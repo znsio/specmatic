@@ -19,7 +19,8 @@ data class HeaderMatchParams(val request: HttpRequest, val headersResolver: Reso
 
 data class HttpRequestPattern(
     val headersPattern: HttpHeadersPattern = HttpHeadersPattern(),
-    val httpUrlPattern: HttpURLPattern? = null,
+    val httpPathPattern: HttpPathPattern? = null,
+    val httpQueryParamPattern: HttpQueryParamPattern = HttpQueryParamPattern(emptyMap()),
     val method: String? = null,
     val body: Pattern = EmptyStringPattern,
     val formFieldsPattern: Map<String, Pattern> = emptyMap(),
@@ -70,7 +71,7 @@ data class HttpRequestPattern(
     }
 
     fun matchesSignature(other: HttpRequestPattern): Boolean =
-        httpUrlPattern!!.path == other.httpUrlPattern!!.path && method.equals(method)
+        httpPathPattern!!.path == other.httpPathPattern!!.path && method.equals(method)
 
     private fun matchMultiPartFormData(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
@@ -193,7 +194,7 @@ data class HttpRequestPattern(
     private fun matchPath(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
 
-        val result = httpUrlPattern!!.matchesPath(httpRequest.path!!, resolver)
+        val result = httpPathPattern!!.matches(httpRequest.path!!, resolver)
 
         return if (result is Failure)
             MatchFailure(result)
@@ -204,10 +205,10 @@ data class HttpRequestPattern(
     private fun matchQuery(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
 
-        val result = httpUrlPattern!!.matchesQuery(httpRequest, resolver)
+        val result = httpQueryParamPattern!!.matches(httpRequest, resolver)
 
         return if (result is Failure)
-            MatchSuccess(Triple(httpRequest, resolver, failures.plus(result.breadCrumb("QUERY-PARAMS"))))
+            MatchSuccess(Triple(httpRequest, resolver, failures.plus(result)))
         else
             MatchSuccess(parameters)
     }
@@ -219,8 +220,11 @@ data class HttpRequestPattern(
             if (method == null) {
                 throw missingParam("HTTP method")
             }
-            if (httpUrlPattern == null) {
+            if (httpPathPattern == null) {
                 throw missingParam("URL path")
+            }
+            if (httpQueryParamPattern == null) {
+                throw missingParam("URL query")
             }
 
             requestType = requestType.copy(method = request.method)
@@ -228,13 +232,10 @@ data class HttpRequestPattern(
             requestType = attempt(breadCrumb = "URL") {
                 val path = request.path ?: ""
                 val pathTypes = pathToPattern(path)
-                val queryParamTypes = toTypeMap(
-                    request.queryParams,
-                    httpUrlPattern.queryPatterns,
-                    resolver
-                ).mapKeys { it.key.removeSuffix("?") }
+                val queryParamTypes = toTypeMap(request.queryParams, httpQueryParamPattern.queryPatterns, resolver)
+                    .mapKeys { it.key.removeSuffix("?") }
 
-                requestType.copy(httpUrlPattern = HttpURLPattern(queryParamTypes, pathTypes, path))
+                requestType.copy(httpPathPattern = HttpPathPattern(pathTypes, path), httpQueryParamPattern = HttpQueryParamPattern(queryParamTypes))
             }
 
             requestType = attempt(breadCrumb = "HEADERS") {
@@ -316,13 +317,16 @@ data class HttpRequestPattern(
             if (method == null) {
                 throw missingParam("HTTP method")
             }
-            if (httpUrlPattern == null) {
+            if (httpPathPattern == null) {
                 throw missingParam("URL path")
+            }
+            if (httpQueryParamPattern == null) {
+                throw missingParam("Query params")
             }
             newRequest = newRequest.updateMethod(method)
             attempt(breadCrumb = "URL") {
-                newRequest = newRequest.updatePath(httpUrlPattern.generatePath(resolver))
-                val queryParams = httpUrlPattern.generateQuery(resolver)
+                newRequest = newRequest.updatePath(httpPathPattern.generate(resolver))
+                val queryParams = httpQueryParamPattern.generate(resolver)
                 for (key in queryParams.keys) {
                     newRequest = newRequest.updateQueryParam(key, queryParams[key] ?: "")
                 }
@@ -383,26 +387,30 @@ data class HttpRequestPattern(
         }
 
         return attempt(breadCrumb = "REQUEST") {
-            val newHttpURLPatterns = httpUrlPattern?.newBasedOn(row, resolver) ?: listOf<HttpURLPattern?>(null)
-                val newBodies: List<Pattern> = attempt(breadCrumb = "BODY") {
+            val newHttpPathPatterns = httpPathPattern?.let { httpPathPattern ->
+                val newURLPathSegmentPatternsList = httpPathPattern.newBasedOn(row, resolver)
+                newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }
+            } ?: listOf<HttpPathPattern?>(null)
+
+            val newQueryParamsPatterns = httpQueryParamPattern.newBasedOn(row, resolver).map { HttpQueryParamPattern(it) }
+
+            val newBodies: List<Pattern> = attempt(breadCrumb = "BODY") {
                 body.let {
-                    if(it is DeferredPattern && row.containsField(it.pattern)) {
+                    if (it is DeferredPattern && row.containsField(it.pattern)) {
                         val example = row.getField(it.pattern)
                         listOf(ExactValuePattern(it.parse(example, resolver)))
-                    }
-                    else if(it.typeAlias?.let { p -> isPatternToken(p) } == true && row.containsField(it.typeAlias!!)) {
+                    } else if (it.typeAlias?.let { p -> isPatternToken(p) } == true && row.containsField(it.typeAlias!!)) {
                         val example = row.getField(it.typeAlias!!)
                         listOf(ExactValuePattern(it.parse(example, resolver)))
-                    }
-                    else if(it is XMLPattern && it.referredType?.let { referredType -> row.containsField("($referredType)") } == true) {
+                    } else if (it is XMLPattern && it.referredType?.let { referredType -> row.containsField("($referredType)") } == true) {
                         val referredType = "(${it.referredType})"
                         val example = row.getField(referredType)
                         listOf(ExactValuePattern(it.parse(example, resolver)))
-                    } else if(row.containsField("(REQUEST-BODY)")) {
+                    } else if (row.containsField("(REQUEST-BODY)")) {
                         val example = row.getField("(REQUEST-BODY)")
                         val value = it.parse(example, resolver)
 
-                        if(! isInvalidRequestResponse(status)) {
+                        if (!isInvalidRequestResponse(status)) {
                             val result = body.matches(value, resolver)
                             if (result is Failure)
                                 throw ContractException(result.toFailureReport())
@@ -421,27 +429,30 @@ data class HttpRequestPattern(
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
             val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
 
-            newHttpURLPatterns.flatMap { newURLMatcher ->
-                newBodies.flatMap { newBody ->
-                    newHeadersPattern.flatMap { newHeadersPattern ->
-                        newFormFieldsPatterns.flatMap { newFormFieldsPattern ->
-                            newFormDataPartLists.flatMap { newFormDataPartList ->
-                                val newRequestPattern = HttpRequestPattern(
-                                    headersPattern = newHeadersPattern,
-                                    httpUrlPattern = newURLMatcher,
-                                    method = method,
-                                    body = newBody,
-                                    formFieldsPattern = newFormFieldsPattern,
-                                    multiPartFormDataPattern = newFormDataPartList
-                                )
+            newHttpPathPatterns.flatMap { newPathParamPattern ->
+                newQueryParamsPatterns.flatMap { newQueryParamPattern ->
+                    newBodies.flatMap { newBody ->
+                        newHeadersPattern.flatMap { newHeadersPattern ->
+                            newFormFieldsPatterns.flatMap { newFormFieldsPattern ->
+                                newFormDataPartLists.flatMap { newFormDataPartList ->
+                                    val newRequestPattern = HttpRequestPattern(
+                                        headersPattern = newHeadersPattern,
+                                        httpPathPattern = newPathParamPattern,
+                                        httpQueryParamPattern = newQueryParamPattern,
+                                        method = method,
+                                        body = newBody,
+                                        formFieldsPattern = newFormFieldsPattern,
+                                        multiPartFormDataPattern = newFormDataPartList
+                                    )
 
-                                val schemeInRow = securitySchemes.find { it.isInRow(row) }
+                                    val schemeInRow = securitySchemes.find { it.isInRow(row) }
 
-                                if(schemeInRow != null) {
-                                    listOf(schemeInRow.addTo(newRequestPattern, row))
-                                } else {
-                                    securitySchemes.map {
-                                        newRequestPattern.copy(securitySchemes = listOf(it))
+                                    if (schemeInRow != null) {
+                                        listOf(schemeInRow.addTo(newRequestPattern, row))
+                                    } else {
+                                        securitySchemes.map {
+                                            newRequestPattern.copy(securitySchemes = listOf(it))
+                                        }
                                     }
                                 }
                             }
@@ -458,7 +469,12 @@ data class HttpRequestPattern(
 
     fun newBasedOn(resolver: Resolver): List<HttpRequestPattern> {
         return attempt(breadCrumb = "REQUEST") {
-            val newHttpURLPatterns = httpUrlPattern?.newBasedOn(resolver) ?: listOf<HttpURLPattern?>(null)
+            val newHttpPathPatterns = httpPathPattern?.let { httpPathPattern ->
+                val newURLPathSegmentPatternsList = httpPathPattern.newBasedOn(resolver)
+                newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }
+            } ?: listOf<HttpPathPattern?>(null)
+
+            val newQueryParamsPatterns = httpQueryParamPattern.newBasedOn(resolver).map { HttpQueryParamPattern(it) }
             val newBodies = attempt(breadCrumb = "BODY") {
                 resolver.withCyclePrevention(body) { cyclePreventedResolver ->
                     body.newBasedOn(cyclePreventedResolver)
@@ -469,22 +485,25 @@ data class HttpRequestPattern(
             //TODO: Backward Compatibility
             val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, Row(), resolver)
 
-            newHttpURLPatterns.flatMap { newURLMatcher ->
-                newBodies.flatMap { newBody ->
-                    newHeadersPattern.flatMap { newHeadersPattern ->
-                        newFormFieldsPatterns.flatMap { newFormFieldsPattern ->
-                            newFormDataPartLists.flatMap { newFormDataPartList ->
-                                val newRequestPattern = HttpRequestPattern(
-                                    headersPattern = newHeadersPattern,
-                                    httpUrlPattern = newURLMatcher,
-                                    method = method,
-                                    body = newBody,
-                                    formFieldsPattern = newFormFieldsPattern,
-                                    multiPartFormDataPattern = newFormDataPartList
-                                )
+            newHttpPathPatterns.flatMap { newPathParamPattern ->
+                newQueryParamsPatterns.flatMap { newQueryParamPattern ->
+                    newBodies.flatMap { newBody ->
+                        newHeadersPattern.flatMap { newHeadersPattern ->
+                            newFormFieldsPatterns.flatMap { newFormFieldsPattern ->
+                                newFormDataPartLists.flatMap { newFormDataPartList ->
+                                    val newRequestPattern = HttpRequestPattern(
+                                        headersPattern = newHeadersPattern,
+                                        httpPathPattern = newPathParamPattern,
+                                        httpQueryParamPattern = newQueryParamPattern,
+                                        method = method,
+                                        body = newBody,
+                                        formFieldsPattern = newFormFieldsPattern,
+                                        multiPartFormDataPattern = newFormDataPartList
+                                    )
 
-                                securitySchemes.map {
-                                    newRequestPattern.copy(securitySchemes = listOf(it))
+                                    securitySchemes.map {
+                                        newRequestPattern.copy(securitySchemes = listOf(it))
+                                    }
                                 }
                             }
                         }
@@ -495,42 +514,47 @@ data class HttpRequestPattern(
     }
 
     fun testDescription(): String {
-        return "$method ${httpUrlPattern.toString()}"
+        return "$method ${httpPathPattern.toString()}"
     }
 
     fun negativeBasedOn(row: Row, resolver: Resolver): List<HttpRequestPattern> {
         return attempt(breadCrumb = "REQUEST") {
-            val newHttpURLPatterns = httpUrlPattern?.negativeBasedOn(row, resolver) ?: listOf<HttpURLPattern?>(null)
+            val newHttpPathPatterns = httpPathPattern?.let { httpPathPattern ->
+                val newURLPathSegmentPatternsList = httpPathPattern.negativeBasedOn(row, resolver)
+                newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }
+            } ?: listOf<HttpPathPattern?>(null)
+
+            val newQueryParamsPatterns = httpQueryParamPattern.negativeBasedOn(row, resolver).map { HttpQueryParamPattern(it) }
+
             val newBodies: List<Pattern> = attempt(breadCrumb = "BODY") {
                 body.let {
-                    if(it is DeferredPattern && row.containsField(it.pattern)) {
+                    if (it is DeferredPattern && row.containsField(it.pattern)) {
                         val example = row.getField(it.pattern)
                         listOf(ExactValuePattern(it.parse(example, resolver)))
-                    }
-                    else if(it.typeAlias?.let { p->isPatternToken(p) } == true && row.containsField(it.typeAlias!!)) {
+                    } else if (it.typeAlias?.let { p -> isPatternToken(p) } == true && row.containsField(it.typeAlias!!)) {
                         val example = row.getField(it.typeAlias!!)
                         listOf(ExactValuePattern(it.parse(example, resolver)))
-                    }
-                    else if(it is XMLPattern && it.referredType?.let { referredType -> row.containsField("($referredType)") } == true) {
+                    } else if (it is XMLPattern && it.referredType?.let { referredType -> row.containsField("($referredType)") } == true) {
                         val referredType = "(${it.referredType})"
                         val example = row.getField(referredType)
                         listOf(ExactValuePattern(it.parse(example, resolver)))
-                    } else if(row.containsField("(REQUEST-BODY)")) {
+                    } else if (row.containsField("(REQUEST-BODY)")) {
                         val example = row.getField("(REQUEST-BODY)")
                         val value = it.parse(example, resolver)
                         val result = body.matches(value, resolver)
-                        if(result is Failure)
+                        if (result is Failure)
                             throw ContractException(result.toFailureReport())
 
-                        val originalRequest = if(value is JSONObjectValue) {
+                        val originalRequest = if (value is JSONObjectValue) {
                             body.negativeBasedOn(row.noteRequestBody(), resolver)
                         } else {
                             listOf(ExactValuePattern(value))
                         }
 
-                        val flattenedRequests: List<Pattern> = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                            body.newBasedOn(row.noteRequestBody(), cyclePreventedResolver)
-                        }
+                        val flattenedRequests: List<Pattern> =
+                            resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+                                body.newBasedOn(row.noteRequestBody(), cyclePreventedResolver)
+                            }
 
                         flattenedRequests.plus(originalRequest)
 
@@ -545,18 +569,23 @@ data class HttpRequestPattern(
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
             val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
 
-
-            val positivePattern:HttpRequestPattern = newBasedOn(row, resolver).first()
+            //TODO: figure out a way to optimise generating all positive scenarios
+            val positivePattern: HttpRequestPattern = newBasedOn(row, resolver).first()
 
             val negativeRequestPatterns = mutableListOf<HttpRequestPattern>()
-            newHttpURLPatterns.forEach { newUrlMatcher ->
+            newHttpPathPatterns.forEach { pathParamPattern ->
                 negativeRequestPatterns.add(
-                    positivePattern.copy(httpUrlPattern = newUrlMatcher)
+                    positivePattern.copy(httpPathPattern = pathParamPattern)
                 )
             }
-            newBodies.forEach { newbodyPattern ->
+            newQueryParamsPatterns.forEach { queryParamPattern ->
                 negativeRequestPatterns.add(
-                    positivePattern.copy(body = newbodyPattern)
+                    positivePattern.copy(httpQueryParamPattern = queryParamPattern)
+                )
+            }
+            newBodies.forEach { newBodyPattern ->
+                negativeRequestPatterns.add(
+                    positivePattern.copy(body = newBodyPattern)
                 )
             }
             newHeadersPattern.forEach { newHeaderPattern ->

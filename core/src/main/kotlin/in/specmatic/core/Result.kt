@@ -69,6 +69,7 @@ sealed class Result {
     abstract fun isPartialSuccess(): Boolean
 
     abstract fun testResult(): TestResult
+    abstract fun withFailureReason(urlPathMisMatch: FailureReason): Result
 
     data class FailureCause(val message: String="", var cause: Failure? = null)
 
@@ -109,6 +110,10 @@ sealed class Result {
                 return TestResult.Error
 
             return TestResult.Failed
+        }
+
+        override fun withFailureReason(failureReason: FailureReason): Result {
+            return copy(failureReason = failureReason)
         }
 
         fun reason(errorMessage: String) = Failure(errorMessage, this)
@@ -177,6 +182,10 @@ sealed class Result {
         override fun isPartialSuccess(): Boolean = partialSuccessMessage != null
         override fun testResult(): TestResult {
             return TestResult.Success
+        }
+
+        override fun withFailureReason(urlPathMisMatch: FailureReason): Result {
+            return this
         }
     }
 }

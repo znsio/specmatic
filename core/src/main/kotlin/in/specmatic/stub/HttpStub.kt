@@ -344,7 +344,7 @@ class HttpStub(
         return result.response
     }
 
-    private suspend fun handleExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
+    private fun handleExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
         return try {
             if (httpRequest.body.toStringLiteral().isEmpty())
                 throw ContractException("Expectation payload was empty")
@@ -352,7 +352,7 @@ class HttpStub(
             val mock: ScenarioStub = stringToMockScenario(httpRequest.body)
             val stub: HttpStubData = setExpectation(mock)
 
-            HttpStubResponse(HttpResponse.OK, contractPath = stub?.contractPath ?: "")
+            HttpStubResponse(HttpResponse.OK, contractPath = stub.contractPath)
         } catch (e: ContractException) {
             HttpStubResponse(
                 HttpResponse(

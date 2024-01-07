@@ -86,7 +86,7 @@ data class Scenario(
 
     override val path: String
         get() {
-            return httpRequestPattern.httpUrlPattern?.path ?: ""
+            return httpRequestPattern.httpPathPattern?.path ?: ""
         }
 
     override val status: Int
@@ -389,7 +389,7 @@ data class Scenario(
         response: HttpResponse,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): Result {
-        return scenarioBreadCrumb(this) {
+        scenarioBreadCrumb(this) {
             val resolver = Resolver(
                 IgnoreFacts(),
                 true,
@@ -434,7 +434,7 @@ data class Scenario(
 
     override fun testDescription(): String {
         val method = this.httpRequestPattern.method
-        val path = this.httpRequestPattern.httpUrlPattern?.path ?: ""
+        val path = this.httpRequestPattern.httpPathPattern?.path ?: ""
         val responseStatus = this.httpResponsePattern.status
         val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | EX:${exampleName.trim()}" }
 

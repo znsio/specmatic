@@ -203,7 +203,7 @@ fun findRedeclarations(
 ): List<APIReDeclarations> {
     val newPathToContractMap = newPaths.map { newPath ->
         val matchingContracts = contracts.filter { (feature, _) ->
-            feature.scenarios.map { it.httpRequestPattern.httpUrlPattern!!.path }.any { scenarioPath ->
+            feature.scenarios.map { it.httpRequestPattern.httpPathPattern!!.path }.any { scenarioPath ->
                 scenarioPath == newPath
             }
         }.map { it.second }
@@ -231,7 +231,7 @@ fun urlPaths(newerContractYaml: String, contractPath: String): List<String>? {
 }
 
 private fun pathsFromFeature(newContract: Feature) =
-    newContract.scenarios.map { it.httpRequestPattern.httpUrlPattern!!.path }.sorted().distinct()
+    newContract.scenarios.map { it.httpRequestPattern.httpPathPattern!!.path }.sorted().distinct()
 
 open class CanonicalFile(val file: File) {
     val path: String = file.path

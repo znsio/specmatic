@@ -29,11 +29,10 @@ class APIKeyInQueryParamSecurityScheme(val name: String, private val apiKey:Stri
         }
 
         return requestPattern.copy(
-            httpUrlPattern = requestPattern.httpUrlPattern?.copy(
-                queryPatterns = requestPattern.httpUrlPattern.queryPatterns.plus(name to queryParamValueType)
+            httpQueryParamPattern = requestPattern.httpQueryParamPattern.copy(
+                queryPatterns = requestPattern.httpQueryParamPattern.queryPatterns.plus(name to queryParamValueType)
             )
         )
-
     }
 
     override fun isInRow(row: Row): Boolean = row.containsField(name)

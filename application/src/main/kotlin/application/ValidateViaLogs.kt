@@ -28,7 +28,7 @@ class ValidateViaLogs : Callable<Unit> {
     override fun call() {
         val feature = OpenApiSpecification.fromFile(contractPath).toFeature()
 
-        val httpUrlMatchers: List<Pair<HttpURLPattern, Resolver>> = findMatchingURLMatchers(feature)
+        val httpUrlMatchers: List<Pair<HttpPathPattern, Resolver>> = findMatchingURLMatchers(feature)
 
         val requestLogs = parsedJSONArray(File(logDirPath).readText())
 
@@ -84,7 +84,7 @@ class ValidateViaLogs : Callable<Unit> {
 
     private fun stubFromExpectationLog(
         log: JSONObjectValue,
-        httpUrlMatchers: List<Pair<HttpURLPattern, Resolver>>
+        httpUrlMatchers: List<Pair<HttpPathPattern, Resolver>>
     ): Pair<ScenarioStub, ScenarioStub>? {
         val status = log.findFirstChildByPath("http-response.status")?.toStringLiteral()
 
@@ -107,14 +107,14 @@ class ValidateViaLogs : Callable<Unit> {
     private fun stubFromExpectationLog(
         stubRequestPathLog: Value,
         log: JSONObjectValue,
-        httpUrlMatchers: List<Pair<HttpURLPattern, Resolver>>
+        httpUrlMatchers: List<Pair<HttpPathPattern, Resolver>>
     ): ScenarioStub? {
         val path = stubRequestPathLog.toStringLiteral()
 
         val body = log.findFirstChildByPath("http-request.body") as JSONObjectValue
 
         if (httpUrlMatchers.any { (matcher, resolver) ->
-                matcher.matchesPath(path, resolver) is Result.Success
+                matcher.matches(path, resolver) is Result.Success
             })
             return mockFromJSON(body.jsonObject)
 
@@ -123,7 +123,7 @@ class ValidateViaLogs : Callable<Unit> {
 
     private fun stubFromRequestLog(
         path: String,
-        httpUrlMatchers: List<Pair<HttpURLPattern, Resolver>>,
+        httpUrlMatchers: List<Pair<HttpPathPattern, Resolver>>,
         log: JSONObjectValue
     ): ScenarioStub? {
         val headers = log.findFirstChildByPath("http-response.headers") as JSONObjectValue?
@@ -133,16 +133,16 @@ class ValidateViaLogs : Callable<Unit> {
             return null
 
         if (httpUrlMatchers.any { (matcher, resolver) ->
-                matcher.matches(HttpRequest(path = path), resolver) is Result.Success
+                matcher.matches(path, resolver) is Result.Success
             })
             return mockFromJSON(log.jsonObject)
 
         return null
     }
 
-    private fun findMatchingURLMatchers(feature: Feature): List<Pair<HttpURLPattern, Resolver>> {
-        val httpUrlMatchers: List<Pair<HttpURLPattern, Resolver>> = feature.scenarios.map {
-            Pair(it.httpRequestPattern.httpUrlPattern, it.resolver)
+    private fun findMatchingURLMatchers(feature: Feature): List<Pair<HttpPathPattern, Resolver>> {
+        val httpUrlMatchers: List<Pair<HttpPathPattern, Resolver>> = feature.scenarios.map {
+            Pair(it.httpRequestPattern.httpPathPattern, it.resolver)
         }.map { (matcher, resolver) ->
             Triple(matcher, matcher?.matches(URI.create(urlPathFilter)), resolver)
         }.filter {

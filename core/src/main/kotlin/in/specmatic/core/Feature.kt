@@ -374,15 +374,15 @@ data class Feature(
         )
             return baseScenario
 
-        val basePathParts = baseScenario.httpRequestPattern.httpUrlPattern.pathParamPatterns
-        val newPathParts = newScenario.httpRequestPattern.httpUrlPattern.pathParamPatterns
+        val basePathParts = baseScenario.httpRequestPattern.httpUrlPattern.pathSegmentPatterns
+        val newPathParts = newScenario.httpRequestPattern.httpUrlPattern.pathSegmentPatterns
 
-        val convergedPathPattern: List<URLPathPattern> = basePathParts.zip(newPathParts).map { (base, new) ->
+        val convergedPathPattern: List<URLPathSegmentPattern> = basePathParts.zip(newPathParts).map { (base, new) ->
             if(base.pattern.encompasses(new.pattern, baseScenario.resolver, newScenario.resolver) is Result.Success)
                 base
             else {
                 if(isInteger(base) && isInteger(new))
-                    URLPathPattern(NumberPattern(), key = "id")
+                    URLPathSegmentPattern(NumberPattern(), key = "id")
                 else
                     throw ContractException("Can't figure out how to converge these URLs: ${baseScenario.httpRequestPattern.httpUrlPattern.path}, ${newScenario.httpRequestPattern.httpUrlPattern.path}")
             }
@@ -395,7 +395,7 @@ data class Feature(
             }
         }.let { if(it.startsWith("/")) it else "/$it"}
 
-        val convergedHttpURLPattern: HttpURLPattern = baseScenario.httpRequestPattern.httpUrlPattern.copy(pathParamPatterns = convergedPathPattern, path = convergedPath)
+        val convergedHttpURLPattern: HttpURLPattern = baseScenario.httpRequestPattern.httpUrlPattern.copy(pathSegmentPatterns = convergedPathPattern, path = convergedPath)
 
         return baseScenario.copy(
             httpRequestPattern =  baseScenario.httpRequestPattern.copy(
@@ -836,12 +836,12 @@ data class Feature(
     }
 
     private fun numberTemplatized(httpUrlPattern: HttpURLPattern?): HttpURLPattern {
-        if(httpUrlPattern!!.pathParamPatterns.any { it.pattern !is ExactValuePattern })
+        if(httpUrlPattern!!.pathSegmentPatterns.any { it.pattern !is ExactValuePattern })
             return httpUrlPattern
 
-        val numberTemplatizedPathPattern: List<URLPathPattern> = httpUrlPattern.pathParamPatterns.map { type ->
+        val numberTemplatizedPathPattern: List<URLPathSegmentPattern> = httpUrlPattern.pathSegmentPatterns.map { type ->
             if(isInteger(type))
-                URLPathPattern(NumberPattern(), key = "id")
+                URLPathSegmentPattern(NumberPattern(), key = "id")
             else
                 type
         }
@@ -853,7 +853,7 @@ data class Feature(
             }
         }.let { if(it.startsWith("/")) it else "/$it"}
 
-        return httpUrlPattern.copy(pathParamPatterns = numberTemplatizedPathPattern, path = numberTemplatizedPath)
+        return httpUrlPattern.copy(pathSegmentPatterns = numberTemplatizedPathPattern, path = numberTemplatizedPath)
     }
 
     private fun requestBodySchema(
@@ -1775,8 +1775,8 @@ fun similarURLPath(baseScenario: Scenario, newScenario: Scenario): Boolean {
     if(baseScenario.httpRequestPattern.httpUrlPattern?.encompasses(newScenario.httpRequestPattern.httpUrlPattern!!, baseScenario.resolver, newScenario.resolver) is Result.Success)
         return true
 
-    val basePathParts = baseScenario.httpRequestPattern.httpUrlPattern!!.pathParamPatterns
-    val newPathParts = newScenario.httpRequestPattern.httpUrlPattern!!.pathParamPatterns
+    val basePathParts = baseScenario.httpRequestPattern.httpUrlPattern!!.pathSegmentPatterns
+    val newPathParts = newScenario.httpRequestPattern.httpUrlPattern!!.pathSegmentPatterns
 
     if(basePathParts.size != newPathParts.size)
         return false
@@ -1788,5 +1788,5 @@ fun similarURLPath(baseScenario: Scenario, newScenario: Scenario): Boolean {
 }
 
 fun isInteger(
-    base: URLPathPattern
+    base: URLPathSegmentPattern
 ) = base.pattern is ExactValuePattern && base.pattern.pattern.toStringLiteral().toIntOrNull() != null

@@ -166,8 +166,8 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
     }
 
     override fun patternMatchesExact(
-        wrapperURLPart: URLPathPattern,
-        openapiURLPart: URLPathPattern,
+        wrapperURLPart: URLPathSegmentPattern,
+        openapiURLPart: URLPathSegmentPattern,
         resolver: Resolver,
     ): Boolean {
         val valueFromWrapper = (wrapperURLPart.pattern as ExactValuePattern).pattern
@@ -183,8 +183,8 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
     }
 
     override fun exactValuePatternsAreEqual(
-        openapiURLPart: URLPathPattern,
-        wrapperURLPart: URLPathPattern
+        openapiURLPart: URLPathSegmentPattern,
+        wrapperURLPart: URLPathSegmentPattern
     ) =
         (openapiURLPart.pattern as ExactValuePattern).pattern.toStringLiteral() == (wrapperURLPart.pattern as ExactValuePattern).pattern.toStringLiteral()
 
@@ -229,7 +229,7 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
 
         return MatchSuccess(specmaticScenarioInfo to openApiScenarioInfos.map { openApiScenario ->
             val queryPattern = openApiScenario.httpRequestPattern.httpUrlPattern?.queryPatterns ?: emptyMap()
-            val zippedPathPatterns = (specmaticScenarioInfo.httpRequestPattern.httpUrlPattern?.pathParamPatterns ?: emptyList()).zip(openApiScenario.httpRequestPattern.httpUrlPattern?.pathParamPatterns ?: emptyList())
+            val zippedPathPatterns = (specmaticScenarioInfo.httpRequestPattern.httpUrlPattern?.pathSegmentPatterns ?: emptyList()).zip(openApiScenario.httpRequestPattern.httpUrlPattern?.pathSegmentPatterns ?: emptyList())
 
             val pathPatterns = zippedPathPatterns.map { (fromWrapper, fromOpenApi) ->
                 if(fromWrapper.pattern is ExactValuePattern)
@@ -1338,15 +1338,15 @@ class OpenApiSpecification(private val openApiFilePath: String, private val pars
                 it.name
             }
 
-        val pathPattern: List<URLPathPattern> = pathStringParts.map {
+        val pathPattern: List<URLPathSegmentPattern> = pathStringParts.map {
             if(it.startsWith("{") && it.endsWith("}")) {
                 val paramName = it.removeSurrounding("{", "}")
 
                 pathParamMap[paramName]?.let {
-                    URLPathPattern(toSpecmaticPattern(it.schema, emptyList()), paramName)
+                    URLPathSegmentPattern(toSpecmaticPattern(it.schema, emptyList()), paramName)
                 } ?: throw ContractException("The path parameter in $openApiPath is not defined in the specification")
             } else {
-                URLPathPattern(ExactValuePattern(StringValue(it)))
+                URLPathSegmentPattern(ExactValuePattern(StringValue(it)))
             }
         }
 

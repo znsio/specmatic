@@ -6,7 +6,7 @@ import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 
-data class URLPathPattern(override val pattern: Pattern, override val key: String? = null, override val typeAlias: String? = null) : Pattern, Keyed {
+data class URLPathSegmentPattern(override val pattern: Pattern, override val key: String? = null, override val typeAlias: String? = null) : Pattern, Keyed {
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
             resolver.matchesPattern(key, pattern, sampleData ?: NullValue)
 
@@ -18,14 +18,14 @@ data class URLPathPattern(override val pattern: Pattern, override val key: Strin
         }
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<URLPathPattern> =
+    override fun newBasedOn(row: Row, resolver: Resolver): List<URLPathSegmentPattern> =
         resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
-            pattern.newBasedOn(row, cyclePreventedResolver).map { URLPathPattern(it, key) }
+            pattern.newBasedOn(row, cyclePreventedResolver).map { URLPathSegmentPattern(it, key) }
         }
 
-    override fun newBasedOn(resolver: Resolver): List<URLPathPattern> =
+    override fun newBasedOn(resolver: Resolver): List<URLPathSegmentPattern> =
         resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
-            pattern.newBasedOn(cyclePreventedResolver).map { URLPathPattern(it, key) }
+            pattern.newBasedOn(cyclePreventedResolver).map { URLPathSegmentPattern(it, key) }
         }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
@@ -35,7 +35,7 @@ data class URLPathPattern(override val pattern: Pattern, override val key: Strin
     override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
-        if(otherPattern !is URLPathPattern)
+        if(otherPattern !is URLPathSegmentPattern)
             return Result.Failure("Expected url type, got ${otherPattern.typeName}")
 
         return otherPattern.pattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver, typeStack)

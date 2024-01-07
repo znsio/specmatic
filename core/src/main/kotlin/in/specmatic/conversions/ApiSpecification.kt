@@ -1,17 +1,17 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.Resolver
-import `in`.specmatic.core.URLPathPattern
+import `in`.specmatic.core.URLPathSegmentPattern
 
 interface ApiSpecification {
     fun exactValuePatternsAreEqual(
-        openapiURLPart: URLPathPattern,
-        wrapperURLPart: URLPathPattern
+        openapiURLPart: URLPathSegmentPattern,
+        wrapperURLPart: URLPathSegmentPattern
     ): Boolean
 
     fun patternMatchesExact(
-        wrapperURLPart: URLPathPattern,
-        openapiURLPart: URLPathPattern,
+        wrapperURLPart: URLPathSegmentPattern,
+        openapiURLPart: URLPathSegmentPattern,
         resolver: Resolver,
     ): Boolean
 }

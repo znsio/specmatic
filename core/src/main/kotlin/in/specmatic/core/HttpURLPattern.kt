@@ -11,13 +11,17 @@ import java.net.URI
 const val QUERY_PARAMS_BREADCRUMB = "QUERY-PARAMS"
 val OMIT = listOf("(OMIT)", "(omit)")
 
-data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: List<URLPathPattern>, val path: String) {
-    fun encompasses(otherURLMatcher: URLMatcher, thisResolver: Resolver, otherResolver: Resolver): Result {
-        if (this.matches(HttpRequest("GET", URI.create(otherURLMatcher.path)), thisResolver) is Success)
+data class HttpURLPattern(
+    val queryPatterns: Map<String, Pattern>,
+    val pathParamPatterns: List<URLPathPattern>,
+    val path: String
+) {
+    fun encompasses(otherHttpURLPattern: HttpURLPattern, thisResolver: Resolver, otherResolver: Resolver): Result {
+        if (this.matches(HttpRequest("GET", URI.create(otherHttpURLPattern.path)), thisResolver) is Success)
             return Success()
 
         val mismatchedPartResults =
-            this.pathPattern.zip(otherURLMatcher.pathPattern).map { (thisPathItem, otherPathItem) ->
+            this.pathParamPatterns.zip(otherHttpURLPattern.pathParamPatterns).map { (thisPathItem, otherPathItem) ->
                 thisPathItem.pattern.encompasses(otherPathItem, thisResolver, otherResolver)
             }
 
@@ -66,19 +70,19 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     }
 
     fun matchesQuery(httpRequest: HttpRequest, resolver: Resolver): Result {
-        return matchesQuery(queryPattern, httpRequest.queryParams, resolver)
+        return matchesQuery(queryPatterns, httpRequest.queryParams, resolver)
     }
 
     private fun matchesPath(uri: URI, resolver: Resolver): Result {
         val pathParts = uri.path.split("/".toRegex()).filter { it.isNotEmpty() }.toTypedArray()
 
-        if (pathPattern.size != pathParts.size)
+        if (pathParamPatterns.size != pathParts.size)
             return Failure(
-                "Expected $uri (having ${pathParts.size} path segments) to match $path (which has ${pathPattern.size} path segments).",
+                "Expected $uri (having ${pathParts.size} path segments) to match $path (which has ${pathParamPatterns.size} path segments).",
                 breadCrumb = "PATH"
             )
 
-        pathPattern.zip(pathParts).forEach { (urlPathPattern, token) ->
+        pathParamPatterns.zip(pathParts).forEach { (urlPathPattern, token) ->
             try {
                 val parsedValue = urlPathPattern.tryParse(token, resolver)
                 val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, parsedValue)
@@ -104,7 +108,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
     fun generatePath(resolver: Resolver): String {
         return attempt(breadCrumb = "PATH") {
-            ("/" + pathPattern.mapIndexed { index, urlPathPattern ->
+            ("/" + pathParamPatterns.mapIndexed { index, urlPathPattern ->
                 attempt(breadCrumb = "[$index]") {
                     val key = urlPathPattern.key
                     resolver.withCyclePrevention(urlPathPattern.pattern) { cyclePreventedResolver ->
@@ -123,7 +127,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
     fun generateQuery(resolver: Resolver): Map<String, String> {
         return attempt(breadCrumb = "QUERY-PARAMS") {
-            queryPattern.mapKeys { it.key.removeSuffix("?") }.map { (name, pattern) ->
+            queryPatterns.mapKeys { it.key.removeSuffix("?") }.map { (name, pattern) ->
                 attempt(breadCrumb = name) {
                     name to resolver.withCyclePrevention(pattern) { it.generate(name, pattern) }.toString()
                 }
@@ -131,48 +135,42 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
         }
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): List<URLMatcher> {
-        val newPathPartsList = newBasedOn(pathPattern.mapIndexed { index, urlPathPattern ->
-            val key = urlPathPattern.key
-
+    fun newBasedOn(row: Row, resolver: Resolver): List<HttpURLPattern> {
+        val generatedPathParamPatterns = newBasedOn(pathParamPatterns.mapIndexed { index, urlPathParamPattern ->
+            val key = urlPathParamPattern.key
+            if (key === null || !row.containsField(key)) return@mapIndexed urlPathParamPattern
             attempt(breadCrumb = "[$index]") {
+                val rowValue = row.getField(key)
                 when {
-                    key !== null && row.containsField(key) -> {
-                        val rowValue = row.getField(key)
-                        when {
-                            isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathPattern.key}\"") {
-                                val rowPattern = resolver.getPattern(rowValue)
-                                when (val result = urlPathPattern.encompasses(rowPattern, resolver, resolver)) {
-                                    is Success -> urlPathPattern.copy(pattern = rowPattern)
-                                    is Failure -> throw ContractException(result.toFailureReport())
-                                }
-                            }
-
-                            else -> attempt("Format error in example of path parameter \"$key\"") {
-                                val value = urlPathPattern.parse(rowValue, resolver)
-
-                                val matchResult = urlPathPattern.matches(value, resolver)
-                                if (matchResult is Failure)
-                                    throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
-
-                                URLPathPattern(
-                                    ExactValuePattern(
-                                        value
-                                    )
-                                )
-                            }
+                    isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathParamPattern.key}\"") {
+                        val rowPattern = resolver.getPattern(rowValue)
+                        when (val result = urlPathParamPattern.encompasses(rowPattern, resolver, resolver)) {
+                            is Success -> urlPathParamPattern.copy(pattern = rowPattern)
+                            is Failure -> throw ContractException(result.toFailureReport())
                         }
                     }
 
-                    else -> urlPathPattern
+                    else -> attempt("Format error in example of path parameter \"$key\"") {
+                        val value = urlPathParamPattern.parse(rowValue, resolver)
+
+                        val matchResult = urlPathParamPattern.matches(value, resolver)
+                        if (matchResult is Failure)
+                            throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
+
+                        URLPathPattern(
+                            ExactValuePattern(
+                                value
+                            )
+                        )
+                    }
                 }
             }
         }, row, resolver)
 
-        val newURLPathPatternsList = newPathPartsList.map { list -> list.map { it as URLPathPattern } }
+        val newURLPathPatternsList = generatedPathParamPatterns.map { list -> list.map { it as URLPathPattern } }
 
         val newQueryParamsList = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
-            val optionalQueryParams = queryPattern
+            val optionalQueryParams = queryPatterns
 
             forEachKeyCombinationIn(row.withoutOmittedKeys(optionalQueryParams), row) { entry ->
                 newBasedOn(entry.mapKeys { withoutOptionality(it.key) }, row, resolver)
@@ -181,13 +179,13 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
         return newURLPathPatternsList.flatMap { newURLPathPatterns ->
             newQueryParamsList.map { newQueryParams ->
-                URLMatcher(newQueryParams, newURLPathPatterns, path)
+                HttpURLPattern(newQueryParams, newURLPathPatterns, path)
             }
         }
     }
 
-    fun newBasedOn(resolver: Resolver): List<URLMatcher> {
-        val newPathPartsList = newBasedOn(pathPattern.mapIndexed { index, urlPathPattern ->
+    fun newBasedOn(resolver: Resolver): List<HttpURLPattern> {
+        val newPathPartsList = newBasedOn(pathParamPatterns.mapIndexed { index, urlPathPattern ->
             attempt(breadCrumb = "[$index]") {
                 urlPathPattern
             }
@@ -196,7 +194,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
         val newURLPathPatternsList = newPathPartsList.map { list -> list.map { it as URLPathPattern } }
 
         val newQueryParamsList = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
-            val optionalQueryParams = queryPattern
+            val optionalQueryParams = queryPatterns
 
             allOrNothingCombinationIn(optionalQueryParams) { entry ->
                 newBasedOn(entry.mapKeys { withoutOptionality(it.key) }, resolver)
@@ -205,14 +203,14 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
         return newURLPathPatternsList.flatMap { newURLPathPatterns ->
             newQueryParamsList.map { newQueryParams ->
-                URLMatcher(newQueryParams, newURLPathPatterns, path)
+                HttpURLPattern(newQueryParams, newURLPathPatterns, path)
             }
         }
     }
 
     override fun toString(): String {
-        val stringizedQuery = if (queryPattern.isNotEmpty()) {
-            "?" + queryPattern.mapKeys { it.key.removeSuffix("?") }.map { (key, value) ->
+        val stringizedQuery = if (queryPatterns.isNotEmpty()) {
+            "?" + queryPatterns.mapKeys { it.key.removeSuffix("?") }.map { (key, value) ->
                 "$key=$value"
             }.toList().joinToString(separator = "&")
         } else ""
@@ -227,11 +225,11 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
     }
 
     fun pathParameters(): List<URLPathPattern> {
-        return pathPattern.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
+        return pathParamPatterns.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
     }
 
-    fun negativeBasedOn(row: Row, resolver: Resolver): List<URLMatcher?> {
-        val newPathPartsList: List<List<Pattern>> = newBasedOn(pathPattern.mapIndexed { index, urlPathPattern ->
+    fun negativeBasedOn(row: Row, resolver: Resolver): List<HttpURLPattern?> {
+        val newPathPartsList: List<List<Pattern>> = newBasedOn(pathParamPatterns.mapIndexed { index, urlPathPattern ->
             val key = urlPathPattern.key
 
             attempt(breadCrumb = "[$index]") {
@@ -271,7 +269,7 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
         val newURLPathPatternsList = newPathPartsList.map { list -> list.map { it as URLPathPattern } }
 
         val newQueryParamsList = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
-            val optionalQueryParams = queryPattern
+            val optionalQueryParams = queryPatterns
 
             forEachKeyCombinationIn(row.withoutOmittedKeys(optionalQueryParams), row) { entry ->
                 negativeBasedOn(entry.mapKeys { withoutOptionality(it.key) }, row, resolver, true)
@@ -280,19 +278,22 @@ data class URLMatcher(val queryPattern: Map<String, Pattern>, val pathPattern: L
 
         return newURLPathPatternsList.flatMap { newURLPathPatterns ->
             newQueryParamsList.map { newQueryParams ->
-                URLMatcher(newQueryParams, newURLPathPatterns, path)
+                HttpURLPattern(newQueryParams, newURLPathPatterns, path)
             }
         }
     }
 }
 
-internal fun toURLMatcherWithOptionalQueryParams(url: String, apiKeyQueryParams: Set<String> = emptySet()): URLMatcher =
+internal fun toURLMatcherWithOptionalQueryParams(
+    url: String,
+    apiKeyQueryParams: Set<String> = emptySet()
+): HttpURLPattern =
     toURLMatcherWithOptionalQueryParams(URI.create(url), apiKeyQueryParams)
 
 internal fun toURLMatcherWithOptionalQueryParams(
     urlPattern: URI,
     apiKeyQueryParams: Set<String> = emptySet()
-): URLMatcher {
+): HttpURLPattern {
     val path = urlPattern.path
 
     val pathPattern = pathToPattern(urlPattern.rawPath)
@@ -310,7 +311,7 @@ internal fun toURLMatcherWithOptionalQueryParams(
         }.toMap().plus(queryParams)
     }
 
-    return URLMatcher(queryPattern = queryPattern, path = path, pathPattern = pathPattern)
+    return HttpURLPattern(queryPatterns = queryPattern, path = path, pathParamPatterns = pathPattern)
 }
 
 internal fun pathToPattern(rawPath: String): List<URLPathPattern> =

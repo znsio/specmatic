@@ -28,7 +28,7 @@ class ValidateViaLogs : Callable<Unit> {
     override fun call() {
         val feature = OpenApiSpecification.fromFile(contractPath).toFeature()
 
-        val urlMatchers: List<Pair<URLMatcher, Resolver>> = findMatchingURLMatchers(feature)
+        val httpUrlMatchers: List<Pair<HttpURLPattern, Resolver>> = findMatchingURLMatchers(feature)
 
         val requestLogs = parsedJSONArray(File(logDirPath).readText())
 
@@ -40,11 +40,11 @@ class ValidateViaLogs : Callable<Unit> {
                     "/_specmatic/expectations",
                     "/_qontract/expectations"
                 ) -> {
-                    stubFromExpectationLog(log, urlMatchers)
+                    stubFromExpectationLog(log, httpUrlMatchers)
                 }
                 null -> null
                 else -> {
-                    stubFromRequestLog(path, urlMatchers, log)?.let { Pair(mockFromJSON(log.jsonObject), it) }
+                    stubFromRequestLog(path, httpUrlMatchers, log)?.let { Pair(mockFromJSON(log.jsonObject), it) }
                 }
             }
         }
@@ -84,7 +84,7 @@ class ValidateViaLogs : Callable<Unit> {
 
     private fun stubFromExpectationLog(
         log: JSONObjectValue,
-        urlMatchers: List<Pair<URLMatcher, Resolver>>
+        httpUrlMatchers: List<Pair<HttpURLPattern, Resolver>>
     ): Pair<ScenarioStub, ScenarioStub>? {
         val status = log.findFirstChildByPath("http-response.status")?.toStringLiteral()
 
@@ -93,7 +93,7 @@ class ValidateViaLogs : Callable<Unit> {
 
         log.findFirstChildByPath("http-request.body.http-request.path")?.let { stubRequestPathLog ->
             if (log.findFirstChildByPath("http-response.status")?.toStringLiteral() == "200")
-                return stubFromExpectationLog(stubRequestPathLog, log, urlMatchers)?.let {
+                return stubFromExpectationLog(stubRequestPathLog, log, httpUrlMatchers)?.let {
                     Pair(
                         mockFromJSON(log.jsonObject),
                         it
@@ -107,13 +107,13 @@ class ValidateViaLogs : Callable<Unit> {
     private fun stubFromExpectationLog(
         stubRequestPathLog: Value,
         log: JSONObjectValue,
-        urlMatchers: List<Pair<URLMatcher, Resolver>>
+        httpUrlMatchers: List<Pair<HttpURLPattern, Resolver>>
     ): ScenarioStub? {
         val path = stubRequestPathLog.toStringLiteral()
 
         val body = log.findFirstChildByPath("http-request.body") as JSONObjectValue
 
-        if (urlMatchers.any { (matcher, resolver) ->
+        if (httpUrlMatchers.any { (matcher, resolver) ->
                 matcher.matchesPath(path, resolver) is Result.Success
             })
             return mockFromJSON(body.jsonObject)
@@ -123,7 +123,7 @@ class ValidateViaLogs : Callable<Unit> {
 
     private fun stubFromRequestLog(
         path: String,
-        urlMatchers: List<Pair<URLMatcher, Resolver>>,
+        httpUrlMatchers: List<Pair<HttpURLPattern, Resolver>>,
         log: JSONObjectValue
     ): ScenarioStub? {
         val headers = log.findFirstChildByPath("http-response.headers") as JSONObjectValue?
@@ -132,7 +132,7 @@ class ValidateViaLogs : Callable<Unit> {
         if(specmaticResult != "success")
             return null
 
-        if (urlMatchers.any { (matcher, resolver) ->
+        if (httpUrlMatchers.any { (matcher, resolver) ->
                 matcher.matches(HttpRequest(path = path), resolver) is Result.Success
             })
             return mockFromJSON(log.jsonObject)
@@ -140,9 +140,9 @@ class ValidateViaLogs : Callable<Unit> {
         return null
     }
 
-    private fun findMatchingURLMatchers(feature: Feature): List<Pair<URLMatcher, Resolver>> {
-        val urlMatchers: List<Pair<URLMatcher, Resolver>> = feature.scenarios.map {
-            Pair(it.httpRequestPattern.urlMatcher, it.resolver)
+    private fun findMatchingURLMatchers(feature: Feature): List<Pair<HttpURLPattern, Resolver>> {
+        val httpUrlMatchers: List<Pair<HttpURLPattern, Resolver>> = feature.scenarios.map {
+            Pair(it.httpRequestPattern.httpUrlPattern, it.resolver)
         }.map { (matcher, resolver) ->
             Triple(matcher, matcher?.matches(URI.create(urlPathFilter)), resolver)
         }.filter {
@@ -150,6 +150,6 @@ class ValidateViaLogs : Callable<Unit> {
         }.map {
             Pair(it.first!!, it.third)
         }
-        return urlMatchers
+        return httpUrlMatchers
     }
 }

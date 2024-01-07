@@ -292,12 +292,12 @@ data class Feature(
 
     private fun getBadRequestsOrDefault(scenario: Scenario): BadRequestOrDefault? {
         val badRequestResponses = scenarios.filter {
-            it.httpRequestPattern.urlMatcher!!.path == scenario.httpRequestPattern.urlMatcher!!.path
+            it.httpRequestPattern.httpUrlPattern!!.path == scenario.httpRequestPattern.httpUrlPattern!!.path
                     && it.httpResponsePattern.status.toString().startsWith("4")
         }.associate { it.httpResponsePattern.status to it.httpResponsePattern }
 
         val defaultResponse: HttpResponsePattern? = scenarios.find {
-            it.httpRequestPattern.urlMatcher!!.path == scenario.httpRequestPattern.urlMatcher!!.path
+            it.httpRequestPattern.httpUrlPattern!!.path == scenario.httpRequestPattern.httpUrlPattern!!.path
                     && it.httpResponsePattern.status == DEFAULT_RESPONSE_CODE
         }?.httpResponsePattern
 
@@ -366,16 +366,16 @@ data class Feature(
     }
 
     private fun convergeURLMatcher(baseScenario: Scenario, newScenario: Scenario): Scenario {
-        if (baseScenario.httpRequestPattern.urlMatcher!!.encompasses(
-                newScenario.httpRequestPattern.urlMatcher!!,
+        if (baseScenario.httpRequestPattern.httpUrlPattern!!.encompasses(
+                newScenario.httpRequestPattern.httpUrlPattern!!,
                 baseScenario.resolver,
                 newScenario.resolver
             ) is Result.Success
         )
             return baseScenario
 
-        val basePathParts = baseScenario.httpRequestPattern.urlMatcher.pathPattern
-        val newPathParts = newScenario.httpRequestPattern.urlMatcher.pathPattern
+        val basePathParts = baseScenario.httpRequestPattern.httpUrlPattern.pathParamPatterns
+        val newPathParts = newScenario.httpRequestPattern.httpUrlPattern.pathParamPatterns
 
         val convergedPathPattern: List<URLPathPattern> = basePathParts.zip(newPathParts).map { (base, new) ->
             if(base.pattern.encompasses(new.pattern, baseScenario.resolver, newScenario.resolver) is Result.Success)
@@ -384,7 +384,7 @@ data class Feature(
                 if(isInteger(base) && isInteger(new))
                     URLPathPattern(NumberPattern(), key = "id")
                 else
-                    throw ContractException("Can't figure out how to converge these URLs: ${baseScenario.httpRequestPattern.urlMatcher.path}, ${newScenario.httpRequestPattern.urlMatcher.path}")
+                    throw ContractException("Can't figure out how to converge these URLs: ${baseScenario.httpRequestPattern.httpUrlPattern.path}, ${newScenario.httpRequestPattern.httpUrlPattern.path}")
             }
         }
 
@@ -395,11 +395,11 @@ data class Feature(
             }
         }.let { if(it.startsWith("/")) it else "/$it"}
 
-        val convergedURLMatcher: URLMatcher = baseScenario.httpRequestPattern.urlMatcher.copy(pathPattern = convergedPathPattern, path = convergedPath)
+        val convergedHttpURLPattern: HttpURLPattern = baseScenario.httpRequestPattern.httpUrlPattern.copy(pathParamPatterns = convergedPathPattern, path = convergedPath)
 
         return baseScenario.copy(
             httpRequestPattern =  baseScenario.httpRequestPattern.copy(
-                urlMatcher = convergedURLMatcher
+                httpUrlPattern = convergedHttpURLPattern
             )
         )
     }
@@ -423,7 +423,7 @@ data class Feature(
 
         return if (baseScenario.httpRequestPattern.formFieldsPattern.size == 1) {
             if (newScenario.httpRequestPattern.formFieldsPattern.size != 1)
-                throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} exists with different form fields")
+                throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.httpUrlPattern?.path} exists with different form fields")
 
             val baseRawPattern = baseScenario.httpRequestPattern.formFieldsPattern.values.first()
             val resolvedBasePattern = resolvedHop(baseRawPattern, baseScenario.resolver)
@@ -432,12 +432,12 @@ data class Feature(
             val resolvedNewPattern = resolvedHop(newRawPattern, newScenario.resolver)
 
             if (isObjectType(resolvedBasePattern) && !isObjectType(resolvedNewPattern))
-                throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} exists with multiple payload types")
+                throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.httpUrlPattern?.path} exists with multiple payload types")
 
             val converged: Pattern = when {
                 resolvedBasePattern.pattern is String && builtInPatterns.contains(resolvedBasePattern.pattern) -> {
                     if (resolvedBasePattern.pattern != resolvedNewPattern.pattern)
-                        throw ContractException("Cannot converge ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} because there are multiple types of request payloads")
+                        throw ContractException("Cannot converge ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.httpUrlPattern?.path} because there are multiple types of request payloads")
 
                     resolvedBasePattern
                 }
@@ -445,10 +445,10 @@ data class Feature(
                     if (baseRawPattern.pattern == newRawPattern.pattern && isObjectType(resolvedBasePattern))
                         baseRawPattern
                     else
-                        throw ContractException("Cannot converge different types ${baseRawPattern.pattern} and ${newRawPattern.pattern} found in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path}")
+                        throw ContractException("Cannot converge different types ${baseRawPattern.pattern} and ${newRawPattern.pattern} found in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.httpUrlPattern?.path}")
                 }
                 else ->
-                    TODO("Converging of type ${resolvedBasePattern.pattern} and ${resolvedNewPattern.pattern} in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path}")
+                    TODO("Converging of type ${resolvedBasePattern.pattern} and ${resolvedNewPattern.pattern} in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.httpUrlPattern?.path}")
             }
 
             baseScenario.copy(
@@ -531,14 +531,14 @@ data class Feature(
         baseRequestBody is DeferredPattern && newRequestBody is DeferredPattern && baseRequestBody.pattern == newRequestBody.pattern
 
     private fun convergeQueryParameters(baseScenario: Scenario, newScenario: Scenario): Scenario {
-        val baseQueryParams = baseScenario.httpRequestPattern.urlMatcher?.queryPattern!!
-        val newQueryParams = newScenario.httpRequestPattern.urlMatcher?.queryPattern!!
+        val baseQueryParams = baseScenario.httpRequestPattern.httpUrlPattern?.queryPatterns!!
+        val newQueryParams = newScenario.httpRequestPattern.httpUrlPattern?.queryPatterns!!
 
         val convergedQueryParams = convergePatternMap(baseQueryParams, newQueryParams)
 
         return baseScenario.copy(
             httpRequestPattern = baseScenario.httpRequestPattern.copy(
-                urlMatcher = baseScenario.httpRequestPattern.urlMatcher.copy(queryPattern = convergedQueryParams)
+                httpUrlPattern = baseScenario.httpRequestPattern.httpUrlPattern.copy(queryPatterns = convergedQueryParams)
             )
         )
     }
@@ -604,7 +604,7 @@ data class Feature(
             throw ContractException("Scenario ${it.name} has no method")
         }
 
-        scenarios.find { it.httpRequestPattern.urlMatcher == null }?.let {
+        scenarios.find { it.httpRequestPattern.httpUrlPattern == null }?.let {
             throw ContractException("Scenario ${it.name} has no path")
         }
 
@@ -616,13 +616,13 @@ data class Feature(
         }.let { if(it.startsWith("/")) it else "/$it"}
 
         val urlPrefixMap = toOpenAPIURLPrefixMap(scenarios.mapNotNull {
-            it.httpRequestPattern.urlMatcher?.path
+            it.httpRequestPattern.httpUrlPattern?.path
         }.map {
             normalize(it)
         }.toSet().toList(), MappedURLType.PATH_ONLY)
 
         val payloadAdjustedScenarios: List<Scenario> = scenarios.map { rawScenario ->
-            val prefix = urlPrefixMap.getValue(normalize(rawScenario.httpRequestPattern.urlMatcher?.path!!))
+            val prefix = urlPrefixMap.getValue(normalize(rawScenario.httpRequestPattern.httpUrlPattern?.path!!))
 
             var scenario = rawScenario
 
@@ -643,7 +643,7 @@ data class Feature(
                     patterns = newTypes,
                     httpRequestPattern = scenario.httpRequestPattern.copy(
                         body = newRequestBody,
-                        urlMatcher = numberTemplatized(scenario.httpRequestPattern.urlMatcher)
+                        httpUrlPattern = numberTemplatized(scenario.httpRequestPattern.httpUrlPattern)
                     )
                 )
             }
@@ -688,7 +688,7 @@ data class Feature(
         }
 
         val paths: List<Pair<String, PathItem>> = rawCombinedScenarios.fold(emptyList()) { acc, scenario ->
-            val pathName = scenario.httpRequestPattern.urlMatcher!!.toOpenApiPath()
+            val pathName = scenario.httpRequestPattern.httpUrlPattern!!.toOpenApiPath()
 
             val existingPathItem = acc.find { it.first == pathName }?.second
             val pathItem = existingPathItem ?: PathItem()
@@ -703,7 +703,7 @@ data class Feature(
                 this.summary = withoutQueryParams(scenario.name)
             }
 
-            val pathParameters = scenario.httpRequestPattern.urlMatcher.pathParameters()
+            val pathParameters = scenario.httpRequestPattern.httpUrlPattern.pathParameters()
 
             val openApiPathParameters = pathParameters.map {
                 val pathParameter: Parameter = PathParameter()
@@ -711,7 +711,7 @@ data class Feature(
                 pathParameter.schema = toOpenApiSchema(it.pattern)
                 pathParameter
             }
-            val queryParameters = scenario.httpRequestPattern.urlMatcher.queryPattern
+            val queryParameters = scenario.httpRequestPattern.httpUrlPattern.queryPatterns
             val openApiQueryParameters = queryParameters.map { (key, pattern) ->
                 val queryParameter: Parameter = QueryParameter()
                 queryParameter.name = key.removeSuffix("?")
@@ -835,11 +835,11 @@ data class Feature(
         return name.replace(Regex("""\?.*$"""), "")
     }
 
-    private fun numberTemplatized(urlMatcher: URLMatcher?): URLMatcher {
-        if(urlMatcher!!.pathPattern.any { it.pattern !is ExactValuePattern })
-            return urlMatcher
+    private fun numberTemplatized(httpUrlPattern: HttpURLPattern?): HttpURLPattern {
+        if(httpUrlPattern!!.pathParamPatterns.any { it.pattern !is ExactValuePattern })
+            return httpUrlPattern
 
-        val numberTemplatizedPathPattern: List<URLPathPattern> = urlMatcher.pathPattern.map { type ->
+        val numberTemplatizedPathPattern: List<URLPathPattern> = httpUrlPattern.pathParamPatterns.map { type ->
             if(isInteger(type))
                 URLPathPattern(NumberPattern(), key = "id")
             else
@@ -853,7 +853,7 @@ data class Feature(
             }
         }.let { if(it.startsWith("/")) it else "/$it"}
 
-        return urlMatcher.copy(pathPattern = numberTemplatizedPathPattern, path = numberTemplatizedPath)
+        return httpUrlPattern.copy(pathParamPatterns = numberTemplatizedPathPattern, path = numberTemplatizedPath)
     }
 
     private fun requestBodySchema(
@@ -1307,7 +1307,7 @@ private fun lexScenario(
         when (step.keyword) {
             in HTTP_METHODS -> {
                 step.words.getOrNull(1)?.let {
-                    val urlMatcher = try {
+                    val urlPattern = try {
                         toURLMatcherWithOptionalQueryParams(URI.create(step.rest))
                     } catch (e: Throwable) {
                         throw Exception(
@@ -1318,7 +1318,7 @@ private fun lexScenario(
 
                     scenarioInfo.copy(
                         httpRequestPattern = scenarioInfo.httpRequestPattern.copy(
-                            urlMatcher = urlMatcher,
+                            httpUrlPattern = urlPattern,
                             method = step.keyword.uppercase()
                         )
                     )
@@ -1772,11 +1772,11 @@ private fun List<String>.second(): String {
 }
 
 fun similarURLPath(baseScenario: Scenario, newScenario: Scenario): Boolean {
-    if(baseScenario.httpRequestPattern.urlMatcher?.encompasses(newScenario.httpRequestPattern.urlMatcher!!, baseScenario.resolver, newScenario.resolver) is Result.Success)
+    if(baseScenario.httpRequestPattern.httpUrlPattern?.encompasses(newScenario.httpRequestPattern.httpUrlPattern!!, baseScenario.resolver, newScenario.resolver) is Result.Success)
         return true
 
-    val basePathParts = baseScenario.httpRequestPattern.urlMatcher!!.pathPattern
-    val newPathParts = newScenario.httpRequestPattern.urlMatcher!!.pathPattern
+    val basePathParts = baseScenario.httpRequestPattern.httpUrlPattern!!.pathParamPatterns
+    val newPathParts = newScenario.httpRequestPattern.httpUrlPattern!!.pathParamPatterns
 
     if(basePathParts.size != newPathParts.size)
         return false

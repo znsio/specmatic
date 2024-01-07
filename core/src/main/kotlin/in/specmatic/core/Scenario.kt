@@ -86,7 +86,7 @@ data class Scenario(
 
     override val path: String
         get() {
-            return httpRequestPattern.urlMatcher?.path ?: ""
+            return httpRequestPattern.httpUrlPattern?.path ?: ""
         }
 
     override val status: Int
@@ -434,7 +434,7 @@ data class Scenario(
 
     override fun testDescription(): String {
         val method = this.httpRequestPattern.method
-        val path = this.httpRequestPattern.urlMatcher?.path ?: ""
+        val path = this.httpRequestPattern.httpUrlPattern?.path ?: ""
         val responseStatus = this.httpResponsePattern.status
         val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | EX:${exampleName.trim()}" }
 

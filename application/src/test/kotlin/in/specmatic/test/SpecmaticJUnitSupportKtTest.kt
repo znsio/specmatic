@@ -51,7 +51,7 @@ paths:
                 type: number
         """.trimIndent(), "").toFeature()
 
-    val contractTests = contract.generateContractTests(emptyList())
+    private val contractTests = contract.generateContractTests(emptyList())
 
     @Test
     fun `should select tests containing the value of filterName in testDescription`() {

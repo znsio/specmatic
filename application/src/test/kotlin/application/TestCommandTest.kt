@@ -23,7 +23,7 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import java.util.stream.Stream
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = arrayOf(SpecmaticApplication::class, TestCommand::class))
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, TestCommand::class])
 internal class TestCommandTest {
     @MockkBean
     lateinit var specmaticConfig: SpecmaticConfig
@@ -58,7 +58,7 @@ internal class TestCommandTest {
     }
 
     @Test
-    fun `when contract files are given it should not load from qontract config`() {
+    fun `when contract files are given it should not load from specmatic config`() {
         CommandLine(testCommand, factory).execute(contractsToBeRunAsTests[0], contractsToBeRunAsTests[1])
         verify(exactly = 0) { specmaticConfig.contractTestPaths() }
         assertThat(System.getProperty(CONTRACT_PATHS)).isEqualTo(contractsToBeRunAsTests.joinToString(","))

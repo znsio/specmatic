@@ -29,7 +29,7 @@ class ContractExecutionListener : TestExecutionListener {
 
     private val failedLog: MutableList<String> = mutableListOf()
 
-    private var couldNotStart = false;
+    private var couldNotStart = false
 
     private val printer: ContractExecutionPrinter = getContractExecutionPrinter()
 

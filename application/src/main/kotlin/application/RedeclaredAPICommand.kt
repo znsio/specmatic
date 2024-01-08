@@ -33,19 +33,19 @@ fun loadContractData(it: File) = try {
 class ReDeclaredAPICommand: Callable<Unit> {
     @CommandLine.Command(name = "file", description = ["Check the specified contract for re-declarations"])
     fun file(@CommandLine.Parameters(paramLabel = "contractPath") contractFilePath: String): Int {
-        val redeclarations = findReDeclaredContracts(ContractToCheck(contractFilePath, SystemGit()))
+        val reDeclarations = findReDeclaredContracts(ContractToCheck(contractFilePath, SystemGit()))
 
-        if(redeclarations.isNotEmpty()) {
+        if(reDeclarations.isNotEmpty()) {
             logger.log("Some APIs in $contractFilePath have been declared in other files as well.")
             logger.newLine()
         }
 
-        redeclarations.forEach { (newPath, contracts) ->
+        reDeclarations.forEach { (newPath, contracts) ->
             logger.log(newPath)
             logger.log(contracts.joinToString("\n") { "- $it" })
         }
 
-        return if(redeclarations.isNotEmpty())
+        return if(reDeclarations.isNotEmpty())
             1
         else
             0
@@ -73,7 +73,7 @@ class ReDeclaredAPICommand: Callable<Unit> {
             it !in ignorableAPIs
         }
 
-        logRedeclarations(json, reDeclarations)
+        logReDeclarations(json, reDeclarations)
 
         return if(reDeclarations.isNotEmpty())
             1
@@ -88,13 +88,13 @@ class ReDeclaredAPICommand: Callable<Unit> {
             findReDeclaredContracts(ContractToCheck(it, SystemGit()))
         }.groupBy {
             it.apiURLPath
-        }.mapValues {
-            it.value.flatMap { it.contractsContainingAPI }.distinct()
+        }.mapValues { entry ->
+            entry.value.flatMap { it.contractsContainingAPI }.distinct()
         }.filter {
             it.value.size > 1
         }
 
-        logRedeclarations(json, reDeclarations)
+        logReDeclarations(json, reDeclarations)
 
         return if(reDeclarations.isNotEmpty())
             1
@@ -102,19 +102,13 @@ class ReDeclaredAPICommand: Callable<Unit> {
             0
     }
 
-    private fun logRedeclarations(
+    private fun logReDeclarations(
         json: Boolean,
         reDeclarations: Map<String, List<String>>
     ) {
-        val sorted = reDeclarations.entries.sortedBy { (api, _) ->
-            api
-        }
+        val sorted = reDeclarations.entries.sortedBy { (api, _) -> api }
 
-        if (json) {
-            printJSON(sorted)
-        } else {
-            printText(reDeclarations, sorted)
-        }
+        if (json) printJSON(sorted) else printText(reDeclarations, sorted)
     }
 
     private fun printText(
@@ -190,14 +184,14 @@ fun findReDeclaredContracts(
         val paths: List<String> = contractToCheck.getPathsInContract() ?: emptyList()
         val contracts: List<Pair<Feature, String>> = contractToCheck.fetchAllOtherContracts()
 
-        findRedeclarations(paths, contracts)
+        findReDeclarations(paths, contracts)
     } catch(e: Throwable) {
         logger.log("Unhandled exception caught when parsing contract contra${contractToCheck.path}")
         emptyList()
     }
 }
 
-fun findRedeclarations(
+fun findReDeclarations(
     newPaths: List<String>,
     contracts: List<Pair<Feature, String>>
 ): List<APIReDeclarations> {
@@ -238,7 +232,6 @@ open class CanonicalFile(val file: File) {
 
     constructor (path: String) : this(File(path).canonicalFile)
     fun readText(): String = file.readText()
-    fun relativeTo(parentDir: File): File = file.relativeTo(parentDir)
 }
 
 fun listOfAllContractFiles(dir: File): List<File> {

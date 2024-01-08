@@ -1,15 +1,17 @@
 package application
 
-import `in`.specmatic.core.*
+import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import `in`.specmatic.core.CONTRACT_EXTENSIONS
+import `in`.specmatic.core.Configuration
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
+import `in`.specmatic.core.WorkingDirectory
 import `in`.specmatic.core.log.*
 import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.stub.ContractStub
 import `in`.specmatic.stub.HttpClientFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.ApplicationContext
 import picocli.CommandLine.*
 import java.io.File
 import java.util.concurrent.Callable
@@ -26,9 +28,6 @@ class StubCommand : Callable<Unit> {
 
     @Autowired
     private var stubLoaderEngine: StubLoaderEngine = StubLoaderEngine()
-
-    @Autowired
-    private lateinit var context: ApplicationContext
 
     @Autowired
     private var specmaticConfig: SpecmaticConfig = SpecmaticConfig()
@@ -222,7 +221,7 @@ internal fun validateContractFileExtensions(contractPaths: List<String>, fileOpe
     contractPaths.filter { fileOperations.isFile(it) && fileOperations.extensionIsNot(it, CONTRACT_EXTENSIONS) }.let {
         if (it.isNotEmpty()) {
             val files = it.joinToString("\n")
-            exitWithMessage("The following files do not end with ${CONTRACT_EXTENSIONS} and cannot be used:\n$files")
+            exitWithMessage("The following files do not end with $CONTRACT_EXTENSIONS and cannot be used:\n$files")
         }
     }
 }

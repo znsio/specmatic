@@ -1,7 +1,6 @@
 package application
 
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.git.NonZeroExitError
 import `in`.specmatic.core.git.SystemGit

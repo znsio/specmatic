@@ -7,17 +7,17 @@ import org.junit.jupiter.api.Test
 import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.core.utilities.contractFilePathsFrom
 
-internal class QontractConfigTest {
+internal class SpecmaticConfigTest {
 
     @Test
     fun `should return contractStubPathData`() {
-        val contractPathData = ContractPathData("aaa", "bbbb")
+        val contractPathData = ContractPathData("baseDir", "invalidPath")
         mockkStatic("in.specmatic.core.utilities.Utilities")
         every {
             contractFilePathsFrom(any(), any(), any())
         }.returns(listOf(contractPathData))
 
         val paths = SpecmaticConfig().contractStubPathData()
-        assertThat(paths.equals(listOf(contractPathData))).isTrue
+        assertThat(paths == listOf(contractPathData)).isTrue
     }
 }

@@ -6,9 +6,8 @@ import org.springframework.stereotype.Component
 import picocli.CommandLine
 
 @Component
-class QontractApplicationRunner(specmaticCommand: SpecmaticCommand, factory: CommandLine.IFactory) : CommandLineRunner, ExitCodeGenerator {
+class SpecmaticApplicationRunner(specmaticCommand: SpecmaticCommand, private val factory: CommandLine.IFactory) : CommandLineRunner, ExitCodeGenerator {
     private val myCommand: SpecmaticCommand = specmaticCommand
-    private val factory: CommandLine.IFactory = factory
     private var exitCode = 0
 
     @Throws(Exception::class)

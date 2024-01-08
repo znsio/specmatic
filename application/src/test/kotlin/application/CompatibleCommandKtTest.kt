@@ -1,17 +1,15 @@
 package application
 
 import com.ninjasquad.springmockk.MockkBean
+import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.Result
+import `in`.specmatic.core.Results
+import `in`.specmatic.core.git.GitCommand
 import io.mockk.every
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
-import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.Result
-import `in`.specmatic.core.Results
-import `in`.specmatic.core.git.GitCommand
-import `in`.specmatic.core.git.SystemGit
-import java.io.File
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, CompatibleCommand::class])
 internal class CompatibleCommandKtTest {

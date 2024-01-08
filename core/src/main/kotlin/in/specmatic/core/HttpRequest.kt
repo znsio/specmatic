@@ -24,10 +24,10 @@ fun urlToQueryParams(uri: URI): Map<String, String> {
     if (uri.query == null)
         return emptyMap()
 
-    return uri.query.split("&").map {
+    return uri.query.split("&").associate {
         val parts = it.split("=".toRegex(), 2)
         Pair(parts[0], parts[1])
-    }.toMap()
+    }
 }
 
 data class HttpRequest(
@@ -202,7 +202,7 @@ data class HttpRequest(
     }
 
     private fun withoutDuplicateHostHeader(headers: Map<String, String>, url: URL?): Map<String, String> {
-        if (url == null)
+        if (url === null)
             return headers
 
         if (isNotIPAddress(url.host))

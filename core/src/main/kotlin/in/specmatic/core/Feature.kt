@@ -8,7 +8,6 @@ import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.*
-import `in`.specmatic.core.wsdl.parser.MappedURLType
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
@@ -165,14 +164,13 @@ data class Feature(
 
     private fun lookupScenario(
         httpRequest: HttpRequest,
-        scenarios: List<Scenario>,
-        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+        scenarios: List<Scenario>
     ): Sequence<Pair<Scenario, Result>> {
         val scenarioSequence = scenarios.asSequence()
 
         val localCopyOfServerState = serverState
         return scenarioSequence.zip(scenarioSequence.map {
-            it.matches(httpRequest, localCopyOfServerState, mismatchMessages)
+            it.matches(httpRequest, localCopyOfServerState, DefaultMismatchMessages)
         })
     }
 
@@ -309,7 +307,7 @@ data class Feature(
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> {
         return resolverStrategies.generation.let {
-            it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this, suggestions)
+            it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
         }
     }
 
@@ -353,7 +351,7 @@ data class Feature(
         serverState = emptyMap()
     }
 
-    fun combine(baseScenario: Scenario, newScenario: Scenario): Scenario {
+    private fun combine(baseScenario: Scenario, newScenario: Scenario): Scenario {
         return convergeURLMatcher(baseScenario, newScenario).let { convergedScenario ->
             convergeHeaders(convergedScenario, newScenario)
         }.let { convergedScenario ->
@@ -487,7 +485,7 @@ data class Feature(
         return updateConverged(converge(basePayload, newPayload, scenarioName))
     }
 
-    fun converge(
+    private fun converge(
         basePayload: Pattern,
         newPayload: Pattern,
         scenarioName: String,
@@ -504,7 +502,7 @@ data class Feature(
             val convergedNewPattern: Pattern = converge(basePayload.pattern, newPayload.pattern, scenarioName)
 
             ListPattern(convergedNewPattern)
-        } else if (bothAreIdenticalDeferreds(basePayload, newPayload)) {
+        } else if (bothAreIdenticalDeferredPatterns(basePayload, newPayload)) {
             basePayload
         } else if (bothAreTheSamePrimitive(basePayload, newPayload)) {
             basePayload
@@ -524,15 +522,15 @@ data class Feature(
                 && builtInPatterns.contains(newRequestBody.pattern as String)
                 && baseRequestBody.pattern == newRequestBody.pattern)
 
-    private fun bothAreIdenticalDeferreds(
+    private fun bothAreIdenticalDeferredPatterns(
         baseRequestBody: Pattern,
         newRequestBody: Pattern
     ) =
         baseRequestBody is DeferredPattern && newRequestBody is DeferredPattern && baseRequestBody.pattern == newRequestBody.pattern
 
     private fun convergeQueryParameters(baseScenario: Scenario, newScenario: Scenario): Scenario {
-        val baseQueryParams = baseScenario.httpRequestPattern.httpQueryParamPattern?.queryPatterns!!
-        val newQueryParams = newScenario.httpRequestPattern.httpQueryParamPattern?.queryPatterns!!
+        val baseQueryParams = baseScenario.httpRequestPattern.httpQueryParamPattern.queryPatterns
+        val newQueryParams = newScenario.httpRequestPattern.httpQueryParamPattern.queryPatterns
 
         val convergedQueryParams = convergePatternMap(baseQueryParams, newQueryParams)
 
@@ -562,7 +560,7 @@ data class Feature(
         )
     }
 
-    fun toOpenAPIURLPrefixMap(urls: List<String>, mappedURLType: MappedURLType): Map<String, String> {
+    private fun toOpenAPIURLPrefixMap(urls: List<String>): Map<String, String> {
         val normalisedURL = urls.map { url ->
             val path =
                 url.removeSuffix("/").removePrefix("http://").removePrefix("https://").split("/").joinToString("/") {
@@ -574,9 +572,9 @@ data class Feature(
             path.let { if(it.startsWith("/")) it else "/$it"}
         }.distinct()
 
-        val minLength = normalisedURL.map {
+        val minLength = normalisedURL.minOfOrNull {
             it.split("/").size
-        }.minOrNull() ?: throw ContractException("No schema namespaces found")
+        } ?: throw ContractException("No schema namespaces found")
 
         val segmentCount = 1.until(minLength + 1).first { length ->
             val segments = normalisedURL.map { url ->
@@ -619,7 +617,7 @@ data class Feature(
             it.httpRequestPattern.httpPathPattern?.path
         }.map {
             normalize(it)
-        }.toSet().toList(), MappedURLType.PATH_ONLY)
+        }.toSet().toList())
 
         val payloadAdjustedScenarios: List<Scenario> = scenarios.map { rawScenario ->
             val prefix = urlPrefixMap.getValue(normalize(rawScenario.httpRequestPattern.httpPathPattern?.path!!))
@@ -643,7 +641,7 @@ data class Feature(
                     patterns = newTypes,
                     httpRequestPattern = scenario.httpRequestPattern.copy(
                         body = newRequestBody,
-                        httpPathPattern = numberTemplatized(scenario.httpRequestPattern.httpPathPattern)
+                        httpPathPattern = toPathPatternWithId(scenario.httpRequestPattern.httpPathPattern)
                     )
                 )
             }
@@ -711,7 +709,7 @@ data class Feature(
                 pathParameter.schema = toOpenApiSchema(it.pattern)
                 pathParameter
             }
-            val queryParameters = scenario.httpRequestPattern.httpQueryParamPattern!!.queryPatterns
+            val queryParameters = scenario.httpRequestPattern.httpQueryParamPattern.queryPatterns
             val openApiQueryParameters = queryParameters.map { (key, pattern) ->
                 val queryParameter: Parameter = QueryParameter()
                 queryParameter.name = key.removeSuffix("?")
@@ -835,25 +833,25 @@ data class Feature(
         return name.replace(Regex("""\?.*$"""), "")
     }
 
-    private fun numberTemplatized(httpPathPattern: HttpPathPattern?): HttpPathPattern {
+    private fun toPathPatternWithId(httpPathPattern: HttpPathPattern?): HttpPathPattern {
         if(httpPathPattern!!.pathSegmentPatterns.any { it.pattern !is ExactValuePattern })
             return httpPathPattern
 
-        val numberTemplatizedPathPattern: List<URLPathSegmentPattern> = httpPathPattern.pathSegmentPatterns.map { type ->
+        val pathSegmentPatternsWithIds: List<URLPathSegmentPattern> = httpPathPattern.pathSegmentPatterns.map { type ->
             if(isInteger(type))
                 URLPathSegmentPattern(NumberPattern(), key = "id")
             else
                 type
         }
 
-        val numberTemplatizedPath: String = numberTemplatizedPathPattern.joinToString("/") {
+        val pathWithIds: String = pathSegmentPatternsWithIds.joinToString("/") {
             when (it.pattern) {
                 is ExactValuePattern -> it.pattern.pattern.toStringLiteral()
                 else -> "(${it.key}:${it.pattern.typeName})"
             }
         }.let { if(it.startsWith("/")) it else "/$it"}
 
-        return httpPathPattern.copy(pathSegmentPatterns = numberTemplatizedPathPattern, path = numberTemplatizedPath)
+        return httpPathPattern.copy(pathSegmentPatterns = pathSegmentPatternsWithIds, path = pathWithIds)
     }
 
     private fun requestBodySchema(
@@ -921,7 +919,7 @@ data class Feature(
 
                 Pair("application/x-www-form-urlencoded", mediaType)
             } else if (scenario.httpRequestPattern.multiPartFormDataPattern.isNotEmpty()) {
-                throw NotImplementedError("mulitpart form data not yet supported")
+                throw NotImplementedError("multipart form data not yet supported")
             } else {
                 null
             }
@@ -934,7 +932,7 @@ data class Feature(
         return Pair("application/json", mediaType)
     }
 
-    fun cleanupDescriptor(descriptor: String): String {
+    private fun cleanupDescriptor(descriptor: String): String {
         val withoutBrackets = withoutPatternDelimiters(descriptor)
         val modifiersTrimmed = withoutBrackets.trimEnd('*', '?')
 
@@ -948,7 +946,7 @@ data class Feature(
         return "${base.trim('_')}$modifiers"
     }
 
-    fun getTypeAndDescriptor(map: Map<String, Pattern>, key: String): Pair<String, Pattern> {
+    private fun getTypeAndDescriptor(map: Map<String, Pattern>, key: String): Pair<String, Pattern> {
         val nonOptionalKey = withoutOptionality(key)
         val optionalKey = "$nonOptionalKey?"
         val commonValueType = map.getOrElse(nonOptionalKey) { map.getValue(optionalKey) }
@@ -997,9 +995,9 @@ data class Feature(
                 ) {
                     val type: Pattern = listOf(map1, map2).map {
                         getTypeAndDescriptor(it, entry.key)
-                    }.map {
+                    }.associate {
                         cleanupDescriptor(it.first) to it.second
-                    }.toMap().getValue(cleanedUpDescriptors.second())
+                    }.getValue(cleanedUpDescriptors.second())
 
                     type
                 } else {
@@ -1515,14 +1513,14 @@ fun values(
         throw ContractException("Incorrect syntax for value statement: $rest - it should be \"Given value <value name> from <$APPLICATION_NAME file name>\"")
 
     val valueStoreName = parts[0]
-    val qontractFileName = parts[2]
+    val specFileName = parts[2]
 
-    val qontractFilePath = ContractFileWithExports(qontractFileName, AnchorFile(filePath))
+    val specFilePath = ContractFileWithExports(specFileName, AnchorFile(filePath))
 
     return backgroundReferences.plus(scenarioReferences).plus(
         valueStoreName to References(
             valueStoreName,
-            qontractFilePath,
+            specFilePath,
             contractCache = contractCache
         )
     )

@@ -28,8 +28,8 @@ Feature: Math API
         val request1 = HttpRequest("POST", "/square", emptyMap(), parsedValue("""{"number": 10}"""))
         val request2 = HttpRequest("POST", "/square", emptyMap(), parsedValue("""{"number": 10, "description": "10"}"""))
 
-        val mock1 = ScenarioStub(request1, HttpResponse.OK(1))
-        val mock2 = ScenarioStub(request2, HttpResponse.OK(2))
+        val mock1 = ScenarioStub(request1, HttpResponse.ok(1))
+        val mock2 = ScenarioStub(request2, HttpResponse.ok(2))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
         val response = stubResponse(request2, contractInfo)
 
@@ -93,7 +93,7 @@ Feature: Math API
 """.trim())
 
         val request = HttpRequest("POST", "/square", mapOf("X-Optional-Header" to "some value"), NumberValue(10))
-        val mock = ScenarioStub(request, HttpResponse.OK(10))
+        val mock = ScenarioStub(request, HttpResponse.ok(10))
 
         val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
 
@@ -116,7 +116,7 @@ Feature: Math API
 """.trim())
 
         val request = HttpRequest("POST", "/square", emptyMap(), NumberValue(10))
-        val mock = ScenarioStub(request, HttpResponse.OK(10))
+        val mock = ScenarioStub(request, HttpResponse.ok(10))
 
         val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
 
@@ -142,8 +142,8 @@ Feature: Math API
         val request1 = HttpRequest("POST", "/square", mapOf("X-Required" to "some value"), parsedValue("""10"""))
         val request2 = HttpRequest("POST", "/square", mapOf("X-Required" to "some value", "X-Optional" to "some other value"), parsedValue("""10"""))
 
-        val mock1 = ScenarioStub(request1, HttpResponse.OK(1))
-        val mock2 = ScenarioStub(request2, HttpResponse.OK(2))
+        val mock1 = ScenarioStub(request1, HttpResponse.ok(1))
+        val mock2 = ScenarioStub(request2, HttpResponse.ok(2))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
         val response = stubResponse(request2, contractInfo)
 
@@ -165,8 +165,8 @@ Feature: Math API
         val request1 = HttpRequest("GET", "/number", queryParams = mapOf("param1" to "some value"))
         val request2 = HttpRequest("GET", "/number", queryParams = mapOf("param1" to "some value", "param2" to "some other value"))
 
-        val mock1 = ScenarioStub(request1, HttpResponse.OK(1))
-        val mock2 = ScenarioStub(request2, HttpResponse.OK(2))
+        val mock1 = ScenarioStub(request1, HttpResponse.ok(1))
+        val mock2 = ScenarioStub(request2, HttpResponse.ok(2))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
         val response = stubResponse(request2, contractInfo)
 
@@ -190,8 +190,8 @@ Feature: Math API
         val mockRequest1 = HttpRequest("POST", "/square", body = JSONObjectValue(mapOf("number" to StringValue("(number)"))))
         val mockRequest2 = HttpRequest("POST", "/square", body = JSONObjectValue(mapOf("number" to StringValue("(null)"))))
 
-        val mock1 = ScenarioStub(mockRequest1, HttpResponse.OK(NumberValue(1)))
-        val mock2 = ScenarioStub(mockRequest2, HttpResponse.OK(NumberValue(2)))
+        val mock1 = ScenarioStub(mockRequest1, HttpResponse.ok(NumberValue(1)))
+        val mock2 = ScenarioStub(mockRequest2, HttpResponse.ok(NumberValue(2)))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
 
         val actualRequest1 = HttpRequest("POST", "/square", body = JSONObjectValue(mapOf("number" to NumberValue(10))))
@@ -224,8 +224,8 @@ Feature: Math API
         val mockRequest1 = HttpRequest("POST", "/square", body = StringValue("(number)"))
         val mockRequest2 = HttpRequest("POST", "/square", body = StringValue("(empty)"))
 
-        val mock1 = ScenarioStub(mockRequest1, HttpResponse.OK(1))
-        val mock2 = ScenarioStub(mockRequest2, HttpResponse.OK(2))
+        val mock1 = ScenarioStub(mockRequest1, HttpResponse.ok(1))
+        val mock2 = ScenarioStub(mockRequest2, HttpResponse.ok(2))
         val contractInfo = listOf(Pair(behaviour, listOf(mock1, mock2)))
 
         val actualRequest1 = HttpRequest("POST", "/square", body = NumberValue(10))
@@ -256,7 +256,7 @@ Feature: Math API
 """.trim())
 
         val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartContentValue("number", NumberValue(10))))
-        val mock = ScenarioStub(request, HttpResponse.OK(10))
+        val mock = ScenarioStub(request, HttpResponse.ok(10))
 
         val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
 
@@ -299,7 +299,7 @@ Feature: Math API
         """.trim())
 
         val request = HttpRequest("POST", "/square", multiPartFormData = listOf(MultiPartFileValue("number", "number.txt", "text/plain", null)))
-        val mock = ScenarioStub(request, HttpResponse.OK(10))
+        val mock = ScenarioStub(request, HttpResponse.ok(10))
 
         val response = stubResponse(request, listOf(Pair(behaviour, listOf(mock))))
 
@@ -330,7 +330,7 @@ Feature: Math API
     }
 
     @Test
-    fun `should get a stub out of a qontract and a matching stub file`() {
+    fun `should get a stub out of a spec file and a matching stub file`() {
         val feature = parseGherkinStringToFeature("""
 Feature: Math API
     Scenario: Square of a number
@@ -352,7 +352,7 @@ Feature: Math API
     }
 
     @Test
-    fun `qontract should reject a stub file that does not match the qontract`() {
+    fun `spec file should reject a stub file that does not match the spec file`() {
         val feature = parseGherkinStringToFeature("""
 Feature: Math API
     Scenario: Square of a number
@@ -384,7 +384,7 @@ sample.json didn't match math.$CONTRACT_EXTENSION
     }
 
     @Test
-    fun `should get a stub out of two qontracts and a single stub file that matches only one of them`() {
+    fun `should get a stub out of two spec files and a single stub file that matches only one of them`() {
         val squareFeature = parseGherkinStringToFeature("""
 Feature: Square API
     Scenario: Square of a number

@@ -38,9 +38,9 @@ fun generateBackwardCompatibilityTests(older: Feature, newerContract: Feature): 
 
 fun testBackwardCompatibility(
     oldScenario: Scenario,
-    newFeature_: Feature
+    newIncomingFeature: Feature
 ): List<Result> {
-    val newFeature = newFeature_.copy()
+    val newFeature = newIncomingFeature.copy()
 
     newFeature.setServerState(oldScenario.expectedFacts)
 
@@ -92,9 +92,9 @@ fun testBackwardCompatibility(
 
 fun findDifferences(
     oldScenario: Scenario,
-    newFeature_: Feature
+    newIncomingFeature: Feature
 ): List<Result> {
-    val newFeature = newFeature_.copy()
+    val newFeature = newIncomingFeature.copy()
 
     newFeature.setServerState(oldScenario.expectedFacts)
 

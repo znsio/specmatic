@@ -8,7 +8,6 @@ object LogTail {
     private var logs = Collections.synchronizedList(LinkedList<LogMessage>())
     private var snapshot = emptyList<LogMessage>()
 
-    @OptIn(ExperimentalStdlibApi::class)
     fun append(msg: LogMessage) {
         logs.size
         logs.add(msg)

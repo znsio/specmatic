@@ -1,12 +1,11 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.core.Result.*
+import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.ExactValuePattern
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.Row
 import `in`.specmatic.core.pattern.isOptional
 import `in`.specmatic.core.value.Value
-import kotlin.Result
 
 interface GenerationStrategies {
     val negativePrefix: String
@@ -15,10 +14,10 @@ interface GenerationStrategies {
     fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): List<Pattern>
     fun generateHttpRequests(resolver: Resolver, body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): List<Pattern>
     fun generateHttpRequests(resolver: Resolver, body: Pattern, row: Row): List<Pattern>
-    fun resolveRow(resolver: Resolver, row: Row): Row
-    fun generateKeySubLists(resolver: Resolver, key: String, subList: List<String>): List<List<String>>
+    fun resolveRow(row: Row): Row
+    fun generateKeySubLists(key: String, subList: List<String>): List<List<String>>
     fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario>
-    fun negativeTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario>
+    fun negativeTestScenarios(feature: Feature): List<Scenario>
 }
 
 data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.onlyPositive()) : GenerationStrategies {
@@ -67,11 +66,11 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
         return fromExamples.plus(remainingVanilla)
     }
 
-    override fun resolveRow(resolver: Resolver, row: Row): Row {
+    override fun resolveRow(row: Row): Row {
         return Row()
     }
 
-    override fun generateKeySubLists(resolver: Resolver, key: String, subList: List<String>): List<List<String>> {
+    override fun generateKeySubLists(key: String, subList: List<String>): List<List<String>> {
         return if(isOptional(key)) {
             listOf(subList, subList + key)
         } else
@@ -82,7 +81,7 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
         return feature.positiveTestScenarios(suggestions)
     }
 
-    override fun negativeTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario> {
+    override fun negativeTestScenarios(feature: Feature): List<Scenario> {
         return if(positiveOnly)
             emptyList()
         else
@@ -108,11 +107,11 @@ object NonGenerativeTests : GenerationStrategies {
         }
     }
 
-    override fun resolveRow(resolver: Resolver, row: Row): Row {
+    override fun resolveRow(row: Row): Row {
         return row
     }
 
-    override fun generateKeySubLists(resolver: Resolver, key: String, subList: List<String>): List<List<String>> {
+    override fun generateKeySubLists(key: String, subList: List<String>): List<List<String>> {
         return listOf(subList + key)
     }
 
@@ -120,7 +119,7 @@ object NonGenerativeTests : GenerationStrategies {
         return feature.positiveTestScenarios(suggestions)
     }
 
-    override fun negativeTestScenarios(feature: Feature, suggestions: List<Scenario>): List<Scenario> {
+    override fun negativeTestScenarios(feature: Feature): List<Scenario> {
         return emptyList()
     }
 }

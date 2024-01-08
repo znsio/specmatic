@@ -6,7 +6,6 @@ import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.test.TestExecutor
-import io.ktor.http.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Disabled
@@ -55,7 +54,7 @@ components:
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.path).isEqualTo("/hello/10")
-                return HttpResponse.OK("success")
+                return HttpResponse.ok("success")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -111,7 +110,7 @@ components:
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.path).isEqualTo("/hello/10")
-                return HttpResponse.OK("success")
+                return HttpResponse.ok("success")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -165,7 +164,7 @@ components:
                 assertThat(request.path).isEqualTo("/hello")
                 assertThat(request.headers["X-HelloRequestHeader"]).isEqualTo("helloworld")
 
-                return HttpResponse.OK("success")
+                return HttpResponse.ok("success")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -224,7 +223,7 @@ components:
                 assertThat(request.path).isEqualTo("/hello")
                 assertThat(request.headers["X-HelloRequestHeader"]).isEqualTo("helloworld")
 
-                return HttpResponse.OK("success")
+                return HttpResponse.ok("success")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -366,7 +365,7 @@ components:
                 assertThat(request.path).isEqualTo("/hello")
                 assertThat(request.queryParams["id"]).isEqualTo("10")
 
-                return HttpResponse.OK("success")
+                return HttpResponse.ok("success")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -424,7 +423,7 @@ components:
                 assertThat(request.path).isEqualTo("/hello")
                 assertThat(request.queryParams["id"]).isEqualTo("10")
 
-                return HttpResponse.OK("success")
+                return HttpResponse.ok("success")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -482,7 +481,7 @@ components:
             override fun execute(request: HttpRequest): HttpResponse {
                 val expectedRequest = parsedJSONObject("""{"id":"abc123"}""")
                 assertThat(request.body).isEqualTo(expectedRequest)
-                return HttpResponse.OK("success")
+                return HttpResponse.ok("success")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -567,7 +566,7 @@ components:
             override fun execute(request: HttpRequest): HttpResponse {
                 val expectedRequest = parsedJSONObject("""{"id":"abc123", "name": "Jane", "description": "A person"}""")
                 assertThat(request.body).isEqualTo(expectedRequest)
-                return HttpResponse.OK("success")
+                return HttpResponse.ok("success")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -632,7 +631,7 @@ components:
             override fun execute(request: HttpRequest): HttpResponse {
                 val expectedRequest = parsedJSONObject("""{"name":"Jack"}""")
                 assertThat(request.body).isEqualTo(expectedRequest)
-                return HttpResponse.OK(parsedJSONObject("""{"id":123}"""))
+                return HttpResponse.ok(parsedJSONObject("""{"id":123}"""))
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -700,7 +699,7 @@ components:
             override fun execute(request: HttpRequest): HttpResponse {
                 val expectedRequest = parsedJSONObject("""{"name":"Jack"}""")
                 assertThat(request.body).isEqualTo(expectedRequest)
-                return HttpResponse.OK(parsedJSONObject("""{"id":123}"""))
+                return HttpResponse.ok(parsedJSONObject("""{"id":123}"""))
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -767,7 +766,7 @@ components:
             override fun execute(request: HttpRequest): HttpResponse {
                 val expectedRequest = parsedJSONObject("""{"name":"Jack"}""")
                 assertThat(request.body).isEqualTo(expectedRequest)
-                return HttpResponse.OK(parsedJSONObject("""{"id":123}"""))
+                return HttpResponse.ok(parsedJSONObject("""{"id":123}"""))
             }
 
             override fun setServerState(serverState: Map<String, Value>) {

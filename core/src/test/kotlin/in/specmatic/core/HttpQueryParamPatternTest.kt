@@ -202,9 +202,9 @@ class HttpQueryParamPatternTest {
 
     @Nested
     inner class ReturnMultipleErrors {
-        val urlMatcher = buildQueryPattern(URI.create("http://example.com/?hello=(number)"))
+        private val urlMatcher = buildQueryPattern(URI.create("http://example.com/?hello=(number)"))
         val result = urlMatcher.matches(HttpRequest("GET", "/", queryParams = mapOf("hello" to "world", "hi" to "all")), Resolver()) as Failure
-        val resultText = result.toReport().toText()
+        private val resultText = result.toReport().toText()
 
         @Test
         fun `should return as many errors as there are value mismatches`() {

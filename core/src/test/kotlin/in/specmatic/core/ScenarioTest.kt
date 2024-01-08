@@ -452,7 +452,7 @@ And response-body (number)
 
         val result = scenario.matchesMock(
             HttpRequest("POST", "/data", body = parsedJSON("""{"id": "abc123"}""")),
-            HttpResponse.OK(parsedJSON("""{"id": "abc123"}"""))
+            HttpResponse.ok(parsedJSON("""{"id": "abc123"}"""))
         )
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
@@ -509,7 +509,7 @@ paths:
 
         val result: Result = executeTest(contractTestScenarios.first(), object: TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                return HttpResponse.OK("abc")
+                return HttpResponse.ok("abc")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {

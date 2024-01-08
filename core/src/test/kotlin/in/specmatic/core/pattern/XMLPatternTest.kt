@@ -64,7 +64,7 @@ internal class XMLPatternTest {
             assertThat(xmlValue.realName).isEqualTo("ns1:items")
 
             assertThat(xmlValue.attributes.size).isOne()
-            assertThat(xmlValue.attributes.get("xmlns:ns1")).isEqualTo(StringValue("http://example.com/items"))
+            assertThat(xmlValue.attributes["xmlns:ns1"]).isEqualTo(StringValue("http://example.com/items"))
 
             assertThat(xmlValue.childNodes.size).isOne()
             assertThat(xmlValue.childNodes.first()).isInstanceOf(StringValue::class.java)
@@ -647,7 +647,8 @@ internal class XMLPatternTest {
         }
     }
 
-    class TypeLookup {
+    @Nested
+    inner class TypeLookup {
         @Test
         fun `do a type lookup for a node with the qontract namespace and match the type to the given a node`() {
             val nameType = parsedPattern("<$TYPE_ATTRIBUTE_NAME>(string)</$TYPE_ATTRIBUTE_NAME>")

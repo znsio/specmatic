@@ -26,7 +26,7 @@ class EnumPatternTest {
 
         @Test
         fun `it should not accept values of the different types`() {
-            org.junit.jupiter.api.assertThrows<ContractException> {
+            assertThrows<ContractException> {
                 EnumPattern(listOf(StringValue("01"), NumberValue(2)))
             }
         }

@@ -332,7 +332,7 @@ internal class HttpHeadersPatternTest {
 
     @Nested
     inner class ReturnMultipleErrrors {
-        val headersPattern = HttpHeadersPattern(mapOf("X-Data" to StringPattern(), "Y-Data" to NumberPattern()), ancestorHeaders = mapOf("X-Data" to StringPattern(), "Y-Data" to NumberPattern()))
+        private val headersPattern = HttpHeadersPattern(mapOf("X-Data" to StringPattern(), "Y-Data" to NumberPattern()), ancestorHeaders = mapOf("X-Data" to StringPattern(), "Y-Data" to NumberPattern()))
         val resolver = Resolver()
         val result = headersPattern.matches(mapOf("Y-Data" to "data"), resolver)
 

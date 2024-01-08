@@ -23,7 +23,6 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.launcher.Launcher
-import org.junit.platform.launcher.LauncherDiscoveryListener
 import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
 import org.springframework.beans.factory.annotation.Autowired
@@ -42,8 +41,6 @@ import java.util.concurrent.Callable
         mixinStandardHelpOptions = true,
         description = ["Run contract as tests"])
 class TestCommand : Callable<Unit> {
-    @Autowired
-    lateinit var specmaticConfig: SpecmaticConfig
 
     @Autowired
     lateinit var junitLauncher: Launcher
@@ -160,9 +157,7 @@ class TestCommand : Callable<Unit> {
             val reportFile = reportDirectory.resolve("TEST-junit-jupiter.xml")
 
             if(reportFile.isFile) {
-                val newText = reportFile.readText().let { text ->
-                    text.replace("JUnit Jupiter", "Contract Tests")
-                }.let { text ->
+                val newText = reportFile.readText().replace("JUnit Jupiter", "Contract Tests").let { text ->
                     val builder = newXMLBuilder()
                     val reportXML: Document = builder.parse(InputSource(StringReader(text)))
 

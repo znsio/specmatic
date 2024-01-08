@@ -190,7 +190,7 @@ internal class JSONObjectPatternTest {
         val type = JSONObjectPattern(mapOf("id" to NumberPattern(), "address" to StringPattern()))
         val json = parsedJSON("""{"id": "10", "person_address": "abc123"}""")
         val error: Result.Failure = type.matches(json, Resolver()) as Result.Failure
-        val reportText = error.toFailureReport().toText()
+        private val reportText = error.toFailureReport().toText()
 
         @Test
         fun `return as many errors as the number of key errors`() {
@@ -325,14 +325,6 @@ internal class JSONObjectPatternTest {
                 assertThatThrownBy { pattern.generate(Resolver()) }.isInstanceOf(ContractException::class.java)
             }
         }
-
-        @Nested
-        inner class GeneratingTests {
-            @Test
-            fun `when generating tests the properties should be within the min and max limits`() {
-
-            }
-        }
     }
 
     @Nested
@@ -416,11 +408,11 @@ internal class JSONObjectPatternTest {
         @Test
         fun `Should avoid combinatorial explosion when many request properties with many possible values`() {
             val resolver = Resolver(
-                newPatterns = (1..6).map { paramIndex ->
+                newPatterns = (1..6).associate { paramIndex ->
                     "(enum${paramIndex})" to AnyPattern((0..9).map { possibleValueIndex ->
                         ExactValuePattern(StringValue("${paramIndex}${possibleValueIndex}"))
                     }.toList())
-                }.toMap()
+                }
             )
 
             val objPattern = parsedPattern("""{"p1": "(enum1)", "p2": "(enum2)", "p3": "(enum3)", "p4": "(enum4)", "p5": "(enum5)", "p6": "(enum6)"}""")

@@ -205,7 +205,7 @@ data class HttpRequestPattern(
     private fun matchQuery(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
 
-        val result = httpQueryParamPattern!!.matches(httpRequest, resolver)
+        val result = httpQueryParamPattern.matches(httpRequest, resolver)
 
         return if (result is Failure)
             MatchSuccess(Triple(httpRequest, resolver, failures.plus(result)))

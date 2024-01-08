@@ -4,13 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.ObjectMapper
-import `in`.specmatic.DefaultStrategies
 import `in`.specmatic.core.*
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.JSONObjectPattern
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.JSONObjectValue
@@ -792,7 +790,7 @@ Feature: multipart file upload
                 assertThat(multipartFileValues.size).isEqualTo(1)
                 assertThat(multipartFileValues.first().name).isEqualTo("fileName")
                 assertThat(multipartFileValues.first().filename).matches(fileName)
-                return HttpResponse.OK("success")
+                return HttpResponse.ok("success")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -1650,7 +1648,7 @@ Background:
                         "/services/jsonAndNonJsonPayload" -> {
                             if (request.method == "POST" &&
                                 request.headers["Content-Type"] == "application/x-www-form-urlencoded" &&
-                                readFormField(request, "payload")["text"] != null
+                                readPayloadFormField(request)["text"] != null
                             ) HttpResponse(
                                 200,
                                 "",
@@ -1675,8 +1673,8 @@ Background:
                     }
                 }
 
-                private fun readFormField(request: HttpRequest, fieldName: String) =
-                    ObjectMapper().readValue(request.formFields[fieldName], Map::class.java)
+                private fun readPayloadFormField(request: HttpRequest) =
+                    ObjectMapper().readValue(request.formFields["payload"], Map::class.java)
 
                 override fun setServerState(serverState: Map<String, Value>) {
                 }
@@ -2630,7 +2628,7 @@ data class CyclicPet(
     @JsonProperty("name") val name: String,
     @JsonProperty("tag") val tag: String,
     @JsonProperty("id") val id: Int,
-    @JsonProperty("parent") val parent: CyclicPet
+    @JsonProperty("parent") val parent: CyclicPet?
 )
 
 data class NewPet(

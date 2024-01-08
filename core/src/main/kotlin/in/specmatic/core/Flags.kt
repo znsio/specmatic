@@ -3,35 +3,35 @@ package `in`.specmatic.core
 import org.apache.commons.lang3.BooleanUtils
 
 object Flags {
-    private const val customResponseName = "CUSTOM_RESPONSE"
-    const val negativeTestingFlag = "SPECMATIC_GENERATIVE_TESTS"
-    const val maxTestRequestCombinationsFlag = "MAX_TEST_REQUEST_COMBINATIONS"
-    const val schemaExampleDefault = "SCHEMA_EXAMPLE_DEFAULT"
-    const val onlyPositive = "ONLY_POSITIVE"
+    private const val CUSTOM_RESPONSE_NAME = "CUSTOM_RESPONSE"
+    const val SPECMATIC_GENERATIVE_TESTS = "SPECMATIC_GENERATIVE_TESTS"
+    private const val MAX_TEST_REQUEST_COMBINATIONS = "MAX_TEST_REQUEST_COMBINATIONS"
+    const val SCHEMA_EXAMPLE_DEFAULT = "SCHEMA_EXAMPLE_DEFAULT"
+    const val ONLY_POSITIVE = "ONLY_POSITIVE"
 
     private fun flagValue(flagName: String): String? {
         return System.getenv(flagName) ?: System.getProperty(flagName)
     }
 
     fun customResponse(): Boolean {
-        return flagValue(customResponseName) == "true"
+        return flagValue(CUSTOM_RESPONSE_NAME) == "true"
     }
 
-    fun booleanFlag(flagName: String, default: String = "false") = BooleanUtils.toBoolean(flagValue(flagName) ?: default)
+    private fun booleanFlag(flagName: String, default: String = "false") = BooleanUtils.toBoolean(flagValue(flagName) ?: default)
 
     fun schemaExampleDefaultEnabled(): Boolean {
-        return booleanFlag(schemaExampleDefault)
+        return booleanFlag(SCHEMA_EXAMPLE_DEFAULT)
     }
 
     fun generativeTestingEnabled(): Boolean {
-        return booleanFlag(negativeTestingFlag)
+        return booleanFlag(SPECMATIC_GENERATIVE_TESTS)
     }
 
     fun maxTestRequestCombinations(): Int {
-        return flagValue(maxTestRequestCombinationsFlag)?.toInt() ?: Int.MAX_VALUE
+        return flagValue(MAX_TEST_REQUEST_COMBINATIONS)?.toInt() ?: Int.MAX_VALUE
     }
 
     fun onlyPositive(): Boolean {
-        return booleanFlag(onlyPositive)
+        return booleanFlag(ONLY_POSITIVE)
     }
 }

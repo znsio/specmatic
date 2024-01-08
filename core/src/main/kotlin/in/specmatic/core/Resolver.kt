@@ -107,18 +107,18 @@ data class Resolver(
         val count = cyclePreventionStack.filter { it == pattern }.size
         val newCyclePreventionStack = cyclePreventionStack.plus(pattern)
 
-        try {
+        return try {
             if (count > 1)
-                // Terminate what would otherwise be an infinite cycle.
+            // Terminate what would otherwise be an infinite cycle.
                 throw ContractException("Invalid pattern cycle: $newCyclePreventionStack", isCycle = true)
 
-            return toResult(copy(cyclePreventionStack = newCyclePreventionStack))
+            toResult(copy(cyclePreventionStack = newCyclePreventionStack))
         } catch (e: ContractException) {
             if (!e.isCycle || !returnNullOnCycle)
                 throw e
 
             // Returns null if (and only if) a cycle has been detected and returnNullOnCycle=true
-            return null
+            null
         }
     }
 
@@ -184,11 +184,11 @@ data class Resolver(
     }
 
     fun resolveRow(row: Row): Row {
-        return generation.resolveRow(this, row)
+        return generation.resolveRow(row)
     }
 
     fun generateKeySubLists(key: String, subList: List<String>): List<List<String>> {
-        return generation.generateKeySubLists(this, key, subList)
+        return generation.generateKeySubLists(key, subList)
     }
 }
 

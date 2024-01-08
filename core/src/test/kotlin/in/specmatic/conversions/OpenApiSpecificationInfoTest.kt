@@ -55,9 +55,9 @@ class OpenApiSpecificationInfoTest {
                     pathItem.post = Operation().also { operation -> operation.operationId = "testOperation2" }
                 })
             }
-            components = Components().also {
-                it.schemas = mutableMapOf("testSchema1" to Schema<Any>(), "testSchema2" to Schema<Any>())
-                it.securitySchemes =
+            components = Components().also { components ->
+                components.schemas = mutableMapOf("testSchema1" to Schema<Any>(), "testSchema2" to Schema<Any>())
+                components.securitySchemes =
                     mutableMapOf("testSecurityScheme" to SecurityScheme().also { it.type = SecurityScheme.Type.APIKEY })
             }
         }

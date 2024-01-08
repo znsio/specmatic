@@ -13,17 +13,17 @@ import `in`.specmatic.core.wsdl.payload.ComplexTypedSOAPPayload
 import `in`.specmatic.core.wsdl.payload.SOAPPayload
 
 data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, val wsdl: WSDL, val namespaceQualification: NamespaceQualification? = null): WSDLElement {
-    override fun deriveSpecmaticTypes(qontractTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
-        if(qontractTypeName in typeStack)
+    override fun deriveSpecmaticTypes(specmaticTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
+        if(specmaticTypeName in typeStack)
             return WSDLTypeInfo(types = existingTypes)
 
         val childTypeInfo = try {
             val complexType = wsdl.getComplexTypeNode(element)
 
             complexType.generateChildren(
-                qontractTypeName,
+                specmaticTypeName,
                 existingTypes,
-                typeStack.plus(qontractTypeName)
+                typeStack.plus(specmaticTypeName)
             )
         } catch(e: ContractException) {
             logger.debug(e, "Error getting types for WSDL type \"$wsdlTypeReference\", ${element.oneLineDescription}")
@@ -32,13 +32,13 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
 
         val qualification = namespaceQualification ?: wsdl.getQualification(element, wsdlTypeReference)
 
-        val inPlaceNode = toXMLNode("<${qualification.nodeName} $TYPE_ATTRIBUTE_NAME=\"$qontractTypeName\"/>").let {
+        val inPlaceNode = toXMLNode("<${qualification.nodeName} $TYPE_ATTRIBUTE_NAME=\"$specmaticTypeName\"/>").let {
             it.copy(attributes = it.attributes.plus(deriveSpecmaticAttributes(element)))
         }
 
         val types = existingTypes
                         .plus(childTypeInfo.types)
-                        .plus(qontractTypeName to XMLPattern(childTypeInfo.nodeTypeInfo))
+                        .plus(specmaticTypeName to XMLPattern(childTypeInfo.nodeTypeInfo))
 
         val namespaces = childTypeInfo.namespacePrefixes.plus(qualification.namespacePrefix)
 
@@ -68,13 +68,13 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
     override fun getSOAPPayload(
         soapMessageType: SOAPMessageType,
         nodeNameForSOAPBody: String,
-        qontractTypeName: String,
+        specmaticTypeName: String,
         namespaces: Map<String, String>,
         typeInfo: WSDLTypeInfo
     ): SOAPPayload {
         val complexType = wsdl.getComplexTypeNode(element)
 
-        return ComplexTypedSOAPPayload(soapMessageType, nodeNameForSOAPBody, qontractTypeName, namespaces, complexType.getAttributes())
+        return ComplexTypedSOAPPayload(soapMessageType, nodeNameForSOAPBody, specmaticTypeName, namespaces, complexType.getAttributes())
     }
 }
 

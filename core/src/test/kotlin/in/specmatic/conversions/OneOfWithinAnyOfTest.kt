@@ -78,7 +78,7 @@ components:
     fun `matching stub`() {
         val result = feature.scenarios.first().matchesMock(
             HttpRequest(path = "/person/10", method = "GET"),
-            HttpResponse.OK(parsedJSONObject("""{"id": 10, "name": "Sherlock Holmes"}""")),
+            HttpResponse.ok(parsedJSONObject("""{"id": 10, "name": "Sherlock Holmes"}""")),
         )
 
         println(result.reportString())
@@ -90,7 +90,7 @@ components:
     fun `also matching stub`() {
         val result = feature.scenarios.first().matchesMock(
             HttpRequest(path = "/person/10", method = "GET"),
-            HttpResponse.OK(parsedJSONObject("""{"id": 10, "first_name": "Sherlock", "last_name": "Holmes"}"""))
+            HttpResponse.ok(parsedJSONObject("""{"id": 10, "first_name": "Sherlock", "last_name": "Holmes"}"""))
         )
 
         println(result.reportString())
@@ -102,7 +102,7 @@ components:
     fun `non matching stub`() {
         val result = feature.scenarios.first().matchesMock(
             HttpRequest(path = "/person/10", method = "GET"),
-            HttpResponse.OK(parsedJSONObject("""{"id": 10, "full_name": "Sherlock Holmes"}"""))
+            HttpResponse.ok(parsedJSONObject("""{"id": 10, "full_name": "Sherlock Holmes"}"""))
         )
 
         println(result.reportString())

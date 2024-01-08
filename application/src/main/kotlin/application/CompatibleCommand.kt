@@ -189,7 +189,7 @@ interface BackwardCompatibilityScope {
     fun executeCheck(): Int
 }
 
-class FileBackwardCompatibilityScope(val path: String, val fileOperations: FileOperations, val fn: (String) -> Outcome<Results>): BackwardCompatibilityScope {
+class FileBackwardCompatibilityScope(val path: String, val fn: (String) -> Outcome<Results>): BackwardCompatibilityScope {
     override fun executeCheck(): Int {
         val outcome: Outcome<Results> = fn(path)
 
@@ -201,7 +201,7 @@ class FileBackwardCompatibilityScope(val path: String, val fileOperations: FileO
     }
 }
 
-class DirectoryBackwardCompatibilityScope(val path: String, val fileOperations: FileOperations, val fn: (String) -> Outcome<Results>): BackwardCompatibilityScope {
+class DirectoryBackwardCompatibilityScope(val path: String, val fn: (String) -> Outcome<Results>): BackwardCompatibilityScope {
     override fun executeCheck(): Int {
         val file = File(path)
         val outputs = file.walkTopDown().filter {
@@ -231,8 +231,8 @@ private fun backwardCompatibleOnFileOrDirectory(
     fn: (String) -> Outcome<Results>
 ): Int {
     val scope = when {
-        fileOperations.isFile(path) -> FileBackwardCompatibilityScope(path, fileOperations, fn)
-        fileOperations.isDirectory(path) -> DirectoryBackwardCompatibilityScope(path, fileOperations, fn)
+        fileOperations.isFile(path) -> FileBackwardCompatibilityScope(path, fn)
+        fileOperations.isDirectory(path) -> DirectoryBackwardCompatibilityScope(path, fn)
         else -> throw ContractException("$path was of an unexpected file type.")
     }
 
@@ -369,5 +369,5 @@ internal fun checkCompatibility(results: Outcome<Results>): CompatibilityOutput 
     try {
         compatibilityMessage(results)
     } catch(e: Throwable) {
-        CompatibilityOutput(1, "Could not run backwad compatibility check, got exception\n${exceptionCauseMessage(e)}")
+        CompatibilityOutput(1, "Could not run backward compatibility check, got exception\n${exceptionCauseMessage(e)}")
     }

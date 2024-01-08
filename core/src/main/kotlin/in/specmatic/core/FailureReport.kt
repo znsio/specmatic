@@ -1,6 +1,6 @@
 package `in`.specmatic.core
 
-class FailureReport(val contractPath: String?, val scenarioMessage: String?, val scenario: ScenarioDetailsForResult?, val matchFailureDetailList: List<MatchFailureDetails>): Report {
+class FailureReport(val contractPath: String?, private val scenarioMessage: String?, val scenario: ScenarioDetailsForResult?, private val matchFailureDetailList: List<MatchFailureDetails>): Report {
     override fun toText(): String {
         val contractLine = contractPathDetails()
         val scenarioDetails = scenarioDetails(scenario) ?: ""
@@ -52,7 +52,7 @@ class FailureReport(val contractPath: String?, val scenarioMessage: String?, val
     }
 
     private fun contractPathDetails(): String? {
-        if(contractPath == null || contractPath.isBlank())
+        if(contractPath.isNullOrBlank())
             return null
 
         return "Error from contract $contractPath\n\n"

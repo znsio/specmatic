@@ -89,9 +89,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         ConsumeResult(Success())
     else {
         val xmlValue = xmlValues.first()
-        val result = matches(xmlValue, resolver)
-
-        when (result) {
+        when (val result = matches(xmlValue, resolver)) {
             is Success -> ConsumeResult(Success(), xmlValues.drop(1))
             is Failure -> when {
                 xmlValue is XMLNode && xmlValue.name == this.pattern.name -> ConsumeResult(result, xmlValues)
@@ -642,9 +640,9 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         return pattern.toGherkinishNode()
     }
 
-    fun toGherkinStatement(qontractTypeName: String): String {
+    fun toGherkinStatement(specmaticTypeName: String): String {
         val typeString = this.toGherkinXMLNode().toPrettyStringValue().trim()
-        return "And type $qontractTypeName\n\"\"\"\n$typeString\n\"\"\""
+        return "And type $specmaticTypeName\n\"\"\"\n$typeString\n\"\"\""
     }
 }
 

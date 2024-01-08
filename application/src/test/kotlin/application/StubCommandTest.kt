@@ -2,6 +2,13 @@ package application
 
 import com.ginsberg.junit.exit.ExpectSystemExitWithStatus
 import com.ninjasquad.springmockk.MockkBean
+import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.CONTRACT_EXTENSIONS
+import `in`.specmatic.core.LEGACY_CONTRACT_EXTENSION
+import `in`.specmatic.core.parseGherkinStringToFeature
+import `in`.specmatic.core.utilities.ContractPathData
+import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.stub.HttpClientFactory
 import io.mockk.every
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
@@ -15,15 +22,6 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE
 import picocli.CommandLine
 import picocli.CommandLine.IFactory
-import `in`.specmatic.core.LEGACY_CONTRACT_EXTENSION
-import `in`.specmatic.core.parseGherkinStringToFeature
-import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.CONTRACT_EXTENSIONS
-import `in`.specmatic.core.utilities.ContractPathData
-import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.stub.HttpClientFactory
-import io.ktor.serialization.*
-import io.mockk.clearAllMocks
 import java.io.File
 import java.nio.file.Path
 
@@ -69,7 +67,7 @@ internal class StubCommandTest {
     }
 
     @Test
-    fun `when contract files are given it should not load from qontract config`() {
+    fun `when contract files are given it should not load from specmatic config`() {
         every { specmaticConfig.contractStubPathData() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION").map { ContractPathData("", it) })
 
         CommandLine(stubCommand, factory).execute("/parameter/path/to/contract.$CONTRACT_EXTENSION")
@@ -132,19 +130,19 @@ internal class StubCommandTest {
     @ParameterizedTest
     @ValueSource(strings = [CONTRACT_EXTENSION, LEGACY_CONTRACT_EXTENSION])
     fun `when a contract with the correct extension is given it should be loaded`(extension: String, @TempDir tempDir: Path) {
-        val validQontract = tempDir.resolve("contract.$extension")
+        val validSpec = tempDir.resolve("contract.$extension")
 
-        val qontractFilePath = validQontract.toAbsolutePath().toString()
-        File(qontractFilePath).writeText("""
+        val specFilePath = validSpec.toAbsolutePath().toString()
+        File(specFilePath).writeText("""
             Feature: Is a dummy feature
         """.trimIndent())
 
-        every { watchMaker.make(listOf(qontractFilePath)) }.returns(watcher)
+        every { watchMaker.make(listOf(specFilePath)) }.returns(watcher)
         every { specmaticConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$extension"))
-        every { fileOperations.isFile(qontractFilePath) }.returns(true)
-        every { fileOperations.extensionIsNot(qontractFilePath, CONTRACT_EXTENSIONS) }.returns(false)
+        every { fileOperations.isFile(specFilePath) }.returns(true)
+        every { fileOperations.extensionIsNot(specFilePath, CONTRACT_EXTENSIONS) }.returns(false)
 
-        val execute = CommandLine(stubCommand, factory).execute(qontractFilePath)
+        val execute = CommandLine(stubCommand, factory).execute(specFilePath)
 
         assertThat(execute).isEqualTo(0)
     }
@@ -152,19 +150,19 @@ internal class StubCommandTest {
     @Test
     @ExpectSystemExitWithStatus(1)
     fun `when a contract with the incorrect extension command should exit with non-zero`(@TempDir tempDir: Path) {
-        val invalidQontract = tempDir.resolve("contract.contract")
+        val invalidSpec = tempDir.resolve("contract.contract")
 
-        val qontractFilePath = invalidQontract.toAbsolutePath().toString()
-        File(qontractFilePath).writeText("""
+        val specFilePath = invalidSpec.toAbsolutePath().toString()
+        File(specFilePath).writeText("""
             Feature: Is a dummy feature
         """.trimIndent())
 
-        every { watchMaker.make(listOf(qontractFilePath)) }.returns(watcher)
+        every { watchMaker.make(listOf(specFilePath)) }.returns(watcher)
         every { specmaticConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
-        every { fileOperations.isFile(qontractFilePath) }.returns(true)
-        every { fileOperations.extensionIsNot(qontractFilePath, CONTRACT_EXTENSIONS) }.returns(true)
+        every { fileOperations.isFile(specFilePath) }.returns(true)
+        every { fileOperations.extensionIsNot(specFilePath, CONTRACT_EXTENSIONS) }.returns(true)
 
-        CommandLine(stubCommand, factory).execute(qontractFilePath)
+        CommandLine(stubCommand, factory).execute(specFilePath)
     }
 
     @Test

@@ -319,7 +319,7 @@ class GenerativeTests {
                 statusValuesSeen.add(body.findFirstChildByPath("status")!!.toStringLiteral() + " in body")
                 statusValuesSeen.add(request.headers["status"]?.let { "$it in headers" } ?: "status not in headers")
 
-                return HttpResponse.OK("OK")
+                return HttpResponse.ok("OK")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -417,30 +417,24 @@ class GenerativeTests {
             val results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
-                    val personBuilding = body.findFirstChildByPath("person.address.building")!!
+                    when (val personBuilding = body.findFirstChildByPath("person.address.building")!!) {
+                        is NullValue -> buildingValuesSeen.add("null in person.address.building")
+                        is NumberValue -> buildingValuesSeen.add("Value ${personBuilding.toStringLiteral()} in person.address.building")
+                        else -> buildingValuesSeen.add("Value type ${personBuilding.displayableType()} in person.address.building")
+                    }
 
-                    if (personBuilding is NullValue)
-                        buildingValuesSeen.add("null in person.address.building")
-                    else if (personBuilding is NumberValue)
-                        buildingValuesSeen.add("Value ${personBuilding.toStringLiteral()} in person.address.building")
-                    else
-                        buildingValuesSeen.add("Value type ${personBuilding.displayableType()} in person.address.building")
-
-                    val companyBuilding = body.findFirstChildByPath("company.address.building")!!
-
-                    if (companyBuilding is NullValue)
-                        buildingValuesSeen.add("null in company.address.building")
-                    else if (companyBuilding is StringValue)
-                        buildingValuesSeen.add("Value ${companyBuilding.toStringLiteral()} in company.address.building")
-                    else
-                        buildingValuesSeen.add("Value type ${companyBuilding.displayableType()} in company.address.building")
+                    when (val companyBuilding = body.findFirstChildByPath("company.address.building")!!) {
+                        is NullValue -> buildingValuesSeen.add("null in company.address.building")
+                        is StringValue -> buildingValuesSeen.add("Value ${companyBuilding.toStringLiteral()} in company.address.building")
+                        else -> buildingValuesSeen.add("Value type ${companyBuilding.displayableType()} in company.address.building")
+                    }
 
                     if (body.findFirstChildByPath("person.address.building")!! !is NumberValue ||
                         body.findFirstChildByPath("company.address.building")!! !is StringValue
                     )
                         return HttpResponse.ERROR_400
 
-                    return HttpResponse.OK("OK")
+                    return HttpResponse.ok("OK")
                 }
 
                 override fun setServerState(serverState: Map<String, Value>) {
@@ -518,7 +512,7 @@ class GenerativeTests {
             override fun execute(request: HttpRequest): HttpResponse {
                 println(request.body)
                 requestBodiesSeen.add(request.body)
-                return HttpResponse.OK("success")
+                return HttpResponse.ok("success")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -585,7 +579,7 @@ class GenerativeTests {
                 println(request.body)
                 seenRequestBodies.add(request.body)
 
-                return HttpResponse.OK("success")
+                return HttpResponse.ok("success")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -609,14 +603,14 @@ class GenerativeTests {
                 }
             })
         } finally {
-            System.clearProperty(Flags.onlyPositive)
+            System.clearProperty(Flags.ONLY_POSITIVE)
         }
     }
 
     @Test
     fun `the flag SPECMATIC_GENERATIVE_TESTS should be used`() {
         try {
-            System.setProperty(Flags.negativeTestingFlag, "true")
+            System.setProperty(Flags.SPECMATIC_GENERATIVE_TESTS, "true")
 
             val feature = OpenApiSpecification.fromYAML(
                 """
@@ -659,7 +653,8 @@ class GenerativeTests {
                           type: string
                           description: The name of the product
                           example: 'Soap'
-                    """, "").toFeature()
+                    """, ""
+            ).toFeature()
 
             val testType = mutableListOf<String>()
 
@@ -667,7 +662,7 @@ class GenerativeTests {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
 
-                    if(body.jsonObject["name"] !is StringValue) {
+                    if (body.jsonObject["name"] !is StringValue) {
                         testType.add("name mutated to " + body.jsonObject["name"]!!.displayableType())
                         return HttpResponse.ERROR_400
                     }
@@ -693,15 +688,15 @@ class GenerativeTests {
 
             assertThat(results.results).hasSize(testType.size)
         } finally {
-            System.clearProperty(Flags.negativeTestingFlag)
+            System.clearProperty(Flags.SPECMATIC_GENERATIVE_TESTS)
         }
     }
 
     @Test
     fun `the flag ONLY_POSITIVE should be used`() {
         try {
-            System.setProperty(Flags.negativeTestingFlag, "true")
-            System.setProperty(Flags.onlyPositive, "true")
+            System.setProperty(Flags.SPECMATIC_GENERATIVE_TESTS, "true")
+            System.setProperty(Flags.ONLY_POSITIVE, "true")
 
             val feature = OpenApiSpecification.fromYAML(
                 """
@@ -748,7 +743,8 @@ class GenerativeTests {
                         price:
                           type: number
                           description: The price of the product
-                    """, "").toFeature()
+                    """, ""
+            ).toFeature()
 
             val testType = mutableListOf<String>()
 
@@ -756,17 +752,17 @@ class GenerativeTests {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
 
-                    if(body.jsonObject["name"] !is StringValue) {
+                    if (body.jsonObject["name"] !is StringValue) {
                         testType.add("name mutated to " + body.jsonObject["name"]!!.displayableType())
                         return HttpResponse.ERROR_400
                     }
 
-                    if("price" in body.jsonObject && body.jsonObject["price"] !is NumberValue) {
+                    if ("price" in body.jsonObject && body.jsonObject["price"] !is NumberValue) {
                         testType.add("price mutated to " + body.jsonObject["price"]!!.displayableType())
                         return HttpResponse.ERROR_400
                     }
 
-                    if("price" in body.jsonObject)
+                    if ("price" in body.jsonObject)
                         testType.add("price is present")
                     else
                         testType.add("price is absent")
@@ -788,8 +784,8 @@ class GenerativeTests {
             assertThat(results.failureCount).isEqualTo(0)
 
         } finally {
-            System.clearProperty(Flags.negativeTestingFlag)
-            System.clearProperty(Flags.onlyPositive)
+            System.clearProperty(Flags.SPECMATIC_GENERATIVE_TESTS)
+            System.clearProperty(Flags.ONLY_POSITIVE)
         }
     }
 
@@ -939,66 +935,68 @@ class GenerativeTests {
             }
         })
 
-        if(results.failureCount > 0)
+        if (results.failureCount > 0)
             println(results.report())
 
-        assertThat(notes.sorted()).isEqualTo(listOf(
-            "address object is empty",
-            "address.building.flat mutated to boolean",
-            "address.building.flat mutated to boolean",
-            "address.building.flat mutated to null",
-            "address.building.flat mutated to null",
-            "address.building.flat mutated to string",
-            "address.building.flat mutated to string",
-            "address.building.name mutated to boolean",
-            "address.building.name mutated to boolean",
-            "address.building.name mutated to null",
-            "address.building.name mutated to null",
-            "address.building.name mutated to number",
-            "address.building.name mutated to number",
-            "address.propertyType is commercial",
-            "address.propertyType is commercial",
-            "address.propertyType is residential",
-            "address.propertyType is residential",
-            "address.propertyType mutated to boolean",
-            "address.propertyType mutated to boolean",
-            "address.propertyType mutated to null",
-            "address.propertyType mutated to null",
-            "address.propertyType mutated to number",
-            "address.propertyType mutated to number",
-            "address.street mutated to boolean",
-            "address.street mutated to boolean",
-            "address.street mutated to boolean",
-            "address.street mutated to boolean",
-            "address.street mutated to null",
-            "address.street mutated to null",
-            "address.street mutated to null",
-            "address.street mutated to null",
-            "address.street mutated to number",
-            "address.street mutated to number",
-            "address.street mutated to number",
-            "address.street mutated to number",
-            "name mutated to boolean",
-            "name mutated to boolean",
-            "name mutated to boolean",
-            "name mutated to boolean",
-            "name mutated to boolean",
-            "name mutated to null",
-            "name mutated to null",
-            "name mutated to null",
-            "name mutated to null",
-            "name mutated to null",
-            "name mutated to number",
-            "name mutated to number",
-            "name mutated to number",
-            "name mutated to number",
-            "name mutated to number",
-            "request matches the specification",
-            "request matches the specification",
-            "request matches the specification",
-            "request matches the specification",
-            "request matches the specification",
-            "request matches the specification"
-        ).sorted())
+        assertThat(notes.sorted()).isEqualTo(
+            listOf(
+                "address object is empty",
+                "address.building.flat mutated to boolean",
+                "address.building.flat mutated to boolean",
+                "address.building.flat mutated to null",
+                "address.building.flat mutated to null",
+                "address.building.flat mutated to string",
+                "address.building.flat mutated to string",
+                "address.building.name mutated to boolean",
+                "address.building.name mutated to boolean",
+                "address.building.name mutated to null",
+                "address.building.name mutated to null",
+                "address.building.name mutated to number",
+                "address.building.name mutated to number",
+                "address.propertyType is commercial",
+                "address.propertyType is commercial",
+                "address.propertyType is residential",
+                "address.propertyType is residential",
+                "address.propertyType mutated to boolean",
+                "address.propertyType mutated to boolean",
+                "address.propertyType mutated to null",
+                "address.propertyType mutated to null",
+                "address.propertyType mutated to number",
+                "address.propertyType mutated to number",
+                "address.street mutated to boolean",
+                "address.street mutated to boolean",
+                "address.street mutated to boolean",
+                "address.street mutated to boolean",
+                "address.street mutated to null",
+                "address.street mutated to null",
+                "address.street mutated to null",
+                "address.street mutated to null",
+                "address.street mutated to number",
+                "address.street mutated to number",
+                "address.street mutated to number",
+                "address.street mutated to number",
+                "name mutated to boolean",
+                "name mutated to boolean",
+                "name mutated to boolean",
+                "name mutated to boolean",
+                "name mutated to boolean",
+                "name mutated to null",
+                "name mutated to null",
+                "name mutated to null",
+                "name mutated to null",
+                "name mutated to null",
+                "name mutated to number",
+                "name mutated to number",
+                "name mutated to number",
+                "name mutated to number",
+                "name mutated to number",
+                "request matches the specification",
+                "request matches the specification",
+                "request matches the specification",
+                "request matches the specification",
+                "request matches the specification",
+                "request matches the specification"
+            ).sorted()
+        )
     }
 }

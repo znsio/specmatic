@@ -25,7 +25,7 @@ class LoadTestsFromExternalisedFiles {
                 assertThat(request.headers).containsEntry("X-Request-ID", "12345")
                 assertThat(request.body).isEqualTo(parsedJSONObject("""{"name": "Master Yoda", "description": "Head of the Jedi Council"}"""))
 
-                return HttpResponse.OK(parsedJSONObject("""{"id": 1}"""))
+                return HttpResponse.ok(parsedJSONObject("""{"id": 1}"""))
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -47,7 +47,7 @@ class LoadTestsFromExternalisedFiles {
                 assertThat(request.method).isEqualTo("POST")
                 assertThat(request.body).isEqualTo(parsedJSONObject("""{"name": "Master Yoda", "description": "Head of the Jedi Council"}"""))
 
-                return HttpResponse.OK(parsedJSONObject("""{"id": 1}"""))
+                return HttpResponse.ok(parsedJSONObject("""{"id": 1}"""))
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -75,7 +75,7 @@ class LoadTestsFromExternalisedFiles {
                     assertThat(request.method).isEqualTo("POST")
                     assertThat(request.body).isEqualTo(parsedJSONObject("""{"name": "Master Yoda", "description": "Head of the Jedi Council"}"""))
 
-                    return HttpResponse.OK(parsedJSONObject("""{"id": 1}"""))
+                    return HttpResponse.ok(parsedJSONObject("""{"id": 1}"""))
                 }
 
                 override fun setServerState(serverState: Map<String, Value>) {
@@ -102,7 +102,7 @@ class LoadTestsFromExternalisedFiles {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.queryParams).containsEntry("description", "Jedi")
 
-                return HttpResponse.OK(parsedJSONArray("""[{"name": "Master Yoda", "description": "Head of the Jedi Council"}]"""))
+                return HttpResponse.ok(parsedJSONArray("""[{"name": "Master Yoda", "description": "Head of the Jedi Council"}]"""))
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -134,7 +134,7 @@ class LoadTestsFromExternalisedFiles {
 
             feature.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    return HttpResponse.OK(parsedJSONArray("""[{"name": "Master Yoda", "description": "Head of the Jedi Council"}]"""))
+                    return HttpResponse.ok(parsedJSONArray("""[{"name": "Master Yoda", "description": "Head of the Jedi Council"}]"""))
                 }
 
                 override fun setServerState(serverState: Map<String, Value>) {

@@ -14,7 +14,11 @@ import java.io.File
 import java.net.URI
 import java.util.concurrent.Callable
 
-@CommandLine.Command(name = "validate-via-logs", description = ["Validate a contract against log files to ensure that the contract matches all valid logs, stubs and requests"], mixinStandardHelpOptions = true)
+@CommandLine.Command(
+    name = "validate-via-logs",
+    description = ["Validate a contract against log files to ensure that the contract matches all valid logs, stubs and requests"],
+    mixinStandardHelpOptions = true
+)
 class ValidateViaLogs : Callable<Unit> {
     @CommandLine.Parameters(index = "0", description = ["Contract path"])
     lateinit var contractPath: String
@@ -32,20 +36,13 @@ class ValidateViaLogs : Callable<Unit> {
 
         val requestLogs = parsedJSONArray(File(logDirPath).readText())
 
-        val stubsMatchingURLs: List<Pair<ScenarioStub, ScenarioStub>> = requestLogs.list.mapNotNull {
-            val log = it as JSONObjectValue
+        val stubsMatchingURLs: List<Pair<ScenarioStub, ScenarioStub>> = requestLogs.list.mapNotNull { requestLog ->
+            val log = requestLog as JSONObjectValue
 
             when (val path = log.findFirstChildByPath("http-request.path")?.toStringLiteral()) {
-                in listOf(
-                    "/_specmatic/expectations",
-                    "/_qontract/expectations"
-                ) -> {
-                    stubFromExpectationLog(log, httpUrlMatchers)
-                }
+                "/_specmatic/expectations" -> stubFromExpectationLog(log, httpUrlMatchers)
                 null -> null
-                else -> {
-                    stubFromRequestLog(path, httpUrlMatchers, log)?.let { Pair(mockFromJSON(log.jsonObject), it) }
-                }
+                else -> stubFromRequestLog(path, httpUrlMatchers, log)?.let { Pair(mockFromJSON(log.jsonObject), it) }
             }
         }
 
@@ -53,7 +50,7 @@ class ValidateViaLogs : Callable<Unit> {
             try {
                 feature.matchingStub(matchingScenario.request, matchingScenario.response)
                 Triple(Result.Success(), container, matchingScenario)
-            } catch(e: NoMatchingScenario) {
+            } catch (e: NoMatchingScenario) {
                 Triple(e.results.toResultIfAny(), container, matchingScenario)
             }
         }
@@ -65,7 +62,7 @@ class ValidateViaLogs : Callable<Unit> {
 
         val countOfSuccessfulMatches = matchResults.size - matchFailures.size
 
-        if(matchFailures.isEmpty())
+        if (matchFailures.isEmpty())
             logger.log("The contract is compatible with all stubs")
         else {
             logger.log("The contract is not compatible with the following:")
@@ -88,7 +85,7 @@ class ValidateViaLogs : Callable<Unit> {
     ): Pair<ScenarioStub, ScenarioStub>? {
         val status = log.findFirstChildByPath("http-response.status")?.toStringLiteral()
 
-        if(status != "200")
+        if (status != "200")
             return null
 
         log.findFirstChildByPath("http-request.body.http-request.path")?.let { stubRequestPathLog ->
@@ -129,7 +126,7 @@ class ValidateViaLogs : Callable<Unit> {
         val headers = log.findFirstChildByPath("http-response.headers") as JSONObjectValue?
         val specmaticResult = headers?.jsonObject?.get("X-Specmatic-Result")?.toStringLiteral()
 
-        if(specmaticResult != "success")
+        if (specmaticResult != "success")
             return null
 
         if (httpUrlMatchers.any { (matcher, resolver) ->

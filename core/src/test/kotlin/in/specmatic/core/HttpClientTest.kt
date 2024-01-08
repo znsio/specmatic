@@ -26,7 +26,7 @@ class HttpClientTest {
         val request = HttpRequest().updateMethod("GET").updatePath("/some/redirect")
         val response = HttpClient("http://localhost:8080").execute(request)
         Assertions.assertEquals(302, response.status)
-        Assertions.assertEquals("/newUrl", response.headers.get("Location"))
+        Assertions.assertEquals("/newUrl", response.headers["Location"])
 
         wireMockServer.stop()
     }

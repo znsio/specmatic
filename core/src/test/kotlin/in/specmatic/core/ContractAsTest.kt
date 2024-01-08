@@ -381,7 +381,7 @@ class ContractAsTest {
                 val expectedLinkedIds = arrayOf(1, 2, 3)
                 val actualLinkedIds = jsonBody["linked_ids"] as JSONArrayValue
                 for (i in expectedLinkedIds.indices) {
-                    assertEquals(expectedLinkedIds[i], (actualLinkedIds.list.get(i) as NumberValue).number)
+                    assertEquals(expectedLinkedIds[i], (actualLinkedIds.list[i] as NumberValue).number)
                 }
                 val headers = HashMap<String, String>()
                 return HttpResponse(200, "", headers)
@@ -411,9 +411,9 @@ class ContractAsTest {
                 val expectedLinkedIds = arrayOf(1, 2, 3)
                 val actualLinkedIds = jsonBody["linked_ids"] as JSONArrayValue
                 for (i in expectedLinkedIds.indices) {
-                    assertEquals(expectedLinkedIds[i], (actualLinkedIds.list.get(i) as NumberValue).number)
+                    assertEquals(expectedLinkedIds[i], (actualLinkedIds.list[i] as NumberValue).number)
                 }
-                val innerObject = actualLinkedIds.list.get(3) as JSONObjectValue
+                val innerObject = actualLinkedIds.list[3] as JSONObjectValue
                 assertThat(innerObject.jsonObject.getValue("a")).isInstanceOf(NumberValue::class.java)
                 assertThat(innerObject.jsonObject.getValue("b")).isInstanceOf(StringValue::class.java)
                 return HttpResponse.OK
@@ -527,7 +527,7 @@ class ContractAsTest {
                 val requestBody = jsonObject(request.body)
                 val locations = requestBody["locations"] as JSONArrayValue
                 for (i in locations.list.indices) {
-                    val location = locations.list.get(i) as JSONObjectValue
+                    val location = locations.list[i] as JSONObjectValue
                     val cityValue = location.jsonObject.getValue("city") as StringValue
                     assertThat(cityValue.string.length).isNotZero()
                 }
@@ -621,7 +621,7 @@ class ContractAsTest {
                     for (i in 0 until childNodes.length) {
                         val city = childNodes.item(i)
                         assertEquals("city", city.nodeName)
-                        assertTrue(city.firstChild.nodeValue.length > 0)
+                        assertTrue(city.firstChild.nodeValue.isNotEmpty())
                     }
                 } catch (e: ParserConfigurationException) {
                     return HttpResponse.ERROR_400
@@ -694,7 +694,7 @@ class ContractAsTest {
                 "    Then status 200\n" +
                 "    And response-body (Cities)"
         val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
-        val setupStatus = arrayOf("Setup didn\"t happen")
+        val setupStatus = arrayOf("Setup did not happen")
         val setupSuccess = "Setup happened"
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
@@ -733,7 +733,7 @@ class ContractAsTest {
   | city_list | 
     """
         val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
-        val setupStatus = arrayOf("Setup didn\"t happen")
+        val setupStatus = arrayOf("Setup did not happen")
         val setupSuccess = "Setup happened"
 
         val results = contractBehaviour.executeTests(object : TestExecutor {
@@ -766,7 +766,7 @@ class ContractAsTest {
                 "  And request-body (Pet)\n" +
                 "  Then status 200\n"
         val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
-        val setupStatus = arrayOf("Setup didn\"t happen")
+        val setupStatus = arrayOf("Setup did not happen")
         val setupSuccess = "Setup happened"
         val idFound = intArrayOf(0)
 
@@ -1064,7 +1064,7 @@ Feature: Contract
         val results = parseGherkinStringToFeature(gherkin).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 flags.add("ran")
-                return HttpResponse.OK(StringValue("""{"data": "value", "unexpected": "value"}"""))
+                return HttpResponse.ok(StringValue("""{"data": "value", "unexpected": "value"}"""))
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -1098,7 +1098,7 @@ Feature: Contract
         val results = parseGherkinStringToFeature(gherkin).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 flags.add("ran")
-                return HttpResponse.OK(StringValue("""{"data": "value", "unexpected": "value"}"""))
+                return HttpResponse.ok(StringValue("""{"data": "value", "unexpected": "value"}"""))
             }
 
             override fun setServerState(serverState: Map<String, Value>) {

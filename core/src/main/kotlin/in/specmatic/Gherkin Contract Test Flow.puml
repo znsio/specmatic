@@ -8,8 +8,10 @@ SpecmaticJUnitSupport <-- GherkinParser: Returns Feature
 SpecmaticJUnitSupport -> Feature: Generate Test Scenarios
 Feature -> Scenario: newBasedOn(row) - Outline to Scenario explosion
 Scenario -> HTTPRequestPattern: newBasedOn(row) - Generate all possible HTTPRequestPatterns
-HTTPRequestPattern -> HttpURLPattern: newBasedOn(row) - Generate all relevant Paths and Query & Paths Params
-HTTPRequestPattern <-- HttpURLPattern: returns all relevant Paths and Query & Paths Params
+HTTPRequestPattern -> HttpPathPattern: newBasedOn(row) - Generate all relevant Paths and Paths Params
+HTTPRequestPattern <-- HttpPathPattern: returns all relevant Paths and Paths Params
+HTTPRequestPattern -> HttpQueryParamPattern: newBasedOn(row) - Generate all relevant Query Params
+HTTPRequestPattern <-- HttpQueryParamPattern: returns all relevant Query Params
 HTTPRequestPattern -> HTTPHeadersPattern: newBasedOn(row) - Generate all relevant HTTPHeaderPatterns
 HTTPRequestPattern <-- HTTPHeadersPattern: returns all relevant HTTPHeaderPatterns
 HTTPRequestPattern -> Pattern: newBasedOn(row) - Dispatch to relevant Pattern

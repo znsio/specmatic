@@ -35,7 +35,7 @@ internal class FailureReportTest {
     }
 
     @Test
-    fun `breadcrumb path parts should be separated from eachother by a dot`() {
+    fun `breadcrumb path segments should be separated from each other by a dot`() {
         val errorDetails = MatchFailureDetails(listOf("address", "street"), listOf("error"))
 
         val report = FailureReport(null, null, null, listOf(errorDetails))

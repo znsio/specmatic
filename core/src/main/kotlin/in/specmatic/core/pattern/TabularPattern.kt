@@ -372,16 +372,19 @@ fun <ValueType> allOrNothingCombinationIn(
     creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>
 ): List<Map<String, ValueType>> {
     val keyLists = if (patternMap.keys.any { isOptional(it) }) {
-        val nothingList: Set<String> = patternMap.keys.filter { k -> !isOptional(k) || row.containsField(withoutOptionality(k)) }.toSet().let { propertyNames ->
-            minPropertiesOrNull?.let { minProperties ->
-                if (propertyNames.size >= minProperties)
-                    propertyNames
-                else {
-                    val remainingPropertyNames = patternMap.keys.minus(propertyNames)
-                    propertyNames + remainingPropertyNames.shuffled().toList().take(minProperties - propertyNames.size).toSet()
+        val nothingList: Set<String> =
+            patternMap.keys.filter { k -> !isOptional(k) || row.containsField(withoutOptionality(k)) }.toSet()
+                .let { propertyNames ->
+                    minPropertiesOrNull?.let { minProperties ->
+                        if (propertyNames.size >= minProperties)
+                            propertyNames
+                        else {
+                            val remainingPropertyNames = patternMap.keys.minus(propertyNames)
+                            propertyNames + remainingPropertyNames.shuffled().toList()
+                                .take(minProperties - propertyNames.size).toSet()
+                        }
+                    } ?: propertyNames
                 }
-            } ?: propertyNames
-        }
 
         val allList: Set<String> = patternMap.keys.let { propertyNames ->
             maxPropertiesOrNull?.let { maxProperties ->
@@ -389,7 +392,8 @@ fun <ValueType> allOrNothingCombinationIn(
                     propertyNames
                 else {
                     val remainingPropertyNames = patternMap.keys.minus(nothingList)
-                    nothingList + remainingPropertyNames.shuffled().toList().take(maxProperties - nothingList.size).toSet()
+                    nothingList + remainingPropertyNames.shuffled().toList().take(maxProperties - nothingList.size)
+                        .toSet()
                 }
             } ?: propertyNames
         }
@@ -407,9 +411,7 @@ fun <ValueType> allOrNothingCombinationIn(
         creator(newPattern)
     }
 
-    val flatten: List<Map<String, ValueType>> = keySetValues.flatten()
-
-    return flatten
+    return keySetValues.flatten()
 }
 
 internal fun keySets(listOfKeys: List<String>, row: Row, resolver: Resolver): List<List<String>> {

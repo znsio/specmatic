@@ -13,7 +13,7 @@ import `in`.specmatic.core.wsdl.payload.SOAPPayload
 import `in`.specmatic.core.wsdl.payload.SimpleTypedSOAPPayload
 
 data class SimpleElement(val wsdlTypeReference: String, val element: XMLNode, val wsdl: WSDL) : WSDLElement {
-    override fun deriveSpecmaticTypes(qontractTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
+    override fun deriveSpecmaticTypes(specmaticTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
         return createSimpleType(element, wsdl).let { (nodes, prefix) ->
             if(prefix != null) {
                 WSDLTypeInfo(nodes = nodes, existingTypes, setOf(prefix))
@@ -26,7 +26,7 @@ data class SimpleElement(val wsdlTypeReference: String, val element: XMLNode, va
     override fun getSOAPPayload(
         soapMessageType: SOAPMessageType,
         nodeNameForSOAPBody: String,
-        qontractTypeName: String,
+        specmaticTypeName: String,
         namespaces: Map<String, String>,
         typeInfo: WSDLTypeInfo
     ): SOAPPayload {
@@ -44,7 +44,7 @@ fun createSimpleType(element: XMLNode, wsdl: WSDL, actualElement: XMLNode? = nul
     val fqname = resolvedElement.fullyQualifiedName(wsdl)
     val prefix = fqname.prefix.ifBlank { null }
 
-    return Pair(listOf(XMLNode(fqname.qname, qontractAttributes, listOf(value))), prefix)
+    return Pair(listOf(XMLNode(fqname.qName, qontractAttributes, listOf(value))), prefix)
 }
 
 fun elementTypeValue(element: XMLNode): StringValue = when (val typeName = simpleTypeName(element)) {
@@ -69,7 +69,5 @@ fun fromRestriction(element: XMLNode): String? {
 }
 
 fun fromTypeAttribute(element: XMLNode): String? {
-    return element.attributes["type"]?.let {
-        it.toStringLiteral().localName()
-    }
+    return element.attributes["type"]?.toStringLiteral()?.localName()
 }

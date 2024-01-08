@@ -1,8 +1,6 @@
 package application
 
 import `in`.specmatic.core.Configuration
-import `in`.specmatic.core.git.GitCommand
-import `in`.specmatic.core.git.SystemGit
 import io.ktor.util.*
 import io.ktor.utils.io.streams.*
 import io.mockk.clearAllMocks
@@ -14,16 +12,14 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import picocli.CommandLine
 import java.io.File
-import java.io.FileFilter
 import java.io.FileInputStream
 import java.util.function.Consumer
-import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
 class BundleTestData(tempDir: File) {
     val projectDir: File
     val specmaticJSONContent: String
-    val configFilename: String
+    private val configFilename: String
 
     init {
         val bundleTestDir = tempDir.resolve("bundle_tests")
@@ -81,7 +77,7 @@ private fun createFile(gitDir: File, filename: String, content: String? = null):
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, BundleCommand::class])
 internal class BundleCommandTestE2E {
     companion object {
-        lateinit var configFilename: String
+        private lateinit var configFilename: String
 
         @BeforeAll
         @JvmStatic

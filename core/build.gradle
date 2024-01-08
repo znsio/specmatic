@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     id 'java-library'
     id 'maven-publish'
@@ -52,7 +54,7 @@ dependencies {
     testImplementation "io.ktor:ktor-client-mock-jvm:$ktor_version"
 }
 
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+tasks.withType(KotlinCompile).configureEach {
     kotlinOptions {
         jvmTarget = "17"
     }
@@ -68,7 +70,7 @@ jar {
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
@@ -123,7 +125,7 @@ signing {
     sign publishing.publications.mavenJava
 }
 
-tasks.withType(Sign) {
+tasks.withType(Sign).configureEach {
     onlyIf { project.hasProperty("signing.keyId") }
 }
 

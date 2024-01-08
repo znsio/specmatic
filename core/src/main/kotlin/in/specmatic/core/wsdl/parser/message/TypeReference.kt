@@ -7,13 +7,13 @@ import `in`.specmatic.core.wsdl.parser.hasSimpleTypeAttribute
 data class TypeReference(val child: XMLNode, val wsdl: WSDL): ChildElementType {
     override fun getWSDLElement(): Pair<String, WSDLElement> {
         val wsdlTypeReference = child.attributes.getValue("type").toStringLiteral()
-        val qontractTypeName = wsdlTypeReference.replace(':', '_')
+        val specmaticTypeName = wsdlTypeReference.replace(':', '_')
 
         val element = when {
             hasSimpleTypeAttribute(child) -> SimpleElement(wsdlTypeReference, child, wsdl)
             else -> ReferredType(wsdlTypeReference, child, wsdl)
         }
 
-        return Pair(qontractTypeName, element)
+        return Pair(specmaticTypeName, element)
     }
 }

@@ -26,20 +26,20 @@ data class ReferredType(val wsdlTypeReference: String, val element: XMLNode, val
       }
 
     override fun deriveSpecmaticTypes(
-        qontractTypeName: String,
+        specmaticTypeName: String,
         existingTypes: Map<String, XMLPattern>,
         typeStack: Set<String>
     ): WSDLTypeInfo {
-        return elementType.deriveSpecmaticTypes(qontractTypeName, existingTypes, typeStack)
+        return elementType.deriveSpecmaticTypes(specmaticTypeName, existingTypes, typeStack)
     }
 
     override fun getSOAPPayload(
         soapMessageType: SOAPMessageType,
         nodeNameForSOAPBody: String,
-        qontractTypeName: String,
+        specmaticTypeName: String,
         namespaces: Map<String, String>,
         typeInfo: WSDLTypeInfo
     ): SOAPPayload {
-        return elementType.getSOAPPayload(soapMessageType, nodeNameForSOAPBody, qontractTypeName, namespaces, typeInfo)
+        return elementType.getSOAPPayload(soapMessageType, nodeNameForSOAPBody, specmaticTypeName, namespaces, typeInfo)
     }
 }

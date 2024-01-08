@@ -92,9 +92,10 @@ data class Results(val results: List<Result> = emptyList()) {
 }
 
 private fun listToReport(results: List<Result>): String {
-    return results.filterIsInstance<Result.Failure>().map {
-        it.toFailureReport().toText()
-    }.joinToString("${System.lineSeparator()}${System.lineSeparator()}")
+    return results.filterIsInstance<Result.Failure>()
+        .joinToString("${System.lineSeparator()}${System.lineSeparator()}") {
+            it.toFailureReport().toText()
+        }
 }
 
 private fun listToDistinctReport(results: List<Result>): String {

@@ -7,12 +7,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 internal class ReDeclaredAPICommandTest {
-    val oldContractYaml = """
+    private val oldContractYaml = """
             openapi: "3.0.0"
             info:
               version: 1.0.0
-              title: Swagger Petstore
-              description: A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification
+              title: Swagger Pet Store
+              description: A sample API that uses a Pet Store as an example to demonstrate features in the OpenAPI 3.0 specification
               termsOfService: http://swagger.io/terms/
               contact:
                 name: Swagger API Team
@@ -22,7 +22,7 @@ internal class ReDeclaredAPICommandTest {
                 name: Apache 2.0
                 url: https://www.apache.org/licenses/LICENSE-2.0.html
             servers:
-              - url: http://petstore.swagger.io/api
+              - url: http://Pet Store.swagger.io/api
             paths:
               /pets:
                 post:
@@ -61,12 +61,12 @@ internal class ReDeclaredAPICommandTest {
                       nullable: true
         """.trimIndent()
 
-    val newContractYaml = """
+    private val newContractYaml = """
             openapi: "3.0.0"
             info:
               version: 1.0.0
-              title: Swagger Petstore
-              description: A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification
+              title: Swagger Pet Store
+              description: A sample API that uses a Pet Store as an example to demonstrate features in the OpenAPI 3.0 specification
               termsOfService: http://swagger.io/terms/
               contact:
                 name: Swagger API Team
@@ -76,7 +76,7 @@ internal class ReDeclaredAPICommandTest {
                 name: Apache 2.0
                 url: https://www.apache.org/licenses/LICENSE-2.0.html
             servers:
-              - url: http://petstore.swagger.io/api
+              - url: http://Pet Store.swagger.io/api
             paths:
               /pet/{id}:
                 get:
@@ -134,18 +134,18 @@ internal class ReDeclaredAPICommandTest {
         """.trimIndent()
 
     @Test
-    fun `should identify APIs in one contract that have been redeclared in others`() {
+    fun `should identify APIs in one contract that have been re-declared in others`() {
         val contractToCheck = mockk<ContractToCheck>()
         every { contractToCheck.getPathsInContract() } returns listOf("/pets")
         every { contractToCheck.fetchAllOtherContracts() } returns listOf(Pair(OpenApiSpecification.fromYAML(oldContractYaml, "/contract.yaml").toFeature(), "/contract.yaml"))
 
-        val redeclaredContracts = findReDeclaredContracts(contractToCheck)
+        val reDeclaredContracts = findReDeclaredContracts(contractToCheck)
 
-        assertThat(redeclaredContracts).hasSize(1)
-        assertThat(redeclaredContracts.single().apiURLPath).isEqualTo("/pets")
+        assertThat(reDeclaredContracts).hasSize(1)
+        assertThat(reDeclaredContracts.single().apiURLPath).isEqualTo("/pets")
 
-        assertThat(redeclaredContracts.single().contractsContainingAPI).hasSize(1)
-        assertThat(redeclaredContracts.single().contractsContainingAPI.single()).isEqualTo("/contract.yaml")
+        assertThat(reDeclaredContracts.single().contractsContainingAPI).hasSize(1)
+        assertThat(reDeclaredContracts.single().contractsContainingAPI.single()).isEqualTo("/contract.yaml")
     }
 
     @Test

@@ -45,6 +45,22 @@ Generate Fat Jar. The `specmatic.jar` should be available in `<projectRoot>/appl
 
 Run the `specmatic.jar` to verify any commands as part of your changes.
 
+## Docker Image
+
+To build the docker image, run the following command to create fat jar.
+
+```./gradlew clean build```
+
+Create docker image with appropriate tag. Please keep version consistent with the version.properties file.
+
+```docker build --no-cache -t znsio/specmatic:<version> .```
+
+Login to docker hub and push the image
+
+```docker login -u <username>```
+
+```docker push znsio/specmatic:<version>```
+
 ## Help needed
 
 Please checkout the [the open issues](https://github.com/znsio/specmatic/issues?q=is%3Aopen+is%3Aissue)

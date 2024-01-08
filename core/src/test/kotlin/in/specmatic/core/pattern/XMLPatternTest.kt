@@ -647,7 +647,8 @@ internal class XMLPatternTest {
         }
     }
 
-    class TypeLookup {
+    @Nested
+    inner class TypeLookup {
         @Test
         fun `do a type lookup for a node with the qontract namespace and match the type to the given a node`() {
             val nameType = parsedPattern("<$TYPE_ATTRIBUTE_NAME>(string)</$TYPE_ATTRIBUTE_NAME>")

@@ -8,7 +8,6 @@ import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.*
-import `in`.specmatic.core.wsdl.parser.MappedURLType
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
@@ -165,14 +164,13 @@ data class Feature(
 
     private fun lookupScenario(
         httpRequest: HttpRequest,
-        scenarios: List<Scenario>,
-        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+        scenarios: List<Scenario>
     ): Sequence<Pair<Scenario, Result>> {
         val scenarioSequence = scenarios.asSequence()
 
         val localCopyOfServerState = serverState
         return scenarioSequence.zip(scenarioSequence.map {
-            it.matches(httpRequest, localCopyOfServerState, mismatchMessages)
+            it.matches(httpRequest, localCopyOfServerState, DefaultMismatchMessages)
         })
     }
 
@@ -309,7 +307,7 @@ data class Feature(
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> {
         return resolverStrategies.generation.let {
-            it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this, suggestions)
+            it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
         }
     }
 
@@ -562,7 +560,7 @@ data class Feature(
         )
     }
 
-    fun toOpenAPIURLPrefixMap(urls: List<String>, mappedURLType: MappedURLType): Map<String, String> {
+    fun toOpenAPIURLPrefixMap(urls: List<String>): Map<String, String> {
         val normalisedURL = urls.map { url ->
             val path =
                 url.removeSuffix("/").removePrefix("http://").removePrefix("https://").split("/").joinToString("/") {
@@ -619,7 +617,7 @@ data class Feature(
             it.httpRequestPattern.httpPathPattern?.path
         }.map {
             normalize(it)
-        }.toSet().toList(), MappedURLType.PATH_ONLY)
+        }.toSet().toList())
 
         val payloadAdjustedScenarios: List<Scenario> = scenarios.map { rawScenario ->
             val prefix = urlPrefixMap.getValue(normalize(rawScenario.httpRequestPattern.httpPathPattern?.path!!))

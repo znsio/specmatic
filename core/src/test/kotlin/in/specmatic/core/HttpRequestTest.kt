@@ -148,12 +148,12 @@ internal class HttpRequestTest {
 
         val feature = parseGherkinStringToFeature(featureGherkin)
         val generatedRequest = feature.scenarios.first().generateHttpRequest()
+        val columns = listOf("RequestBody")
+        val examples = Examples(columns, listOf(Row(columns, listOf("10"))))
 
         assertThat(generatedRequest.method).isEqualTo("POST")
         assertThat(generatedRequest.path).isEqualTo("/square")
         assertThat(generatedRequest.body).isInstanceOf(StringValue::class.java)
-
-        val examples = exampleOf("RequestBody", "10")
         assertThat(feature.scenarios.single().examples.single()).isEqualTo(examples)
     }
 
@@ -172,11 +172,6 @@ internal class HttpRequestTest {
         ).withoutDynamicHeaders().headers.let {
             assertThat(it).isEmpty()
         }
-    }
-
-    private fun exampleOf(columnName: String, value: String): Examples {
-        val columns = listOf(columnName)
-        return Examples(columns, listOf(Row(columns, listOf(value))))
     }
 
     companion object {

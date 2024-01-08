@@ -109,11 +109,8 @@ class CyclePrevention {
         assertThat(testCount).isEqualTo(8)
     }
 
-    @Test
     @RepeatedTest(5)
     fun `test cycle in optional key to circular ref`() {
-//        key? -> circular-ref-value
-
         val stubContract = OpenApiSpecification.fromYAML("""
             openapi: "3.0.0"
             info:
@@ -177,11 +174,8 @@ class CyclePrevention {
         return expectationSettingResponse
     }
 
-    @Test
     @RepeatedTest(5)
     fun `test cycle in required key to nullable ref`() {
-//        key -> circular-ref-value?
-
         val feature = OpenApiSpecification.fromYAML("""
             openapi: "3.0.0"
             info:
@@ -243,11 +237,8 @@ class CyclePrevention {
         }
     }
 
-    @Test
     @RepeatedTest(5)
     fun `test cycle in optional key to nullable ref`() {
-//        key? -> circular-ref-value?
-
         val feature = OpenApiSpecification.fromYAML("""
             openapi: "3.0.0"
             info:
@@ -387,11 +378,8 @@ class CyclePrevention {
         }
     }
 
-    @Test
     @RepeatedTest(5)
     fun `test cycle in required key to optional key to circular ref`() {
-//        key1 -> { key2? -> circular-ref-value }
-
         val feature = OpenApiSpecification.fromYAML("""
             openapi: "3.0.0"
             info:
@@ -433,11 +421,8 @@ class CyclePrevention {
             Success::class.java)
     }
 
-    @Test
     @RepeatedTest(5)
     fun `test cycle in required key to required key to nullable circular ref`() {
-//        key1 -> { key2 -> circular-ref-value? }
-
         val feature = OpenApiSpecification.fromYAML("""
             openapi: "3.0.0"
             info:
@@ -484,11 +469,8 @@ class CyclePrevention {
             Success::class.java)
     }
 
-    @Test
     @RepeatedTest(5)
     fun `test cycle in required key to optional key to nullable circular ref`() {
-//        key1 -> { key2? -> circular-ref-value? }
-
         val feature = OpenApiSpecification.fromYAML("""
             openapi: "3.0.0"
             info:

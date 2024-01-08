@@ -91,7 +91,7 @@ Examples:
                 val result = executeTest(contractTests.single(), object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsKey(HttpHeaders.AUTHORIZATION)
-                        assertThat(request.headers[HttpHeaders.AUTHORIZATION]).matches("Bearer QWERTY1234")
+                        assertThat(request.headers[HttpHeaders.AUTHORIZATION]).matches("Bearer $token")
                         return HttpResponse.OK("success")
                     }
 
@@ -429,7 +429,7 @@ Feature: Authenticated
                 val result = executeTest(scenario, object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         request.headers[HttpHeaders.AUTHORIZATION]?.takeIf {
-                            it == "Bearer TOKEN1234"
+                            it == "Bearer $token"
                         }?.let {
                             requestMadeWithTokenFromSpecmaticJson = true
                         }
@@ -687,7 +687,7 @@ Feature: Authenticated
                 val result = executeTest(scenario, object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         request.headers["X-API-KEY"]?.takeIf {
-                            it == "APIHEADERKEY1234"
+                            it == token
                         }?.let {
                             requestMadeWithApiKeyInHeaderFromSpecmaticJson = true
                         }
@@ -750,7 +750,7 @@ Feature: Authenticated
                 val result = executeTest(scenario, object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         request.queryParams["apiKey"]?.takeIf {
-                            it == "APIQUERYKEY1234"
+                            it == token
                         }?.let {
                             requestMadeWithApiKeyInQueryFromSpecmaticJson = true
                         }

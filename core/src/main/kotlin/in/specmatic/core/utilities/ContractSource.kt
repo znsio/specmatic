@@ -26,7 +26,7 @@ data class GitRepo(
     override val stubContracts: List<String>,
     override val type: String?
 ) : ContractSource() {
-    val repoName = gitRepositoryURL.split("/").last().removeSuffix(".git")
+    private val repoName = gitRepositoryURL.split("/").last().removeSuffix(".git")
     override fun pathDescriptor(path: String): String {
         return "${repoName}:${path}"
     }

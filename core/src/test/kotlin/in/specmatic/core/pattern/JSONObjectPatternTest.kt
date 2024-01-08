@@ -325,14 +325,6 @@ internal class JSONObjectPatternTest {
                 assertThatThrownBy { pattern.generate(Resolver()) }.isInstanceOf(ContractException::class.java)
             }
         }
-
-        @Nested
-        inner class GeneratingTests {
-            @Test
-            fun `when generating tests the properties should be within the min and max limits`() {
-
-            }
-        }
     }
 
     @Nested

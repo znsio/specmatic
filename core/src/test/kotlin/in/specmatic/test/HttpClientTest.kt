@@ -10,21 +10,21 @@ import kotlin.text.Charsets
 internal class HttpClientTest {
     @Test
     fun `should unzip a file successfully`() {
-        val bytes = gzipEncode("hello world")
+        val bytes = gzipEncode()
 
         Assertions.assertThat(unzip(bytes, Charsets.UTF_8)).isEqualTo("hello world")
     }
 
     @Test
     fun `should unzip a file successfully, assuming UTF-8 if the charset is not supplied`() {
-        val bytes = gzipEncode("hello world")
+        val bytes = gzipEncode()
 
         Assertions.assertThat(unzip(bytes, null)).isEqualTo("hello world")
     }
 
-    private fun gzipEncode(data: String): ByteArray {
+    private fun gzipEncode(): ByteArray {
         val byteArrayOutputStream = ByteArrayOutputStream()
-        GZIPOutputStream(byteArrayOutputStream).writer(Charsets.UTF_8).use { it.write(data) }
+        GZIPOutputStream(byteArrayOutputStream).writer(Charsets.UTF_8).use { it.write("hello world") }
 
         byteArrayOutputStream.flush()
         val bytes = byteArrayOutputStream.toByteArray()
@@ -33,7 +33,7 @@ internal class HttpClientTest {
 
     @Test
     fun `Content-Encoding header should be removed when decoding a response body`() {
-        val bytes = gzipEncode("hello world")
+        val bytes = gzipEncode()
         val (headers, body) = decodeBody(bytes, "gzip", Charset.forName("UTF-8"), mapOf("Content-Encoding" to "gzip"))
 
         Assertions.assertThat(headers).isEmpty()

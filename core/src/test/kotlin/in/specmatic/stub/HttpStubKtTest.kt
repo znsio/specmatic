@@ -10,25 +10,17 @@ import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.stub.report.StubEndpoint
-import `in`.specmatic.stub.report.StubUsageReportJson
-import `in`.specmatic.stub.report.StubUsageReportOperation
-import `in`.specmatic.stub.report.StubUsageReportRow
 import `in`.specmatic.stubResponse
 import `in`.specmatic.test.HttpClient
 import io.mockk.InternalPlatformDsl.toStr
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
-import java.io.File
 import java.security.KeyStore
 import java.util.*
 import java.util.function.Consumer
@@ -543,7 +535,7 @@ Feature: POST API
         val errors: Vector<String> = Vector()
 
         HttpStub(feature).use { stub ->
-            usingMultipleThreads(20) { stubNumber ->
+            usingMultipleThreads { stubNumber ->
                 `set an expectation and exercise it`(stubNumber, stub)?.let {
                     errors.add(it)
                 }
@@ -556,8 +548,8 @@ Feature: POST API
         }
     }
 
-    private fun usingMultipleThreads(threadCount: Int, fn: (Int) -> Unit) {
-        val range = 0 until threadCount
+    private fun usingMultipleThreads(fn: (Int) -> Unit) {
+        val range = 0 until 20
         val threads = range.map { stubNumber ->
             Thread {
                 val base = stubNumber * 10

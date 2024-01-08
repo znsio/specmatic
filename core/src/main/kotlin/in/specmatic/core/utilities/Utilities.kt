@@ -31,7 +31,6 @@ import java.io.StringWriter
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
-import javax.xml.transform.Transformer
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
@@ -110,25 +109,14 @@ private fun isEmptyText(it: Node, node: Node) =
 private fun containsTextContent(node: Node) =
         node.childNodes.length == 1 && node.firstChild.nodeType == TEXT_NODE && node.nodeType == ELEMENT_NODE
 
-fun xmlToString(node: Node): String = xmlToString(DOMSource(node))
-
-private fun xmlToString(domSource: DOMSource, configureTransformer: (Transformer) -> Unit = {}): String {
+fun xmlToString(node: Node): String {
     val writer = StringWriter()
     val result = StreamResult(writer)
-    val tf = TransformerFactory.newInstance()
-    val transformer = tf.newTransformer()
+    val transformer = TransformerFactory.newInstance().newTransformer()
     transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes")
-    configureTransformer(transformer)
-    transformer.transform(domSource, result)
+    transformer.transform(DOMSource(node), result)
     return writer.toString()
 }
-
-val contractFilePath: String
-    get() = currentDirectory + defaultContractFilePath
-
-private const val currentDirectory = "./"
-private const val contractDirectory = "contract"
-private const val defaultContractFilePath = "$contractDirectory/service.contract"
 
 fun getTransportCallingCallback(bearerToken: String? = null): TransportConfigCallback {
     return TransportConfigCallback { transport ->

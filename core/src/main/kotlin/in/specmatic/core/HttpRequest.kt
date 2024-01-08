@@ -202,7 +202,7 @@ data class HttpRequest(
     }
 
     private fun withoutDuplicateHostHeader(headers: Map<String, String>, url: URL?): Map<String, String> {
-        if (url == null)
+        if (url === null)
             return headers
 
         if (isNotIPAddress(url.host))

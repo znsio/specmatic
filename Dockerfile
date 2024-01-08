@@ -1,6 +1,10 @@
-FROM openjdk:17-jdk-buster
+FROM ubuntu:22.04
 
 WORKDIR /usr/src/app
+
+RUN apt-get update && \
+    apt-get install -y openjdk-17-jre && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && \
     apt-get install -y git && \

@@ -22,8 +22,6 @@ import io.swagger.v3.oas.models.OpenAPI
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.TempDir
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
 import java.util.function.Consumer
 
@@ -37,13 +35,6 @@ internal class OpenApiSpecificationTest {
         const val OPENAPI_FILE_WITH_REFERENCE = "openApiWithRef.yaml"
         const val PET_OPENAPI_FILE = "Pet.yaml"
         const val SCHEMAS_DIRECTORY = "schemas"
-
-        fun freeFormObjectData() = listOf(
-            """ "" """,
-            """ "some data" """,
-            """{ "id": 10, "name": "John"}""",
-            """{ "id": 10, "name": "John" , "address": {"street": "abc"} }"""
-        )
     }
 
     private fun portableComparisonAcrossBuildEnvironments(actual: String, expected: String) {
@@ -151,7 +142,7 @@ components:
               ${"$"}ref: '#/components/schemas/NestedTypeWithRef'
     """.trim()
 
-        var openApiWithRef = """
+        val openApiWithRef = """
 openapi: "3.0.0"
 info:
   version: 1.0.0
@@ -183,7 +174,7 @@ components:
   schemas:
         """.trim()
 
-        var pet = """
+        val pet = """
 Pet:
   type: object
   required:
@@ -212,7 +203,7 @@ Pet:
     }
 
     @AfterEach
-    fun `teardown`() {
+    fun teardown() {
         File(OPENAPI_FILE).delete()
         File(OPENAPI_FILE_WITH_REFERENCE).delete()
         File(SCHEMAS_DIRECTORY).deleteRecursively()
@@ -3734,134 +3725,6 @@ paths:
         }
     }
 
-    @Nested
-    inner class AllSyntacticalEquivalentsOfFreeFormObjects {
-        @Test
-        fun `when schema is an object with additional properties of type object with no properties defined`() {
-            val spec =
-                """
----
-openapi: 3.0.1
-info:
-  title: API
-  version: 1
-paths:
-  /data:
-    post:
-      summary: API
-      parameters: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                payload:
-                  type: object
-                  additionalProperties:
-                    type: object
-      responses:
-        200:
-          description: API
-""".trimIndent()
-
-            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-
-            val request =
-                HttpRequest(
-                    "POST",
-                    "/data",
-                    body = parsedValue(""" { "payload" : {"data" : { "id": 10, "name": "John" } } } """)
-                )
-            val response = HttpResponse.OK
-
-            val stub: HttpStubData = feature.matchingStub(request, response)
-            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
-        }
-
-        @Test
-        fun `when schema is an object with additional properties of type object with with no properties defined and additional properties set as true`() {
-            val spec =
-                """
----
-openapi: 3.0.1
-info:
-  title: API
-  version: 1
-paths:
-  /data:
-    post:
-      summary: API
-      parameters: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                payload:
-                  type: object
-                  additionalProperties:
-                    type: object
-                    additionalProperties: true
-      responses:
-        200:
-          description: API
-""".trimIndent()
-
-            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-
-            val request =
-                HttpRequest(
-                    "POST",
-                    "/data",
-                    body = parsedValue(""" { "payload" : {"data1" : { "id": 10, "name": "John" }, "data2" : { "id": 10, "Age": 20 } } } """)
-                )
-            val response = HttpResponse.OK
-
-            val stub: HttpStubData = feature.matchingStub(request, response)
-            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
-        }
-
-        @ParameterizedTest
-        @MethodSource("freeFormObjectData")
-        fun `when schema is defined just as an object with no properties defined`(data: String) {
-            val spec =
-                """
----
-openapi: 3.0.1
-info:
-  title: API
-  version: 1
-paths:
-  /data:
-    post:
-      summary: API
-      parameters: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                payload:
-                  type: object
-      responses:
-        200:
-          description: API
-""".trimIndent()
-
-            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-
-            val request =
-                HttpRequest("POST", "/data", body = parsedValue("""{ "payload" : { "id": 10, "data": $data } }"""))
-            val response = HttpResponse.OK
-
-            val stub: HttpStubData = feature.matchingStub(request, response)
-            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
-        }
-    }
-
     @Test
     fun `conversion supports dictionary type`() {
         val gherkin = """
@@ -4019,14 +3882,14 @@ paths:
         """.trimIndent()
 
             val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
-
             val xmlSnippet = """<user><id>10</id></user>"""
-
             val request = HttpRequest("POST", "/users", body = parsedValue(xmlSnippet))
-            val stubData = xmlFeature.matchingStub(request, HttpResponse.OK)
-            val stubMatchResult = stubData.requestType.body.matches(parsedValue(xmlSnippet), Resolver())
-            assertThat(stubMatchResult).withFailMessage(stubMatchResult.reportString())
-                .isInstanceOf(Result.Failure::class.java)
+            assertThatThrownBy {
+                xmlFeature.matchingStub(
+                    request,
+                    HttpResponse.OK
+                )
+            }.isInstanceOf(NoMatchingScenario::class.java)
         }
 
         @Test

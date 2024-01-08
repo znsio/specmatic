@@ -204,7 +204,7 @@ object UseDefaultExample : DefaultExampleResolver {
             return null
 
         val value = pattern.parse(example, resolver)
-        val exampleMatchResult = pattern.matches(value, resolver)
+        val exampleMatchResult = pattern.matches(value, Resolver())
 
         if(exampleMatchResult.isSuccess())
             return value
@@ -218,8 +218,8 @@ object UseDefaultExample : DefaultExampleResolver {
 
         val matchResults = pattern.asSequence().map {
             try {
-                val value = it.parse(example, resolver)
-                Pair(it.matches(value, resolver), value)
+                val value = it.parse(example, Resolver())
+                Pair(it.matches(value, Resolver()), value)
             } catch(e: Throwable) {
                 Pair(Result.Failure(exceptionCauseMessage(e)), null)
             }

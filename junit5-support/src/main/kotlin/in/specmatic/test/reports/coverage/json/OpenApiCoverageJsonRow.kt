@@ -21,8 +21,8 @@ class OpenApiCoverageJsonRow {
         serviceType: String?,
         testResults: List<TestResultRecord>
     ) {
-        this.type = type;
-        this.repository = repository;
+        this.type = type
+        this.repository = repository
         this.branch = branch
         this.specification = specification
         this.serviceType = serviceType

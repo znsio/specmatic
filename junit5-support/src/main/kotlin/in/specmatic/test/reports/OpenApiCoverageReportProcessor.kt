@@ -68,7 +68,7 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
             val coverageThresholdNotMetMessage =
                 "Total API coverage: ${openAPICoverageReport.totalCoveragePercentage}% is less than the specified minimum threshold of ${successCriteria.minThresholdPercentage}%."
             val missedEndpointsCountExceededMessage =
-                "Total missed endpoints count: ${openAPICoverageReport.missedEndpointsCount} is greater than the maximum threshold of ${successCriteria.maxMissedEndpointsInSpec}.\n(Note: Specmatic will consider an endpoint as 'covered' only if it is documented in the open api spec with atleast one example for each operation and response code.\nIf it is present in the spec, but does not have an example, Specmatic will still report the particular operation and response code as 'missing in spec'.)"
+                "Total missed endpoints count: ${openAPICoverageReport.missedEndpointsCount} is greater than the maximum threshold of ${successCriteria.maxMissedEndpointsInSpec}.\n(Note: Specmatic will consider an endpoint as 'covered' only if it is documented in the open api spec with at least one example for each operation and response code.\nIf it is present in the spec, but does not have an example, Specmatic will still report the particular operation and response code as 'missing in spec'.)"
 
             val minCoverageThresholdCriteriaMet = openAPICoverageReport.totalCoveragePercentage >= successCriteria.minThresholdPercentage
             val maxMissingEndpointsExceededCriteriaMet = openAPICoverageReport.missedEndpointsCount <= successCriteria.maxMissedEndpointsInSpec

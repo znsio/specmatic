@@ -4,8 +4,8 @@ import `in`.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 
 class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageConsoleReport> {
     override fun render(report: OpenAPICoverageConsoleReport): String {
-        val maxPathSize: Int = report.rows.map { it.path.length }.max()
-        val maxRemarksSize = report.rows.map{it.remarks.toString().length}.max()
+        val maxPathSize: Int = report.rows.maxOf { it.path.length }
+        val maxRemarksSize = report.rows.maxOf { it.remarks.toString().length }
 
         val longestCoveragePercentageValue = "coverage"
         val statusFormat = "%${longestCoveragePercentageValue.length}s"
@@ -30,7 +30,7 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageConsoleReport> {
 
         val totalCoveragePercentage = report.totalCoveragePercentage
 
-        val totalPaths = withPluralSuffix(report.totalEndpointsCount)
+        val totalPaths = pluralisePath(report.totalEndpointsCount)
 
         val summary = "$totalCoveragePercentage% API Coverage reported from $totalPaths"
         val summaryRowFormatter = "%-${headerTitleSize}s"
@@ -45,30 +45,30 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageConsoleReport> {
         val missingAndNotImplementedAPIsMessageRows:MutableList<String> = mutableListOf()
 
         if(report.missedEndpointsCount > 0) {
-            val missedPaths = withPluralSuffix(report.missedEndpointsCount)
+            val missedPaths = pluralisePath(report.missedEndpointsCount)
             missingAndNotImplementedAPIsMessageRows.add("$missedPaths found in the app ${isOrAre(report.missedEndpointsCount)} not documented in the spec.")
         }
 
         if(report.partiallyMissedEndpointsCount > 0) {
-            val partiallyMissedPaths = withPluralSuffix(report.partiallyMissedEndpointsCount)
+            val partiallyMissedPaths = pluralisePath(report.partiallyMissedEndpointsCount)
             missingAndNotImplementedAPIsMessageRows.add("$partiallyMissedPaths found in the app ${isOrAre(report.partiallyMissedEndpointsCount)} partially documented in the spec.")
         }
 
         if(report.notImplementedAPICount > 0) {
-            val notImplementedPaths = withPluralSuffix(report.notImplementedAPICount)
+            val notImplementedPaths = pluralisePath(report.notImplementedAPICount)
             missingAndNotImplementedAPIsMessageRows.add("$notImplementedPaths found in the spec ${isOrAre(report.notImplementedAPICount)} not implemented.")
         }
 
         if(report.partiallyNotImplementedAPICount > 0) {
-            val partiallyNotImplementedPaths = withPluralSuffix(report.partiallyNotImplementedAPICount)
+            val partiallyNotImplementedPaths = pluralisePath(report.partiallyNotImplementedAPICount)
             missingAndNotImplementedAPIsMessageRows.add("$partiallyNotImplementedPaths found in the spec ${isOrAre(report.partiallyNotImplementedAPICount)} partially implemented.")
         }
 
         return coveredAPIsTable + System.lineSeparator()  + missingAndNotImplementedAPIsMessageRows.joinToString(System.lineSeparator()) + System.lineSeparator()
     }
 
-    private fun withPluralSuffix(count: Int, singular: String = "path"): String =
-        "$count $singular${if (count == 1) "" else "s"}"
+    private fun pluralisePath(count: Int): String =
+        "$count path${if (count == 1) "" else "s"}"
 
 
     private fun isOrAre(count: Int): String = if (count > 1) "are" else "is"

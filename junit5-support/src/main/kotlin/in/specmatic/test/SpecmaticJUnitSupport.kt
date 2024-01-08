@@ -40,7 +40,7 @@ open class SpecmaticJUnitSupport {
         const val VARIABLES_FILE_NAME = "variablesFileName"
         const val FILTER_NAME = "filterName"
         const val FILTER_NOT_NAME = "filterNotName"
-        const val ENDPOINTS_API = "endpointsAPI"
+        private const val ENDPOINTS_API = "endpointsAPI"
 
         val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
@@ -84,9 +84,9 @@ open class SpecmaticJUnitSupport {
                 openApiCoverageReportInput.setEndpointsAPIFlag(true)
 
                 val endpointData = response.body as JSONObjectValue
-                val apis: List<API> = endpointData.getJSONObject("contexts").entries.flatMap {
+                val apis: List<API> = endpointData.getJSONObject("contexts").entries.flatMap { entry ->
                     val mappings: JSONArrayValue =
-                        (it.value as JSONObjectValue).findFirstChildByPath("mappings.dispatcherServlets.dispatcherServlet") as JSONArrayValue
+                        (entry.value as JSONObjectValue).findFirstChildByPath("mappings.dispatcherServlets.dispatcherServlet") as JSONArrayValue
                     mappings.list.map { it as JSONObjectValue }.filter {
                         it.findFirstChildByPath("details.handlerMethod.className")?.toStringLiteral()
                             ?.contains("springframework") != true
@@ -347,7 +347,7 @@ open class SpecmaticJUnitSupport {
                     val columns = columnsFromExamples(exampleData)
 
                     val rows = exampleData.list.map { row ->
-                        asJSONObjectValue(row, "Each value in the list of suggestions must be a json object containing column name as key and sample value as the value")
+                        asJSONObjectValue(row)
                     }.map { row ->
                         Row(columns, columns.map { row.getValue(it).toStringLiteral() })
                     }.toMutableList()
@@ -377,7 +377,8 @@ private fun columnsFromExamples(exampleData: JSONArrayValue): List<String> {
     return firstRow.jsonObject.keys.toList()
 }
 
-private fun asJSONObjectValue(value: Value, errorMessage: String): Map<String, Value> {
+private fun asJSONObjectValue(value: Value): Map<String, Value> {
+    val errorMessage = "Each value in the list of suggestions must be a json object containing column name as key and sample value as the value"
     if(value !is JSONObjectValue)
         throw ContractException(errorMessage)
 

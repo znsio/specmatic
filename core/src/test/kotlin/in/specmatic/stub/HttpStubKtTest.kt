@@ -427,7 +427,7 @@ Scenario: Square of a number
 """.trim())
 
         val stubRequest = HttpRequest(method = "GET", path = "/count", queryParams = mapOf("status" to "available"))
-        val stubResponse = HttpResponse.OK("data")
+        val stubResponse = HttpResponse.ok("data")
         val stubData = HttpStubData(
             stubRequest.toPattern(),
             stubResponse,
@@ -618,16 +618,6 @@ Feature: POST API
         assertThat(isStateSetupRequest(HttpRequest("POST", "/_$APPLICATION_NAME_LOWER_CASE/state"))).isTrue()
     }
 
-    private fun createStubsUsingMultipleThreads(range: IntRange, stub: HttpStub) {
-        val threads = range.map { i ->
-            println("STARTING THREAD $i")
-            Thread { createExpectation(i, stub) }
-        }
-
-        start(threads)
-        waitFor(threads)
-    }
-
     private fun waitFor(threads: List<Thread>) = threads.forEach { it.join() }
 
     private fun start(threads: List<Thread>) = threads.forEach { it.start() }
@@ -728,9 +718,9 @@ paths:
               schema:
                 type: number
         """.trimIndent(), "").toFeature()
-        val stub: HttpStubData = HttpStubData(
+        val stub = HttpStubData(
             HttpRequest("POST", "/data", body = StringValue("Hello")).toPattern(),
-            HttpResponse.OK("abc123").copy(externalisedResponseCommand = """echo {"status": 200, "body": "abc123"}"""),
+            HttpResponse.ok("abc123").copy(externalisedResponseCommand = """echo {"status": 200, "body": "abc123"}"""),
             Resolver(),
             responsePattern = contract.scenarios.single().httpResponsePattern
         )
@@ -777,7 +767,7 @@ paths:
         """.trimIndent(), "").toFeature()
         val stub = HttpStubData(
             HttpRequest("POST", "/data", body = parsedJSON("""{"data": 10}""")).toPattern(),
-            HttpResponse.OK("123"),
+            HttpResponse.ok("123"),
             Resolver(),
             responsePattern = contract.scenarios.single().httpResponsePattern
         )

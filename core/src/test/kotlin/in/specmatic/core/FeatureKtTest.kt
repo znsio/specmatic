@@ -487,7 +487,7 @@ class FeatureKtTest {
                 "http-response": {
                     "status": 200,
                     "body": {
-                        "operationid": 10
+                        "operationId": 10
                     }
                 }
             }
@@ -508,7 +508,7 @@ class FeatureKtTest {
       | entries | (Entries*) |
       | data | (Data) |
     And type ResponseBody
-      | operationid | (number) |
+      | operationId | (number) |
     When POST /data
     And request-body (RequestBody)
     Then status 200
@@ -590,20 +590,18 @@ class FeatureKtTest {
             """
 
         val feature = parseContractFileToFeature("test.yaml", hookMock)
-        assertThat(feature.matches(HttpRequest("GET", "/"), HttpResponse.OK(NumberValue(10)))).isTrue
+        assertThat(feature.matches(HttpRequest("GET", "/"), HttpResponse.ok(NumberValue(10)))).isTrue
     }
 
     companion object {
-        private const val openApiFileName = "openApiTest.yaml"
-        private const val resourcesRoot = "src/test/resources/"
-        private const val openApiFilePathRelativeToProjectRoot = "$resourcesRoot$openApiFileName"
+        private const val OPENAPI_FILENAME = "openApiTest.yaml"
+        private const val RESOURCES_ROOT = "src/test/resources/"
+        private const val OPENAPI_RELATIVE_FILEPATH = "$RESOURCES_ROOT$OPENAPI_FILENAME"
 
         @BeforeAll
         @JvmStatic
-        fun `setup`() {
-            File(".").canonicalFile.let {
-                println(it.path)
-            }
+        fun setup() {
+            println(File(".").canonicalFile.path)
             val openAPI = """
 openapi: 3.0.0
 info:
@@ -648,15 +646,15 @@ paths:
                 type: string
     """.trim()
 
-            val openApiFile = File(openApiFilePathRelativeToProjectRoot)
+            val openApiFile = File(OPENAPI_RELATIVE_FILEPATH)
             openApiFile.createNewFile()
             openApiFile.writeText(openAPI)
         }
 
         @AfterAll
         @JvmStatic
-        fun `teardown`() {
-            File(openApiFilePathRelativeToProjectRoot).delete()
+        fun teardown() {
+            File(OPENAPI_RELATIVE_FILEPATH).delete()
         }
     }
 
@@ -665,14 +663,14 @@ paths:
         val feature = parseGherkinStringToFeature("""
                 Feature: OpenAPI test
                     Background:
-                        Given openapi $openApiFileName
+                        Given openapi $OPENAPI_FILENAME
                         And value auth from auth.spec
                         
                     Scenario: OpenAPI test
                         When GET /hello/10
                         Then status 200
                         And export data = response-body
-            """.trimIndent(), File("${resourcesRoot}dummy.spec").canonicalPath)
+            """.trimIndent(), File("${RESOURCES_ROOT}dummy.spec").canonicalPath)
 
         @Test
         fun `parsing OpenAPI spec should preserve the references declared in the gherkin spec`() {
@@ -761,7 +759,7 @@ paths:
         assertThat(jsonToYAml.success()).withFailMessage(jsonToYAml.report()).isTrue
     }
 
-    fun String.toFeatureString(): String {
+    private fun String.toFeatureString(): String {
         val parsedJSONValue = parsedJSON(this) as JSONObjectValue
         return toGherkinFeature(NamedStub("Test Feature", mockFromJSON(parsedJSONValue.jsonObject)))
     }

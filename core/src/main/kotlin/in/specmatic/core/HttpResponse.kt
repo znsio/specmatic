@@ -106,17 +106,17 @@ data class HttpResponse(
     companion object {
         val ERROR_400 = HttpResponse(400, "This request did not match any scenario.", emptyMap())
         val OK = HttpResponse(200, emptyMap())
-        fun OK(body: Number): HttpResponse {
+        fun ok(body: Number): HttpResponse {
             val bodyValue = NumberValue(body)
             return HttpResponse(200, mapOf(CONTENT_TYPE to bodyValue.httpContentType), bodyValue)
         }
 
-        fun OK(body: String): HttpResponse {
+        fun ok(body: String): HttpResponse {
             val bodyValue = StringValue(body)
             return HttpResponse(200, mapOf(CONTENT_TYPE to bodyValue.httpContentType), bodyValue)
         }
 
-        fun OK(body: Value) = HttpResponse(200, mapOf(CONTENT_TYPE to body.httpContentType), body)
+        fun ok(body: Value) = HttpResponse(200, mapOf(CONTENT_TYPE to body.httpContentType), body)
         val EMPTY = HttpResponse(0, emptyMap())
 
         fun jsonResponse(jsonData: String?): HttpResponse {

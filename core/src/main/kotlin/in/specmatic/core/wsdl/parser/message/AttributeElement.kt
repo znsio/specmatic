@@ -9,7 +9,7 @@ import `in`.specmatic.core.value.localName
 class AttributeElement(xmlNode: XMLNode) {
     val name: String
     val type: Value
-    val mandatory: Boolean
+    private val mandatory: Boolean
     val nameWithOptionality: String
 
     init {

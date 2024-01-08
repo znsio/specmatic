@@ -61,8 +61,13 @@ internal class AnyPatternTest {
     @Test
     @Tag(GENERATION)
     fun `should generate new patterns for all available types`() {
-        AnyPattern(listOf(NumberPattern(), EnumPattern(listOf(StringValue("one"), StringValue("two"))))).newBasedOn(Row(), Resolver()).let {
-            it.map { it.typeName } shouldContainInAnyOrder listOf("number", "\"one\"", "\"two\"")
+        AnyPattern(
+            listOf(
+                NumberPattern(),
+                EnumPattern(listOf(StringValue("one"), StringValue("two")))
+            )
+        ).newBasedOn(Row(), Resolver()).let { patterns ->
+            patterns.map { it.typeName } shouldContainInAnyOrder listOf("number", "\"one\"", "\"two\"")
         }
     }
 
@@ -166,7 +171,7 @@ internal class AnyPatternTest {
     }
 
     @Nested
-    inner class EnumBackwardComaptibility {
+    inner class EnumBackwardCompatibility {
         private val enum = toStringEnum("sold", "available")
 
         @Test

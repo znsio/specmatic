@@ -243,7 +243,7 @@ Pet:
                     "POST",
                     "/user",
                     body = parsedJSON("""{"address": {"street": "Baker Street"}}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
 
@@ -253,7 +253,7 @@ Pet:
                     "POST",
                     "/user",
                     body = parsedJSON("""{"address": null}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
     }
@@ -499,7 +499,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}]}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -600,7 +600,7 @@ Scenario: Get product by id
                     "POST",
                     "/person",
                     body = parsedJSON("""{"street": "baker street", "locality": "London"}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             )
         ).isTrue
     }
@@ -632,7 +632,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": "123", "address": null}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -711,7 +711,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": null}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -774,7 +774,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": null}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
             assertThat(
@@ -783,7 +783,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": "10"}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -850,7 +850,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}]}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ) {
                 assertThat(this).isInstanceOf(Result.Success::class.java)
@@ -862,7 +862,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": "123", "address": null}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ) {
 
@@ -948,7 +948,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}, null]}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -1032,7 +1032,7 @@ Scenario: Get product by id
                     "POST",
                     "/person",
                     formFields = mapOf("person" to """{"id": "123", "address": {"street": "baker street", "locality": "London"}}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             )
         }
 
@@ -1184,7 +1184,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": "10", "address": "Baker street"}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -1259,7 +1259,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/person1"
-                    ), HttpResponse.OK(body = parsedJSON("""{"id": "10", "address": "Baker street"}"""))
+                    ), HttpResponse.ok(body = parsedJSON("""{"id": "10", "address": "Baker street"}"""))
                 )
             ).isTrue
             assertThat(
@@ -1267,7 +1267,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/person2"
-                    ), HttpResponse.OK(body = parsedJSON("""{"id": "10", "address": "Baker street"}"""))
+                    ), HttpResponse.ok(body = parsedJSON("""{"id": "10", "address": "Baker street"}"""))
                 )
             ).isTrue
             assertThat(
@@ -1275,7 +1275,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/person1"
-                    ), HttpResponse.OK(body = parsedJSON("""{"address": "Baker street"}"""))
+                    ), HttpResponse.ok(body = parsedJSON("""{"address": "Baker street"}"""))
                 )
             ).isTrue
             assertThat(
@@ -1283,7 +1283,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/person2"
-                    ), HttpResponse.OK(body = parsedJSON("""{"address": "Baker street"}"""))
+                    ), HttpResponse.ok(body = parsedJSON("""{"address": "Baker street"}"""))
                 )
             ).isTrue
         }
@@ -1727,7 +1727,7 @@ Scenario: Get product by id
                 HttpRequest(
                     "POST",
                     "/person"
-                ), HttpResponse.OK(NumberValue(10))
+                ), HttpResponse.ok(NumberValue(10))
             )
         }
 
@@ -1780,7 +1780,7 @@ Scenario: Get product by id
                         "GET",
                         "/person"
                     ),
-                    HttpResponse.OK(parsedJSON("""{"address": "Baker Street"}"""))
+                    HttpResponse.ok(parsedJSON("""{"address": "Baker Street"}"""))
                         .copy(headers = mapOf("X-Hello-World" to "hello"))
                 )
             ).isTrue
@@ -1846,7 +1846,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/person"
-                    ), HttpResponse.OK(parsedJSON("""{"address": "Baker Street"}"""))
+                    ), HttpResponse.ok(parsedJSON("""{"address": "Baker Street"}"""))
                 )
             ).isTrue
         }
@@ -1908,7 +1908,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"address": null}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -1975,7 +1975,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"address": []}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -2043,7 +2043,7 @@ Scenario: Get product by id
                     "POST",
                     "/person",
                     body = parsedJSON("""{"address": [null, "Baker Street"]}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             )
 
             assertThat(result).isInstanceOf(Result.Success::class.java)
@@ -2120,7 +2120,7 @@ Scenario: Get product by id
                         "GET",
                         "/data",
                         headers = mapOf("X-Data" to "data")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -2182,7 +2182,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data"
-                    ), HttpResponse.OK("success").copy(headers = mapOf("X-Data" to "data"))
+                    ), HttpResponse.ok("success").copy(headers = mapOf("X-Data" to "data"))
                 )
             ).isTrue
         }
@@ -2244,7 +2244,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data"
-                    ), HttpResponse.OK("success").copy(headers = mapOf("X-Data-One" to "data"))
+                    ), HttpResponse.ok("success").copy(headers = mapOf("X-Data-One" to "data"))
                 )
             ).isTrue
             assertThat(
@@ -2252,7 +2252,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data"
-                    ), HttpResponse.OK("success").copy(headers = mapOf("X-Data-Two" to "data"))
+                    ), HttpResponse.ok("success").copy(headers = mapOf("X-Data-Two" to "data"))
                 )
             ).isTrue
             assertThat(
@@ -2260,7 +2260,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data"
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -2327,7 +2327,7 @@ Scenario: Get product by id
                         "GET",
                         "/data",
                         headers = mapOf("X-Data-One" to "data")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
             assertThat(
@@ -2336,7 +2336,7 @@ Scenario: Get product by id
                         "GET",
                         "/data",
                         headers = mapOf("X-Data-One" to "data")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
             assertThat(
@@ -2345,7 +2345,7 @@ Scenario: Get product by id
                         "GET",
                         "/data",
                         headers = mapOf("X-Data-One" to "data")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -3611,7 +3611,7 @@ paths:
 
     @Nested
     inner class WhenAdditionalPropertiesIsFalse {
-        val openAPI =
+        private val openAPI =
             """
 ---
 openapi: 3.0.1
@@ -3664,7 +3664,7 @@ paths:
 
     @Nested
     inner class WhenAdditionalPropertiesIsTrue {
-        val openAPI =
+        private val openAPI =
             """
 ---
 openapi: 3.0.1
@@ -3749,7 +3749,7 @@ paths:
                 "GET",
                 "/"
             )
-            val response = HttpResponse.OK(
+            val response = HttpResponse.ok(
                 body = parsedJSON("""{"10": {"name": "Jane"}}""")
             )
 
@@ -4807,7 +4807,7 @@ paths:
 
         private fun assertMatchesResponseSnippet(path: String, xmlSnippet: String, xmlFeature: Feature) {
             val request = HttpRequest("GET", path)
-            val stubData = xmlFeature.matchingStub(request, HttpResponse.OK(body = parsedValue(xmlSnippet)))
+            val stubData = xmlFeature.matchingStub(request, HttpResponse.ok(body = parsedValue(xmlSnippet)))
 
             val stubMatchResult =
                 stubData.responsePattern.body.matches(parsedValue(xmlSnippet), xmlFeature.scenarios.first().resolver)
@@ -5701,7 +5701,7 @@ paths:
                     "POST",
                     "/user",
                     body = parsedJSON("""{"location": {"street": "Baker Street"}}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
 
@@ -5711,7 +5711,7 @@ paths:
                     "POST",
                     "/user",
                     body = parsedJSON("""{"location": {"latitude": 51.523160, "longitude": -0.158070}}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
 
@@ -5721,7 +5721,7 @@ paths:
                     "POST",
                     "/user",
                     body = parsedJSON("""{"location": null}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
     }
@@ -5784,7 +5784,7 @@ paths:
                     "POST",
                     "/user",
                     body = parsedJSON("""{"location": {"street": "Baker Street"}}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
 
@@ -5794,7 +5794,7 @@ paths:
                     "POST",
                     "/user",
                     body = parsedJSON("""{"location": {"latitude": 51.523160, "longitude": -0.158070}}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
 
@@ -5804,7 +5804,7 @@ paths:
                     "POST",
                     "/user",
                     body = parsedJSON("""{"location": null}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             )
         }.satisfies(Consumer { it.instanceOf(NoMatchingScenario::class) })
     }
@@ -5876,7 +5876,7 @@ paths:
                     "PATCH",
                     "/pets",
                     body = parsedJSON("""{"pet_type": "Cat", "age": 3}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
 
@@ -5886,7 +5886,7 @@ paths:
                     "PATCH",
                     "/pets",
                     body = parsedJSON("""{"pet_type": "Dog", "bark": true}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
 
@@ -5896,7 +5896,7 @@ paths:
                     "PATCH",
                     "/pets",
                     body = parsedJSON("""{"pet_type": "Dog", "bark": false, "breed": "Dingo"}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
 
@@ -5906,7 +5906,7 @@ paths:
                     "PATCH",
                     "/pets",
                     body = parsedJSON("""{"age": 3}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             )
         }.isInstanceOf(NoMatchingScenario::class.java)
 
@@ -5916,7 +5916,7 @@ paths:
                     "PATCH",
                     "/pets",
                     body = parsedJSON("""{"pet_type": "Cat", "bark": true}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             )
         }.isInstanceOf(NoMatchingScenario::class.java)
     }
@@ -6459,7 +6459,7 @@ paths:
                 mapOf("Authorization" to "valid"),
                 body = parsedJSONObject("""{"item": "data"}""")
             ),
-            HttpResponse.OK("success")
+            HttpResponse.ok("success")
         )
 
         val invalidAuthStub: ScenarioStub = ScenarioStub(
@@ -6539,7 +6539,7 @@ paths:
                         "POST",
                         "/person",
                         body = parsedJSON("""[{"id": "123", "name": "Jack Sprat"}, {"id": "456"}]""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
 
             assertThat(result.reportString()).isEqualTo(
@@ -6603,7 +6603,7 @@ paths:
                         "POST",
                         "/person",
                         body = parsedJSON("""[{"id": "123", "names": ["Jack", "Sprat"]}, {"id": "456", "names": null}]""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
 
             println(result.reportString())

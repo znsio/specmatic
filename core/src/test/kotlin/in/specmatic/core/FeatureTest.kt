@@ -1,7 +1,6 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.conversions.OpenApiSpecification
-import `in`.specmatic.core.pattern.EmptyStringPattern
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.value.*
@@ -495,12 +494,9 @@ Feature: Contract for /balance API
                 "    And request-body {name: \"(string)\", address: \"(string)\"}\n" +
                 "    Then status 200\n"
         val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
-        var httpRequest: HttpRequest
-        var httpResponse: HttpResponse
-        val jsonResponse: JSONObject
-        httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("id", "100")
-        httpResponse = contractBehaviour.lookupResponse(httpRequest)
-        jsonResponse = JSONObject(httpResponse.body.displayableValue())
+        var httpRequest: HttpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("id", "100")
+        var httpResponse: HttpResponse = contractBehaviour.lookupResponse(httpRequest)
+        val jsonResponse = JSONObject(httpResponse.body.displayableValue())
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
         assertTrue(jsonResponse["calls_left"] is Int)
@@ -543,7 +539,7 @@ Feature: Contract for /balance API
         val cities = responseBody.getJSONArray("cities")
         for (i in 0 until cities.length()) {
             val city = cities.getJSONObject(i)
-            assertTrue(city.getString("city").length > 0)
+            assertTrue(city.getString("city").isNotEmpty())
         }
     }
 
@@ -904,14 +900,14 @@ Feature: Contract for /balance API
 Feature: Math API
 
 Scenario: Square a number
-When POST /squareof
+When POST /squareOf
     And form-field number (number)
 Then status 200
     And response-body (number)
 """.trim()
 
         val behaviour = parseGherkinStringToFeature(contractGherkin)
-        val httpRequest = HttpRequest(method="POST", path="/squareof", formFields=mapOf("number" to "10"))
+        val httpRequest = HttpRequest(method="POST", path="/squareOf", formFields=mapOf("number" to "10"))
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
         assertEquals(200, httpResponse.status)
@@ -924,14 +920,14 @@ Then status 200
 Feature: Math API
 
 Scenario: Square a number
-When POST /squareof
+When POST /squareOf
     And form-field number (number)
 Then status 200
     And response-body (number)
 """.trim()
 
         val behaviour = parseGherkinStringToFeature(contractGherkin)
-        val httpRequest = HttpRequest(method="POST", path="/squareof", formFields=mapOf("number" to "hello"))
+        val httpRequest = HttpRequest(method="POST", path="/squareOf", formFields=mapOf("number" to "hello"))
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
         assertEquals(400, httpResponse.status)
@@ -1197,7 +1193,7 @@ paths:
 """.trimIndent(), "").toFeature()
 
         val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenarios(emptyList())
-        assertThat(scenarios.filter { it.testDescription().contains("-ve")}.count()).isEqualTo(0)
+        assertThat(scenarios.count { it.testDescription().contains("-ve") }).isEqualTo(0)
     }
 
     @Test

@@ -177,7 +177,7 @@ fun allOrNothingListCombinations(values: List<List<Pattern?>>): List<List<Patter
     if (values.isEmpty())
         return listOf(emptyList())
 
-    val maxKeyValues = values.map { it.size }.maxOrNull() ?: 0
+    val maxKeyValues = values.maxOfOrNull { it.size } ?: 0
 
     return (0 until maxKeyValues).map {
         keyCombinations(values) { value ->

@@ -19,7 +19,7 @@ import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.cors.*
+import io.ktor.server.plugins.cors.CORS
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -46,7 +46,7 @@ data class HttpStubResponse(
 
 class HttpStub(
     private val features: List<Feature>,
-    _httpStubs: List<HttpStubData> = emptyList(),
+    rawHttpStubs: List<HttpStubData> = emptyList(),
     host: String = "127.0.0.1",
     port: Int = 9000,
     private val log: (event: LogMessage) -> Unit = dontPrintToConsole,
@@ -78,10 +78,10 @@ class HttpStub(
         const val JSON_REPORT_FILE_NAME = "stub_usage_report.json"
     }
 
-    private val threadSafeHttpStubs = ThreadSafeListOfStubs(staticHttpStubData(_httpStubs))
+    private val threadSafeHttpStubs = ThreadSafeListOfStubs(staticHttpStubData(rawHttpStubs))
 
-    private fun staticHttpStubData(_httpStubs: List<HttpStubData>): MutableList<HttpStubData> {
-        val staticStubs = _httpStubs.filter { it.stubToken == null }.toMutableList()
+    private fun staticHttpStubData(rawHttpStubs: List<HttpStubData>): MutableList<HttpStubData> {
+        val staticStubs = rawHttpStubs.filter { it.stubToken == null }.toMutableList()
         val stubsFromSpecificationExamples: List<HttpStubData> = features.map { feature ->
             feature.stubsFromExamples.entries.map {
                 it.value.mapNotNull { (request, response) ->
@@ -112,7 +112,7 @@ class HttpStub(
     }
 
     private val threadSafeHttpStubQueue =
-        ThreadSafeListOfStubs(_httpStubs.filter { it.stubToken != null }.reversed().toMutableList())
+        ThreadSafeListOfStubs(rawHttpStubs.filter { it.stubToken != null }.reversed().toMutableList())
 
     private val _logs: MutableList<StubEndpoint> = Collections.synchronizedList(ArrayList())
     private val _allEndpoints: List<StubEndpoint> = extractALlEndpoints()
@@ -297,9 +297,9 @@ class HttpStub(
             } catch (e: Throwable) {
                 it
             }
-        }.let {
+        }.let { request ->
             val requestHeaders = call.request.headers.toMap().mapValues { it.value[0] }
-            it.copy(headers = requestHeaders)
+            request.copy(headers = requestHeaders)
         }.let {
             val queryParams = toParams(call.request.queryParameters)
             it.copy(queryParams = queryParams)
@@ -320,13 +320,13 @@ class HttpStub(
     })
 
     private fun handleFetchLoadLogRequest(): HttpStubResponse =
-        HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getSnapshot())))
+        HttpStubResponse(HttpResponse.ok(StringValue(LogTail.getSnapshot())))
 
     private fun handleFetchContractsRequest(): HttpStubResponse =
-        HttpStubResponse(HttpResponse.OK(StringValue(features.joinToString("\n") { it.name })))
+        HttpStubResponse(HttpResponse.ok(StringValue(features.joinToString("\n") { it.name })))
 
     private fun handleFetchLogRequest(): HttpStubResponse =
-        HttpStubResponse(HttpResponse.OK(StringValue(LogTail.getString())))
+        HttpStubResponse(HttpResponse.ok(StringValue(LogTail.getString())))
 
     private fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse {
         val result: StubbedResponseResult = getHttpResponse(
@@ -532,7 +532,7 @@ class HttpStub(
     }
 }
 
-class CouldNotParseRequest(val innerException: Throwable) : Exception(exceptionCauseMessage(innerException))
+class CouldNotParseRequest(innerException: Throwable) : Exception(exceptionCauseMessage(innerException))
 
 internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
     try {

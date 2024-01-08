@@ -1,11 +1,10 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.core.MismatchMessages
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import `in`.specmatic.core.value.StringValue
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import java.util.function.Consumer
 
@@ -49,20 +48,6 @@ internal class GrammarKtTest {
 
     @Nested
     inner class CustomEmptyStringMessage {
-        val customMessage = object: MismatchMessages {
-            override fun mismatchMessage(expected: String, actual: String): String {
-                return actual
-            }
-
-            override fun unexpectedKey(keyLabel: String, keyName: String): String {
-                TODO("Not yet implemented")
-            }
-
-            override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
-                TODO("Not yet implemented")
-            }
-        }
-
         @Test
         fun `should show custom empty string message when trying to parse it as json object`() {
             assertThatThrownBy {

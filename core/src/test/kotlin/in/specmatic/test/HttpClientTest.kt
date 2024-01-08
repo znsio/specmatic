@@ -27,8 +27,7 @@ internal class HttpClientTest {
         GZIPOutputStream(byteArrayOutputStream).writer(Charsets.UTF_8).use { it.write("hello world") }
 
         byteArrayOutputStream.flush()
-        val bytes = byteArrayOutputStream.toByteArray()
-        return bytes
+        return byteArrayOutputStream.toByteArray()
     }
 
     @Test

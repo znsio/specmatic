@@ -10,18 +10,18 @@ import `in`.specmatic.core.wsdl.parser.WSDL
 import `in`.specmatic.core.wsdl.payload.SoapPayloadType
 
 class ParseMessageWithoutElementRef(
-    val fullyQualifiedMessageName: FullyQualifiedName,
-    val partName: String,
-    val fullyQualifiedTypeName: FullyQualifiedName,
+    private val fullyQualifiedMessageName: FullyQualifiedName,
+    private val partName: String,
+    private val fullyQualifiedTypeName: FullyQualifiedName,
     val soapMessageType: SOAPMessageType,
     val existingTypes: Map<String, XMLPattern>,
-    val operationName: String,
+    private val operationName: String,
     val wsdl: WSDL,
 ) : MessageTypeInfoParser {
     override fun execute(): MessageTypeInfoParser {
         val (qualification, qualifiedMessageName) = when {
             fullyQualifiedMessageName.prefix.isNotBlank() -> {
-                val qualification = QualificationWithoutSchema(listOf(wsdl.getSchemaNamespacePrefix(fullyQualifiedMessageName.namespace)), fullyQualifiedMessageName.qname)
+                val qualification = QualificationWithoutSchema(listOf(wsdl.getSchemaNamespacePrefix(fullyQualifiedMessageName.namespace)), fullyQualifiedMessageName.qName)
                 Pair(qualification, qualification.nodeName)
             }
             else -> Pair(null, fullyQualifiedMessageName.localName)
@@ -32,21 +32,21 @@ class ParseMessageWithoutElementRef(
 
             xmlNode("complexType") {
                 xmlNode("sequence") {
-                    xmlNode("element", mapOf("name" to partName, "type" to fullyQualifiedTypeName.qname))
+                    xmlNode("element", mapOf("name" to partName, "type" to fullyQualifiedTypeName.qName))
                 }
             }
         }
 
-        val topLevelElement = ComplexElement(fullyQualifiedTypeName.qname, topLevelNode, wsdl, qualification)
+        val topLevelElement = ComplexElement(fullyQualifiedTypeName.qName, topLevelNode, wsdl, qualification)
 
-        val qontractTypeName = "${operationName.replace(":", "_")}${soapMessageType.messageTypeName.capitalizeFirstChar()} "
+        val specmaticTypeName = "${operationName.replace(":", "_")}${soapMessageType.messageTypeName.capitalizeFirstChar()} "
 
-        val typeInfo = topLevelElement.deriveSpecmaticTypes(qontractTypeName, existingTypes, emptySet())
+        val typeInfo = topLevelElement.deriveSpecmaticTypes(specmaticTypeName, existingTypes, emptySet())
 
         val namespaces: Map<String, String> = wsdl.getNamespaces(typeInfo)
         val nodeNameForSOAPBody = (typeInfo.nodes.first() as XMLNode).realName
 
-        val soapPayload = topLevelElement.getSOAPPayload(soapMessageType, nodeNameForSOAPBody, qontractTypeName, namespaces, typeInfo)
+        val soapPayload = topLevelElement.getSOAPPayload(soapMessageType, nodeNameForSOAPBody, specmaticTypeName, namespaces, typeInfo)
 
         return MessageTypeProcessingComplete(SoapPayloadType(typeInfo.types, soapPayload))
     }

@@ -1,8 +1,13 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.core.*
-import `in`.specmatic.core.utilities.exceptionCauseMessage
-import `in`.specmatic.core.value.*
+import `in`.specmatic.core.MismatchMessages
+import `in`.specmatic.core.Resolver
+import `in`.specmatic.core.Result
+import `in`.specmatic.core.mismatchResult
+import `in`.specmatic.core.value.EmptyString
+import `in`.specmatic.core.value.NullValue
+import `in`.specmatic.core.value.ScalarValue
+import `in`.specmatic.core.value.Value
 
 data class AnyPattern(
     override val pattern: List<Pattern>,
@@ -147,11 +152,11 @@ data class AnyPattern(
         val negativeTypes = newTypesOrExceptionIfNone(
             negativeTypeResults,
             "Could not get negative tests"
-        ).let {
+        ).let { patterns ->
             if (nullable)
-                it.filterNot { it is NullPattern }
+                patterns.filterNot { it is NullPattern }
             else
-                it
+                patterns
         }
 
         return if(negativeTypes.all { it is ScalarType })

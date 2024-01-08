@@ -9,7 +9,7 @@ import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
 
 class SystemGit(override val workingDirectory: String = ".", private val prefix: String = "- ", val authCredentials: AuthCredentials = NoGitAuthCredentials) : GitCommand {
-    fun executeWithAuth(vararg command: String): String {
+    private fun executeWithAuth(vararg command: String): String {
         val gitExecutable = listOf(Configuration.gitCommand)
         val auth = authCredentials.gitCommandAuthHeaders()
 
@@ -74,11 +74,10 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     }
 
     override fun checkIgnore(path: String): String {
-        try {
-            return execute(Configuration.gitCommand, "check-ignore", path)
-        }
-        catch (nonZeroExitError:NonZeroExitError) {
-            return ""
+        return try {
+            execute(Configuration.gitCommand, "check-ignore", path)
+        } catch (nonZeroExitError:NonZeroExitError) {
+            ""
         }
     }
 

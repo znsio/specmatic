@@ -1,6 +1,5 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.core.Flags
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.StringValue

@@ -24,10 +24,10 @@ fun urlToQueryParams(uri: URI): Map<String, String> {
     if (uri.query == null)
         return emptyMap()
 
-    return uri.query.split("&").map {
+    return uri.query.split("&").associate {
         val parts = it.split("=".toRegex(), 2)
         Pair(parts[0], parts[1])
-    }.toMap()
+    }
 }
 
 data class HttpRequest(

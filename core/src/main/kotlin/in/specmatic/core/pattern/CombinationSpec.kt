@@ -58,17 +58,15 @@ class CombinationSpec<ValueType>(
 
     private fun toSelectedCombinations(): List<Map<String, ValueType>> {
         val prioritizedCombos = prioritizedComboIndexes.map { toCombo(it) }
-        val remainingCombos = (0 .. lastCombination)
+        val remainingCombos = (0..lastCombination)
             .filterNot { prioritizedComboIndexes.contains(it) }
             .map { toCombo(it) }
 
         val combined = prioritizedCombos.plus(remainingCombos)
 
-        val combinedAndTrimmed = if (combined.size > maxCombinations)
+        return if (combined.size > maxCombinations)
             combined.subList(0, maxCombinations)
         else combined
-
-        return combinedAndTrimmed
     }
     private fun toCombo(comboIndex: Int): Map<String, ValueType> {
         var subIndex = comboIndex

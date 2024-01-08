@@ -56,12 +56,6 @@ data class Row(
         }
     }
 
-    fun stringForOpenAPIError(): String {
-        return columnNames.zip(values).joinToString(", ") { (key, value) ->
-            "$key=$value"
-        }
-    }
-
     fun getField(columnName: String): String {
         return getValue(columnName).fetch()
     }

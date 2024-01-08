@@ -80,10 +80,10 @@ Feature: Recursive test
 
     @Nested
     inner class ReturnAllErrors {
-        val listType = ListPattern(NumberPattern())
+        private val listType = ListPattern(NumberPattern())
         val list = parsedJSON("""["elementA", 2, "elementC"]""")
         val result: Result.Failure = listType.matches(list, Resolver()) as Result.Failure
-        val resultText = result.toFailureReport().toText()
+        private val resultText = result.toFailureReport().toText()
 
         @Test
         fun `should return all errors in a list`() {

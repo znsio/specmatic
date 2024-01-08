@@ -5,7 +5,6 @@ import `in`.specmatic.core.pattern.AnyPattern
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.DeferredPattern
 import `in`.specmatic.core.pattern.Pattern
-import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.mock.ScenarioStub
@@ -67,28 +66,6 @@ fun String.testBackwardCompatibility(oldContractGherkin: String): Results {
     val oldFeature = parseGherkinStringToFeature(oldContractGherkin)
     val newFeature = parseGherkinStringToFeature(this)
     return testBackwardCompatibility(oldFeature, newFeature)
-}
-
-fun stubShouldNotBreak(stubRequest: HttpRequest, stubResponse: HttpResponse, oldContract: String, newContract: String) {
-    val responseFromOldContract = testStub(oldContract, stubRequest, stubResponse)
-    assertThat(responseFromOldContract).isEqualTo(stubResponse)
-
-    val responseFromNewContract = testStub(newContract, stubRequest, stubResponse)
-    assertThat(responseFromNewContract.status).isEqualTo(200)
-}
-
-fun stubShouldBreak(stubRequest: HttpRequest, stubResponse: HttpResponse, oldContract: String, newContract: String) {
-    val responseFromOldContract = testStub(oldContract, stubRequest, stubResponse)
-    assertThat(responseFromOldContract).isEqualTo(stubResponse)
-
-    val responseFromNewContract = try {
-        testStub(newContract, stubRequest, stubResponse)
-    } catch(e: Throwable) {
-        println(exceptionCauseMessage(e))
-        return
-    }
-
-    assertThat(responseFromNewContract.status).isEqualTo(400)
 }
 
 fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeStubs: List<HttpStubData>, strictMode: Boolean): HttpStubResponse {

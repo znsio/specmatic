@@ -41,7 +41,7 @@ internal class ProxyTest {
     )
 
     private var fakeFileWriter: FakeFileWriter = FakeFileWriter()
-    val generatedContracts = File("./build/generatedContracts")
+    private val generatedContracts = File("./build/generatedContracts")
 
     @BeforeEach
     fun setup() {

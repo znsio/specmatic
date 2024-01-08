@@ -11,13 +11,13 @@ data class InlineType(val parentTypeName: String, val child: XMLNode, val wsdl: 
 
         val elementName = child.attributes["name"]
             ?: throw ContractException("Element does not have a name: $child")
-        val qontractTypeName = "${parentTypeName}_$elementName"
+        val specmaticTypeName = "${parentTypeName}_$elementName"
 
         val element = when {
             hasSimpleTypeAttribute(child) -> SimpleElement(wsdlTypeReference, child, wsdl)
             else -> ComplexElement(wsdlTypeReference, child, wsdl)
         }
 
-        return Pair(qontractTypeName, element)
+        return Pair(specmaticTypeName, element)
     }
 }

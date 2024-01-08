@@ -198,8 +198,7 @@ data class HttpPathPattern(
         }, row, resolver)
 
         //TODO: Replace with Generics
-        val newURLPathSegmentPatternsList = newPathPartsList.map { list -> list.map { it as URLPathSegmentPattern } }
-        return newURLPathSegmentPatternsList
+        return newPathPartsList.map { list -> list.map { it as URLPathSegmentPattern } }
     }
 }
 

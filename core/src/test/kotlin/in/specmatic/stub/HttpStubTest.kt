@@ -153,7 +153,7 @@ Scenario: Get a number
         }
     }
 
-    fun testMock(mockData: String, output: String, fake: HttpStub) {
+    private fun testMock(mockData: String, output: String, fake: HttpStub) {
         val stubSetupURL = "${fake.endPoint}/_specmatic/expectations"
         val headers = HttpHeaders()
         headers.contentType = MediaType.APPLICATION_JSON
@@ -423,7 +423,7 @@ And response-body (number)
 
         val request = HttpRequest("POST", "/number", emptyMap(), parsedValue("""<data>10</data>"""))
         val expectedNumber = 100000
-        val mock = ScenarioStub(request, HttpResponse.OK(NumberValue(expectedNumber)))
+        val mock = ScenarioStub(request, HttpResponse.ok(NumberValue(expectedNumber)))
 
         HttpStub(gherkin, listOf(mock)).use { fake ->
             RestTemplate().postForEntity<String>(fake.endPoint + "/number", """<data>10</data>""")
@@ -602,7 +602,7 @@ Scenario: Square of a number
         )
 
         val httpClient = mockk<HttpClient>()
-        every { httpClient.execute(any()) } returns (HttpResponse.OK("it worked"))
+        every { httpClient.execute(any()) } returns (HttpResponse.ok("it worked"))
 
         val httpClientFactory = mockk<HttpClientFactory>()
         every { httpClientFactory.client(any()) } returns (httpClient)
@@ -636,7 +636,7 @@ Scenario: Square of a number
         )
 
         val httpClient = mockk<HttpClient>()
-        every { httpClient.execute(any()) } returns (HttpResponse.OK("it worked"))
+        every { httpClient.execute(any()) } returns (HttpResponse.ok("it worked"))
 
         val httpClientFactory = mockk<HttpClientFactory>()
         every { httpClientFactory.client(any()) } returns (httpClient)
@@ -668,7 +668,7 @@ Scenario: Square of a number
         )
 
         val httpClient = mockk<HttpClient>()
-        every { httpClient.execute(any()) } returns (HttpResponse.OK("should not get here"))
+        every { httpClient.execute(any()) } returns (HttpResponse.ok("should not get here"))
 
         val httpClientFactory = mockk<HttpClientFactory>()
         every { httpClientFactory.client(any()) } returns (httpClient)
@@ -681,7 +681,7 @@ Scenario: Square of a number
             stub.setExpectation(
                 ScenarioStub(
                     HttpRequest("POST", "/", body = NumberValue(10)),
-                    HttpResponse.OK("success")
+                    HttpResponse.ok("success")
                 )
             )
             val client = HttpClient(stub.endPoint)

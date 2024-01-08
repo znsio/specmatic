@@ -138,7 +138,7 @@ class PatternDefinitionTests {
                 val childNode = childNodes.item(i)
                 Assertions.assertEquals("city", childNode.nodeName)
                 val cityNode = childNode.firstChild
-                assertTrue(cityNode.nodeValue.length > 0)
+                assertTrue(cityNode.nodeValue.isNotEmpty())
             }
         } catch(e: Throwable) {
             println(e.stackTrace)

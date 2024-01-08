@@ -9,7 +9,7 @@ import java.util.function.Consumer
 internal class ResultKtTest {
     @Test
     fun `add response body to result variables`() {
-        val result = Result.Success().withBindings(mapOf("data" to "response-body"), HttpResponse.OK("10")) as Result.Success
+        val result = Result.Success().withBindings(mapOf("data" to "response-body"), HttpResponse.ok("10")) as Result.Success
         assertThat(result.variables).isEqualTo(mapOf("data" to "10"))
     }
 

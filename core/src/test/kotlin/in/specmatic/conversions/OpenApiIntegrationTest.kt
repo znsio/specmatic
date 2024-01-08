@@ -49,7 +49,7 @@ Examples:
                 val result = executeTest(contractTests.single(), object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsEntry(HttpHeaders.AUTHORIZATION, "Bearer abc123")
-                        return HttpResponse.OK("success")
+                        return HttpResponse.ok("success")
                     }
 
                     override fun setServerState(serverState: Map<String, Value>) {
@@ -69,7 +69,7 @@ Examples:
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsKey(HttpHeaders.AUTHORIZATION)
                         assertThat(request.headers[HttpHeaders.AUTHORIZATION]).matches("Bearer (\\S+)")
-                        return HttpResponse.OK("success")
+                        return HttpResponse.ok("success")
                     }
 
                     override fun setServerState(serverState: Map<String, Value>) {
@@ -92,7 +92,7 @@ Examples:
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsKey(HttpHeaders.AUTHORIZATION)
                         assertThat(request.headers[HttpHeaders.AUTHORIZATION]).matches("Bearer $token")
-                        return HttpResponse.OK("success")
+                        return HttpResponse.ok("success")
                     }
 
                     override fun setServerState(serverState: Map<String, Value>) {
@@ -117,7 +117,7 @@ Examples:
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsKey(HttpHeaders.AUTHORIZATION)
                         assertThat(request.headers[HttpHeaders.AUTHORIZATION]).matches("Bearer ENV1234")
-                        return HttpResponse.OK("success")
+                        return HttpResponse.ok("success")
                     }
 
                     override fun setServerState(serverState: Map<String, Value>) {
@@ -222,7 +222,7 @@ Feature: Authenticated
                 val result = executeTest(contractTests.single(), object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsEntry(HttpHeaders.AUTHORIZATION, "Bearer abc123")
-                        return HttpResponse.OK("success")
+                        return HttpResponse.ok("success")
                     }
 
                     override fun setServerState(serverState: Map<String, Value>) {
@@ -274,7 +274,7 @@ Feature: Authenticated
                 val result = executeTest(contractTests.single(), object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsEntry(HttpHeaders.AUTHORIZATION, "Bearer abc123")
-                        return HttpResponse.OK("success")
+                        return HttpResponse.ok("success")
                     }
 
                     override fun setServerState(serverState: Map<String, Value>) {
@@ -326,7 +326,7 @@ Feature: Authenticated
                 val result = executeTest(contractTests.single(), object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsEntry(HttpHeaders.AUTHORIZATION, "Bearer abc123")
-                        return HttpResponse.OK("success")
+                        return HttpResponse.ok("success")
                     }
 
                     override fun setServerState(serverState: Map<String, Value>) {
@@ -379,7 +379,7 @@ Feature: Authenticated
             val result = executeTest(contractTests.single(), object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     assertThat(request.headers).containsEntry("Authorization", "Bearer abc123")
-                    return HttpResponse.OK("success")
+                    return HttpResponse.ok("success")
                 }
 
                 override fun setServerState(serverState: Map<String, Value>) {
@@ -404,7 +404,7 @@ Feature: Authenticated
                         }?.let {
                             requestMadeWithRandomlyGeneratedBearerToken = true
                         }
-                        return HttpResponse.OK("success")
+                        return HttpResponse.ok("success")
                     }
 
                     override fun setServerState(serverState: Map<String, Value>) {
@@ -433,7 +433,7 @@ Feature: Authenticated
                         }?.let {
                             requestMadeWithTokenFromSpecmaticJson = true
                         }
-                        return HttpResponse.OK("success")
+                        return HttpResponse.ok("success")
                     }
 
                     override fun setServerState(serverState: Map<String, Value>) {
@@ -466,7 +466,7 @@ Feature: Authenticated
                         }?.let {
                             requestMadeWithTokenFromSpecmaticJson = true
                         }
-                        return HttpResponse.OK("success")
+                        return HttpResponse.ok("success")
                     }
 
                     override fun setServerState(serverState: Map<String, Value>) {
@@ -599,7 +599,7 @@ Feature: Authenticated
             val result = executeTest(contractTests.single(), object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     assertThat(request.queryParams).containsEntry("apiKey", "abc123")
-                    return HttpResponse.OK("success")
+                    return HttpResponse.ok("success")
                 }
 
                 override fun setServerState(serverState: Map<String, Value>) {
@@ -662,7 +662,7 @@ Feature: Authenticated
             val result = executeTest(contractTests.single(), object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     assertThat(request.headers).containsEntry("X-API-KEY", "abc123")
-                    return HttpResponse.OK("success")
+                    return HttpResponse.ok("success")
                 }
 
                 override fun setServerState(serverState: Map<String, Value>) {
@@ -691,7 +691,7 @@ Feature: Authenticated
                         }?.let {
                             requestMadeWithApiKeyInHeaderFromSpecmaticJson = true
                         }
-                        return HttpResponse.OK("success")
+                        return HttpResponse.ok("success")
                     }
 
                     override fun setServerState(serverState: Map<String, Value>) {
@@ -725,7 +725,7 @@ Feature: Authenticated
                         }?.let {
                             requestMadeWithApiKeyInHeaderFromSpecmaticJson = true
                         }
-                        return HttpResponse.OK("success")
+                        return HttpResponse.ok("success")
                     }
 
                     override fun setServerState(serverState: Map<String, Value>) {
@@ -754,7 +754,7 @@ Feature: Authenticated
                         }?.let {
                             requestMadeWithApiKeyInQueryFromSpecmaticJson = true
                         }
-                        return HttpResponse.OK("success")
+                        return HttpResponse.ok("success")
                     }
 
                     override fun setServerState(serverState: Map<String, Value>) {

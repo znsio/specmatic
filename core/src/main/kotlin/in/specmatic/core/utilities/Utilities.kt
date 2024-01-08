@@ -124,7 +124,7 @@ fun getTransportCallingCallback(bearerToken: String? = null): TransportConfigCal
             transport.sshSessionFactory = SshdSessionFactory()
         } else if(bearerToken != null && transport is TransportHttp) {
             logger.debug("Setting Authorization header")
-            transport.setAdditionalHeaders(mapOf("Authorization" to "Bearer $bearerToken"))
+            transport.additionalHeaders = mapOf("Authorization" to "Bearer $bearerToken")
         }
     }
 }

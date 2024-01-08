@@ -10,7 +10,7 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.test.HttpClient
 import java.net.URI
 
-private fun undefault(jsonObject: JSONObjectValue, defaultCollectionName: String) =
+private fun unDefault(jsonObject: JSONObjectValue, defaultCollectionName: String) =
     when (val collection = (jsonObject.jsonObject["collection"] ?: throw ContractException("Expected \"collection\" in Azure search result")).toStringLiteral()) {
         "DefaultCollection" -> defaultCollectionName
         else -> collection
@@ -19,7 +19,7 @@ private fun undefault(jsonObject: JSONObjectValue, defaultCollectionName: String
 class AzureAPI(private val azureAuthToken: AzureAuthToken, private val azureBaseURL: String, private val collection: String) {
     data class ContractConsumerEntry(val collection: String, val project: String, val branch: String) {
         constructor(collection: String, referenceToSpecificationInAzureSearchResult: JSONObjectValue): this(
-            undefault(referenceToSpecificationInAzureSearchResult, collection),
+            unDefault(referenceToSpecificationInAzureSearchResult, collection),
             (referenceToSpecificationInAzureSearchResult.jsonObject["project"]
                 ?: throw ContractException("Expected \"project\" in consumer search result")).toStringLiteral(),
             (referenceToSpecificationInAzureSearchResult.jsonObject["branch"]

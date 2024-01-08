@@ -62,7 +62,7 @@ fun getNamespaces(attributes: Map<String, StringValue>): Map<String, String> =
     attributes.filterKeys { it.startsWith("xmlns:") }.mapKeys { it.key.removePrefix("xmlns:") }.mapValues { it.value.toString() }
 
 data class FullyQualifiedName(val prefix: String, val namespace: String, val localName: String) {
-    val qname: String
+    val qName: String
         get() {
             return if(prefix.isNotBlank())
                 "$prefix:$localName"
@@ -76,7 +76,7 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
 
     val oneLineDescription: String = "<$realName ${attributeString()}>"
 
-    fun attributeString(): String {
+    private fun attributeString(): String {
         return attributes.entries.joinToString(" ") { (name, value) ->
             "$name=\"$value\""
         }

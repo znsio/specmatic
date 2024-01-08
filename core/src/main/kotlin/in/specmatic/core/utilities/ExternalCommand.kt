@@ -24,7 +24,7 @@ class ExternalCommand(
         val commandWithParameters = command.joinToString(" ")
         return try {
             val procBuilder = ProcessBuilder(command.asList()).directory(File(workingDirect))
-            val env = procBuilder.environment();
+            val env = procBuilder.environment()
             env.putAll(environmentParameters)
             val proc = procBuilder.start()
             val out = proc.inputStream.bufferedReader().readText()

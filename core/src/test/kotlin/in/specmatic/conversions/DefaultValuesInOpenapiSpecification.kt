@@ -316,7 +316,7 @@ class DefaultValuesInOpenapiSpecification {
     @Test
     fun `SCHEMA_EXAMPLE_DEFAULT should switch on the schema example default feature`() {
         try {
-            System.setProperty(Flags.schemaExampleDefault, "true")
+            System.setProperty(Flags.SCHEMA_EXAMPLE_DEFAULT, "true")
 
             val feature = OpenApiSpecification.fromYAML(
                 """
@@ -377,7 +377,7 @@ class DefaultValuesInOpenapiSpecification {
             assertThat(results.successCount).isEqualTo(1)
             assertThat(results.failureCount).isEqualTo(0)
         } finally {
-            System.clearProperty(Flags.schemaExampleDefault)
+            System.clearProperty(Flags.SCHEMA_EXAMPLE_DEFAULT)
         }
     }
 }

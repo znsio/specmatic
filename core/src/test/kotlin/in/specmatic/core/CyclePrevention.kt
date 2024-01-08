@@ -136,10 +136,17 @@ class CyclePrevention {
                       ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), "").toFeature()
 
-        HttpStub(stubContract).use {
-            val randomResponse = it.client.execute(HttpRequest("GET", "/data"))
-            assertThat(stubContract.scenarios.first().let { it.httpResponsePattern.matches(randomResponse, it.resolver) }).isInstanceOf(
-                Success::class.java)
+        HttpStub(stubContract).use { stub ->
+            val randomResponse = stub.client.execute(HttpRequest("GET", "/data"))
+            assertThat(
+                stubContract.scenarios.first().let { scenario ->
+                    scenario.httpResponsePattern.matches(
+                        randomResponse,
+                        scenario.resolver
+                    )
+                }).isInstanceOf(
+                Success::class.java
+            )
 
             val rawJSON = """
                 {
@@ -160,7 +167,7 @@ class CyclePrevention {
                 }
             """.trimIndent()
 
-            val expectationSettingResponse = setExpectation(rawJSON, it)
+            val expectationSettingResponse = setExpectation(rawJSON, stub)
 
             assertThat(expectationSettingResponse.status).isEqualTo(200)
         }
@@ -169,9 +176,7 @@ class CyclePrevention {
 
     private fun setExpectation(rawJSON: String, it: HttpStub): HttpResponse {
         val expectation = parsedJSON(rawJSON)
-        val expectationSettingResponse =
-            it.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectation))
-        return expectationSettingResponse
+        return it.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectation))
     }
 
     @RepeatedTest(5)
@@ -207,11 +212,18 @@ class CyclePrevention {
                         - ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), "").toFeature()
 
-        HttpStub(feature).use {
-            val response = it.client.execute(HttpRequest("GET", "/data"))
+        HttpStub(feature).use { stub ->
+            val response = stub.client.execute(HttpRequest("GET", "/data"))
 
-            assertThat(feature.scenarios.first().let { it.httpResponsePattern.matches(response, it.resolver) }).isInstanceOf(
-                Success::class.java)
+            assertThat(
+                feature.scenarios.first().let { scenario ->
+                    scenario.httpResponsePattern.matches(
+                        response,
+                        scenario.resolver
+                    )
+                }).isInstanceOf(
+                Success::class.java
+            )
 
             assertThat(
                 setExpectation(
@@ -232,7 +244,7 @@ class CyclePrevention {
                                 }
                             }
                         }
-                    """.trimIndent(), it
+                    """.trimIndent(), stub
                 ).status).isEqualTo(200)
         }
     }
@@ -265,10 +277,10 @@ class CyclePrevention {
                       ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), "").toFeature()
 
-        HttpStub(feature).use {
-            val response = it.client.execute(HttpRequest("GET", "/data"))
+        HttpStub(feature).use { stub ->
+            val response = stub.client.execute(HttpRequest("GET", "/data"))
 
-            assertThat(feature.scenarios.first().let { it.httpResponsePattern.matches(response, it.resolver) }).isInstanceOf(
+            assertThat(feature.scenarios.first().let { scenario -> scenario.httpResponsePattern.matches(response, scenario.resolver) }).isInstanceOf(
                 Success::class.java)
 
             assertThat(
@@ -290,7 +302,7 @@ class CyclePrevention {
                                 }
                             }
                         }
-                    """.trimIndent(), it
+                    """.trimIndent(), stub
                 ).status).isEqualTo(200)
 
             assertThat(
@@ -312,7 +324,7 @@ class CyclePrevention {
                                 }
                             }
                         }
-                    """.trimIndent(), it
+                    """.trimIndent(), stub
                 ).status).isEqualTo(200)
         }
     }

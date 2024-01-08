@@ -163,7 +163,7 @@ class OpenApiSpecification(
         specmaticScenarioInfo: ScenarioInfo, steps: List<Step>
     ): List<ScenarioInfo> {
         val (openApiScenarioInfos, _) = openApiToScenarioInfos()
-        if (openApiScenarioInfos.isEmpty() || !steps.isNotEmpty()) return listOf(specmaticScenarioInfo)
+        if (openApiScenarioInfos.isEmpty() || steps.isEmpty()) return listOf(specmaticScenarioInfo)
         val result: MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> =
             specmaticScenarioInfo to openApiScenarioInfos to ::matchesPath then ::matchesMethod then ::matchesStatus then ::updateUrlMatcher otherwise ::handleError
         when (result) {
@@ -260,7 +260,7 @@ class OpenApiSpecification(
         val (specmaticScenarioInfo, openApiScenarioInfos) = parameters
 
         return MatchSuccess(specmaticScenarioInfo to openApiScenarioInfos.map { openApiScenario ->
-            val queryPattern = openApiScenario.httpRequestPattern.httpQueryParamPattern?.queryPatterns ?: emptyMap()
+            val queryPattern = openApiScenario.httpRequestPattern.httpQueryParamPattern.queryPatterns
             val zippedPathPatterns =
                 (specmaticScenarioInfo.httpRequestPattern.httpPathPattern?.pathSegmentPatterns ?: emptyList()).zip(
                     openApiScenario.httpRequestPattern.httpPathPattern?.pathSegmentPatterns ?: emptyList()
@@ -369,7 +369,7 @@ class OpenApiSpecification(
     private fun toScenarioInfosWithExamples(): List<ScenarioInfo> {
         val testsDirectory: File? = getTestsDirectory()
         val externalizedJSONExamples: Map<OperationIdentifier, List<Row>> =
-            loadExternalisedJSONExamples(testsDirectory).also {
+            loadExternalisedJSONExamples(testsDirectory).also { it ->
                 if (it.isNotEmpty()) {
                     logger.log("Loaded ${it.size} externalised test${if (it.size > 1) "s" else ""}")
                     it.keys.map {
@@ -424,9 +424,19 @@ class OpenApiSpecification(
         }.flatten()
 
         val externalizedExampleFilePaths =
-            externalizedJSONExamples.entries.flatMap { it.value.map { it.fileSource } }.filterNotNull().sorted().toSet()
+            externalizedJSONExamples.entries.flatMap { (_, rows) ->
+                rows.map {
+                    it.fileSource
+                }
+            }.filterNotNull().sorted().toSet()
         val utilizedFileSources =
-            scenarioInfos.map { it.examples.map { it.rows.map { it.fileSource } } }.flatten().flatten().filterNotNull()
+            scenarioInfos.asSequence().flatMap { scenarioInfo ->
+                scenarioInfo.examples.flatMap { examples ->
+                    examples.rows.map {
+                        it.fileSource
+                    }
+                }
+            }.filterNotNull()
                 .sorted().toSet()
 
         val unusedExternalizedExamples = (externalizedExampleFilePaths - utilizedFileSources)
@@ -533,7 +543,7 @@ class OpenApiSpecification(
             }
         }
             .groupBy { (operationIdentifier, _) -> operationIdentifier }
-            .mapValues { it.value.map { it.second } }
+            .mapValues { (_, value) -> value.map { it.second } }
     }
 
     private fun getTestsDirectory(): File? {
@@ -743,7 +753,7 @@ class OpenApiSpecification(
 
         return when (val requestBody = resolveRequestBody(operation)) {
             null -> {
-                val examples: Map<String, List<HttpRequest>> = unionOfParameterKeys.map { exampleName ->
+                val examples: Map<String, List<HttpRequest>> = unionOfParameterKeys.associateWith { exampleName ->
                     val queryParams = exampleQueryParams[exampleName] ?: emptyMap()
                     val pathParams = examplePathParams[exampleName] ?: emptyMap()
                     val headerParams = exampleHeaderParams[exampleName] ?: emptyMap()
@@ -759,8 +769,8 @@ class OpenApiSpecification(
                         securityScheme.addTo(httpRequest)
                     }
 
-                    exampleName to requestsWithSecurityParams
-                }.toMap()
+                    requestsWithSecurityParams
+                }
 
                 listOf(
                     Pair(requestPattern, examples)
@@ -873,7 +883,7 @@ class OpenApiSpecification(
         parameterType: Class<T>
     ): Map<String, Map<String, String>> = operation.parameters.orEmpty()
         .filterIsInstance(parameterType)
-        .fold(emptyMap<String, Map<String, String>>()) { acc, parameter ->
+        .fold(emptyMap()) { acc, parameter ->
             extractParameterExamples(parameter.examples, parameter.name, acc)
         }
 
@@ -959,7 +969,7 @@ class OpenApiSpecification(
     ) = if (mediaType.encoding.isNullOrEmpty()) false
     else mediaType.encoding[formFieldName]?.contentType == "application/json"
 
-    fun toSpecmaticPattern(mediaType: MediaType, jsonInFormData: Boolean = false): Pattern =
+    private fun toSpecmaticPattern(mediaType: MediaType, jsonInFormData: Boolean = false): Pattern =
         toSpecmaticPattern(mediaType.schema, emptyList(), jsonInFormData = jsonInFormData)
 
     private fun resolveDeepAllOfs(schema: Schema<Any>): List<Schema<Any>> {
@@ -975,10 +985,10 @@ class OpenApiSpecification(
         }
     }
 
-    fun toSpecmaticPattern(
+    private fun toSpecmaticPattern(
         schema: Schema<*>, typeStack: List<String>, patternName: String = "", jsonInFormData: Boolean = false
     ): Pattern {
-        val preExistingResult = patterns.get("($patternName)")
+        val preExistingResult = patterns["($patternName)"]
         val pattern = if (preExistingResult != null && patternName.isNotBlank())
             preExistingResult
         else if (typeStack.filter { it == patternName }.size > 1) {
@@ -1183,7 +1193,7 @@ class OpenApiSpecification(
     private fun <T : Pattern> cacheComponentPattern(componentName: String, pattern: T): T {
         if (componentName.isNotBlank() && pattern !is DeferredPattern) {
             val typeName = "(${componentName})"
-            val prev = patterns.get(typeName)
+            val prev = patterns[typeName]
             if (pattern != prev) {
                 if (prev != null) {
                     logger.debug("Replacing cached component pattern. name=$componentName, prev=$prev, new=$pattern")
@@ -1426,8 +1436,7 @@ class OpenApiSpecification(
 
     private fun extractComponentName(component: String): String {
         if (!component.startsWith("#")) throw UnsupportedOperationException("Specmatic only supports local component references.")
-        val componentName = componentNameFromReference(component)
-        return componentName
+        return componentNameFromReference(component)
     }
 
     private fun componentNameFromReference(component: String) = component.substringAfterLast("/")
@@ -1449,7 +1458,7 @@ class OpenApiSpecification(
     private fun toSpecmaticPathParam(openApiPath: String, operation: Operation): HttpPathPattern {
         val parameters = operation.parameters ?: return buildHttpPathPattern(openApiPath)
 
-        val pathStringParts: List<String> = openApiPath.removePrefix("/").removeSuffix("/").let {
+        val pathSegments: List<String> = openApiPath.removePrefix("/").removeSuffix("/").let {
             if (it.isBlank())
                 emptyList()
             else it.split("/")
@@ -1459,15 +1468,15 @@ class OpenApiSpecification(
                 it.name
             }
 
-        val pathPattern: List<URLPathSegmentPattern> = pathStringParts.map {
-            if (it.startsWith("{") && it.endsWith("}")) {
-                val paramName = it.removeSurrounding("{", "}")
+        val pathPattern: List<URLPathSegmentPattern> = pathSegments.map { pathSegment ->
+            if (pathSegment.startsWith("{") && pathSegment.endsWith("}")) {
+                val paramName = pathSegment.removeSurrounding("{", "}")
 
                 pathParamMap[paramName]?.let {
                     URLPathSegmentPattern(toSpecmaticPattern(it.schema, emptyList()), paramName)
                 } ?: throw ContractException("The path parameter in $openApiPath is not defined in the specification")
             } else {
-                URLPathSegmentPattern(ExactValuePattern(StringValue(it)))
+                URLPathSegmentPattern(ExactValuePattern(StringValue(pathSegment)))
             }
         }
 

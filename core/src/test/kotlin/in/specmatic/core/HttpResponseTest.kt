@@ -8,7 +8,6 @@ import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
-import io.ktor.client.request.HttpRequest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -100,7 +99,7 @@ internal class HttpResponseTest {
 
     @Test
     fun `response-body selector with no path should return response body`() {
-        val response = HttpResponse.OK("hello")
+        val response = HttpResponse.ok("hello")
         testSelection(response, "response-body", "hello")
     }
 
@@ -111,7 +110,7 @@ internal class HttpResponseTest {
 
     @Test
     fun `response-body selector with a path should return the JSON value at that path`() {
-        val response = HttpResponse.OK(JSONObjectValue(mapOf("token" to NumberValue(10))))
+        val response = HttpResponse.ok(JSONObjectValue(mapOf("token" to NumberValue(10))))
         testSelection(response, "response-body.token", "10")
     }
 
@@ -120,7 +119,7 @@ internal class HttpResponseTest {
         val nameData = mapOf("name" to StringValue("Jack"))
         val responseBody = JSONObjectValue(mapOf("person" to JSONObjectValue(nameData)))
 
-        val response = HttpResponse.OK(responseBody)
+        val response = HttpResponse.ok(responseBody)
         val selectedValue = response.selectValue("response-body.person")
         val parsedValue = parsedValue(selectedValue)
 
@@ -135,14 +134,14 @@ internal class HttpResponseTest {
 
     @Test
     fun `exports bindings`() {
-        val response = HttpResponse.OK(JSONObjectValue(mapOf("token" to NumberValue(10))))
+        val response = HttpResponse.ok(JSONObjectValue(mapOf("token" to NumberValue(10))))
         val bindings = response.export(mapOf("token" to "response-body.token"))
         assertThat(bindings).isEqualTo(mapOf("token" to "10"))
     }
 
     @Test
     fun `throws error if export is not found`() {
-        val response = HttpResponse.OK(JSONObjectValue(mapOf("token" to NumberValue(10))))
+        val response = HttpResponse.ok(JSONObjectValue(mapOf("token" to NumberValue(10))))
         assertThatThrownBy { response.export(mapOf("token" to "response-body.notfound")) }.isInstanceOf(ContractException::class.java)
     }
 

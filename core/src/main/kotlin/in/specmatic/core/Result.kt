@@ -214,19 +214,7 @@ fun Result.breadCrumb(breadCrumb: String): Result =
         else -> this
     }
 
-data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null) {
-    private fun breadCrumbString(breadCrumbs: List<String>) {
-        breadCrumbs
-            .filter { it.isNotBlank() }
-            .joinToString(".") { it.trim() }
-            .let {
-                when {
-                    it.isNotBlank() -> ">> $it"
-                    else -> ""
-                }
-            }
-    }
-}
+data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null)
 
 interface MismatchMessages {
     fun mismatchMessage(expected: String, actual: String): String

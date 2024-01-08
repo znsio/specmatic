@@ -64,7 +64,7 @@ internal class XMLPatternTest {
             assertThat(xmlValue.realName).isEqualTo("ns1:items")
 
             assertThat(xmlValue.attributes.size).isOne()
-            assertThat(xmlValue.attributes.get("xmlns:ns1")).isEqualTo(StringValue("http://example.com/items"))
+            assertThat(xmlValue.attributes["xmlns:ns1"]).isEqualTo(StringValue("http://example.com/items"))
 
             assertThat(xmlValue.childNodes.size).isOne()
             assertThat(xmlValue.childNodes.first()).isInstanceOf(StringValue::class.java)

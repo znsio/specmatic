@@ -790,7 +790,7 @@ Feature: multipart file upload
                 assertThat(multipartFileValues.size).isEqualTo(1)
                 assertThat(multipartFileValues.first().name).isEqualTo("fileName")
                 assertThat(multipartFileValues.first().filename).matches(fileName)
-                return HttpResponse.OK("success")
+                return HttpResponse.ok("success")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {
@@ -2628,7 +2628,7 @@ data class CyclicPet(
     @JsonProperty("name") val name: String,
     @JsonProperty("tag") val tag: String,
     @JsonProperty("id") val id: Int,
-    @JsonProperty("parent") val parent: CyclicPet
+    @JsonProperty("parent") val parent: CyclicPet?
 )
 
 data class NewPet(

@@ -4,7 +4,6 @@ import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.ContractException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -165,11 +164,11 @@ interface SecuritySchemeWithOAuthToken {
 
 @Serializable
 @SerialName("oauth2")
-data class OAuth2SecuritySchemeConfiguration(override val type:String, override val token: String,) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
+data class OAuth2SecuritySchemeConfiguration(override val type: String, override val token: String) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
 
 @Serializable
 @SerialName("bearer")
-data class BearerSecuritySchemeConfiguration(override val type:String, override val token: String,) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
+data class BearerSecuritySchemeConfiguration(override val type: String, override val token: String) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
 
 @Serializable
 @SerialName("apiKey")

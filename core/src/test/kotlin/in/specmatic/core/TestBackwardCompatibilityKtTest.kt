@@ -1070,7 +1070,7 @@ Then status 200
 
     @Nested
     inner class EnumStringIsBackwardCompatibleWithString {
-        val specWithStringInResponse: Feature =
+        private val specWithStringInResponse: Feature =
             """
         openapi: 3.0.0
         info:
@@ -1097,7 +1097,7 @@ Then status 200
                             type: string
             """.trimIndent().openAPIToContract()
 
-        val specWithEnumInResponse: Feature =
+        private val specWithEnumInResponse: Feature =
             """
         openapi: 3.0.0
         info:
@@ -1147,6 +1147,7 @@ Then status 200
         }
     }
 
+    @Test
     fun `backward compatibility error in request shows contextual error message`() {
         val oldContract = OpenApiSpecification.fromYAML(
             """
@@ -1504,7 +1505,7 @@ paths:
 
     @Nested
     inner class FluffyBackwardCompatibilityErrors {
-        val oldContract = OpenApiSpecification.fromYAML(
+        private val oldContract = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.0
 info:
@@ -1539,7 +1540,7 @@ paths:
 """.trimIndent(), ""
         ).toFeature()
 
-        val newContract = OpenApiSpecification.fromYAML(
+        private val newContract = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.0
 info:
@@ -1576,7 +1577,7 @@ paths:
 
         val result: Results = testBackwardCompatibility(oldContract, newContract)
 
-        val reportText: String = result.report().also { println(it) }
+        private val reportText: String = result.report().also { println(it) }
 
         @Test
         fun `fluffy backward compatibility errors should be eliminated`() {

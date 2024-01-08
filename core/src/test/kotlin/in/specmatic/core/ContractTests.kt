@@ -242,20 +242,6 @@ Then status 200
                 | userid |
                 | 12345 |
                 """
-        var pathParameterContractGherkin = """
-                Feature: Contract for the balance service
-                
-                Scenario Outline: Should be able to get the balance for an individual
-                  Given fact userid
-                  When GET /balance/(userid:number)
-                  Then status 200
-                  And response-header Content-Length (number)
-                  And response-body {call-mins-left: "(number)", sms-messages-left: "(number)"}
-
-                Examples:
-                | userid |
-                | 12345  |
-                """
     }
 
     @Test

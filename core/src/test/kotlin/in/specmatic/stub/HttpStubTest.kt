@@ -1039,4 +1039,21 @@ paths:
             }
         }
     }
+
+    @Test
+    fun `should load a stub with query params and a space in the path and return the stubbed response`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_query_and_space_in_path.yaml")).use { stub ->
+            val request = HttpRequest("GET", "/da ta", queryParams = mapOf("id" to "5"))
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            response.body.let {
+                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                it as JSONObjectValue
+
+                assertThat(it.jsonObject).containsEntry("id", NumberValue(10))
+            }
+        }
+    }
 }

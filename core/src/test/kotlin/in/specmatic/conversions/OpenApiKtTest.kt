@@ -22,6 +22,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.*
@@ -900,9 +901,8 @@ Background:
         )
 
         val petResponse = HttpStub(feature).use {
-            val requestBody = RequestBody.create(
-                "application/json".toMediaTypeOrNull(), ObjectMapper().writeValueAsString(Pet("scooby", "golden", 1, "retriever", 1))
-            )
+            val requestBody = ObjectMapper().writeValueAsString(Pet("scooby", "golden", 1, "retriever", 1))
+                .toRequestBody("application/json".toMediaTypeOrNull())
             val request =
                 Request.Builder().url("http://localhost:9000/pets/1").addHeader("Content-Type", "application/json")
                     .patch(requestBody).build()

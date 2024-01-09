@@ -17,6 +17,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -278,12 +279,11 @@ Feature: Test
         val feature = parseGherkinStringToFeature(gherkin)
 
         HttpStub(feature).use {
-            val body = RequestBody.create(
-                "application/json".toMediaTypeOrNull(), """{
+            val body = """{
 "event": "features",
 "id": "332f8278",
 "data": "[{\"id\":\"b5bf7f9e-9391-40a4-8808-61ad73f800e9\",\"key\":\"FT01\",\"l\":true,\"version\":1,\"type\":\"BOOLEAN\",\"value\":true},{\"id\":\"8b6002e8-e97a-4ebe-8cae-ac68fb99fc33\",\"key\":\"FT02\",\"l\":true,\"version\":1,\"type\":\"BOOLEAN\",\"value\":false}]"
-}""")
+}""".toRequestBody("application/json".toMediaTypeOrNull())
             val request = Request.Builder().url(it.endPoint + "/_specmatic/sse-expectations").addHeader("Content-Type", "application/json").post(body).build()
             val call = OkHttpClient().newCall(request)
             val response = call.execute()

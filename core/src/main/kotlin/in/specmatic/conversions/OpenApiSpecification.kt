@@ -300,8 +300,8 @@ class OpenApiSpecification(
                     val httpResponsePatterns: List<ResponseData> = toHttpResponsePatterns(operation.responses)
 
                     val scenarioInfos =
-                        httpResponsePatterns.map { (response, responseMediaType, httpResponsePattern, responseJSONBodyExamples) ->
-                            httpRequestPatterns.map { (httpRequestPattern, examplesJSONRequestBodies) ->
+                        httpResponsePatterns.map { (response, _: MediaType, httpResponsePattern, _: Map<String, HttpResponse>) ->
+                            httpRequestPatterns.map { (httpRequestPattern, _: Map<String, List<HttpRequest>>) ->
                                 val scenarioName = scenarioName(operation, response, httpRequestPattern)
 
                                 val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
@@ -888,13 +888,13 @@ class OpenApiSpecification(
         }
 
     private fun extractParameterExamples(
-        examples: Map<String, Example>?,
+        examplesToAdd: Map<String, Example>?,
         parameterName: String,
-        acc: Map<String, Map<String, String>>
+        examplesAccumulatedSoFar: Map<String, Map<String, String>>
     ): Map<String, Map<String, String>> {
-        return examples.orEmpty()
+        return examplesToAdd.orEmpty()
             .entries.filter { it.value.value?.toString().orEmpty() !in OMIT }
-            .fold(acc) { acc, (exampleName, example) ->
+            .fold(examplesAccumulatedSoFar) { acc, (exampleName, example) ->
                 val exampleValue = resolveExample(example)?.value?.toString() ?: ""
                 val exampleMap = acc[exampleName] ?: emptyMap()
                 acc.plus(exampleName to exampleMap.plus(parameterName to exampleValue))
@@ -917,7 +917,7 @@ class OpenApiSpecification(
         val operationSecurityRequirementsSuperSet: List<String> =
             globalSecurityRequirements.plus(operationSecurityRequirements).distinct()
         val operationSecuritySchemes: List<OpenAPISecurityScheme> =
-            contractSecuritySchemes.filter { (name, scheme) -> name in operationSecurityRequirementsSuperSet }.values.toList()
+            contractSecuritySchemes.filter { (name, _: OpenAPISecurityScheme) -> name in operationSecurityRequirementsSuperSet }.values.toList()
         return operationSecuritySchemes.ifEmpty { listOf(NoSecurityScheme()) }
     }
 
@@ -1023,7 +1023,7 @@ class OpenApiSpecification(
             is BooleanSchema -> BooleanPattern(example = schema.example?.toString())
             is ObjectSchema -> {
                 if (schema.additionalProperties is Schema<*>) {
-                    toDictionaryPattern(schema, typeStack, patternName)
+                    toDictionaryPattern(schema, typeStack)
                 } else if (noPropertiesDefinedInSchema(schema)) {
                     toFreeFormDictionaryWithStringKeysPattern()
                 } else if (schema.xml?.name != null) {
@@ -1061,8 +1061,8 @@ class OpenApiSpecification(
                         it.oneOf != null
                     }
 
-                    val oneOfs = schemasWithOneOf.map { schema ->
-                        schema.oneOf.map {
+                    val oneOfs = schemasWithOneOf.map { oneOfTheSchemas ->
+                        oneOfTheSchemas.oneOf.map {
                             val (componentName, schemaToProcess) = resolveReferenceToSchema(it.`$ref`)
                             val requiredFields = schemaToProcess.required.orEmpty()
                             componentName to toSchemaProperties(
@@ -1110,7 +1110,7 @@ class OpenApiSpecification(
                 if (schema.nullable == true && schema.additionalProperties == null && schema.`$ref` == null) {
                     NullPattern
                 } else if (schema.additionalProperties is Schema<*>) {
-                    toDictionaryPattern(schema, typeStack, patternName)
+                    toDictionaryPattern(schema, typeStack)
                 } else if (schema.additionalProperties == true) {
                     toFreeFormDictionaryWithStringKeysPattern()
                 } else {
@@ -1352,7 +1352,7 @@ class OpenApiSpecification(
         mapOf("string" to "(string)", "number" to "(number)", "integer" to "(number)", "boolean" to "(boolean)")
 
     private fun toDictionaryPattern(
-        schema: Schema<*>, typeStack: List<String>, patternName: String
+        schema: Schema<*>, typeStack: List<String>
     ): DictionaryPattern {
         val valueSchema = schema.additionalProperties as Schema<Any>
         val valueSchemaTypeName = valueSchema.`$ref` ?: valueSchema.types?.first() ?: ""

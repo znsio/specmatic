@@ -1305,7 +1305,7 @@ private fun lexScenario(
         when (step.keyword) {
             in HTTP_METHODS -> {
                 step.words.getOrNull(1)?.let {
-                    val urlInSpec = step.rest.uriEscape()
+                    val urlInSpec = step.rest
                     val pathParamPattern = try {
                         buildHttpPathPattern(URI.create(urlInSpec))
                     } catch (e: Throwable) {

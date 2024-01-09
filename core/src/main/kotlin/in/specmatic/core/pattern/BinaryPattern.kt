@@ -7,7 +7,7 @@ import `in`.specmatic.core.value.BinaryValue
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import org.apache.commons.lang3.RandomUtils
+import java.security.SecureRandom
 
 data class BinaryPattern(
     override val typeAlias: String? = null,
@@ -33,7 +33,12 @@ data class BinaryPattern(
         return JSONArrayValue(valueList)
     }
 
-    override fun generate(resolver: Resolver): Value = BinaryValue(RandomUtils.nextBytes(20))
+    override fun generate(resolver: Resolver): Value {
+        val secureRandom = SecureRandom()
+        val bytes = ByteArray(20)
+        secureRandom.nextBytes(bytes)
+        return BinaryValue(bytes)
+    }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)

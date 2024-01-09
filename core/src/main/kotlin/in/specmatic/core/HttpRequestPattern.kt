@@ -115,7 +115,7 @@ data class HttpRequestPattern(
     }
 
     fun matchFormFields(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
-        val (httpRequest, resolver, failures) = parameters
+        val (httpRequest, resolver, _: List<Failure>) = parameters
 
         val keyErrorResults: List<Failure> = resolver.findKeyErrorList(formFieldsPattern, httpRequest.formFields).map {
             it.missingKeyToResult("form field", resolver.mismatchMessages).breadCrumb(it.name).breadCrumb(FORM_FIELDS_BREADCRUMB)
@@ -222,9 +222,6 @@ data class HttpRequestPattern(
             }
             if (httpPathPattern == null) {
                 throw missingParam("URL path")
-            }
-            if (httpQueryParamPattern == null) {
-                throw missingParam("URL query")
             }
 
             requestType = requestType.copy(method = request.method)

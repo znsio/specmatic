@@ -414,7 +414,7 @@ class GenerativeTests {
         val buildingValuesSeen = mutableSetOf<String>()
 
         try {
-            val results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
+            feature.enableGenerativeTesting().executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val body = request.body as JSONObjectValue
                     when (val personBuilding = body.findFirstChildByPath("person.address.building")!!) {

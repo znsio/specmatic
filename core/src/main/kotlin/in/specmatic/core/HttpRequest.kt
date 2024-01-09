@@ -547,10 +547,6 @@ fun listOfExcludedHeaders(): List<String> = HttpHeaders.UnsafeHeadersList.plus(
     )
 ).distinct().map { it.lowercase() }
 
-fun String.uriEscape(): String = this.replace(" ", "%20")
-
-fun String.uriDecode(): String = this.replace("%20", " ")
-
 fun escapeSpaceInPath(path: String): String {
     return path.split("/").joinToString("/") { segment ->
         URLEncoder.encode(segment, StandardCharsets.UTF_8.toString()).replace("+", "%20")

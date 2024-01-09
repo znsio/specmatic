@@ -119,7 +119,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
     }
 
     private fun isFullURL(path: String?): Boolean {
-        return path != null && try { URL(path); true } catch(e: Throwable) { false }
+        return path != null && try { URL(path.uriEscape()); true } catch(e: Throwable) { false }
     }
 
     init {

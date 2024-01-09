@@ -224,7 +224,7 @@ internal class HttpRequestTest {
             this.url.host = "test.com"
             this.url.port = 80
         }
-        HttpRequest("GET", "/").buildRequest(builderWithPort80, null)
+        HttpRequest("GET", "/").buildKTORRequest(builderWithPort80, null)
         assertThat(builderWithPort80.headers["Host"]).isEqualTo("test.com")
 
         val httpRequestBuilderWithHTTPS = HttpRequestBuilder().apply {
@@ -232,7 +232,7 @@ internal class HttpRequestTest {
             this.url.host = "test.com"
             this.url.port = 443
         }
-        HttpRequest("GET", "/").buildRequest(httpRequestBuilderWithHTTPS, null)
+        HttpRequest("GET", "/").buildKTORRequest(httpRequestBuilderWithHTTPS, null)
         assertThat(httpRequestBuilderWithHTTPS.headers["Host"]).isEqualTo("test.com")
     }
 
@@ -242,7 +242,7 @@ internal class HttpRequestTest {
             this.url.host = "test.com"
             this.url.port = 8080
         }
-        HttpRequest("GET", "/").buildRequest(httpRequestBuilder2, null)
+        HttpRequest("GET", "/").buildKTORRequest(httpRequestBuilder2, null)
         assertThat(httpRequestBuilder2.headers["Host"]).isNull()
     }
 
@@ -336,5 +336,11 @@ internal class HttpRequestTest {
                 "/test"
             )
         ).isEqualTo("No matching REST stub (strict mode) found for method POST and path /test (assuming you're looking for a REST API since no SOAPAction header was detected)")
+    }
+
+    @Test
+    fun `should percent-encode spaces within path segments`() {
+        val request = HttpRequest("GET", "/test path")
+        assertThat(request.getURL("http://localhost")).isEqualTo("http://localhost/test%20path")
     }
 }

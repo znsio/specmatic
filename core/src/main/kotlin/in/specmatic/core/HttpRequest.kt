@@ -82,7 +82,7 @@ data class HttpRequest(
     fun getURL(baseURL: String?): String {
         val cleanBase = baseURL?.removeSuffix("/")
         val cleanPath = path?.removePrefix("/")
-        val fullUrl = escapeSpaceInUrl(concatNonNulls(cleanBase, cleanPath, "/"))
+        val fullUrl = URLParts(concatNonNulls(cleanBase, cleanPath, "/")).withEncodedPathSegments()
         val queryPart = URLEncodedUtils.format(queryParams.map { BasicNameValuePair(it.key, it.value) }, Charsets.UTF_8)
         return concatNonNulls(fullUrl, queryPart, "?")
     }
@@ -553,41 +553,44 @@ fun escapeSpaceInPath(path: String): String {
     }
 }
 
-fun escapeSpaceInUrl(url: String): String {
-    val queryStartIndex = url.indexOf('?')
-    val baseUrl = if (queryStartIndex != -1) url.substring(0, queryStartIndex) else url
+class URLParts(url: String) {
+    private val queryStartIndex = url.indexOf('?')
+    private val baseUrl = if (queryStartIndex != -1) url.substring(0, queryStartIndex) else url
 
     val parts = baseUrl.split("/", limit = 4)
 
-    if(parts.size < 4)
-        return url
+    private val queryOnwards = if (queryStartIndex != -1) url.substring(queryStartIndex) else ""
 
-    val queryOnwards = if (queryStartIndex != -1) url.substring(queryStartIndex) else ""
+    fun withEncodedPathSegments(): String {
+        if(noPathInURL())
+            return baseUrl
 
-    val (scheme, _, authority, path) = parts
-    val escapedPath = escapeSpaceInPath(path)
+        val (scheme, _, authority, path) = parts
 
-    return "$scheme//$authority/$escapedPath$queryOnwards"
+        val escapedPath = escapeSpaceInPath(path)
+
+        return "$scheme//$authority/$escapedPath$queryOnwards"
+    }
+
+    fun withDecodedPathSegments(): String {
+        if(noPathInURL())
+            return baseUrl
+
+        val (scheme, _, authority, path) = parts
+
+        val escapedPath = decodePath(path)
+
+        return "$scheme//$authority/$escapedPath$queryOnwards"
+    }
+
+    private fun noPathInURL() = parts.size < 4
 }
 
 fun urlDecodePathSegments(url: String): String {
     if("://" !in url)
         return decodePath(url)
 
-    val queryStartIndex = url.indexOf('?')
-    val baseUrl = if (queryStartIndex != -1) url.substring(0, queryStartIndex) else url
-
-    val parts = baseUrl.split("/", limit = 4)
-
-    if(parts.size < 4)
-        return url
-
-    val queryOnwards = if (queryStartIndex != -1) url.substring(queryStartIndex) else ""
-
-    val (scheme, _, authority, path) = parts
-    val escapedPath = decodePath(path)
-
-    return "$scheme//$authority/$escapedPath$queryOnwards"
+    return URLParts(url).withDecodedPathSegments()
 }
 
 fun decodePath(path: String): String {

@@ -119,7 +119,8 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
     }
 
     private fun isFullURL(path: String?): Boolean {
-        return path != null && try { URL(escapeSpaceInUrl(path)); true } catch(e: Throwable) { false }
+        return path != null && try {
+            URL(URLParts(path).withEncodedPathSegments()); true } catch(e: Throwable) { false }
     }
 
     init {

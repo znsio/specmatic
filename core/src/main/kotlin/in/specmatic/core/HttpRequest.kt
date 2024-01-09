@@ -18,6 +18,7 @@ import java.net.URISyntaxException
 import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.net.URLDecoder
 
 const val FORM_FIELDS_JSON_KEY = "form-fields"
 const val MULTIPART_FORMDATA_JSON_KEY = "multipart-formdata"
@@ -81,7 +82,7 @@ data class HttpRequest(
     fun getURL(baseURL: String?): String {
         val cleanBase = baseURL?.removeSuffix("/")
         val cleanPath = path?.removePrefix("/")
-        val fullUrl = concatNonNulls(cleanBase, cleanPath, "/").uriEscape()
+        val fullUrl = escapeSpaceInUrl(concatNonNulls(cleanBase, cleanPath, "/"))
         val queryPart = URLEncodedUtils.format(queryParams.map { BasicNameValuePair(it.key, it.value) }, Charsets.UTF_8)
         return concatNonNulls(fullUrl, queryPart, "?")
     }
@@ -513,7 +514,7 @@ fun firstLineToGherkin(
         else -> Triple("", emptyMap(), exampleDeclarationsStore)
     }
 
-    val path = "${request.path}$query"
+    val path = "${escapeSpaceInPath(request.path)}$query"
 
     val requestLineGherkin = GherkinClause("$method $path", When)
 
@@ -549,3 +550,52 @@ fun listOfExcludedHeaders(): List<String> = HttpHeaders.UnsafeHeadersList.plus(
 fun String.uriEscape(): String = this.replace(" ", "%20")
 
 fun String.uriDecode(): String = this.replace("%20", " ")
+
+fun escapeSpaceInPath(path: String): String {
+    return path.split("/").joinToString("/") { segment ->
+        URLEncoder.encode(segment, StandardCharsets.UTF_8.toString()).replace("+", "%20")
+    }
+}
+
+fun escapeSpaceInUrl(url: String): String {
+    val queryStartIndex = url.indexOf('?')
+    val baseUrl = if (queryStartIndex != -1) url.substring(0, queryStartIndex) else url
+
+    val parts = baseUrl.split("/", limit = 4)
+
+    if(parts.size < 4)
+        return url
+
+    val queryOnwards = if (queryStartIndex != -1) url.substring(queryStartIndex) else ""
+
+    val (scheme, _, authority, path) = parts
+    val escapedPath = escapeSpaceInPath(path)
+
+    return "$scheme//$authority/$escapedPath$queryOnwards"
+}
+
+fun urlDecodePathSegments(url: String): String {
+    if("://" !in url)
+        return decodePath(url)
+
+    val queryStartIndex = url.indexOf('?')
+    val baseUrl = if (queryStartIndex != -1) url.substring(0, queryStartIndex) else url
+
+    val parts = baseUrl.split("/", limit = 4)
+
+    if(parts.size < 4)
+        return url
+
+    val queryOnwards = if (queryStartIndex != -1) url.substring(queryStartIndex) else ""
+
+    val (scheme, _, authority, path) = parts
+    val escapedPath = decodePath(path)
+
+    return "$scheme//$authority/$escapedPath$queryOnwards"
+}
+
+fun decodePath(path: String): String {
+    return path.split("/").joinToString("/") { segment ->
+        URLDecoder.decode(segment, StandardCharsets.UTF_8.toString())
+    }
+}

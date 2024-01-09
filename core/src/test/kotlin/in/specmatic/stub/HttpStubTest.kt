@@ -3,6 +3,7 @@ package `in`.specmatic.stub
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.DELAY_IN_SECONDS
@@ -998,6 +999,43 @@ paths:
                 val response = stub.client.execute(HttpRequest("POST", "/data", emptyMap(), parsedJSONObject("""{"id": 10}""")))
                 assertThat(response.status).isEqualTo(400)
                 assertThat(response.body).isEqualTo(StringValue("No valid API specifications loaded"))
+            }
+        }
+    }
+
+    @Test
+    fun `should stub out a path having a space and return a randomised response`() {
+        val specification = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_space_in_path.yaml").toFeature()
+
+        HttpStub(specification).use { stub ->
+            val request = HttpRequest("GET", "/da ta")
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            response.body.let {
+                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                it as JSONObjectValue
+
+                assertThat(it.jsonObject).containsKey("id")
+                assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
+            }
+        }
+    }
+
+    @Test
+    fun `should load a stub with a space in the path and return the stubbed response`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_space_in_path.yaml")).use { stub ->
+            val request = HttpRequest("GET", "/da ta")
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            response.body.let {
+                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                it as JSONObjectValue
+
+                assertThat(it.jsonObject).containsEntry("id", NumberValue(10))
             }
         }
     }

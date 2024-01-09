@@ -16,6 +16,8 @@ import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
 import java.net.URL
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 const val FORM_FIELDS_JSON_KEY = "form-fields"
 const val MULTIPART_FORMDATA_JSON_KEY = "multipart-formdata"
@@ -79,12 +81,12 @@ data class HttpRequest(
     fun getURL(baseURL: String?): String {
         val cleanBase = baseURL?.removeSuffix("/")
         val cleanPath = path?.removePrefix("/")
-        val fullUrl = contact(cleanBase, cleanPath, "/")
+        val fullUrl = concatNonNulls(cleanBase, cleanPath, "/").uriEscape()
         val queryPart = URLEncodedUtils.format(queryParams.map { BasicNameValuePair(it.key, it.value) }, Charsets.UTF_8)
-        return contact(fullUrl, queryPart, "?")
+        return concatNonNulls(fullUrl, queryPart, "?")
     }
 
-    private fun contact(first: String?, second: String?, separator: String) =
+    private fun concatNonNulls(first: String?, second: String?, separator: String) =
         listOf(first, second).filterNot { it.isNullOrBlank() }.joinToString(separator)
 
     fun toJSON(): JSONObjectValue {
@@ -159,7 +161,7 @@ data class HttpRequest(
         }
     }
 
-    fun buildRequest(httpRequestBuilder: HttpRequestBuilder, url: URL?) {
+    fun buildKTORRequest(httpRequestBuilder: HttpRequestBuilder, url: URL?) {
         httpRequestBuilder.method = HttpMethod.parse(method as String)
 
         val listOfExcludedHeaders: List<String> = listOfExcludedHeaders()
@@ -543,3 +545,7 @@ fun listOfExcludedHeaders(): List<String> = HttpHeaders.UnsafeHeadersList.plus(
         HttpHeaders.Upgrade
     )
 ).distinct().map { it.lowercase() }
+
+fun String.uriEscape(): String = this.replace(" ", "%20")
+
+fun String.uriDecode(): String = this.replace("%20", " ")

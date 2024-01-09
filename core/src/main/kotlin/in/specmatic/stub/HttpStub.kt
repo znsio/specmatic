@@ -542,7 +542,7 @@ internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRe
 
         return HttpRequest(
             method = call.request.httpMethod.value,
-            path = call.request.path(),
+            path = call.request.path().uriDecode(),
             headers = requestHeaders,
             body = body,
             queryParams = toParams(call.request.queryParameters),

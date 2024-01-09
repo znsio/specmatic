@@ -1305,8 +1305,9 @@ private fun lexScenario(
         when (step.keyword) {
             in HTTP_METHODS -> {
                 step.words.getOrNull(1)?.let {
+                    val urlInSpec = step.rest.uriEscape()
                     val pathParamPattern = try {
-                        buildHttpPathPattern(URI.create(step.rest))
+                        buildHttpPathPattern(URI.create(urlInSpec))
                     } catch (e: Throwable) {
                         throw Exception(
                             "Could not parse the contract URL \"${step.rest}\" in scenario \"${scenarioInfo.scenarioName}\"",
@@ -1314,7 +1315,7 @@ private fun lexScenario(
                         )
                     }
 
-                    val queryParamPattern = buildQueryPattern(URI.create(step.rest))
+                    val queryParamPattern = buildQueryPattern(URI.create(urlInSpec))
 
                     scenarioInfo.copy(
                         httpRequestPattern = scenarioInfo.httpRequestPattern.copy(

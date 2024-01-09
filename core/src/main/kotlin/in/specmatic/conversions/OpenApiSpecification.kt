@@ -1456,7 +1456,7 @@ class OpenApiSpecification(
     }
 
     private fun toSpecmaticPathParam(openApiPath: String, operation: Operation): HttpPathPattern {
-        val parameters = operation.parameters ?: return buildHttpPathPattern(openApiPath)
+        val parameters = operation.parameters ?: emptyList()
 
         val pathSegments: List<String> = openApiPath.removePrefix("/").removeSuffix("/").let {
             if (it.isBlank())
@@ -1464,17 +1464,18 @@ class OpenApiSpecification(
             else it.split("/")
         }
         val pathParamMap: Map<String, PathParameter> =
-            parameters.filterIsInstance(PathParameter::class.java).associateBy {
+            parameters.filterIsInstance<PathParameter>().associateBy {
                 it.name
             }
 
         val pathPattern: List<URLPathSegmentPattern> = pathSegments.map { pathSegment ->
-            if (pathSegment.startsWith("{") && pathSegment.endsWith("}")) {
+            if (isParameter(pathSegment)) {
                 val paramName = pathSegment.removeSurrounding("{", "}")
 
-                pathParamMap[paramName]?.let {
-                    URLPathSegmentPattern(toSpecmaticPattern(it.schema, emptyList()), paramName)
-                } ?: throw ContractException("The path parameter in $openApiPath is not defined in the specification")
+                val param = pathParamMap[paramName]
+                    ?: throw ContractException("The path parameter in $openApiPath is not defined in the specification")
+
+                URLPathSegmentPattern(toSpecmaticPattern(param.schema, emptyList()), paramName)
             } else {
                 URLPathSegmentPattern(ExactValuePattern(StringValue(pathSegment)))
             }
@@ -1484,6 +1485,8 @@ class OpenApiSpecification(
 
         return HttpPathPattern(pathPattern, specmaticPath)
     }
+
+    private fun isParameter(pathSegment: String) = pathSegment.startsWith("{") && pathSegment.endsWith("}")
 
     private fun toSpecmaticFormattedPathString(
         parameters: List<Parameter>,

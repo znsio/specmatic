@@ -24,7 +24,7 @@ data class BooleanPattern(val example: String? = null) : Pattern, ScalarType {
         return listOf(NullPattern)
     }
 
-    override fun parse(value: String, resolver: Resolver): Value = when (value) {
+    override fun parse(value: String, resolver: Resolver): Value = when (value.lowercase()) {
         !in listOf("true", "false") -> throw ContractException(mismatchResult(BooleanPattern(), value, resolver.mismatchMessages).toFailureReport())
         else -> BooleanValue(value.toBoolean())
     }

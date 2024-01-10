@@ -996,7 +996,8 @@ paths:
         fun `should return descriptive error message when there are no valid specifications loaded`() {
             val httpStub = HttpStub(emptyList())
             httpStub.use { stub ->
-                val response = stub.client.execute(HttpRequest("POST", "/data", emptyMap(), parsedJSONObject("""{"id": 10}""")))
+                val response =
+                    stub.client.execute(HttpRequest("POST", "/data", emptyMap(), parsedJSONObject("""{"id": 10}""")))
                 assertThat(response.status).isEqualTo(400)
                 assertThat(response.body).isEqualTo(StringValue("No valid API specifications loaded"))
             }
@@ -1007,7 +1008,8 @@ paths:
     fun `should stub out a path having a space and return a randomised response`() {
         val pathWithSpace = "/da ta"
 
-        val specification = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_space_in_path.yaml").toFeature()
+        val specification =
+            OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_space_in_path.yaml").toFeature()
 
         HttpStub(specification).use { stub ->
             val request = HttpRequest("GET", pathWithSpace)
@@ -1067,7 +1069,8 @@ paths:
     fun `should load a stub with a space in query params and return the stubbed response`() {
         val queryParamWithSpace = "id entifier"
 
-        val specification = OpenApiSpecification.fromYAML("""
+        val specification = OpenApiSpecification.fromYAML(
+            """
             openapi: 3.0.1
             info:
               title: Random
@@ -1091,10 +1094,75 @@ paths:
                             properties:
                               id:
                                 type: integer
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         HttpStub(specification).use { stub ->
             val request = HttpRequest("GET", "/data", queryParams = mapOf(queryParamWithSpace to "5"))
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            response.body.let {
+                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                it as JSONObjectValue
+
+                assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
+            }
+        }
+    }
+
+    @Test
+    fun `should stub out a request for boolean query param with capital T or F in the incoming request`() {
+        val specification = createStubFromContracts(listOf("src/test/resources/openapi/spec_with_boolean_query.yaml"))
+
+        specification.use { stub ->
+            val request = HttpRequest("GET", "/data", queryParams = mapOf("enabled" to "True"))
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            response.body.let {
+                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                it as JSONObjectValue
+
+                assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
+            }
+        }
+    }
+
+    @Test
+    fun `should recognize a request for boolean query param with capital T or F in the incoming request`() {
+        val specification = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /data:
+                get:
+                  summary: Random
+                  parameters:
+                    - name: enabled
+                      in: query
+                      schema:
+                        type: boolean
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+        """.trimIndent(), ""
+        ).toFeature()
+
+        HttpStub(specification).use { stub ->
+            val request = HttpRequest("GET", "/data", queryParams = mapOf("enabled" to "True"))
 
             val response = stub.client.execute(request)
 

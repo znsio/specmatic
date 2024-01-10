@@ -30,4 +30,10 @@ internal class BooleanPatternTest {
             "null"
         )
     }
+
+    @Test
+    fun `should parse a value with capital T or F as boolean` () {
+        assertThat(BooleanPattern().parse("True", Resolver())).isEqualTo(BooleanValue(true))
+        assertThat(BooleanPattern().parse("False", Resolver())).isEqualTo(BooleanValue(false))
+    }
 }

@@ -3,7 +3,6 @@ package `in`.specmatic.core
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.Row
 import `in`.specmatic.core.pattern.TypeStack
-import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
@@ -31,7 +30,7 @@ object NoBodyPattern : Pattern {
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = emptyList()
 
     override fun parse(value: String, resolver: Resolver): Value {
-        return NoBodyValue
+        return StringValue(value)
     }
 
     override fun encompasses(

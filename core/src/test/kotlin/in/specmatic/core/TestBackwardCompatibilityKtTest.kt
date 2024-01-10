@@ -1132,9 +1132,7 @@ Then status 200
         fun `new should be should be backward compatible with old`() {
             val results: Results = testBackwardCompatibility(specWithStringInResponse, specWithEnumInResponse)
 
-            println(results.report())
-
-            assertThat(results.success()).isTrue
+            assertThat(results.success()).withFailMessage(results.report()).isTrue
         }
 
         @Test
@@ -2133,12 +2131,61 @@ paths:
         """.trimIndent())
 
         val result = testBackwardCompatibility(older, newer)
-        val reportText = result.report().also { println(it) }
-
-        println(reportText)
-        assertThat(result.success()).isTrue
+        assertThat(result.success()).withFailMessage(result.report()).isTrue
     }
 
+    @Test
+    fun `backward compatibility check going from string to nothing in request`() {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result = testBackwardCompatibility(oldContract, newContract)
+        assertThat(result.success()).withFailMessage(result.report()).isFalse()
+    }
 }
 
 private fun String.openAPIToContract(): Feature {

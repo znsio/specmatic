@@ -1107,4 +1107,80 @@ paths:
             }
         }
     }
+
+    @Test
+    fun `stub out a spec with no request body and respond to a request which has no body`() {
+        val specification = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /data:
+                get:
+                  summary: Random
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(specification).use { stub ->
+            val request = HttpRequest("GET", "/data", body = NoBodyValue)
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            response.body.let {
+                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                it as JSONObjectValue
+
+                assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
+            }
+        }
+    }
+
+    @Test
+    fun `stub should load an expectation for a spec with no request body and respond to a request in the expectation`() {
+        val specification = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /data:
+                get:
+                  summary: Random
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(specification).use { stub ->
+            val request = HttpRequest("GET", "/data", body = NoBodyValue)
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            response.body.let {
+                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                it as JSONObjectValue
+
+                assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
+            }
+        }
+    }
 }

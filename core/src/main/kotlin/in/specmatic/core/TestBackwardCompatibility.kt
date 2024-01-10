@@ -5,16 +5,16 @@ import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.Value
 
-fun testBackwardCompatibility(older: Feature, newerBehaviour: Feature): Results {
+fun testBackwardCompatibility(older: Feature, newer: Feature): Results {
     return older.generateBackwardCompatibilityTestScenarios().filter { !it.ignoreFailure }.fold(Results()) { results, olderScenario ->
-        val scenarioResults: List<Result> = testBackwardCompatibility(olderScenario, newerBehaviour)
+        val scenarioResults: List<Result> = testBackwardCompatibility(olderScenario, newer)
         results.copy(results = results.results.plus(scenarioResults))
     }.distinct()
 }
 
-fun findDifferences(older: Feature, newerBehaviour: Feature): Results {
+fun findDifferences(older: Feature, newer: Feature): Results {
     return older.generateBackwardCompatibilityTestScenarios().filter { !it.ignoreFailure }.fold(Results()) { results, olderScenario ->
-        val scenarioResults: List<Result> = findDifferences(olderScenario, newerBehaviour)
+        val scenarioResults: List<Result> = findDifferences(olderScenario, newer)
         results.copy(results = results.results.plus(scenarioResults))
     }.distinct()
 }

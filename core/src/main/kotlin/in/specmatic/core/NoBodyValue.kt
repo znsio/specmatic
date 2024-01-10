@@ -1,9 +1,7 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.Pattern
-import `in`.specmatic.core.value.JSONArrayValue
-import `in`.specmatic.core.value.TypeDeclaration
-import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.value.*
 
 object NoBodyValue : Value {
     override val httpContentType: String
@@ -47,5 +45,11 @@ object NoBodyValue : Value {
 
     override fun listOf(valueList: List<Value>): Value {
         return JSONArrayValue(valueList)
+    }
+
+    override fun toString(): String = toStringValue().string
+
+    override fun toStringValue(): StringValue {
+        return EmptyString
     }
 }

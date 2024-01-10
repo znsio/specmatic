@@ -13,12 +13,8 @@ import org.apache.http.client.utils.URLEncodedUtils
 import org.apache.http.message.BasicNameValuePair
 import java.io.File
 import java.io.UnsupportedEncodingException
-import java.net.URI
-import java.net.URISyntaxException
-import java.net.URL
-import java.net.URLEncoder
+import java.net.*
 import java.nio.charset.StandardCharsets
-import java.net.URLDecoder
 
 const val FORM_FIELDS_JSON_KEY = "form-fields"
 const val MULTIPART_FORMDATA_JSON_KEY = "multipart-formdata"
@@ -551,39 +547,6 @@ fun escapeSpaceInPath(path: String): String {
     return path.split("/").joinToString("/") { segment ->
         URLEncoder.encode(segment, StandardCharsets.UTF_8.toString()).replace("+", "%20")
     }
-}
-
-class URLParts(url: String) {
-    private val queryStartIndex = url.indexOf('?')
-    private val baseUrl = if (queryStartIndex != -1) url.substring(0, queryStartIndex) else url
-
-    val parts = baseUrl.split("/", limit = 4)
-
-    private val queryOnwards = if (queryStartIndex != -1) url.substring(queryStartIndex) else ""
-
-    fun withEncodedPathSegments(): String {
-        if(noPathInURL())
-            return baseUrl
-
-        val (scheme, _, authority, path) = parts
-
-        val escapedPath = escapeSpaceInPath(path)
-
-        return "$scheme//$authority/$escapedPath$queryOnwards"
-    }
-
-    fun withDecodedPathSegments(): String {
-        if(noPathInURL())
-            return baseUrl
-
-        val (scheme, _, authority, path) = parts
-
-        val escapedPath = decodePath(path)
-
-        return "$scheme//$authority/$escapedPath$queryOnwards"
-    }
-
-    private fun noPathInURL() = parts.size < 4
 }
 
 fun urlDecodePathSegments(url: String): String {

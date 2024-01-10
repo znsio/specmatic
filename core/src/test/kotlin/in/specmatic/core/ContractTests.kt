@@ -1,10 +1,17 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.value.*
+import `in`.specmatic.test.HttpClient
 import `in`.specmatic.test.TestExecutor
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.fail
 
@@ -729,6 +736,93 @@ Examples:
 
         assertThat(flags.toSet()).isEqualTo(setOf("executed"))
         assertTrue(results.success(), results.report())
+    }
+
+    @Test
+    fun ` body and content-type header should be sent when there is a request body in the spec`() {
+        val spec = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.0
+            info:
+              title: Test API
+              version: 1.0.0
+            paths:
+              /test:
+                post:
+                  requestBody:
+                    content:
+                      text/plain:
+                        schema:
+                          type: string
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val server = embeddedServer(Netty, port = 8080) {
+            routing {
+                route("/{...}") {
+                    handle {
+                        assertThat(call.request.headers["Content-Type"]).isEqualTo("text/plain")
+                        call.respondText("Hello, Ktor!")
+                    }
+                }
+            }
+        }
+
+        try {
+            server.start(wait = false)
+
+            val results = spec.executeTests(HttpClient("http://localhost:8080"))
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+            assertThat(results.successCount).isPositive()
+        } finally {
+            server.stop()
+        }
+    }
+
+    @Test
+    fun ` body and content-type header should not be sent when there is no request body in the spec`() {
+        val spec = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.0
+            info:
+              title: Test API
+              version: 1.0.0
+            paths:
+              /test:
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val server = embeddedServer(Netty, port = 8080) {
+            routing {
+                route("/{...}") {
+                    handle {
+                        assertThat(call.request.headers["Content-Type"]).isNull()
+                        call.respondText("Hello, Ktor!")
+                    }
+                }
+            }
+        }
+
+        try {
+            server.start(wait = false)
+
+            val results = spec.executeTests(HttpClient("http://localhost:8080"))
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+            assertThat(results.successCount).isPositive()
+        } finally {
+            server.stop()
+        }
     }
 }
 

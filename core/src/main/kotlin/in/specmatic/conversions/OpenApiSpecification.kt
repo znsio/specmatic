@@ -773,7 +773,7 @@ class OpenApiSpecification(
                 }
 
                 listOf(
-                    Pair(requestPattern, examples)
+                    Pair(requestPattern.copy(body = NoBodyPattern), examples)
                 )
             }
 

@@ -40,7 +40,7 @@ class CombinationSpec<ValueType>(
         // Prioritizes using each candidate value as early as possible so uses first candidate of each set,
         // then second candidate, and so on.
         val prioritizedCombos = (0 until maxCandidateCount).map { lockStepOffset ->
-            val fullComboIndex = indexToCandidates.foldIndexed(0) {index, acc, candidates ->
+            val fullComboIndex = indexToCandidates.fold(0) {acc, candidates ->
                 // Lower-cardinality sets run out of candidates first so are reused round-robin until other sets finish
                 val candidateOffset = lockStepOffset % candidates.size
 

@@ -10,8 +10,10 @@ import `in`.specmatic.test.TestExecutor
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.util.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.fail
 
@@ -823,6 +825,194 @@ Examples:
         } finally {
             server.stop()
         }
+    }
+
+    @Test
+    fun `contract tests should encode spaces in path segments before sending the request`() {
+        val pathWithSpace = "/rand om"
+
+        val specification = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              $pathWithSpace:
+                post:
+                  summary: Random
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          required:
+                          - id
+                          properties:
+                            id:
+                              type: number
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val pathsSeen = mutableListOf<String>()
+
+        val server = embeddedServer(Netty, port = 9001) {
+            routing {
+                route("/{...}") {
+                    handle {
+                        pathsSeen.add(call.request.path())
+                        call.respondText("Hello, Ktor!")
+                    }
+                }
+            }
+        }
+
+        val results = try {
+            server.start(wait = false)
+            specification.executeTests(HttpClient("http://localhost:9001"))
+        } finally {
+            server.stop()
+        }
+
+        assertThat(results.success()).isTrue()
+        assertThat(pathsSeen.distinct().first()).isEqualTo(escapeSpaceInPath(pathWithSpace))
+    }
+
+    @Test
+    fun `contract tests should encode spaces in path segments when query params are present before sending the request`() {
+        val pathWithSpace = "/rand om"
+
+        val specification = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              $pathWithSpace:
+                post:
+                  summary: Random
+                  parameters:
+                    - name: name
+                      in: query
+                      schema:
+                        type: string
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: number
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val pathsSeen = mutableListOf<String>()
+
+        val server = embeddedServer(Netty, port = 9001) {
+            routing {
+                route("/{...}") {
+                    handle {
+                        pathsSeen.add(call.request.path())
+                        call.respondText("Hello, Ktor!")
+                    }
+                }
+            }
+        }
+
+        val results = try {
+            server.start(wait = false)
+            specification.executeTests(HttpClient("http://localhost:9001"))
+        } finally {
+            server.stop()
+        }
+
+        assertThat(results.success()).isTrue()
+        assertThat(pathsSeen.distinct().first()).isEqualTo(escapeSpaceInPath(pathWithSpace))
+    }
+
+    @Test
+    fun `contract tests should encode spaces in query params before sending the request`() {
+        val queryParamWithSpace = "id entifier"
+
+        val specification = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /random:
+                post:
+                  summary: Random
+                  parameters:
+                    - name: $queryParamWithSpace
+                      in: query
+                      schema:
+                        type: string
+                      examples:
+                        SUCCESS:
+                          value: "123"
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: number
+                        examples:
+                          SUCCESS:
+                            value:
+                              id: 10
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            SUCCESS:
+                              value: "123"
+        """.trimIndent(), "").toFeature()
+
+        val queryParamsSeen = mutableListOf<Map<String, List<String>>>()
+
+        val server = embeddedServer(Netty, port = 9001) {
+            routing {
+                route("/{...}") {
+                    handle {
+                        queryParamsSeen.add(call.request.queryParameters.toMap())
+                        call.respondText("Hello, Ktor!")
+                    }
+                }
+            }
+        }
+
+        val results = try {
+            server.start(wait = false)
+            specification.executeTests(HttpClient("http://localhost:9001"))
+        } finally {
+            server.stop()
+        }
+
+        assertThat(results.success()).isTrue()
+        assertThat(queryParamsSeen.distinct()).containsExactlyInAnyOrder(
+            mapOf(queryParamWithSpace to listOf("123")))
     }
 }
 

@@ -275,8 +275,15 @@ Pet:
     }
 
     private fun containsDeferredPattern(pattern: Pattern): Boolean {
-        if (!pattern.pattern.instanceOf(Map::class)) return false
-        val childPattern = (pattern.pattern as Map<String, Pattern?>).values.firstOrNull() ?: return false
+        val innerPattern = pattern.pattern
+
+        if(innerPattern !is Map<*, *>)
+            return false
+
+        val childPattern = (innerPattern).values.firstOrNull() ?: return false
+        if(childPattern !is Pattern)
+            return false
+
         return if (childPattern.instanceOf(DeferredPattern::class)) true
         else containsDeferredPattern(childPattern)
     }
@@ -3753,8 +3760,6 @@ paths:
                 body = parsedJSON("""{"10": {"name": "Jane"}}""")
             )
 
-            val results = this.stubMatchResult(request, response, DefaultMismatchMessages)
-
             assertThat(
                 this.matches(
                     request,
@@ -5103,7 +5108,7 @@ paths:
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
 
-            var testStatus: String = "Did not run"
+            var testStatus: String
 
             createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
                 testStatus = "test ran"
@@ -5158,7 +5163,7 @@ paths:
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
 
-            var testStatus: String = "Did not run"
+            var testStatus: String
 
             createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
                 testStatus = "test ran"
@@ -5213,7 +5218,7 @@ paths:
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
 
-            var testStatus: String = "Did not run"
+            var testStatus: String
 
             createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
                 testStatus = "test ran"
@@ -5270,7 +5275,7 @@ paths:
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
 
-            var testStatus: String = "Did not run"
+            var testStatus: String
 
             createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
                 testStatus = "test ran"
@@ -5326,7 +5331,7 @@ paths:
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
 
-            var testStatus: String = "Did not run"
+            var testStatus: String
 
             createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
                 testStatus = "test ran"

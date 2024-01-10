@@ -1,0 +1,18 @@
+openapi: 3.0.1
+info:
+  title: Random
+  version: "1"
+paths:
+  /da ta:
+    get:
+      summary: Random
+      responses:
+        "200":
+          description: Random
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer

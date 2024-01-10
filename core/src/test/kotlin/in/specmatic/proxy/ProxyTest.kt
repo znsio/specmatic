@@ -4,12 +4,14 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.stub.HttpStub
+import `in`.specmatic.stub.createStubFromContracts
 import io.ktor.http.*
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.web.client.RestTemplate
+import org.springframework.web.client.getForEntity
 import java.io.File
 import java.net.InetSocketAddress
 
@@ -97,6 +99,37 @@ internal class ProxyTest {
         }.doesNotThrowAnyException()
         assertThatCode { parsedJSON(fakeFileWriter.receivedStub ?: "") }.doesNotThrowAnyException()
         assertThat(fakeFileWriter.receivedPaths).isEqualTo(listOf("proxy_generated.yaml", "stub0.json"))
+    }
+
+    @Test
+    fun `reverse proxy should record a space appropriately`() {
+        val spec = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Data
+              version: "1"
+            paths:
+              /da ta:
+                get:
+                  summary: Data
+                  responses:
+                    "200":
+                      description: Data
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(spec).use {
+            Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
+                val client = RestTemplate()
+                val response = client.getForEntity("http://localhost:9001/da ta", String::class.java)
+            }
+        }
+
+        assertThat(fakeFileWriter.receivedContract?.trim()).startsWith("openapi:")
+        assertThat(fakeFileWriter.receivedContract!!).contains("/da ta")
     }
 
     @Test

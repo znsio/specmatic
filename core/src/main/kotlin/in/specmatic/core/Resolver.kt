@@ -11,7 +11,7 @@ val actualMatch: (resolver: Resolver, factKey: String?, pattern: Pattern, sample
     resolver.actualPatternMatch(factKey, pattern, sampleValue)
 }
 
-val matchAnything: (resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value) -> Result = { resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value ->
+val matchAnything: (resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value) -> Result = { _: Resolver, _: String?, _: Pattern, _: Value ->
     Result.Success()
 }
 
@@ -19,7 +19,7 @@ val actualParse: (resolver: Resolver, pattern: Pattern, rowValue: String) -> Val
     resolver.actualParse(pattern, rowValue)
 }
 
-val alwaysReturnStringValue: (resolver: Resolver, pattern: Pattern, rowValue: String) -> Value = { resolver: Resolver, pattern: Pattern, rowValue: String ->
+val alwaysReturnStringValue: (resolver: Resolver, pattern: Pattern, rowValue: String) -> Value = { _: Resolver, _: Pattern, rowValue: String ->
     StringValue(rowValue)
 }
 

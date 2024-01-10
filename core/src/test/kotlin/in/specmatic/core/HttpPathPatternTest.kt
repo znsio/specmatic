@@ -44,7 +44,6 @@ internal class HttpPathPatternTest {
     @Throws(URISyntaxException::class, UnsupportedEncodingException::class)
     fun `should not match when all parts of the path do not match`() {
         val urlPattern = buildHttpPathPattern(URI("/pets/(petid:number)"))
-        val queryParameters = HashMap<String, String>()
         urlPattern.matches(URI("/owners/123123"), Resolver()).let {
             assertThat(it is Result.Failure).isTrue()
             assertThat((it as Result.Failure).toMatchFailureDetails()).isEqualTo(

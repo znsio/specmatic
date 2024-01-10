@@ -200,7 +200,7 @@ fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String,
             }
         }
         .filterValues { it.isPresent }
-        .mapValues { (key, opt) -> opt.get() }
+        .mapValues { (_, opt) -> opt.get() }
 }
 
 private fun selectPropertiesWithinMaxAndMin(

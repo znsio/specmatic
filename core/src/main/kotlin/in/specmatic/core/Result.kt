@@ -208,12 +208,6 @@ enum class FailureReason(val fluffLevel: Int) {
     SOAPActionMismatch(2)
 }
 
-fun Result.breadCrumb(breadCrumb: String): Result =
-    when(this) {
-        is Failure -> this.breadCrumb(breadCrumb)
-        else -> this
-    }
-
 data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null)
 
 interface MismatchMessages {

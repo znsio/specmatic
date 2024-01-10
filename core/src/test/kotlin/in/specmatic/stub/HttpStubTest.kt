@@ -3,6 +3,7 @@ package `in`.specmatic.stub
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.DELAY_IN_SECONDS
@@ -998,6 +999,111 @@ paths:
                 val response = stub.client.execute(HttpRequest("POST", "/data", emptyMap(), parsedJSONObject("""{"id": 10}""")))
                 assertThat(response.status).isEqualTo(400)
                 assertThat(response.body).isEqualTo(StringValue("No valid API specifications loaded"))
+            }
+        }
+    }
+
+    @Test
+    fun `should stub out a path having a space and return a randomised response`() {
+        val pathWithSpace = "/da ta"
+
+        val specification = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_space_in_path.yaml").toFeature()
+
+        HttpStub(specification).use { stub ->
+            val request = HttpRequest("GET", pathWithSpace)
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            response.body.let {
+                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                it as JSONObjectValue
+
+                assertThat(it.jsonObject).containsKey("id")
+                assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
+            }
+        }
+    }
+
+    @Test
+    fun `should load a stub with a space in the path and return the stubbed response`() {
+        val pathWithSpace = "/da ta"
+
+        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_space_in_path.yaml")).use { stub ->
+            val request = HttpRequest("GET", pathWithSpace)
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            response.body.let {
+                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                it as JSONObjectValue
+
+                assertThat(it.jsonObject).containsEntry("id", NumberValue(10))
+            }
+        }
+    }
+
+    @Test
+    fun `should load a stub with query params and a space in the path and return the stubbed response`() {
+        val pathWithSpace = "/da ta"
+
+        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_query_and_space_in_path.yaml")).use { stub ->
+            val request = HttpRequest("GET", pathWithSpace, queryParams = mapOf("id" to "5"))
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            response.body.let {
+                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                it as JSONObjectValue
+
+                assertThat(it.jsonObject).containsEntry("id", NumberValue(10))
+            }
+        }
+    }
+
+    @Test
+    fun `should load a stub with a space in query params and return the stubbed response`() {
+        val queryParamWithSpace = "id entifier"
+
+        val specification = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /data:
+                get:
+                  summary: Random
+                  parameters:
+                    - name: $queryParamWithSpace
+                      in: query
+                      schema:
+                        type: integer
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(specification).use { stub ->
+            val request = HttpRequest("GET", "/data", queryParams = mapOf(queryParamWithSpace to "5"))
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            response.body.let {
+                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                it as JSONObjectValue
+
+                assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
             }
         }
     }

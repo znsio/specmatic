@@ -4,9 +4,11 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.NumberPattern
+import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.*
 import `in`.specmatic.test.HttpClient
 import `in`.specmatic.test.TestExecutor
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -926,6 +928,83 @@ Examples:
         assertThat(results.success()).isTrue()
         assertThat(queryParamsSeen.distinct()).containsExactlyInAnyOrder(
             mapOf(queryParamWithSpace to listOf("123")))
+    }
+
+    @Test
+    fun `contract tests should consider any 4xx as valid negative-test responses`() {
+        val specification = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /random:
+                post:
+                  summary: Random
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: number
+                        examples:
+                          SUCCESS:
+                            value:
+                              id: 10
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            SUCCESS:
+                              value: "123"
+                    "400":
+                      description: Random
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    "422":
+                      description: Random
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val server = embeddedServer(Netty, port = 9001) {
+            routing {
+                route("/{...}") {
+                    handle {
+                        val body = parsedJSONObject(call.receiveText())
+
+                        when(body.jsonObject["id"]) {
+                            is NumberValue -> call.respondText("Hello, Ktor!")
+                            is NullValue -> call.respond(HttpStatusCode.BadRequest)
+                            is BooleanValue -> call.respond(HttpStatusCode.UnprocessableEntity)
+                            is StringValue -> call.respond(HttpStatusCode.UnprocessableEntity)
+                        }
+                    }
+                }
+            }
+        }
+
+        val results = try {
+            server.start(wait = false)
+            specification.enableGenerativeTesting().executeTests(HttpClient("http://localhost:9001"))
+        } finally {
+            server.stop()
+        }
+
+        assertThat(results.success()).isTrue()
+        assertThat(results.failureCount).isZero()
     }
 }
 

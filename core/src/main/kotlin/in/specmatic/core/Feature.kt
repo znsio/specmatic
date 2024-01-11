@@ -329,7 +329,12 @@ data class Feature(
             negativeTestScenarios.filterNot { negativeTestScenario ->
                 val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
                 scenario.httpRequestPattern.matches(sampleRequest, scenario.resolver).isSuccess()
-            }.map { it.copy(generativePrefix = resolverStrategies.generation.negativePrefix) }
+            }.mapIndexed { index, negativeScenario ->
+                negativeScenario.copy(
+                    generativePrefix = resolverStrategies.generation.negativePrefix,
+                    disambiguate = { "[${(index + 1)}] " }
+                )
+            }
         }
 
     fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =

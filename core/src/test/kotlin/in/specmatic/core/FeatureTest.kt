@@ -1382,6 +1382,61 @@ paths:
         assertThat(negativeTestScenarios.count()).isEqualTo(10)
     }
 
+    @Test
+    fun `negative tests should say that 4xx status is expected in response`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    post:
+      summary: Add Product
+      description: Add Product
+      requestBody:
+        content:
+          application/json:
+            examples:
+              SUCCESS:
+                value:
+                  name: 'abc'
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Returns Product With Id
+          content:
+            application/json:
+              examples:
+                SUCCESS:
+                  value:
+                    id: 10
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: integer
+""".trimIndent(), "").toFeature()
+
+        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenarios(emptyList())
+        val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
+        assertThat(negativeTestScenarios.map { it.testDescription() }).allSatisfy {
+            assertThat(it).contains("-> 4xx")
+        }
+    }
+
 
     companion object {
         @JvmStatic

@@ -56,7 +56,8 @@ data class Scenario(
     val sourceRepositoryBranch:String? = null,
     val specification:String? = null,
     val serviceType:String? = null,
-    val generativePrefix: String = ""
+    val generativePrefix: String = "",
+    val statusInDescription: String = httpResponsePattern.status.toString()
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -435,12 +436,11 @@ data class Scenario(
     override fun testDescription(): String {
         val method = this.httpRequestPattern.method
         val path = this.httpRequestPattern.httpPathPattern?.path ?: ""
-        val responseStatus = this.httpResponsePattern.status
         val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | EX:${exampleName.trim()}" }
 
         val generativePrefix = this.generativePrefix
 
-        return "$generativePrefix Scenario: $method $path -> $responseStatus$exampleIdentifier"
+        return "$generativePrefix Scenario: $method $path -> $statusInDescription$exampleIdentifier"
     }
 
     fun newBasedOn(scenario: Scenario): Scenario {
@@ -457,7 +457,8 @@ data class Scenario(
     fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?): Scenario {
         return this.copy(
             isNegative = true,
-            badRequestOrDefault = badRequestOrDefault
+            badRequestOrDefault = badRequestOrDefault,
+            statusInDescription = "4xx"
         )
     }
 }

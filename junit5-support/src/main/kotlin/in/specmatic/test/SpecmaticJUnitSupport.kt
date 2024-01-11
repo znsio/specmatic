@@ -1,5 +1,6 @@
 package `in`.specmatic.test
 
+import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.ignoreLog
@@ -265,20 +266,7 @@ open class SpecmaticJUnitSupport {
         }.toList()
     }
 
-    private fun getSpecmaticJson(): SpecmaticConfigJson? {
-        return try {
-            loadSpecmaticJsonConfig(configFile)
-        }
-        catch (e: ContractException) {
-            logger.log(exceptionCauseMessage(e))
-            null
-        }
-        catch (e: Throwable) {
-            exitWithMessage(exceptionCauseMessage(e))
-        }
-    }
-
-    private fun loadTestScenarios(
+    fun loadTestScenarios(
         path: String,
         suggestionsPath: String,
         suggestionsData: String,
@@ -304,7 +292,7 @@ open class SpecmaticJUnitSupport {
 
         val allEndpoints: List<Endpoint> = feature.scenarios.map { scenario ->
             Endpoint(
-                scenario.path,
+                convertPathParameterStyle(scenario.path),
                 scenario.method,
                 scenario.httpResponsePattern.status,
                 scenario.sourceProvider,
@@ -328,6 +316,19 @@ open class SpecmaticJUnitSupport {
             .generateContractTests(suggestions)
 
         return Pair(tests, allEndpoints)
+    }
+
+    private fun getSpecmaticJson(): SpecmaticConfigJson? {
+        return try {
+            loadSpecmaticJsonConfig(configFile)
+        }
+        catch (e: ContractException) {
+            logger.log(exceptionCauseMessage(e))
+            null
+        }
+        catch (e: Throwable) {
+            exitWithMessage(exceptionCauseMessage(e))
+        }
     }
 
     private fun suggestionsFromFile(suggestionsPath: String): List<Scenario> {

@@ -1,0 +1,54 @@
+components:
+  schemas:
+    HTTPError:
+      properties:
+        detail:
+          type: object
+        message:
+          type: string
+      type: object
+info:
+  title: Newsletter Service
+  version: 0.1.0
+openapi: 3.0.3
+paths:
+  /sayHello/{name}:
+    get:
+      parameters:
+      - in: path
+        name: name
+        required: true
+        schema:
+          type: string
+        examples:
+          SUCCESS:
+            value: "Emily Bache"
+          BLACKLISTED:
+            value: "DDT"
+          UNKNOWN:
+            value: "Unknown"
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+              examples:
+                SUCCESS:
+                  value: "Hello, Miss. Emily Bache. Independent Technical Coach, YouTuber, creator of Samman Coaching, Author is my favourite person."
+                UNKNOWN:
+                  value: "Hello, Unknown."
+          description: Successful response
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+              examples:
+                BLACKLISTED:
+                  value:
+                    detail: { "error": "Blacklisted name" }
+                    message: "Bad request"
+          description: Bad request
+      summary: Say Hello
+tags: []

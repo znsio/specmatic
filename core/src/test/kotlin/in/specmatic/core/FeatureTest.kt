@@ -4,6 +4,7 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.value.*
+import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.*
@@ -1435,6 +1436,89 @@ paths:
         assertThat(negativeTestScenarios.map { it.testDescription() }).allSatisfy {
             assertThat(it).contains("-> 4xx")
         }
+    }
+
+    @Test
+    fun `positive examples of 4xx should be able to have non-string non-spec-conformant examples`() {
+        val specification = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    post:
+      summary: Add Product
+      description: Add Product
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+            examples:
+              SUCCESS:
+                value:
+                  name: 'abc'
+              BAD_REQUEST_NUMBER:
+                value:
+                  name: 10
+              BAD_REQUEST_NULL:
+                value:
+                  name: null
+      responses:
+        '200':
+          description: Returns Id
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                SUCCESS:
+                  value: 10
+        '422':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: string
+              examples:
+                BAD_REQUEST_NUMBER:
+                  value: "Bad request was received and could not be handled"
+                BAD_REQUEST_NULL:
+                  value: "Bad request was received and could not be handled"
+""".trimIndent(), "").toFeature()
+
+        val results = specification.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                print(request.toLogString())
+                return when(val body = request.body) {
+                    is JSONObjectValue -> {
+                        if(body.jsonObject["name"] is StringValue) {
+                            HttpResponse.ok("10")
+                        } else {
+                            HttpResponse(422, "Bad request was received and could not be handled")
+                        }
+                    }
+
+                    else -> HttpResponse(422, "Bad request was received and could not be handled")
+                }
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(results.success()).isTrue()
+        assertThat(results.failureCount).isZero()
     }
 
 

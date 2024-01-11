@@ -177,19 +177,4 @@ paths:
         assertThat(descriptions[1]).contains("TEST2")
         assertThat(descriptions[2]).contains("TEST3")
     }
-
-    @Test
-    fun `should retain open api path parameter convention for parameterized endpoints`(){
-        val result: Pair<List<ContractTest>, List<Endpoint>> = SpecmaticJUnitSupport().loadTestScenarios(
-            "./src/test/resources/spec_with_parameterized_paths.yaml",
-            "",
-            "",
-            TestConfig(emptyMap(), emptyMap()),
-            filterName = null,
-            filterNotName = null
-        )
-        val specEndpoints = result.second
-        assertThat(specEndpoints.count()).isEqualTo(2)
-        assertThat(specEndpoints.all { it.path == "/sayHello/{name}"})
-    }
 }

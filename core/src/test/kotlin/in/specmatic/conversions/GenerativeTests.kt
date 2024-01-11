@@ -999,4 +999,58 @@ class GenerativeTests {
             ).sorted()
         )
     }
+
+    @Test
+    fun `generative tests for path params`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person/{id}:
+                parameters:
+                  - name: id
+                    in: path
+                    schema:
+                      type: integer
+                    examples:
+                      CREATE_PERSON:
+                        value: 100
+                post:
+                  summary: Create person record
+                  responses:
+                    200:
+                      description: Person record created
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+                          examples:
+                            CREATE_PERSON:
+                              value: "Person record created"
+            """.trimIndent(), ""
+        ).toFeature()
+
+        val pathsSeen = mutableListOf<String>()
+
+        val results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                pathsSeen.add(request.path!!)
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(pathsSeen).withFailMessage(results.report()).satisfiesExactlyInAnyOrder(
+            { assertThat(it).isEqualTo("/person/100") },
+            { assertThat(it).matches("^/person/(false|true)") },
+            { assertThat(it).matches("/person/[A-Z]+$") }
+        )
+    }
 }

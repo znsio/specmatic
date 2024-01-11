@@ -231,13 +231,14 @@ open class SpecmaticJUnitSupport {
 
                 testsNames.add(testScenario.testDescription())
 
-                lateinit var result:Result
+                lateinit var testResult: Pair<Result, HttpResponse?>
 
                 try {
                     val protocol = System.getProperty("protocol") ?: "http"
                     val testBaseURL = System.getProperty(TEST_BASE_URL)
                         ?: "$protocol://${System.getProperty(HOST)}:${System.getProperty(PORT)}"
-                    result = testScenario.runTest(testBaseURL, timeout)
+                    testResult = testScenario.runTest(testBaseURL, timeout)
+                    val (result, response) = testResult
 
                     if (result is Result.Success && result.isPartialSuccess()) {
                         partialSuccesses.add(result)
@@ -256,11 +257,11 @@ open class SpecmaticJUnitSupport {
                     }
 
                 } catch(e: Throwable) {
-                    result = Result.Failure(exceptionCauseMessage(e))
                     throw e
                 }
                 finally {
-                    openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result))
+                    val (result, response) = testResult
+                    openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result, response))
                 }
             }
         }.toList()

@@ -12,9 +12,12 @@ class ScenarioTest(
     private val specification: String? = null,
     private val serviceType: String? = null,
 ) : ContractTest {
-    override fun testResultRecord(result: Result): TestResultRecord {
+    override fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord {
         val resultStatus = result.testResult()
-        return TestResultRecord(convertPathParameterStyle(scenario.path), scenario.method, scenario.status, resultStatus, sourceProvider, sourceRepository, sourceRepositoryBranch, specification, serviceType)
+
+        val responseStatus = scenario.getStatus(response)
+        return TestResultRecord(convertPathParameterStyle(scenario.path), scenario.method,
+            responseStatus, resultStatus, sourceProvider, sourceRepository, sourceRepositoryBranch, specification, serviceType)
     }
 
     override fun generateTestScenarios(
@@ -28,9 +31,10 @@ class ScenarioTest(
         return scenario.testDescription()
     }
 
-    override fun runTest(testBaseURL: String, timeOut: Int): Result {
+    override fun runTest(testBaseURL: String, timeOut: Int): Pair<Result, HttpResponse?> {
         val httpClient = HttpClient(testBaseURL, timeout = timeOut)
-        return executeTest(scenario, httpClient, resolverStrategies).updateScenario(scenario)
+        val (result, response) = executeTestAndReturnResultAndResponse(scenario, httpClient, resolverStrategies)
+        return Pair(result.updateScenario(scenario), response)
     }
 
 }

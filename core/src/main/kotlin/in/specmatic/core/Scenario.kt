@@ -462,6 +462,15 @@ data class Scenario(
             statusInDescription = "4xx"
         )
     }
+
+    fun getStatus(response: HttpResponse?): Int {
+        // TODO: This should return a string so that we can return a 4xx when response is null for a negative scenario
+        return when {
+            response == null -> status
+            isNegative -> response.status
+            else -> status
+        }
+    }
 }
 
 fun newExpectedServerStateBasedOn(
@@ -508,6 +517,14 @@ object ContractAndResponseMismatch : MismatchMessages {
 }
 
 fun executeTest(testScenario: Scenario, testExecutor: TestExecutor, resolverStrategies: ResolverStrategies = DefaultStrategies): Result {
+    return executeTestAndReturnResultAndResponse(testScenario, testExecutor, resolverStrategies).first
+}
+
+fun executeTestAndReturnResultAndResponse(
+    testScenario: Scenario,
+    testExecutor: TestExecutor,
+    resolverStrategies: ResolverStrategies
+): Pair<Result, HttpResponse?> {
     val request = testScenario.generateHttpRequest(resolverStrategies)
 
     return try {
@@ -517,10 +534,10 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor, resolverStra
 
         val result = testResult(response, testScenario)
 
-        result.withBindings(testScenario.bindings, response)
+        Pair(result.withBindings(testScenario.bindings, response), response)
     } catch (exception: Throwable) {
-        Result.Failure(exceptionCauseMessage(exception))
-            .also { failure -> failure.updateScenario(testScenario) }
+        Pair(Result.Failure(exceptionCauseMessage(exception))
+            .also { failure -> failure.updateScenario(testScenario) }, null)
     }
 }
 

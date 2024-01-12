@@ -196,7 +196,7 @@ class TestCommand : Callable<Unit> {
     }
 
     private fun setParallelism() {
-        Flags.parallelism()?.let { parallelism ->
+        Flags.testParallelism()?.let { parallelism ->
             validateParallelism(parallelism)
 
             System.setProperty("junit.jupiter.execution.parallel.enabled", "true");
@@ -223,7 +223,7 @@ class TestCommand : Callable<Unit> {
         try {
             parallelism.toInt()
         } catch(e: Throwable) {
-            exitWithMessage("The value of the ${Flags.PARALLEL_ENV_VAR} environment variable must be either 'true' or an integer value")
+            exitWithMessage("The value of the ${Flags.SPECMATIC_TEST_PARALLELISM} environment variable must be either 'true' or an integer value")
         }
     }
 }

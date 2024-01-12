@@ -64,10 +64,10 @@ open class SpecmaticJUnitSupport {
             reportProcessors.forEach { it.process(getReportConfiguration()) }
 
             threads.distinct().let {
-//                if(it.size > 1) {
+                if(it.size > 1) {
                     logger.newLine()
                     logger.log("Executed tests in ${it.size} threads")
-//                }
+                }
             }
         }
 

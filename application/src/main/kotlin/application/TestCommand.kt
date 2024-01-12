@@ -217,7 +217,7 @@ class TestCommand : Callable<Unit> {
     }
 
     private fun validateParallelism(parallelism: String) {
-        if(parallelism == "true")
+        if(parallelism == "auto")
             return
 
         try {

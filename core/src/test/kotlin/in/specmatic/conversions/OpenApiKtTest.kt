@@ -18,6 +18,11 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.jsonBody
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request

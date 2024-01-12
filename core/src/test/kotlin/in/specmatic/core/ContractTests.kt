@@ -743,6 +743,93 @@ Examples:
     }
 
     @Test
+    fun ` body and content-type header should be sent when there is a request body in the spec`() {
+        val spec = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.0
+            info:
+              title: Test API
+              version: 1.0.0
+            paths:
+              /test:
+                post:
+                  requestBody:
+                    content:
+                      text/plain:
+                        schema:
+                          type: string
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val server = embeddedServer(Netty, port = 8080) {
+            routing {
+                route("/{...}") {
+                    handle {
+                        assertThat(call.request.headers["Content-Type"]).isEqualTo("text/plain")
+                        call.respondText("Hello, Ktor!")
+                    }
+                }
+            }
+        }
+
+        try {
+            server.start(wait = false)
+
+            val results = spec.executeTests(HttpClient("http://localhost:8080"))
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+            assertThat(results.successCount).isPositive()
+        } finally {
+            server.stop()
+        }
+    }
+
+    @Test
+    fun ` body and content-type header should not be sent when there is no request body in the spec`() {
+        val spec = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.0
+            info:
+              title: Test API
+              version: 1.0.0
+            paths:
+              /test:
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val server = embeddedServer(Netty, port = 8080) {
+            routing {
+                route("/{...}") {
+                    handle {
+                        assertThat(call.request.headers["Content-Type"]).isNull()
+                        call.respondText("Hello, Ktor!")
+                    }
+                }
+            }
+        }
+
+        try {
+            server.start(wait = false)
+
+            val results = spec.executeTests(HttpClient("http://localhost:8080"))
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+            assertThat(results.successCount).isPositive()
+        } finally {
+            server.stop()
+        }
+    }
+
+    @Test
     fun `contract tests should encode spaces in path segments before sending the request`() {
         val pathWithSpace = "/rand om"
 

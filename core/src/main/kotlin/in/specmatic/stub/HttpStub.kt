@@ -556,7 +556,12 @@ internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRe
 
 private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<String, String>, List<MultiPartFormDataValue>> {
     return when {
-        call.request.httpMethod == HttpMethod.Get -> Triple(EmptyString, emptyMap(), emptyList())
+        call.request.httpMethod == HttpMethod.Get -> if(call.request.headers.contains("Content-Type")) {
+            Triple(parsedValue(receiveText(call)), emptyMap(), emptyList())
+        } else {
+            Triple(NoBodyValue, emptyMap(), emptyList())
+        }
+
         call.request.contentType().match(ContentType.Application.FormUrlEncoded) -> Triple(
             EmptyString,
             call.receiveParameters().toMap().mapValues { (_, values) -> values.first() },
@@ -616,7 +621,12 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
             Triple(EmptyString, emptyMap(), parts)
         }
 
-        else -> Triple(parsedValue(receiveText(call)), emptyMap(), emptyList())
+        else -> {
+            if(call.request.headers.contains("Content-Type"))
+                Triple(parsedValue(receiveText(call)), emptyMap(), emptyList())
+            else
+                Triple(NoBodyValue, emptyMap(), emptyList())
+        }
     }
 }
 

@@ -175,29 +175,35 @@ data class HttpRequest(
                 httpRequestBuilder.header("Host", it.authority)
         }
 
-        httpRequestBuilder.setBody(
-            when {
-                formFields.isNotEmpty() -> {
-                    val parameters = formFields.mapValues { listOf(it.value) }.toList()
-                    FormDataContent(parametersOf(*parameters.toTypedArray()))
-                }
+        if(body !is NoBodyValue) {
+            httpRequestBuilder.setBody(
+                when {
+                    formFields.isNotEmpty() -> {
+                        val parameters = formFields.mapValues { listOf(it.value) }.toList()
+                        FormDataContent(parametersOf(*parameters.toTypedArray()))
+                    }
 
-                multiPartFormData.isNotEmpty() -> {
-                    MultiPartFormDataContent(formData {
-                        multiPartFormData.forEach { value ->
-                            value.addTo(this)
+                    multiPartFormData.isNotEmpty() -> {
+                        MultiPartFormDataContent(formData {
+                            multiPartFormData.forEach { value ->
+                                value.addTo(this)
+                            }
+                        })
+                    }
+
+                    else -> {
+                        when {
+                            headers.containsKey(CONTENT_TYPE) -> TextContent(
+                                bodyString,
+                                ContentType.parse(headers[CONTENT_TYPE] as String)
+                            )
+
+                            else -> TextContent(bodyString, ContentType.parse(body.httpContentType))
                         }
-                    })
-                }
-
-                else -> {
-                    when {
-                        headers.containsKey(CONTENT_TYPE) -> TextContent(bodyString, ContentType.parse(headers[CONTENT_TYPE] as String))
-                        else -> TextContent(bodyString, ContentType.parse(body.httpContentType))
                     }
                 }
-            }
-        )
+            )
+        }
     }
 
     private fun withoutDuplicateHostHeader(headers: Map<String, String>, url: URL?): Map<String, String> {

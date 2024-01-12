@@ -134,7 +134,14 @@ private fun ktorHttpRequestToHttpRequestForLogging(
     val (body, formFields, multiPartFormData) =
         when (request.content) {
             is FormDataContent -> Triple(EmptyString, specmaticRequest.formFields, emptyList())
-            is TextContent -> Triple(specmaticRequest.body, emptyMap(), emptyList())
+            is TextContent -> {
+                val bodyValue = when (specmaticRequest.body) {
+                    is NoBodyValue -> NoBodyValue
+                    else -> specmaticRequest.body
+                }
+
+                Triple(bodyValue, emptyMap(), emptyList())
+            }
             is MultiPartFormDataContent -> Triple(EmptyString, emptyMap(), specmaticRequest.multiPartFormData)
             is EmptyContent -> Triple(EmptyString, emptyMap(), emptyList())
             else -> throw ContractException("Unknown type of body content sent in the request")

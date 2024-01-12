@@ -202,7 +202,7 @@ class TestCommand : Callable<Unit> {
             System.setProperty("junit.jupiter.execution.parallel.enabled", "true");
 
             when (parallelism) {
-                "true" -> {
+                "auto" -> {
                     logger.log("Running contract tests in parallel (dynamically determined number of threads)")
                     System.setProperty("junit.jupiter.execution.parallel.config.strategy", "dynamic")
                 }

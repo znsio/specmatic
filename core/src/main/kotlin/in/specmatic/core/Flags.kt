@@ -8,6 +8,7 @@ object Flags {
     private const val MAX_TEST_REQUEST_COMBINATIONS = "MAX_TEST_REQUEST_COMBINATIONS"
     const val SCHEMA_EXAMPLE_DEFAULT = "SCHEMA_EXAMPLE_DEFAULT"
     const val ONLY_POSITIVE = "ONLY_POSITIVE"
+    const val PARALLEL_ENV_VAR = "SPECMATIC_PARALLEL"
 
     private fun flagValue(flagName: String): String? {
         return System.getenv(flagName) ?: System.getProperty(flagName)
@@ -33,5 +34,9 @@ object Flags {
 
     fun onlyPositive(): Boolean {
         return booleanFlag(ONLY_POSITIVE)
+    }
+
+    fun parallelism(): String? {
+        return flagValue(PARALLEL_ENV_VAR)
     }
 }

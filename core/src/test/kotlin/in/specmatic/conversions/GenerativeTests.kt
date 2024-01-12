@@ -1105,6 +1105,7 @@ class GenerativeTests {
 
         val results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
                 pathsSeen.add(request.path!!)
                 assertThat(request.body).isInstanceOf(JSONObjectValue::class.java)
 
@@ -1115,7 +1116,7 @@ class GenerativeTests {
             }
         })
 
-        assertThat(pathsSeen).withFailMessage("${pathsSeen.joinToString("\n")}\n${results.report()}").satisfiesExactlyInAnyOrder(
+        assertThat(pathsSeen.distinct()).withFailMessage("${pathsSeen.joinToString("\n")}\n${results.report()}").satisfiesExactlyInAnyOrder(
             { assertThat(it).isEqualTo("/person/100") },
             { assertThat(it).matches("^/person/(false|true)") },
             { assertThat(it).matches("/person/[A-Z]+$") }

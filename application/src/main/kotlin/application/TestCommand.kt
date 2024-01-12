@@ -6,6 +6,7 @@ import `in`.specmatic.core.Configuration
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.core.utilities.newXMLBuilder
 import `in`.specmatic.core.utilities.xmlToString
 import `in`.specmatic.test.SpecmaticJUnitSupport
@@ -90,7 +91,29 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--debug"], description = ["Debug logs"])
     var verboseMode: Boolean = false
 
+    val parallelEnvVar = "SPECMATIC_PARALLEL"
+
     override fun call() = try {
+        if(parallelEnvVar in System.getenv()) {
+            val parallelism = System.getenv(parallelEnvVar).lowercase()
+
+            validateParallelism(parallelism)
+
+            System.setProperty("junit.jupiter.execution.parallel.enabled", "true");
+
+            when(parallelism) {
+                "true" -> {
+                    logger.log("Running contract tests in parallel (dynamically determined number of threads)")
+                    System.setProperty("junit.jupiter.execution.parallel.config.strategy", "dynamic")
+                }
+                else -> {
+                    logger.log("Running contract tests in parallel in $parallelism threads")
+                    System.setProperty("junit.jupiter.execution.parallel.config.strategy", "fixed")
+                    System.setProperty("junit.jupiter.execution.parallel.config.fixed.parallelism", parallelism)
+                }
+            }
+        }
+
         if(verboseMode) {
             logger = Verbose()
         }
@@ -189,5 +212,16 @@ class TestCommand : Callable<Unit> {
     }
     catch (e: Throwable) {
         logger.log(e)
+    }
+
+    private fun validateParallelism(parallelism: String) {
+        if(parallelism == "true")
+            return
+
+        try {
+            parallelism.toInt()
+        } catch(e: Throwable) {
+            exitWithMessage("The value of the $parallelEnvVar environment variable must be either 'true' or an integer value")
+        }
     }
 }

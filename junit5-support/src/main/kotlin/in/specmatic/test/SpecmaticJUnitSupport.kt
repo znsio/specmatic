@@ -19,12 +19,16 @@ import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
+import org.junit.jupiter.api.parallel.Execution
+import org.junit.jupiter.api.parallel.ExecutionMode
 import org.opentest4j.TestAbortedException
 import java.io.File
+import java.util.*
 
 @Serializable
 data class API(val method: String, val path: String)
 
+@Execution(ExecutionMode.CONCURRENT)
 open class SpecmaticJUnitSupport {
     companion object {
         const val CONTRACT_PATHS = "contractPaths"
@@ -48,6 +52,8 @@ open class SpecmaticJUnitSupport {
         private var specmaticConfigJson: SpecmaticConfigJson? = null
         private val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
 
+        private val threads: Vector<String> = Vector<String>()
+
         var totalTestCount: Int = 0
 
 
@@ -56,6 +62,13 @@ open class SpecmaticJUnitSupport {
         fun report() {
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
             reportProcessors.forEach { it.process(getReportConfiguration()) }
+
+            threads.distinct().let {
+//                if(it.size > 1) {
+                    logger.newLine()
+                    logger.log("Executed tests in ${it.size} threads")
+//                }
+            }
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
@@ -219,6 +232,8 @@ open class SpecmaticJUnitSupport {
 
         return testScenarios.map { testScenario ->
             DynamicTest.dynamicTest(testScenario.testDescription()) {
+                threads.add(Thread.currentThread().name)
+
                 if(!checkedAPIs) {
                     checkedAPIs = true
 

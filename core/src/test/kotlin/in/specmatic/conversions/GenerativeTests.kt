@@ -1053,4 +1053,72 @@ class GenerativeTests {
             { assertThat(it).matches("/person/[A-Z]+$") }
         )
     }
+
+    @Test
+    fun `generative tests for path params and a request body`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person/{id}:
+                parameters:
+                  - name: id
+                    in: path
+                    schema:
+                      type: integer
+                    examples:
+                      CREATE_PERSON:
+                        value: 100
+                post:
+                  summary: Create person record
+                  requestBody:
+                    content:
+                      application/json:
+                        examples:
+                          CREATE_PERSON:
+                            value:
+                              name: "John Doe"
+                        schema:
+                          required:
+                          - name
+                          properties:
+                            name:
+                              type: string
+                  responses:
+                    200:
+                      description: Person record created
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+                          examples:
+                            CREATE_PERSON:
+                              value: "Person record created"
+            """.trimIndent(), ""
+        ).toFeature()
+
+        val pathsSeen = mutableListOf<String>()
+
+        val results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                pathsSeen.add(request.path!!)
+                assertThat(request.body).isInstanceOf(JSONObjectValue::class.java)
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(pathsSeen).withFailMessage("${pathsSeen.joinToString("\n")}\n${results.report()}").satisfiesExactlyInAnyOrder(
+            { assertThat(it).isEqualTo("/person/100") },
+            { assertThat(it).matches("^/person/(false|true)") },
+            { assertThat(it).matches("/person/[A-Z]+$") }
+        )
+    }
 }

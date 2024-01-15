@@ -17,6 +17,9 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Docker Login
+        run: echo ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }} | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -30,12 +33,6 @@ jobs:
           version=$(grep 'version=' version.properties | cut -d'=' -f2)
           echo "Version: $version"
           echo "::set-output name=VERSION::$version"
-
-      - name: Docker Login
-        run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
           
       - name: Build Docker Image
         run: docker build --no-cache -t znsio/specmatic:${{ steps.read_version.outputs.VERSION }} .

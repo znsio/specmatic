@@ -783,7 +783,7 @@ Feature: Authenticated
                 val requestWithQuery = HttpRequest(
                     method = "GET",
                     path = "/hello/10",
-                    queryParams = mapOf(
+                    queryParametersMap = mapOf(
                         "apiKey" to "test"
                     )
                 )

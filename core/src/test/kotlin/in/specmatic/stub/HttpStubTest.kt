@@ -1051,7 +1051,7 @@ paths:
         val pathWithSpace = "/da ta"
 
         createStubFromContracts(listOf("src/test/resources/openapi/spec_with_query_and_space_in_path.yaml")).use { stub ->
-            val request = HttpRequest("GET", pathWithSpace, queryParams = mapOf("id" to "5"))
+            val request = HttpRequest("GET", pathWithSpace, queryParametersMap = mapOf("id" to "5"))
 
             val response = stub.client.execute(request)
 
@@ -1097,7 +1097,7 @@ paths:
         ).toFeature()
 
         HttpStub(specification).use { stub ->
-            val request = HttpRequest("GET", "/data", queryParams = mapOf(queryParamWithSpace to "5"))
+            val request = HttpRequest("GET", "/data", queryParametersMap = mapOf(queryParamWithSpace to "5"))
 
             val response = stub.client.execute(request)
 
@@ -1116,7 +1116,7 @@ paths:
         val specification = createStubFromContracts(listOf("src/test/resources/openapi/spec_with_boolean_query.yaml"))
 
         specification.use { stub ->
-            val request = HttpRequest("GET", "/data", queryParams = mapOf("enabled" to "True"))
+            val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("enabled" to "True"))
 
             val response = stub.client.execute(request)
 
@@ -1161,7 +1161,7 @@ paths:
         ).toFeature()
 
         HttpStub(specification).use { stub ->
-            val request = HttpRequest("GET", "/data", queryParams = mapOf("enabled" to "True"))
+            val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("enabled" to "True"))
 
             val response = stub.client.execute(request)
 

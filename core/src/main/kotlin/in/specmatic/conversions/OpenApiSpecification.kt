@@ -763,7 +763,7 @@ class OpenApiSpecification(
                     }
 
                     val httpRequest =
-                        HttpRequest(method = httpMethod, path = path, queryParams = queryParams, headers = headerParams)
+                        HttpRequest(method = httpMethod, path = path, queryParametersMap = queryParams, headers = headerParams)
 
                     val requestsWithSecurityParams: List<HttpRequest> = securitySchemes.map { (_, securityScheme) ->
                         securityScheme.addTo(httpRequest)
@@ -847,7 +847,7 @@ class OpenApiSpecification(
                                 val httpRequest = HttpRequest(
                                     method = httpMethod,
                                     path = httpPathPattern.path,
-                                    queryParams = queryParams,
+                                    queryParametersMap = queryParams,
                                     body = parsedValue(it.value ?: "")
                                 )
 

@@ -143,7 +143,7 @@ class HttpQueryParamPatternTest {
         val matcher =
             HttpQueryParamPattern(queryPatterns = mapOf("name" to StringPattern(), "string" to StringPattern()))
 
-        val result = matcher.matches(HttpRequest(queryParams = mapOf("name" to "Archie")), Resolver())
+        val result = matcher.matches(HttpRequest(queryParametersMap = mapOf("name" to "Archie")), Resolver())
             .breadCrumb(QUERY_PARAMS_BREADCRUMB)
         assertThat(result.isSuccess()).isFalse()
     }
@@ -203,7 +203,7 @@ class HttpQueryParamPatternTest {
     @Nested
     inner class ReturnMultipleErrors {
         private val urlMatcher = buildQueryPattern(URI.create("http://example.com/?hello=(number)"))
-        val result = urlMatcher.matches(HttpRequest("GET", "/", queryParams = mapOf("hello" to "world", "hi" to "all")), Resolver()) as Failure
+        val result = urlMatcher.matches(HttpRequest("GET", "/", queryParametersMap = mapOf("hello" to "world", "hi" to "all")), Resolver()) as Failure
         private val resultText = result.toReport().toText()
 
         @Test

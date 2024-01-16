@@ -34,14 +34,32 @@ data class HttpRequest(
     val path: String? = null,
     val headers: Map<String, String> = emptyMap(),
     val body: Value = EmptyString,
-    val queryParams: Map<String, String> = emptyMap(),
+    val queryParams: QueryParameters = QueryParameters(),
     val formFields: Map<String, String> = emptyMap(),
     val multiPartFormData: List<MultiPartFormDataValue> = emptyList()
 ) {
-    constructor(method: String, uri: URI) : this(method, uri.path, queryParams = urlToQueryParams(uri))
+    constructor(method: String, uri: URI) : this(method, uri.path, queryParametersMap = urlToQueryParams(uri))
+    constructor(
+        method: String? = null,
+        path: String? = null,
+        headers: Map<String, String> = emptyMap(),
+        body: Value = EmptyString,
+        queryParametersMap: Map<String, String> = emptyMap(),
+        formFields: Map<String, String> = emptyMap(),
+        multiPartFormData: List<MultiPartFormDataValue> = emptyList(),
+        marker: String = "Dummy"
+    ) : this(
+        method = method,
+        path = path,
+        headers = headers,
+        body = body,
+        queryParams = QueryParameters(queryParametersMap),
+        formFields = formFields,
+        multiPartFormData = multiPartFormData,
+    )
 
-    fun updateQueryParams(queryParams: Map<String, String>): HttpRequest =
-        copy(queryParams = queryParams.plus(queryParams))
+    fun updateQueryParams(otherQueryParams: Map<String, String>): HttpRequest =
+        copy(queryParams = queryParams.plus(otherQueryParams))
 
     fun withHost(host: String) = this.copy(headers = this.headers.plus("Host" to host))
 
@@ -65,7 +83,7 @@ data class HttpRequest(
     fun updateWith(url: URI): HttpRequest {
         val path = url.path
         val queryParams = parseQuery(url.query)
-        return copy(path = path, queryParams = queryParams)
+        return copy(path = path, queryParams = QueryParameters(queryParams))
     }
 
     fun updateMethod(name: String): HttpRequest = copy(method = name.uppercase())

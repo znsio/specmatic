@@ -96,7 +96,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
     }
 
     fun matches(uri: URI, queryParams: Map<String, String>, resolver: Resolver = Resolver()): Result {
-        return matches(HttpRequest(path = uri.path, queryParams = queryParams), resolver)
+        return matches(HttpRequest(path = uri.path, queryParametersMap =  queryParams), resolver)
     }
 }
 

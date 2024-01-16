@@ -302,7 +302,7 @@ class HttpStub(
             request.copy(headers = requestHeaders)
         }.let {
             val queryParams = toParams(call.request.queryParameters)
-            it.copy(queryParams = queryParams)
+            it.copy(queryParams = QueryParameters(queryParams))
         }.let {
             val bodyOrError = try {
                 receiveText(call)
@@ -545,7 +545,7 @@ internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRe
             path = urlDecodePathSegments(call.request.path()),
             headers = requestHeaders,
             body = body,
-            queryParams = toParams(call.request.queryParameters),
+            queryParametersMap = toParams(call.request.queryParameters),
             formFields = formFields,
             multiPartFormData = multiPartFormData
         )

@@ -343,7 +343,7 @@ security:
                 "GET",
                 "/hello",
                 mapOf("Authorization" to "Bearer 1234"),
-                queryParams = mapOf("greeting" to "Hello")
+                queryParametersMap = mapOf("greeting" to "Hello")
             ))
 
             assertThat(response.body.toStringLiteral()).isEqualTo("Hello to you!")

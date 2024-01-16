@@ -239,8 +239,8 @@ class FeatureKtTest {
 
     @Test
     fun `a single scenario with 2 examples should be generated out of 2 stubs with the same structure`() {
-        val stub1 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", queryParams = mapOf("hello" to "world")), HttpResponse.OK))
-        val stub2 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", queryParams = mapOf("hello" to "hello")), HttpResponse.OK))
+        val stub1 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", queryParametersMap = mapOf("hello" to "world")), HttpResponse.OK))
+        val stub2 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", queryParametersMap = mapOf("hello" to "hello")), HttpResponse.OK))
 
         val generatedGherkin = toGherkinFeature("new feature", listOf(stub1, stub2)).trim()
 
@@ -358,7 +358,7 @@ class FeatureKtTest {
             parsedJSONObject("""{id: 10, addresses: [{"street": "Shaeffer Street"}, {"street": "Ransom Street"}]}""")
 
         val stubs = listOf(
-            NamedStub("http://localhost?a=b", ScenarioStub(HttpRequest("GET", "/data", queryParams = mapOf("id" to "10"), body = requestBody), HttpResponse.OK))
+            NamedStub("http://localhost?a=b", ScenarioStub(HttpRequest("GET", "/data", queryParametersMap = mapOf("id" to "10"), body = requestBody), HttpResponse.OK))
         )
 
         val gherkin = toGherkinFeature("New Feature", stubs)

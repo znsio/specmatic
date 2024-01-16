@@ -299,7 +299,7 @@ internal class HttpRequestPatternTest {
     @Test
     fun `should generate a stub request pattern from an http request in which the query params are not optional`() {
         val requestType = HttpRequestPattern(method = "GET", httpPathPattern = HttpPathPattern(pathToPattern("/"), "/"), httpQueryParamPattern = HttpQueryParamPattern(mapOf("status" to StringPattern())))
-        val newRequestType = requestType.generate(HttpRequest("GET", "/", queryParams = mapOf("status" to "available")), Resolver())
+        val newRequestType = requestType.generate(HttpRequest("GET", "/", queryParametersMap = mapOf("status" to "available")), Resolver())
 
         assertThat(newRequestType.httpQueryParamPattern.queryPatterns.keys.sorted()).isEqualTo(listOf("status"))
 

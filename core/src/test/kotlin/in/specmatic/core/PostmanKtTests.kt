@@ -68,7 +68,7 @@ class PostmanKtTests {
         val request = postmanItemRequest(parsedJSON(postmanJSON) as JSONObjectValue)
 
         assertThat(request.first).isEqualTo("https://localhost")
-        assertThat(request.second.queryParams).isEqualTo(mapOf("one" to "1"))
+        assertThat(request.second.queryParams).isEqualTo(QueryParameters(mapOf("one" to "1")))
     }
 
     @Test

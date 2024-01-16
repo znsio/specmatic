@@ -102,13 +102,13 @@ paths:
 
     @Test
     fun `should read array in query params as CsvString type`() {
-        val result: Result = contract.scenarios.first().matches(HttpRequest("GET", "/hello", queryParams = mapOf("data" to "1,2,3")), emptyMap())
+        val result: Result = contract.scenarios.first().matches(HttpRequest("GET", "/hello", queryParametersMap = mapOf("data" to "1,2,3")), emptyMap())
         assertThat(result).isInstanceOf(Success::class.java)
     }
 
     @Test
     fun `should stub out CsvString type`() {
-        val request = HttpRequest("GET", "/hello", queryParams = mapOf("data" to "1,2,3"))
+        val request = HttpRequest("GET", "/hello", queryParametersMap = mapOf("data" to "1,2,3"))
         val stub = contract.matchingStub(request, HttpResponse.OK)
 
         assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Success::class.java)

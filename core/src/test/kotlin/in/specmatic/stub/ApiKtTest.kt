@@ -162,8 +162,8 @@ Feature: Math API
         And response-body (number)
 """.trim())
 
-        val request1 = HttpRequest("GET", "/number", queryParams = mapOf("param1" to "some value"))
-        val request2 = HttpRequest("GET", "/number", queryParams = mapOf("param1" to "some value", "param2" to "some other value"))
+        val request1 = HttpRequest("GET", "/number", queryParametersMap = mapOf("param1" to "some value"))
+        val request2 = HttpRequest("GET", "/number", queryParametersMap = mapOf("param1" to "some value", "param2" to "some other value"))
 
         val mock1 = ScenarioStub(request1, HttpResponse.ok(1))
         val mock2 = ScenarioStub(request2, HttpResponse.ok(2))

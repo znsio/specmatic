@@ -2425,7 +2425,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data",
-                        queryParams = mapOf("param" to "data")
+                        queryParametersMap = mapOf("param" to "data")
                     ), HttpResponse.OK.copy(body = StringValue("success"))
                 )
             ).isTrue
@@ -2493,7 +2493,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data",
-                        queryParams = mapOf("param1" to "data")
+                        queryParametersMap = mapOf("param1" to "data")
                     ), HttpResponse.OK.copy(body = StringValue("success"))
                 )
             ).isTrue
@@ -2502,7 +2502,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data",
-                        queryParams = mapOf("param2" to "data")
+                        queryParametersMap = mapOf("param2" to "data")
                     ), HttpResponse.OK.copy(body = StringValue("success"))
                 )
             ).isTrue
@@ -2511,7 +2511,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data",
-                        queryParams = mapOf("param1" to "data", "param2" to "data")
+                        queryParametersMap = mapOf("param1" to "data", "param2" to "data")
                     ), HttpResponse.OK.copy(body = StringValue("success"))
                 )
             ).isTrue

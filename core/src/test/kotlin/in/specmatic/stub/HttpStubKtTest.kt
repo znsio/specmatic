@@ -426,7 +426,7 @@ Scenario: Square of a number
   And response-body (string)
 """.trim())
 
-        val stubRequest = HttpRequest(method = "GET", path = "/count", queryParams = mapOf("status" to "available"))
+        val stubRequest = HttpRequest(method = "GET", path = "/count", queryParametersMap = mapOf("status" to "available"))
         val stubResponse = HttpResponse.ok("data")
         val stubData = HttpStubData(
             stubRequest.toPattern(),

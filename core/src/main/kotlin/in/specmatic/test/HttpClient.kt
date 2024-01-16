@@ -156,7 +156,7 @@ private fun ktorHttpRequestToHttpRequestForLogging(
         path = request.url.encodedPath,
         headers = requestHeaders,
         body = body,
-        queryParams = toParams(request.url.parameters),
+        queryParametersMap = toParams(request.url.parameters),
         formFields = formFields,
         multiPartFormData = multiPartFormData
     )

@@ -166,8 +166,8 @@ class TestCommand : Callable<Unit> {
                     val reportXML: Document = builder.parse(InputSource(StringReader(text)))
 
                     val actualTestNameMap: Map<String, String> = SpecmaticJUnitSupport.testsNames.mapIndexed { index, actualTestName ->
-                        val nodeTestName = "contractAsTest()[${index + 1}]"
-                        nodeTestName to actualTestName
+                        val nodeTestName = "contractTest()[${index + 1}]"
+                        nodeTestName to actualTestName.trim()
                     }.toMap()
 
                     for(i in 0..reportXML.documentElement.childNodes.length.minus(1)) {

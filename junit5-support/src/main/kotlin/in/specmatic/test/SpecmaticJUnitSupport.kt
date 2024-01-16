@@ -47,7 +47,6 @@ open class SpecmaticJUnitSupport {
         const val FILTER_NOT_NAME = "filterNotName"
         private const val ENDPOINTS_API = "endpointsAPI"
 
-        val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfigJson: SpecmaticConfigJson? = null
         private val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
@@ -153,7 +152,6 @@ open class SpecmaticJUnitSupport {
 
     private fun loadExceptionAsTestError(e: Throwable): Collection<DynamicTest> {
         return listOf(DynamicTest.dynamicTest("Load Error") {
-            testsNames.add("Load Error")
             logger.log(e)
             ResultAssert.assertThat(Result.Failure(exceptionCauseMessage(e))).isSuccess()
         })
@@ -243,8 +241,6 @@ open class SpecmaticJUnitSupport {
                         logger.log(exception, "Failed to query actuator with error")
                     }
                 }
-
-                testsNames.add(testScenario.testDescription())
 
                 lateinit var testResult: Pair<Result, HttpResponse?>
 

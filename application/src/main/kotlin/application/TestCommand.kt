@@ -45,6 +45,8 @@ private const val SYSTEM_OUT_TESTCASE_TAG = "system-out"
 
 private const val DISPLAY_NAME_PREFIX_IN_SYSTEM_OUT_TAG_TEXT = "display-name: "
 
+private const val s = "Contract"
+
 @Command(name = "test",
         mixinStandardHelpOptions = true,
         description = ["Run contract as tests"])
@@ -213,8 +215,16 @@ class TestCommand : Callable<Unit> {
     }
 }
 
+private const val ORIGINAL_JUNIT_TEST_SUITE_NAME = "JUnit Jupiter"
+private const val UPDATED_JUNIT_TEST_SUITE_NAME = "Contract Tests"
+
+private const val TEST_NAME_ATTRIBUTE = "name"
+
 internal fun updateNamesInJUnitXML(junitReport: String): String {
-    val junitReportWithUpdatedTestSuiteTitle = junitReport.replace("JUnit Jupiter", "Contract Tests")
+    val junitReportWithUpdatedTestSuiteTitle = junitReport.replace(
+        ORIGINAL_JUNIT_TEST_SUITE_NAME,
+        UPDATED_JUNIT_TEST_SUITE_NAME
+    )
 
     val builder = newXMLBuilder()
     val reportDocument: Document = builder.parse(InputSource(StringReader(junitReportWithUpdatedTestSuiteTitle)))
@@ -234,7 +244,7 @@ internal fun updateNamesInJUnitXML(junitReport: String): String {
 
         val testName = displayNameLine.removePrefix(DISPLAY_NAME_PREFIX_IN_SYSTEM_OUT_TAG_TEXT).trim()
 
-        testCaseNode.attributes.getNamedItem("name").nodeValue = testName
+        testCaseNode.attributes.getNamedItem(TEST_NAME_ATTRIBUTE).nodeValue = testName
     }
 
     return xmlToString(reportDocument)

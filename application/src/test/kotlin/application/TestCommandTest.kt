@@ -134,25 +134,6 @@ internal class TestCommandTest {
             </testsuite>
         """.trimIndent()
 
-        val expectedJUnitReport = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <testsuite name="Contract Tests" tests="1" skipped="0" failures="0" errors="0" time="1.22" hostname="" timestamp="">
-            <properties>
-            <property name="contractPaths" value="service.yaml"/>
-            </properties>
-            <testcase name="Scenario: GET /pets/(petid:number) -&gt; 200 | EX:200_OKAY" classname="in.specmatic.test.SpecmaticJUnitSupport" time="1.028">
-            <system-out><![CDATA[
-            unique-id: [engine:junit-jupiter]/[class:in.specmatic.test.SpecmaticJUnitSupport]/[test-factory:contractTest()]/[dynamic-test:#1]
-            display-name:  Scenario: GET /pets/(petid:number) -> 200 | EX:200_OKAY
-            ]]></system-out>
-            </testcase>
-            <system-out><![CDATA[
-            unique-id: [engine:junit-jupiter]
-            display-name: Contract Tests
-            ]]></system-out>
-            </testsuite>
-        """.trimIndent()
-
         val junitReportWithUpdatedNames = updateNamesInJUnitXML(initialJUnitReport)
 
         val builder = newXMLBuilder()

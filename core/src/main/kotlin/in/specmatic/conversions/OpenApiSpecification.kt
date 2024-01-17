@@ -1032,6 +1032,7 @@ class OpenApiSpecification(
                     toJsonObjectPattern(schema, patternName, typeStack)
                 }
             }
+            is ByteArraySchema -> Base64StringPattern()
 
             is ArraySchema -> {
                 if (schema.xml?.name != null) {

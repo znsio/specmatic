@@ -155,13 +155,13 @@ data class HttpHeadersPattern(
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): List<HttpHeadersPattern> {
-        return forEachKeyCombinationIn(row.withoutOmittedKeys(pattern), row, resolver) { pattern ->
+        return forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
             newBasedOn(pattern, row, resolver)
         }.map { map -> HttpHeadersPattern(map.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
     }
 
     fun negativeBasedOn(row: Row, resolver: Resolver) =
-        forEachKeyCombinationIn(row.withoutOmittedKeys(pattern), row, resolver) { pattern ->
+        forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
             negativeBasedOn(pattern, row, resolver, true)
         }.map { patternMap ->
             HttpHeadersPattern(

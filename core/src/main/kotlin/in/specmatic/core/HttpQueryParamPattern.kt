@@ -24,7 +24,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
         val newQueryParamsList = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val optionalQueryParams = queryPatterns
 
-            forEachKeyCombinationIn(row.withoutOmittedKeys(optionalQueryParams), row) { entry ->
+            forEachKeyCombinationIn(row.withoutOmittedKeys(optionalQueryParams, resolver.defaultExampleResolver), row) { entry ->
                 newBasedOn(entry.mapKeys { withoutOptionality(it.key) }, row, resolver)
             }
         }
@@ -89,7 +89,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
         return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val optionalQueryParams = queryPatterns
 
-            forEachKeyCombinationIn(row.withoutOmittedKeys(optionalQueryParams), row) { entry ->
+            forEachKeyCombinationIn(row.withoutOmittedKeys(optionalQueryParams, resolver.defaultExampleResolver), row) { entry ->
                 negativeBasedOn(entry.mapKeys { withoutOptionality(it.key) }, row, resolver, true)
             }
         }

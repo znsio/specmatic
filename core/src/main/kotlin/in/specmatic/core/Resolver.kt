@@ -196,6 +196,7 @@ interface DefaultExampleResolver {
     fun resolveExample(example: String?, pattern: Pattern, resolver: Resolver): Value?
     fun resolveExample(example: List<String?>?, pattern: Pattern, resolver: Resolver): JSONArrayValue?
     fun resolveExample(example: String?, pattern: List<Pattern>, resolver: Resolver): Value?
+    fun theDefaultExampleForThisKeyIsNotOmit(valuePattern: Pattern): Boolean
 }
 
 object UseDefaultExample : DefaultExampleResolver {
@@ -229,6 +230,21 @@ object UseDefaultExample : DefaultExampleResolver {
             ?: throw ContractException("Example \"$example\" does not match:\n${Result.fromResults(matchResults.map { it.first }.toList()).reportString()}")
     }
 
+    override fun theDefaultExampleForThisKeyIsNotOmit(valuePattern: Pattern): Boolean {
+        if(!Flags.schemaExampleDefaultEnabled())
+            return true
+
+        if(valuePattern !is HasDefaultExample)
+            return true
+
+        val example = valuePattern.example
+
+        if(example is String)
+            return example !in OMIT
+
+        return true
+    }
+
     override fun resolveExample(example: List<String?>?, pattern: Pattern, resolver: Resolver): JSONArrayValue? {
         if(example == null)
             return null
@@ -254,6 +270,10 @@ object DoNotUseDefaultExample : DefaultExampleResolver {
 
     override fun resolveExample(example: String?, pattern: List<Pattern>, resolver: Resolver): Value? {
         return null
+    }
+
+    override fun theDefaultExampleForThisKeyIsNotOmit(valuePattern: Pattern): Boolean {
+        return true
     }
 
 }

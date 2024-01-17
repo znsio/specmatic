@@ -1,5 +1,6 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.core.DefaultExampleResolver
 import `in`.specmatic.core.Flags
 import `in`.specmatic.core.OMIT
 import `in`.specmatic.core.References
@@ -84,10 +85,10 @@ data class Row(
 
     fun containsField(key: String): Boolean = requestBodyJSONExample?.hasScalarValueForKey(key) ?: cells.containsKey(key)
 
-    fun withoutOmittedKeys(keys: Map<String, Pattern>) = keys.filter {
+    fun withoutOmittedKeys(keys: Map<String, Pattern>, defaultExampleResolver: DefaultExampleResolver) = keys.filter {
         !this.containsField(withoutOptionality(it.key)) || this.getField(withoutOptionality(it.key)) !in OMIT
     }.filter {
-        thisFieldHasAnExample(it.key) || theDefaultExampleForThisKeyIsNotOmit(it.value)
+        thisFieldHasAnExample(it.key) || defaultExampleResolver.theDefaultExampleForThisKeyIsNotOmit(it.value)
     }
 
     fun stepDownOneLevelInJSONHierarchy(key: String): Row {
@@ -121,21 +122,6 @@ data class Row(
             return this.copy(requestBodyJSONExample = JSONExample(firstValue as JSONComposite, requestBodyJSONExample.originalRow))
 
         return this.copy(requestBodyJSONExample = null)
-    }
-
-    private fun theDefaultExampleForThisKeyIsNotOmit(valuePattern: Pattern): Boolean {
-        if(!Flags.schemaExampleDefaultEnabled())
-            return true
-
-        if(valuePattern !is HasDefaultExample)
-            return false
-
-        val example = valuePattern.example
-
-        if(example is String)
-            return example !in OMIT
-
-        return true
     }
 
     private fun thisFieldHasAnExample(key: String) =

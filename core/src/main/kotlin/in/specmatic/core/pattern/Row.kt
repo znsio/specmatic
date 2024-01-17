@@ -1,31 +1,14 @@
 package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.DefaultExampleResolver
-import `in`.specmatic.core.Flags
 import `in`.specmatic.core.OMIT
 import `in`.specmatic.core.References
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONComposite
 import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.ScalarValue
 
 const val DEREFERENCE_PREFIX = "$"
 const val FILENAME_PREFIX = "@"
-
-data class JSONExample(val jsonObject: JSONComposite, val originalRow: Row) {
-    fun hasScalarValueForKey(key: String): Boolean {
-        return jsonObject.let {
-            it is JSONObjectValue && it.jsonObject[key] is ScalarValue
-        }
-    }
-
-    fun getValueFromTopLevelKeys(columnName: String): String {
-        if(jsonObject !is JSONObjectValue)
-            throw ContractException("The example provided is a JSON array, while the specification expects a JSON object with key $columnName")
-
-        return jsonObject.jsonObject.getValue(columnName).toStringLiteral()
-    }
-}
 
 data class Row(
     val columnNames: List<String> = emptyList(),

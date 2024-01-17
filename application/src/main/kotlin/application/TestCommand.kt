@@ -3,9 +3,11 @@ package application
 import application.test.ContractExecutionListener
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import `in`.specmatic.core.Configuration
+import `in`.specmatic.core.Flags
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.core.utilities.newXMLBuilder
 import `in`.specmatic.core.utilities.xmlToString
 import `in`.specmatic.test.SpecmaticJUnitSupport
@@ -23,11 +25,12 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.launcher.Launcher
-import org.junit.platform.launcher.LauncherDiscoveryListener
 import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
 import org.springframework.beans.factory.annotation.Autowired
 import org.w3c.dom.Document
+import org.w3c.dom.Node
+import org.w3c.dom.NodeList
 import org.xml.sax.InputSource
 import picocli.CommandLine
 import picocli.CommandLine.Command
@@ -38,12 +41,16 @@ import java.io.StringReader
 import java.nio.file.Paths
 import java.util.concurrent.Callable
 
+private const val SYSTEM_OUT_TESTCASE_TAG = "system-out"
+
+private const val DISPLAY_NAME_PREFIX_IN_SYSTEM_OUT_TAG_TEXT = "display-name: "
+
+private const val s = "Contract"
+
 @Command(name = "test",
         mixinStandardHelpOptions = true,
         description = ["Run contract as tests"])
 class TestCommand : Callable<Unit> {
-    @Autowired
-    lateinit var specmaticConfig: SpecmaticConfig
 
     @Autowired
     lateinit var junitLauncher: Launcher
@@ -94,6 +101,8 @@ class TestCommand : Callable<Unit> {
     var verboseMode: Boolean = false
 
     override fun call() = try {
+        setParallelism()
+
         if(verboseMode) {
             logger = Verbose()
         }
@@ -160,31 +169,8 @@ class TestCommand : Callable<Unit> {
             val reportFile = reportDirectory.resolve("TEST-junit-jupiter.xml")
 
             if(reportFile.isFile) {
-                val newText = reportFile.readText().let { text ->
-                    text.replace("JUnit Jupiter", "Contract Tests")
-                }.let { text ->
-                    val builder = newXMLBuilder()
-                    val reportXML: Document = builder.parse(InputSource(StringReader(text)))
-
-                    val actualTestNameMap: Map<String, String> = SpecmaticJUnitSupport.testsNames.mapIndexed { index, actualTestName ->
-                        val nodeTestName = "contractAsTest()[${index + 1}]"
-                        nodeTestName to actualTestName
-                    }.toMap()
-
-                    for(i in 0..reportXML.documentElement.childNodes.length.minus(1)) {
-                        val node = reportXML.documentElement.childNodes.item(i)
-
-                        if(node.nodeName == "testcase") {
-                            val nodeTestName: String = node.attributes.getNamedItem("name").nodeValue
-                            val actualTestName = actualTestNameMap[nodeTestName]
-                            node.attributes.getNamedItem("name").nodeValue = actualTestName
-                        }
-                    }
-
-                    xmlToString(reportXML)
-                }
-
-                reportFile.writeText(newText)
+                val updatedJUnitXML = updateNamesInJUnitXML(reportFile.readText())
+                reportFile.writeText(updatedJUnitXML)
             } else {
                 throw ContractException("Was expecting a JUnit report file called TEST-junit-jupiter.xml inside $junitReportDirName but could not find it.")
             }
@@ -195,4 +181,82 @@ class TestCommand : Callable<Unit> {
     catch (e: Throwable) {
         logger.log(e)
     }
+
+    private fun setParallelism() {
+        Flags.testParallelism()?.let { parallelism ->
+            validateParallelism(parallelism)
+
+            System.setProperty("junit.jupiter.execution.parallel.enabled", "true");
+
+            when (parallelism) {
+                "auto" -> {
+                    logger.log("Running contract tests in parallel (dynamically determined number of threads)")
+                    System.setProperty("junit.jupiter.execution.parallel.config.strategy", "dynamic")
+                }
+
+                else -> {
+                    logger.log("Running contract tests in parallel in $parallelism threads")
+                    System.setProperty("junit.jupiter.execution.parallel.config.strategy", "fixed")
+                    System.setProperty("junit.jupiter.execution.parallel.config.fixed.parallelism", parallelism)
+                }
+            }
+        }
+    }
+
+    private fun validateParallelism(parallelism: String) {
+        if(parallelism == "auto")
+            return
+
+        try {
+            parallelism.toInt()
+        } catch(e: Throwable) {
+            exitWithMessage("The value of the ${Flags.SPECMATIC_TEST_PARALLELISM} environment variable must be either 'true' or an integer value")
+        }
+    }
+}
+
+private const val ORIGINAL_JUNIT_TEST_SUITE_NAME = "JUnit Jupiter"
+private const val UPDATED_JUNIT_TEST_SUITE_NAME = "Contract Tests"
+
+private const val TEST_NAME_ATTRIBUTE = "name"
+
+internal fun updateNamesInJUnitXML(junitReport: String): String {
+    val junitReportWithUpdatedTestSuiteTitle = junitReport.replace(
+        ORIGINAL_JUNIT_TEST_SUITE_NAME,
+        UPDATED_JUNIT_TEST_SUITE_NAME
+    )
+
+    val builder = newXMLBuilder()
+    val reportDocument: Document = builder.parse(InputSource(StringReader(junitReportWithUpdatedTestSuiteTitle)))
+
+    for (i in 0..reportDocument.documentElement.childNodes.length.minus(1)) {
+        val testCaseNode = reportDocument.documentElement.childNodes.item(i)
+
+        if (testCaseNode.nodeName != "testcase") continue
+
+        val systemOutChildNode = findFirstChildNodeByName(testCaseNode.childNodes, SYSTEM_OUT_TESTCASE_TAG) ?: continue
+        val cdataChildNode = systemOutChildNode.childNodes.item(0) ?: continue
+        val systemOutTextContent = cdataChildNode.textContent ?: continue
+
+        val displayNameLine = systemOutTextContent.lines().find { line ->
+            line.startsWith(DISPLAY_NAME_PREFIX_IN_SYSTEM_OUT_TAG_TEXT)
+        } ?: continue
+
+        val testName = displayNameLine.removePrefix(DISPLAY_NAME_PREFIX_IN_SYSTEM_OUT_TAG_TEXT).trim()
+
+        testCaseNode.attributes.getNamedItem(TEST_NAME_ATTRIBUTE).nodeValue = testName
+    }
+
+    return xmlToString(reportDocument)
+}
+
+internal fun findFirstChildNodeByName(nodes: NodeList, nodeName: String): Node? {
+    for(i in 0..nodes.length.minus(1)) {
+        val childNode = nodes.item(i)
+
+        if(childNode.nodeName == nodeName)
+            return childNode
+    }
+
+    return null
 }

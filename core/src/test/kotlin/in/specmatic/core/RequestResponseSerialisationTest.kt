@@ -58,7 +58,7 @@ class RequestResponseSerialisationTest {
         assertEquals(request, requestDeserialised)
     }
 
-    fun s(json: Map<String, Value>, key: String): String = (json.getValue(key) as StringValue).string
+    private fun s(json: Map<String, Value>, key: String): String = (json.getValue(key) as StringValue).string
 
     @Test
     fun testResponseSerialisation() {

@@ -57,7 +57,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
 
                             val name =
                                 "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams)}"
-                            stubs.add(NamedStub(name, ScenarioStub(httpRequest, httpResponse)))
+                            stubs.add(NamedStub(name, ScenarioStub(httpRequest.withoutDynamicHeaders(), httpResponse.withoutDynamicHeaders())))
 
                             respondToKtorHttpResponse(call, withoutContentEncodingGzip(httpResponse))
                         } catch (e: Throwable) {
@@ -119,7 +119,8 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
     }
 
     private fun isFullURL(path: String?): Boolean {
-        return path != null && try { URL(path); true } catch(e: Throwable) { false }
+        return path != null && try {
+            URL(URLParts(path).withEncodedPathSegments()); true } catch(e: Throwable) { false }
     }
 
     init {

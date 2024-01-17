@@ -27,8 +27,8 @@ internal class CompatibleCommandTest {
     @MockkBean
     lateinit var fileOperations: FileOperations
 
-    val relativeContractPath = "api_1.$CONTRACT_EXTENSION"
-    val contractPath = "/path/to/$relativeContractPath"
+    private val relativeContractPath = "api_1.$CONTRACT_EXTENSION"
+    private val contractPath = "/path/to/$relativeContractPath"
 
     @Test
     fun `should check compatibility between file in working tree and HEAD`() {
@@ -40,7 +40,7 @@ internal class CompatibleCommandTest {
                 And response-body (number)
         """.trimIndent()
 
-        setupHEADcompatibilityCheck(trivialContract, trivialContract)
+        setupHEADCompatibilityCheck(trivialContract, trivialContract)
 
         every { fileOperations.isFile(any()) }.returns(true)
         every { fileOperations.isDirectory(any()) }.returns(false)
@@ -66,7 +66,7 @@ internal class CompatibleCommandTest {
                 And response-body (number)
         """.trimIndent()
 
-        setupHEADcompatibilityCheck(oldContract, newContract)
+        setupHEADCompatibilityCheck(oldContract, newContract)
 
         val exitCode = CommandLine(compatibleCommand, factory).execute("git", "file", contractPath)
         assertThat(exitCode).isOne()
@@ -80,7 +80,7 @@ internal class CompatibleCommandTest {
 //        clearMocks(fileOperations)
     }
 
-    private fun setupHEADcompatibilityCheck(oldContract: String, newContract: String) {
+    private fun setupHEADCompatibilityCheck(oldContract: String, newContract: String) {
         val contractGitCommand = mockk<GitCommand>()
         clearMocks(contractGitCommand)
         clearMocks(fileOperations)

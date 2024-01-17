@@ -15,7 +15,7 @@ internal class SOAPRequestTest {
         assertThat(statements).hasSize(4)
 
         assertThat(statements).contains("When POST /customer")
-        assertThat(statements).contains("And enum SoapAction (string) values \"/add\",/add",)
+        assertThat(statements).contains("And enum SoapAction (string) values \"/add\",/add")
         assertThat(statements).contains("And request-header SOAPAction (SoapAction)")
         assertThat(statements).contains("And request-body\n" +
                 "\"\"\"\n" +

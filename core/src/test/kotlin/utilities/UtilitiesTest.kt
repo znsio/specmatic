@@ -166,7 +166,7 @@ internal class UtilitiesTest {
     fun `contractFilePathsFrom sources with mono repo`() {
         val configFilePath = "monorepo/configLoc/specmatic.json"
 
-        var monorepoContents = listOf(configFilePath, "monorepo/a/1.$CONTRACT_EXTENSION", "monorepo/b/1.$CONTRACT_EXTENSION", "monorepo/c/1.$CONTRACT_EXTENSION")
+        val monorepoContents = listOf(configFilePath, "monorepo/a/1.$CONTRACT_EXTENSION", "monorepo/b/1.$CONTRACT_EXTENSION", "monorepo/c/1.$CONTRACT_EXTENSION")
         monorepoContents.forEach {
             File(it).parentFile.mkdirs()
             File(it).createNewFile()

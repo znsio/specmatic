@@ -7,8 +7,8 @@ import java.io.File
 // and if the configuration file is invalid, an exception is thrown and eaten silently by JUnit's
 // test discovery functionality.
 // Moving it here so we can use a function to read it which is not inside Configuration
-private var _globalConfigFileName: String = "./${Configuration.DEFAULT_CONFIG_FILE_NAME}"
-public fun getGlobalConfigFileName(): String = _globalConfigFileName
+private var innerGlobalConfigFileName: String = "./${Configuration.DEFAULT_CONFIG_FILE_NAME}"
+fun getGlobalConfigFileName(): String = innerGlobalConfigFileName
 
 class Configuration {
     companion object {
@@ -20,17 +20,17 @@ class Configuration {
             get() = getGlobalConfigFileName()
 
             set(value) {
-                _globalConfigFileName = value
-                _config = if(File(_globalConfigFileName).exists())
-                    loadSpecmaticJsonConfig(_globalConfigFileName)
+                innerGlobalConfigFileName = value
+                _config = if(File(innerGlobalConfigFileName).exists())
+                    loadSpecmaticJsonConfig(innerGlobalConfigFileName)
                 else
                     null
 
             }
 
         private var _config: SpecmaticConfigJson? =
-            if(File(_globalConfigFileName).exists())
-                loadSpecmaticJsonConfig(_globalConfigFileName)
+            if(File(innerGlobalConfigFileName).exists())
+                loadSpecmaticJsonConfig(innerGlobalConfigFileName)
             else
                 null
 

@@ -132,8 +132,8 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
     override val typeName: String = "json array"
 }
 
-fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {
-    val values = jsonPattern.mapIndexed { index, pattern ->
+fun newBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {
+    val values = patterns.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
             resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
                 pattern.newBasedOn(row, cyclePreventedResolver)
@@ -144,8 +144,8 @@ fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<L
     return listCombinations(values)
 }
 
-fun newBasedOn(jsonPattern: List<Pattern>, resolver: Resolver): List<List<Pattern>> {
-    val values = jsonPattern.mapIndexed { index, pattern ->
+fun newBasedOn(patterns: List<Pattern>, resolver: Resolver): List<List<Pattern>> {
+    val values = patterns.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
             resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
                 pattern.newBasedOn(cyclePreventedResolver)
@@ -177,7 +177,7 @@ fun allOrNothingListCombinations(values: List<List<Pattern?>>): List<List<Patter
     if (values.isEmpty())
         return listOf(emptyList())
 
-    val maxKeyValues = values.map { it.size }.maxOrNull() ?: 0
+    val maxKeyValues = values.maxOfOrNull { it.size } ?: 0
 
     return (0 until maxKeyValues).map {
         keyCombinations(values) { value ->

@@ -24,8 +24,9 @@ class SamplesCommand : Callable<Unit> {
             try {
                 val feature = parseContractFileToFeature(contractFile)
 
-                HttpStub(feature, emptyList(), "127.0.0.1", 56789).use { fake ->
-                    Contract(feature).samples(fake)
+                HttpStub(feature, emptyList(), "127.0.0.1", 56789).use { stub ->
+                    feature.executeTests(stub.client)
+                    Contract(feature).samples(stub)
                 }
             } catch(e: StackOverflowError) {
                 logger.log("Got a stack overflow error. You probably have a recursive data structure definition in the contract.")

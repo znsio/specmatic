@@ -473,7 +473,7 @@ Feature: Recursive test
         val type = TabularPattern(mapOf("id" to NumberPattern(), "address" to StringPattern()))
         val json = parsedJSON("""{"id": "10", "person_address": "abc123"}""")
         val error: Result.Failure = type.matches(json, Resolver()) as Result.Failure
-        val reportText = error.toFailureReport().toText()
+        private val reportText = error.toFailureReport().toText()
 
         @Test
         fun `return as many errors as the number of key errors`() {
@@ -530,5 +530,5 @@ internal fun getScenario(gherkin: String) = parseGherkinString(gherkin)!!.featur
 
 data class Data(
     @JsonProperty("id") val name: Int,
-    @JsonProperty("data") val data: Data
+    @JsonProperty("data") val data: Data?
 )

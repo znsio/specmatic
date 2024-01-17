@@ -2,7 +2,6 @@ package `in`.specmatic.core.wsdl.parser
 
 import `in`.specmatic.core.SPECMATIC_GITHUB_ISSUES
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.TYPE_ATTRIBUTE_NAME
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.message.*
@@ -108,9 +107,7 @@ fun WSDL(rootDefinition: XMLNode, wsdlPath: String): WSDL {
 fun schemaPrefixesFrom(schemas: Map<String, XMLNode>): Map<String, String> {
     val namespaces = schemas.keys.toSet().toList()
 
-    val namespacePrefixMap = toURLPrefixMap(namespaces, MappedURLType.INCLUDES_DOMAIN)
-
-    return namespacePrefixMap
+    return toURLPrefixMap(namespaces, MappedURLType.INCLUDES_DOMAIN)
 }
 
 enum class MappedURLType(val index: Int) {
@@ -164,7 +161,7 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
         return findInDefinition("portType", binding, portTypeQName)
     }
 
-    fun getBinding(): XMLNode {
+    private fun getBinding(): XMLNode {
         val servicePort = getServicePort()
         val bindingQName = servicePort.getAttributeValue("binding")
 
@@ -213,7 +210,7 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
         return soapParser.convertToGherkin(url)
     }
 
-    fun findComplexType(
+    private fun findComplexType(
         element: XMLNode,
         attributeName: String
     ): XMLNode {
@@ -248,7 +245,7 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
                 ?: throw ContractException("Could not find namespace with prefix $namespacePrefix in xml node $element")
     }
 
-    fun findElement(typeName: String, namespace: String, element: XMLNode? = null): XMLNode {
+    private fun findElement(typeName: String, namespace: String, element: XMLNode? = null): XMLNode {
         val schema = findSchema(namespace, element?.schema)
 
         return schema.getXMLNodeByAttributeValue("name", typeName)
@@ -262,13 +259,13 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
         }
 
         return if(hasSimpleTypeAttribute(node)) {
-            SimpleElement(fullyQualifiedName.qname, node, this)
+            SimpleElement(fullyQualifiedName.qName, node, this)
         } else {
-            ReferredType(fullyQualifiedName.qname, node, this)
+            ReferredType(fullyQualifiedName.qName, node, this)
         }
     }
 
-    fun findSchema(namespace: String, schema: XMLNode?): XMLNode {
+    private fun findSchema(namespace: String, schema: XMLNode?): XMLNode {
         val resolvedNamespace: String? = namespaceOrSchemaNamespace(namespace, schema)
         if(resolvedNamespace.isNullOrBlank())
             throw ContractException("Cannot look for an empty schema namespace. Please report this to the Specmatic Builders at $SPECMATIC_GITHUB_ISSUES")
@@ -299,13 +296,13 @@ data class WSDL(private val rootDefinition: XMLNode, val definitions: Map<String
 
     fun findMessageNode(fullyQualifiedName: FullyQualifiedName): XMLNode {
         val definition = definitions[fullyQualifiedName.namespace]
-            ?: throw ContractException("Could not find message named ${fullyQualifiedName.qname}. ${fullyQualifiedName.prefix} mapped to ${fullyQualifiedName.namespace}, but could not find a definition with this targetNamespace.")
+            ?: throw ContractException("Could not find message named ${fullyQualifiedName.qName}. ${fullyQualifiedName.prefix} mapped to ${fullyQualifiedName.namespace}, but could not find a definition with this targetNamespace.")
 
         return definition.findByNodeNameAndAttribute(
             "message",
             "name",
             fullyQualifiedName.localName,
-            "Message node ${fullyQualifiedName.qname} not found"
+            "Message node ${fullyQualifiedName.qName} not found"
         )
     }
 

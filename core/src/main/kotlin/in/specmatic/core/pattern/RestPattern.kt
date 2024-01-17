@@ -5,7 +5,6 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.value.Value
 
-//TODO: Not sure what this means
 data class RestPattern(override val pattern: Pattern, override val typeAlias: String? = null) : Pattern {
     private val listPattern = ListPattern(pattern)
 

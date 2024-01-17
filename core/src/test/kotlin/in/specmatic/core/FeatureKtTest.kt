@@ -10,6 +10,7 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.mock.mockFromJSON
 import io.mockk.every
 import io.mockk.mockk
+import io.swagger.v3.core.util.Yaml
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -297,6 +298,115 @@ class FeatureKtTest {
         assertThat(generatedGherkin).isEqualTo(expectedGherkin)
     }
 
+    @Test
+    fun `arrays should be converged when converting stubs into a specification`() {
+        val requestBodies = listOf(
+            parsedJSONObject("""{id: 10, addresses: [{"street": "Shaeffer Street"}, {"street": "Ransom Street"}]}"""),
+            parsedJSONObject("""{id: 10, addresses: [{"street": "Gladstone Street"}, {"street": "Abacus Street"}]}"""),
+            parsedJSONObject("""{id: 10, addresses: [{"street": "Maxwell Street"}, {"street": "Xander Street"}]}""")
+        )
+
+        val stubs = requestBodies.mapIndexed { index, requestBody ->
+            NamedStub("stub$index", ScenarioStub(HttpRequest("POST", "/body", body = requestBody), HttpResponse.OK))
+        }
+
+        val gherkin = toGherkinFeature("New Feature", stubs)
+        val openApi = parseGherkinStringToFeature(gherkin).toOpenApi()
+        assertThat(Yaml.pretty(openApi).trim()).isEqualTo("""
+          openapi: 3.0.1
+          info:
+            title: New Feature
+            version: "1"
+          paths:
+            /body:
+              post:
+                summary: stub0
+                parameters: []
+                requestBody:
+                  content:
+                    application/json:
+                      schema:
+                        ${"$"}ref: '#/components/schemas/Body_RequestBody'
+                responses:
+                  "200":
+                    description: stub0
+          components:
+            schemas:
+              Addresses:
+                required:
+                - street
+                properties:
+                  street:
+                    type: string
+              Body_RequestBody:
+                required:
+                - addresses
+                - id
+                properties:
+                  id:
+                    type: number
+                  addresses:
+                    type: array
+                    items:
+                      ${"$"}ref: '#/components/schemas/Addresses'
+        """.trimIndent())
+    }
+
+    @Test
+    fun `Scenario and description of a GET should not contain the query param section`() {
+        val requestBody =
+            parsedJSONObject("""{id: 10, addresses: [{"street": "Shaeffer Street"}, {"street": "Ransom Street"}]}""")
+
+        val stubs = listOf(
+            NamedStub("http://localhost?a=b", ScenarioStub(HttpRequest("GET", "/data", queryParams = mapOf("id" to "10"), body = requestBody), HttpResponse.OK))
+        )
+
+        val gherkin = toGherkinFeature("New Feature", stubs)
+        val openApi = parseGherkinStringToFeature(gherkin).toOpenApi()
+        assertThat(Yaml.pretty(openApi).trim()).isEqualTo("""
+              openapi: 3.0.1
+              info:
+                title: New Feature
+                version: "1"
+              paths:
+                /data:
+                  get:
+                    summary: http://localhost
+                    parameters:
+                    - name: id
+                      in: query
+                      schema:
+                        type: number
+                    requestBody:
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/Data_RequestBody'
+                    responses:
+                      "200":
+                        description: http://localhost
+              components:
+                schemas:
+                  Addresses:
+                    required:
+                    - street
+                    properties:
+                      street:
+                        type: string
+                  Data_RequestBody:
+                    required:
+                    - addresses
+                    - id
+                    properties:
+                      id:
+                        type: number
+                      addresses:
+                        type: array
+                        items:
+                          ${"$"}ref: '#/components/schemas/Addresses'
+        """.trimIndent())
+    }
+
     private fun deferredToJsonPatternData(pattern: Pattern, resolver: Resolver): Map<String, Pattern> =
             ((pattern as DeferredPattern).resolvePattern(resolver) as TabularPattern).pattern
 
@@ -377,7 +487,7 @@ class FeatureKtTest {
                 "http-response": {
                     "status": 200,
                     "body": {
-                        "operationid": 10
+                        "operationId": 10
                     }
                 }
             }
@@ -398,7 +508,7 @@ class FeatureKtTest {
       | entries | (Entries*) |
       | data | (Data) |
     And type ResponseBody
-      | operationid | (number) |
+      | operationId | (number) |
     When POST /data
     And request-body (RequestBody)
     Then status 200
@@ -480,20 +590,18 @@ class FeatureKtTest {
             """
 
         val feature = parseContractFileToFeature("test.yaml", hookMock)
-        assertThat(feature.matches(HttpRequest("GET", "/"), HttpResponse.OK(NumberValue(10)))).isTrue
+        assertThat(feature.matches(HttpRequest("GET", "/"), HttpResponse.ok(NumberValue(10)))).isTrue
     }
 
     companion object {
-        private const val openApiFileName = "openApiTest.yaml"
-        private const val resourcesRoot = "src/test/resources/"
-        private const val openApiFilePathRelativeToProjectRoot = "$resourcesRoot$openApiFileName"
+        private const val OPENAPI_FILENAME = "openApiTest.yaml"
+        private const val RESOURCES_ROOT = "src/test/resources/"
+        private const val OPENAPI_RELATIVE_FILEPATH = "$RESOURCES_ROOT$OPENAPI_FILENAME"
 
         @BeforeAll
         @JvmStatic
-        fun `setup`() {
-            File(".").canonicalFile.let {
-                println(it.path)
-            }
+        fun setup() {
+            println(File(".").canonicalFile.path)
             val openAPI = """
 openapi: 3.0.0
 info:
@@ -538,15 +646,15 @@ paths:
                 type: string
     """.trim()
 
-            val openApiFile = File(openApiFilePathRelativeToProjectRoot)
+            val openApiFile = File(OPENAPI_RELATIVE_FILEPATH)
             openApiFile.createNewFile()
             openApiFile.writeText(openAPI)
         }
 
         @AfterAll
         @JvmStatic
-        fun `teardown`() {
-            File(openApiFilePathRelativeToProjectRoot).delete()
+        fun teardown() {
+            File(OPENAPI_RELATIVE_FILEPATH).delete()
         }
     }
 
@@ -555,14 +663,14 @@ paths:
         val feature = parseGherkinStringToFeature("""
                 Feature: OpenAPI test
                     Background:
-                        Given openapi $openApiFileName
+                        Given openapi $OPENAPI_FILENAME
                         And value auth from auth.spec
                         
                     Scenario: OpenAPI test
                         When GET /hello/10
                         Then status 200
                         And export data = response-body
-            """.trimIndent(), File("${resourcesRoot}dummy.spec").canonicalPath)
+            """.trimIndent(), File("${RESOURCES_ROOT}dummy.spec").canonicalPath)
 
         @Test
         fun `parsing OpenAPI spec should preserve the references declared in the gherkin spec`() {
@@ -609,7 +717,7 @@ paths:
                 type: number
         """.trimIndent(), "").toFeature()
 
-        val withGenerativeTestsEnabled = contract.copy(generativeTestingEnabled = true)
+        val withGenerativeTestsEnabled = contract.enableGenerativeTesting()
 
         val tests: List<Scenario> = withGenerativeTestsEnabled.generateContractTestScenarios(emptyList())
 
@@ -641,7 +749,17 @@ paths:
         }
     }
 
-    fun String.toFeatureString(): String {
+    @Test
+    fun `should parse equivalent json and yaml representation of an API`() {
+        val yamlSpec = parseContractFileToFeature("src/test/resources/openapi/jsonAndYamlEquivalence/openapi.yaml")
+        val jsonSpec = parseContractFileToFeature("src/test/resources/openapi/jsonAndYamlEquivalence/openapi.json")
+        val yamlToJson = testBackwardCompatibility(yamlSpec, jsonSpec)
+        assertThat(yamlToJson.success()).withFailMessage(yamlToJson.report()).isTrue
+        val jsonToYAml = testBackwardCompatibility(jsonSpec, yamlSpec)
+        assertThat(jsonToYAml.success()).withFailMessage(jsonToYAml.report()).isTrue
+    }
+
+    private fun String.toFeatureString(): String {
         val parsedJSONValue = parsedJSON(this) as JSONObjectValue
         return toGherkinFeature(NamedStub("Test Feature", mockFromJSON(parsedJSONValue.jsonObject)))
     }

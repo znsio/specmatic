@@ -1,23 +1,23 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATION
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 internal class DatePatternTest {
     @Test
     fun `should parse a valid date value`() {
-        val dateString = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
+        val dateString = LocalDate.now().format(RFC3339.dateFormatter)
         val dateValue = DatePattern.parse(dateString, Resolver())
 
-        assertEquals(dateString, dateValue.string)
+        assertThat(dateValue.string).isEqualTo(dateString)
     }
 
     @Test
@@ -25,7 +25,7 @@ internal class DatePatternTest {
         val valueGenerated = DatePattern.generate(Resolver())
         val valueParsed = DatePattern.parse(valueGenerated.string, Resolver())
 
-        assertEquals(valueGenerated, valueParsed)
+        assertThat(valueParsed).isEqualTo(valueGenerated)
     }
 
     @Test
@@ -43,16 +43,26 @@ internal class DatePatternTest {
     @Test
     fun `should return itself when generating a new pattern based on a row`() {
         val datePatterns = DatePattern.newBasedOn(Row(), Resolver())
-        assertEquals(1, datePatterns.size)
-        assertEquals(DatePattern, datePatterns.first())
+        assertThat(datePatterns.size).isEqualTo(1)
+        assertThat(datePatterns.first() ).isEqualTo(DatePattern)
     }
 
     @Test
-    fun `should match this date format`() {
+    fun `should match RFC3339 date format`() {
         val date1 = StringValue("2020-04-12")
         val date2 = StringValue("2020-04-22")
 
         assertThat(DatePattern.matches(date1, Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(DatePattern.matches(date2, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+
+    @Test
+    @Tag(GENERATION)
+    fun `negative patterns should be generated`() {
+        val result = BooleanPattern().negativeBasedOn(Row(), Resolver())
+        assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
+            "null"
+        )
     }
 }

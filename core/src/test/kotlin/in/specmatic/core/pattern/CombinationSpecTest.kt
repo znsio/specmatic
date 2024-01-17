@@ -20,7 +20,7 @@ class CombinationSpecTest {
   @Test
   fun `combination omitted when candidate set empty`() {
     val spec = CombinationSpec(mapOf("k1" to listOf(), "k2" to listOf(21, 22)), 50)
-    assertThat(spec.selectedCombinations).containsExactly(mapOf("k2" to 21), mapOf("k2" to 22),)
+    assertThat(spec.selectedCombinations).containsExactly(mapOf("k2" to 21), mapOf("k2" to 22))
   }
 
   @Test

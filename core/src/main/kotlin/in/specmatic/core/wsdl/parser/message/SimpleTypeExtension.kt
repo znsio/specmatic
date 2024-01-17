@@ -7,7 +7,7 @@ import `in`.specmatic.core.value.XMLValue
 import `in`.specmatic.core.wsdl.parser.WSDL
 import `in`.specmatic.core.wsdl.parser.WSDLTypeInfo
 
-class SimpleTypeExtension(var simpleTypeNode: XMLNode, var wsdl: WSDL) : ComplexTypeChild {
+class SimpleTypeExtension(private var simpleTypeNode: XMLNode, var wsdl: WSDL) : ComplexTypeChild {
     override fun process(
         wsdlTypeInfo: WSDLTypeInfo,
         existingTypes: Map<String, XMLPattern>,

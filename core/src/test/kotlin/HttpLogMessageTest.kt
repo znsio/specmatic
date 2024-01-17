@@ -8,7 +8,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 internal class HttpLogMessageTest {
-    val httpLog = HttpLogMessage("start-time", HttpRequest("GET", "/"), "end-time", HttpResponse.OK, "/path/to/file")
+    private val httpLog = HttpLogMessage("start-time", HttpRequest("GET", "/"), "end-time", HttpResponse.OK, "/path/to/file")
 
     @Test
     fun `render an http log message as JSON`() {

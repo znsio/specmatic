@@ -164,7 +164,7 @@ fun postmanItemRequest(request: JSONObjectValue): Pair<String, HttpRequest> {
 
     val (body, formFields, formData) = when {
         request.jsonObject.contains("body") -> when (val mode = request.getJSONObjectValue("body").getString("mode")) {
-            "raw" -> Triple(guessType(parsedValue(request.getJSONObjectValue("body").getString(mode))), emptyMap<String, String>(), emptyList<MultiPartFormDataValue>())
+            "raw" -> Triple(guessType(parsedValue(request.getJSONObjectValue("body").getString(mode))), emptyMap(), emptyList<MultiPartFormDataValue>())
             "urlencoded" -> {
                 val rawFormFields = request.getJSONObjectValue("body").getJSONArray(mode)
                 val formFields = rawFormFields.map {

@@ -1,14 +1,13 @@
 package `in`.specmatic.conversions
 
-import `in`.specmatic.core.pattern.JSONObjectPattern
-import `in`.specmatic.core.value.JSONArrayValue
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.NumberValue
-import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.core.Flags
+import `in`.specmatic.core.HttpRequest
+import `in`.specmatic.core.HttpResponse
+import `in`.specmatic.core.value.*
+import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class DefaultValuesInOpenapiSpecification {
@@ -28,161 +27,357 @@ class DefaultValuesInOpenapiSpecification {
 
     @Test
     fun `schema examples should be used as default values`() {
-        val specification = OpenApiSpecification.fromYAML("""
-            openapi: 3.0.1
-            info:
-              title: Employee API
-              version: 1.0.0
-            paths:
-              /employees:
-                post:
-                  requestBody:
-                    content:
-                      application/json:
-                        schema:
-                          ${'$'}ref: '#/components/schemas/Employee'
-                  responses:
-                    '200':
-                      description: OK
-                      content:
-                        text/plain:
-                          schema:
-                            type: string
-            components:
-              schemas:
-                Employee:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                      example: 'Jane Doe'
-                    age:
-                      type: integer
-                      format: int32
-                      example: 35
-                    salary:
-                      type: number
-                      format: double
-                      nullable: true
-                      example: 50000
-                    salary_history:
-                      type: array
-                      items:
-                        type: number
-                        example: 1000
-                    years_employed:
-                      type: array
-                      items:
-                        type: number
-                      example:
-                        - 2021
-                        - 2022
-                        - 2023
-                  required:
-                    - name
-                    - age
-                    - salary
-                    - years_employed
-            """.trimIndent(), "").toFeature()
+        val specification = OpenApiSpecification.fromYAML(
+            """
+        openapi: 3.0.1
+        info:
+          title: Employee API
+          version: 1.0.0
+        paths:
+          /employees:
+            post:
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      ${'$'}ref: '#/components/schemas/Employee'
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    text/plain:
+                      schema:
+                        type: string
+        components:
+          schemas:
+            Employee:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: 'Jane Doe'
+                age:
+                  type: integer
+                  format: int32
+                  example: 35
+                salary:
+                  type: number
+                  format: double
+                  nullable: true
+                  example: 50000
+                salary_history:
+                  type: array
+                  items:
+                    type: number
+                    example: 1000
+                years_employed:
+                  type: array
+                  items:
+                    type: number
+                  example:
+                    - 2021
+                    - 2022
+                    - 2023
+              required:
+                - name
+                - age
+                - salary
+                - years_employed
+        """.trimIndent(), ""
+        ).toFeature()
 
-        val withGenerativeTestsEnabled = specification.copy(generativeTestingEnabled = true)
+        val withGenerativeTestsEnabled = specification.enableGenerativeTesting().enableSchemaExampleDefault()
 
-        val testRequestBodies = withGenerativeTestsEnabled.generateContractTestScenarios(emptyList()).filter {
-            !it.isNegative
-        }.map {
-            it.httpRequestPattern.body.generate(it.resolver)
-        }.filterIsInstance<JSONObjectPattern>()
+        val testTypes = mutableListOf<String>()
 
-        assertThat(testRequestBodies).allSatisfy {
-            assertThat(it.pattern["name"]).isEqualTo(StringValue("Jane Doe"))
-            assertThat(it.pattern["age"]).isEqualTo(NumberValue(35))
-            assertThat(it.pattern["salary"]).isEqualTo(NumberValue(50000))
+        val results = withGenerativeTestsEnabled.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = request.body as JSONObjectValue
 
-            val salaryHistory = it.pattern["salary_history"] as JSONArrayValue
-            assertThat(salaryHistory.list).allSatisfy {
-                assertThat(it).isEqualTo(NumberValue(1000))
+                println(body.toStringLiteral())
+
+                if ("salary" in body.jsonObject && body.jsonObject["salary"] !is NumberValue) {
+                    testTypes.add("salary mutated to ${body.jsonObject["salary"]!!.displayableType()}")
+                    return HttpResponse.ERROR_400
+                }
+
+                if (body.jsonObject["name"] !is StringValue) {
+                    testTypes.add("name mutated to ${body.jsonObject["name"]!!.displayableType()}")
+                    return HttpResponse.ERROR_400
+                }
+
+                if (body.jsonObject["age"] !is NumberValue) {
+                    testTypes.add("age mutated to ${body.jsonObject["age"]!!.displayableType()}")
+                    return HttpResponse.ERROR_400
+                }
+
+                if("salary_history" in body.jsonObject && body.jsonObject["salary_history"] !is JSONArrayValue) {
+                    testTypes.add("salary_history mutated to ${body.jsonObject["salary_history"]!!.displayableType()}")
+                    return HttpResponse.ERROR_400
+                }
+
+                if("salary_history" in body.jsonObject && body.jsonObject["salary_history"] is JSONArrayValue && (body.jsonObject["salary_history"]!! as JSONArrayValue).list.any { it !is NumberValue }) {
+                    val item = (body.jsonObject["salary_history"]!! as JSONArrayValue).list.first { it !is NumberValue }
+                    testTypes.add("salary_history[item] mutated to ${item.displayableType()}")
+                    return HttpResponse.ERROR_400
+                }
+
+                if("years_employed" in body.jsonObject && body.jsonObject["years_employed"] !is JSONArrayValue) {
+                    testTypes.add("years_employed mutated to ${body.jsonObject["years_employed"]!!.displayableType()}")
+                    return HttpResponse.ERROR_400
+                }
+
+                if("years_employed" in body.jsonObject && body.jsonObject["years_employed"] is JSONArrayValue && (body.jsonObject["years_employed"]!! as JSONArrayValue).list.any { it !is NumberValue }) {
+                    val item = (body.jsonObject["years_employed"]!! as JSONArrayValue).list.first { it !is NumberValue }
+                    testTypes.add("years_employed[item] mutated to ${item.displayableType()}")
+                    return HttpResponse.ERROR_400
+                }
+
+                assertThat(body.jsonObject["name"]).isEqualTo(StringValue("Jane Doe"))
+                assertThat(body.jsonObject["age"]).isEqualTo(NumberValue(35))
+
+                if ("salary" in body.jsonObject) {
+                    testTypes.add("salary is present")
+                } else {
+                    testTypes.add("salary is absent")
+                }
+
+                if ("salary" in body.jsonObject) {
+                    assertThat(body.jsonObject["salary"]).isEqualTo(NumberValue(50000))
+                }
+
+                if("salary_history" in body.jsonObject) {
+                    assertThat((body.jsonObject["salary_history"] as JSONArrayValue).list).containsOnly(NumberValue(1000))
+                }
+
+                if("years_employed" in body.jsonObject) {
+                    assertThat((body.jsonObject["years_employed"] as JSONArrayValue).list).contains(NumberValue(2021), NumberValue(2022), NumberValue(2023))
+                }
+
+                return HttpResponse.OK
             }
 
-            val yearsEmployed = it.pattern["years_employed"] as JSONArrayValue
-            assertThat(yearsEmployed.list).isEqualTo(JSONArrayValue(listOf(NumberValue(2021), NumberValue(2022), NumberValue(2023))))
-        }
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+        })
+
+        assertThat(testTypes).containsExactlyInAnyOrder(
+            "name mutated to null",
+            "name mutated to number",
+            "name mutated to boolean",
+            "age mutated to null",
+            "age mutated to boolean",
+            "age mutated to string",
+            "salary mutated to boolean",
+            "salary mutated to string",
+            "salary_history mutated to null",
+            "years_employed mutated to null",
+            "name mutated to null",
+            "name mutated to number",
+            "name mutated to boolean",
+            "age mutated to null",
+            "age mutated to boolean",
+            "age mutated to string",
+            "salary mutated to boolean",
+            "salary mutated to string",
+            "years_employed mutated to null",
+            "salary is present",
+            "salary is present"
+        )
+        assertThat(results.results).hasSize(testTypes.size)
     }
 
     @Test
     fun `named examples should be given preference over schema examples`() {
-        val specification = OpenApiSpecification.fromYAML("""
-            openapi: 3.0.1
-            info:
-              title: Employee API
-              version: 1.0.0
-            paths:
-              /employees:
-                post:
-                  requestBody:
+        val specification = OpenApiSpecification.fromYAML(
+            """
+        openapi: 3.0.1
+        info:
+          title: Employee API
+          version: 1.0.0
+        paths:
+          /employees:
+            post:
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      ${'$'}ref: '#/components/schemas/Employee'
+                    examples:
+                      SUCCESS:
+                        value:
+                          name: 'John Doe'
+                          age: 30
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    text/plain:
+                      schema:
+                        type: string
+                      examples:
+                        SUCCESS:
+                          value: 'success'
+                '400':
+                    description: Bad Request
                     content:
-                      application/json:
+                      text/plain:
                         schema:
-                          ${'$'}ref: '#/components/schemas/Employee'
-                        examples:
-                          SUCCESS:
-                            value:
-                              name: 'John Doe'
-                              age: 30
-                  responses:
-                    '200':
-                      description: OK
-                      content:
-                        text/plain:
-                          schema:
-                            type: string
-                          examples:
-                            SUCCESS:
-                              value: 'success'
-            components:
-              schemas:
-                Employee:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                      example: 'Jane Doe'
-                    age:
-                      type: integer
-                      format: int32
-                      example: 35
-                    salary:
-                      type: number
-                      format: double
-                      nullable: true
-                      example: 50000
-                  required:
-                    - name
-                    - age
-            """.trimIndent(), "").toFeature()
+                          type: string
+        components:
+          schemas:
+            Employee:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: 'Jane Doe'
+                age:
+                  type: integer
+                  format: int32
+                  example: 35
+                salary:
+                  type: number
+                  format: double
+                  nullable: true
+                  example: 50000
+              required:
+                - name
+                - age
+        """.trimIndent(), ""
+        ).toFeature()
 
-        val withGenerativeTestsEnabled = specification.copy(generativeTestingEnabled = true)
+        val withGenerativeTestsEnabled = specification.enableGenerativeTesting().enableSchemaExampleDefault()
 
-        val generateContractTestScenarios = withGenerativeTestsEnabled.generateContractTestScenarios(emptyList())
+        val testTypes = mutableListOf<String>()
 
-        val positiveTests = generateContractTestScenarios.filter {
-            !it.isNegative
-        }
+        val results = withGenerativeTestsEnabled.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = request.body as JSONObjectValue
 
-        val testRequestBodies = positiveTests.map {
-            it.httpRequestPattern.body.generate(it.resolver)
-        }
+                if ("salary" in body.jsonObject && body.jsonObject["salary"] !is NumberValue) {
+                    testTypes.add("salary mutated to ${body.jsonObject["salary"]!!.displayableType()}")
+                    return HttpResponse.ERROR_400
+                }
 
-        assertThat(testRequestBodies).allSatisfy {
-            assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                if (body.jsonObject["name"] !is StringValue) {
+                    testTypes.add("name mutated to ${body.jsonObject["name"]!!.displayableType()}")
+                    return HttpResponse.ERROR_400
+                }
 
-            it as JSONObjectValue
+                if (body.jsonObject["age"] !is NumberValue) {
+                    testTypes.add("age mutated to ${body.jsonObject["age"]!!.displayableType()}")
+                    return HttpResponse.ERROR_400
+                }
 
-            assertThat(it.jsonObject["name"]).isEqualTo(StringValue("John Doe"))
-            assertThat(it.jsonObject["age"]).isEqualTo(NumberValue(30))
+                assertThat(body.jsonObject["name"]).isEqualTo(StringValue("John Doe"))
+                assertThat(body.jsonObject["age"]).isEqualTo(NumberValue(30))
 
-            if("salary" in it.jsonObject) {
-                assertThat(it.jsonObject["salary"]).isEqualTo(NumberValue(50000))
+                if ("salary" in body.jsonObject) {
+                    testTypes.add("salary is present")
+                } else {
+                    testTypes.add("salary is absent")
+                }
+
+                if ("salary" in body.jsonObject) {
+                    assertThat(body.jsonObject["salary"]).isEqualTo(NumberValue(50000))
+                }
+
+                return HttpResponse.OK
             }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+        })
+
+        assertThat(testTypes).containsExactlyInAnyOrder(
+            "salary is present",
+            "salary is absent",
+            "name mutated to null",
+            "name mutated to number",
+            "name mutated to boolean",
+            "age mutated to null",
+            "age mutated to boolean",
+            "age mutated to string",
+            "salary mutated to boolean",
+            "salary mutated to string",
+            "name mutated to null",
+            "name mutated to number",
+            "name mutated to boolean",
+            "age mutated to null",
+            "age mutated to boolean",
+            "age mutated to string"
+        )
+        assertThat(results.results).hasSize(testTypes.size)
+    }
+
+    @Test
+    fun `SCHEMA_EXAMPLE_DEFAULT should switch on the schema example default feature`() {
+        try {
+            System.setProperty(Flags.SCHEMA_EXAMPLE_DEFAULT, "true")
+
+            val feature = OpenApiSpecification.fromYAML(
+                """
+                openapi: 3.0.0
+                info:
+                  version: 1.0.0
+                  title: Product API
+                  description: API for creating a product
+                paths:
+                  /products:
+                    post:
+                      summary: Create a product
+                      requestBody:
+                        required: true
+                        content:
+                          application/json:
+                            schema:
+                              ${"$"}ref: '#/components/schemas/Product'
+                      responses:
+                        '200':
+                          description: Product created successfully
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                components:
+                  schemas:
+                    Product:
+                      type: object
+                      required:
+                        - name
+                        - price
+                      properties:
+                        name:
+                          type: string
+                          description: The name of the product
+                          example: 'Soap'
+                        price:
+                          type: number
+                          format: float
+                          description: The price of the product
+                          example: 10
+                    """, "").toFeature()
+
+            val results = feature.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val body = request.body as JSONObjectValue
+                    assertThat(body.jsonObject["name"]).isEqualTo(StringValue("Soap"))
+                    assertThat(body.jsonObject["price"]).isEqualTo(NumberValue(10))
+                    return HttpResponse.OK
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+
+                }
+            })
+
+            assertThat(results.successCount).isEqualTo(1)
+            assertThat(results.failureCount).isEqualTo(0)
+        } finally {
+            System.clearProperty(Flags.SCHEMA_EXAMPLE_DEFAULT)
         }
     }
 }

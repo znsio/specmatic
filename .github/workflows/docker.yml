@@ -1,0 +1,41 @@
+name: Manual Release Build and Docker Image
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-dockerize:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Docker Login
+        run: echo ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }} | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build
+
+      - name: Read version from properties
+        id: read_version
+        run: |
+          echo "Reading version from version.properties..."
+          version=$(grep 'version=' version.properties | cut -d'=' -f2)
+          echo "Version: $version"
+          echo "::set-output name=VERSION::$version"
+          
+      - name: Build Docker Image
+        run: docker build --no-cache -t znsio/specmatic:${{ steps.read_version.outputs.VERSION }} .
+
+      - name: Push Docker Image
+        run: docker push znsio/specmatic:${{ steps.read_version.outputs.VERSION }}

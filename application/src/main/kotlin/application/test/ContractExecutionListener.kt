@@ -6,6 +6,7 @@ import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestIdentifier
 import org.junit.platform.launcher.TestPlan
+import java.util.*
 import kotlin.system.exitProcess
 
 fun getContractExecutionPrinter(): ContractExecutionPrinter {
@@ -29,7 +30,7 @@ class ContractExecutionListener : TestExecutionListener {
 
     private val failedLog: MutableList<String> = mutableListOf()
 
-    private var couldNotStart = false;
+    private var couldNotStart = false
 
     private val printer: ContractExecutionPrinter = getContractExecutionPrinter()
 

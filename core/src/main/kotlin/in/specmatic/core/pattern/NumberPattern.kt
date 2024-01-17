@@ -5,7 +5,6 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.NumberValue
-import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import java.util.*
 
@@ -39,7 +38,7 @@ data class NumberPattern(
     }
 
     override fun generate(resolver: Resolver): Value =
-        matchingExample(example, this) ?:
+        resolver.resolveExample(example, this) ?:
             NumberValue(randomNumber(minLength ?: 3))
 
     private fun randomNumber(minLength: Int): Int {
@@ -58,7 +57,7 @@ data class NumberPattern(
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(NullPattern, StringPattern())
+        return listOf(NullPattern, BooleanPattern(), StringPattern())
     }
 
     override fun parse(value: String, resolver: Resolver): Value {
@@ -108,6 +107,9 @@ fun encompasses(
                 Result.Success()
             else
                 Result.Failure.fromFailures(failures)
+        }
+        otherPattern is EnumPattern -> {
+            encompasses(thisPattern, otherPattern.pattern, thisResolver, otherResolver, typeStack)
         }
         else -> mismatchResult(thisPattern, otherPattern, thisResolver.mismatchMessages)
     }

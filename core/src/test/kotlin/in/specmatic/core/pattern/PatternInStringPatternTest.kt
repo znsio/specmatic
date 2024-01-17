@@ -1,5 +1,6 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATION
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
@@ -7,6 +8,7 @@ import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
+import org.junit.jupiter.api.Tag
 
 internal class PatternInStringPatternTest {
     @Test
@@ -86,6 +88,15 @@ internal class PatternInStringPatternTest {
         val numberInStringType = parsedPattern("""(number in string)""")
         val numberInStringValue = ExactValuePattern(StringValue("""10"""))
         assertEncompasses(numberInStringType, Resolver(), numberInStringValue, Resolver())
+    }
+
+    @Test
+    @Tag(GENERATION)
+    fun `negative values should be generated`() {
+        val result = PatternInStringPattern().negativeBasedOn(Row(), Resolver())
+        assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
+            "null"
+        )
     }
 
     private fun assertEncompasses(bigger: Pattern, biggerResolver: Resolver, smaller: ExactValuePattern, smallerResolver: Resolver) {

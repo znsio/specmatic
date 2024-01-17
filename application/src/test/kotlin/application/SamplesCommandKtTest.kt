@@ -21,16 +21,17 @@ internal class SamplesCommandKtTest {
     @TempDir
     lateinit var tempDir: File
 
-    val simpleGherkin = """Feature: Math API
+    private val simpleGherkin = """Feature: Math API
   Scenario: Square
     When POST /square
     And request-body (number)
     Then status 200
     And response-body (number)"""
 
-    lateinit var qontractFile: File
+    private lateinit var specFile: File
 
     companion object {
+        @JvmStatic
         @AfterAll
         fun tearDown() {
             resetLogger()
@@ -42,7 +43,7 @@ internal class SamplesCommandKtTest {
         logger = NonVerbose(CompositePrinter(listOf(JSONConsoleLogPrinter)))
 
         val (data, _) = captureStandardOutput {
-            val gherkin = qontractFile.readText().trim()
+            val gherkin = specFile.readText().trim()
             HttpStub(gherkin, emptyList(), "localhost", 9000).use { fake ->
                 Contract.fromGherkin(gherkin).samples(fake)
             }
@@ -58,9 +59,9 @@ internal class SamplesCommandKtTest {
 
         val (data, _) = captureStandardOutput {
             val command = SamplesCommand()
-            command.contractFile = qontractFile
+            command.contractFile = specFile
 
-            val gherkin = qontractFile.readText().trim()
+            val gherkin = specFile.readText().trim()
             HttpStub(gherkin, emptyList(), "localhost", 9000).use { fake ->
                 Contract.fromGherkin(gherkin).samples(fake)
             }
@@ -84,7 +85,7 @@ internal class SamplesCommandKtTest {
 
     @BeforeEach
     fun setup() {
-        qontractFile = File(tempDir, "math.$CONTRACT_EXTENSION").also {
+        specFile = File(tempDir, "math.$CONTRACT_EXTENSION").also {
             it.writeText(simpleGherkin)
         }
     }

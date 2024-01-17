@@ -1,5 +1,6 @@
 package `in`.specmatic.test
 
+import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.ignoreLog
@@ -12,17 +13,22 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.isOpenAPI
 import `in`.specmatic.stub.isYAML
 import `in`.specmatic.test.reports.OpenApiCoverageReportProcessor
+import `in`.specmatic.test.reports.coverage.Endpoint
 import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
+import org.junit.jupiter.api.parallel.Execution
+import org.junit.jupiter.api.parallel.ExecutionMode
 import org.opentest4j.TestAbortedException
 import java.io.File
+import java.util.*
 
 @Serializable
 data class API(val method: String, val path: String)
 
+@Execution(ExecutionMode.CONCURRENT)
 open class SpecmaticJUnitSupport {
     companion object {
         const val CONTRACT_PATHS = "contractPaths"
@@ -39,12 +45,13 @@ open class SpecmaticJUnitSupport {
         const val VARIABLES_FILE_NAME = "variablesFileName"
         const val FILTER_NAME = "filterName"
         const val FILTER_NOT_NAME = "filterNotName"
-        const val ENDPOINTS_API = "endpointsAPI"
+        private const val ENDPOINTS_API = "endpointsAPI"
 
-        val testsNames = mutableListOf<String>()
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfigJson: SpecmaticConfigJson? = null
         private val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
+
+        private val threads: Vector<String> = Vector<String>()
 
         var totalTestCount: Int = 0
 
@@ -54,6 +61,13 @@ open class SpecmaticJUnitSupport {
         fun report() {
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
             reportProcessors.forEach { it.process(getReportConfiguration()) }
+
+            threads.distinct().let {
+                if(it.size > 1) {
+                    logger.newLine()
+                    logger.log("Executed tests in ${it.size} threads")
+                }
+            }
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
@@ -80,10 +94,12 @@ open class SpecmaticJUnitSupport {
 
                 logger.debug(response.toLogString())
 
+                openApiCoverageReportInput.setEndpointsAPIFlag(true)
+
                 val endpointData = response.body as JSONObjectValue
-                val apis: List<API> = endpointData.getJSONObject("contexts").entries.flatMap {
+                val apis: List<API> = endpointData.getJSONObject("contexts").entries.flatMap { entry ->
                     val mappings: JSONArrayValue =
-                        (it.value as JSONObjectValue).findFirstChildByPath("mappings.dispatcherServlets.dispatcherServlet") as JSONArrayValue
+                        (entry.value as JSONObjectValue).findFirstChildByPath("mappings.dispatcherServlets.dispatcherServlet") as JSONArrayValue
                     mappings.list.map { it as JSONObjectValue }.filter {
                         it.findFirstChildByPath("details.handlerMethod.className")?.toStringLiteral()
                             ?.contains("springframework") != true
@@ -136,7 +152,6 @@ open class SpecmaticJUnitSupport {
 
     private fun loadExceptionAsTestError(e: Throwable): Collection<DynamicTest> {
         return listOf(DynamicTest.dynamicTest("Load Error") {
-            testsNames.add("Load Error")
             logger.log(e)
             ResultAssert.assertThat(Result.Failure(exceptionCauseMessage(e))).isSuccess()
         })
@@ -163,9 +178,9 @@ open class SpecmaticJUnitSupport {
             return loadExceptionAsTestError(e)
         }
         val testScenarios = try {
-            val testScenarios = when {
+            val (testScenarios, allEndpoints) = when {
                 contractPaths != null -> {
-                    contractPaths.split(",").flatMap {
+                    val testScenariosAndEndpointsPairList = contractPaths.split(",").map {
                         loadTestScenarios(
                             it,
                             suggestionsPath,
@@ -176,6 +191,9 @@ open class SpecmaticJUnitSupport {
                             filterNotName = filterNotName
                         )
                     }
+                    val tests: List<ContractTest> = testScenariosAndEndpointsPairList.flatMap { it.first }
+                    val endpoints: List<Endpoint> = testScenariosAndEndpointsPairList.flatMap { it.second }
+                    Pair(tests, endpoints)
                 }
                 else -> {
                     val configFile = configFile
@@ -188,20 +206,21 @@ open class SpecmaticJUnitSupport {
 
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
 
-                    contractFilePaths.flatMap { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security, filterName, filterNotName) }
+                    val testScenariosAndEndpointsPairList = contractFilePaths.map { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security, filterName, filterNotName) }
+
+                    val tests: List<ContractTest> = testScenariosAndEndpointsPairList.flatMap { it.first }
+
+                    val endpoints: List<Endpoint> = testScenariosAndEndpointsPairList.flatMap { it.second }
+
+                    Pair(tests, endpoints)
                 }
             }
-
+            openApiCoverageReportInput.addEndpoints(allEndpoints)
             selectTestsToRun(testScenarios, filterName, filterNotName) { it.testDescription() }
         } catch(e: ContractException) {
             return loadExceptionAsTestError(e)
         } catch(e: Throwable) {
             return loadExceptionAsTestError(e)
-        }
-
-        val invoker = when(val testBaseURL = System.getProperty(TEST_BASE_URL)) {
-            null -> TargetHostAndPort(System.getProperty(HOST), System.getProperty(PORT))
-            else -> TargetBaseURL(testBaseURL)
         }
 
         var checkedAPIs = false
@@ -211,6 +230,8 @@ open class SpecmaticJUnitSupport {
 
         return testScenarios.map { testScenario ->
             DynamicTest.dynamicTest(testScenario.testDescription()) {
+                threads.add(Thread.currentThread().name)
+
                 if(!checkedAPIs) {
                     checkedAPIs = true
 
@@ -221,29 +242,92 @@ open class SpecmaticJUnitSupport {
                     }
                 }
 
-                testsNames.add(testScenario.testDescription())
+                lateinit var testResult: Pair<Result, HttpResponse?>
 
                 try {
-                    val result: Result = invoker.execute(testScenario, timeout)
-                    openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result))
+                    val protocol = System.getProperty("protocol") ?: "http"
+                    val testBaseURL = System.getProperty(TEST_BASE_URL)
+                        ?: "$protocol://${System.getProperty(HOST)}:${System.getProperty(PORT)}"
+                    testResult = testScenario.runTest(testBaseURL, timeout)
+                    val (result, response) = testResult
 
-                    if(result is Result.Success && result.isPartialSuccess()) {
+                    if (result is Result.Success && result.isPartialSuccess()) {
                         partialSuccesses.add(result)
                     }
 
                     when {
                         result.shouldBeIgnored() -> {
-                            val message = "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${result.toReport().toText().prependIndent("  ")}"
+                            val message =
+                                "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${
+                                    result.toReport().toText().prependIndent("  ")
+                                }"
                             throw TestAbortedException(message)
                         }
+
                         else -> ResultAssert.assertThat(result).isSuccess()
                     }
+
                 } catch(e: Throwable) {
-                    openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(Result.Failure(exceptionCauseMessage(e))))
                     throw e
+                }
+                finally {
+                    val (result, response) = testResult
+                    openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result, response))
                 }
             }
         }.toList()
+    }
+
+    fun loadTestScenarios(
+        path: String,
+        suggestionsPath: String,
+        suggestionsData: String,
+        config: TestConfig,
+        sourceProvider: String? = null,
+        sourceRepository: String? = null,
+        sourceRepositoryBranch: String? = null,
+        specificationPath: String? = null,
+        securityConfiguration: SecurityConfiguration? = null,
+        filterName: String?,
+        filterNotName: String?
+    ): Pair<List<ContractTest>, List<Endpoint>> {
+        if(isYAML(path) && !isOpenAPI(path))
+            return Pair(emptyList(), emptyList())
+
+        val contractFile = File(path)
+        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract), sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
+        val suggestions = when {
+            suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)
+            suggestionsData.isNotEmpty() -> suggestionsFromCommandLine(suggestionsData)
+            else -> emptyList()
+        }
+
+        val allEndpoints: List<Endpoint> = feature.scenarios.map { scenario ->
+            Endpoint(
+                convertPathParameterStyle(scenario.path),
+                scenario.method,
+                scenario.httpResponsePattern.status,
+                scenario.sourceProvider,
+                scenario.sourceRepository,
+                scenario.sourceRepositoryBranch,
+                scenario.specification,
+                scenario.serviceType
+            )
+        }
+
+        val tests: List<ContractTest> = feature
+            .copy(scenarios = selectTestsToRun(feature.scenarios, filterName, filterNotName) { it.testDescription() })
+            .also {
+                if (it.scenarios.isEmpty())
+                    logger.log("All scenarios were filtered out.")
+                else if (it.scenarios.size < feature.scenarios.size) {
+                    logger.debug("Selected scenarios:")
+                    it.scenarios.forEach { scenario -> logger.debug(scenario.testDescription().prependIndent("  ")) }
+                }
+            }
+            .generateContractTests(suggestions)
+
+        return Pair(tests, allEndpoints)
     }
 
     private fun getSpecmaticJson(): SpecmaticConfigJson? {
@@ -257,43 +341,6 @@ open class SpecmaticJUnitSupport {
         catch (e: Throwable) {
             exitWithMessage(exceptionCauseMessage(e))
         }
-    }
-
-    private fun loadTestScenarios(
-        path: String,
-        suggestionsPath: String,
-        suggestionsData: String,
-        config: TestConfig,
-        sourceProvider: String? = null,
-        sourceRepository: String? = null,
-        sourceRepositoryBranch: String? = null,
-        specificationPath: String? = null,
-        securityConfiguration: SecurityConfiguration? = null,
-        filterName: String?,
-        filterNotName: String?
-    ): List<ContractTest> {
-        if(isYAML(path) && !isOpenAPI(path))
-            return emptyList()
-
-        val contractFile = File(path)
-        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract), sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
-        val suggestions = when {
-            suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)
-            suggestionsData.isNotEmpty() -> suggestionsFromCommandLine(suggestionsData)
-            else -> emptyList()
-        }
-
-        return feature
-            .copy(scenarios = selectTestsToRun(feature.scenarios, filterName, filterNotName) { it.testDescription() })
-            .also {
-                if (it.scenarios.isEmpty())
-                    logger.log("All scenarios were filtered out.")
-                else if (it.scenarios.size < feature.scenarios.size) {
-                    logger.debug("Selected scenarios:")
-                    it.scenarios.forEach { scenario -> logger.debug(scenario.testDescription().prependIndent("  ")) }
-                }
-            }
-            .generateContractTests(suggestions)
     }
 
     private fun suggestionsFromFile(suggestionsPath: String): List<Scenario> {
@@ -313,7 +360,7 @@ open class SpecmaticJUnitSupport {
                     val columns = columnsFromExamples(exampleData)
 
                     val rows = exampleData.list.map { row ->
-                        asJSONObjectValue(row, "Each value in the list of suggestions must be a json object containing column name as key and sample value as the value")
+                        asJSONObjectValue(row)
                     }.map { row ->
                         Row(columns, columns.map { row.getValue(it).toStringLiteral() })
                     }.toMutableList()
@@ -343,7 +390,8 @@ private fun columnsFromExamples(exampleData: JSONArrayValue): List<String> {
     return firstRow.jsonObject.keys.toList()
 }
 
-private fun asJSONObjectValue(value: Value, errorMessage: String): Map<String, Value> {
+private fun asJSONObjectValue(value: Value): Map<String, Value> {
+    val errorMessage = "Each value in the list of suggestions must be a json object containing column name as key and sample value as the value"
     if(value !is JSONObjectValue)
         throw ContractException(errorMessage)
 

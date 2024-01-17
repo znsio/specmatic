@@ -7,15 +7,10 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStubResponse
 
-class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = HttpRequest(), var responseTime: String = "", var response: HttpResponse = HttpResponse.OK, var contractPath: String = "", val targetServer: String = ""):
+class HttpLogMessage(private var requestTime: String = "", var request: HttpRequest = HttpRequest(), private var responseTime: String = "", var response: HttpResponse = HttpResponse.OK, var contractPath: String = "", val targetServer: String = ""):
     LogMessage {
     fun addRequest(httpRequest: HttpRequest) {
         requestTime = CurrentDate().toLogString()
-        this.request = httpRequest
-    }
-
-    fun addRequest(httpRequest: HttpRequest, requestTime: String) {
-        this.requestTime = requestTime
         this.request = httpRequest
     }
 
@@ -24,7 +19,7 @@ class HttpLogMessage(var requestTime: String = "", var request: HttpRequest = Ht
         this.response = httpResponse
     }
 
-    fun target(): String {
+    private fun target(): String {
         return if(targetServer.isNotBlank()) {
             "to $targetServer "
         } else ""

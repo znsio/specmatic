@@ -4,10 +4,12 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import io.ktor.http.*
 
 data class HttpHeadersPattern(
     val pattern: Map<String, Pattern> = emptyMap(),
-    val ancestorHeaders: Map<String, Pattern>? = null
+    val ancestorHeaders: Map<String, Pattern>? = null,
+    val contentType: String? = null
 ) {
     init {
         val uniqueHeaders = pattern.keys.map { it.lowercase() }.distinct()
@@ -81,6 +83,7 @@ data class HttpHeadersPattern(
                             .copy(failureReason = highlightIfSOAPActionMismatch(key))
                     }
                 }
+
                 else ->
                     null
             }
@@ -121,18 +124,19 @@ data class HttpHeadersPattern(
             contentTypeHeader in headers && contentTypeHeader !in pattern && "$contentTypeHeader?" !in pattern -> headers.minus(
                 contentTypeHeader
             )
+
             else -> headers
         }
     }
 
     fun generate(resolver: Resolver): Map<String, String> {
-        return attempt(breadCrumb = "HEADERS") {
-            pattern.mapValues { (key, pattern) ->
-                attempt(breadCrumb = key) {
-                    toStringLiteral(resolver.withCyclePrevention(pattern) { it.generate(key, pattern) })
-                }
+        val headers = pattern.mapValues { (key, pattern) ->
+            attempt(breadCrumb = "HEADERS.$key") {
+                toStringLiteral(resolver.withCyclePrevention(pattern) { it.generate(key, pattern) })
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
+        if (contentType.isNullOrBlank()) return headers
+        return headers.plus(CONTENT_TYPE to contentType)
     }
 
     private fun toStringLiteral(headerValue: Value) = when (headerValue) {
@@ -150,25 +154,36 @@ data class HttpHeadersPattern(
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): List<HttpHeadersPattern> =
-        forEachKeyCombinationIn(row.withoutOmittedKeys(pattern), row) { pattern ->
+    fun newBasedOn(row: Row, resolver: Resolver): List<HttpHeadersPattern> {
+        return forEachKeyCombinationIn(row.withoutOmittedKeys(pattern), row, resolver) { pattern ->
             newBasedOn(pattern, row, resolver)
-        }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
+        }.map { map -> HttpHeadersPattern(map.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
+    }
 
     fun negativeBasedOn(row: Row, resolver: Resolver) =
-        forEachKeyCombinationIn(row.withoutOmittedKeys(pattern), row) { pattern ->
+        forEachKeyCombinationIn(row.withoutOmittedKeys(pattern), row, resolver) { pattern ->
             negativeBasedOn(pattern, row, resolver, true)
-        }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
+        }.map { patternMap ->
+            HttpHeadersPattern(
+                patternMap.mapKeys { withoutOptionality(it.key) },
+                contentType = contentType
+            )
+        }
 
     fun newBasedOn(resolver: Resolver): List<HttpHeadersPattern> =
         allOrNothingCombinationIn(pattern) { pattern ->
             newBasedOn(pattern, resolver)
-        }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
+        }.map { patternMap ->
+            HttpHeadersPattern(
+                patternMap.mapKeys { withoutOptionality(it.key) },
+                contentType = contentType
+            )
+        }
 
     fun negativeBasedOn(resolver: Resolver): List<HttpHeadersPattern> =
         allOrNothingCombinationIn(pattern) { pattern ->
             negativeBasedOn(pattern, resolver, true)
-        }.map { HttpHeadersPattern(it.mapKeys { withoutOptionality(it.key) }) }
+        }.map { patternMap -> HttpHeadersPattern(patternMap.mapKeys { withoutOptionality(it.key) }) }
 
     fun encompasses(other: HttpHeadersPattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
@@ -194,33 +209,6 @@ data class HttpHeadersPattern(
         return Result.fromResults(results).breadCrumb("HEADER")
     }
 
-    fun encompassesOld(other: HttpHeadersPattern, thisResolver: Resolver, otherResolver: Resolver): Result {
-        val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
-        val otherRequiredKeys = other.pattern.keys.filter { !isOptional(it) }
-
-        return checkAllMissingHeaders(myRequiredKeys, otherRequiredKeys, thisResolver).ifSuccess {
-            val otherWithoutOptionality = other.pattern.mapKeys { withoutOptionality(it.key) }
-            val thisWithoutOptionality = pattern.filterKeys { withoutOptionality(it) in otherWithoutOptionality }
-                .mapKeys { withoutOptionality(it.key) }
-
-            val valueResults =
-                thisWithoutOptionality.keys.asSequence().map { key ->
-                    Pair(
-                        key,
-                        thisWithoutOptionality.getValue(key).encompasses(
-                            resolvedHop(otherWithoutOptionality.getValue(key), otherResolver),
-                            thisResolver,
-                            otherResolver
-                        )
-                    )
-                }
-
-            valueResults.find { it.second is Result.Failure }.let { result ->
-                result?.second?.breadCrumb(result.first) ?: Result.Success()
-            }
-        }.breadCrumb("HEADER")
-    }
-
     private fun checkAllMissingHeaders(
         myRequiredKeys: List<String>,
         otherRequiredKeys: List<String>,
@@ -242,49 +230,30 @@ private fun parseOrString(pattern: Pattern, sampleValue: String, resolver: Resol
         StringValue(sampleValue)
     }
 
-private val standardCommonHTTPHeaders = setOf(
-    "A-IM",
-    "Accept",
-    "Accept-Charset",
-    "Accept-Datetime",
-    "Accept-Encoding",
-    "Accept-Language",
-    "Access-Control-Request-Method,",
-    "Access-Control-Request-Headers",
-    "Authorization",
-    "Cache-Control",
-    "Connection",
-    "Content-Encoding",
-    "Content-Length",
-    "Content-MD5",
-    "Content-Type",
-    "Cookie",
-    "Date",
-    "Expect",
-    "Forwarded",
-    "From",
-    "Host",
-    "HTTP2-Settings",
-    "If-Match",
-    "If-Modified-Since",
-    "If-None-Match",
-    "If-Range",
-    "If-Unmodified-Since",
-    "Max-Forwards",
-    "Origin",
-    "Pragma",
-    "Prefer",
-    "Proxy-Authorization",
-    "Range",
-    "Referer",
-    "TE",
-    "Trailer",
-    "Transfer-Encoding",
-    "User-Agent",
-    "Upgrade",
-    "Via",
-    "Warning"
-).map { it.lowercase() }
+fun Map<String, String>.withoutDynamicHeaders(): Map<String, String> =
+    this.filterKeys { key -> key.lowercase() !in DYNAMIC_HTTP_HEADERS.map { it.lowercase() } }
 
-fun isStandardHeader(header: String): Boolean = withoutOptionality(header) in standardCommonHTTPHeaders
-
+val DYNAMIC_HTTP_HEADERS = listOf(
+    HttpHeaders.Authorization,
+    HttpHeaders.UserAgent,
+    HttpHeaders.Cookie,
+    HttpHeaders.Referrer,
+    HttpHeaders.AcceptLanguage,
+    HttpHeaders.Host,
+    HttpHeaders.IfModifiedSince,
+    HttpHeaders.IfNoneMatch,
+    HttpHeaders.CacheControl,
+    HttpHeaders.ContentLength,
+    HttpHeaders.Range,
+    HttpHeaders.XForwardedFor,
+    HttpHeaders.Date,
+    HttpHeaders.Server,
+    HttpHeaders.Expires,
+    HttpHeaders.LastModified,
+    HttpHeaders.ETag,
+    HttpHeaders.Vary,
+    HttpHeaders.AccessControlAllowCredentials,
+    HttpHeaders.AccessControlMaxAge,
+    HttpHeaders.AccessControlRequestHeaders,
+    HttpHeaders.AccessControlRequestMethod
+)

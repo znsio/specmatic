@@ -9,7 +9,7 @@ import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
 
 class SystemGit(override val workingDirectory: String = ".", private val prefix: String = "- ", val authCredentials: AuthCredentials = NoGitAuthCredentials) : GitCommand {
-    fun executeWithAuth(vararg command: String): String {
+    private fun executeWithAuth(vararg command: String): String {
         val gitExecutable = listOf(Configuration.gitCommand)
         val auth = authCredentials.gitCommandAuthHeaders()
 
@@ -31,7 +31,7 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         return ExternalCommand(
             command,
             workingDirectory,
-            listOf("GIT_SSL_NO_VERIFY=true").toTypedArray()
+            mapOf("GIT_SSL_NO_VERIFY" to "true")
         ).executeAsSeparateProcess()
     }
 
@@ -74,14 +74,10 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     }
 
     override fun checkIgnore(path: String): String {
-        try {
-            return execute(Configuration.gitCommand, "check-ignore", path)
-        }
-        catch (nonZeroExitError:NonZeroExitError) {
-            if(nonZeroExitError.exitCode == 1) {
-                return ""
-            }
-            throw nonZeroExitError
+        return try {
+            execute(Configuration.gitCommand, "check-ignore", path)
+        } catch (nonZeroExitError:NonZeroExitError) {
+            ""
         }
     }
 

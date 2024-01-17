@@ -9,8 +9,8 @@ import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.core.utilities.contractStubPaths
 import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.mock.*
-import io.ktor.util.reflect.*
+import `in`.specmatic.mock.NoMatchingScenario
+import `in`.specmatic.mock.ScenarioStub
 import org.yaml.snakeyaml.Yaml
 import java.io.File
 
@@ -85,14 +85,14 @@ fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathDa
                                 val stubDataFiles = filesInDir(implicitDataDir)?.toList()?.filter { it.extension == "json" }.orEmpty().sorted()
                                 printDataFiles(stubDataFiles)
 
-                                stubDataFiles.map {
+                                stubDataFiles.mapNotNull {
                                     try {
                                         Pair(it.path, stringToMockScenario(StringValue(it.readText())))
-                                    } catch(e: Throwable) {
+                                    } catch (e: Throwable) {
                                         logger.log(e, "    Could not load stub file ${it.canonicalPath}")
                                         null
                                     }
-                                }.filterNotNull()
+                                }
                             }
                         }
                         else -> emptyList()
@@ -125,7 +125,7 @@ private fun logIgnoredFiles(implicitDataDir: File) {
 }
 
 fun loadContractStubsFromFiles(contractPathDataList: List<ContractPathData>, dataDirPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
-    val contactPathsString = contractPathDataList.map { it.path }.joinToString(System.lineSeparator())
+    val contactPathsString = contractPathDataList.joinToString(System.lineSeparator()) { it.path }
     consoleLog(StringLog("Loading the following contracts:${System.lineSeparator()}$contactPathsString"))
     consoleLog(StringLog(""))
 
@@ -208,27 +208,27 @@ fun stubMatchErrorMessage(
 
 
 
-    return errorReports.map { (exceptionReport, contractFilePath) ->
+    return errorReports.joinToString("${System.lineSeparator()}${System.lineSeparator()}") { (exceptionReport, contractFilePath) ->
         "$stubFile didn't match $contractFilePath${System.lineSeparator()}${
             exceptionReport.message.prependIndent(
                 "  "
             )
         }"
-    }.joinToString("${System.lineSeparator()}${System.lineSeparator()}")
+    }
 }
 
 fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair<String, ScenarioStub>>): List<Pair<Feature, List<ScenarioStub>>> {
     val contractInfoFromStubs: List<Pair<Feature, List<ScenarioStub>>> = stubData.mapNotNull { (stubFile, stub) ->
-        val matchResults = features.map { (qontractFile, feature) ->
+        val matchResults = features.map { (specFile, feature) ->
             try {
                 feature.matchingStub(stub.request, stub.response, ContractAndStubMismatchMessages)
                 StubMatchResults(feature, null)
             } catch (e: NoMatchingScenario) {
-                StubMatchResults(null, StubMatchErrorReport(StubMatchExceptionReport(stub.request, e), qontractFile))
+                StubMatchResults(null, StubMatchErrorReport(StubMatchExceptionReport(stub.request, e), specFile))
             }
         }
 
-        when (val feature = matchResults.mapNotNull { it.feature }.firstOrNull()) {
+        when (val feature = matchResults.firstNotNullOfOrNull { it.feature }) {
             null -> {
                 val errorMessage = stubMatchErrorMessage(matchResults, stubFile).prependIndent("  ")
 
@@ -238,7 +238,7 @@ fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair
             }
             else -> Pair(feature, stub)
         }
-    }.groupBy { it.first }.mapValues { it.value.map { it.second } }.entries.map { Pair(it.key, it.value) }
+    }.groupBy { it.first }.mapValues { (_, value) -> value.map { it.second } }.entries.map { Pair(it.key, it.value) }
 
     val stubbedFeatures = contractInfoFromStubs.map { it.first }
     val missingFeatures = features.map { it.second }.filter { it !in stubbedFeatures }

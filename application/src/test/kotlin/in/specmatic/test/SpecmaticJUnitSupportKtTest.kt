@@ -1,6 +1,8 @@
 package `in`.specmatic.test
 
 import `in`.specmatic.conversions.OpenApiSpecification
+import `in`.specmatic.core.TestConfig
+import `in`.specmatic.test.reports.coverage.Endpoint
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -51,7 +53,7 @@ paths:
                 type: number
         """.trimIndent(), "").toFeature()
 
-    val contractTests = contract.generateContractTests(emptyList())
+    private val contractTests = contract.generateContractTests(emptyList())
 
     @Test
     fun `should select tests containing the value of filterName in testDescription`() {

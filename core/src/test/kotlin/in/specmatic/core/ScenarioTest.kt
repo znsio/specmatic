@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.DefaultStrategies
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.*
@@ -25,7 +26,7 @@ internal class ScenarioTest {
             HashMap(),
             HashMap(),
         )
-        scenario.generateTestScenarios().let {
+        scenario.generateTestScenarios(DefaultStrategies).let {
             assertThat(it.size).isEqualTo(1)
         }
     }
@@ -42,7 +43,7 @@ internal class ScenarioTest {
             HashMap(),
             HashMap(),
         )
-        scenario.generateTestScenarios().let {
+        scenario.generateTestScenarios(DefaultStrategies).let {
             assertThat(it.size).isEqualTo(2)
         }
     }
@@ -84,7 +85,7 @@ internal class ScenarioTest {
         val state = HashMap(mapOf<String, Value>("id" to True))
         val scenario = Scenario(
             "Test",
-            HttpRequestPattern(urlMatcher = URLMatcher(emptyMap(), emptyList(), path="/")),
+            HttpRequestPattern(httpPathPattern = HttpPathPattern(emptyList(), path="/")),
             HttpResponsePattern(status=200),
             state,
             listOf(example),
@@ -92,7 +93,7 @@ internal class ScenarioTest {
             HashMap(),
         )
 
-        val testScenarios = scenario.generateTestScenarios()
+        val testScenarios = scenario.generateTestScenarios(DefaultStrategies)
         val newState = testScenarios.first().expectedFacts
 
         assertThat(newState.getValue("id").toStringLiteral()).isNotEqualTo("(string)")
@@ -103,7 +104,7 @@ internal class ScenarioTest {
     fun `will not match a mock http request with unexpected request headers`() {
         val scenario = Scenario(
             "Test",
-            HttpRequestPattern(method="GET", urlMatcher = URLMatcher(emptyMap(), emptyList(), "/"), headersPattern = HttpHeadersPattern(mapOf("X-Expected" to StringPattern()))),
+            HttpRequestPattern(method="GET", httpPathPattern = HttpPathPattern(emptyList(), "/"), headersPattern = HttpHeadersPattern(mapOf("X-Expected" to StringPattern()))),
             HttpResponsePattern(status = 200),
             emptyMap(),
             emptyList(),
@@ -120,7 +121,7 @@ internal class ScenarioTest {
     fun `will not match a mock http request with unexpected response headers`() {
         val scenario = Scenario(
             "Test",
-            HttpRequestPattern(method="GET", urlMatcher = URLMatcher(emptyMap(), emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap())),
+            HttpRequestPattern(method="GET", httpPathPattern = HttpPathPattern(emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap())),
             HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Expected" to StringPattern()))),
             emptyMap(),
             emptyList(),
@@ -137,7 +138,7 @@ internal class ScenarioTest {
     fun `will not match a mock http request with unexpected query params`() {
         val scenario = Scenario(
             "Test",
-            HttpRequestPattern(method="GET", urlMatcher = URLMatcher(mapOf("expected" to StringPattern()), emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap(), null)),
+            HttpRequestPattern(method="GET", httpPathPattern = HttpPathPattern(emptyList(), "/"), httpQueryParamPattern = HttpQueryParamPattern(mapOf("expected" to StringPattern())), headersPattern = HttpHeadersPattern(emptyMap(), null)),
             HttpResponsePattern(status = 200),
             emptyMap(),
             emptyList(),
@@ -154,7 +155,7 @@ internal class ScenarioTest {
     fun `will not match a mock json body with unexpected keys`() {
         val scenario = Scenario(
             "Test",
-            HttpRequestPattern(method="POST", urlMatcher = URLMatcher(mapOf("expected" to StringPattern()), emptyList(), "/"), headersPattern = HttpHeadersPattern(emptyMap(), null), body = parsedPattern("""{"expected": "value"}""")),
+            HttpRequestPattern(method="POST", httpPathPattern = HttpPathPattern(emptyList(), "/"), httpQueryParamPattern = HttpQueryParamPattern(mapOf("expected" to StringPattern())), headersPattern = HttpHeadersPattern(emptyMap(), null), body = parsedPattern("""{"expected": "value"}""")),
             HttpResponsePattern(status = 200),
             emptyMap(),
             emptyList(),
@@ -431,7 +432,7 @@ And response-body (number)
                 it.value.copy(contractCache = mockCache)
             }
 
-            scenario.copy(references = updatedReferences).generateTestScenarios(variables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.spec" to "http://baseurl"))
+            scenario.copy(references = updatedReferences).generateTestScenarios(DefaultStrategies, variables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.spec" to "http://baseurl"))
         }.flatten()
 
         assertThat(testScenarios).allSatisfy(Consumer {
@@ -444,14 +445,14 @@ And response-body (number)
 
     @Test
     fun `mock should return match errors across both request and response`() {
-        val requestType = HttpRequestPattern(method = "POST", urlMatcher = toURLMatcherWithOptionalQueryParams("http://localhost/data"), body = JSONObjectPattern(mapOf("id" to NumberPattern())))
+        val requestType = HttpRequestPattern(method = "POST", httpPathPattern = buildHttpPathPattern("http://localhost/data"), body = JSONObjectPattern(mapOf("id" to NumberPattern())))
         val responseType = HttpResponsePattern(status = 200, body = JSONObjectPattern(mapOf("id" to NumberPattern())))
 
         val scenario = Scenario(ScenarioInfo("name", requestType, responseType))
 
         val result = scenario.matchesMock(
             HttpRequest("POST", "/data", body = parsedJSON("""{"id": "abc123"}""")),
-            HttpResponse.OK(parsedJSON("""{"id": "abc123"}"""))
+            HttpResponse.ok(parsedJSON("""{"id": "abc123"}"""))
         )
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
@@ -508,7 +509,7 @@ paths:
 
         val result: Result = executeTest(contractTestScenarios.first(), object: TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                return HttpResponse.OK("abc")
+                return HttpResponse.ok("abc")
             }
 
             override fun setServerState(serverState: Map<String, Value>) {

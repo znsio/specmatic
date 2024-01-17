@@ -20,7 +20,7 @@ internal class DictionaryPatternTest {
     }
 
     @Test
-    fun `should not match a json object with nonmatching keys`() {
+    fun `should not match a json object with non-matching keys`() {
         val pattern = DictionaryPattern(DeferredPattern("(number)"), DeferredPattern("(number)"))
         val value = parsedJSON("""{"not a number": 1, "2": 2}""")
 
@@ -28,7 +28,7 @@ internal class DictionaryPatternTest {
     }
 
     @Test
-    fun `should not match a json object with nonmatching values`() {
+    fun `should not match a json object with non-matching values`() {
         val pattern = DictionaryPattern(DeferredPattern("(number)"), DeferredPattern("(number)"))
         val value = parsedJSON("""{"1": 1, "2": "two"}""")
 

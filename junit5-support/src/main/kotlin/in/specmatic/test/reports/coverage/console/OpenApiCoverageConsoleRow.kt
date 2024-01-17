@@ -40,12 +40,3 @@ data class OpenApiCoverageConsoleRow(
     }
 }
 
-enum class Remarks(val value: String) {
-    Covered("covered"),
-    Missed("missing in spec"),
-    NotImplemented("not implemented");
-
-    override fun toString(): String {
-        return value
-    }
-}

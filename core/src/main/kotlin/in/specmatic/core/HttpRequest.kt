@@ -97,7 +97,7 @@ data class HttpRequest(
         val cleanBase = baseURL?.removeSuffix("/")
         val cleanPath = path?.removePrefix("/")
         val fullUrl = URLParts(concatNonNulls(cleanBase, cleanPath, "/")).withEncodedPathSegments()
-        val queryPart = URLEncodedUtils.format(queryParams.map { BasicNameValuePair(it.key, it.value) }, Charsets.UTF_8)
+        val queryPart = URLEncodedUtils.format(queryParams.paramPairs.map { BasicNameValuePair(it.first, it.second) }, Charsets.UTF_8)
         return concatNonNulls(fullUrl, queryPart, "?")
     }
 
@@ -134,7 +134,7 @@ data class HttpRequest(
 
         val pathString = path ?: "NO_PATH"
         val queryParamString =
-            queryParams.map { "${it.key}=${it.value}" }.joinToString("&").let { if (it.isNotEmpty()) "?$it" else it }
+            queryParams.paramPairs.map { "${it.first}=${it.second}" }.joinToString("&").let { if (it.isNotEmpty()) "?$it" else it }
         val urlString = "$pathString$queryParamString"
 
         val firstLine = "$methodString $urlString"

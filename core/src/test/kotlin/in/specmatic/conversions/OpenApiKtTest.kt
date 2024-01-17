@@ -2580,6 +2580,53 @@ components:
 
         assertThat(result.success()).withFailMessage(result.report()).isTrue
     }
+
+    @Test
+    fun `should support arrays in query parameters`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+    openapi: 3.0.0
+    info:
+      title: Sample API
+      version: 0.1.9
+    paths:
+      /products:
+        get:
+          summary: get products
+          description: Get multiple products filtered by Brand Ids
+          parameters:
+            - name: brand_ids
+              in: query
+              required: true
+              schema:
+                items:
+                  type: number
+                type: array
+          responses:
+            '200':
+              description: OK
+              content:
+                application/json:
+                  schema:
+                    type: string
+""".trimIndent(), ""
+        ).toFeature()
+        var queryParameterCount = 0
+        contract.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                if(request.queryParams.isNotEmpty()) {
+                    queryParameterCount = request.queryParams.paramPairs.count { it.first == "brand_ids" }
+                }
+                return HttpResponse.ok("success")
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+
+            }
+
+        })
+        assertThat(queryParameterCount).isGreaterThan(1)
+    }
 }
 
 data class CycleRoot(

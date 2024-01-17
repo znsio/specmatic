@@ -324,8 +324,8 @@ data class HttpRequestPattern(
             attempt(breadCrumb = "URL") {
                 newRequest = newRequest.updatePath(httpPathPattern.generate(resolver))
                 val queryParams = httpQueryParamPattern.generate(resolver)
-                for (key in queryParams.keys) {
-                    newRequest = newRequest.updateQueryParam(key, queryParams[key] ?: "")
+                for (queryParam in queryParams) {
+                    newRequest = newRequest.updateQueryParam(queryParam.first, queryParam.second)
                 }
             }
             val headers = headersPattern.generate(resolver)

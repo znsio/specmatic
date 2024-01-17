@@ -3,17 +3,24 @@ package `in`.specmatic.core
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.withoutOptionality
 import `in`.specmatic.core.utilities.URIUtils
+import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import java.net.URI
 
 data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
-    fun generate(resolver: Resolver): Map<String, String> {
+    fun generate(resolver: Resolver): List<Pair<String, String>> {
         return attempt(breadCrumb = "QUERY-PARAMS") {
-            queryPatterns.mapKeys { it.key.removeSuffix("?") }.map { (name, pattern) ->
-                attempt(breadCrumb = name) {
-                    name to resolver.withCyclePrevention(pattern) { it.generate(name, pattern) }.toString()
+            queryPatterns.map { it.key.removeSuffix("?") to it.value }.flatMap { (parameterName, pattern) ->
+                attempt(breadCrumb = parameterName) {
+                    val generatedValue =  resolver.withCyclePrevention(pattern) { it.generate(parameterName, pattern) }
+                    if(generatedValue is JSONArrayValue) {
+                        generatedValue.list.map { parameterName to it.toString() }
+                    }
+                    else {
+                        listOf(parameterName to generatedValue.toString())
+                    }
                 }
-            }.toMap()
+            }
         }
     }
 

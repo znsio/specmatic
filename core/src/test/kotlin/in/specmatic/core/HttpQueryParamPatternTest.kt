@@ -113,7 +113,7 @@ class HttpQueryParamPatternTest {
             } returns StringValue("hari")
         }
         urlPattern.generate(resolver).let {
-            assertThat(it).isEqualTo(hashMapOf("petid" to "123", "owner" to "hari"))
+            assertThat(it).isEqualTo(listOf("owner" to "hari", "petid" to "123"))
         }
     }
 
@@ -124,9 +124,9 @@ class HttpQueryParamPatternTest {
         val row = Row(listOf("status", "type"), listOf("available", "dog"))
         val generatedPatterns = buildQueryPattern(URI("/pets?status=(string)&type=(string)")).newBasedOn(row, resolver)
         assertEquals(1, generatedPatterns.size)
-        val pattern = HttpQueryParamPattern(generatedPatterns.first()).generate(resolver)
-        assertEquals("available", pattern.getValue("status"))
-        assertEquals("dog", pattern.getValue("type"))
+        val values = HttpQueryParamPattern(generatedPatterns.first()).generate(resolver)
+        assertThat(values.single{ it.first == "status"}.second).isEqualTo("available")
+        assertThat(values.single{ it.first == "type"}.second).isEqualTo("dog")
     }
 
     @Test
@@ -134,8 +134,8 @@ class HttpQueryParamPatternTest {
         val matcher = buildQueryPattern(URI("/pets?id=(string)"))
         val query = matcher.generate(Resolver())
 
-        Assertions.assertNotEquals("(string)", query.getValue("id"))
-        assertTrue(query.getValue("id").isNotEmpty())
+        Assertions.assertNotEquals("(string)", query.single{ it.first == "id"}.second)
+        assertTrue(query.single{ it.first == "id"}.second.isNotEmpty())
     }
 
     @Test

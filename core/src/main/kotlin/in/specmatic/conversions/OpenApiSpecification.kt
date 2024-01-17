@@ -1445,7 +1445,7 @@ class OpenApiSpecification(
         val parameters = operation.parameters ?: return HttpQueryParamPattern(emptyMap())
         val queryPattern: Map<String, Pattern> = parameters.filterIsInstance(QueryParameter::class.java).associate {
             val specmaticPattern: Pattern = if (it.schema.type == "array") {
-                CsvPattern(toSpecmaticPattern(schema = it.schema.items, typeStack = emptyList()))
+                QueryParameterArrayPattern(toSpecmaticPattern(schema = it.schema.items, typeStack = emptyList()))
             } else {
                 toSpecmaticPattern(schema = it.schema, typeStack = emptyList(), patternName = it.name)
             }

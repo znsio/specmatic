@@ -929,4 +929,44 @@ paths:
             }
         }
     }
+
+    @Test
+    fun `stub generates multiple query parameters when they are defined as an array`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+    openapi: 3.0.0
+    info:
+      title: Sample API
+      version: 0.1.9
+    paths:
+      /products:
+        get:
+          summary: get products
+          description: Get multiple products filtered by Brand Ids
+          parameters:
+            - name: brand_ids
+              in: query
+              required: true
+              schema:
+                items:
+                  type: number
+                type: array
+          responses:
+            '200':
+              description: OK
+              content:
+                application/json:
+                  schema:
+                    type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        HttpStub(contract, emptyList()).use {
+            val queryParameters = QueryParameters(mapOf("brand_ids" to "1")).plus("brand_ids" to "2").plus("brand_ids" to "3")
+            val response = it.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
+
+            val responseString = response.toLogString()
+            assertThat(responseString).isNotEmpty
+        }
+    }
 }

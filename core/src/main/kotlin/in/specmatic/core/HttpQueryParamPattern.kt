@@ -40,33 +40,36 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
 
     fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
         val keyErrors =
-            resolver.findKeyErrorList(queryPatterns, httpRequest.queryParams.mapValues { StringValue(it.value) })
+            resolver.findKeyErrorList(queryPatterns, httpRequest.queryParams.asMap().mapValues { StringValue(it.value) })
         val keyErrorList: List<Result.Failure> = keyErrors.map {
             it.missingKeyToResult("query param", resolver.mismatchMessages).breadCrumb(it.name)
         }
-        val results: List<Result?> = queryPatterns.keys.map { key ->
+
+        val results: List<Result?> = queryPatterns.keys.flatMap { key ->
             val keyName = key.removeSuffix("?")
 
-            if (!httpRequest.queryParams.containsKey(keyName))
-                null
-            else {
+            if (!httpRequest.queryParams.containsKey(keyName)) {
+                listOf<Result?>(null)
+            } else {
                 try {
-                    val patternValue = queryPatterns.getValue(key)
-                    val sampleValue = httpRequest.queryParams.getValue(keyName)
-
-                    val parsedValue = try {
-                        patternValue.parse(sampleValue, resolver)
-                    } catch (e: Exception) {
-                        StringValue(sampleValue)
+                    val patternValue: Pattern = queryPatterns.getValue(key)
+                    val sampleValues: List<String> = httpRequest.queryParams.getValues(keyName)
+                    sampleValues.map { sampleValue ->
+                        val parsedValue = try {
+                             patternValue.parse(sampleValue, resolver)
+                        } catch (e: Exception) {
+                            StringValue(sampleValue)
+                        }
+                        resolver.matchesPattern(keyName, patternValue, parsedValue).breadCrumb(keyName)
                     }
-                    resolver.matchesPattern(keyName, patternValue, parsedValue).breadCrumb(keyName)
                 } catch (e: ContractException) {
-                    e.failure().breadCrumb(keyName)
+                    listOf(e.failure().breadCrumb(keyName)) // wrap single item in a list
                 } catch (e: Throwable) {
-                    Result.Failure(e.localizedMessage).breadCrumb(keyName)
+                    listOf(Result.Failure(e.localizedMessage).breadCrumb(keyName)) // wrap single item in a list
                 }
             }
         }
+
         val failures = keyErrorList.plus(results).filterIsInstance<Result.Failure>()
         return if (failures.isNotEmpty())
             Result.Failure.fromFailures(failures).breadCrumb(QUERY_PARAMS_BREADCRUMB)

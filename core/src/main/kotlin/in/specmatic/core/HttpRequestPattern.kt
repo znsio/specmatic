@@ -229,7 +229,7 @@ data class HttpRequestPattern(
             requestType = attempt(breadCrumb = "URL") {
                 val path = request.path ?: ""
                 val pathTypes = pathToPattern(path)
-                val queryParamTypes = toTypeMap(request.queryParams, httpQueryParamPattern.queryPatterns, resolver)
+                val queryParamTypes = toTypeMap(request.queryParams.asMap(), httpQueryParamPattern.queryPatterns, resolver)
                     .mapKeys { it.key.removeSuffix("?") }
 
                 requestType.copy(httpPathPattern = HttpPathPattern(pathTypes, path), httpQueryParamPattern = HttpQueryParamPattern(queryParamTypes))

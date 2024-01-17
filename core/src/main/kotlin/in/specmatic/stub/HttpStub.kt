@@ -302,7 +302,7 @@ class HttpStub(
             request.copy(headers = requestHeaders)
         }.let {
             val queryParams = toParams(call.request.queryParameters)
-            it.copy(queryParams = QueryParameters(queryParams))
+            it.copy(queryParams = QueryParameters(paramPairs = queryParams))
         }.let {
             val bodyOrError = try {
                 receiveText(call)
@@ -545,7 +545,7 @@ internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRe
             path = urlDecodePathSegments(call.request.path()),
             headers = requestHeaders,
             body = body,
-            queryParametersMap = toParams(call.request.queryParameters),
+            queryParams = QueryParameters(paramPairs = toParams(call.request.queryParameters)),
             formFields = formFields,
             multiPartFormData = multiPartFormData
         )
@@ -639,7 +639,14 @@ suspend fun receiveText(call: ApplicationCall): String {
     }
 }
 
-internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().mapValues { it.value.first() }
+//internal fun toParams(queryParameters: Parameters) = queryParameters.toMap().mapValues { it.value.first() }
+
+internal fun toParams(queryParameters: Parameters): List<Pair<String, String>> =
+    queryParameters.toMap().flatMap { (parameterName, parameterValues) ->
+        parameterValues.map {
+            parameterName to it
+        }
+    }
 
 internal suspend fun respondToKtorHttpResponse(
     call: ApplicationCall,

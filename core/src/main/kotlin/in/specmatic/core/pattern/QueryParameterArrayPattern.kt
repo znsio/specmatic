@@ -41,7 +41,7 @@ class QueryParameterArrayPattern(override val pattern: Pattern): Pattern {
     }
 
     override fun parse(value: String, resolver: Resolver): Value {
-        return StringValue(value)
+        return pattern.parse(value, resolver)
     }
 
     override fun encompasses(
@@ -50,7 +50,10 @@ class QueryParameterArrayPattern(override val pattern: Pattern): Pattern {
         otherResolver: Resolver,
         typeStack: TypeStack
     ): Result {
-        TODO("Not yet implemented")
+        if(otherPattern !is QueryParameterArrayPattern)
+            return Result.Failure(thisResolver.mismatchMessages.mismatchMessage(this.typeName, otherPattern.typeName))
+
+        return this.pattern.encompasses(otherPattern.pattern, thisResolver, otherResolver, typeStack)
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
@@ -62,4 +65,8 @@ class QueryParameterArrayPattern(override val pattern: Pattern): Pattern {
 
     override val typeName: String
         get() = "(queryParameterArray/${pattern.typeName})"
+
+    override fun parseToType(valueString: String, resolver: Resolver): Pattern {
+        return QueryParameterArrayPattern(pattern.parse(valueString, resolver).type())
+    }
 }

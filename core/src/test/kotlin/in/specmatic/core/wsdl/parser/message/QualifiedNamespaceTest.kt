@@ -8,7 +8,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 internal class QualifiedNamespaceTest {
-    val dummyNode = toXMLNode("<dummy/>")
+    private val dummyNode = toXMLNode("<dummy/>")
     @Test
     fun `gets the node name for a qualified element`() {
         val wsdl = mockk<WSDL>()

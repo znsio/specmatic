@@ -6,6 +6,7 @@ import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestIdentifier
 import org.junit.platform.launcher.TestPlan
+import java.util.*
 import kotlin.system.exitProcess
 
 fun getContractExecutionPrinter(): ContractExecutionPrinter {
@@ -21,15 +22,17 @@ private fun colorIsRequested() = System.getenv("SPECMATIC_COLOR") == "1"
 private fun stdOutIsRedirected() = System.console() == null
 
 class ContractExecutionListener : TestExecutionListener {
+    private var totalRun: Int = 0
+
     private var success: Int = 0
     private var failure: Int = 0
     private var aborted: Int = 0
 
     private val failedLog: MutableList<String> = mutableListOf()
 
-    private var couldNotStart = false;
+    private var couldNotStart = false
 
-    private val colorPrinter: ContractExecutionPrinter = getContractExecutionPrinter()
+    private val printer: ContractExecutionPrinter = getContractExecutionPrinter()
 
     override fun executionSkipped(testIdentifier: TestIdentifier?, reason: String?) {
         super.executionSkipped(testIdentifier, reason)
@@ -45,7 +48,12 @@ class ContractExecutionListener : TestExecutionListener {
                     return
         }
 
-        colorPrinter.printTestSummary(testIdentifier, testExecutionResult)
+        totalRun += 1
+        logger.newLine()
+        logger.log(progressUpdate(totalRun, SpecmaticJUnitSupport.totalTestCount))
+        logger.newLine()
+
+        printer.printTestSummary(testIdentifier, testExecutionResult)
 
         when(testExecutionResult?.status) {
             TestExecutionResult.Status.SUCCESSFUL ->  {
@@ -87,7 +95,7 @@ class ContractExecutionListener : TestExecutionListener {
 
         if(SpecmaticJUnitSupport.partialSuccesses.isNotEmpty()) {
             println()
-            colorPrinter.printFailureTitle("Partial Successes:")
+            printer.printFailureTitle("Partial Successes:")
             println()
 
             SpecmaticJUnitSupport.partialSuccesses.filter { it.partialSuccessMessage != null} .forEach { result ->
@@ -101,12 +109,12 @@ class ContractExecutionListener : TestExecutionListener {
 
         if (failedLog.isNotEmpty()) {
             println()
-            colorPrinter.printFailureTitle("Unsuccessful Scenarios:")
+            printer.printFailureTitle("Unsuccessful Scenarios:")
             println(failedLog.joinToString(System.lineSeparator()) { it.prependIndent("  ") })
             println()
         }
 
-        colorPrinter.printFinalSummary(TestSummary(success, SpecmaticJUnitSupport.partialSuccesses.size, aborted, failure))
+        printer.printFinalSummary(TestSummary(success, SpecmaticJUnitSupport.partialSuccesses.size, aborted, failure))
     }
 
     fun exitProcess() {
@@ -117,4 +125,15 @@ class ContractExecutionListener : TestExecutionListener {
 
         exitProcess(exitStatus)
     }
+}
+
+private fun progressUpdate(totalTestsRun: Int, countOfTests: Int): String {
+    return "Tests run: $totalTestsRun/$countOfTests (${percentage(totalTestsRun, countOfTests)}%)"
+}
+
+private fun percentage(totalTestsRun: Int, countOfTests: Int): String {
+    return if(countOfTests == 0)
+        "0"
+    else
+        ((totalTestsRun.toDouble() / countOfTests.toDouble()) * 100).toInt().toString()
 }

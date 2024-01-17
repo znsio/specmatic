@@ -12,7 +12,8 @@ import `in`.specmatic.core.value.Value
 data class AnyPattern(
     override val pattern: List<Pattern>,
     val key: String? = null,
-    override val typeAlias: String? = null
+    override val typeAlias: String? = null,
+    val example: String? = null
 ) : Pattern {
     override fun equals(other: Any?): Boolean = other is AnyPattern && other.pattern == this.pattern
 
@@ -42,9 +43,14 @@ data class AnyPattern(
 
         val failuresWithUpdatedBreadcrumbs = matchResults.map {
             Pair(it.pattern, it.result as Result.Failure)
-        }.map { (pattern, failure) ->
+        }.mapIndexed { index, (pattern, failure) ->
+            val ordinal = index + 1
+
             pattern.typeAlias?.let {
-                failure.breadCrumb("(~~~${withoutPatternDelimiters(it)} object)")
+                if(it.isBlank() || it == "()")
+                    failure.breadCrumb("(~~~object $ordinal)")
+                else
+                    failure.breadCrumb("(~~~${withoutPatternDelimiters(it)} object)")
             } ?:
             failure
         }
@@ -65,23 +71,60 @@ data class AnyPattern(
     private fun isEmpty(it: Pattern) = it.typeAlias == "(empty)" || it is NullPattern
 
     override fun generate(resolver: Resolver): Value {
+        return resolver.resolveExample(example, pattern) ?: generateRandomValue(resolver)
+    }
+
+    private fun generateRandomValue(resolver: Resolver): Value {
         val randomPattern = pattern.random()
-        val isNullable = pattern.any {it is NullPattern}
+        val isNullable = pattern.any { it is NullPattern }
         return resolver.withCyclePrevention(randomPattern, isNullable) { cyclePreventedResolver ->
             when (key) {
                 null -> randomPattern.generate(cyclePreventedResolver)
                 else -> cyclePreventedResolver.generate(key, randomPattern)
             }
-        }?: NullValue // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
+        } ?: NullValue // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        val isNullable = pattern.any {it is NullPattern}
-        return pattern.flatMap { innerPattern ->
-            resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
-                innerPattern.newBasedOn(row, cyclePreventedResolver)
-            }?: listOf()  // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
+        resolver.resolveExample(example, pattern)?.let {
+            return listOf(ExactValuePattern(it))
         }
+
+        val isNullable = pattern.any { it is NullPattern }
+        val patternResults: List<Pair<List<Pattern>?, Throwable?>> =
+            pattern.sortedBy { it is NullPattern }.map { innerPattern ->
+                try {
+                    val patterns =
+                        resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
+                            innerPattern.newBasedOn(row, cyclePreventedResolver)
+                        } ?: listOf()
+                    Pair(patterns, null)
+                } catch (e: Throwable) {
+                    Pair(null, e)
+                }
+            }
+
+        return newTypesOrExceptionIfNone(patternResults, "Could not generate new tests")
+    }
+
+    private fun newTypesOrExceptionIfNone(patternResults: List<Pair<List<Pattern>?, Throwable?>>, message: String): List<Pattern> {
+        val newPatterns: List<Pattern> = patternResults.mapNotNull { it.first }.flatten()
+
+        if (newPatterns.isEmpty() && pattern.isNotEmpty()) {
+            val exceptions = patternResults.mapNotNull { it.second }.map {
+                when (it) {
+                    is ContractException -> it
+                    else -> ContractException(exceptionCause = it)
+                }
+            }
+
+            val failures = exceptions.map { it.failure() }
+
+            val failure = Result.Failure.fromFailures(failures)
+
+            throw ContractException(failure.toFailureReport(message))
+        }
+        return newPatterns
     }
 
     override fun newBasedOn(resolver: Resolver): List<Pattern> {
@@ -96,13 +139,24 @@ data class AnyPattern(
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val nullable = pattern.any { it is NullPattern }
 
-        val negativeTypes = pattern.flatMap {
-            it.negativeBasedOn(row, resolver)
-        }.let {
+        val negativeTypeResults = pattern.map {
+            try {
+                val patterns =
+                    it.negativeBasedOn(row, resolver)
+                Pair(patterns, null)
+            } catch(e: Throwable) {
+                Pair(null, e)
+            }
+        }
+
+        val negativeTypes = newTypesOrExceptionIfNone(
+            negativeTypeResults,
+            "Could not get negative tests"
+        ).let { patterns ->
             if (nullable)
-                it.filterNot { it is NullPattern }
+                patterns.filterNot { it is NullPattern }
             else
-                it
+                patterns
         }
 
         return if(negativeTypes.all { it is ScalarType })
@@ -153,7 +207,7 @@ data class AnyPattern(
         if (pattern.isEmpty())
             throw ContractException("AnyPattern doesn't have any types, so can't infer which type of list to wrap the given value in")
 
-        return pattern.single().listOf(valueList, resolver)
+        return pattern.first().listOf(valueList, resolver)
     }
 
     override val typeName: String
@@ -166,6 +220,10 @@ data class AnyPattern(
             } else
                 "(${pattern.joinToString(" or ") { inner -> withoutPatternDelimiters(inner.typeName).let { if(it == "null") "\"null\"" else it}  }})"
         }
+
+    override fun toNullable(defaultValue: String?): Pattern {
+        return this
+    }
 }
 
 private fun failedToFindAny(expected: String, actual: Value?, results: List<Result.Failure>, mismatchMessages: MismatchMessages): Result.Failure =

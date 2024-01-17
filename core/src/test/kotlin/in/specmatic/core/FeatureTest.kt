@@ -1,10 +1,10 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.conversions.OpenApiSpecification
-import `in`.specmatic.core.pattern.EmptyStringPattern
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.value.*
+import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.*
@@ -120,7 +120,7 @@ paths:
                     type: integer
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
+        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenarios(emptyList())
 
         assertThat(scenarios.map { it.testDescription() }).allSatisfy {
             assertThat(it).containsAnyOf("+ve", "-ve")
@@ -495,12 +495,9 @@ Feature: Contract for /balance API
                 "    And request-body {name: \"(string)\", address: \"(string)\"}\n" +
                 "    Then status 200\n"
         val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
-        var httpRequest: HttpRequest
-        var httpResponse: HttpResponse
-        val jsonResponse: JSONObject
-        httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("id", "100")
-        httpResponse = contractBehaviour.lookupResponse(httpRequest)
-        jsonResponse = JSONObject(httpResponse.body.displayableValue())
+        var httpRequest: HttpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateQueryParam("id", "100")
+        var httpResponse: HttpResponse = contractBehaviour.lookupResponse(httpRequest)
+        val jsonResponse = JSONObject(httpResponse.body.displayableValue())
         assertNotNull(httpResponse)
         assertEquals(200, httpResponse.status)
         assertTrue(jsonResponse["calls_left"] is Int)
@@ -543,7 +540,7 @@ Feature: Contract for /balance API
         val cities = responseBody.getJSONArray("cities")
         for (i in 0 until cities.length()) {
             val city = cities.getJSONObject(i)
-            assertTrue(city.getString("city").length > 0)
+            assertTrue(city.getString("city").isNotEmpty())
         }
     }
 
@@ -883,14 +880,14 @@ Feature: Contract for /balance API
 
     @Test
     fun `successfully matches valid form fields`() {
-        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, EmptyStringPattern, mapOf("Data" to NumberPattern()))
+        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), formFieldsPattern = mapOf("Data" to NumberPattern()))
         val request = HttpRequest().copy(formFields = mapOf("Data" to "10"))
         assertTrue(requestPattern.matchFormFields(Triple(request, Resolver(), emptyList())) is MatchSuccess)
     }
 
     @Test
     fun `returns error for form fields`() {
-        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), null, null, EmptyStringPattern, mapOf("Data" to NumberPattern()))
+        val requestPattern = HttpRequestPattern(HttpHeadersPattern(), formFieldsPattern =  mapOf("Data" to NumberPattern()))
         val request = HttpRequest().copy(formFields = mapOf("Data" to "hello"))
         val result: MatchingResult<Triple<HttpRequest, Resolver, List<Result.Failure>>> = requestPattern.matchFormFields(Triple(request, Resolver(), emptyList()))
         result as MatchSuccess<Triple<HttpRequest, Resolver, List<Result.Failure>>>
@@ -904,14 +901,14 @@ Feature: Contract for /balance API
 Feature: Math API
 
 Scenario: Square a number
-When POST /squareof
+When POST /squareOf
     And form-field number (number)
 Then status 200
     And response-body (number)
 """.trim()
 
         val behaviour = parseGherkinStringToFeature(contractGherkin)
-        val httpRequest = HttpRequest(method="POST", path="/squareof", formFields=mapOf("number" to "10"))
+        val httpRequest = HttpRequest(method="POST", path="/squareOf", formFields=mapOf("number" to "10"))
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
         assertEquals(200, httpResponse.status)
@@ -924,14 +921,14 @@ Then status 200
 Feature: Math API
 
 Scenario: Square a number
-When POST /squareof
+When POST /squareOf
     And form-field number (number)
 Then status 200
     And response-body (number)
 """.trim()
 
         val behaviour = parseGherkinStringToFeature(contractGherkin)
-        val httpRequest = HttpRequest(method="POST", path="/squareof", formFields=mapOf("number" to "hello"))
+        val httpRequest = HttpRequest(method="POST", path="/squareOf", formFields=mapOf("number" to "hello"))
         val httpResponse = behaviour.lookupResponse(httpRequest)
 
         assertEquals(400, httpResponse.status)
@@ -1196,8 +1193,8 @@ paths:
                     type: string
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
-        assertThat(scenarios.filter { it.testDescription().contains("-ve")}.count()).isEqualTo(0)
+        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenarios(emptyList())
+        assertThat(scenarios.count { it.testDescription().contains("-ve") }).isEqualTo(0)
     }
 
     @Test
@@ -1247,9 +1244,9 @@ paths:
                     type: string
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
+        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenarios(emptyList())
         val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
-        assertThat(negativeTestScenarios.count()).isEqualTo(1)
+        assertThat(negativeTestScenarios.count()).isEqualTo(2)
         val headerPattern = negativeTestScenarios.first().httpRequestPattern.headersPattern.pattern
         assertThat(headerPattern.values.first() is StringPattern)
     }
@@ -1301,7 +1298,7 @@ paths:
                     type: string
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
+        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenarios(emptyList())
         val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
         assertThat(negativeTestScenarios.count()).isEqualTo(0)
     }
@@ -1381,9 +1378,151 @@ paths:
                     type: string
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.copy(generativeTestingEnabled = true).generateContractTestScenarios(emptyList())
+        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenarios(emptyList())
         val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
-        assertThat(negativeTestScenarios.count()).isEqualTo(8)
+        assertThat(negativeTestScenarios.count()).isEqualTo(10)
+    }
+
+    @Test
+    fun `negative tests should say that 4xx status is expected in response and show the index of the test`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    post:
+      summary: Add Product
+      description: Add Product
+      requestBody:
+        content:
+          application/json:
+            examples:
+              SUCCESS:
+                value:
+                  name: 'abc'
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Returns Product With Id
+          content:
+            application/json:
+              examples:
+                SUCCESS:
+                  value:
+                    id: 10
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: integer
+""".trimIndent(), "").toFeature()
+
+        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenarios(emptyList())
+        val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
+        assertThat(negativeTestScenarios.map { it.testDescription() }).allSatisfy {
+            assertThat(it).contains("-> 4xx")
+        }
+
+        negativeTestScenarios.zip((1..negativeTestScenarios.size).toList()).forEach { (scenario, index) ->
+            assertThat(scenario.testDescription()).contains("[$index] -> 4xx")
+        }
+    }
+
+    @Test
+    fun `positive examples of 4xx should be able to have non-string non-spec-conformant examples`() {
+        val specification = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    post:
+      summary: Add Product
+      description: Add Product
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+            examples:
+              SUCCESS:
+                value:
+                  name: 'abc'
+              BAD_REQUEST_NUMBER:
+                value:
+                  name: 10
+              BAD_REQUEST_NULL:
+                value:
+                  name: null
+      responses:
+        '200':
+          description: Returns Id
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                SUCCESS:
+                  value: 10
+        '422':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: string
+              examples:
+                BAD_REQUEST_NUMBER:
+                  value: "Bad request was received and could not be handled"
+                BAD_REQUEST_NULL:
+                  value: "Bad request was received and could not be handled"
+""".trimIndent(), "").toFeature()
+
+        val results = specification.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                print(request.toLogString())
+                return when(val body = request.body) {
+                    is JSONObjectValue -> {
+                        if(body.jsonObject["name"] is StringValue) {
+                            HttpResponse.ok("10")
+                        } else {
+                            HttpResponse(422, "Bad request was received and could not be handled")
+                        }
+                    }
+
+                    else -> HttpResponse(422, "Bad request was received and could not be handled")
+                }
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(results.success()).isTrue()
+        assertThat(results.failureCount).isZero()
     }
 
 

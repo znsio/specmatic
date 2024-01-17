@@ -6,7 +6,6 @@ import `in`.specmatic.core.pattern.ExactValuePattern
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.StringPattern
 import io.ktor.http.*
-import io.ktor.util.*
 import org.w3c.dom.Document
 import org.w3c.dom.Node
 
@@ -15,7 +14,6 @@ data class BinaryValue(val byteArray: ByteArray = ByteArray(0)) : Value, ScalarV
 
     override fun valueErrorSnippet(): String = displayableValue()
 
-    @OptIn(InternalAPI::class)
     override fun displayableValue(): String = toStringLiteral().quote()
     override fun toStringLiteral() = byteArray.contentToString()
     override fun displayableType(): String = "binary"
@@ -58,4 +56,17 @@ data class BinaryValue(val byteArray: ByteArray = ByteArray(0)) : Value, ScalarV
         get() = byteArray
 
     override fun toString() = byteArray.contentToString()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as BinaryValue
+
+        return byteArray.contentEquals(other.byteArray)
+    }
+
+    override fun hashCode(): Int {
+        return byteArray.contentHashCode()
+    }
 }

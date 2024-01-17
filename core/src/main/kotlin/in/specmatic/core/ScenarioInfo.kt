@@ -27,8 +27,8 @@ data class ScenarioInfo(
 
     fun matchesGherkinWrapperPath(scenarioInfos: List<ScenarioInfo>, apiSpecification: ApiSpecification): List<ScenarioInfo> =
         scenarioInfos.filter { openApiScenarioInfo ->
-            val pathPatternFromOpenApi = openApiScenarioInfo.httpRequestPattern.urlMatcher!!.pathPattern
-            val pathPatternFromWrapper = this.httpRequestPattern.urlMatcher!!.pathPattern
+            val pathPatternFromOpenApi = openApiScenarioInfo.httpRequestPattern.httpPathPattern!!.pathSegmentPatterns
+            val pathPatternFromWrapper = this.httpRequestPattern.httpPathPattern!!.pathSegmentPatterns
 
             if(pathPatternFromOpenApi.size != pathPatternFromWrapper.size)
                 return@filter false
@@ -36,7 +36,7 @@ data class ScenarioInfo(
             val resolver = Resolver(newPatterns = openApiScenarioInfo.patterns)
             val zipped = pathPatternFromOpenApi.zip(pathPatternFromWrapper)
 
-            zipped.all { (openapiURLPart: URLPathPattern, wrapperURLPart: URLPathPattern) ->
+            zipped.all { (openapiURLPart: URLPathSegmentPattern, wrapperURLPart: URLPathSegmentPattern) ->
                 val openapiType = if(openapiURLPart.pattern is ExactValuePattern) "exact" else "pattern"
                 val wrapperType = if(wrapperURLPart.pattern is ExactValuePattern) "exact" else "pattern"
 
@@ -44,7 +44,7 @@ data class ScenarioInfo(
                     Pair("exact", "exact") -> apiSpecification.exactValuePatternsAreEqual(openapiURLPart, wrapperURLPart)
                     Pair("exact", "pattern") -> false
                     Pair("pattern", "exact") -> {
-                        attempt("Error matching url ${this.httpRequestPattern.urlMatcher.path} to the specification") {
+                        attempt("Error matching url ${this.httpRequestPattern.httpPathPattern.path} to the specification") {
                             apiSpecification.patternMatchesExact(
                                 wrapperURLPart,
                                 openapiURLPart,

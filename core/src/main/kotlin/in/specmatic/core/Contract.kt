@@ -20,7 +20,7 @@ data class Contract(val contract: Feature) {
     fun test(fake: HttpStub) = test(fake.endPoint)
 
     fun samples(fake: HttpStub) = samples(fake.endPoint)
-    fun samples(endPoint: String) {
+    private fun samples(endPoint: String) {
         val contractBehaviour = contract
         val httpClient = HttpClient(endPoint)
 

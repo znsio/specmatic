@@ -10,25 +10,18 @@ import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.stub.report.StubEndpoint
-import `in`.specmatic.stub.report.StubUsageReportJson
-import `in`.specmatic.stub.report.StubUsageReportOperation
-import `in`.specmatic.stub.report.StubUsageReportRow
 import `in`.specmatic.stubResponse
 import `in`.specmatic.test.HttpClient
 import io.mockk.InternalPlatformDsl.toStr
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
-import java.io.File
 import java.security.KeyStore
 import java.util.*
 import java.util.function.Consumer
@@ -286,12 +279,11 @@ Feature: Test
         val feature = parseGherkinStringToFeature(gherkin)
 
         HttpStub(feature).use {
-            val body = RequestBody.create(
-                "application/json".toMediaTypeOrNull(), """{
+            val body = """{
 "event": "features",
 "id": "332f8278",
 "data": "[{\"id\":\"b5bf7f9e-9391-40a4-8808-61ad73f800e9\",\"key\":\"FT01\",\"l\":true,\"version\":1,\"type\":\"BOOLEAN\",\"value\":true},{\"id\":\"8b6002e8-e97a-4ebe-8cae-ac68fb99fc33\",\"key\":\"FT02\",\"l\":true,\"version\":1,\"type\":\"BOOLEAN\",\"value\":false}]"
-}""")
+}""".toRequestBody("application/json".toMediaTypeOrNull())
             val request = Request.Builder().url(it.endPoint + "/_specmatic/sse-expectations").addHeader("Content-Type", "application/json").post(body).build()
             val call = OkHttpClient().newCall(request)
             val response = call.execute()
@@ -435,7 +427,7 @@ Scenario: Square of a number
 """.trim())
 
         val stubRequest = HttpRequest(method = "GET", path = "/count", queryParams = mapOf("status" to "available"))
-        val stubResponse = HttpResponse.OK("data")
+        val stubResponse = HttpResponse.ok("data")
         val stubData = HttpStubData(
             stubRequest.toPattern(),
             stubResponse,
@@ -543,7 +535,7 @@ Feature: POST API
         val errors: Vector<String> = Vector()
 
         HttpStub(feature).use { stub ->
-            usingMultipleThreads(20) { stubNumber ->
+            usingMultipleThreads { stubNumber ->
                 `set an expectation and exercise it`(stubNumber, stub)?.let {
                     errors.add(it)
                 }
@@ -556,8 +548,8 @@ Feature: POST API
         }
     }
 
-    private fun usingMultipleThreads(threadCount: Int, fn: (Int) -> Unit) {
-        val range = 0 until threadCount
+    private fun usingMultipleThreads(fn: (Int) -> Unit) {
+        val range = 0 until 20
         val threads = range.map { stubNumber ->
             Thread {
                 val base = stubNumber * 10
@@ -624,16 +616,6 @@ Feature: POST API
         assertThat(isFetchContractsRequest(HttpRequest("GET", "/_$APPLICATION_NAME_LOWER_CASE/contracts"))).isTrue()
         assertThat(isExpectationCreation(HttpRequest("POST", "/_$APPLICATION_NAME_LOWER_CASE/expectations"))).isTrue()
         assertThat(isStateSetupRequest(HttpRequest("POST", "/_$APPLICATION_NAME_LOWER_CASE/state"))).isTrue()
-    }
-
-    private fun createStubsUsingMultipleThreads(range: IntRange, stub: HttpStub) {
-        val threads = range.map { i ->
-            println("STARTING THREAD $i")
-            Thread { createExpectation(i, stub) }
-        }
-
-        start(threads)
-        waitFor(threads)
     }
 
     private fun waitFor(threads: List<Thread>) = threads.forEach { it.join() }
@@ -736,9 +718,9 @@ paths:
               schema:
                 type: number
         """.trimIndent(), "").toFeature()
-        val stub: HttpStubData = HttpStubData(
+        val stub = HttpStubData(
             HttpRequest("POST", "/data", body = StringValue("Hello")).toPattern(),
-            HttpResponse.OK("abc123").copy(externalisedResponseCommand = """echo {"status": 200, "body": "abc123"}"""),
+            HttpResponse.ok("abc123").copy(externalisedResponseCommand = """echo {"status": 200, "body": "abc123"}"""),
             Resolver(),
             responsePattern = contract.scenarios.single().httpResponsePattern
         )
@@ -785,7 +767,7 @@ paths:
         """.trimIndent(), "").toFeature()
         val stub = HttpStubData(
             HttpRequest("POST", "/data", body = parsedJSON("""{"data": 10}""")).toPattern(),
-            HttpResponse.OK("123"),
+            HttpResponse.ok("123"),
             Resolver(),
             responsePattern = contract.scenarios.single().httpResponsePattern
         )

@@ -4,6 +4,7 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 
 internal class TestBackwardCompatibilityKtTest {
@@ -1069,8 +1070,8 @@ Then status 200
     }
 
     @Nested
-    inner class EnumStringIsBackardCompatibleWithString {
-        val olderContract: Feature =
+    inner class EnumStringIsBackwardCompatibleWithString {
+        private val specWithStringInResponse: Feature =
             """
         openapi: 3.0.0
         info:
@@ -1097,7 +1098,7 @@ Then status 200
                             type: string
             """.trimIndent().openAPIToContract()
 
-        val newerContract: Feature =
+        private val specWithEnumInResponse: Feature =
             """
         openapi: 3.0.0
         info:
@@ -1130,19 +1131,22 @@ Then status 200
 
         @Test
         fun `new should be should be backward compatible with old`() {
-            val results: Results = testBackwardCompatibility(olderContract, newerContract)
+            val results: Results = testBackwardCompatibility(specWithStringInResponse, specWithEnumInResponse)
 
-            assertThat(results.success()).isTrue
+            assertThat(results.success()).withFailMessage(results.report()).isTrue
         }
 
         @Test
         fun `old should be backward incompatible with new`() {
-            val results: Results = testBackwardCompatibility(newerContract, olderContract)
+            val results: Results = testBackwardCompatibility(specWithEnumInResponse, specWithStringInResponse)
+
+            println(results.report())
 
             assertThat(results.hasFailures()).isTrue
         }
     }
 
+    @Test
     fun `backward compatibility error in request shows contextual error message`() {
         val oldContract = OpenApiSpecification.fromYAML(
             """
@@ -1222,8 +1226,8 @@ paths:
 
         val result: Results = testBackwardCompatibility(oldContract, newContract)
 
-        assertThat(result.report()).contains("New contract expected")
-        assertThat(result.report()).contains("old contract sent")
+        assertThat(result.report()).contains("string in the new contract")
+        assertThat(result.report()).contains("number in the old contract")
     }
 
     @Test
@@ -1500,7 +1504,7 @@ paths:
 
     @Nested
     inner class FluffyBackwardCompatibilityErrors {
-        val oldContract = OpenApiSpecification.fromYAML(
+        private val oldContract = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.0
 info:
@@ -1535,7 +1539,7 @@ paths:
 """.trimIndent(), ""
         ).toFeature()
 
-        val newContract = OpenApiSpecification.fromYAML(
+        private val newContract = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.0
 info:
@@ -1572,7 +1576,7 @@ paths:
 
         val result: Results = testBackwardCompatibility(oldContract, newContract)
 
-        val reportText: String = result.report().also { println(it) }
+        private val reportText: String = result.report().also { println(it) }
 
         @Test
         fun `fluffy backward compatibility errors should be eliminated`() {
@@ -2128,12 +2132,115 @@ paths:
         """.trimIndent())
 
         val result = testBackwardCompatibility(older, newer)
-        val reportText = result.report().also { println(it) }
-
-        println(reportText)
-        assertThat(result.success()).isTrue
+        assertThat(result.success()).withFailMessage(result.report()).isTrue
     }
 
+    @Test
+    fun `backward compatibility check going from string to nothing in request`() {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result = testBackwardCompatibility(oldContract, newContract)
+        assertThat(result.success()).withFailMessage(result.report()).isFalse()
+    }
+
+    @Test
+    @Disabled
+    fun `backward compatibility check going from nothing to string in request`() {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result = testBackwardCompatibility(oldContract, newContract)
+        assertThat(result.success()).withFailMessage(result.report()).isFalse()
+    }
 }
 
 private fun String.openAPIToContract(): Feature {

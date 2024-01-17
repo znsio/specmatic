@@ -13,14 +13,14 @@ data class ParseMessageWithElementRef(private val wsdl: WSDL, private val fullyQ
     override fun execute(): MessageTypeInfoParser {
         val topLevelElement = wsdl.getSOAPElement(fullyQualifiedName)
 
-        val qontractTypeName = "${operationName.replace(":", "_")}_SOAPPayload_${soapMessageType.messageTypeName.capitalizeFirstChar()}"
+        val specmaticTypeName = "${operationName.replace(":", "_")}_SOAPPayload_${soapMessageType.messageTypeName.capitalizeFirstChar()}"
 
-        val typeInfo = topLevelElement.deriveSpecmaticTypes(qontractTypeName, existingTypes, emptySet())
+        val typeInfo = topLevelElement.deriveSpecmaticTypes(specmaticTypeName, existingTypes, emptySet())
 
         val namespaces: Map<String, String> = wsdl.getNamespaces(typeInfo)
         val nodeNameForSOAPBody = (typeInfo.nodes.first() as XMLNode).realName
 
-        val soapPayload = topLevelElement.getSOAPPayload(soapMessageType, nodeNameForSOAPBody, qontractTypeName, namespaces, typeInfo)
+        val soapPayload = topLevelElement.getSOAPPayload(soapMessageType, nodeNameForSOAPBody, specmaticTypeName, namespaces, typeInfo)
 
         return MessageTypeProcessingComplete(SoapPayloadType(typeInfo.types, soapPayload))
     }

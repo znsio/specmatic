@@ -1,0 +1,52 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+      "title": "Text/HTML API",
+      "version": "1.0.0"
+    },
+    "paths": {
+      "/api": {
+        "post": {
+          "summary": "Create a text/html response",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "name"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "text/html": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Generated"
+                  }
+                }
+              },
+              "description": "Successful response"
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "Generated": {
+          "type": "string",
+          "example": "<html><body><h1>Hello, world!</h1></body></html>"
+        }
+      }
+    }
+  }

@@ -29,7 +29,7 @@ internal fun containsKey(jsonObject: Map<String, Any?>, key: String) =
 internal val builtInPatterns = mapOf(
     "(number)" to NumberPattern(),
     "(string)" to StringPattern(),
-    "(boolean)" to BooleanPattern,
+    "(boolean)" to BooleanPattern(),
     "(null)" to NullPattern,
     "(empty)" to EmptyStringPattern,
     "(date)" to DatePattern,
@@ -179,7 +179,7 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
                 val tokens = it.split(" ")
 
                 val restrictions =
-                    tokens.drop(1).chunked(2).map { restriction -> restriction[0] to restriction[1] }.toMap()
+                    tokens.drop(1).chunked(2).associate { restriction -> restriction[0] to restriction[1] }
                 try {
                     StringPattern(
                         typeAlias = typeAlias,
@@ -194,7 +194,7 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
                 val tokens = it.split(" ")
 
                 val restrictions =
-                    tokens.drop(1).chunked(2).map { restriction -> restriction[0] to restriction[1] }.toMap()
+                    tokens.drop(1).chunked(2).associate { restriction -> restriction[0] to restriction[1] }
                 try {
                     NumberPattern(
                         typeAlias = typeAlias,

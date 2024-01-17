@@ -109,11 +109,8 @@ class CyclePrevention {
         assertThat(testCount).isEqualTo(8)
     }
 
-    @Test
     @RepeatedTest(5)
     fun `test cycle in optional key to circular ref`() {
-//        key? -> circular-ref-value
-
         val stubContract = OpenApiSpecification.fromYAML("""
             openapi: "3.0.0"
             info:
@@ -139,10 +136,17 @@ class CyclePrevention {
                       ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), "").toFeature()
 
-        HttpStub(stubContract).use {
-            val randomResponse = it.client.execute(HttpRequest("GET", "/data"))
-            assertThat(stubContract.scenarios.first().let { it.httpResponsePattern.matches(randomResponse, it.resolver) }).isInstanceOf(
-                Success::class.java)
+        HttpStub(stubContract).use { stub ->
+            val randomResponse = stub.client.execute(HttpRequest("GET", "/data"))
+            assertThat(
+                stubContract.scenarios.first().let { scenario ->
+                    scenario.httpResponsePattern.matches(
+                        randomResponse,
+                        scenario.resolver
+                    )
+                }).isInstanceOf(
+                Success::class.java
+            )
 
             val rawJSON = """
                 {
@@ -163,7 +167,7 @@ class CyclePrevention {
                 }
             """.trimIndent()
 
-            val expectationSettingResponse = setExpectation(rawJSON, it)
+            val expectationSettingResponse = setExpectation(rawJSON, stub)
 
             assertThat(expectationSettingResponse.status).isEqualTo(200)
         }
@@ -172,16 +176,11 @@ class CyclePrevention {
 
     private fun setExpectation(rawJSON: String, it: HttpStub): HttpResponse {
         val expectation = parsedJSON(rawJSON)
-        val expectationSettingResponse =
-            it.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectation))
-        return expectationSettingResponse
+        return it.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectation))
     }
 
-    @Test
     @RepeatedTest(5)
     fun `test cycle in required key to nullable ref`() {
-//        key -> circular-ref-value?
-
         val feature = OpenApiSpecification.fromYAML("""
             openapi: "3.0.0"
             info:
@@ -213,11 +212,18 @@ class CyclePrevention {
                         - ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), "").toFeature()
 
-        HttpStub(feature).use {
-            val response = it.client.execute(HttpRequest("GET", "/data"))
+        HttpStub(feature).use { stub ->
+            val response = stub.client.execute(HttpRequest("GET", "/data"))
 
-            assertThat(feature.scenarios.first().let { it.httpResponsePattern.matches(response, it.resolver) }).isInstanceOf(
-                Success::class.java)
+            assertThat(
+                feature.scenarios.first().let { scenario ->
+                    scenario.httpResponsePattern.matches(
+                        response,
+                        scenario.resolver
+                    )
+                }).isInstanceOf(
+                Success::class.java
+            )
 
             assertThat(
                 setExpectation(
@@ -238,16 +244,13 @@ class CyclePrevention {
                                 }
                             }
                         }
-                    """.trimIndent(), it
+                    """.trimIndent(), stub
                 ).status).isEqualTo(200)
         }
     }
 
-    @Test
     @RepeatedTest(5)
     fun `test cycle in optional key to nullable ref`() {
-//        key? -> circular-ref-value?
-
         val feature = OpenApiSpecification.fromYAML("""
             openapi: "3.0.0"
             info:
@@ -274,10 +277,10 @@ class CyclePrevention {
                       ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), "").toFeature()
 
-        HttpStub(feature).use {
-            val response = it.client.execute(HttpRequest("GET", "/data"))
+        HttpStub(feature).use { stub ->
+            val response = stub.client.execute(HttpRequest("GET", "/data"))
 
-            assertThat(feature.scenarios.first().let { it.httpResponsePattern.matches(response, it.resolver) }).isInstanceOf(
+            assertThat(feature.scenarios.first().let { scenario -> scenario.httpResponsePattern.matches(response, scenario.resolver) }).isInstanceOf(
                 Success::class.java)
 
             assertThat(
@@ -299,7 +302,7 @@ class CyclePrevention {
                                 }
                             }
                         }
-                    """.trimIndent(), it
+                    """.trimIndent(), stub
                 ).status).isEqualTo(200)
 
             assertThat(
@@ -321,7 +324,7 @@ class CyclePrevention {
                                 }
                             }
                         }
-                    """.trimIndent(), it
+                    """.trimIndent(), stub
                 ).status).isEqualTo(200)
         }
     }
@@ -387,11 +390,8 @@ class CyclePrevention {
         }
     }
 
-    @Test
     @RepeatedTest(5)
     fun `test cycle in required key to optional key to circular ref`() {
-//        key1 -> { key2? -> circular-ref-value }
-
         val feature = OpenApiSpecification.fromYAML("""
             openapi: "3.0.0"
             info:
@@ -433,11 +433,8 @@ class CyclePrevention {
             Success::class.java)
     }
 
-    @Test
     @RepeatedTest(5)
     fun `test cycle in required key to required key to nullable circular ref`() {
-//        key1 -> { key2 -> circular-ref-value? }
-
         val feature = OpenApiSpecification.fromYAML("""
             openapi: "3.0.0"
             info:
@@ -484,11 +481,8 @@ class CyclePrevention {
             Success::class.java)
     }
 
-    @Test
     @RepeatedTest(5)
     fun `test cycle in required key to optional key to nullable circular ref`() {
-//        key1 -> { key2? -> circular-ref-value? }
-
         val feature = OpenApiSpecification.fromYAML("""
             openapi: "3.0.0"
             info:

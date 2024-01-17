@@ -1,5 +1,6 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATION
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.value.StringValue
@@ -7,6 +8,7 @@ import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
@@ -53,5 +55,14 @@ internal class UUIDPatternTest {
 
         assertThat(UUIDPattern.matches(uuid1, Resolver())).isInstanceOf(Result.Success::class.java)
         assertThat(UUIDPattern.matches(uuid2, Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    @Tag(GENERATION)
+    fun `negative values should be generated`() {
+        val result = UUIDPattern.negativeBasedOn(Row(), Resolver())
+        assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
+            "null",
+        )
     }
 }

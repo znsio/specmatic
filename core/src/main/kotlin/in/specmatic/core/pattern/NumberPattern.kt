@@ -11,7 +11,8 @@ import java.util.*
 data class NumberPattern(
     override val typeAlias: String? = null,
     val minLength: Int? = null,
-    val maxLength: Int? = null
+    val maxLength: Int? = null,
+    val example: String? = null
 ) : Pattern, ScalarType {
     init {
         require(minLength?.let { minLength > 0 } ?: true) {"minLength cannot be less than 1"}
@@ -36,7 +37,9 @@ data class NumberPattern(
         }
     }
 
-    override fun generate(resolver: Resolver): Value = NumberValue(randomNumber(minLength ?: 3))
+    override fun generate(resolver: Resolver): Value =
+        resolver.resolveExample(example, this) ?:
+            NumberValue(randomNumber(minLength ?: 3))
 
     private fun randomNumber(minLength: Int): Int {
         val first = randomPositiveDigit().toString()
@@ -54,7 +57,7 @@ data class NumberPattern(
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(NullPattern, StringPattern())
+        return listOf(NullPattern, BooleanPattern(), StringPattern())
     }
 
     override fun parse(value: String, resolver: Resolver): Value {
@@ -104,6 +107,9 @@ fun encompasses(
                 Result.Success()
             else
                 Result.Failure.fromFailures(failures)
+        }
+        otherPattern is EnumPattern -> {
+            encompasses(thisPattern, otherPattern.pattern, thisResolver, otherResolver, typeStack)
         }
         else -> mismatchResult(thisPattern, otherPattern, thisResolver.mismatchMessages)
     }

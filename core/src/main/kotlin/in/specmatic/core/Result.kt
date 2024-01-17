@@ -69,6 +69,7 @@ sealed class Result {
     abstract fun isPartialSuccess(): Boolean
 
     abstract fun testResult(): TestResult
+    abstract fun withFailureReason(urlPathMisMatch: FailureReason): Result
 
     data class FailureCause(val message: String="", var cause: Failure? = null)
 
@@ -109,6 +110,10 @@ sealed class Result {
                 return TestResult.Error
 
             return TestResult.Failed
+        }
+
+        override fun withFailureReason(failureReason: FailureReason): Result {
+            return copy(failureReason = failureReason)
         }
 
         fun reason(errorMessage: String) = Failure(errorMessage, this)
@@ -178,6 +183,10 @@ sealed class Result {
         override fun testResult(): TestResult {
             return TestResult.Success
         }
+
+        override fun withFailureReason(urlPathMisMatch: FailureReason): Result {
+            return this
+        }
     }
 }
 
@@ -186,7 +195,8 @@ enum class TestResult {
     Error,
     Failed,
     Skipped,
-    NotImplemented
+    NotImplemented,
+    DidNotRun
 }
 
 enum class FailureReason(val fluffLevel: Int) {
@@ -198,25 +208,7 @@ enum class FailureReason(val fluffLevel: Int) {
     SOAPActionMismatch(2)
 }
 
-fun Result.breadCrumb(breadCrumb: String): Result =
-    when(this) {
-        is Failure -> this.breadCrumb(breadCrumb)
-        else -> this
-    }
-
-data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null) {
-    private fun breadCrumbString(breadCrumbs: List<String>) {
-        breadCrumbs
-            .filter { it.isNotBlank() }
-            .joinToString(".") { it.trim() }
-            .let {
-                when {
-                    it.isNotBlank() -> ">> $it"
-                    else -> ""
-                }
-            }
-    }
-}
+data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null)
 
 interface MismatchMessages {
     fun mismatchMessage(expected: String, actual: String): String

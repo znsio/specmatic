@@ -138,7 +138,7 @@ class PatternDefinitionTests {
                 val childNode = childNodes.item(i)
                 Assertions.assertEquals("city", childNode.nodeName)
                 val cityNode = childNode.firstChild
-                assertTrue(cityNode.nodeValue.length > 0)
+                assertTrue(cityNode.nodeValue.isNotEmpty())
             }
         } catch(e: Throwable) {
             println(e.stackTrace)
@@ -214,7 +214,7 @@ class PatternDefinitionTests {
     @Test
     fun `(boolean) should match a boolean value`() {
         val boolValue = true
-        val boolPattern = BooleanPattern
+        val boolPattern = BooleanPattern()
 
         BooleanValue(boolValue) shouldMatch  boolPattern
     }

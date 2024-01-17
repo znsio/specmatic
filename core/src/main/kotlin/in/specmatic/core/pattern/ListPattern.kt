@@ -6,8 +6,7 @@ import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.value.ListValue
 import `in`.specmatic.core.value.Value
 
-data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null) : Pattern, SequenceType {
-
+data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null, val example: List<String?>? = null) : Pattern, SequenceType {
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
 
@@ -38,17 +37,21 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
     override fun generate(resolver: Resolver): Value {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-        // Cycle prevention handled in listOf, so not duplicating it here.
+
+        return resolver.resolveExample(example, pattern) ?: generateRandomValue(resolverWithEmptyType)
+    }
+
+    private fun generateRandomValue(resolver: Resolver): Value {
         return pattern.listOf(0.until(randomNumber(3)).mapIndexed{ index, _ ->
-            attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolverWithEmptyType) }
-        }, resolverWithEmptyType)
+            attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolver) }
+        }, resolver)
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
         return attempt(breadCrumb = "[]") {
             resolverWithEmptyType.withCyclePrevention(pattern) { cyclePreventedResolver ->
-                pattern.newBasedOn(row, cyclePreventedResolver).map { ListPattern(it) }
+                pattern.newBasedOn(row.dropDownIntoList(), cyclePreventedResolver).map { ListPattern(it) }
             }
         }
     }

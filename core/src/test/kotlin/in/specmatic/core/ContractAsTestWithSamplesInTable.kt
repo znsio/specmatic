@@ -15,7 +15,7 @@ import org.junit.jupiter.api.fail
 class ContractAsTestWithSamplesInTable {
     @Test
     @Throws(Throwable::class)
-    fun GETAndResponseBodyGeneratedThroughDataTableWithPathParams() {
+    fun `GET And Response Body Generated Through Data Table With Path Params`() {
         val contractGherkin = """Feature: Contract for /balance API
 
   Scenario Outline: api call
@@ -64,7 +64,7 @@ class ContractAsTestWithSamplesInTable {
 
     @Test
     @Throws(Throwable::class)
-    fun POSTBodyAndResponseGeneratedThroughDataTable() {
+    fun `POST Body And Response Generated Through Data Table`() {
         val contractGherkin = """
 Feature: Contract for /balance API
 
@@ -209,7 +209,7 @@ Feature: Contract for /balance API
 
     @Test
     @Throws(Throwable::class)
-    fun POSTBodyAndResponseXMLGeneratedThroughDataTable() {
+    fun `POST Body And Response XML Generated Through Data Table`() {
         val contractGherkin = """Feature: Contract for /balance API
 
   Scenario Outline: api call

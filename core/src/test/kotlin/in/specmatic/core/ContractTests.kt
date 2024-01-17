@@ -1,10 +1,21 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.NumberPattern
+import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.*
+import `in`.specmatic.test.HttpClient
 import `in`.specmatic.test.TestExecutor
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import io.ktor.util.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.fail
 
@@ -241,20 +252,6 @@ Then status 200
                 Examples:
                 | userid |
                 | 12345 |
-                """
-        var pathParameterContractGherkin = """
-                Feature: Contract for the balance service
-                
-                Scenario Outline: Should be able to get the balance for an individual
-                  Given fact userid
-                  When GET /balance/(userid:number)
-                  Then status 200
-                  And response-header Content-Length (number)
-                  And response-body {call-mins-left: "(number)", sms-messages-left: "(number)"}
-
-                Examples:
-                | userid |
-                | 12345  |
                 """
     }
 
@@ -743,6 +740,358 @@ Examples:
 
         assertThat(flags.toSet()).isEqualTo(setOf("executed"))
         assertTrue(results.success(), results.report())
+    }
+
+    @Test
+    fun ` body and content-type header should be sent when there is a request body in the spec`() {
+        val spec = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.0
+            info:
+              title: Test API
+              version: 1.0.0
+            paths:
+              /test:
+                post:
+                  requestBody:
+                    content:
+                      text/plain:
+                        schema:
+                          type: string
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val server = embeddedServer(Netty, port = 8080) {
+            routing {
+                route("/{...}") {
+                    handle {
+                        assertThat(call.request.headers["Content-Type"]).isEqualTo("text/plain")
+                        call.respondText("Hello, Ktor!")
+                    }
+                }
+            }
+        }
+
+        try {
+            server.start(wait = false)
+
+            val results = spec.executeTests(HttpClient("http://localhost:8080"))
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+            assertThat(results.successCount).isPositive()
+        } finally {
+            server.stop()
+        }
+    }
+
+    @Test
+    fun ` body and content-type header should not be sent when there is no request body in the spec`() {
+        val spec = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.0
+            info:
+              title: Test API
+              version: 1.0.0
+            paths:
+              /test:
+                post:
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val server = embeddedServer(Netty, port = 8080) {
+            routing {
+                route("/{...}") {
+                    handle {
+                        assertThat(call.request.headers["Content-Type"]).isNull()
+                        call.respondText("Hello, Ktor!")
+                    }
+                }
+            }
+        }
+
+        try {
+            server.start(wait = false)
+
+            val results = spec.executeTests(HttpClient("http://localhost:8080"))
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+            assertThat(results.successCount).isPositive()
+        } finally {
+            server.stop()
+        }
+    }
+
+    @Test
+    fun `contract tests should encode spaces in path segments before sending the request`() {
+        val pathWithSpace = "/rand om"
+
+        val specification = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              $pathWithSpace:
+                post:
+                  summary: Random
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          required:
+                          - id
+                          properties:
+                            id:
+                              type: number
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val pathsSeen = mutableListOf<String>()
+
+        val server = embeddedServer(Netty, port = 9001) {
+            routing {
+                route("/{...}") {
+                    handle {
+                        pathsSeen.add(call.request.path())
+                        call.respondText("Hello, Ktor!")
+                    }
+                }
+            }
+        }
+
+        val results = try {
+            server.start(wait = false)
+            specification.executeTests(HttpClient("http://localhost:9001"))
+        } finally {
+            server.stop()
+        }
+
+        assertThat(results.success()).isTrue()
+        assertThat(pathsSeen.distinct().first()).isEqualTo(escapeSpaceInPath(pathWithSpace))
+    }
+
+    @Test
+    fun `contract tests should encode spaces in path segments when query params are present before sending the request`() {
+        val pathWithSpace = "/rand om"
+
+        val specification = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              $pathWithSpace:
+                post:
+                  summary: Random
+                  parameters:
+                    - name: name
+                      in: query
+                      schema:
+                        type: string
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: number
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val pathsSeen = mutableListOf<String>()
+
+        val server = embeddedServer(Netty, port = 9001) {
+            routing {
+                route("/{...}") {
+                    handle {
+                        pathsSeen.add(call.request.path())
+                        call.respondText("Hello, Ktor!")
+                    }
+                }
+            }
+        }
+
+        val results = try {
+            server.start(wait = false)
+            specification.executeTests(HttpClient("http://localhost:9001"))
+        } finally {
+            server.stop()
+        }
+
+        assertThat(results.success()).isTrue()
+        assertThat(pathsSeen.distinct().first()).isEqualTo(escapeSpaceInPath(pathWithSpace))
+    }
+
+    @Test
+    fun `contract tests should encode spaces in query params before sending the request`() {
+        val queryParamWithSpace = "id entifier"
+
+        val specification = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /random:
+                post:
+                  summary: Random
+                  parameters:
+                    - name: $queryParamWithSpace
+                      in: query
+                      schema:
+                        type: string
+                      examples:
+                        SUCCESS:
+                          value: "123"
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: number
+                        examples:
+                          SUCCESS:
+                            value:
+                              id: 10
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            SUCCESS:
+                              value: "123"
+        """.trimIndent(), "").toFeature()
+
+        val queryParamsSeen = mutableListOf<Map<String, List<String>>>()
+
+        val server = embeddedServer(Netty, port = 9001) {
+            routing {
+                route("/{...}") {
+                    handle {
+                        queryParamsSeen.add(call.request.queryParameters.toMap())
+                        call.respondText("Hello, Ktor!")
+                    }
+                }
+            }
+        }
+
+        val results = try {
+            server.start(wait = false)
+            specification.executeTests(HttpClient("http://localhost:9001"))
+        } finally {
+            server.stop()
+        }
+
+        assertThat(results.success()).isTrue()
+        assertThat(queryParamsSeen.distinct()).containsExactlyInAnyOrder(
+            mapOf(queryParamWithSpace to listOf("123")))
+    }
+
+    @Test
+    fun `contract tests should consider any 4xx as valid negative-test responses`() {
+        val specification = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /random:
+                post:
+                  summary: Random
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: number
+                        examples:
+                          SUCCESS:
+                            value:
+                              id: 10
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            SUCCESS:
+                              value: "123"
+                    "400":
+                      description: Random
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    "422":
+                      description: Random
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val server = embeddedServer(Netty, port = 9001) {
+            routing {
+                route("/{...}") {
+                    handle {
+                        val body = parsedJSONObject(call.receiveText())
+
+                        when(body.jsonObject["id"]) {
+                            is NumberValue -> call.respondText("Hello, Ktor!")
+                            is NullValue -> call.respond(HttpStatusCode.BadRequest)
+                            is BooleanValue -> call.respond(HttpStatusCode.UnprocessableEntity)
+                            is StringValue -> call.respond(HttpStatusCode.UnprocessableEntity)
+                        }
+                    }
+                }
+            }
+        }
+
+        val results = try {
+            server.start(wait = false)
+            specification.enableGenerativeTesting().executeTests(HttpClient("http://localhost:9001"))
+        } finally {
+            server.stop()
+        }
+
+        assertThat(results.success()).isTrue()
+        assertThat(results.failureCount).isZero()
     }
 }
 

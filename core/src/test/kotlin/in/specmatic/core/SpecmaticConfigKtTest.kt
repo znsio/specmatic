@@ -1,6 +1,5 @@
 package `in`.specmatic.core
 
-import kotlinx.serialization.decodeFromString
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

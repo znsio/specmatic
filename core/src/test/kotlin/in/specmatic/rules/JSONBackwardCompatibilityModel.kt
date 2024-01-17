@@ -5,7 +5,7 @@ import `in`.specmatic.notBackwardCompatibleWith
 import org.junit.jupiter.api.Test
 
 class JSONBackwardCompatibilityModel {
-    val oldContract = """
+    private val oldContract = """
 Feature: User API
   Scenario: Add user
     Given json User

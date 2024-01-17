@@ -17,11 +17,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Set up JDK 1.8
-      uses: actions/setup-java@v3
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
       with:
-        java-version: '8.0.282+8'
-        distribution: 'adopt'
+        java-version: '17'
+        distribution: 'temurin'
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
@@ -31,30 +31,21 @@ jobs:
         ./gradlew build
     - name: Publish to local maven
       run: ./gradlew publishToMavenLocal
-    - name: Run maven project to check for Spring 2.3 conflicts
-      run: |
-        cd spring-2.3-compatibility
-        
-        # Update the spring boot parent version to the one we want to test against
-        awk '/<version>/ && ++count == 2 {sub(/<version>[^<]*<\/version>/, "<version>2.3.2.RELEASE<\/version>")} 1' pom.xml > temp && mv temp pom.xml
-        
-        # Set the version of Specmatic to what just got built and pushed to local maven
-        mvn -Dspecmatic.version=`cat ../version.properties | cut -d = -f 2` clean test
     - name: Upload core Gradle Log
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Gradle core Build Log
         path: core/build/reports/
     - name: Upload junit5-support Gradle Log
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Gradle junit5-support Build Log
         path: junit5-support/build/reports/
     - name: Upload application Gradle Log
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Gradle application Build Log
         path: application/build/reports/

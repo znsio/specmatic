@@ -15,7 +15,7 @@ data class ContractException(
     val exceptionCause: Throwable? = null,
     val scenario: ScenarioDetailsForResult? = null,
     val isCycle: Boolean = isCycle(exceptionCause)
-) : Exception(errorMessage) {
+) : Exception(errorMessage, exceptionCause) {
     constructor(failureReport: FailureReport): this(failureReport.toText())
 
     fun failure(): Result.Failure =
@@ -37,7 +37,7 @@ fun <ReturnType> attempt(errorMessage: String = "", breadCrumb: String = "", f: 
         throw ContractException(errorMessage, breadCrumb, contractException)
     }
     catch(throwable: Throwable) {
-        throw ContractException("$errorMessage\nException thrown: $throwable", breadCrumb, throwable)
+        throw ContractException("$errorMessage\nError: $throwable", breadCrumb, throwable)
     }
 }
 
@@ -46,7 +46,7 @@ fun <ReturnType> attempt(f: ()->ReturnType): ReturnType {
         return f()
     }
     catch(throwable: Throwable) {
-        throw ContractException("Exception thrown: ${throwable.localizedMessage}", exceptionCause = throwable)
+        throw ContractException("Error: ${throwable.localizedMessage}", exceptionCause = throwable)
     }
 }
 

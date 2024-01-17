@@ -24,9 +24,6 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import `in`.specmatic.stub.HttpStub
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import org.w3c.dom.Node.*
 import java.io.File
 import java.io.StringReader
@@ -34,7 +31,6 @@ import java.io.StringWriter
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
-import javax.xml.transform.Transformer
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
@@ -113,25 +109,14 @@ private fun isEmptyText(it: Node, node: Node) =
 private fun containsTextContent(node: Node) =
         node.childNodes.length == 1 && node.firstChild.nodeType == TEXT_NODE && node.nodeType == ELEMENT_NODE
 
-fun xmlToString(node: Node): String = xmlToString(DOMSource(node))
-
-private fun xmlToString(domSource: DOMSource, configureTransformer: (Transformer) -> Unit = {}): String {
+fun xmlToString(node: Node): String {
     val writer = StringWriter()
     val result = StreamResult(writer)
-    val tf = TransformerFactory.newInstance()
-    val transformer = tf.newTransformer()
+    val transformer = TransformerFactory.newInstance().newTransformer()
     transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes")
-    configureTransformer(transformer)
-    transformer.transform(domSource, result)
+    transformer.transform(DOMSource(node), result)
     return writer.toString()
 }
-
-val contractFilePath: String
-    get() = currentDirectory + defaultContractFilePath
-
-private const val currentDirectory = "./"
-private const val contractDirectory = "contract"
-private const val defaultContractFilePath = "$contractDirectory/service.contract"
 
 fun getTransportCallingCallback(bearerToken: String? = null): TransportConfigCallback {
     return TransportConfigCallback { transport ->
@@ -139,7 +124,7 @@ fun getTransportCallingCallback(bearerToken: String? = null): TransportConfigCal
             transport.sshSessionFactory = SshdSessionFactory()
         } else if(bearerToken != null && transport is TransportHttp) {
             logger.debug("Setting Authorization header")
-            transport.setAdditionalHeaders(mapOf("Authorization" to "Bearer $bearerToken"))
+            transport.additionalHeaders = mapOf("Authorization" to "Bearer $bearerToken")
         }
     }
 }
@@ -309,4 +294,8 @@ fun saveJsonFile(jsonString: String, path: String, fileName: String) {
     val directory = File(path)
     directory.mkdirs()
     File(directory, fileName).writeText(jsonString)
+}
+
+fun readEnvVarOrProperty(envVarName: String, propertyName: String): String? {
+    return System.getenv(envVarName) ?: System.getProperty(propertyName)
 }

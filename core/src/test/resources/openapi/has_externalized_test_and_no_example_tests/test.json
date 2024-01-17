@@ -1,0 +1,17 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/order_action_figure",
+    "headers": {
+      "X-Request-ID": "12345"
+    },
+    "body": {
+      "name": "Master Yoda",
+      "description": "Head of the Jedi Council"
+    }
+  },
+  "http-response": {
+    "status": 200
+  },
+  "name": "Create Order"
+}

@@ -18,8 +18,9 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
         const val JSON_REPORT_PATH = "./build/reports/specmatic"
         const val JSON_REPORT_FILE_NAME = "coverage_report.json"
     }
+
     override fun process(reportConfiguration: ReportConfiguration) {
-        openApiCoverageReportInput.addExcludedAPIs(reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints)
+        openApiCoverageReportInput.addExcludedAPIs(reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints + excludedEndpointsFromEnv())
         val openAPICoverageReport = openApiCoverageReportInput.generate()
         if (openAPICoverageReport.rows.isEmpty()) {
             logger.log("The Open API coverage report generated is blank.\nThis can happen if you have included all the endpoints in the 'excludedEndpoints' array in the report section in specmatic.json, or if your open api specification does not have any paths documented.")
@@ -32,6 +33,10 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
         }
         assertSuccessCriteria(reportConfiguration,openAPICoverageReport)
     }
+
+    private fun excludedEndpointsFromEnv() = System.getenv("SPECMATIC_EXCLUDED_ENDPOINTS")?.let { excludedEndpoints ->
+        excludedEndpoints.split(",").map { it.trim() }
+    } ?: emptyList()
 
     private fun saveAsJson(openApiCoverageJsonReport: OpenApiCoverageJsonReport) {
         println("Saving Open API Coverage Report json to $JSON_REPORT_PATH ...")
@@ -63,7 +68,7 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
             val coverageThresholdNotMetMessage =
                 "Total API coverage: ${openAPICoverageReport.totalCoveragePercentage}% is less than the specified minimum threshold of ${successCriteria.minThresholdPercentage}%."
             val missedEndpointsCountExceededMessage =
-                "Total missed endpoints count: ${openAPICoverageReport.missedEndpointsCount} is greater than the maximum threshold of ${successCriteria.maxMissedEndpointsInSpec}.\n(Note: Specmatic will consider an endpoint as 'covered' only if it is documented in the open api spec with atleast one example for each operation and response code.\nIf it is present in the spec, but does not have an example, Specmatic will still report the particular operation and response code as 'missing in spec'.)"
+                "Total missed endpoints count: ${openAPICoverageReport.missedEndpointsCount} is greater than the maximum threshold of ${successCriteria.maxMissedEndpointsInSpec}.\n(Note: Specmatic will consider an endpoint as 'covered' only if it is documented in the open api spec with at least one example for each operation and response code.\nIf it is present in the spec, but does not have an example, Specmatic will still report the particular operation and response code as 'missing in spec'.)"
 
             val minCoverageThresholdCriteriaMet = openAPICoverageReport.totalCoveragePercentage >= successCriteria.minThresholdPercentage
             val maxMissingEndpointsExceededCriteriaMet = openAPICoverageReport.missedEndpointsCount <= successCriteria.maxMissedEndpointsInSpec

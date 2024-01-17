@@ -57,6 +57,10 @@ interface Pattern {
 
     fun listOf(valueList: List<Value>, resolver: Resolver): Value
 
+    fun toNullable(defaultValue: String?): Pattern {
+        return AnyPattern(listOf(NullPattern, this), example = defaultValue)
+    }
+
     val typeAlias: String?
     val typeName: String
     val pattern: Any

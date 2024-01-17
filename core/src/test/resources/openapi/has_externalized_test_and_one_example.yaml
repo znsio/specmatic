@@ -1,0 +1,48 @@
+openapi: 3.0.0
+info:
+  title: Order API
+  version: 1.0.0
+paths:
+  /order_action_figure:
+    post:
+      summary: Create a new order
+      requestBody:
+        parameters:
+          - in: header
+            name: X-Request-ID
+            schema:
+              type: string
+            required: true
+            description: Unique ID for the request
+          - in: query
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+              required:
+                - name
+                - description
+            examples:
+              200_OK:
+                value:
+                  name: "Jedi Knight"
+                  description: "This is an action figure of a Jedi Knight"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+              examples:
+                200_OK:
+                  value:
+                    id: 12345

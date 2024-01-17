@@ -850,7 +850,7 @@ paths:
 
         val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
         val request = HttpRequest(method = "GET", path = "/hello/10", headers = mapOf("X-Value" to "data"))
-        val response = HttpResponse.OK("success")
+        val response = HttpResponse.ok("success")
 
         assertThatThrownBy {
             feature.matchingStub(request, response, ContractAndStubMismatchMessages)

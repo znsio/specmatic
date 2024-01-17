@@ -42,7 +42,10 @@ data class Base64StringPattern(override val typeAlias: String? = null) : Pattern
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(NullPattern, NumberPattern(), BooleanPattern, StringPattern())
+        // TODO ideally StringPattern should be in this list. However need to better understand how to generate
+        //      strings that are not valid base64 strings (e.g. send an exact "]" which is not a base64 encoded value)
+
+        return listOf(NullPattern, NumberPattern(), BooleanPattern)
     }
 
     override fun parse(value: String, resolver: Resolver): Value {

@@ -24,6 +24,7 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.util.Base64
 import java.util.function.Consumer
 
 fun openAPIToString(openAPI: OpenAPI): String {
@@ -6463,8 +6464,321 @@ paths:
                         body = parsedJSON("""[{"id": "123", "names": ["Jack", "Sprat"]}, {"id": "456", "names": null}]""")
                     ), HttpResponse.OK("success"))
 
-            println(result.reportString())
             assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
+    @Test
+    fun `randomized response when stubbing out API with byte array request body`() {
+        val specification = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  summary: "Add data"
+                  requestBody:
+                    content:
+                      application/octet-stream:
+                        schema:
+                          type: string
+                          format: byte
+                  responses:
+                    200:
+                      description: "Result"
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(specification).use { stub ->
+            val base64EncodedRequestBody = Base64.getEncoder().encodeToString("hello world".encodeToByteArray())
+
+            val response = stub.client.execute(
+                HttpRequest(
+                    method = "POST",
+                    path = "/data",
+                    body = StringValue(base64EncodedRequestBody)
+                )
+            )
+
+            assertThat(response.status).isEqualTo(200)
+        }
+    }
+
+    @Test
+    fun `stubbed response when stubbing out API with byte array request body`() {
+        val specification = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  summary: "Add data"
+                  requestBody:
+                    content:
+                      application/octet-stream:
+                        schema:
+                          type: string
+                          format: byte
+                  responses:
+                    200:
+                      description: "Result"
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(specification).use { stub ->
+            val base64EncodedRequestBody = Base64.getEncoder().encodeToString("hello world".encodeToByteArray())
+
+            val stubbedRequest = HttpRequest(
+                method = "POST",
+                path = "/data",
+                body = StringValue(base64EncodedRequestBody)
+            )
+
+            stub.client.execute(
+                HttpRequest(
+                    method = "POST",
+                    path = "/_specmatic/expectations",
+                    body = StringValue("""
+                        {
+                            "http-request": {
+                                "method": "POST",
+                                "path": "/data",
+                                "body": "$base64EncodedRequestBody"
+                            },
+                            "http-response": {
+                                "status": 200,
+                                "body": "success"
+                            }
+                        }
+                    """.trimIndent())
+                )
+            ).also { response ->
+                assertThat(response.status).isEqualTo(200)
+            }
+
+            val response = stub.client.execute(stubbedRequest)
+            assertThat(response.status).withFailMessage("Got a non-200 status which means that the stub did not respond to the request").isEqualTo(200)
+            assertThat(response.body.toStringLiteral()).withFailMessage("Did not get success, most likely got a random response, which means that the stubbed response was not returned").isEqualTo("success")
+        }
+    }
+
+    @Test
+    fun `cannot stub out non-base64 request for a byte array request body`() {
+        val specification = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  summary: "Add data"
+                  requestBody:
+                    content:
+                      application/octet-stream:
+                        schema:
+                          type: string
+                          format: byte
+                  responses:
+                    200:
+                      description: "Result"
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(specification).use { stub ->
+            val vanillaNonBase64Request = "]"
+
+            stub.client.execute(
+                HttpRequest(
+                    method = "POST",
+                    path = "/_specmatic/expectations",
+                    body = StringValue("""
+                        {
+                            "http-request": {
+                                "method": "POST",
+                                "path": "/data",
+                                "body": "$vanillaNonBase64Request"
+                            },
+                            "http-response": {
+                                "status": 200,
+                                "body": "success"
+                            }
+                        }
+                    """.trimIndent())
+                )
+            ).also { response ->
+                assertThat(response.status).isEqualTo(400)
+            }
+        }
+    }
+
+    @Test
+    fun `test request of type byte array request body sends a random base64 request value`() {
+        val specification = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  summary: "Add data"
+                  requestBody:
+                    content:
+                      application/octet-stream:
+                        schema:
+                          type: string
+                          format: byte
+                  responses:
+                    200:
+                      description: "Result"
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val results = specification.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.body.toStringLiteral()).isBase64()
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `test request of type byte array request body loads sends a base64 example`() {
+        val base64EncodedRequestBody = Base64.getEncoder().encodeToString("hello world".encodeToByteArray())
+
+        val specification = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  summary: "Add data"
+                  requestBody:
+                    content:
+                      application/octet-stream:
+                        schema:
+                          type: string
+                          format: byte
+                        examples:
+                          SUCCESS:
+                            value: $base64EncodedRequestBody
+                  responses:
+                    200:
+                      description: "Result"
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            SUCCESS:
+                              value: success
+        """.trimIndent(), "").toFeature()
+
+        val results = specification.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val expectedRequestBody = "hello world".toByteArray()
+                val actualRequestBody = request.body.toStringLiteral()
+
+                assertThat(actualRequestBody).asBase64Decoded().isEqualTo(expectedRequestBody)
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    @Disabled
+    fun `byte string request backward compatibility check`() {
+        // TODO: backward compatibility check for byte arrays to string and vice versa is not working
+        val byteString = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  summary: "Add data"
+                  requestBody:
+                    content:
+                      application/octet-stream:
+                        schema:
+                          type: string
+                          format: byte
+                  responses:
+                    200:
+                      description: "Result"
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        val normalString = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  summary: "Add data"
+                  requestBody:
+                    content:
+                      application/octet-stream:
+                        schema:
+                          type: string
+                  responses:
+                    200:
+                      description: "Result"
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        testBackwardCompatibility(normalString, byteString).also { result ->
+            assertThat(result.hasFailures()).isTrue()
+        }
+
+        testBackwardCompatibility(normalString, byteString).also { result ->
+            assertThat(result.hasFailures()).isTrue()
         }
     }
 

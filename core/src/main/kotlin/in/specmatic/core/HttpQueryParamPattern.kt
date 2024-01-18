@@ -49,7 +49,7 @@ data class HttpQueryParamPattern(val queryPatternPairs: List<Pair<String, Patter
 
         val groupedPatternPairs = queryPatternPairs.groupBy { it.first }
 
-        val resultsForGroups:List<Result?> = groupedPatternPairs.map { (key, pairs) ->
+        val resultsForGroups: List<Result?> = groupedPatternPairs.map { (key, pairs) ->
             // 1. key is optional and request does not have the key as well
             // 2. key is mandatory and request does not have the key as well -> Result.Failure
             // 3. key in request but not in groupedPatternPairs -> Result.Failure
@@ -58,43 +58,90 @@ data class HttpQueryParamPattern(val queryPatternPairs: List<Pair<String, Patter
                 // B. key value pattern is a scalar (not an array)
                 // C. multiple pattern pairs with the same key
 
+            val requestValues = httpRequest.queryParams.getValues(withoutOptionality(key))
 
+            val keyWithoutOptionality = withoutOptionality(key)
 
-            Result.Success()
-        }
+            if (requestValues.isEmpty())
+                return@map (
+                    if(isOptional(key))
+                        Result.Success()
+                    else
+                        Result.Failure("Missing query parameter: $keyWithoutOptionality")
+                ).breadCrumb(keyWithoutOptionality)
 
-        val results: List<Result?> = queryPatternPairs.map { (key, patternValue) ->
-            val keyName = key.removeSuffix("?")
-
-            if (!httpRequest.queryParams.containsKey(keyName)) {
-               null
+            if (pairs.first().second is QueryParameterArrayPattern) {
+                val list = JSONArrayValue(requestValues.map { StringValue(it) })
+                resolver.matchesPattern(keyWithoutOptionality, pairs.single().second, list)
             } else {
-                try {
-                    val sampleValues: List<String> = httpRequest.queryParams.getValues(keyName)
-                    if (patternValue is QueryParameterArrayPattern) {
-                        val parsedValue = JSONArrayValue(sampleValues.map { StringValue(it) })
-                        resolver.matchesPattern(keyName, patternValue, parsedValue).breadCrumb(keyName)
-                    }
-                    else {
-                        if(sampleValues.count() > 1) {
-                            return Result.Failure("Multiple values: $sampleValues found for query parameter: $key. Expected a single value")
+                val (matchResults, unmatchedKeys) =
+                    pairs.foldRight(emptyList<Result>() to requestValues) { (_, pattern), (results, valuesToBeMatched) ->
+                        val matchResultsForValuesWithThisKey = valuesToBeMatched.map { value ->
+                            val parsedValue = try {
+                                pattern.parse(value, resolver)
+                            } catch (e: Exception) {
+                                StringValue(value)
+                            }
+
+                            resolver.matchesPattern(keyWithoutOptionality, pattern, parsedValue) to value
                         }
-                        val parsedValue = try {
-                            patternValue.parse(sampleValues.single(), resolver)
-                        } catch (e: Exception) {
-                            StringValue(sampleValues.single())
+
+                        if(matchResultsForValuesWithThisKey.none { it.first is Result.Success }) {
+                            results.plus(Result.fromResults(matchResultsForValuesWithThisKey.map { it.first })) to valuesToBeMatched
                         }
-                        resolver.matchesPattern(keyName, patternValue, parsedValue).breadCrumb(keyName)
-                    }
-                } catch (e: ContractException) {
-                    e.failure().breadCrumb(keyName)
-                } catch (e: Throwable) {
-                    Result.Failure(e.localizedMessage).breadCrumb(keyName)
+
+                        val valuesMatched = matchResultsForValuesWithThisKey.filter { it.first is Result.Success }.map { it.second }.toSet()
+
+                        val unmatchedValues = valuesToBeMatched.toSet() - valuesMatched
+
+                        results.plus(Result.Success()) to unmatchedValues.toList()
                 }
-            }
+
+                val overallMatchResultForTheKey = Result.fromResults(matchResults)
+
+                val unmatchedKeysResult = if(unmatchedKeys.isEmpty()) {
+                    Result.Success()
+                } else {
+                    Result.Failure("Unmatched values: $unmatchedKeys")
+                }
+
+                Result.fromResults(listOf(overallMatchResultForTheKey, unmatchedKeysResult))
+            }.breadCrumb(keyWithoutOptionality)
         }
 
-        val failures = keyErrorList.plus(results).filterIsInstance<Result.Failure>()
+//        val results: List<Result?> = queryPatternPairs.map { (key, patternValue) ->
+//            val keyName = key.removeSuffix("?")
+//
+//            if (!httpRequest.queryParams.containsKey(keyName)) {
+//               null
+//            } else {
+//                try {
+//                    val sampleValues: List<String> = httpRequest.queryParams.getValues(keyName)
+//                    if (patternValue is QueryParameterArrayPattern) {
+//                        val parsedValue = JSONArrayValue(sampleValues.map { StringValue(it) })
+//                        resolver.matchesPattern(keyName, patternValue, parsedValue).breadCrumb(keyName)
+//                    }
+//                    else {
+//                        if(sampleValues.count() > 1) {
+//                            return Result.Failure("Multiple values: $sampleValues found for query parameter: $key. Expected a single value")
+//                        }
+//                        val parsedValue = try {
+//                            patternValue.parse(sampleValues.single(), resolver)
+//                        } catch (e: Exception) {
+//                            StringValue(sampleValues.single())
+//                        }
+//                        resolver.matchesPattern(keyName, patternValue, parsedValue).breadCrumb(keyName)
+//                    }
+//                } catch (e: ContractException) {
+//                    e.failure().breadCrumb(keyName)
+//                } catch (e: Throwable) {
+//                    Result.Failure(e.localizedMessage).breadCrumb(keyName)
+//                }
+//            }
+//        }
+
+        val failures = keyErrorList.plus(resultsForGroups).filterIsInstance<Result.Failure>()
+
         return if (failures.isNotEmpty())
             Result.Failure.fromFailures(failures).breadCrumb(QUERY_PARAMS_BREADCRUMB)
         else

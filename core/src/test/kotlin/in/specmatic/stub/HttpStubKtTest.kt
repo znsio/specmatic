@@ -960,7 +960,7 @@ paths:
 """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(contract, emptyList()).use { stub ->
+        HttpStub(contract).use { stub ->
             stub.setExpectation("""
                 {
                     "http-request": {

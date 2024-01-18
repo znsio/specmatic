@@ -47,6 +47,22 @@ data class HttpQueryParamPattern(val queryPatternPairs: List<Pair<String, Patter
             it.missingKeyToResult("query param", resolver.mismatchMessages).breadCrumb(it.name)
         }
 
+        val groupedPatternPairs = queryPatternPairs.groupBy { it.first }
+
+        val resultsForGroups:List<Result?> = groupedPatternPairs.map { (key, pairs) ->
+            // 1. key is optional and request does not have the key as well
+            // 2. key is mandatory and request does not have the key as well -> Result.Failure
+            // 3. key in request but not in groupedPatternPairs -> Result.Failure
+            // 4. key in request
+                // A. key value pattern is an array
+                // B. key value pattern is a scalar (not an array)
+                // C. multiple pattern pairs with the same key
+
+
+
+            Result.Success()
+        }
+
         val results: List<Result?> = queryPatternPairs.map { (key, patternValue) ->
             val keyName = key.removeSuffix("?")
 

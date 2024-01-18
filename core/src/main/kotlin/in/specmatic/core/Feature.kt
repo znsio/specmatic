@@ -541,7 +541,7 @@ data class Feature(
 
         return baseScenario.copy(
             httpRequestPattern = baseScenario.httpRequestPattern.copy(
-                httpQueryParamPattern = baseScenario.httpRequestPattern.httpQueryParamPattern.copy(queryPatterns = convergedQueryParams)
+                httpQueryParamPattern = baseScenario.httpRequestPattern.httpQueryParamPattern.copy(queryPatternPairs = convergedQueryParams.toList())
             )
         )
     }

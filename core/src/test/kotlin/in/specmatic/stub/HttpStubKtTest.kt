@@ -961,29 +961,29 @@ paths:
         ).toFeature()
 
         HttpStub(contract, emptyList()).use { stub ->
-//            stub.setExpectation("""
-//                {
-//                    "http-request": {
-//                        "method": "GET",
-//                        "path": "/products",
-//                         "query": {
-//                            "brand_ids": [1,2,3]
-//                        }
-//
-//                    },
-//                    "http-response": {
-//                        "status": 200,
-//                        "body": "product list"
-//                    }
-//                }
-//            """.trimIndent())
+            stub.setExpectation("""
+                {
+                    "http-request": {
+                        "method": "GET",
+                        "path": "/products",
+                         "query": {
+                            "brand_ids": [1,2,3]
+                        }
+
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": "product list"
+                    }
+                }
+            """.trimIndent())
 
             val queryParameters = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "brand_ids" to "3"))
             val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
 
             assertThat(response.status).isEqualTo(200)
-            assertThat(response.body.toString()).isNotEmpty
-            //assertThat(response.body).isEqualTo(StringValue("product list"))
+            //assertThat(response.body.toString()).isNotEmpty
+            assertThat(response.body).isEqualTo(StringValue("product list"))
         }
     }
 

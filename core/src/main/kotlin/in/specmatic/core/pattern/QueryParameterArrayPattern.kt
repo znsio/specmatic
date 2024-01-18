@@ -69,6 +69,6 @@ class QueryParameterArrayPattern(override val pattern: Pattern): Pattern {
         get() = "(queryParameterArray/${pattern.typeName})"
 
     override fun parseToType(valueString: String, resolver: Resolver): Pattern {
-        return QueryParameterArrayPattern(pattern.parse(valueString, resolver).type())
+        return pattern.parse(valueString, resolver).exactMatchElseType()
     }
 }

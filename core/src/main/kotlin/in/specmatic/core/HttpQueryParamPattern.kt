@@ -6,7 +6,10 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import java.net.URI
 
-data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
+data class HttpQueryParamPattern(val queryPatternPairs: List<Pair<String, Pattern>>) {
+    constructor(queryPatterns: Map<String, Pattern> ) : this(queryPatterns.toList())
+    val queryPatterns = queryPatternPairs.toMap()
+
     fun generate(resolver: Resolver): List<Pair<String, String>> {
         return attempt(breadCrumb = "QUERY-PARAMS") {
             queryPatterns.map { it.key.removeSuffix("?") to it.value }.flatMap { (parameterName, pattern) ->
@@ -39,24 +42,24 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
 
     fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
         val keyErrors =
-            resolver.findKeyErrorList(queryPatterns, httpRequest.queryParams.asMap().mapValues { StringValue(it.value) })
+            resolver.findKeyErrorList(queryPatternPairs.toMap(), httpRequest.queryParams.asMap().mapValues { StringValue(it.value) })
         val keyErrorList: List<Result.Failure> = keyErrors.map {
             it.missingKeyToResult("query param", resolver.mismatchMessages).breadCrumb(it.name)
         }
 
-        val results: List<Result?> = queryPatterns.keys.map { key ->
+        val results: List<Result?> = queryPatternPairs.map { (key, patternValue) ->
             val keyName = key.removeSuffix("?")
 
             if (!httpRequest.queryParams.containsKey(keyName)) {
                null
             } else {
                 try {
-                    val patternValue: Pattern = queryPatterns.getValue(key)
                     val sampleValues: List<String> = httpRequest.queryParams.getValues(keyName)
                     if (patternValue is QueryParameterArrayPattern) {
                         val parsedValue = JSONArrayValue(sampleValues.map { StringValue(it) })
                         resolver.matchesPattern(keyName, patternValue, parsedValue).breadCrumb(keyName)
-                    } else {
+                    }
+                    else {
                         if(sampleValues.count() > 1) {
                             return Result.Failure("Multiple values: $sampleValues found for query parameter: $key. Expected a single value")
                         }

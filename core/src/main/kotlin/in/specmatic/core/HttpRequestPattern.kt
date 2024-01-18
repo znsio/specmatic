@@ -5,6 +5,7 @@ import `in`.specmatic.conversions.OpenAPISecurityScheme
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import io.ktor.util.*
@@ -229,9 +230,7 @@ data class HttpRequestPattern(
             requestType = attempt(breadCrumb = "URL") {
                 val path = request.path ?: ""
                 val pathTypes = pathToPattern(path)
-                val queryParamTypes = toTypeMap(request.queryParams.asMap(), httpQueryParamPattern.queryPatterns, resolver)
-                    .mapKeys { it.key.removeSuffix("?") }
-
+                val queryParamTypes = toTypeMapForQueryParameters(request.queryParams, httpQueryParamPattern.queryPatterns, resolver)
                 requestType.copy(httpPathPattern = HttpPathPattern(pathTypes, path), httpQueryParamPattern = HttpQueryParamPattern(queryParamTypes))
             }
 
@@ -291,6 +290,29 @@ data class HttpRequestPattern(
             attempt(breadCrumb = key) {
                 val valueString = values.getValue(key)
                 encompassedType(valueString, key, type, resolver)
+            }
+        }
+    }
+
+    private fun toTypeMapForQueryParameters(
+        queryParams: QueryParameters,
+        patterns: Map<String, Pattern>,
+        resolver: Resolver
+    ): List<Pair<String, Pattern>> {
+        return patterns.filterKeys { withoutOptionality(it) in queryParams.paramPairs.map { it.first } }.flatMap {
+            val key = withoutOptionality(it.key)
+            val pattern = it.value
+
+            attempt(breadCrumb = key) {
+                val values: List<String> = queryParams.getValues(key)
+                if (pattern is QueryParameterArrayPattern) {
+                    values.map { value ->
+                        key to encompassedType(value, key, pattern, resolver)
+                    }
+                }
+                else {
+                   listOf(key to encompassedType(values.single(), key, pattern, resolver))
+                }
             }
         }
     }

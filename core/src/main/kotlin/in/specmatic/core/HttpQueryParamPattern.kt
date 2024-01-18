@@ -1,7 +1,6 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.*
-import `in`.specmatic.core.pattern.withoutOptionality
 import `in`.specmatic.core.utilities.URIUtils
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
@@ -45,27 +44,33 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
             it.missingKeyToResult("query param", resolver.mismatchMessages).breadCrumb(it.name)
         }
 
-        val results: List<Result?> = queryPatterns.keys.flatMap { key ->
+        val results: List<Result?> = queryPatterns.keys.map { key ->
             val keyName = key.removeSuffix("?")
 
             if (!httpRequest.queryParams.containsKey(keyName)) {
-                listOf<Result?>(null)
+               null
             } else {
                 try {
                     val patternValue: Pattern = queryPatterns.getValue(key)
                     val sampleValues: List<String> = httpRequest.queryParams.getValues(keyName)
-                    sampleValues.map { sampleValue ->
+                    if (patternValue is QueryParameterArrayPattern) {
+                        val parsedValue = JSONArrayValue(sampleValues.map { StringValue(it) })
+                        resolver.matchesPattern(keyName, patternValue, parsedValue).breadCrumb(keyName)
+                    } else {
+                        if(sampleValues.count() > 1) {
+                            return Result.Failure("Multiple values: $sampleValues found for query parameter: $key. Expected a single value")
+                        }
                         val parsedValue = try {
-                             patternValue.parse(sampleValue, resolver)
+                            patternValue.parse(sampleValues.single(), resolver)
                         } catch (e: Exception) {
-                            StringValue(sampleValue)
+                            StringValue(sampleValues.single())
                         }
                         resolver.matchesPattern(keyName, patternValue, parsedValue).breadCrumb(keyName)
                     }
                 } catch (e: ContractException) {
-                    listOf(e.failure().breadCrumb(keyName)) // wrap single item in a list
+                    e.failure().breadCrumb(keyName)
                 } catch (e: Throwable) {
-                    listOf(Result.Failure(e.localizedMessage).breadCrumb(keyName)) // wrap single item in a list
+                    Result.Failure(e.localizedMessage).breadCrumb(keyName)
                 }
             }
         }

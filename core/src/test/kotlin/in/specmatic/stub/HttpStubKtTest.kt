@@ -16,7 +16,6 @@ import io.mockk.InternalPlatformDsl.toStr
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -931,7 +930,7 @@ paths:
     }
 
     @Test
-    fun `stub generates multiple query parameters when they are defined as an array`() {
+    fun `test stub with array query parameter`() {
         val contract = OpenApiSpecification.fromYAML(
             """
     openapi: 3.0.0
@@ -961,12 +960,69 @@ paths:
 """.trimIndent(), ""
         ).toFeature()
 
-        HttpStub(contract, emptyList()).use {
-            val queryParameters = QueryParameters(mapOf("brand_ids" to "1")).plus("brand_ids" to "2").plus("brand_ids" to "3")
-            val response = it.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
+        HttpStub(contract, emptyList()).use { stub ->
+//            stub.setExpectation("""
+//                {
+//                    "http-request": {
+//                        "method": "GET",
+//                        "path": "/products",
+//                         "query": {
+//                            "brand_ids": [1,2,3]
+//                        }
+//
+//                    },
+//                    "http-response": {
+//                        "status": 200,
+//                        "body": "product list"
+//                    }
+//                }
+//            """.trimIndent())
 
-            val responseString = response.toLogString()
-            assertThat(responseString).isNotEmpty
+            val queryParameters = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "brand_ids" to "3"))
+            val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toString()).isNotEmpty
+            //assertThat(response.body).isEqualTo(StringValue("product list"))
         }
     }
+
+    @Test
+    fun `test stub with scalar query parameter`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+    openapi: 3.0.0
+    info:
+      title: Sample API
+      version: 0.1.9
+    paths:
+      /products:
+        get:
+          summary: get products
+          description: Get products filtered by Brand Id
+          parameters:
+            - name: brand_id
+              in: query
+              required: true
+              schema:
+                type: number
+          responses:
+            '200':
+              description: OK
+              content:
+                application/json:
+                  schema:
+                    type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        HttpStub(contract, emptyList()).use { stub ->
+            val queryParameters = QueryParameters(paramPairs = listOf("brand_id" to "1"))
+            val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toString()).isNotEmpty
+        }
+    }
+
 }

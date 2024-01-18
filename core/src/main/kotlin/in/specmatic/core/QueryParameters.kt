@@ -3,9 +3,19 @@ package `in`.specmatic.core
 import kotlin.collections.Map
 
 data class QueryParameters(val map: Map<String, String> = kotlin.collections.HashMap(), val paramPairs: List<Pair<String, String>> = map.toList()) : Map<String, String> by map {
-
     fun plus(map: Map<String, String>): QueryParameters {
-        return QueryParameters(this.map + map, paramPairs + map.toList())
+        val newPairs = map.flatMap { (key, value) ->
+            if (value.startsWith("[") && value.endsWith("]")) {
+                value.removeSurrounding("[", "]")
+                    .split(",")
+                    .map { numberString ->
+                        key to numberString.trim()
+                    }
+            } else {
+                listOf(key to value)
+            }
+        }
+        return QueryParameters(this.map + map, paramPairs + newPairs)
     }
 
     fun plus(pair: Pair<String, String>): QueryParameters {

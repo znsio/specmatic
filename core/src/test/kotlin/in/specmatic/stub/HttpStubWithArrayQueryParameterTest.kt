@@ -64,6 +64,18 @@ class HttpStubWithArrayQueryParameterTest {
     }
 
     @Test
+    fun `should match stub with mandatory array query parameter with expectation from examples in spec`() {
+        val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_mandatory_array_query_parameter_with_examples.yaml").toFeature()
+        HttpStub(contract).use { stub ->
+            val queryParameters = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "brand_ids" to "3"))
+            val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toString()).isEqualTo("product list")
+        }
+    }
+
+    @Test
     fun `should not match stub for array query parameter when request contains a query parameter value which is not defined in the stub`() {
         val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml").toFeature()
         HttpStub(contract).use { stub ->

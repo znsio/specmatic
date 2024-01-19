@@ -2,19 +2,9 @@ package `in`.specmatic.core
 
 import kotlin.collections.Map
 
-data class QueryParameters(val map: Map<String, String> = kotlin.collections.HashMap(), val paramPairs: List<Pair<String, String>> = map.toList()) : Map<String, String> by map {
+data class QueryParameters(val map: Map<String, String> = kotlin.collections.HashMap(), val paramPairs: List<Pair<String, String>> = mapToListOfPairs(map)) : Map<String, String> by map {
     fun plus(map: Map<String, String>): QueryParameters {
-        val newPairs = map.flatMap { (key, value) ->
-            if (value.startsWith("[") && value.endsWith("]")) {
-                value.removeSurrounding("[", "]")
-                    .split(",")
-                    .map { numberString ->
-                        key to numberString.trim()
-                    }
-            } else {
-                listOf(key to value)
-            }
-        }
+        val newPairs = mapToListOfPairs(map)
         return QueryParameters(this.map + map, paramPairs + newPairs)
     }
 
@@ -36,5 +26,19 @@ data class QueryParameters(val map: Map<String, String> = kotlin.collections.Has
 
     override fun containsKey(key: String): Boolean {
         return paramPairs.any { it.first == key }
+    }
+}
+
+fun mapToListOfPairs(inputMap: Map<String, String>): List<Pair<String, String>> {
+    return inputMap.flatMap { (key, value) ->
+        if (value.startsWith("[") && value.endsWith("]")) {
+            value.removeSurrounding("[", "]")
+                .split(",")
+                .map { numberString ->
+                    key to numberString.trim()
+                }
+        } else {
+            listOf(key to value)
+        }
     }
 }

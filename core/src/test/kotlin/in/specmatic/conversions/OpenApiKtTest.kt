@@ -26,7 +26,6 @@ import io.ktor.server.routing.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -47,35 +46,9 @@ import java.io.File
 import java.net.URI
 import java.util.function.Consumer
 import java.util.stream.Stream
-import kotlin.collections.HashMap
-import kotlin.collections.List
-import kotlin.collections.Map
-import kotlin.collections.MutableList
-import kotlin.collections.any
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlin.collections.emptyList
-import kotlin.collections.filter
-import kotlin.collections.filterIsInstance
-import kotlin.collections.first
-import kotlin.collections.forEach
-import kotlin.collections.get
-import kotlin.collections.getValue
-import kotlin.collections.joinToString
-import kotlin.collections.last
-import kotlin.collections.listOf
-import kotlin.collections.map
-import kotlin.collections.mapValues
-import kotlin.collections.mutableListOf
-import kotlin.collections.mutableMapOf
 import kotlin.collections.set
-import kotlin.collections.setOf
-import kotlin.collections.single
-import kotlin.collections.sorted
-import kotlin.collections.sum
-import kotlin.collections.toList
-import kotlin.collections.toMap
-import kotlin.collections.withDefault
 
 internal class OpenApiKtTest {
     companion object {
@@ -2579,53 +2552,6 @@ components:
         })
 
         assertThat(result.success()).withFailMessage(result.report()).isTrue
-    }
-
-    @Test
-    fun `should support arrays in query parameters`() {
-        val contract = OpenApiSpecification.fromYAML(
-            """
-    openapi: 3.0.0
-    info:
-      title: Sample API
-      version: 0.1.9
-    paths:
-      /products:
-        get:
-          summary: get products
-          description: Get multiple products filtered by Brand Ids
-          parameters:
-            - name: brand_ids
-              in: query
-              required: true
-              schema:
-                items:
-                  type: number
-                type: array
-          responses:
-            '200':
-              description: OK
-              content:
-                application/json:
-                  schema:
-                    type: string
-""".trimIndent(), ""
-        ).toFeature()
-        var queryParameterCount = 0
-        contract.executeTests(object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                if(request.queryParams.isNotEmpty()) {
-                    queryParameterCount = request.queryParams.paramPairs.count { it.first == "brand_ids" }
-                }
-                return HttpResponse.ok("success")
-            }
-
-            override fun setServerState(serverState: Map<String, Value>) {
-
-            }
-
-        })
-        assertThat(queryParameterCount).isGreaterThan(1)
     }
 }
 

@@ -4,12 +4,13 @@ import kotlin.collections.Map
 
 data class QueryParameters(val map: Map<String, String> = kotlin.collections.HashMap(), val paramPairs: List<Pair<String, String>> = mapToListOfPairs(map)) : Map<String, String> by map {
     fun plus(map: Map<String, String>): QueryParameters {
-        val newPairs = mapToListOfPairs(map)
-        return QueryParameters(this.map + map, paramPairs + newPairs)
+        val newListOfPairs = mapToListOfPairs(map)
+        return QueryParameters(this.map + map, paramPairs + newListOfPairs)
     }
 
     fun plus(pair: Pair<String, String>): QueryParameters {
-        return QueryParameters(this.map + pair, paramPairs + pair)
+        val newListOfPairs = pairToListOfPairs(pair)
+        return QueryParameters(this.map + pair, paramPairs + newListOfPairs)
     }
 
     fun minus(name: String): QueryParameters {
@@ -31,14 +32,34 @@ data class QueryParameters(val map: Map<String, String> = kotlin.collections.Has
 
 fun mapToListOfPairs(inputMap: Map<String, String>): List<Pair<String, String>> {
     return inputMap.flatMap { (key, value) ->
-        if (value.startsWith("[") && value.endsWith("]")) {
-            value.removeSurrounding("[", "]")
-                .split(",")
-                .map { numberString ->
-                    key to numberString.trim()
-                }
-        } else {
-            listOf(key to value)
-        }
+        toListOfPairs(value, key)
     }
 }
+
+fun pairToListOfPairs(pair: Pair<String, String>): List<Pair<String, String>> {
+    val key = pair.first
+    val value = pair.second
+    return toListOfPairs(value, key)
+}
+
+private fun toListOfPairs(
+    value: String,
+    key: String
+): List<Pair<String, String>> {
+    return if (isJsonArrayString(value)) {
+        convertJsonArrayStringToListOfPairs(value, key)
+    } else {
+        listOf(key to value)
+    }
+}
+
+private fun convertJsonArrayStringToListOfPairs(
+    value: String,
+    key: String
+) = value.removeSurrounding("[", "]")
+    .split(",")
+    .map { valueItem ->
+        key to valueItem.trim()
+    }
+
+private fun isJsonArrayString(value: String) = value.startsWith("[") && value.endsWith("]")

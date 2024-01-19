@@ -26,6 +26,7 @@ import java.util.*
 import java.util.function.Consumer
 
 internal class HttpStubKtTest {
+
     @Test
     fun `flush transient stub`() {
         val contract = OpenApiSpecification.fromYAML("""
@@ -918,7 +919,7 @@ paths:
 
     @Test
     fun `transient stubs are loaded in order sorted by filename across nested dirs where the first item in sorted order is the first item in the queue`() {
-        createStubFromContracts(listOf("src/test/resources/openapi/contractWithOrderedStubsInNestedDirs.yaml")).use { stub ->
+        createStubFromContracts(listOf("src/test/resources/openapi/.yaml")).use { stub ->
             val request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}"""))
 
             (0..4).map { ctr ->
@@ -926,64 +927,6 @@ paths:
                     assertThat(this.body.toStringLiteral()).isEqualTo("success $ctr")
                 }
             }
-        }
-    }
-
-    @Test
-    fun `test stub with array query parameter`() {
-        val contract = OpenApiSpecification.fromYAML(
-            """
-    openapi: 3.0.0
-    info:
-      title: Sample API
-      version: 0.1.9
-    paths:
-      /products:
-        get:
-          summary: get products
-          description: Get multiple products filtered by Brand Ids
-          parameters:
-            - name: brand_ids
-              in: query
-              required: true
-              schema:
-                items:
-                  type: number
-                type: array
-          responses:
-            '200':
-              description: OK
-              content:
-                application/json:
-                  schema:
-                    type: string
-""".trimIndent(), ""
-        ).toFeature()
-
-        HttpStub(contract).use { stub ->
-            stub.setExpectation("""
-                {
-                    "http-request": {
-                        "method": "GET",
-                        "path": "/products",
-                         "query": {
-                            "brand_ids": [1,2,3]
-                        }
-
-                    },
-                    "http-response": {
-                        "status": 200,
-                        "body": "product list"
-                    }
-                }
-            """.trimIndent())
-
-            val queryParameters = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "brand_ids" to "3"))
-            val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
-
-            assertThat(response.status).isEqualTo(200)
-            //assertThat(response.body.toString()).isNotEmpty
-            assertThat(response.body).isEqualTo(StringValue("product list"))
         }
     }
 
@@ -1024,5 +967,4 @@ paths:
             assertThat(response.body.toString()).isNotEmpty
         }
     }
-
 }

@@ -89,12 +89,16 @@ data class HttpQueryParamPattern(val queryPatternPairs: List<Pair<String, Patter
                         if(matchResultsForValuesWithThisKey.none { it.first is Result.Success }) {
                             results.plus(Result.fromResults(matchResultsForValuesWithThisKey.map { it.first })) to valuesToBeMatched
                         }
+                        else {
 
-                        val valuesMatched = matchResultsForValuesWithThisKey.filter { it.first is Result.Success }.map { it.second }.toSet()
+                            val valuesMatched =
+                                matchResultsForValuesWithThisKey.filter { it.first is Result.Success }.map { it.second }
+                                    .toSet()
 
-                        val unmatchedValues = valuesToBeMatched.toSet() - valuesMatched
+                            val unmatchedValues = valuesToBeMatched.toSet() - valuesMatched
 
-                        results.plus(Result.Success()) to unmatchedValues.toList()
+                            results.plus(Result.Success()) to unmatchedValues.toList()
+                        }
                 }
 
                 val overallMatchResultForTheKey = Result.fromResults(matchResults)

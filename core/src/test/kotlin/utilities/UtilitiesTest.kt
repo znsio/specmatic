@@ -2,15 +2,18 @@ package utilities
 
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.DEFAULT_WORKING_DIRECTORY
+import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.SourceProvider
 import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.checkout
 import `in`.specmatic.core.git.clone
 import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.toXMLNode
+import `in`.specmatic.stub.createStub
 import io.mockk.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -438,6 +441,126 @@ internal class UtilitiesTest {
                 contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
             assertThat(contractPaths.size).isEqualTo(1)
             assertSpecmaticFolderIsIgnored()
+        }
+    }
+
+    @Test
+    fun `should load sources from local filesystem using current directory implicitly`() {
+        val specmaticJSON = File("./specmatic.json")
+        specmaticJSON.createNewFile()
+
+        val specFile = File("random.yaml")
+        specFile.createNewFile()
+
+        try {
+            specmaticJSON.writeText("""
+                {
+                    "sources": [
+                        {
+                            "provider": "filesystem",
+                            "stub": ["random.yaml"]
+                        }
+                    ]
+                }
+            """.trimIndent())
+
+            specFile.writeText("""
+                openapi: 3.0.1
+                info:
+                  title: Random
+                  version: "1"
+                paths:
+                  /random:
+                    post:
+                      summary: Random
+                      parameters: []
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - id
+                              properties:
+                                id:
+                                  type: number
+                      responses:
+                        "200":
+                          description: Random
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+            """.trimIndent())
+
+            createStub("localhost", 9000).use { stub ->
+                val response = stub.client.execute(HttpRequest("POST", "/random", body = parsedJSONObject("""{"id": 1}""")))
+                assertThat(response.status).isEqualTo(200)
+            }
+        } finally {
+            specFile.delete()
+            specmaticJSON.delete()
+        }
+    }
+
+    @Test
+    fun `should load sources from local filesystem using the specified directory directory relative to current directory`() {
+        val specmaticJSON = File("./specmatic.json")
+        specmaticJSON.createNewFile()
+
+        val specDir = File("specifications")
+        specDir.mkdirs()
+
+        val specFile = specDir.resolve("random.yaml")
+        specFile.createNewFile()
+
+        try {
+            specmaticJSON.writeText("""
+                {
+                    "sources": [
+                        {
+                            "provider": "filesystem",
+                            "directory": "${specDir.name}"
+                            "stub": ["random.yaml"]
+                        }
+                    ]
+                }
+            """.trimIndent())
+
+            specFile.writeText("""
+                openapi: 3.0.1
+                info:
+                  title: Random
+                  version: "1"
+                paths:
+                  /random:
+                    post:
+                      summary: Random
+                      parameters: []
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - id
+                              properties:
+                                id:
+                                  type: number
+                      responses:
+                        "200":
+                          description: Random
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+            """.trimIndent())
+
+            createStub("localhost", 9000).use { stub ->
+                val response = stub.client.execute(HttpRequest("POST", "/random", body = parsedJSONObject("""{"id": 1}""")))
+                assertThat(response.status).isEqualTo(200)
+            }
+        } finally {
+            specDir.deleteRecursively()
+            specmaticJSON.delete()
         }
     }
 

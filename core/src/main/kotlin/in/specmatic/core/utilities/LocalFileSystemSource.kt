@@ -5,7 +5,7 @@ import `in`.specmatic.core.log.logger
 import java.io.File
 
 class LocalFileSystemSource(
-    val directory: String,
+    val directory: String = ".",
     override val testContracts: List<String>,
     override val stubContracts: List<String>
 ) : ContractSource {

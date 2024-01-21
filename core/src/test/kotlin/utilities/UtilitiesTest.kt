@@ -1,5 +1,6 @@
 package utilities
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.DEFAULT_WORKING_DIRECTORY
 import `in`.specmatic.core.HttpRequest
@@ -16,8 +17,8 @@ import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.stub.createStub
 import io.mockk.*
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -554,10 +555,15 @@ internal class UtilitiesTest {
                                 type: string
             """.trimIndent())
 
-            createStub("localhost", 9000).use { stub ->
-                val response = stub.client.execute(HttpRequest("POST", "/random", body = parsedJSONObject("""{"id": 1}""")))
-                assertThat(response.status).isEqualTo(200)
+            val results = createStub("localhost", 9000).use { stub ->
+                loadSources(specmaticJSON.path).flatMap { source ->
+                    source.testContracts
+                }.map { specPath ->
+                    OpenApiSpecification.fromFile(specPath).toFeature().executeTests(stub.client)
+                }
             }
+
+            assertThat(results.all { it.success() }).isTrue
         } finally {
             specDir.deleteRecursively()
             specmaticJSON.delete()

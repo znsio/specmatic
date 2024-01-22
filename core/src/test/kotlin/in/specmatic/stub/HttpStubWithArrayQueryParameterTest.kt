@@ -4,7 +4,6 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.QueryParameters
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 class HttpStubWithArrayQueryParameterTest {
@@ -175,19 +174,6 @@ class HttpStubWithArrayQueryParameterTest {
             val response = stub.client.execute(HttpRequest("GET", "/products"))
             assertThat(response.status).isEqualTo(200)
             assertThat(response.body.toString()).isNotEmpty
-        }
-    }
-
-    @Test
-    @Disabled
-    fun `should not match request which does not contain a mandatory array query parameter`() {
-        val contract =
-            OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml")
-                .toFeature()
-
-        HttpStub(contract).use { stub ->
-            val response = stub.client.execute(HttpRequest("GET", "/products"))
-            assertThat(response.status).isEqualTo(400)
         }
     }
 

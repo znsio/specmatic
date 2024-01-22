@@ -919,7 +919,7 @@ paths:
 
     @Test
     fun `transient stubs are loaded in order sorted by filename across nested dirs where the first item in sorted order is the first item in the queue`() {
-        createStubFromContracts(listOf("src/test/resources/openapi/.yaml")).use { stub ->
+        createStubFromContracts(listOf("src/test/resources/openapi/contractWithOrderedStubsInNestedDirs.yaml")).use { stub ->
             val request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}"""))
 
             (0..4).map { ctr ->

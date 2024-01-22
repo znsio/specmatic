@@ -49,55 +49,84 @@ data class HttpQueryParamPattern(val queryPatternPairs: List<Pair<String, Patter
 
         val groupedPatternPairs = queryPatternPairs.groupBy { it.first }
 
-        val resultsForGroups: List<Result?> = groupedPatternPairs.map { (key, pairs) ->
+        val resultsForGroups: List<Result?> = groupedPatternPairs.map { (key, patternPairGroup) ->
             // 1. key is optional and request does not have the key as well
             // 2. key is mandatory and request does not have the key as well -> Result.Failure
             // 3. key in request but not in groupedPatternPairs -> Result.Failure
             // 4. key in request
                 // A. key value pattern is an array
                 // B. key value pattern is a scalar (not an array)
-                // C. multiple pattern pairs with the same key
+                // C. multiple pattern patternPairGroup with the same key
+
+
+            // We don't need unmatched values when:
+            // 1. Running contract tests
+            // 2. Backward compatibility
+            // 3. Stub
+            // A. Setting expectation
+            // B. Matching incoming request to a stub without expectations
+
+            // Where we need unmatched values:
+            // 1. Matching incoming request to stubbed out API
 
             val requestValues = httpRequest.queryParams.getValues(withoutOptionality(key))
 
             val keyWithoutOptionality = withoutOptionality(key)
 
-            if (requestValues.isEmpty())
-                return@map (
-                    if(isOptional(key))
-                        Result.Success()
-                    else
-                        Result.Failure("Missing query parameter: $keyWithoutOptionality")
-                ).breadCrumb(keyWithoutOptionality)
+//            if (requestValues.isEmpty())
+//                return@map (
+//                    if(isOptional(key))
+//                        Result.Success()
+//                    else
+//                        Result.Failure("Missing query parameter: $keyWithoutOptionality")
+//                ).breadCrumb(keyWithoutOptionality)
 
-            if (pairs.first().second is QueryParameterArrayPattern) {
+            if (patternPairGroup.first().second is QueryParameterArrayPattern) {
                 val list = JSONArrayValue(requestValues.map { StringValue(it) })
-                resolver.matchesPattern(keyWithoutOptionality, pairs.single().second, list)
+                resolver.matchesPattern(keyWithoutOptionality, patternPairGroup.single().second, list)
             } else {
+                val initialRequestValuesBeforeMatching = requestValues.map { Pair(it, emptyList<Result.Failure>()) }
                 val (matchResults, unmatchedKeys) =
-                    pairs.foldRight(emptyList<Result>() to requestValues) { (_, pattern), (results, valuesToBeMatched) ->
-                        val matchResultsForValuesWithThisKey = valuesToBeMatched.map { value ->
+                    patternPairGroup.foldRight(emptyList<Result>() to initialRequestValuesBeforeMatching) {
+                            (_, pattern), (results, unmatchedValuesWithReasons) ->
+                        val matchResultsForValuesWithThisKey = unmatchedValuesWithReasons.map { value ->
                             val parsedValue = try {
-                                pattern.parse(value, resolver)
+                                pattern.parse(value.first, resolver)
                             } catch (e: Exception) {
-                                StringValue(value)
+                                StringValue(value.first)
                             }
 
                             resolver.matchesPattern(keyWithoutOptionality, pattern, parsedValue) to value
                         }
 
                         if(matchResultsForValuesWithThisKey.none { it.first is Result.Success }) {
-                            results.plus(Result.fromResults(matchResultsForValuesWithThisKey.map { it.first })) to valuesToBeMatched
+                            results.plus(Result.fromResults(matchResultsForValuesWithThisKey.map { it.first })) to unmatchedValuesWithReasons
                         }
                         else {
 
                             val valuesMatched =
-                                matchResultsForValuesWithThisKey.filter { it.first is Result.Success }.map { it.second }
-                                    .toSet()
+                                matchResultsForValuesWithThisKey.filter { (result, _) ->
+                                    result is Result.Success }.map { (_, parameterMismatches) ->
+                                    val (paramName, _) = parameterMismatches
+                                    paramName
+                                }.toSet()
 
-                            val unmatchedValues = valuesToBeMatched.toSet() - valuesMatched
 
-                            results.plus(Result.Success()) to unmatchedValues.toList()
+                            val unmatchedValues = (unmatchedValuesWithReasons.map { it.first } - valuesMatched).toSet()
+
+                            val asYetUnmatchedValuesWithOlderReasons = unmatchedValuesWithReasons.filter {
+                                it.first in unmatchedValues
+                            }.toMap()
+
+                            val parameterMismatchesSoFar = matchResultsForValuesWithThisKey.filter { (_, parameterMismatches) ->
+                                val (paramName, _) = parameterMismatches
+                                paramName in unmatchedValues
+                            }.map { (_, parameterMismatches) ->
+                                val (paramName, mismatches) = parameterMismatches
+                                Pair(paramName, asYetUnmatchedValuesWithOlderReasons.getValue(paramName).plus(mismatches) )
+                            }
+
+                            results.plus(Result.Success()) to parameterMismatchesSoFar
                         }
                 }
 
@@ -106,43 +135,12 @@ data class HttpQueryParamPattern(val queryPatternPairs: List<Pair<String, Patter
                 val unmatchedKeysResult = if(unmatchedKeys.isEmpty()) {
                     Result.Success()
                 } else {
-                    Result.Failure("Unmatched values: $unmatchedKeys")
+                    Result.fromResults(unmatchedKeys.flatMap { it.second })
                 }
 
                 Result.fromResults(listOf(overallMatchResultForTheKey, unmatchedKeysResult))
             }.breadCrumb(keyWithoutOptionality)
         }
-
-//        val results: List<Result?> = queryPatternPairs.map { (key, patternValue) ->
-//            val keyName = key.removeSuffix("?")
-//
-//            if (!httpRequest.queryParams.containsKey(keyName)) {
-//               null
-//            } else {
-//                try {
-//                    val sampleValues: List<String> = httpRequest.queryParams.getValues(keyName)
-//                    if (patternValue is QueryParameterArrayPattern) {
-//                        val parsedValue = JSONArrayValue(sampleValues.map { StringValue(it) })
-//                        resolver.matchesPattern(keyName, patternValue, parsedValue).breadCrumb(keyName)
-//                    }
-//                    else {
-//                        if(sampleValues.count() > 1) {
-//                            return Result.Failure("Multiple values: $sampleValues found for query parameter: $key. Expected a single value")
-//                        }
-//                        val parsedValue = try {
-//                            patternValue.parse(sampleValues.single(), resolver)
-//                        } catch (e: Exception) {
-//                            StringValue(sampleValues.single())
-//                        }
-//                        resolver.matchesPattern(keyName, patternValue, parsedValue).breadCrumb(keyName)
-//                    }
-//                } catch (e: ContractException) {
-//                    e.failure().breadCrumb(keyName)
-//                } catch (e: Throwable) {
-//                    Result.Failure(e.localizedMessage).breadCrumb(keyName)
-//                }
-//            }
-//        }
 
         val failures = keyErrorList.plus(resultsForGroups).filterIsInstance<Result.Failure>()
 

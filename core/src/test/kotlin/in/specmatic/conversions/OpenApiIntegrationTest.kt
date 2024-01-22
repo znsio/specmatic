@@ -675,6 +675,42 @@ Feature: Authenticated
         }
 
         @Test
+        fun `should generate one test with multiple api keys for security scheme value from row`() {
+            val contract: Feature = parseGherkinStringToFeature(
+                    """
+Feature: Authenticated
+
+  Background:
+    Given openapi openapi/authenticated-compound-auth.yaml
+  
+  Scenario: Compound header auth test
+    When GET /hello/(id:number)
+    Then status 200
+    
+    Examples:
+    | id |
+    | 10 |
+        """.trimIndent(), sourceSpecPath
+            )
+
+            val contractTests = contract.generateContractTestScenarios(emptyList())
+            val result = executeTest(contractTests.single(), object : TestExecutor { //should generate one test instead of 2
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.headers).containsKey("X-API-KEY")
+                    assertThat(request.headers).containsKey("X-API-KEY-2")
+                    return HttpResponse.ok("success")
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+
+                }
+
+            })
+
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
         fun `should generate test with api key in header security scheme with token in header from security configuration`() {
             val token = "APIHEADERKEY1234"
             val feature = parseContractFileToFeature(

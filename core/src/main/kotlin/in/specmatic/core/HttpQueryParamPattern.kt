@@ -108,34 +108,43 @@ data class HttpQueryParamPattern(val queryPatternPairs: List<Pair<String, Patter
                                 matchResultsForPreviousQueryPairs.plus(consolidatedResultForCurrentPair) to unmatchedValuesWithReasons
                             } else {
 
-                                val valuesMatchedThisIteration =
-                                    matchResultsForCurrentParameter.filter { (result, _) ->
-                                        result is Result.Success
-                                    }.map { (_, parameterMismatches) ->
-                                        val (value, _) = parameterMismatches
-                                        value
-                                    }.toSet()
+//                                val valuesMatchedThisIteration =
+//                                    matchResultsForCurrentParameter.filter { (result, _) ->
+//                                        result is Result.Success
+//                                    }.map { (_, parameterMismatches) ->
+//                                        val (value, _) = parameterMismatches
+//                                        value
+//                                    }.toSet()
+//
+//                                val unmatchedValuesAtStartOfIteration = unmatchedValuesWithReasons.map { it.first }
+//                                val unmatchedValuesInThisIteration = (unmatchedValuesAtStartOfIteration - valuesMatchedThisIteration).toSet()
 
-                                val unmatchedValuesAtStartOfIteration = unmatchedValuesWithReasons.map { it.first }
-                                val unmatchedValuesInThisIteration = (unmatchedValuesAtStartOfIteration - valuesMatchedThisIteration).toSet()
+                                // REMEMBER: We are matching one param a time against all values.
+                                // This means that any value that does not match the current param may match the next
+                                // param. We need to keep track of it, in case after all params are exhausted, it proves
+                                // not to match any param.
 
-                                val unmatchedValuesInThisIterationWithHistoricalReasons =
-                                    unmatchedValuesWithReasons.filter { (value, _) ->
-                                        value in unmatchedValuesInThisIteration
-                                    }.toMap()
+                                val unmatchedValuesInThisIteration = matchResultsForCurrentParameter.filter { (result, _) ->
+                                    result is Result.Failure
+                                }.map { (_, parameterMismatches) ->
+                                    val (value, _) = parameterMismatches
+                                    value
+                                }.toSet()
 
                                 val currentParameterMismatches =
                                     matchResultsForCurrentParameter.filter { (_, currentParameterMismatches) ->
                                         val (value, _) = currentParameterMismatches
                                         value in unmatchedValuesInThisIteration
+                                    }.map {
+                                        (it.first as Result.Failure) to it.second
                                     }
 
                                 val historicalAndCurrentParameterMismatchesCombined =
-                                    currentParameterMismatches.map { (result, currentParameterMismatches) ->
-                                        val (value, _) = currentParameterMismatches
+                                    currentParameterMismatches.map { (reasonForLatestFailure, currentParameterMismatches) ->
+                                        val (value, historicalFailures) = currentParameterMismatches
 
                                         val valueMismatchReasons =
-                                            unmatchedValuesInThisIterationWithHistoricalReasons.getValue(value).plus(result as Result.Failure)
+                                            historicalFailures.plus(reasonForLatestFailure)
 
                                         Pair(value, valueMismatchReasons)
                                     }

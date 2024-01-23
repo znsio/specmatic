@@ -3,13 +3,15 @@ package `in`.specmatic.stub
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.QueryParameters
+import `in`.specmatic.mock.NoMatchingScenario
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class HttpStubWithArrayQueryParameterTest {
 
     @Test
-    fun `should match stub with mandatory array query parameter with no expectations set`() {
+    fun `should match stub for mandatory query parameter with no expectations set`() {
         val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml").toFeature()
 
         HttpStub(contract).use { stub ->
@@ -22,7 +24,7 @@ class HttpStubWithArrayQueryParameterTest {
     }
 
     @Test
-    fun `should match stub with mandatory array query parameter with dynamic expectation`() {
+    fun `should match stub for mandatory query parameter with dynamic expectation set`() {
         val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml").toFeature()
 
         HttpStub(contract).use { stub ->
@@ -52,7 +54,7 @@ class HttpStubWithArrayQueryParameterTest {
     }
 
     @Test
-    fun `should match stub with mandatory array query parameter with externalized json expectation`() {
+    fun `should match stub for mandatory query parameter with externalized json expectation`() {
         createStubFromContracts(listOf("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml")).use { stub ->
             val queryParameters = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "brand_ids" to "3"))
             val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
@@ -63,7 +65,7 @@ class HttpStubWithArrayQueryParameterTest {
     }
 
     @Test
-    fun `should match stub with mandatory array query parameter with expectation from examples in spec`() {
+    fun `should match stub for mandatory query parameter with expectation from examples in spec`() {
         val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_mandatory_array_query_parameter_with_examples.yaml").toFeature()
         HttpStub(contract).use { stub ->
             val queryParameters = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "brand_ids" to "3"))
@@ -75,7 +77,7 @@ class HttpStubWithArrayQueryParameterTest {
     }
 
     @Test
-    fun `should not match stub for array query parameter when request contains a query parameter value which is not defined in the stub`() {
+    fun `should not match stub for query parameter when request contains a value which is not defined in the stub`() {
         val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml").toFeature()
         HttpStub(contract).use { stub ->
             stub.setExpectation("""
@@ -105,7 +107,7 @@ class HttpStubWithArrayQueryParameterTest {
     }
 
     @Test
-    fun `should not match stub for array query parameter when request does not contain all the query parameter values defined in the stub`() {
+    fun `should not match stub for query parameter when request does not contain all the values defined in the stub`() {
         val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml").toFeature()
         HttpStub(contract).use { stub ->
             stub.setExpectation("""
@@ -135,7 +137,7 @@ class HttpStubWithArrayQueryParameterTest {
     }
 
     @Test
-    fun `should match stub with optional array query parameter with dynamic expectation`() {
+    fun `should match stub for optional array query parameter with dynamic expectation set`() {
         val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_optional_array_query_parameter.yaml").toFeature()
 
         HttpStub(contract).use { stub ->
@@ -165,7 +167,7 @@ class HttpStubWithArrayQueryParameterTest {
     }
 
     @Test
-    fun `should match request which does not contain an optional array query parameter`() {
+    fun `should match request which does not contain an optional array query parameter with no expectations set`() {
         val contract =
             OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_optional_array_query_parameter.yaml")
                 .toFeature()
@@ -198,4 +200,108 @@ class HttpStubWithArrayQueryParameterTest {
             """.trimIndent())
         }
     }
+
+    @Test
+    fun `should match stub for enum query parameter with dynamic expectation set`() {
+        val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_enum_based_array_query_parameter.yaml").toFeature()
+
+        HttpStub(contract).use { stub ->
+            stub.setExpectation("""
+                {
+                    "http-request": {
+                        "method": "GET",
+                        "path": "/orders",
+                         "query": {
+                            "status": ["pending","complete"]
+                        }
+
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": "order list"
+                    }
+                }
+            """.trimIndent())
+
+            val queryParameters = QueryParameters(paramPairs = listOf("status" to "pending", "status" to "complete"))
+            val response = stub.client.execute(HttpRequest("GET", "/orders", queryParams = queryParameters) )
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toString()).isEqualTo("order list")
+        }
+    }
+
+    @Test
+    fun `should not accept expectation for enum query parameter when the values supplied are not in the enum list`() {
+        val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_enum_based_array_query_parameter.yaml").toFeature()
+
+        HttpStub(contract).use { stub ->
+            val exception = assertThrows<NoMatchingScenario> {
+                stub.setExpectation(
+                    """
+                {
+                    "http-request": {
+                        "method": "GET",
+                        "path": "/orders",
+                         "query": {
+                            "status": ["cancelled", "suspended"]
+                        }
+
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": "order list"
+                    }
+                }
+            """.trimIndent()
+                )
+
+            }
+            assertThat(exception.message).isEqualTo("""
+                Error from contract src/test/resources/openapi/spec_with_enum_based_array_query_parameter.yaml
+
+                  In scenario "get orders. Response: OK"
+                  API: GET /orders -> 200
+                  
+                    >> REQUEST.QUERY-PARAMS.status
+                  
+                       Contract expected ("pending" or "complete") but stub contained "cancelled"
+                  
+                    >> REQUEST.QUERY-PARAMS.status
+                  
+                       Contract expected ("pending" or "complete") but stub contained "suspended"
+            """.trimIndent())
+        }
+    }
+
+    @Test
+    fun `should not match stub for enum query parameter with dynamic expectation set when request does not contain all the values`() {
+        val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_enum_based_array_query_parameter.yaml").toFeature()
+
+        HttpStub(contract).use { stub ->
+            stub.setExpectation("""
+                {
+                    "http-request": {
+                        "method": "GET",
+                        "path": "/orders",
+                         "query": {
+                            "status": ["pending","complete"]
+                        }
+
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": "order list"
+                    }
+                }
+            """.trimIndent())
+
+            val queryParameters = QueryParameters(paramPairs = listOf("status" to "pending"))
+            val response = stub.client.execute(HttpRequest("GET", "/orders", queryParams = queryParameters) )
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toString()).isNotEqualTo("order list")
+        }
+    }
+
 }

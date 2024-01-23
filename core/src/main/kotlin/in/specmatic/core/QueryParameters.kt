@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.core.pattern.parsedJSONArray
 import kotlin.collections.Map
 
 data class QueryParameters(val map: Map<String, String> = kotlin.collections.HashMap(), val paramPairs: List<Pair<String, String>> = mapToListOfPairs(map)) : Map<String, String> by map {
@@ -56,10 +57,10 @@ private fun toListOfPairs(
 private fun convertJsonArrayStringToListOfPairs(
     value: String,
     key: String
-) = value.removeSurrounding("[", "]")
-    .split(",")
+) = parsedJSONArray(value)
+    .list
     .map { valueItem ->
-        key to valueItem.trim()
+        key to valueItem.toString().trim()
     }
 
 private fun isJsonArrayString(value: String) = value.startsWith("[") && value.endsWith("]")

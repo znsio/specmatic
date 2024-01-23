@@ -49,93 +49,104 @@ data class HttpQueryParamPattern(val queryPatternPairs: List<Pair<String, Patter
 
         val groupedPatternPairs = queryPatternPairs.groupBy { it.first }
 
+        // 1. key is optional and request does not have the key as well
+        // 2. key is mandatory and request does not have the key as well -> Result.Failure
+        // 3. key in request but not in groupedPatternPairs -> Result.Failure
+        // 4. key in request
+        // A. key value pattern is an array
+        // B. key value pattern is a scalar (not an array)
+        // C. multiple pattern patternPairGroup with the same key
+
+
+        // We don't need unmatched values when:
+        // 1. Running contract tests
+        // 2. Backward compatibility
+        // 3. Stub
+        // A. Setting expectation
+        // B. Matching incoming request to a stub without expectations
+
+        // Where we need unmatched values:
+        // 1. Matching incoming request to stubbed out API
+
         val resultsForGroups: List<Result?> = groupedPatternPairs.map { (key, patternPairGroup) ->
-            // 1. key is optional and request does not have the key as well
-            // 2. key is mandatory and request does not have the key as well -> Result.Failure
-            // 3. key in request but not in groupedPatternPairs -> Result.Failure
-            // 4. key in request
-                // A. key value pattern is an array
-                // B. key value pattern is a scalar (not an array)
-                // C. multiple pattern patternPairGroup with the same key
-
-
-            // We don't need unmatched values when:
-            // 1. Running contract tests
-            // 2. Backward compatibility
-            // 3. Stub
-            // A. Setting expectation
-            // B. Matching incoming request to a stub without expectations
-
-            // Where we need unmatched values:
-            // 1. Matching incoming request to stubbed out API
-
             val requestValues = httpRequest.queryParams.getValues(withoutOptionality(key))
 
             val keyWithoutOptionality = withoutOptionality(key)
-
-//            if (requestValues.isEmpty())
-//                return@map (
-//                    if(isOptional(key))
-//                        Result.Success()
-//                    else
-//                        Result.Failure("Missing query parameter: $keyWithoutOptionality")
-//                ).breadCrumb(keyWithoutOptionality)
 
             if (patternPairGroup.first().second is QueryParameterArrayPattern) {
                 val list = JSONArrayValue(requestValues.map { StringValue(it) })
                 resolver.matchesPattern(keyWithoutOptionality, patternPairGroup.single().second, list)
             } else {
-                val initialRequestValuesBeforeMatching = requestValues.map { Pair(it, emptyList<Result.Failure>()) }
+
+                val initialFoldValue =
+                    emptyList<Result>() to requestValues.map<String, Pair<String, List<Result.Failure>>> { value ->
+                        Pair(
+                            value,
+                            emptyList()
+                        )
+                    }
+
                 val (matchResults, unmatchedKeys) =
-                    patternPairGroup.foldRight(emptyList<Result>() to initialRequestValuesBeforeMatching) {
-                            (_, pattern), (results, unmatchedValuesWithReasons) ->
-                        val matchResultsForValuesWithThisKey = unmatchedValuesWithReasons.map { (value, failuresSoFar) ->
-                            val parsedValue = try {
-                                pattern.parse(value, resolver)
-                            } catch (e: Exception) {
-                                StringValue(value)
+                    patternPairGroup
+                        .foldRight(initialFoldValue) { (_, pattern), (matchResultsForPreviousQueryPairs, unmatchedValuesWithReasons) ->
+                            val matchResultsForCurrentParameter =
+                                unmatchedValuesWithReasons.map { (value, previousParameterMatchFailures) ->
+                                    val parsedValue = try {
+                                        pattern.parse(value, resolver)
+                                    } catch (e: Exception) {
+                                        StringValue(value)
+                                    }
+
+                                    val matchResult =
+                                        resolver.matchesPattern(keyWithoutOptionality, pattern, parsedValue)
+
+                                    matchResult to Pair(value, previousParameterMatchFailures)
+                                }
+
+                            if (matchResultsForCurrentParameter.none { it.first is Result.Success }) {
+                                val consolidatedResultForCurrentPair = Result.fromResults(matchResultsForCurrentParameter.map { it.first })
+                                matchResultsForPreviousQueryPairs.plus(consolidatedResultForCurrentPair) to unmatchedValuesWithReasons
+                            } else {
+
+                                val valuesMatchedThisIteration =
+                                    matchResultsForCurrentParameter.filter { (result, _) ->
+                                        result is Result.Success
+                                    }.map { (_, parameterMismatches) ->
+                                        val (value, _) = parameterMismatches
+                                        value
+                                    }.toSet()
+
+                                val unmatchedValuesAtStartOfIteration = unmatchedValuesWithReasons.map { it.first }
+                                val unmatchedValuesInThisIteration = (unmatchedValuesAtStartOfIteration - valuesMatchedThisIteration).toSet()
+
+                                val unmatchedValuesInThisIterationWithHistoricalReasons =
+                                    unmatchedValuesWithReasons.filter { (value, _) ->
+                                        value in unmatchedValuesInThisIteration
+                                    }.toMap()
+
+                                val currentParameterMismatches =
+                                    matchResultsForCurrentParameter.filter { (_, currentParameterMismatches) ->
+                                        val (value, _) = currentParameterMismatches
+                                        value in unmatchedValuesInThisIteration
+                                    }
+
+                                val historicalAndCurrentParameterMismatchesCombined =
+                                    currentParameterMismatches.map { (result, currentParameterMismatches) ->
+                                        val (value, _) = currentParameterMismatches
+
+                                        val valueMismatchReasons =
+                                            unmatchedValuesInThisIterationWithHistoricalReasons.getValue(value).plus(result as Result.Failure)
+
+                                        Pair(value, valueMismatchReasons)
+                                    }
+
+                                matchResultsForPreviousQueryPairs.plus(Result.Success()) to historicalAndCurrentParameterMismatchesCombined
                             }
-
-                            resolver.matchesPattern(keyWithoutOptionality, pattern, parsedValue) to Pair(value, failuresSoFar)
                         }
-
-                        if(matchResultsForValuesWithThisKey.none { it.first is Result.Success }) {
-                            results.plus(Result.fromResults(matchResultsForValuesWithThisKey.map { it.first })) to unmatchedValuesWithReasons
-                        }
-                        else {
-
-                            val valuesMatched =
-                                matchResultsForValuesWithThisKey.filter { (result, _) ->
-                                    result is Result.Success
-                                }.map { (_, parameterMismatches) ->
-                                    val (paramName, _) = parameterMismatches
-                                    paramName
-                                }.toSet()
-
-
-                            val unmatchedValues = (unmatchedValuesWithReasons.map { it.first } - valuesMatched).toSet()
-
-                            val asYetUnmatchedValuesWithOlderReasons = unmatchedValuesWithReasons.filter {
-                                it.first in unmatchedValues
-                            }.toMap()
-
-                            val currentParameterMismatches = matchResultsForValuesWithThisKey.filter { (_, parameterMismatches) ->
-                                val (paramName, _) = parameterMismatches
-                                paramName in unmatchedValues
-                            }
-
-                            val parameterMismatchesSoFar = currentParameterMismatches.map { (result, parameterMismatches) ->
-                                val (paramName, _) = parameterMismatches
-                                Pair(paramName, asYetUnmatchedValuesWithOlderReasons.getValue(paramName).plus(result as Result.Failure))
-                            }
-
-                            results.plus(Result.Success()) to parameterMismatchesSoFar
-                        }
-                }
 
                 val overallMatchResultForTheKey = Result.fromResults(matchResults)
 
-                val unmatchedKeysResult = if(unmatchedKeys.isEmpty()) {
+                val unmatchedKeysResult = if (unmatchedKeys.isEmpty()) {
                     Result.Success()
                 } else {
                     Result.fromResults(unmatchedKeys.flatMap { it.second })

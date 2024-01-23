@@ -77,7 +77,7 @@ class HttpStubWithArrayQueryParameterTest {
     }
 
     @Test
-    fun `should not match stub for query parameter when request contains a value which is not defined in the stub`() {
+    fun `should not match stub for query parameter when request does not contain all stub values and also a value which is not defined in the stub`() {
         val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml").toFeature()
         HttpStub(contract).use { stub ->
             stub.setExpectation("""
@@ -98,6 +98,36 @@ class HttpStubWithArrayQueryParameterTest {
             """.trimIndent())
 
             val queryParameters = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "brand_ids" to "4"))
+            val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toString()).isNotEqualTo("product list")
+            assertThat(response.headers["X-Specmatic-Type"]).isEqualTo("random")
+        }
+    }
+
+    @Test
+    fun `should not match stub for query parameter when request contains all stub values and also a value which is not defined in the stub`() {
+        val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml").toFeature()
+        HttpStub(contract).use { stub ->
+            stub.setExpectation("""
+                {
+                    "http-request": {
+                        "method": "GET",
+                        "path": "/products",
+                         "query": {
+                            "brand_ids": [1,2,3]
+                        }
+
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": "product list"
+                    }
+                }
+            """.trimIndent())
+
+            val queryParameters = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "brand_ids" to "3", "brand_ids" to "4"))
             val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
 
             assertThat(response.status).isEqualTo(200)

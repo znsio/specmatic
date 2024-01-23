@@ -118,12 +118,14 @@ data class HttpQueryParamPattern(val queryPatternPairs: List<Pair<String, Patter
                                 it.first in unmatchedValues
                             }.toMap()
 
-                            val parameterMismatchesSoFar = matchResultsForValuesWithThisKey.filter { (_, parameterMismatches) ->
+                            val currentParameterMismatches = matchResultsForValuesWithThisKey.filter { (_, parameterMismatches) ->
                                 val (paramName, _) = parameterMismatches
                                 paramName in unmatchedValues
-                            }.map { (_, parameterMismatches) ->
-                                val (paramName, mismatches) = parameterMismatches
-                                Pair(paramName, asYetUnmatchedValuesWithOlderReasons.getValue(paramName).plus(mismatches) )
+                            }
+
+                            val parameterMismatchesSoFar = currentParameterMismatches.map { (result, parameterMismatches) ->
+                                val (paramName, _) = parameterMismatches
+                                Pair(paramName, asYetUnmatchedValuesWithOlderReasons.getValue(paramName).plus(result as Result.Failure))
                             }
 
                             results.plus(Result.Success()) to parameterMismatchesSoFar

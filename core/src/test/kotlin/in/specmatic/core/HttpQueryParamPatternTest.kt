@@ -12,6 +12,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -220,6 +221,236 @@ class HttpQueryParamPatternTest {
         @Test
         fun `key presence errors should appear before value errors`() {
             assertThat(resultText.indexOf(">> QUERY-PARAMS.hi")).isLessThan(resultText.indexOf(">> QUERY-PARAMS.hello"))
+        }
+    }
+
+    @Nested
+    inner class ArrayParameterUnStubbedBehaviour {
+        private val unStubbedArrayQueryParameterPattern = HttpQueryParamPattern(listOf("brand_ids" to QueryParameterArrayPattern(NumberPattern()) ))
+
+        @Test
+        fun `matches request with single value `() {
+            val result = unStubbedArrayQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("brand_ids" to "1"))),  Resolver())
+            assertThat(result is Success).isTrue
+        }
+
+        @Test
+        fun `matches request with multiple values`() {
+            val result = unStubbedArrayQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2"))),  Resolver())
+            assertThat(result is Success).isTrue
+        }
+
+        @Test
+        fun `fails when request contains a parameter whose type does not match the spec`() {
+            val result = unStubbedArrayQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("brand_ids" to "abc", "brand_ids" to "def"))),  Resolver())
+            assertThat(result is Failure).isTrue
+            assertThat(result.reportString()).isEqualTo("""
+                >> QUERY-PARAMS.brand_ids
+
+                   Element 0 (abc) did not match the array type number. Expected number, actual was "abc"
+                
+                >> QUERY-PARAMS.brand_ids
+                
+                   Element 1 (def) did not match the array type number. Expected number, actual was "def"
+            """.trimIndent())
+        }
+
+        @Test
+        fun `fails when request does not contain a mandatory query parameter`() {
+            val result = unStubbedArrayQueryParameterPattern.matches(HttpRequest("GET", "/", emptyMap()),  Resolver())
+            assertThat(result is Failure).isTrue
+            assertThat(result.reportString()).isEqualTo("""
+                >> QUERY-PARAMS.brand_ids
+
+                   Expected query param named "brand_ids" was missing
+            """.trimIndent())
+        }
+
+        @Test
+        fun `fails when request contains a query parameter not present in the spec`() {
+            val result = unStubbedArrayQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "product_id" to "1"))),  Resolver())
+            assertThat(result is Failure).isTrue
+            assertThat(result.reportString()).isEqualTo("""
+                >> QUERY-PARAMS.product_id
+
+                   Query param named "product_id" was unexpected
+            """.trimIndent())
+        }
+
+    }
+
+    @Nested
+    inner class ArrayParameterStubbedBehaviour {
+        private val stubbedArrayQueryParameterPattern = HttpQueryParamPattern(listOf("brand_ids" to ExactValuePattern(NumberValue(1)), "brand_ids" to ExactValuePattern(NumberValue(2))))
+
+        @Test
+        fun `matches request with exact stub values`() {
+            val result = stubbedArrayQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2"))),  Resolver())
+            assertThat(result is Success).isTrue
+        }
+
+        @Test
+        fun `fails when request does not contain all the stub values`() {
+            val result = stubbedArrayQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("brand_ids" to "1"))),  Resolver())
+            assertThat(result is Failure).isTrue
+            assertThat(result.reportString()).isEqualTo("""
+                >> QUERY-PARAMS.brand_ids
+
+                   Expected 2 (number), actual was 1 (number)
+            """.trimIndent())
+        }
+
+        @Test
+        fun `fails when request does not contain all stub values and also a value not present in the stub`() {
+            val result = stubbedArrayQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "3"))),  Resolver())
+            assertThat(result is Failure).isTrue
+            assertThat(result.reportString()).isEqualTo("""
+                >> QUERY-PARAMS.brand_ids
+
+                   Expected 2 (number), actual was 1 (number)
+                
+                >> QUERY-PARAMS.brand_ids
+                
+                   Expected 2 (number), actual was 3 (number)
+                
+                >> QUERY-PARAMS.brand_ids
+                
+                   Expected 1 (number), actual was 3 (number)
+            """.trimIndent())
+        }
+
+        @Test
+        fun `fails when request contains all stub values and also a value not present in the stub`() {
+            val result = stubbedArrayQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "brand_ids" to "3"))),  Resolver())
+            assertThat(result is Failure).isTrue
+            assertThat(result.reportString()).isEqualTo("""
+                >> QUERY-PARAMS.brand_ids
+
+                   Expected 2 (number), actual was 3 (number)
+                
+                >> QUERY-PARAMS.brand_ids
+                
+                   Expected 1 (number), actual was 3 (number)
+            """.trimIndent())
+        }
+
+        @Test
+        fun `fails when request does not contain a mandatory query parameter`() {
+            val result = stubbedArrayQueryParameterPattern.matches(HttpRequest("GET", "/", emptyMap()),  Resolver())
+            assertThat(result is Failure).isTrue
+            assertThat(result.reportString()).isEqualTo("""
+                >> QUERY-PARAMS.brand_ids
+
+                   Expected query param named "brand_ids" was missing
+            """.trimIndent())
+        }
+
+        @Test
+        fun `fails when request contains a query parameter not present in the spec`() {
+            val result = stubbedArrayQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "product_id" to "1"))),  Resolver())
+            assertThat(result is Failure).isTrue
+            assertThat(result.reportString()).isEqualTo("""
+                >> QUERY-PARAMS.product_id
+
+                   Query param named "product_id" was unexpected
+            """.trimIndent())
+        }
+
+    }
+
+    @Nested
+    inner class ScalarParameterUnStubbedBehaviour {
+        private val unStubbedScalarQueryParameterPattern = HttpQueryParamPattern(listOf("product_id" to NumberPattern()))
+
+        @Test
+        fun `matches request with single value `() {
+            val result = unStubbedScalarQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("product_id" to "1"))),  Resolver())
+            assertThat(result is Success).isTrue
+        }
+
+        @Test
+        @Disabled
+        fun `fails when request contains multiple values for the parameter`() {
+            val result = unStubbedScalarQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("product_id" to "1", "product_id" to "2"))),  Resolver())
+            assertThat(result is Failure).isTrue
+        }
+
+        @Test
+        fun `fails when query parameter type does not match the spec`() {
+            val result = unStubbedScalarQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("product_id" to "abc"))),  Resolver())
+            assertThat(result is Failure).isTrue
+            assertThat(result.reportString()).isEqualTo("""
+                >> QUERY-PARAMS.product_id
+
+                   Expected number, actual was "abc"
+            """.trimIndent())
+        }
+
+        @Test
+        fun `fails when request does not contain a mandatory query parameter`() {
+            val result = unStubbedScalarQueryParameterPattern.matches(HttpRequest("GET", "/", emptyMap()),  Resolver())
+            assertThat(result is Failure).isTrue
+            assertThat(result.reportString()).isEqualTo("""
+                >> QUERY-PARAMS.product_id
+
+                   Expected query param named "product_id" was missing
+            """.trimIndent())
+        }
+
+        @Test
+        fun `fails when request contains a query parameter not present in the spec`() {
+            val result = unStubbedScalarQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("brand_ids" to "1", "product_id" to "1"))),  Resolver())
+            assertThat(result is Failure).isTrue
+            assertThat(result.reportString()).isEqualTo("""
+                >> QUERY-PARAMS.brand_ids
+
+                   Query param named "brand_ids" was unexpected
+            """.trimIndent())
+        }
+    }
+
+    @Nested
+    inner class ScalarParameterStubbedBehaviour {
+        private val stubbedScalarQueryParameterPattern = HttpQueryParamPattern(listOf("status" to ExactValuePattern(StringValue("pending"))))
+
+        @Test
+        fun `matches request with exact stubbed parameter value`() {
+            val result = stubbedScalarQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("status" to "pending"))),  Resolver())
+            assertThat(result is Success).isTrue
+        }
+
+        @Test
+        fun `fails when query parameter type does not match the stub`() {
+            val stubbedNumericScalarQueryParameterPattern = HttpQueryParamPattern(listOf("product_id" to ExactValuePattern(NumberValue(1))))
+            val result = stubbedNumericScalarQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("product_id" to "abc"))),  Resolver())
+            assertThat(result is Failure).isTrue
+            assertThat(result.reportString()).isEqualTo("""
+                >> QUERY-PARAMS.product_id
+
+                   Expected 1 (number), actual was "abc"
+            """.trimIndent())
+        }
+
+        @Test
+        fun `fails when request does not contain a mandatory query parameter`() {
+            val result = stubbedScalarQueryParameterPattern.matches(HttpRequest("GET", "/", emptyMap()),  Resolver())
+            assertThat(result is Failure).isTrue
+            assertThat(result.reportString()).isEqualTo("""
+                >> QUERY-PARAMS.status
+
+                   Expected query param named "status" was missing
+            """.trimIndent())
+        }
+
+        @Test
+        fun `fails when request contains a query parameter not present in the spec`() {
+            val result = stubbedScalarQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("brand_ids" to "1", "status" to "pending"))),  Resolver())
+            assertThat(result is Failure).isTrue
+            assertThat(result.reportString()).isEqualTo("""
+                >> QUERY-PARAMS.brand_ids
+
+                   Query param named "brand_ids" was unexpected
+            """.trimIndent())
         }
     }
 }

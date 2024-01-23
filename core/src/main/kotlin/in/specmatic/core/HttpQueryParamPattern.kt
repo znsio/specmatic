@@ -89,14 +89,14 @@ data class HttpQueryParamPattern(val queryPatternPairs: List<Pair<String, Patter
                 val (matchResults, unmatchedKeys) =
                     patternPairGroup.foldRight(emptyList<Result>() to initialRequestValuesBeforeMatching) {
                             (_, pattern), (results, unmatchedValuesWithReasons) ->
-                        val matchResultsForValuesWithThisKey = unmatchedValuesWithReasons.map { value ->
+                        val matchResultsForValuesWithThisKey = unmatchedValuesWithReasons.map { (value, failuresSoFar) ->
                             val parsedValue = try {
-                                pattern.parse(value.first, resolver)
+                                pattern.parse(value, resolver)
                             } catch (e: Exception) {
-                                StringValue(value.first)
+                                StringValue(value)
                             }
 
-                            resolver.matchesPattern(keyWithoutOptionality, pattern, parsedValue) to value
+                            resolver.matchesPattern(keyWithoutOptionality, pattern, parsedValue) to Pair(value, failuresSoFar)
                         }
 
                         if(matchResultsForValuesWithThisKey.none { it.first is Result.Success }) {
@@ -106,7 +106,8 @@ data class HttpQueryParamPattern(val queryPatternPairs: List<Pair<String, Patter
 
                             val valuesMatched =
                                 matchResultsForValuesWithThisKey.filter { (result, _) ->
-                                    result is Result.Success }.map { (_, parameterMismatches) ->
+                                    result is Result.Success
+                                }.map { (_, parameterMismatches) ->
                                     val (paramName, _) = parameterMismatches
                                     paramName
                                 }.toSet()

@@ -2244,17 +2244,6 @@ paths:
 
     @Test
     fun `should pass for scalar query parameter when type is changed from number to string`() {
-
-        // scaler string -> number should fail
-        // scaler number -> string should not fail
-
-        // array string -> number should fail
-        // array number -> string should not fail
-
-        // scalar number to array number should not fail
-        // array number to scalar number
-
-
         val olderContract: Feature =
             """
         openapi: 3.0.0

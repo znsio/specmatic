@@ -23,9 +23,13 @@ import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
 import java.util.Base64
 import java.util.function.Consumer
+import java.util.stream.Stream
 
 fun openAPIToString(openAPI: OpenAPI): String {
     return Yaml.pretty(openAPI)
@@ -33,10 +37,19 @@ fun openAPIToString(openAPI: OpenAPI): String {
 
 internal class OpenApiSpecificationTest {
     companion object {
-        const val OPENAPI_FILE = "openApiTest.yaml"
+        const val OPENAPI_FILE_WITH_YAML_EXTENSION = "openApiTest.yaml"
+        const val OPENAPI_FILE_WITH_YML_EXTENSION = "openApiTest.yaml"
         const val OPENAPI_FILE_WITH_REFERENCE = "openApiWithRef.yaml"
         const val PET_OPENAPI_FILE = "Pet.yaml"
         const val SCHEMAS_DIRECTORY = "schemas"
+
+        @JvmStatic
+        fun listOfOpenApiFiles(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(OPENAPI_FILE_WITH_YAML_EXTENSION),
+                Arguments.of(OPENAPI_FILE_WITH_YML_EXTENSION)
+            )
+        }
     }
 
     private fun portableComparisonAcrossBuildEnvironments(actual: String, expected: String) {
@@ -171,7 +184,7 @@ paths:
           content:
             application/json:
               schema:
-                ${"$"}ref: './${SCHEMAS_DIRECTORY}/Pet.yaml'
+                ${"$"}ref: './${SCHEMAS_DIRECTORY}/${PET_OPENAPI_FILE}'
 components:
   schemas:
         """.trim()
@@ -190,9 +203,11 @@ Pet:
       format: int64
         """.trim()
 
-        val openApiFile = File(OPENAPI_FILE)
-        openApiFile.createNewFile()
-        openApiFile.writeText(openAPI)
+        listOf(OPENAPI_FILE_WITH_YAML_EXTENSION, OPENAPI_FILE_WITH_YML_EXTENSION).forEach {
+            val openApiFile = File(it)
+            openApiFile.createNewFile()
+            openApiFile.writeText(openAPI)
+        }
 
         val openApiFileWithRef = File(OPENAPI_FILE_WITH_REFERENCE)
         openApiFileWithRef.createNewFile()
@@ -206,15 +221,18 @@ Pet:
 
     @AfterEach
     fun teardown() {
-        File(OPENAPI_FILE).delete()
+        listOf(OPENAPI_FILE_WITH_YAML_EXTENSION, OPENAPI_FILE_WITH_YML_EXTENSION).forEach {
+            File(it).delete()
+        }
         File(OPENAPI_FILE_WITH_REFERENCE).delete()
         File(SCHEMAS_DIRECTORY).deleteRecursively()
     }
 
     @Disabled
-    @Test
-    fun `should generate 200 OK scenarioInfos from openAPI`() {
-        val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
+    @ParameterizedTest
+    @MethodSource("listOfOpenApiFiles")
+    fun `should generate 200 OK scenarioInfos from openAPI`(openApiFile: String) {
+        val openApiSpecification = OpenApiSpecification.fromFile(openApiFile)
         val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
         assertThat(scenarioInfos.size).isEqualTo(3)
     }
@@ -260,17 +278,19 @@ Pet:
         ).isEqualTo("success")
     }
 
-    @Test
-    fun `should not resolve non ref nested types to Deferred Pattern`() {
-        val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
+    @ParameterizedTest
+    @MethodSource("listOfOpenApiFiles")
+    fun `should not resolve non ref nested types to Deferred Pattern`(openApiFile: String) {
+        val openApiSpecification = OpenApiSpecification.fromFile(openApiFile)
         val (scenarioInfoData, _) = openApiSpecification.toScenarioInfos()
         val nestedTypeWithoutRef = scenarioInfoData.first().patterns.getOrDefault("(NestedTypeWithoutRef)", NullPattern)
         assertThat(containsDeferredPattern(nestedTypeWithoutRef)).isFalse
     }
 
-    @Test
-    fun `should resolve ref nested types to Deferred Pattern`() {
-        val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
+    @ParameterizedTest
+    @MethodSource("listOfOpenApiFiles")
+    fun `should resolve ref nested types to Deferred Pattern`(openApiFile: String) {
+        val openApiSpecification = OpenApiSpecification.fromFile(openApiFile)
         val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
         val nestedTypeWithRef = scenarioInfos[4].patterns["(NestedTypeWithRef)"]
         assertThat(containsDeferredPattern(nestedTypeWithRef!!)).isTrue
@@ -290,9 +310,10 @@ Pet:
         else containsDeferredPattern(childPattern)
     }
 
-    @Test
-    fun `none of the scenarios should expect the Content-Type header`() {
-        val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
+    @ParameterizedTest
+    @MethodSource("listOfOpenApiFiles")
+    fun `none of the scenarios should expect the Content-Type header`(openApiFile: String) {
+        val openApiSpecification = OpenApiSpecification.fromFile(openApiFile)
         val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
 
         for (scenarioInfo in scenarioInfos) {

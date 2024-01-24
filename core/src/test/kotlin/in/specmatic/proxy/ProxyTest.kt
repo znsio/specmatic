@@ -1,17 +1,16 @@
 package `in`.specmatic.proxy
 
 import `in`.specmatic.conversions.OpenApiSpecification
+import `in`.specmatic.core.YAML
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.stub.HttpStub
-import `in`.specmatic.stub.createStubFromContracts
 import io.ktor.http.*
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.web.client.RestTemplate
-import org.springframework.web.client.getForEntity
 import java.io.File
 import java.net.InetSocketAddress
 
@@ -167,7 +166,7 @@ class FakeFileWriter : FileWriter {
     override fun writeText(path: String, content: String) {
         this.receivedPaths.add(path)
 
-        if (path.endsWith(".yaml"))
+        if (path.endsWith(".${YAML}"))
             this.receivedContract = content
         else
             this.receivedStub = content

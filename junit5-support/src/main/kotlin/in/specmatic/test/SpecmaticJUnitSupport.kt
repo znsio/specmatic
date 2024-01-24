@@ -11,7 +11,7 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.isOpenAPI
-import `in`.specmatic.stub.isYAML
+import `in`.specmatic.stub.hasOpenApiFileExtension
 import `in`.specmatic.test.reports.OpenApiCoverageReportProcessor
 import `in`.specmatic.test.reports.coverage.Endpoint
 import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
@@ -291,7 +291,7 @@ open class SpecmaticJUnitSupport {
         filterName: String?,
         filterNotName: String?
     ): Pair<List<ContractTest>, List<Endpoint>> {
-        if(isYAML(path) && !isOpenAPI(path))
+        if(hasOpenApiFileExtension(path) && !isOpenAPI(path))
             return Pair(emptyList(), emptyList())
 
         val contractFile = File(path)

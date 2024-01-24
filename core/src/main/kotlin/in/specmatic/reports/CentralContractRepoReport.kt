@@ -5,7 +5,7 @@ import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.stub.isOpenAPI
-import `in`.specmatic.stub.isYAML
+import `in`.specmatic.stub.hasOpenApiFileExtension
 import java.io.File
 
 class CentralContractRepoReport {
@@ -58,7 +58,7 @@ class CentralContractRepoReport {
         for (file in allFiles) {
             if (file.isDirectory) {
                 specifications.addAll(findSpecifications(file.canonicalPath))
-            } else if (isYAML(file.canonicalPath) && isOpenAPI(file.canonicalPath)) {
+            } else if (hasOpenApiFileExtension(file.canonicalPath) && isOpenAPI(file.canonicalPath)) {
                 specifications.add(file)
             }
         }

@@ -8,8 +8,8 @@ import org.apache.http.HttpHeaders.AUTHORIZATION
 class BearerSecurityScheme(private val token: String? = null) : OpenAPISecurityScheme {
     override fun matches(httpRequest: HttpRequest): Result {
         httpRequest.headers.let {
-            val authHeaderValue: String = it[AUTHORIZATION]
-                ?: return Result.Failure("$AUTHORIZATION header is missing in request")
+            val authHeaderValue: String = it["Authorization"] ?: it["authorization"]
+            ?: return Result.Failure("$AUTHORIZATION header is missing in request")
 
             if (!authHeaderValue.lowercase().startsWith("bearer"))
                 return Result.Failure("$AUTHORIZATION header must be prefixed with \"Bearer\"")

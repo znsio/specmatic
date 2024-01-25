@@ -96,19 +96,19 @@ class HttpQueryParamPatternTest {
         val resolver = mockk<Resolver>().also {
             every {
                 it.withCyclePrevention<StringValue>(
-                    ExactValuePattern(StringValue("pets")),
+                    QueryParameterScalarPattern(ExactValuePattern(StringValue("pets"))),
                     any()
                 )
             } returns StringValue("pets")
             every {
                 it.withCyclePrevention<NumberValue>(
-                    DeferredPattern("(number)", "petid"),
+                    QueryParameterScalarPattern(DeferredPattern("(number)", "petid")),
                     any()
                 )
             } returns NumberValue(123)
             every {
                 it.withCyclePrevention<StringValue>(
-                    DeferredPattern("(string)", "owner"),
+                    QueryParameterScalarPattern(DeferredPattern("(string)", "owner")),
                     any()
                 )
             } returns StringValue("hari")
@@ -226,7 +226,7 @@ class HttpQueryParamPatternTest {
 
     @Nested
     inner class ArrayParameterUnStubbedBehaviour {
-        private val unStubbedArrayQueryParameterPattern = HttpQueryParamPattern(listOf("brand_ids" to QueryParameterArrayPattern(NumberPattern()) ))
+        private val unStubbedArrayQueryParameterPattern = HttpQueryParamPattern(mapOf("brand_ids" to QueryParameterArrayPattern(listOf(NumberPattern()), "brand_ids") ))
 
         @Test
         fun `matches request with single value `() {
@@ -247,11 +247,11 @@ class HttpQueryParamPatternTest {
             assertThat(result.reportString()).isEqualTo("""
                 >> QUERY-PARAMS.brand_ids
 
-                   Element 0 (abc) did not match the array type number. Expected number, actual was "abc"
+                   Expected number, actual was "abc"
                 
                 >> QUERY-PARAMS.brand_ids
                 
-                   Element 1 (def) did not match the array type number. Expected number, actual was "def"
+                   Expected number, actual was "def"
             """.trimIndent())
         }
 
@@ -281,7 +281,13 @@ class HttpQueryParamPatternTest {
 
     @Nested
     inner class ArrayParameterStubbedBehaviour {
-        private val stubbedArrayQueryParameterPattern = HttpQueryParamPattern(listOf("brand_ids" to ExactValuePattern(NumberValue(1)), "brand_ids" to ExactValuePattern(NumberValue(2))))
+        private val stubbedArrayQueryParameterPattern = HttpQueryParamPattern(
+            mapOf(
+                "brand_ids" to QueryParameterArrayPattern(
+                    listOf(ExactValuePattern(NumberValue(1)), ExactValuePattern(NumberValue(2))), "brand_ids"
+                )
+            )
+        )
 
         @Test
         fun `matches request with exact stub values`() {
@@ -360,7 +366,7 @@ class HttpQueryParamPatternTest {
 
     @Nested
     inner class ScalarParameterUnStubbedBehaviour {
-        private val unStubbedScalarQueryParameterPattern = HttpQueryParamPattern(listOf("product_id" to NumberPattern()))
+        private val unStubbedScalarQueryParameterPattern = HttpQueryParamPattern(mapOf("product_id" to QueryParameterScalarPattern(NumberPattern())))
 
         @Test
         fun `matches request with single value `() {
@@ -411,7 +417,7 @@ class HttpQueryParamPatternTest {
 
     @Nested
     inner class ScalarParameterStubbedBehaviour {
-        private val stubbedScalarQueryParameterPattern = HttpQueryParamPattern(listOf("status" to ExactValuePattern(StringValue("pending"))))
+        private val stubbedScalarQueryParameterPattern = HttpQueryParamPattern(mapOf("status" to QueryParameterScalarPattern(ExactValuePattern(StringValue("pending")))))
 
         @Test
         fun `matches request with exact stubbed parameter value`() {
@@ -421,13 +427,13 @@ class HttpQueryParamPatternTest {
 
         @Test
         fun `fails when query parameter type does not match the stub`() {
-            val stubbedNumericScalarQueryParameterPattern = HttpQueryParamPattern(listOf("product_id" to ExactValuePattern(NumberValue(1))))
+            val stubbedNumericScalarQueryParameterPattern = HttpQueryParamPattern(mapOf("product_id" to QueryParameterScalarPattern(ExactValuePattern(NumberValue(1)))))
             val result = stubbedNumericScalarQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("product_id" to "abc"))),  Resolver())
             assertThat(result is Failure).isTrue
             assertThat(result.reportString()).isEqualTo("""
                 >> QUERY-PARAMS.product_id
 
-                   Expected 1 (number), actual was "abc"
+                   Expected number, actual was "abc"
             """.trimIndent())
         }
 

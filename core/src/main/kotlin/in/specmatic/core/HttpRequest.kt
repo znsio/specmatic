@@ -159,7 +159,7 @@ data class HttpRequest(
         return HttpRequestPattern(
             headersPattern = HttpHeadersPattern(mapToPattern(headers)),
             httpPathPattern = HttpPathPattern(pathToPattern(pathForPattern), pathForPattern),
-            httpQueryParamPattern = HttpQueryParamPattern(mapToPattern(queryParams)),
+            httpQueryParamPattern = HttpQueryParamPattern(mapToQueryParameterPattern(queryParams)),
             method = this.method,
             body = this.body.exactMatchElseType(),
             formFieldsPattern = mapToPattern(formFields),
@@ -174,6 +174,26 @@ data class HttpRequest(
             else
                 ExactValuePattern(StringValue(value))
         }
+    }
+
+    private fun mapToQueryParameterPattern(queryParams: QueryParameters): Map<String, Pattern> {
+        val queryParamGroups = queryParams.paramPairs.groupBy { it.first }
+            .mapValues { (_, keyValuePairs) ->
+                keyValuePairs.map { (_,value) ->
+                    if (isPatternToken(value))
+                        parsedPattern(value)
+                    else
+                        ExactValuePattern(StringValue(value))
+                }
+            }
+        return queryParamGroups.map { (parameterKey, parameterPatterns) ->
+            if(parameterPatterns.size > 1) {
+                parameterKey to QueryParameterArrayPattern(parameterPatterns, parameterKey)
+            }
+            else {
+                parameterKey to QueryParameterScalarPattern(parameterPatterns.single())
+            }
+        }.toMap()
     }
 
     fun buildKTORRequest(httpRequestBuilder: HttpRequestBuilder, url: URL?) {

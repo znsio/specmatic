@@ -541,7 +541,7 @@ data class Feature(
 
         return baseScenario.copy(
             httpRequestPattern = baseScenario.httpRequestPattern.copy(
-                httpQueryParamPattern = baseScenario.httpRequestPattern.httpQueryParamPattern.copy(queryPatternPairs = convergedQueryParams.toList())
+                httpQueryParamPattern = baseScenario.httpRequestPattern.httpQueryParamPattern.copy(queryPatterns = convergedQueryParams)
             )
         )
     }
@@ -1168,6 +1168,9 @@ data class Feature(
                 toOpenApiSchema(specmaticType).also {
                     it.enum = values
                 }
+            }
+            pattern is QueryParameterScalarPattern -> {
+                toOpenApiSchema(pattern.pattern)
             }
             else ->
                 TODO("Not supported: ${pattern.typeAlias ?: pattern.typeName}, ${pattern.javaClass.name}")

@@ -30,7 +30,7 @@ class APIKeyInQueryParamSecurityScheme(val name: String, private val apiKey:Stri
 
         return requestPattern.copy(
             httpQueryParamPattern = requestPattern.httpQueryParamPattern.copy(
-                queryPatternPairs = requestPattern.httpQueryParamPattern.queryPatterns.plus(name to queryParamValueType).toList()
+                 queryPatterns = requestPattern.httpQueryParamPattern.queryPatterns.plus(name to queryParamValueType)
             )
         )
     }

@@ -268,7 +268,11 @@ Then status 200
         val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
-        assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParametersMap = mapOf("query" to "true")), Resolver())).isInstanceOf(Result.Success::class.java)
+        val result = requestPattern.matches(
+            HttpRequest("GET", "/resource", queryParametersMap = mapOf("query" to "true")),
+            Resolver()
+        )
+        assertThat(result).withFailMessage(result.reportString()).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
         assertThat(matchingResponse.response.status).isEqualTo(200)

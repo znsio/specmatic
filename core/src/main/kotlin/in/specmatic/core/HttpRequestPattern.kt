@@ -5,7 +5,6 @@ import `in`.specmatic.conversions.OpenAPISecurityScheme
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
-import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import io.ktor.util.*
@@ -298,23 +297,31 @@ data class HttpRequestPattern(
         queryParams: QueryParameters,
         patterns: Map<String, Pattern>,
         resolver: Resolver
-    ): List<Pair<String, Pattern>> {
-        return patterns.filterKeys { withoutOptionality(it) in queryParams.paramPairs.map { it.first } }.flatMap {
+    ): Map<String, Pattern> {
+        return patterns.filterKeys { withoutOptionality(it) in queryParams.paramPairs.map { it.first } }.map {
             val key = withoutOptionality(it.key)
             val pattern = it.value
 
             attempt(breadCrumb = key) {
                 val values: List<String> = queryParams.getValues(key)
-                if (pattern is QueryParameterArrayPattern) {
-                    values.map { value ->
-                        key to encompassedType(value, key, pattern, resolver)
+                when (pattern) {
+                    is QueryParameterArrayPattern -> {
+                        val queryParameterValuePatterns = values.map { value ->
+                            encompassedType(value, key, pattern.pattern.first(), resolver)
+                        }
+                        key to QueryParameterArrayPattern(queryParameterValuePatterns, key)
+                    }
+
+                    is QueryParameterScalarPattern -> {
+                        key to QueryParameterScalarPattern(encompassedType(values.single(), key, pattern.pattern, resolver))
+                    }
+
+                    else -> {
+                        throw ContractException("Non query type: $pattern found")
                     }
                 }
-                else {
-                   listOf(key to encompassedType(values.single(), key, pattern, resolver))
-                }
             }
-        }
+        }.toMap()
     }
 
     private fun encompassedType(valueString: String, key: String?, type: Pattern, resolver: Resolver): Pattern {

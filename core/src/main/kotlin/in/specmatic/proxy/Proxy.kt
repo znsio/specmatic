@@ -55,8 +55,9 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
 
                             val httpResponse = client.execute(requestToSend)
 
+                            //TODO: Fix toQueryString for array query parameter support in proxy
                             val name =
-                                "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams)}"
+                                "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams.asMap())}"
                             stubs.add(NamedStub(name, ScenarioStub(httpRequest.withoutDynamicHeaders(), httpResponse.withoutDynamicHeaders())))
 
                             respondToKtorHttpResponse(call, withoutContentEncodingGzip(httpResponse))

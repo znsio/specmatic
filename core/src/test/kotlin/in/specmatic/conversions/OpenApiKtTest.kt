@@ -1722,7 +1722,7 @@ Scenario: zero should return not found
         val results = feature.enableGenerativeTesting().executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    queryParameters.add(request.queryParams)
+                    queryParameters.add(request.queryParams.asMap())
                     return HttpResponse.OK
                 }
 
@@ -2141,7 +2141,7 @@ components:
 
         contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                val dataHeaderValue: String? = request.queryParams["data"]
+                val dataHeaderValue: String? = request.queryParams.getValues("data").first()
 
                 if (dataHeaderValue == "hello")
                     contractInvalidValueReceived = true

@@ -143,6 +143,7 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolv
     val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
     val negativePatternsMap = patternMap.mapValues { (key, pattern) ->
         val resolvedPattern = resolvedHop(pattern, resolver)
+        // TODO: Refactor special handling of scalar and array query params when the stringly check is refactored
         if (stringlyCheck && (resolvedPattern is StringPattern || isStringBasedQueryParameterScalarPattern(resolvedPattern) || isStringBasedQueryParameterArrayPattern(resolvedPattern)))
         {
             emptyList()

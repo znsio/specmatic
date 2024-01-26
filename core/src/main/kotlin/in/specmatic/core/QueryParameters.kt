@@ -1,33 +1,77 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.parsedJSONArray
+import `in`.specmatic.core.value.JSONArrayValue
 import kotlin.collections.Map
 
-data class QueryParameters(val map: Map<String, String> = kotlin.collections.HashMap(), val paramPairs: List<Pair<String, String>> = mapToListOfPairs(map)) : Map<String, String> by map {
+data class QueryParameters(val paramPairs: List<Pair<String, String>> = emptyList())  {
+
+    constructor(map: Map<String, String>) : this(mapToListOfPairs(map))
+
+    val keys = paramPairs.map { it.first }.toSet()
+
     fun plus(map: Map<String, String>): QueryParameters {
         val newListOfPairs = mapToListOfPairs(map)
-        return QueryParameters(this.map + map, paramPairs + newListOfPairs)
+        return QueryParameters( paramPairs + newListOfPairs)
     }
 
     fun plus(pair: Pair<String, String>): QueryParameters {
         val newListOfPairs = pairToListOfPairs(pair)
-        return QueryParameters(this.map + pair, paramPairs + newListOfPairs)
+        return QueryParameters( paramPairs + newListOfPairs)
     }
 
     fun minus(name: String): QueryParameters {
-        return QueryParameters(this.map - name, paramPairs.filterNot { it.first == name })
+        return QueryParameters( paramPairs.filterNot { it.first == name })
     }
 
-    fun asMap():Map<String, String> {
-        return paramPairs.toMap()
+    fun asMap(): Map<String, String> {
+        return paramPairs.groupBy { it.first }.map { (parameterName, parameterValues) ->
+            if (parameterValues.size > 1) {
+                parameterName to parameterValues.map { it.second }.toString()
+            } else {
+                parameterName to parameterValues.single().second
+            }
+        }.toMap()
     }
 
     fun getValues(key: String): List<String> {
         return paramPairs.filter { it.first == key }.map { it.second }
     }
 
-    override fun containsKey(key: String): Boolean {
+    fun containsKey(key: String): Boolean {
         return paramPairs.any { it.first == key }
+    }
+
+    fun isNotEmpty(): Boolean {
+        return paramPairs.isNotEmpty()
+    }
+
+    fun containsEntry(key:String, value: String): Boolean {
+        return paramPairs.any { it.first == key && it.second == value }
+    }
+
+    fun getOrElse(key: String, defaultValue: () -> String): String {
+        return when {
+            containsKey(key) -> {
+                getValues(key).first()
+            }
+            else -> defaultValue()
+        }
+    }
+
+    fun getOrDefault(key: String, defaultValue: String): String {
+        return when {
+            containsKey(key) -> {
+                getValues(key).first()
+            }
+            else -> defaultValue
+        }
+    }
+}
+
+fun paramPairsExpanded(inputList: List<Pair<String, String>>): List<Pair<String, String>> {
+    return inputList.flatMap { (key, value) ->
+        toListOfPairs(value, key)
     }
 }
 

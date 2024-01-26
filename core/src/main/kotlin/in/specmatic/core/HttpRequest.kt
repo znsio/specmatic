@@ -111,7 +111,7 @@ data class HttpRequest(
         method?.let { requestMap["method"] = StringValue(it) }
             ?: throw ContractException("Can't serialise the request without a method.")
 
-        setIfNotEmpty(requestMap, "query", queryParams)
+        setIfNotEmpty(requestMap, "query", queryParams.asMap())
         setIfNotEmpty(requestMap, "headers", headers)
 
         when {
@@ -495,6 +495,9 @@ fun toGherkinClauses(request: HttpRequest): Triple<List<GherkinClause>, Map<Stri
 fun stringMapToValueMap(stringStringMap: Map<String, String>) =
     stringStringMap.mapValues { guessType(parsedValue(it.value)) }
 
+fun queryParamsToValueMap(queryParams: QueryParameters) =
+    queryParams.paramPairs.map { (key, value) -> key to guessType(parsedValue(value)) }.toMap()
+
 fun bodyToGherkin(
     request: HttpRequest,
     types: Map<String, Pattern>,
@@ -541,7 +544,7 @@ fun firstLineToGherkin(
     val (query, newTypes, newExamples) = when {
         request.queryParams.isNotEmpty() -> {
             val (dictionaryType, newTypes, examples) = dictionaryToDeclarations(
-                stringMapToValueMap(request.queryParams),
+                queryParamsToValueMap(request.queryParams),
                 types,
                 exampleDeclarationsStore
             )

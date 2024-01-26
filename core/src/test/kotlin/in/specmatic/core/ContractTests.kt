@@ -525,7 +525,7 @@ Then status 200
         val results = contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 when {
-                    "type" in request.queryParams -> flags.add("with")
+                    request.queryParams.containsKey("type") -> flags.add("with")
                     else -> flags.add("without")
                 }
 

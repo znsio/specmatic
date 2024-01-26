@@ -271,11 +271,11 @@ class ContractAsTest {
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
-                if (request.queryParams.contains("account_id")) {
+                if (request.queryParams.containsKey("account_id")) {
                     flags.add("with")
                     assertTrue(
                         NumberPattern().matches(
-                            NumberValue(request.queryParams.getValue("account_id").toInt()),
+                            NumberValue(request.queryParams.getValues("account_id").first().toInt()),
                             Resolver()
                         ) is Result.Success
                     )
@@ -480,7 +480,7 @@ class ContractAsTest {
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertEquals("/accounts", request.path)
-                assertEquals("10", request.queryParams["userid"])
+                assertEquals("10", request.queryParams.getValues("userid").first())
                 return jsonResponse("{\"name\": \"jack\"}")
             }
 

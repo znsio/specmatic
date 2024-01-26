@@ -45,7 +45,6 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
             it.missingKeyToResult("query param", resolver.mismatchMessages).breadCrumb(it.name)
         }
 
-
         // 1. key is optional and request does not have the key as well
         // 2. key is mandatory and request does not have the key as well -> Result.Failure
         // 3. key in request but not in groupedPatternPairs -> Result.Failure
@@ -63,7 +62,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
         // B. Matching incoming request to a stub without expectations
 
         // Where we need unmatched values:
-        // 1. Matching incoming request to stubbed out API
+        // Matching incoming request to stubbed out API
 
         val results: List<Result?> = queryPatterns.mapNotNull { (key, parameterPattern) ->
             val requestValues = httpRequest.queryParams.getValues(withoutOptionality(key))
@@ -78,18 +77,6 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
 
             resolver.matchesPattern(keyWithoutOptionality, parameterPattern, requestValuesList).breadCrumb(keyWithoutOptionality)
 
-//            if (parameterPattern is QueryParameterArrayPattern) {
-//                val requestValuesList = JSONArrayValue(requestValues.map { StringValue(it) })
-//                resolver.matchesPattern(keyWithoutOptionality, parameterPattern, requestValuesList)
-//            } else {
-//                val requestValue = requestValues.first()
-//                val parsedValue = try {
-//                    parameterPattern.parse(requestValue, resolver)
-//                } catch (e: Exception) {
-//                    StringValue(requestValue)
-//                }
-//                resolver.matchesPattern(keyWithoutOptionality, parameterPattern, parsedValue)
-//            }.breadCrumb(keyWithoutOptionality)
         }
 
         val failures = keyErrorList.plus(results).filterIsInstance<Result.Failure>()

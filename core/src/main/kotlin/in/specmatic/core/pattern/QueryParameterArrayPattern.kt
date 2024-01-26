@@ -45,17 +45,6 @@ class QueryParameterArrayPattern(override val pattern: List<Pattern>, val parame
                         matchResultsForPreviousQueryPairs.plus(consolidatedResultForCurrentPair) to unmatchedValuesWithReasons
                     } else {
 
-//                                val valuesMatchedThisIteration =
-//                                    matchResultsForCurrentParameter.filter { (result, _) ->
-//                                        result is Result.Success
-//                                    }.map { (_, parameterMismatches) ->
-//                                        val (value, _) = parameterMismatches
-//                                        value
-//                                    }.toSet()
-//
-//                                val unmatchedValuesAtStartOfIteration = unmatchedValuesWithReasons.map { it.first }
-//                                val unmatchedValuesInThisIteration = (unmatchedValuesAtStartOfIteration - valuesMatchedThisIteration).toSet()
-
                         // REMEMBER: We are matching one param a time against all values.
                         // This means that any value that does not match the current param may match the next
                         // param. We need to keep track of it, in case after all params are exhausted, it proves

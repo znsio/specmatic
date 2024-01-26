@@ -156,49 +156,108 @@ data class HttpPathPattern(
         return pathSegmentPatterns.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
     }
 
+    private fun negatively(patterns: List<URLPathSegmentPattern>, row: Row, resolver: Resolver): List<List<URLPathSegmentPattern>> {
+        if(patterns.isEmpty())
+            return emptyList()
+
+        val current = patterns.first()
+
+        val negativesOfCurrent = current.negativeBasedOn(row, resolver).map { negative ->
+            listOf(negative) + positively(patterns.drop(1), row, resolver)
+        }.map { it.filterIsInstance<URLPathSegmentPattern>() }
+
+        if(patterns.size == 1)
+            return negativesOfCurrent
+
+
+
+        val negativesFromSubsequent =
+            negatively(patterns.drop(1), row, resolver)
+
+        val negativesFromSubsequent1: List<List<URLPathSegmentPattern>> = negativesFromSubsequent
+            .filterNot { it.isEmpty() }
+            .flatMap { subsequentNegatives: List<URLPathSegmentPattern> ->
+                val subsequents = current.newBasedOn(row, resolver).map { positive ->
+                    listOf(positive) + subsequentNegatives
+                }
+                subsequents
+            }
+
+        return (negativesOfCurrent + negativesFromSubsequent1)
+    }
+
+    private fun positively(
+        patterns: List<URLPathSegmentPattern>,
+        row: Row,
+        resolver: Resolver
+    ): List<URLPathSegmentPattern> {
+        if(patterns.isEmpty())
+            return emptyList()
+
+        val patternToPositively = patterns.first()
+
+        val positives = patternFromExample(null, row, patternToPositively, resolver)
+
+        return positives.map {
+            listOf(it) + positively(patterns.drop(1), row, resolver)
+        }.filterIsInstance<URLPathSegmentPattern>()
+    }
+
     fun negativeBasedOn(
         row: Row,
         resolver: Resolver
     ): List<List<URLPathSegmentPattern>> {
-        val newPathPartsList: List<List<Pattern>> = newBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathPattern ->
+        return negatively(pathSegmentPatterns, row, resolver)
+        val newPathPartsList: List<List<Pattern>> = pathSegmentPatterns.mapIndexed { index, urlPathPattern ->
             val key = urlPathPattern.key
 
             attempt(breadCrumb = "[$index]") {
-                when {
-                    key !== null && row.containsField(key) -> {
-                        val rowValue = row.getField(key)
-                        when {
-                            isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathPattern.key}\"") {
-                                val rowPattern = resolver.getPattern(rowValue)
-                                when (val result = urlPathPattern.encompasses(rowPattern, resolver, resolver)) {
-                                    is Success -> urlPathPattern.copy(pattern = rowPattern)
-                                    is Failure -> throw ContractException(result.toFailureReport())
-                                }
-                            }
+                patternFromExample(key, row, urlPathPattern, resolver)
+            }
+        }
 
-                            else -> attempt("Format error in example of path parameter \"$key\"") {
-                                val value = urlPathPattern.parse(rowValue, resolver)
+//        TODO: Replace with Generics
+        return listCombinations(newPathPartsList).map { it.filterIsInstance<URLPathSegmentPattern>()}
 
-                                val matchResult = urlPathPattern.matches(value, resolver)
-                                if (matchResult is Failure)
-                                    throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
+//        return newPathPartsList.map { list -> list.map { it as URLPathSegmentPattern } }
+    }
 
-                                URLPathSegmentPattern(
-                                    ExactValuePattern(
-                                        value
-                                    )
-                                )
-                            }
-                        }
+    private fun patternFromExample(
+        key: String?,
+        row: Row,
+        urlPathPattern: URLPathSegmentPattern,
+        resolver: Resolver
+    ) = when {
+        key !== null && row.containsField(key) -> {
+            val rowValue = row.getField(key)
+            when {
+                isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathPattern.key}\"") {
+                    val rowPattern = resolver.getPattern(rowValue)
+                    when (val result = urlPathPattern.encompasses(rowPattern, resolver, resolver)) {
+                        is Success -> listOf(urlPathPattern.copy(pattern = rowPattern))
+                        is Failure -> throw ContractException(result.toFailureReport())
                     }
+                }
 
-                    else -> urlPathPattern
+                else -> attempt("Format error in example of path parameter \"$key\"") {
+                    val value = urlPathPattern.parse(rowValue, resolver)
+
+                    val matchResult = urlPathPattern.matches(value, resolver)
+                    if (matchResult is Failure)
+                        throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
+
+                    listOf(
+                        URLPathSegmentPattern(
+                            ExactValuePattern(
+                                value
+                            )
+                        )
+                    )
                 }
             }
-        }, row, resolver)
+        }
 
-        //TODO: Replace with Generics
-        return newPathPartsList.map { list -> list.map { it as URLPathSegmentPattern } }
+        else -> (urlPathPattern.newBasedOn(row, resolver) + urlPathPattern.negativeBasedOn(row, resolver)).distinct()
     }
 }
 

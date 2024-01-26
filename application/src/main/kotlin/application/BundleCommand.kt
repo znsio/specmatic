@@ -3,6 +3,7 @@
 package application
 
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import `in`.specmatic.core.YAML
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.stub.customImplicitStubBase
@@ -160,7 +161,7 @@ private fun createBundle(
     zipper.compress(bundleOutputPath ?: bundle.bundlePath, zipperEntries)
 }
 
-private fun yamlFileName(path: String): String = path.removeSuffix(".spec") + ".yaml"
+private fun yamlFileName(path: String): String = path.removeSuffix(".spec") + ".${YAML}"
 
 private fun yamlExists(pathData: String): Boolean =
         File(yamlFileName(pathData)).exists()

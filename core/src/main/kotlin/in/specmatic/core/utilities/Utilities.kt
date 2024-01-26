@@ -24,6 +24,7 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import org.eclipse.jgit.util.TemporaryBuffer.LocalFile
 import org.w3c.dom.Node.*
 import java.io.File
 import java.io.StringReader
@@ -166,6 +167,12 @@ fun loadSources(specmaticConfigJson: SpecmaticConfigJson): List<ContractSource> 
                     else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
                 }
             }
+            SourceProvider.filesystem -> {
+                val stubPaths = source.stub ?: emptyList()
+                val testPaths = source.test ?: emptyList()
+
+                LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
+            }
         }
     }
 }
@@ -180,6 +187,8 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
         if (source !is JSONObjectValue)
             throw ContractException("Every element of the sources json array must be a json object, but got this: ${source.toStringLiteral()}")
 
+        val type = nativeString(source.jsonObject, "provider")
+
         when(nativeString(source.jsonObject, "provider")) {
             "git" -> {
                 val repositoryURL = nativeString(source.jsonObject, "repository")
@@ -187,12 +196,18 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
 
                 val stubPaths = jsonArray(source, "stub")
                 val testPaths = jsonArray(source, "test")
-                val type = nativeString(source.jsonObject, "provider")
 
                 when (repositoryURL) {
                     null -> GitMonoRepo(testPaths, stubPaths, type)
                     else -> GitRepo(repositoryURL, branch, testPaths, stubPaths, type)
                 }
+            }
+            "filesystem" -> {
+                val directory = nativeString(source.jsonObject, "directory") ?: throw ContractException("The \"directory\" key is required for the local source provider")
+                val stubPaths = jsonArray(source, "stub")
+                val testPaths = jsonArray(source, "test")
+
+                LocalFileSystemSource(directory, testPaths, stubPaths)
             }
             else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $globalConfigFileName")
         }

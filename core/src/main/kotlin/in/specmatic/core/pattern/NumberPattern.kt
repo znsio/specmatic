@@ -12,8 +12,8 @@ data class NumberPattern(
     override val typeAlias: String? = null,
     val minLength: Int? = null,
     val maxLength: Int? = null,
-    val example: String? = null
-) : Pattern, ScalarType {
+    override val example: String? = null
+) : Pattern, ScalarType, HasDefaultExample {
     init {
         require(minLength?.let { minLength > 0 } ?: true) {"minLength cannot be less than 1"}
         require(minLength?.let { maxLength?.let { minLength <= maxLength } }

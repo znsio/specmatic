@@ -11,6 +11,7 @@ import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.stub.hasOpenApiFileExtension
 import `in`.specmatic.test.ResultAssert
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -90,7 +91,7 @@ class GitCompatibleCommand : Callable<Int> {
         if(verbose)
             logger = Verbose(CompositePrinter())
 
-        if(!inputContractPath.isContractFile() && !inputContractPath.endsWith(".yaml") && !File(inputContractPath).isDirectory) {
+        if(!inputContractPath.isContractFile() && !hasOpenApiFileExtension(inputContractPath) && !File(inputContractPath).isDirectory) {
             logger.log(invalidContractExtensionMessage(inputContractPath))
             return 1
         }
@@ -360,8 +361,8 @@ internal data class CompatibilityOutput(val exitCode: Int, val message: String)
 internal fun compatibilityMessage(results: Outcome<Results>): CompatibilityOutput {
     return when {
         results.result == null -> CompatibilityOutput(1, results.errorMessage)
-        results.result.success() -> CompatibilityOutput(0, results.errorMessage.ifEmpty { "The newer contract is backward compatible" })
-        else -> CompatibilityOutput(1, compatibilityReport(results.result, "The newer contract is NOT backward compatible"))
+        results.result.hasFailures() -> CompatibilityOutput(1, compatibilityReport(results.result, "The newer contract is NOT backward compatible"))
+        else -> CompatibilityOutput(0, results.errorMessage.ifEmpty { "The newer contract is backward compatible" })
     }
 }
 

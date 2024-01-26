@@ -13,8 +13,8 @@ data class AnyPattern(
     override val pattern: List<Pattern>,
     val key: String? = null,
     override val typeAlias: String? = null,
-    val example: String? = null
-) : Pattern {
+    override val example: String? = null
+) : Pattern, HasDefaultExample {
     override fun equals(other: Any?): Boolean = other is AnyPattern && other.pattern == this.pattern
 
     override fun hashCode(): Int = pattern.hashCode()

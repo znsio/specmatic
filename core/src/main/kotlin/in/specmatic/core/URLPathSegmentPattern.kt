@@ -29,7 +29,13 @@ data class URLPathSegmentPattern(override val pattern: Pattern, override val key
         }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return newBasedOn(row, resolver)
+        return when (pattern) {
+            is ExactValuePattern -> emptyList()
+            is StringPattern -> emptyList()
+            else -> resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.negativeBasedOn(row, cyclePreventedResolver).filterNot { it is NullPattern }.map { URLPathSegmentPattern(it, key) }
+            }
+        }
     }
 
     override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)

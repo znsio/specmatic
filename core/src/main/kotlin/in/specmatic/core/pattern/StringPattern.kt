@@ -9,12 +9,12 @@ import `in`.specmatic.core.value.Value
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-data class StringPattern(
+data class StringPattern (
     override val typeAlias: String? = null,
     val minLength: Int? = null,
     val maxLength: Int? = null,
-    val example: String? = null
-) : Pattern, ScalarType {
+    override val example: String? = null
+) : Pattern, ScalarType, HasDefaultExample {
     init {
         require(minLength?.let { maxLength?.let { minLength <= maxLength } }
             ?: true) { """maxLength cannot be less than minLength""" }

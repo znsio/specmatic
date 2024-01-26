@@ -1,0 +1,50 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://api.example.com/v1
+    description: Optional server description, e.g. Main (production) server
+  - url: http://staging-api.example.com
+    description: Optional server description, e.g. Internal staging server for testing
+paths:
+  /hello:
+    get:
+      summary: hello world
+      description: Optional extended description in CommonMark or HTML.
+      parameters:
+        - in: header
+          name: traceId
+          schema:
+            type: string
+            example: "(OMIT)"
+          required: false
+          description: trace id
+        - in: query
+          name: id
+          schema:
+            type: string
+            example: "(OMIT)"
+          required: false
+          description: identifier
+        - in: query
+          name: name
+          schema:
+            type: string
+          required: false
+          description: identifier
+          examples:
+            200_OKAY:
+              value: "data"
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: string
+              examples:
+                200_OKAY:
+                  value: hello15
+                  summary: response that matches 200_OKAY

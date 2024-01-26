@@ -885,7 +885,7 @@ Then status 200
 
         assertThat(results.successCount).isZero()
         assertThat(results.failureCount).isZero()
-        assertThat(results.success()).isTrue()
+        assertThat(results.hasFailures()).isFalse()
     }
 
     @Test

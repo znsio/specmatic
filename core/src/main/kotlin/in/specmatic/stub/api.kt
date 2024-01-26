@@ -67,7 +67,7 @@ fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathDa
             contractPath.isFile && contractPath.extension in CONTRACT_EXTENSIONS -> {
                 consoleLog(StringLog("Loading $contractPath"))
 
-                if(isYAML(contractPath.path) && !isOpenAPI(contractPath.path.trim())) {
+                if(hasOpenApiFileExtension(contractPath.path) && !isOpenAPI(contractPath.path.trim())) {
                     logger.log("Ignoring ${contractPath.path} as it is not an OpenAPI specification")
                     emptyList()
                 }
@@ -112,7 +112,8 @@ fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathDa
     }
 }
 
-fun isYAML(contractPath: String): Boolean = contractPath.trim().endsWith(".yaml")
+fun hasOpenApiFileExtension(contractPath: String): Boolean =
+    OPENAPI_FILE_EXTENSIONS.any { contractPath.trim().endsWith(".$it") }
 
 private fun logIgnoredFiles(implicitDataDir: File) {
     val ignoredFiles = implicitDataDir.listFiles()?.toList()?.filter { it.extension != "json" }?.filter { it.isFile } ?: emptyList()
@@ -316,7 +317,7 @@ fun implicitContractDataDir(contractPath: String, customBase: String? = null): F
 }
 
 fun loadIfOpenAPISpecification(contractPathData: ContractPathData): Pair<String, Feature>? {
-    if (!isYAML(contractPathData.path))
+    if (!hasOpenApiFileExtension(contractPathData.path))
         return Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath))
 
     if (isOpenAPI(contractPathData.path))

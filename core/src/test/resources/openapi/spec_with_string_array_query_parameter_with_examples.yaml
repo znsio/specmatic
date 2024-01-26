@@ -1,0 +1,35 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /products:
+    get:
+      summary: get products
+      description: Get multiple products filtered by Brand Ids
+      parameters:
+        - name: category
+          in: query
+          required: true
+          schema:
+            items:
+              type: string
+            type: array
+          examples:
+            SUCCESS:
+              value:
+                - "Laptop"
+                - "Mobile"
+                - "TV"
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                SUCCESS:
+                  value: "product list"
+
+

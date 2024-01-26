@@ -77,6 +77,59 @@ class HttpStubWithArrayQueryParameterTest {
     }
 
     @Test
+    fun `should match stub for string query parameter with dynamic expectation set`() {
+        val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_string_array_query_parameter.yaml").toFeature()
+
+        HttpStub(contract).use { stub ->
+            stub.setExpectation("""
+                {
+                    "http-request": {
+                        "method": "GET",
+                        "path": "/products",
+                         "query": {
+                            "category": ["Laptop","Tablet","Phone"]
+                        }
+
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": "electronic product list"
+                    }
+                }
+            """.trimIndent())
+
+            val queryParameters = QueryParameters(paramPairs = listOf("category" to "Laptop", "category" to "Tablet", "category" to "Phone"))
+            val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toString()).isEqualTo("electronic product list")
+        }
+    }
+
+    @Test
+    fun `should match stub for string query parameter with externalized json expectation`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_string_array_query_parameter_with_stub.yaml")).use { stub ->
+            val queryParameters = QueryParameters(paramPairs = listOf("category" to "Pen", "category" to "Pencil", "category" to "Marker"))
+            val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toString()).isEqualTo("product list from externalized stub json")
+        }
+    }
+
+    @Test
+    fun `should match stub for string query parameter with expectation from examples in spec`() {
+        val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_string_array_query_parameter_with_examples.yaml").toFeature()
+        HttpStub(contract).use { stub ->
+            val queryParameters = QueryParameters(paramPairs = listOf("category" to "Laptop", "category" to "Mobile", "category" to "TV"))
+            val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toString()).isEqualTo("product list")
+        }
+    }
+
+    @Test
     fun `should not match stub for query parameter when request does not contain all stub values and also a value which is not defined in the stub`() {
         val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml").toFeature()
         HttpStub(contract).use { stub ->

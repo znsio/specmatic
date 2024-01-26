@@ -2565,7 +2565,7 @@ components:
 
             val results = feature.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    assertThat(request.queryParams).doesNotContainKey("id")
+                    assertThat(request.queryParams.asMap()).doesNotContainKey("id")
                     assertThat(request.headers).doesNotContainKey("traceId")
                     return HttpResponse.OK
                 }

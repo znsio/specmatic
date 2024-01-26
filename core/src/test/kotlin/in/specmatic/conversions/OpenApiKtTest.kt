@@ -2556,29 +2556,23 @@ components:
 
     @Test
     fun `should handle omit correctly when it is a default value in the parameter section if the schemaExampleDefault flag is set`() {
-        try {
-            System.setProperty(Flags.SCHEMA_EXAMPLE_DEFAULT, "true")
+        val feature =
+            OpenApiSpecification.fromFile("src/test/resources/openapi/helloWithOmitAsDefault.yaml").toFeature()
+                .enableSchemaExampleDefault()
 
-            val feature =
-                OpenApiSpecification.fromFile("src/test/resources/openapi/helloWithOmitAsDefault.yaml").toFeature()
-                    .enableSchemaExampleDefault()
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.queryParams.asMap()).doesNotContainKey("id")
+                assertThat(request.headers).doesNotContainKey("traceId")
+                return HttpResponse.OK
+            }
 
-            val results = feature.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    assertThat(request.queryParams.asMap()).doesNotContainKey("id")
-                    assertThat(request.headers).doesNotContainKey("traceId")
-                    return HttpResponse.OK
-                }
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
 
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
-
-            assertThat(results.hasFailures()).isFalse()
-            assertThat(results.success()).isTrue()
-        } finally {
-            System.clearProperty(Flags.SCHEMA_EXAMPLE_DEFAULT)
-        }
+        assertThat(results.hasFailures()).isFalse()
+        assertThat(results.success()).isTrue()
     }
 
     @Test

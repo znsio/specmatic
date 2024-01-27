@@ -1261,6 +1261,7 @@ Background:
                         request.path == "/pets" -> {
                             when (request.method) {
                                 "GET" -> {
+                                    println(request.queryParams.toLine())
                                     HttpResponse(
                                         200,
                                         ObjectMapper().writeValueAsString(listOf(pet)),

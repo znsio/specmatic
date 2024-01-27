@@ -227,6 +227,9 @@ class HttpQueryParamPatternTest {
     @Nested
     inner class ArrayParameterUnStubbedBehaviour {
         private val unStubbedArrayQueryParameterPattern = HttpQueryParamPattern(mapOf("brand_ids" to QueryParameterArrayPattern(listOf(NumberPattern()), "brand_ids") ))
+        private val enumArrayQueryParameterPattern = HttpQueryParamPattern(mapOf("brand_ids" to QueryParameterArrayPattern(listOf(EnumPattern(
+            listOf(NumberValue(1), NumberValue(2))
+        )), "brand_ids") ))
 
         @Test
         fun `matches request with single value `() {
@@ -275,6 +278,12 @@ class HttpQueryParamPatternTest {
 
                    Query param named "product_id" was unexpected
             """.trimIndent())
+        }
+
+        @Test
+        fun `should generate the correct number of query parameters`() {
+            val values = enumArrayQueryParameterPattern.generate(Resolver())
+            println(values)
         }
 
     }

@@ -67,6 +67,12 @@ data class QueryParameters(val paramPairs: List<Pair<String, String>> = emptyLis
             else -> defaultValue
         }
     }
+
+    fun toLine(): String {
+        return paramPairs.joinToString(" "){ (key, value) ->
+            "$key=$value"
+        }
+    }
 }
 
 fun paramPairsExpanded(inputList: List<Pair<String, String>>): List<Pair<String, String>> {

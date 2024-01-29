@@ -39,3 +39,6 @@ jobs:
 
       - name: Push Docker Image
         run: docker push znsio/specmatic:${{ steps.read_version.outputs.VERSION }}
+
+      - name: Tag as latest
+        run: docker tag znsio/specmatic:${{ steps.read_version.outputs.VERSION }} znsio/specmatic:latest

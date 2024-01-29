@@ -192,7 +192,7 @@ internal class ScenarioStubKtTest {
 
     @Test
     fun `request-response with json body in request to gherkin string`() {
-        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParams = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
+        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParametersMap = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
         validateStubAndQontract(request, response, """Feature: New Feature
@@ -217,7 +217,7 @@ internal class ScenarioStubKtTest {
 
     @Test
     fun `request-response with headers to gherkin string`() {
-        val request = HttpRequest(method = "POST", path="/customer", headers = mapOf("X-Header1" to "value 1", "X-Header2" to "value 2"), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParams = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
+        val request = HttpRequest(method = "POST", path="/customer", headers = mapOf("X-Header1" to "value 1", "X-Header2" to "value 2"), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParametersMap = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
         val response = HttpResponse(status = 200, headers = mapOf("X-Required" to "this is a must", "X-Extra" to "something more"), body = parsedValue("""{"id": 10}"""))
 
         validateStubAndQontract(request, response, """Feature: New Feature

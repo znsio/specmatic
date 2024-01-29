@@ -598,7 +598,7 @@ Feature: Authenticated
             val contractTests = contract.generateContractTestScenarios(emptyList())
             val result = executeTest(contractTests.single(), object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    assertThat(request.queryParams).containsEntry("apiKey", "abc123")
+                    assertThat(request.queryParams.containsEntry("apiKey", "abc123")).isTrue
                     return HttpResponse.ok("success")
                 }
 
@@ -749,10 +749,12 @@ Feature: Authenticated
             contractTests.forEach { scenario ->
                 val result = executeTest(scenario, object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
-                        request.queryParams["apiKey"]?.takeIf {
-                            it == token
-                        }?.let {
-                            requestMadeWithApiKeyInQueryFromSpecmaticJson = true
+                        if(request.queryParams.containsKey("apiKey")) {
+                            request.queryParams.getValues("apiKey").first().takeIf {
+                                it == token
+                            }?.let {
+                                requestMadeWithApiKeyInQueryFromSpecmaticJson = true
+                            }
                         }
                         return HttpResponse.ok("success")
                     }
@@ -783,7 +785,7 @@ Feature: Authenticated
                 val requestWithQuery = HttpRequest(
                     method = "GET",
                     path = "/hello/10",
-                    queryParams = mapOf(
+                    queryParametersMap = mapOf(
                         "apiKey" to "test"
                     )
                 )

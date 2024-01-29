@@ -1169,6 +1169,9 @@ data class Feature(
                     it.enum = values
                 }
             }
+            pattern is QueryParameterScalarPattern -> {
+                toOpenApiSchema(pattern.pattern)
+            }
             else ->
                 TODO("Not supported: ${pattern.typeAlias ?: pattern.typeName}, ${pattern.javaClass.name}")
         }

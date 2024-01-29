@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/products",
+    "query": {
+      "brand_ids": [1,2,3]
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": "product list from externalized json"
+  }
+}

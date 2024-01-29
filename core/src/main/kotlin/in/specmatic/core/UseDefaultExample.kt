@@ -1,9 +1,6 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.HasDefaultExample
-import `in`.specmatic.core.pattern.Pattern
-import `in`.specmatic.core.pattern.attempt
+import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.Value
@@ -44,10 +41,17 @@ object UseDefaultExample : DefaultExampleResolver {
     }
 
     override fun theDefaultExampleForThisKeyIsNotOmit(valuePattern: Pattern): Boolean {
-        if(valuePattern !is HasDefaultExample)
+        //TODO: Handle this elsewhere?
+        val patternToValidate = when(valuePattern) {
+            is QueryParameterScalarPattern -> valuePattern.pattern
+            is QueryParameterArrayPattern -> valuePattern.pattern.first()
+            else -> valuePattern
+        }
+
+        if(patternToValidate !is HasDefaultExample)
             return true
 
-        val example = valuePattern.example
+        val example = patternToValidate.example
 
         if(example is String)
             return example !in OMIT

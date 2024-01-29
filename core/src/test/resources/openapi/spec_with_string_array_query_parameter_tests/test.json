@@ -1,0 +1,14 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/products",
+    "query": {
+      "category": ["Book","Headphone","Camera"]
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": "product list from externalized test json"
+  },
+  "name": "Get Products"
+}

@@ -100,7 +100,7 @@ class LoadTestsFromExternalisedFiles {
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                assertThat(request.queryParams).containsEntry("description", "Jedi")
+                assertThat(request.queryParams.containsEntry("description", "Jedi")).isTrue
 
                 return HttpResponse.ok(parsedJSONArray("""[{"name": "Master Yoda", "description": "Head of the Jedi Council"}]"""))
             }

@@ -16,7 +16,6 @@ import io.mockk.InternalPlatformDsl.toStr
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -27,6 +26,7 @@ import java.util.*
 import java.util.function.Consumer
 
 internal class HttpStubKtTest {
+
     @Test
     fun `flush transient stub`() {
         val contract = OpenApiSpecification.fromYAML("""
@@ -426,7 +426,7 @@ Scenario: Square of a number
   And response-body (string)
 """.trim())
 
-        val stubRequest = HttpRequest(method = "GET", path = "/count", queryParams = mapOf("status" to "available"))
+        val stubRequest = HttpRequest(method = "GET", path = "/count", queryParametersMap = mapOf("status" to "available"))
         val stubResponse = HttpResponse.ok("data")
         val stubData = HttpStubData(
             stubRequest.toPattern(),
@@ -927,6 +927,44 @@ paths:
                     assertThat(this.body.toStringLiteral()).isEqualTo("success $ctr")
                 }
             }
+        }
+    }
+
+    @Test
+    fun `test stub with scalar query parameter`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+    openapi: 3.0.0
+    info:
+      title: Sample API
+      version: 0.1.9
+    paths:
+      /products:
+        get:
+          summary: get products
+          description: Get products filtered by Brand Id
+          parameters:
+            - name: brand_id
+              in: query
+              required: true
+              schema:
+                type: number
+          responses:
+            '200':
+              description: OK
+              content:
+                application/json:
+                  schema:
+                    type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        HttpStub(contract, emptyList()).use { stub ->
+            val queryParameters = QueryParameters(paramPairs = listOf("brand_id" to "1"))
+            val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toString()).isNotEmpty
         }
     }
 }

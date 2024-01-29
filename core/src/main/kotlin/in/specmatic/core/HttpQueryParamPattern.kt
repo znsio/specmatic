@@ -1,19 +1,26 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.*
-import `in`.specmatic.core.pattern.withoutOptionality
 import `in`.specmatic.core.utilities.URIUtils
+import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import java.net.URI
 
 data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
-    fun generate(resolver: Resolver): Map<String, String> {
+
+    fun generate(resolver: Resolver): List<Pair<String, String>> {
         return attempt(breadCrumb = "QUERY-PARAMS") {
-            queryPatterns.mapKeys { it.key.removeSuffix("?") }.map { (name, pattern) ->
-                attempt(breadCrumb = name) {
-                    name to resolver.withCyclePrevention(pattern) { it.generate(name, pattern) }.toString()
+            queryPatterns.map { it.key.removeSuffix("?") to it.value }.flatMap { (parameterName, pattern) ->
+                attempt(breadCrumb = parameterName) {
+                    val generatedValue =  resolver.withCyclePrevention(pattern) { it.generate(parameterName, pattern) }
+                    if(generatedValue is JSONArrayValue) {
+                        generatedValue.list.map { parameterName to it.toString() }
+                    }
+                    else {
+                        listOf(parameterName to generatedValue.toString())
+                    }
                 }
-            }.toMap()
+            }
         }
     }
 
@@ -33,34 +40,47 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
 
     fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
         val keyErrors =
-            resolver.findKeyErrorList(queryPatterns, httpRequest.queryParams.mapValues { StringValue(it.value) })
+            resolver.findKeyErrorList(queryPatterns, httpRequest.queryParams.asMap().mapValues { StringValue(it.value) })
         val keyErrorList: List<Result.Failure> = keyErrors.map {
             it.missingKeyToResult("query param", resolver.mismatchMessages).breadCrumb(it.name)
         }
-        val results: List<Result?> = queryPatterns.keys.map { key ->
-            val keyName = key.removeSuffix("?")
 
-            if (!httpRequest.queryParams.containsKey(keyName))
-                null
-            else {
-                try {
-                    val patternValue = queryPatterns.getValue(key)
-                    val sampleValue = httpRequest.queryParams.getValue(keyName)
+        // 1. key is optional and request does not have the key as well
+        // 2. key is mandatory and request does not have the key as well -> Result.Failure
+        // 3. key in request but not in groupedPatternPairs -> Result.Failure
+        // 4. key in request
+        // A. key value pattern is an array
+        // B. key value pattern is a scalar (not an array)
+        // C. multiple pattern patternPairGroup with the same key
 
-                    val parsedValue = try {
-                        patternValue.parse(sampleValue, resolver)
-                    } catch (e: Exception) {
-                        StringValue(sampleValue)
-                    }
-                    resolver.matchesPattern(keyName, patternValue, parsedValue).breadCrumb(keyName)
-                } catch (e: ContractException) {
-                    e.failure().breadCrumb(keyName)
-                } catch (e: Throwable) {
-                    Result.Failure(e.localizedMessage).breadCrumb(keyName)
-                }
-            }
+
+        // We don't need unmatched values when:
+        // 1. Running contract tests
+        // 2. Backward compatibility
+        // 3. Stub
+        // A. Setting expectation
+        // B. Matching incoming request to a stub without expectations
+
+        // Where we need unmatched values:
+        // Matching incoming request to stubbed out API
+
+        val results: List<Result?> = queryPatterns.mapNotNull { (key, parameterPattern) ->
+            val requestValues = httpRequest.queryParams.getValues(withoutOptionality(key))
+
+            if (requestValues.isEmpty()) return@mapNotNull null
+
+            val keyWithoutOptionality = withoutOptionality(key)
+
+            val requestValuesList = JSONArrayValue(requestValues.map {
+                StringValue(it)
+            })
+
+            resolver.matchesPattern(keyWithoutOptionality, parameterPattern, requestValuesList).breadCrumb(keyWithoutOptionality)
+
         }
+
         val failures = keyErrorList.plus(results).filterIsInstance<Result.Failure>()
+
         return if (failures.isNotEmpty())
             Result.Failure.fromFailures(failures).breadCrumb(QUERY_PARAMS_BREADCRUMB)
         else
@@ -96,7 +116,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
     }
 
     fun matches(uri: URI, queryParams: Map<String, String>, resolver: Resolver = Resolver()): Result {
-        return matches(HttpRequest(path = uri.path, queryParams = queryParams), resolver)
+        return matches(HttpRequest(path = uri.path, queryParametersMap =  queryParams), resolver)
     }
 }
 
@@ -108,9 +128,9 @@ internal fun buildQueryPattern(
         "${it.key}?"
     }.mapValues {
         if (isPatternToken(it.value))
-            DeferredPattern(it.value, it.key)
+            QueryParameterScalarPattern(DeferredPattern(it.value, it.key))
         else
-            ExactValuePattern(StringValue(it.value))
+            QueryParameterScalarPattern(ExactValuePattern(StringValue(it.value)))
     }.let { queryParams ->
         apiKeyQueryParams.associate { apiKeyQueryParam ->
             Pair("${apiKeyQueryParam}?", StringPattern())

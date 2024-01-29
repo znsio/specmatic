@@ -143,7 +143,9 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolv
     val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
     val negativePatternsMap = patternMap.mapValues { (key, pattern) ->
         val resolvedPattern = resolvedHop(pattern, resolver)
-        if (stringlyCheck && resolvedPattern is StringPattern) {
+        // TODO: Refactor special handling of scalar and array query params when the stringly check is refactored
+        if (stringlyCheck && (resolvedPattern is StringPattern || isStringBasedQueryParameterScalarPattern(resolvedPattern) || isStringBasedQueryParameterArrayPattern(resolvedPattern)))
+        {
             emptyList()
         } else if (stringlyCheck && resolvedPattern is ScalarType) {
             resolvedPattern.negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver).filterNot { it is NullPattern }
@@ -179,6 +181,12 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolv
         list.toList().map { patternList(it) }.flatten()
     }.flatten()
 }
+
+private fun isStringBasedQueryParameterArrayPattern(resolvedPattern: Pattern) =
+    resolvedPattern is QueryParameterArrayPattern &&  resolvedHop(resolvedPattern.pattern.first(), Resolver()) is StringPattern
+
+private fun isStringBasedQueryParameterScalarPattern(resolvedPattern: Pattern) =
+    resolvedPattern is QueryParameterScalarPattern && resolvedHop(resolvedPattern.pattern, Resolver()) is StringPattern
 
 private fun negativeBasedOnForEnum(pattern: Pattern): List<Pattern> {
     val enumPattern = (pattern as EnumPattern).pattern

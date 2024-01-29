@@ -363,7 +363,7 @@ components:
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.path).isEqualTo("/hello")
-                assertThat(request.queryParams["id"]).isEqualTo("10")
+                assertThat(request.queryParams.getValues("id").first()).isEqualTo("10")
 
                 return HttpResponse.ok("success")
             }
@@ -421,7 +421,7 @@ components:
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.path).isEqualTo("/hello")
-                assertThat(request.queryParams["id"]).isEqualTo("10")
+                assertThat(request.queryParams.getValues("id").first()).isEqualTo("10")
 
                 return HttpResponse.ok("success")
             }

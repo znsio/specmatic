@@ -763,7 +763,7 @@ class OpenApiSpecification(
                     }
 
                     val httpRequest =
-                        HttpRequest(method = httpMethod, path = path, queryParams = queryParams, headers = headerParams)
+                        HttpRequest(method = httpMethod, path = path, queryParametersMap = queryParams, headers = headerParams)
 
                     val requestsWithSecurityParams: List<HttpRequest> = securitySchemes.map { (_, securityScheme) ->
                         securityScheme.addTo(httpRequest)
@@ -847,7 +847,7 @@ class OpenApiSpecification(
                                 val httpRequest = HttpRequest(
                                     method = httpMethod,
                                     path = httpPathPattern.path,
-                                    queryParams = queryParams,
+                                    queryParametersMap = queryParams,
                                     body = parsedValue(it.value ?: "")
                                 )
 
@@ -1446,9 +1446,9 @@ class OpenApiSpecification(
         val parameters = operation.parameters ?: return HttpQueryParamPattern(emptyMap())
         val queryPattern: Map<String, Pattern> = parameters.filterIsInstance(QueryParameter::class.java).associate {
             val specmaticPattern: Pattern = if (it.schema.type == "array") {
-                CsvPattern(toSpecmaticPattern(schema = it.schema.items, typeStack = emptyList()))
+                QueryParameterArrayPattern(listOf(toSpecmaticPattern(schema = it.schema.items, typeStack = emptyList())), it.name)
             } else {
-                toSpecmaticPattern(schema = it.schema, typeStack = emptyList(), patternName = it.name)
+                QueryParameterScalarPattern(toSpecmaticPattern(schema = it.schema, typeStack = emptyList(), patternName = it.name))
             }
 
             "${it.name}?" to specmaticPattern

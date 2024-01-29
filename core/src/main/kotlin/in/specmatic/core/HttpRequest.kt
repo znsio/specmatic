@@ -34,14 +34,32 @@ data class HttpRequest(
     val path: String? = null,
     val headers: Map<String, String> = emptyMap(),
     val body: Value = EmptyString,
-    val queryParams: Map<String, String> = emptyMap(),
+    val queryParams: QueryParameters = QueryParameters(),
     val formFields: Map<String, String> = emptyMap(),
     val multiPartFormData: List<MultiPartFormDataValue> = emptyList()
 ) {
-    constructor(method: String, uri: URI) : this(method, uri.path, queryParams = urlToQueryParams(uri))
+    constructor(method: String, uri: URI) : this(method, uri.path, queryParametersMap = urlToQueryParams(uri))
+    constructor(
+        method: String? = null,
+        path: String? = null,
+        headers: Map<String, String> = emptyMap(),
+        body: Value = EmptyString,
+        queryParametersMap: Map<String, String> = emptyMap(),
+        formFields: Map<String, String> = emptyMap(),
+        multiPartFormData: List<MultiPartFormDataValue> = emptyList(),
+        marker: String = "Dummy"
+    ) : this(
+        method = method,
+        path = path,
+        headers = headers,
+        body = body,
+        queryParams = QueryParameters(queryParametersMap),
+        formFields = formFields,
+        multiPartFormData = multiPartFormData,
+    )
 
-    fun updateQueryParams(queryParams: Map<String, String>): HttpRequest =
-        copy(queryParams = queryParams.plus(queryParams))
+    fun updateQueryParams(otherQueryParams: Map<String, String>): HttpRequest =
+        copy(queryParams = queryParams.plus(otherQueryParams))
 
     fun withHost(host: String) = this.copy(headers = this.headers.plus("Host" to host))
 
@@ -65,7 +83,7 @@ data class HttpRequest(
     fun updateWith(url: URI): HttpRequest {
         val path = url.path
         val queryParams = parseQuery(url.query)
-        return copy(path = path, queryParams = queryParams)
+        return copy(path = path, queryParams = QueryParameters(queryParams))
     }
 
     fun updateMethod(name: String): HttpRequest = copy(method = name.uppercase())
@@ -79,7 +97,7 @@ data class HttpRequest(
         val cleanBase = baseURL?.removeSuffix("/")
         val cleanPath = path?.removePrefix("/")
         val fullUrl = URLParts(concatNonNulls(cleanBase, cleanPath, "/")).withEncodedPathSegments()
-        val queryPart = URLEncodedUtils.format(queryParams.map { BasicNameValuePair(it.key, it.value) }, Charsets.UTF_8)
+        val queryPart = URLEncodedUtils.format(queryParams.paramPairs.map { BasicNameValuePair(it.first, it.second) }, Charsets.UTF_8)
         return concatNonNulls(fullUrl, queryPart, "?")
     }
 
@@ -93,7 +111,7 @@ data class HttpRequest(
         method?.let { requestMap["method"] = StringValue(it) }
             ?: throw ContractException("Can't serialise the request without a method.")
 
-        setIfNotEmpty(requestMap, "query", queryParams)
+        setIfNotEmpty(requestMap, "query", queryParams.asMap())
         setIfNotEmpty(requestMap, "headers", headers)
 
         when {
@@ -116,7 +134,7 @@ data class HttpRequest(
 
         val pathString = path ?: "NO_PATH"
         val queryParamString =
-            queryParams.map { "${it.key}=${it.value}" }.joinToString("&").let { if (it.isNotEmpty()) "?$it" else it }
+            queryParams.paramPairs.map { "${it.first}=${it.second}" }.joinToString("&").let { if (it.isNotEmpty()) "?$it" else it }
         val urlString = "$pathString$queryParamString"
 
         val firstLine = "$methodString $urlString"
@@ -141,7 +159,7 @@ data class HttpRequest(
         return HttpRequestPattern(
             headersPattern = HttpHeadersPattern(mapToPattern(headers)),
             httpPathPattern = HttpPathPattern(pathToPattern(pathForPattern), pathForPattern),
-            httpQueryParamPattern = HttpQueryParamPattern(mapToPattern(queryParams)),
+            httpQueryParamPattern = HttpQueryParamPattern(mapToQueryParameterPattern(queryParams)),
             method = this.method,
             body = this.body.exactMatchElseType(),
             formFieldsPattern = mapToPattern(formFields),
@@ -156,6 +174,26 @@ data class HttpRequest(
             else
                 ExactValuePattern(StringValue(value))
         }
+    }
+
+    private fun mapToQueryParameterPattern(queryParams: QueryParameters): Map<String, Pattern> {
+        val queryParamGroups = queryParams.paramPairs.groupBy { it.first }
+            .mapValues { (_, keyValuePairs) ->
+                keyValuePairs.map { (_,value) ->
+                    if (isPatternToken(value))
+                        parsedPattern(value)
+                    else
+                        ExactValuePattern(StringValue(value))
+                }
+            }
+        return queryParamGroups.map { (parameterKey, parameterPatterns) ->
+            if(parameterPatterns.size > 1) {
+                parameterKey to QueryParameterArrayPattern(parameterPatterns, parameterKey)
+            }
+            else {
+                parameterKey to QueryParameterScalarPattern(parameterPatterns.single())
+            }
+        }.toMap()
     }
 
     fun buildKTORRequest(httpRequestBuilder: HttpRequestBuilder, url: URL?) {
@@ -457,6 +495,9 @@ fun toGherkinClauses(request: HttpRequest): Triple<List<GherkinClause>, Map<Stri
 fun stringMapToValueMap(stringStringMap: Map<String, String>) =
     stringStringMap.mapValues { guessType(parsedValue(it.value)) }
 
+fun queryParamsToValueMap(queryParams: QueryParameters) =
+    queryParams.paramPairs.map { (key, value) -> key to guessType(parsedValue(value)) }.toMap()
+
 fun bodyToGherkin(
     request: HttpRequest,
     types: Map<String, Pattern>,
@@ -503,7 +544,7 @@ fun firstLineToGherkin(
     val (query, newTypes, newExamples) = when {
         request.queryParams.isNotEmpty() -> {
             val (dictionaryType, newTypes, examples) = dictionaryToDeclarations(
-                stringMapToValueMap(request.queryParams),
+                queryParamsToValueMap(request.queryParams),
                 types,
                 exampleDeclarationsStore
             )

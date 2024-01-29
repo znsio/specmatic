@@ -26,7 +26,6 @@ import io.ktor.server.routing.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -47,35 +46,9 @@ import java.io.File
 import java.net.URI
 import java.util.function.Consumer
 import java.util.stream.Stream
-import kotlin.collections.HashMap
-import kotlin.collections.List
-import kotlin.collections.Map
-import kotlin.collections.MutableList
-import kotlin.collections.any
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlin.collections.emptyList
-import kotlin.collections.filter
-import kotlin.collections.filterIsInstance
-import kotlin.collections.first
-import kotlin.collections.forEach
-import kotlin.collections.get
-import kotlin.collections.getValue
-import kotlin.collections.joinToString
-import kotlin.collections.last
-import kotlin.collections.listOf
-import kotlin.collections.map
-import kotlin.collections.mapValues
-import kotlin.collections.mutableListOf
-import kotlin.collections.mutableMapOf
 import kotlin.collections.set
-import kotlin.collections.setOf
-import kotlin.collections.single
-import kotlin.collections.sorted
-import kotlin.collections.sum
-import kotlin.collections.toList
-import kotlin.collections.toMap
-import kotlin.collections.withDefault
 
 internal class OpenApiKtTest {
     companion object {
@@ -1288,6 +1261,7 @@ Background:
                         request.path == "/pets" -> {
                             when (request.method) {
                                 "GET" -> {
+                                    println(request.queryParams.toLine())
                                     HttpResponse(
                                         200,
                                         ObjectMapper().writeValueAsString(listOf(pet)),
@@ -1358,7 +1332,8 @@ Background:
         printMap("Tests Executed", flags.mapValues { it.toString() })
 
         assertThat(flags["/pets POST executed"]).isEqualTo(1)
-        assertThat(flags["/pets GET executed"]).isEqualTo(24)
+        //assertThat(flags["/pets GET executed"]).isEqualTo(24)
+        assertThat(flags["/pets GET executed"]).isEqualTo(36)
         assertThat(flags["/petIds GET executed"]).isEqualTo(4)
         assertThat(flags["/pets/0 GET executed"]).isEqualTo(1)
         assertThat(flags.keys.filter { it.matches(Regex("""/pets/\d+ GET executed""")) }.size).isEqualTo(2)
@@ -1747,7 +1722,7 @@ Scenario: zero should return not found
         val results = feature.enableGenerativeTesting().executeTests(
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    queryParameters.add(request.queryParams)
+                    queryParameters.add(request.queryParams.asMap())
                     return HttpResponse.OK
                 }
 
@@ -2166,7 +2141,7 @@ components:
 
         contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                val dataHeaderValue: String? = request.queryParams["data"]
+                val dataHeaderValue: String? = request.queryParams.getValues("data").first()
 
                 if (dataHeaderValue == "hello")
                     contractInvalidValueReceived = true
@@ -2582,29 +2557,23 @@ components:
 
     @Test
     fun `should handle omit correctly when it is a default value in the parameter section if the schemaExampleDefault flag is set`() {
-        try {
-            System.setProperty(Flags.SCHEMA_EXAMPLE_DEFAULT, "true")
+        val feature =
+            OpenApiSpecification.fromFile("src/test/resources/openapi/helloWithOmitAsDefault.yaml").toFeature()
+                .enableSchemaExampleDefault()
 
-            val feature =
-                OpenApiSpecification.fromFile("src/test/resources/openapi/helloWithOmitAsDefault.yaml").toFeature()
-                    .enableSchemaExampleDefault()
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.queryParams.asMap()).doesNotContainKey("id")
+                assertThat(request.headers).doesNotContainKey("traceId")
+                return HttpResponse.OK
+            }
 
-            val results = feature.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    assertThat(request.queryParams).doesNotContainKey("id")
-                    assertThat(request.headers).doesNotContainKey("traceId")
-                    return HttpResponse.OK
-                }
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
 
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
-
-            assertThat(results.hasFailures()).isFalse()
-            assertThat(results.success()).isTrue()
-        } finally {
-            System.clearProperty(Flags.SCHEMA_EXAMPLE_DEFAULT)
-        }
+        assertThat(results.hasFailures()).isFalse()
+        assertThat(results.success()).isTrue()
     }
 
     @Test

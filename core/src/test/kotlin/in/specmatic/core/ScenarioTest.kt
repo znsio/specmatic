@@ -145,7 +145,7 @@ internal class ScenarioTest {
             emptyMap(),
             emptyMap(),
         )
-        val mockRequest = HttpRequest(method = "GET", path = "/", queryParams = mapOf("expected" to "value", "unexpected" to "value"))
+        val mockRequest = HttpRequest(method = "GET", path = "/", queryParametersMap = mapOf("expected" to "value", "unexpected" to "value"))
         val mockResponse = HttpResponse.OK
 
         assertThat(scenario.matchesMock(mockRequest, mockResponse)).isInstanceOf(Result.Failure::class.java)
@@ -222,13 +222,13 @@ When GET /resource?query=(number)
 Then status 200
         """.trim()
 
-        val request = HttpRequest("GET", "/resource", queryParams = mapOf("query" to "(number)"))
+        val request = HttpRequest("GET", "/resource", queryParametersMap = mapOf("query" to "(number)"))
         val stub = ScenarioStub(request, HttpResponse.OK)
 
         val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
-        assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParametersMap = mapOf("query" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
         assertThat(matchingResponse.response.status).isEqualTo(200)
@@ -242,13 +242,13 @@ When GET /resource?query=(number)
 Then status 200
         """.trim()
 
-        val request = HttpRequest("GET", "/resource", queryParams = mapOf("query" to "10"))
+        val request = HttpRequest("GET", "/resource", queryParametersMap = mapOf("query" to "10"))
         val stub = ScenarioStub(request, HttpResponse.OK)
 
         val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
-        assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParametersMap = mapOf("query" to "10")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
         assertThat(matchingResponse.response.status).isEqualTo(200)
@@ -262,13 +262,17 @@ When GET /resource?query=(boolean)
 Then status 200
         """.trim()
 
-        val request = HttpRequest("GET", "/resource", queryParams = mapOf("query" to "(boolean)"))
+        val request = HttpRequest("GET", "/resource", queryParametersMap = mapOf("query" to "(boolean)"))
         val stub = ScenarioStub(request, HttpResponse.OK)
 
         val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
-        assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "true")), Resolver())).isInstanceOf(Result.Success::class.java)
+        val result = requestPattern.matches(
+            HttpRequest("GET", "/resource", queryParametersMap = mapOf("query" to "true")),
+            Resolver()
+        )
+        assertThat(result).withFailMessage(result.reportString()).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
         assertThat(matchingResponse.response.status).isEqualTo(200)
@@ -282,13 +286,13 @@ When GET /resource?query=(boolean)
 Then status 200
         """.trim()
 
-        val request = HttpRequest("GET", "/resource", queryParams = mapOf("query" to "true"))
+        val request = HttpRequest("GET", "/resource", queryParametersMap = mapOf("query" to "true"))
         val stub = ScenarioStub(request, HttpResponse.OK)
 
         val feature = parseGherkinStringToFeature(gherkin)
 
         val requestPattern = request.toPattern()
-        assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParams = mapOf("query" to "true")), Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(requestPattern.matches(HttpRequest("GET", "/resource", queryParametersMap = mapOf("query" to "true")), Resolver())).isInstanceOf(Result.Success::class.java)
 
         val matchingResponse = feature.matchingStub(stub)
         assertThat(matchingResponse.response.status).isEqualTo(200)

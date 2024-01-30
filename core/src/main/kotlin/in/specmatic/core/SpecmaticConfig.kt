@@ -186,7 +186,9 @@ fun loadSpecmaticJsonConfig(configFileName: String? = null): SpecmaticConfigJson
     }
     try {
         return SpecmaticJsonFormat.decodeFromString(configFile.readText())
+    } catch(e: NoClassDefFoundError) {
+        throw Exception("This usually means that there's a dependency version conflict. If you are using Spring in a maven project, the most common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.", e)
     } catch (e: Throwable) {
-        throw Exception("Your specmatic.json file may have some missing configuration sections. Please ensure that the specmatic.json file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes")
+        throw Exception("Your specmatic.json file may have some missing configuration sections. Please ensure that the specmatic.json file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes", e)
     }
 }

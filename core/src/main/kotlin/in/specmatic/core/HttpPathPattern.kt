@@ -208,18 +208,6 @@ data class HttpPathPattern(
         resolver: Resolver
     ): List<List<URLPathSegmentPattern>> {
         return negatively(pathSegmentPatterns, row, resolver)
-        val newPathPartsList: List<List<Pattern>> = pathSegmentPatterns.mapIndexed { index, urlPathPattern ->
-            val key = urlPathPattern.key
-
-            attempt(breadCrumb = "[$index]") {
-                patternFromExample(key, row, urlPathPattern, resolver)
-            }
-        }
-
-//        TODO: Replace with Generics
-        return listCombinations(newPathPartsList).map { it.filterIsInstance<URLPathSegmentPattern>()}
-
-//        return newPathPartsList.map { list -> list.map { it as URLPathSegmentPattern } }
     }
 
     private fun patternFromExample(

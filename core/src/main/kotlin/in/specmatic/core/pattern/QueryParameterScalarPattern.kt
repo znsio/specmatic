@@ -69,4 +69,8 @@ class QueryParameterScalarPattern(override val pattern: Pattern): Pattern by pat
         if (other !is QueryParameterScalarPattern) return false
         return pattern == other.pattern
     }
+
+    override fun hashCode(): Int {
+        return pattern.hashCode()
+    }
 }

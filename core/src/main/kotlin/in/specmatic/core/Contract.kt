@@ -20,11 +20,23 @@ data class Contract(val contract: Feature) {
     fun test(fake: HttpStub) = test(fake.endPoint)
 
     fun samples(fake: HttpStub) = samples(fake.endPoint)
+
+    fun examples(fake: HttpStub) = examples(fake.endPoint)
+
     private fun samples(endPoint: String) {
         val contractBehaviour = contract
         val httpClient = HttpClient(endPoint)
 
         contractBehaviour.generateContractTestScenarios(emptyList()).fold(Results()) { results, scenario ->
+            Results(results = results.results.plus(executeTest(scenario, httpClient)).toMutableList())
+        }
+    }
+
+    private fun examples(endPoint: String) {
+        val contractBehaviour = contract
+        val httpClient = HttpClient(endPoint)
+
+        val completeResults = contractBehaviour.generateContractTestScenarios(emptyList()).fold(Results()) { results, scenario ->
             Results(results = results.results.plus(executeTest(scenario, httpClient)).toMutableList())
         }
     }

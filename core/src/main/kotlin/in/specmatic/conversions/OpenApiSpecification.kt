@@ -843,11 +843,13 @@ class OpenApiSpecification(
 
                             val examples: Map<String, List<HttpRequest>> = exampleBodies.map {
                                 val queryParams = exampleQueryParams[it.key] ?: emptyMap()
+                                val headerParams = exampleHeaderParams[it.key] ?: emptyMap()
 
                                 val httpRequest = HttpRequest(
                                     method = httpMethod,
                                     path = httpPathPattern.path,
                                     queryParametersMap = queryParams,
+                                    headers = headerParams,
                                     body = parsedValue(it.value ?: "")
                                 )
 

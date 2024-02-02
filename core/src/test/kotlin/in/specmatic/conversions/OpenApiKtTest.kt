@@ -20,12 +20,6 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.jsonBody
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
-import io.ktor.util.reflect.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -52,6 +46,8 @@ import java.util.stream.Stream
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
+
+private const val EMAIL_REGEX = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
 
 internal class OpenApiKtTest {
     companion object {
@@ -2607,10 +2603,13 @@ components:
     fun `should work with password and email formats while generating tests`() {
         val feature = OpenApiSpecification.fromFile("openapi/spec_with_password_and_email_format_strings.yaml").toFeature()
         var emailDataType: Pattern? = null
+        var emailValue: String? = null
         var passwordDataType: Pattern? = null
         feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                emailDataType = request.jsonBody.findFirstChildByName("email")?.type()
+                val email = request.jsonBody.findFirstChildByName("email")
+                emailDataType = email?.type()
+                emailValue = email?.toStringLiteral()
                 passwordDataType = request.jsonBody.findFirstChildByName("password")?.type()
                 return HttpResponse.OK
             }
@@ -2619,6 +2618,7 @@ components:
             }
         })
         assertThat(emailDataType).isInstanceOf(StringPattern::class.java)
+        assertThat(emailValue).matches(EMAIL_REGEX)
         assertThat(passwordDataType).isInstanceOf(StringPattern::class.java)
     }
 
@@ -2638,6 +2638,30 @@ components:
         assertThat(response).isInstanceOf(CreatedUser::class.java)
     }
 
+    @Test
+    fun `stub should not match email value in request that does not adhere to email format`() {
+        val feature = OpenApiSpecification.fromFile("openapi/spec_with_password_and_email_format_strings.yaml").toFeature()
+
+        val exception = Assertions.assertThrows(HttpClientErrorException::class.java) {
+            HttpStub(feature).use {
+                val restTemplate = RestTemplate()
+                restTemplate.postForObject(
+                    URI.create("http://localhost:9000/users"),
+                    NewUser("Euclid", "this.is.not.an.email", "password"),
+                    CreatedUser::class.java
+                )
+            }
+        }
+
+        assertThat(exception.message).isEqualTo(
+            """400 Bad Request: "In scenario "POST /users.
+            | Response: Details of the new user to register"<EOL>API: POST /users -> 201<EOL><EOL>
+            |  >> REQUEST.BODY.email<EOL>  <EOL>
+            |     Contract expected email string but request contained "this.is.not.an.email"""""
+                .trimMargin()
+                .replace(Regex("(\n*)\n"), "$1")
+        )
+    }
 }
 
 data class CycleRoot(

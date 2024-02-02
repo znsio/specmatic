@@ -2621,6 +2621,23 @@ components:
         assertThat(emailDataType).isInstanceOf(StringPattern::class.java)
         assertThat(passwordDataType).isInstanceOf(StringPattern::class.java)
     }
+
+    @Test
+    fun `should work with password and email formats while generating stub`() {
+        val feature = OpenApiSpecification.fromFile("openapi/spec_with_password_and_email_format_strings.yaml").toFeature()
+
+        val response = HttpStub(feature).use {
+            val restTemplate = RestTemplate()
+            restTemplate.postForObject(
+                URI.create("http://localhost:9000/users"),
+                NewUser("Euclid", "euclid@geometry.com", "password"),
+                CreatedUser::class.java
+            )
+        }
+
+        assertThat(response).isInstanceOf(CreatedUser::class.java)
+    }
+
 }
 
 data class CycleRoot(
@@ -2661,6 +2678,18 @@ data class MyBaseHolder(@JsonProperty("myBase") val myBase: MyBase)
 interface MyBase
 data class MySub1(@JsonProperty("aMyBase") val aMyBase: MyBase?) : MyBase
 data class MySub2(@JsonProperty("myVal") val myVal: String) : MyBase
+
+data class NewUser(
+    @JsonProperty val username: String,
+    @JsonProperty val email: String,
+    @JsonProperty val password: String
+)
+
+data class CreatedUser(
+    @JsonProperty("id") val id: Int,
+    @JsonProperty("username") val username: String,
+    @JsonProperty("email") val email: String
+)
 
 data class Pet(
     @JsonProperty("name") val name: String,

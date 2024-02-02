@@ -9,6 +9,8 @@ import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.Pattern
+import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.JSONObjectValue
@@ -23,6 +25,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.util.reflect.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -2598,6 +2601,25 @@ components:
 
         assertThat(queryParamsSeen.sorted().distinct()).isEqualTo(listOf("id", "name"))
         assertThat(headersSeen.sorted().distinct()).isEqualTo(listOf("traceId"))
+    }
+
+    @Test
+    fun `should work with password and email formats while generating tests`() {
+        val feature = OpenApiSpecification.fromFile("openapi/spec_with_password_and_email_format_strings.yaml").toFeature()
+        var emailDataType: Pattern? = null
+        var passwordDataType: Pattern? = null
+        feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                emailDataType = request.jsonBody.findFirstChildByName("email")?.type()
+                passwordDataType = request.jsonBody.findFirstChildByName("password")?.type()
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+        assertThat(emailDataType).isInstanceOf(StringPattern::class.java)
+        assertThat(passwordDataType).isInstanceOf(StringPattern::class.java)
     }
 }
 

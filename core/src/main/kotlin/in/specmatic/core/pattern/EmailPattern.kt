@@ -8,7 +8,7 @@ import java.util.*
 private const val EMAIL_REGEX = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}\$"
 
 class EmailPattern (private val stringPatternDelegate: StringPattern) :
-    Pattern by stringPatternDelegate {
+    Pattern by stringPatternDelegate, ScalarType {
 
     constructor(
         typeAlias: String? = null,

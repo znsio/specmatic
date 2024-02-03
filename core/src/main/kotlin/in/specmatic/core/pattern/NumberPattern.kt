@@ -111,6 +111,6 @@ fun encompasses(
         otherPattern is EnumPattern -> {
             encompasses(thisPattern, otherPattern.pattern, thisResolver, otherResolver, typeStack)
         }
-        thisPattern.matches(otherPattern.generate(otherResolver), thisResolver) is Result.Success -> Result.Success()
+        thisPattern is ScalarType && otherPattern is ScalarType && thisPattern.matches(otherPattern.generate(otherResolver), thisResolver) is Result.Success -> Result.Success()
         else -> mismatchResult(thisPattern, otherPattern, thisResolver.mismatchMessages)
     }

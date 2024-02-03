@@ -19,7 +19,7 @@ import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.cors.CORS
+import io.ktor.server.plugins.cors.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -533,21 +533,6 @@ class HttpStub(
             saveJsonFile(reportJson, JSON_REPORT_PATH, JSON_REPORT_FILE_NAME)
         }
     }
-}
-
-class ExamplesAsExpectationsMismatch(val exampleName: String) : MismatchMessages {
-    override fun mismatchMessage(expected: String, actual: String): String {
-        return "$actual in the example \"$exampleName\" does not match $expected in the spec"
-    }
-
-    override fun unexpectedKey(keyLabel: String, keyName: String): String {
-        return "$keyLabel named $keyName in the example \"$exampleName\" was not found in the spec"
-    }
-
-    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
-        return "$keyLabel named $keyName in the spec was not found in the \"$exampleName\" example"
-    }
-
 }
 
 class CouldNotParseRequest(innerException: Throwable) : Exception(exceptionCauseMessage(innerException))

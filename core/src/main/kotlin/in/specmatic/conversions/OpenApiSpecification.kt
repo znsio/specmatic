@@ -1008,7 +1008,7 @@ class OpenApiSpecification(
                 )
             }
 
-            is EmailSchema -> EmailPattern.create(example = schema.example?.toString())
+            is EmailSchema -> EmailPattern(example = schema.example?.toString())
 
             is PasswordSchema -> StringPattern(example = schema.example?.toString())
 

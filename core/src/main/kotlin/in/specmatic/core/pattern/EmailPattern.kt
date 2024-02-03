@@ -7,21 +7,18 @@ import java.util.*
 
 private const val EMAIL_REGEX = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}\$"
 
-class EmailPattern private constructor(private val stringPatternDelegate: StringPattern) :
+class EmailPattern (private val stringPatternDelegate: StringPattern) :
     Pattern by stringPatternDelegate {
+
+    constructor(
+        typeAlias: String? = null,
+        minLength: Int? = null,
+        maxLength: Int? = null,
+        example: String? = null
+    ) : this(StringPattern(typeAlias, minLength, maxLength, example))
 
     companion object {
         val emailRegex = Regex(EMAIL_REGEX)
-
-        fun create(
-            typeAlias: String? = null,
-            minLength: Int? = null,
-            maxLength: Int? = null,
-            example: String? = null
-        ): EmailPattern {
-            val stringPattern = StringPattern(typeAlias, minLength, maxLength, example)
-            return EmailPattern(stringPattern)
-        }
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
@@ -41,4 +38,23 @@ class EmailPattern private constructor(private val stringPatternDelegate: String
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
+
+    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+        return stringPatternDelegate.negativeBasedOn(row, resolver).plus(StringPattern())
+    }
+
+    override fun encompasses(
+        otherPattern: Pattern,
+        thisResolver: Resolver,
+        otherResolver: Resolver,
+        typeStack: TypeStack
+    ): Result {
+        val resolvedOther = resolvedHop(otherPattern, otherResolver)
+        if(resolvedOther !is EmailPattern) return Result.Failure("Expected email, get ${resolvedOther.typeAlias}")
+
+        return stringPatternDelegate.encompasses(resolvedOther.stringPatternDelegate, thisResolver, otherResolver, typeStack)
+    }
+
+    override val typeName: String
+        get() = "email"
 }

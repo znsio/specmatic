@@ -111,5 +111,6 @@ fun encompasses(
         otherPattern is EnumPattern -> {
             encompasses(thisPattern, otherPattern.pattern, thisResolver, otherResolver, typeStack)
         }
+        thisPattern is StringPattern && otherPattern is EmailPattern -> otherPattern.fitsWithin(thisPattern.patternSet(thisResolver), thisResolver, otherResolver, typeStack)
         else -> mismatchResult(thisPattern, otherPattern, thisResolver.mismatchMessages)
     }

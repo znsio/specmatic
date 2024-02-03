@@ -83,25 +83,28 @@ class HttpStub(
     private fun staticHttpStubData(rawHttpStubs: List<HttpStubData>): MutableList<HttpStubData> {
         val staticStubs = rawHttpStubs.filter { it.stubToken == null }.toMutableList()
         val stubsFromSpecificationExamples: List<HttpStubData> = features.map { feature ->
-            feature.stubsFromExamples.entries.map {
-                it.value.mapNotNull { (request, response) ->
+            feature.stubsFromExamples.entries.map { (exampleName, examples) ->
+                examples.mapNotNull { (request, response) ->
                     try {
-                        val matchResult: HttpStubData =
-                            feature.matchingStub(request, response, ContractAndStubMismatchMessages)
-                        if (matchResult.matchFailure) {
-                            logger.log(matchResult.response.body.toStringLiteral())
+                        val stubData: HttpStubData =
+                            feature.matchingStub(request, response, ExamplesAsExpectationsMismatch(exampleName))
+
+                        if (stubData.matchFailure) {
+                            logger.log(stubData.response.body.toStringLiteral())
                             null
                         } else {
-                            matchResult
+                            stubData
                         }
                     } catch (e: Throwable) {
                         when (e) {
                             is ContractException, is NoMatchingScenario -> {
-                                logger.log(e)
+                                logger.log(e, "Error when loading example \"$exampleName\" as expectation")
                                 null
                             }
-
-                            else -> throw e
+                            else -> {
+                                logger.log(e, "Error when loading example \"$exampleName\" as expectation")
+                                throw e
+                            }
                         }
                     }
                 }
@@ -530,6 +533,21 @@ class HttpStub(
             saveJsonFile(reportJson, JSON_REPORT_PATH, JSON_REPORT_FILE_NAME)
         }
     }
+}
+
+class ExamplesAsExpectationsMismatch(val exampleName: String) : MismatchMessages {
+    override fun mismatchMessage(expected: String, actual: String): String {
+        return "$actual in the example \"$exampleName\" does not match $expected in the spec"
+    }
+
+    override fun unexpectedKey(keyLabel: String, keyName: String): String {
+        return "$keyLabel named $keyName in the example \"$exampleName\" was not found in the spec"
+    }
+
+    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+        return "$keyLabel named $keyName in the spec was not found in the \"$exampleName\" example"
+    }
+
 }
 
 class CouldNotParseRequest(innerException: Throwable) : Exception(exceptionCauseMessage(innerException))

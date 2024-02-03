@@ -731,7 +731,7 @@ class OpenApiSpecification(
 
         val parameters = operation.parameters
 
-        val headersMap = parameters.orEmpty().filterIsInstance(HeaderParameter::class.java).associate {
+        val headersMap = parameters.orEmpty().filterIsInstance<HeaderParameter>().associate {
             toSpecmaticParamName(it.required != true, it.name) to toSpecmaticPattern(it.schema, emptyList())
         }
 
@@ -751,31 +751,27 @@ class OpenApiSpecification(
         val unionOfParameterKeys =
             (exampleQueryParams.keys + examplePathParams.keys + exampleHeaderParams.keys).distinct()
 
-        return when (val requestBody = resolveRequestBody(operation)) {
-            null -> {
-                val examples: Map<String, List<HttpRequest>> = unionOfParameterKeys.associateWith { exampleName ->
-                    val queryParams = exampleQueryParams[exampleName] ?: emptyMap()
-                    val pathParams = examplePathParams[exampleName] ?: emptyMap()
-                    val headerParams = exampleHeaderParams[exampleName] ?: emptyMap()
+        val examplesBasedOnParameters: Map<String, List<HttpRequest>> = unionOfParameterKeys.associateWith { exampleName ->
+            val queryParams = exampleQueryParams[exampleName] ?: emptyMap()
+            val pathParams = examplePathParams[exampleName] ?: emptyMap()
+            val headerParams = exampleHeaderParams[exampleName] ?: emptyMap()
 
-                    val path = pathParams.entries.fold(httpPathPattern.toOpenApiPath()) { acc, (key, value) ->
-                        acc.replace("{$key}", value)
-                    }
+            val path = toConcretePath(pathParams, httpPathPattern)
 
-                    val httpRequest =
-                        HttpRequest(method = httpMethod, path = path, queryParametersMap = queryParams, headers = headerParams)
+            val httpRequest =
+                HttpRequest(method = httpMethod, path = path, queryParametersMap = queryParams, headers = headerParams)
 
-                    val requestsWithSecurityParams: List<HttpRequest> = securitySchemes.map { (_, securityScheme) ->
-                        securityScheme.addTo(httpRequest)
-                    }
-
-                    requestsWithSecurityParams
-                }
-
-                listOf(
-                    Pair(requestPattern.copy(body = NoBodyPattern), examples)
-                )
+            val requestsWithSecurityParams: List<HttpRequest> = securitySchemes.map { (_, securityScheme) ->
+                securityScheme.addTo(httpRequest)
             }
+
+            requestsWithSecurityParams
+        }
+
+        return when (val requestBody = resolveRequestBody(operation)) {
+            null -> listOf(
+                Pair(requestPattern.copy(body = NoBodyPattern), examplesBasedOnParameters)
+            )
 
             else -> {
                 requestBody.content.map { (contentType, mediaType) ->
@@ -818,59 +814,76 @@ class OpenApiSpecification(
                             )
                         }
 
-                        "application/x-www-form-urlencoded" -> {
-                            Pair(
-                                requestPattern.copy(
-                                    formFieldsPattern = toFormFields(mediaType),
-                                    headersPattern = headersPatternWithContentType(requestPattern, contentType)
-                                ), emptyMap()
-                            )
-                        }
+                        "application/x-www-form-urlencoded" -> Pair(
+                            requestPattern.copy(
+                                formFieldsPattern = toFormFields(mediaType),
+                                headersPattern = headersPatternWithContentType(requestPattern, contentType)
+                            ), emptyMap()
+                        )
 
-                        "application/xml" -> {
-                            Pair(
+                        "application/xml" -> Pair(
                                 requestPattern.copy(
                                     body = toXMLPattern(mediaType),
                                     headersPattern = headersPatternWithContentType(requestPattern, contentType)
                                 ), emptyMap()
                             )
-                        }
 
                         else -> {
-                            val exampleBodies: Map<String, String?> = mediaType.examples?.mapValues {
+                            val examplesFromMediaType = mediaType.examples ?: emptyMap()
+
+                            val exampleBodies: Map<String, String?> = examplesFromMediaType.mapValues {
                                 resolveExample(it.value)?.value?.toString() ?: ""
-                            } ?: emptyMap()
+                            }
 
-                            val examples: Map<String, List<HttpRequest>> = exampleBodies.map {
-                                val queryParams = exampleQueryParams[it.key] ?: emptyMap()
-                                val headerParams = exampleHeaderParams[it.key] ?: emptyMap()
+                            val examplesWithBodies: Map<String, List<HttpRequest>> = exampleBodies.mapValues { (exampleName, bodyValue) ->
+                                val bodies: List<HttpRequest> = if(exampleName in examplesBasedOnParameters) {
+                                    examplesBasedOnParameters.getValue(exampleName).map { exampleRequest ->
+                                        exampleRequest.copy(body = parsedValue(bodyValue))
+                                    }
+                                } else {
+                                    val httpRequest = HttpRequest(
+                                        method = httpMethod,
+                                        path = httpPathPattern.path,
+                                        body = parsedValue(bodyValue)
+                                    )
 
-                                val httpRequest = HttpRequest(
-                                    method = httpMethod,
-                                    path = httpPathPattern.path,
-                                    queryParametersMap = queryParams,
-                                    headers = headerParams,
-                                    body = parsedValue(it.value ?: "")
-                                )
+                                    val requestsWithSecurityParams = securitySchemes.map { (_, securityScheme) ->
+                                        securityScheme.addTo(httpRequest)
+                                    }
 
-                                val requestsWithSecurityParams = securitySchemes.map { (_, securityScheme) ->
-                                    securityScheme.addTo(httpRequest)
+                                    requestsWithSecurityParams
                                 }
 
-                                it.key to requestsWithSecurityParams
-                            }.toMap()
+                                bodies
+                            }
+
+                            val examplesWithoutBodies = (examplesBasedOnParameters.keys - exampleBodies.keys).associate { key ->
+                                key to examplesBasedOnParameters.getValue(key)
+                            }
+
+                            val allExamples = examplesWithBodies + examplesWithoutBodies
 
                             Pair(
                                 requestPattern.copy(
                                     body = toSpecmaticPattern(mediaType),
                                     headersPattern = headersPatternWithContentType(requestPattern, contentType)
-                                ), examples
+                                ), allExamples
                             )
                         }
                     }
                 }
             }
         }
+    }
+
+    private fun toConcretePath(
+        pathParams: Map<String, String>,
+        httpPathPattern: HttpPathPattern
+    ): String {
+        val path = pathParams.entries.fold(httpPathPattern.toOpenApiPath()) { acc, (key, value) ->
+            acc.replace("{$key}", value)
+        }
+        return path
     }
 
     private fun headersPatternWithContentType(

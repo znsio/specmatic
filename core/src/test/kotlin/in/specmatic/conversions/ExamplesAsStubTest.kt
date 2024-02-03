@@ -487,7 +487,7 @@ components:
     }
 
     @Test
-    fun `expectations with path param and request body`() {
+    fun `expectations with path param + header + request body`() {
         val spec = """
 openapi: 3.0.0
 info:
@@ -498,6 +498,14 @@ paths:
     parameters:
       - name: id
         in: path
+        required: true
+        schema:
+          type: integer
+        examples:
+          SUCCESS:
+            value: 10
+      - name: trace-id
+        in: header
         required: true
         schema:
           type: integer
@@ -535,7 +543,13 @@ paths:
 
         val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
         HttpStub(contract).use { stub ->
-            val response = stub.client.execute(HttpRequest("POST", "/products/10", emptyMap(), parsedJSONObject("""{"name": "Macbook"}""")))
+            val request = HttpRequest(
+                "POST",
+                "/products/10",
+                mapOf("trace-id" to "10"),
+                parsedJSONObject("""{"name": "Macbook"}""")
+            )
+            val response = stub.client.execute(request)
             assertThat(response.status).isEqualTo(200)
             assertThat(response.body.toStringLiteral()).isEqualTo("success")
         }

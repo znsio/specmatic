@@ -1,6 +1,6 @@
 package `in`.specmatic.test
 
-import `in`.specmatic.conversions.convertPathParameterStyle
+import `in`.specmatic.conversions.*
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.ignoreLog
@@ -295,7 +295,19 @@ open class SpecmaticJUnitSupport {
             return Pair(emptyList(), emptyList())
 
         val contractFile = File(path)
-        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract), sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
+        val feature =
+            parseContractFileToFeature(
+                contractFile.path,
+                CommandHook(HookName.test_load_contract),
+                sourceProvider,
+                sourceRepository,
+                sourceRepositoryBranch,
+                specificationPath,
+                securityConfiguration
+            ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
+
+
+
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)
             suggestionsData.isNotEmpty() -> suggestionsFromCommandLine(suggestionsData)

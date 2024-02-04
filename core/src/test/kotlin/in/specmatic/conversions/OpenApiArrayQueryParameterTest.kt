@@ -49,7 +49,7 @@ class OpenApiArrayQueryParameterTest {
 
     @Test
     fun `should generate request with integer query parameter based on externalized examples`() {
-        val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml").toFeature()
+        val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml").toFeature().loadExternalisedExamples()
         var brandIds = emptyList<String>()
         contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -87,7 +87,7 @@ class OpenApiArrayQueryParameterTest {
 
     @Test
     fun `should generate request with string array query parameter based on externalized examples`(){
-        val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_string_array_query_parameter.yaml").toFeature()
+        val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_string_array_query_parameter.yaml").toFeature().loadExternalisedExamples()
         var brandIds = emptyList<String>()
         contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {

@@ -802,6 +802,10 @@ class OpenApiSpecification(
                 )
             }
 
+            is EmailSchema -> EmailPattern(example = schema.example?.toString())
+
+            is PasswordSchema -> StringPattern(example = schema.example?.toString())
+
             is IntegerSchema -> when (schema.enum) {
                 null -> NumberPattern(example = schema.example?.toString())
                 else -> toEnum(schema, patternName) { enumValue ->

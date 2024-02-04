@@ -23,6 +23,8 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.opentest4j.TestAbortedException
 import java.io.File
+import java.net.URI
+import java.net.URISyntaxException
 import java.util.*
 
 @Serializable
@@ -40,6 +42,7 @@ open class SpecmaticJUnitSupport {
         const val SUGGESTIONS_PATH = "suggestionsPath"
         const val HOST = "host"
         const val PORT = "port"
+        const val PROTOCOL = "protocol"
         const val TEST_BASE_URL = "testBaseURL"
         const val ENV_NAME = "environment"
         const val VARIABLES_FILE_NAME = "variablesFileName"
@@ -245,9 +248,7 @@ open class SpecmaticJUnitSupport {
                 lateinit var testResult: Pair<Result, HttpResponse?>
 
                 try {
-                    val protocol = System.getProperty("protocol") ?: "http"
-                    val testBaseURL = System.getProperty(TEST_BASE_URL)
-                        ?: "$protocol://${System.getProperty(HOST)}:${System.getProperty(PORT)}"
+                    var testBaseURL = constructTestBaseURL()
                     testResult = testScenario.runTest(testBaseURL, timeout)
                     val (result, response) = testResult
 
@@ -276,6 +277,42 @@ open class SpecmaticJUnitSupport {
                 }
             }
         }.toList()
+    }
+
+    fun constructTestBaseURL(): String {
+        val testBaseURL = System.getProperty(TEST_BASE_URL)
+        if (testBaseURL != null) {
+            if (!isValidURI(testBaseURL)) {
+                throw TestAbortedException("Please specific a valid URL in $TEST_BASE_URL environment variable")
+            }
+            return testBaseURL
+        }
+        val hostProperty = System.getProperty(HOST)
+            ?: throw TestAbortedException("Please specific $TEST_BASE_URL OR $HOST and $PORT as environment variables")
+        val host = if (hostProperty.startsWith("http")) {
+            URI(hostProperty).host
+        } else {
+            hostProperty
+        }
+        val protocol = System.getProperty(PROTOCOL) ?: "http"
+        val port = System.getProperty(PORT)
+        val url = "$protocol://$host:$port"
+        if (!isValidURI(url)) {
+            throw TestAbortedException("Please specific a valid $PROTOCOL, $HOST and $PORT environment variables")
+        }
+        return url
+    }
+
+    private fun isValidURI(uri: String): Boolean {
+        return try {
+            val parsedURI = URI(uri)
+            val validProtocols = listOf("http", "https")
+            val validPorts = 1..65535
+
+            validProtocols.contains(parsedURI.scheme) && validPorts.contains(parsedURI.port)
+        } catch (e: URISyntaxException) {
+            false
+        }
     }
 
     fun loadTestScenarios(

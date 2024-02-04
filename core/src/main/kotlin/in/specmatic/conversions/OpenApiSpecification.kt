@@ -143,26 +143,34 @@ class OpenApiSpecification(
     }
 
     override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
-        val scenarioInfosWithExamples = toScenarioInfosWithExamples()
+//        val scenarioInfosWithExamples = toScenarioInfosWithExamples()
+//
+//        val (
+//            openApitoScenarioInfosFromSpecification: List<ScenarioInfo>,
+//            examplesAsStubs: Map<String, List<Pair<HttpRequest, HttpResponse>>>
+//        ) = openApiToScenarioInfos()
+//
+//        val combinedScenariosFromSpecificationAndWrapper =
+//            openApitoScenarioInfosFromSpecification.filter { scenarioInfo ->
+//                scenarioInfosWithExamples.none { scenarioInfoWithExample ->
+//                    scenarioInfoWithExample.matchesSignature(scenarioInfo)
+//                }
+//            }.plus(scenarioInfosWithExamples).filter { it.httpResponsePattern.status > 0 }
+//
+//        return combinedScenariosFromSpecificationAndWrapper to examplesAsStubs
+
         val (
-            openApitoScenarioInfosFromSpecification: List<ScenarioInfo>,
-            examplesAsStubs: Map<String, List<Pair<HttpRequest, HttpResponse>>>
-        ) = openApiToScenarioInfos()
+            scenarioInfos: List<ScenarioInfo>,
+            examplesAsExpectations: Map<String, List<Pair<HttpRequest, HttpResponse>>>
+        ) = openApiToScenarioInfos2()
 
-        val combinedScenariosFromSpecificationAndWrapper =
-            openApitoScenarioInfosFromSpecification.filter { scenarioInfo ->
-                scenarioInfosWithExamples.none { scenarioInfoWithExample ->
-                    scenarioInfoWithExample.matchesSignature(scenarioInfo)
-                }
-            }.plus(scenarioInfosWithExamples).filter { it.httpResponsePattern.status > 0 }
-
-        return combinedScenariosFromSpecificationAndWrapper to examplesAsStubs
+        return scenarioInfos.filter { it.httpResponsePattern.status > 0 } to examplesAsExpectations
     }
 
     override fun matches(
         specmaticScenarioInfo: ScenarioInfo, steps: List<Step>
     ): List<ScenarioInfo> {
-        val (openApiScenarioInfos, _) = openApiToScenarioInfos()
+        val (openApiScenarioInfos, _) = openApiToScenarioInfos2()
         if (openApiScenarioInfos.isEmpty() || steps.isEmpty()) return listOf(specmaticScenarioInfo)
         val result: MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> =
             specmaticScenarioInfo to openApiScenarioInfos to ::matchesPath then ::matchesMethod then ::matchesStatus then ::updateUrlMatcher otherwise ::handleError
@@ -341,6 +349,114 @@ class OpenApiSpecification(
             data.map { it.second }.foldRight(emptyMap()) { acc, map ->
                 acc.plus(map)
             }
+
+        return scenarioInfos to examples
+    }
+
+    private fun openApiToScenarioInfos2(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
+        val testsDirectory: File? = getTestsDirectory()
+        val externalizedJSONExamples: Map<OperationIdentifier, List<Row>> =
+            loadExternalisedJSONExamples(testsDirectory).also { it ->
+                if (it.isNotEmpty()) {
+                    logger.log("Loaded ${it.size} externalised test${if (it.size > 1) "s" else ""}")
+                    it.keys.map {
+                        logger.log("  ${it.loggableString}")
+                    }
+                }
+            }
+
+        val data: List<Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>>> =
+            openApiPaths().map { (openApiPath, pathItem) ->
+                openApiOperations(pathItem).map { (httpMethod, operation) ->
+                    val specmaticPathParam = toSpecmaticPathParam(openApiPath, operation)
+                    val specmaticQueryParam = toSpecmaticQueryParam(operation)
+
+                    val requestBody: RequestBody? = resolveRequestBody(operation)
+
+                    val httpResponsePatterns: List<ResponseData> = toHttpResponsePatterns(operation.responses)
+                    val httpRequestPatterns: List<Pair<HttpRequestPattern, Map<String, List<HttpRequest>>>> =
+                        toHttpRequestPatterns(
+                            specmaticPathParam, specmaticQueryParam, httpMethod, operation
+                        )
+
+                    val scenarioInfos =
+                        httpResponsePatterns.map { (response, responseMediaType: MediaType, httpResponsePattern, _: Map<String, HttpResponse>) ->
+                            val responseExamples: Map<String, Example> = responseMediaType.examples.orEmpty()
+                            val specmaticExampleRows: List<Row> = testRowsFromExamples(responseExamples, operation, requestBody)
+
+                            httpRequestPatterns.map { (httpRequestPattern, _: Map<String, List<HttpRequest>>) ->
+                                val scenarioName = scenarioName(operation, response, httpRequestPattern)
+
+                                val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
+
+                                val operationIdentifier =
+                                    OperationIdentifier(httpMethod, specmaticPathParam.path, httpResponsePattern.status)
+
+                                val relevantExternalizedJSONExamples = externalizedJSONExamples[operationIdentifier]
+                                val rowsToBeUsed: List<Row> = relevantExternalizedJSONExamples ?: specmaticExampleRows
+
+                                ScenarioInfo(
+                                    scenarioName = scenarioName,
+                                    patterns = patterns.toMap(),
+                                    httpRequestPattern = httpRequestPattern,
+                                    httpResponsePattern = httpResponsePattern,
+                                    ignoreFailure = ignoreFailure,
+                                    examples = rowsToExamples(rowsToBeUsed),
+                                    sourceProvider = sourceProvider,
+                                    sourceRepository = sourceRepository,
+                                    sourceRepositoryBranch = sourceRepositoryBranch,
+                                    specification = specificationPath,
+                                    serviceType = SERVICE_TYPE_HTTP
+                                )
+                            }
+                        }.flatten()
+
+                    val requestExamples = httpRequestPatterns.map {
+                        it.second
+                    }.foldRight(emptyMap<String, List<HttpRequest>>()) { acc, map ->
+                        acc.plus(map)
+                    }
+
+                    val responseExamplesList = httpResponsePatterns.map { it.examples }
+
+                    val examples =
+                        collateExamplesForExpectations(requestExamples, responseExamplesList)
+
+                    scenarioInfos to examples
+                }
+            }.flatten()
+
+
+        val scenarioInfos = data.map { it.first }.flatten()
+        val examples: Map<String, List<Pair<HttpRequest, HttpResponse>>> =
+            data.map { it.second }.foldRight(emptyMap()) { acc, map ->
+                acc.plus(map)
+            }
+
+        val externalizedExampleFilePaths =
+            externalizedJSONExamples.entries.flatMap { (_, rows) ->
+                rows.map {
+                    it.fileSource
+                }
+            }.filterNotNull().sorted().toSet()
+        val utilizedFileSources =
+            scenarioInfos.asSequence().flatMap { scenarioInfo ->
+                scenarioInfo.examples.flatMap { examples ->
+                    examples.rows.map {
+                        it.fileSource
+                    }
+                }
+            }.filterNotNull()
+                .sorted().toSet()
+
+        val unusedExternalizedExamples = (externalizedExampleFilePaths - utilizedFileSources)
+        if (unusedExternalizedExamples.isNotEmpty()) {
+            logger.log("The following externalized examples were not used:")
+
+            unusedExternalizedExamples.sorted().forEach {
+                logger.log("  $it")
+            }
+        }
 
         return scenarioInfos to examples
     }

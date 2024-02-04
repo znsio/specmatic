@@ -137,7 +137,12 @@ internal class StringPatternTest {
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null",
             "number",
-            "boolean"
+            "boolean",
         )
+    }
+
+    @Test
+    fun `string pattern encompasses email`() {
+        assertThat(StringPattern().encompasses(EmailPattern(), Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 }

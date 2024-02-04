@@ -731,7 +731,7 @@ class OpenApiSpecification(
 
         val parameters = operation.parameters
 
-        val headersMap = parameters.orEmpty().filterIsInstance(HeaderParameter::class.java).associate {
+        val headersMap = parameters.orEmpty().filterIsInstance<HeaderParameter>().associate {
             toSpecmaticParamName(it.required != true, it.name) to toSpecmaticPattern(it.schema, emptyList())
         }
 
@@ -748,124 +748,83 @@ class OpenApiSpecification(
         val examplePathParams = namedExampleParams(operation, PathParameter::class.java)
         val exampleHeaderParams = namedExampleParams(operation, HeaderParameter::class.java)
 
-        val unionOfParameterKeys =
-            (exampleQueryParams.keys + examplePathParams.keys + exampleHeaderParams.keys).distinct()
+        val exampleRequestBuilder = ExampleRequestBuilder(examplePathParams, exampleHeaderParams, exampleQueryParams, httpPathPattern, httpMethod, securitySchemes)
 
-        return when (val requestBody = resolveRequestBody(operation)) {
-            null -> {
-                val examples: Map<String, List<HttpRequest>> = unionOfParameterKeys.associateWith { exampleName ->
-                    val queryParams = exampleQueryParams[exampleName] ?: emptyMap()
-                    val pathParams = examplePathParams[exampleName] ?: emptyMap()
-                    val headerParams = exampleHeaderParams[exampleName] ?: emptyMap()
+        val requestBody = resolveRequestBody(operation)
+            ?: return listOf(
+                Pair(requestPattern.copy(body = NoBodyPattern), exampleRequestBuilder.examplesBasedOnParameters)
+            )
 
-                    val path = pathParams.entries.fold(httpPathPattern.toOpenApiPath()) { acc, (key, value) ->
-                        acc.replace("{$key}", value)
+        return requestBody.content.map { (contentType, mediaType) ->
+            when (contentType.lowercase()) {
+                "multipart/form-data" -> {
+                    val partSchemas = if (mediaType.schema.`$ref` == null) {
+                        mediaType.schema
+                    } else {
+                        resolveReferenceToSchema(mediaType.schema.`$ref`).second
                     }
 
-                    val httpRequest =
-                        HttpRequest(method = httpMethod, path = path, queryParametersMap = queryParams, headers = headerParams)
+                    val parts: List<MultiPartFormDataPattern> =
+                        partSchemas.properties.map { (partName, partSchema) ->
+                            val partContentType = mediaType.encoding?.get(partName)?.contentType
+                            val partNameWithPresence = if (partSchemas.required?.contains(partName) == true)
+                                partName
+                            else
+                                "$partName?"
 
-                    val requestsWithSecurityParams: List<HttpRequest> = securitySchemes.map { (_, securityScheme) ->
-                        securityScheme.addTo(httpRequest)
-                    }
+                            if (partSchema is BinarySchema) {
+                                MultiPartFilePattern(
+                                    partNameWithPresence,
+                                    toSpecmaticPattern(partSchema, emptyList()),
+                                    partContentType
+                                )
+                            } else {
+                                MultiPartContentPattern(
+                                    partNameWithPresence,
+                                    toSpecmaticPattern(partSchema, emptyList()),
+                                    partContentType
+                                )
+                            }
+                        }
 
-                    requestsWithSecurityParams
+                    Pair(
+                        requestPattern.copy(
+                            multiPartFormDataPattern = parts,
+                            headersPattern = headersPatternWithContentType(requestPattern, contentType)
+                        ), emptyMap()
+                    )
                 }
 
-                listOf(
-                    Pair(requestPattern.copy(body = NoBodyPattern), examples)
+                "application/x-www-form-urlencoded" -> Pair(
+                    requestPattern.copy(
+                        formFieldsPattern = toFormFields(mediaType),
+                        headersPattern = headersPatternWithContentType(requestPattern, contentType)
+                    ), emptyMap()
                 )
-            }
 
-            else -> {
-                requestBody.content.map { (contentType, mediaType) ->
-                    when (contentType.lowercase()) {
-                        "multipart/form-data" -> {
-                            val partSchemas = if (mediaType.schema.`$ref` == null) {
-                                mediaType.schema
-                            } else {
-                                resolveReferenceToSchema(mediaType.schema.`$ref`).second
-                            }
+                "application/xml" -> Pair(
+                        requestPattern.copy(
+                            body = toXMLPattern(mediaType),
+                            headersPattern = headersPatternWithContentType(requestPattern, contentType)
+                        ), emptyMap()
+                    )
 
-                            val parts: List<MultiPartFormDataPattern> =
-                                partSchemas.properties.map { (partName, partSchema) ->
-                                    val partContentType = mediaType.encoding?.get(partName)?.contentType
-                                    val partNameWithPresence = if (partSchemas.required?.contains(partName) == true)
-                                        partName
-                                    else
-                                        "$partName?"
+                else -> {
+                    val examplesFromMediaType = mediaType.examples ?: emptyMap()
 
-                                    if (partSchema is BinarySchema) {
-                                        MultiPartFilePattern(
-                                            partNameWithPresence,
-                                            toSpecmaticPattern(partSchema, emptyList()),
-                                            partContentType
-                                        )
-                                    } else {
-                                        MultiPartContentPattern(
-                                            partNameWithPresence,
-                                            toSpecmaticPattern(partSchema, emptyList()),
-                                            partContentType
-                                        )
-                                    }
-                                }
-
-                            Pair(
-                                requestPattern.copy(
-                                    multiPartFormDataPattern = parts,
-                                    headersPattern = headersPatternWithContentType(requestPattern, contentType)
-                                ), emptyMap()
-                            )
-                        }
-
-                        "application/x-www-form-urlencoded" -> {
-                            Pair(
-                                requestPattern.copy(
-                                    formFieldsPattern = toFormFields(mediaType),
-                                    headersPattern = headersPatternWithContentType(requestPattern, contentType)
-                                ), emptyMap()
-                            )
-                        }
-
-                        "application/xml" -> {
-                            Pair(
-                                requestPattern.copy(
-                                    body = toXMLPattern(mediaType),
-                                    headersPattern = headersPatternWithContentType(requestPattern, contentType)
-                                ), emptyMap()
-                            )
-                        }
-
-                        else -> {
-                            val exampleBodies: Map<String, String?> = mediaType.examples?.mapValues {
-                                resolveExample(it.value)?.value?.toString() ?: ""
-                            } ?: emptyMap()
-
-                            val examples: Map<String, List<HttpRequest>> = exampleBodies.map {
-                                val queryParams = exampleQueryParams[it.key] ?: emptyMap()
-
-                                val httpRequest = HttpRequest(
-                                    method = httpMethod,
-                                    path = httpPathPattern.path,
-                                    queryParametersMap = queryParams,
-                                    body = parsedValue(it.value ?: "")
-                                )
-
-                                val requestsWithSecurityParams = securitySchemes.map { (_, securityScheme) ->
-                                    securityScheme.addTo(httpRequest)
-                                }
-
-                                it.key to requestsWithSecurityParams
-                            }.toMap()
-
-                            Pair(
-                                requestPattern.copy(
-                                    body = toSpecmaticPattern(mediaType),
-                                    headersPattern = headersPatternWithContentType(requestPattern, contentType)
-                                ), examples
-                            )
-                        }
+                    val exampleBodies: Map<String, String?> = examplesFromMediaType.mapValues {
+                        resolveExample(it.value)?.value?.toString() ?: ""
                     }
+
+                    val allExamples = exampleRequestBuilder.examplesWithRequestBodies(exampleBodies)
+
+
+                    Pair(
+                        requestPattern.copy(
+                            body = toSpecmaticPattern(mediaType),
+                            headersPattern = headersPatternWithContentType(requestPattern, contentType)
+                        ), allExamples
+                    )
                 }
             }
         }
@@ -1005,6 +964,10 @@ class OpenApiSpecification(
                     schema.example?.toString()
                 )
             }
+
+            is EmailSchema -> EmailPattern(example = schema.example?.toString())
+
+            is PasswordSchema -> StringPattern(example = schema.example?.toString())
 
             is IntegerSchema -> when (schema.enum) {
                 null -> NumberPattern(example = schema.example?.toString())

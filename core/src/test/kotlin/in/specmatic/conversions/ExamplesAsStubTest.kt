@@ -1,9 +1,13 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.HttpRequest
+import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.pattern.parsedJSONArray
 import `in`.specmatic.core.pattern.parsedJSONObject
+import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
+import `in`.specmatic.stub.HttpStubData
+import `in`.specmatic.stub.captureStandardOutput
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -480,5 +484,131 @@ components:
                     )
                 }
         }
+    }
+
+    @Test
+    fun `expectations with path param + header + request body`() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Product API
+  version: 0.1.9
+paths:
+  /products/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        examples:
+          SUCCESS:
+            value: 10
+      - name: trace-id
+        in: header
+        required: true
+        schema:
+          type: integer
+        examples:
+          SUCCESS:
+            value: 10
+    post:
+      summary: create product
+      description: create product
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+            examples:
+              SUCCESS:
+                value:
+                  name: 'Macbook'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+              examples:
+                SUCCESS:
+                  value: success
+""".trimIndent()
+
+        val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        HttpStub(contract).use { stub ->
+            val request = HttpRequest(
+                "POST",
+                "/products/10",
+                mapOf("trace-id" to "10"),
+                parsedJSONObject("""{"name": "Macbook"}""")
+            )
+            val response = stub.client.execute(request)
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toStringLiteral()).isEqualTo("success")
+        }
+    }
+
+    @Test
+    fun `errors when loading examples with invalid values as expectations should mention the example name`() {
+        val nameOfExample = "EXAMPLE_OF_SUCCESS"
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Product API
+  version: 0.1.9
+paths:
+  /products/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        examples:
+          $nameOfExample:
+            value: "abc"
+    post:
+      summary: create product
+      description: create product
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+            examples:
+              $nameOfExample:
+                value:
+                  name: 'Macbook'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+              examples:
+                $nameOfExample:
+                  value: success
+""".trimIndent()
+
+        val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val (output, _) = captureStandardOutput {
+            val stub = HttpStub(contract)
+            stub.close()
+        }
+
+        assertThat(output).withFailMessage(output).contains("EXAMPLE_OF_SUCCESS")
     }
 }

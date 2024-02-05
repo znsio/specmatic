@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.capitalizeFirstChar
@@ -470,6 +471,21 @@ data class Scenario(
             isNegative -> response.status
             else -> status
         }
+    }
+
+    fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Scenario {
+        val operationIdentifier = OpenApiSpecification.OperationIdentifier(method, path, status)
+
+        val newExamples: List<Examples> = externalisedJSONExamples[operationIdentifier]?.let { rows ->
+            if(rows.isEmpty())
+                return@let emptyList()
+
+            val columns = rows.first().columnNames
+
+            listOf(Examples(columns, rows))
+        } ?: emptyList()
+
+        return this.copy(examples = newExamples)
     }
 }
 

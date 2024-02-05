@@ -7,6 +7,7 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.jsonStringToValueMap
+import `in`.specmatic.core.utilities.readEnvVarOrProperty
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
@@ -1250,6 +1251,129 @@ data class Feature(
         schema.properties = properties
 
         return schema
+    }
+
+    fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Feature {
+        val scenariosWithExamples: List<Scenario> = scenarios.map {
+            it.useExamples(externalisedJSONExamples)
+        }
+
+        return this.copy(scenarios = scenariosWithExamples)
+    }
+
+    private fun loadExternalisedJSONExamples(testsDirectory: File?): Map<OpenApiSpecification.OperationIdentifier, List<Row>> {
+        if (testsDirectory == null)
+            return emptyMap()
+
+        if (!testsDirectory.exists())
+            return emptyMap()
+
+        val files = testsDirectory.listFiles()
+
+        if (files.isNullOrEmpty())
+            return emptyMap()
+
+        return files.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
+            try {
+                with(exampleFromFile) {
+                    logger.log("Loading test file ${exampleFromFile.expectationFilePath}")
+
+                    val examples: Map<String, String> =
+                        headers
+                            .plus(queryParams)
+                            .plus(pathParams)
+                            .plus(requestBody?.let { mapOf("(REQUEST-BODY)" to it.toStringLiteral()) } ?: emptyMap())
+
+                    val (
+                        columnNames,
+                        values
+                    ) = examples.entries.let { entry ->
+                        entry.map { it.key } to entry.map { it.value }
+                    }
+
+                    OpenApiSpecification.OperationIdentifier(requestMethod, requestPath, responseStatus) to Row(
+                        columnNames,
+                        values,
+                        name = testName,
+                        fileSource = exampleFromFile.file.canonicalPath
+                    )
+                }
+            } catch (e: Throwable) {
+                logger.log(e, "Error reading file ${exampleFromFile.expectationFilePath}")
+                null
+            }
+        }
+            .groupBy { (operationIdentifier, _) -> operationIdentifier }
+            .mapValues { (_, value) -> value.map { it.second } }
+    }
+
+    fun loadExternalisedExamples(): Feature {
+        val testsDirectory = getTestsDirectory(File(this.path))
+        val externalisedJSONExamples = loadExternalisedJSONExamples(testsDirectory)
+
+        if(externalisedJSONExamples.isEmpty())
+            return this
+
+        val featureWithExternalisedExamples = useExamples(externalisedJSONExamples)
+
+        val externalizedExampleFilePaths =
+            externalisedJSONExamples.entries.flatMap { (_, rows) ->
+                rows.map {
+                    it.fileSource
+                }
+            }.filterNotNull().sorted().toSet()
+
+        val utilizedFileSources =
+            featureWithExternalisedExamples.scenarios.asSequence().flatMap { scenarioInfo ->
+                scenarioInfo.examples.flatMap { examples ->
+                    examples.rows.map {
+                        it.fileSource
+                    }
+                }
+            }.filterNotNull()
+                .sorted().toSet()
+
+        val unusedExternalizedExamples = (externalizedExampleFilePaths - utilizedFileSources)
+        if (unusedExternalizedExamples.isNotEmpty()) {
+            logger.log("The following externalized examples were not used:")
+
+            unusedExternalizedExamples.sorted().forEach {
+                logger.log("  $it")
+            }
+        }
+
+        return featureWithExternalisedExamples
+    }
+
+    private fun testDirectoryFileFromEnvironmentVariable(): File? {
+        return readEnvVarOrProperty(testDirectoryEnvironmentVariable, testDirectoryProperty)?.let {
+            File(System.getenv(testDirectoryEnvironmentVariable))
+        }
+    }
+
+    private fun testDirectoryFileFromSpecificationPath(openApiFilePath: String): File? {
+        if (openApiFilePath.isBlank())
+            return null
+
+        return File(openApiFilePath).canonicalFile.let {
+            it.parentFile.resolve(it.nameWithoutExtension + "_tests")
+        }
+    }
+
+
+    private fun getTestsDirectory(contractFile: File): File? {
+        val testDirectory = testDirectoryFileFromSpecificationPath(contractFile.path) ?: testDirectoryFileFromEnvironmentVariable()
+
+        return when {
+            testDirectory?.exists() == true -> {
+                logger.log("Test directory ${testDirectory.canonicalPath} found")
+                testDirectory
+            }
+
+            else -> {
+                null
+            }
+        }
     }
 }
 

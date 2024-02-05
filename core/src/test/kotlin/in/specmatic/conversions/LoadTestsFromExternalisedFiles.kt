@@ -16,7 +16,7 @@ import java.util.function.Consumer
 class LoadTestsFromExternalisedFiles {
     @Test
     fun `should load and execute externalized tests for header and request body from _tests directory`() {
-        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test_and_no_example.yaml").toFeature()
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test_and_no_example.yaml").toFeature().loadExternalisedExamples()
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -39,7 +39,7 @@ class LoadTestsFromExternalisedFiles {
 
     @Test
     fun `externalized tests should replace example tests`() {
-        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test_and_one_example.yaml").toFeature()
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test_and_one_example.yaml").toFeature().loadExternalisedExamples()
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -60,13 +60,13 @@ class LoadTestsFromExternalisedFiles {
 
     @Test
     fun `externalized tests be converted to rows`() {
-        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_two_externalised_tests.yaml").toFeature()
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_two_externalised_tests.yaml").toFeature().loadExternalisedExamples()
         assertThat(feature.scenarios.first().examples.first().rows.size).isEqualTo(2)
     }
 
     @Test
     fun `externalized tests should be validated`() {
-        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_invalid_externalized_test.yaml").toFeature()
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_invalid_externalized_test.yaml").toFeature().loadExternalisedExamples()
 
         assertThatThrownBy {
             feature.executeTests(object : TestExecutor {
@@ -96,7 +96,7 @@ class LoadTestsFromExternalisedFiles {
 
     @Test
     fun `externalized tests with query parameters`() {
-        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalised_test_with_query_params.yaml").toFeature()
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalised_test_with_query_params.yaml").toFeature().loadExternalisedExamples()
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -130,7 +130,7 @@ class LoadTestsFromExternalisedFiles {
         try {
             logger = testLogger
 
-            val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_irrelevant_externalized_test.yaml").toFeature()
+            val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_irrelevant_externalized_test.yaml").toFeature().loadExternalisedExamples()
 
             feature.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {

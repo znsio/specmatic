@@ -141,20 +141,7 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
 
 fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver, stringlyCheck: Boolean=false): List<Map<String, Pattern>> {
     val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
-    val negativePatternsMap = patternMap.mapValues { (key, pattern) ->
-        val resolvedPattern = resolvedHop(pattern, resolver)
-        // TODO: Refactor special handling of scalar and array query params when the stringly check is refactored
-        if (stringlyCheck && (resolvedPattern is StringPattern || isStringBasedQueryParameterScalarPattern(resolvedPattern) || isStringBasedQueryParameterArrayPattern(resolvedPattern)))
-        {
-            emptyList()
-        } else if (stringlyCheck && resolvedPattern is ScalarType) {
-            resolvedPattern.negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver).filterNot { it is NullPattern }
-        } else if (stringlyCheck && patternIsEnum(resolvedPattern, resolver)) {
-            shortCircuitStringlyEnumGenerationToOneEnumValue(resolvedPattern, resolver)
-        } else {
-            resolvedPattern.negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
-        }
-    }
+    val negativePatternsMap = getNegativePatterns(patternMap, resolver, stringlyCheck, row)
 
     val modifiedPatternMap: Map<String, List<Map<String, List<Pattern>>>> = eachKeyMappedToPatternMap.mapValues { (keyToNegate, patterns) ->
         val negativePatterns = negativePatternsMap[keyToNegate]
@@ -180,6 +167,31 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolv
     return modifiedPatternMap.values.map { list: List<Map<String, List<Pattern>>> ->
         list.toList().map { patternList(it) }.flatten()
     }.flatten()
+}
+
+private fun getNegativePatterns(
+    patternMap: Map<String, Pattern>,
+    resolver: Resolver,
+    stringlyCheck: Boolean,
+    row: Row
+): Map<String, List<Pattern>> {
+    return patternMap.mapValues { (key, pattern) ->
+        val resolvedPattern = resolvedHop(pattern, resolver)
+        // TODO: Refactor special handling of scalar and array query params when the stringly check is refactored
+        if (stringlyCheck && (resolvedPattern is StringPattern || isStringBasedQueryParameterScalarPattern(
+                resolvedPattern
+            ) || isStringBasedQueryParameterArrayPattern(resolvedPattern))
+        ) {
+            emptyList()
+        } else if (stringlyCheck && isScalar(resolvedPattern)) {
+            resolvedPattern.negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
+                .filterNot { it is NullPattern }
+        } else if (stringlyCheck && patternIsEnum(resolvedPattern, resolver)) {
+            shortCircuitStringlyEnumGenerationToOneEnumValue(resolvedPattern, resolver)
+        } else {
+            resolvedPattern.negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
+        }
+    }
 }
 
 private fun isStringBasedQueryParameterArrayPattern(resolvedPattern: Pattern) =
@@ -229,7 +241,7 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver, string
             if(stringlyCheck && resolvedPattern is StringPattern) {
                 emptyList()
             }
-            else if (stringlyCheck && resolvedPattern is ScalarType) {
+            else if (stringlyCheck && isScalar(resolvedPattern)) {
                 negativeBasedOn(key, resolvedPattern, resolver).filterNot { it is NullPattern  }
             }
             else {
@@ -240,6 +252,10 @@ fun negativeBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver, string
 
     return patternValues(patternCollection)
 }
+
+private fun isScalar(resolvedPattern: Pattern) =
+    resolvedPattern is ScalarType
+        || (resolvedPattern is QueryParameterScalarPattern && resolvedPattern.pattern is ScalarType)
 
 fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): List<Pattern> {
     val keyWithoutOptionality = key(pattern, key)

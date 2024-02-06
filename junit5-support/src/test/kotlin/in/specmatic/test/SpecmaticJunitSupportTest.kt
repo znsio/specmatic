@@ -71,7 +71,7 @@ class SpecmaticJunitSupportTest {
         val ex = assertThrows<TestAbortedException> {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
-        assertThat(ex.message).isEqualTo("Please specific a valid URL in $TEST_BASE_URL environment variable")
+        assertThat(ex.message).isEqualTo("Please specify a valid URL in $TEST_BASE_URL environment variable")
     }
 
     @Test
@@ -82,7 +82,7 @@ class SpecmaticJunitSupportTest {
         val ex = assertThrows<TestAbortedException> {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
-        assertThat(ex.message).isEqualTo("Please specific a valid $PROTOCOL, $HOST and $PORT environment variables")
+        assertThat(ex.message).isEqualTo("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
     }
 
     @Test
@@ -93,7 +93,7 @@ class SpecmaticJunitSupportTest {
         val ex = assertThrows<TestAbortedException> {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
-        assertThat(ex.message).isEqualTo("Please specific a valid $PROTOCOL, $HOST and $PORT environment variables")
+        assertThat(ex.message).isEqualTo("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
     }
 
     @Test
@@ -112,7 +112,7 @@ class SpecmaticJunitSupportTest {
         val ex = assertThrows<TestAbortedException> {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
-        assertThat(ex.message).isEqualTo("Please specific $TEST_BASE_URL OR host and port as environment variables")
+        assertThat(ex.message).isEqualTo("Please specify $TEST_BASE_URL OR host and port as environment variables")
     }
 
     @Test

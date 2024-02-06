@@ -177,22 +177,43 @@ private fun getNegativePatterns(
 ): Map<String, List<Pattern>> {
     return patternMap.mapValues { (key, pattern) ->
         val resolvedPattern = resolvedHop(pattern, resolver)
-        // TODO: Refactor special handling of scalar and array query params when the stringly check is refactored
-        if (stringlyCheck && (resolvedPattern is StringPattern || isStringBasedQueryParameterScalarPattern(
+        if(stringlyCheck) {
+            if (patternIsEnum(resolvedPattern, resolver)) {
+                shortCircuitStringlyEnumGenerationToOneEnumValue(resolvedPattern, resolver)
+            } else {
                 resolvedPattern
-            ) || isStringBasedQueryParameterArrayPattern(resolvedPattern))
-        ) {
-            emptyList()
-        } else if (stringlyCheck && isScalar(resolvedPattern)) {
-            resolvedPattern.negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
-                .filterNot { it is NullPattern }
-        } else if (stringlyCheck && patternIsEnum(resolvedPattern, resolver)) {
-            shortCircuitStringlyEnumGenerationToOneEnumValue(resolvedPattern, resolver)
+                    .negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
+                    .filterNot {
+                        isStringly(resolvedPattern, it, resolver)
+                    }.filterNot {
+                        it is NullPattern
+                    }
+            }
         } else {
             resolvedPattern.negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
         }
+        // TODO: Refactor special handling of scalar and array query params when the stringly check is refactored
+//        if (stringlyCheck && (resolvedPattern is StringPattern || isStringBasedQueryParameterScalarPattern(
+//                resolvedPattern
+//            ) || isStringBasedQueryParameterArrayPattern(resolvedPattern))
+//        ) {
+//            emptyList()
+//        } else if (stringlyCheck && isScalar(resolvedPattern)) {
+//            resolvedPattern.negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
+//                .filterNot { it is NullPattern }
+//        } else if (stringlyCheck && patternIsEnum(resolvedPattern, resolver)) {
+//            shortCircuitStringlyEnumGenerationToOneEnumValue(resolvedPattern, resolver)
+//        } else {
+//            resolvedPattern.negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
+//        }
     }
 }
+
+private fun isStringly(
+    resolvedPattern: Pattern,
+    it: Pattern,
+    resolver: Resolver
+) = resolvedPattern.matches(it.generate(resolver).toStringValue(), resolver) is Result.Success
 
 private fun isStringBasedQueryParameterArrayPattern(resolvedPattern: Pattern) =
     resolvedPattern is QueryParameterArrayPattern &&  resolvedHop(resolvedPattern.pattern.first(), Resolver()) is StringPattern

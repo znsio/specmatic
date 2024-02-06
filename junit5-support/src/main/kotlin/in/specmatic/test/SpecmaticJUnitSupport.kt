@@ -283,12 +283,12 @@ open class SpecmaticJUnitSupport {
         val testBaseURL = System.getProperty(TEST_BASE_URL)
         if (testBaseURL != null) {
             if (!isValidURI(testBaseURL)) {
-                throw TestAbortedException("Please specific a valid URL in $TEST_BASE_URL environment variable")
+                throw TestAbortedException("Please specify a valid URL in $TEST_BASE_URL environment variable")
             }
             return testBaseURL
         }
         val hostProperty = System.getProperty(HOST)
-            ?: throw TestAbortedException("Please specific $TEST_BASE_URL OR $HOST and $PORT as environment variables")
+            ?: throw TestAbortedException("Please specify $TEST_BASE_URL OR $HOST and $PORT as environment variables")
         val host = if (hostProperty.startsWith("http")) {
             URI(hostProperty).host
         } else {
@@ -303,7 +303,7 @@ open class SpecmaticJUnitSupport {
 
         val url = "$protocol://$host:$port"
         if (!isValidURI(url)) {
-            throw TestAbortedException("Please specific a valid $PROTOCOL, $HOST and $PORT environment variables")
+            throw TestAbortedException("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
         }
         return url
     }

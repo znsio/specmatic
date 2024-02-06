@@ -47,7 +47,7 @@ dependencies {
     testImplementation 'org.assertj:assertj-core:3.25.2'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
-    testImplementation 'org.json:json:20231013'
+    testImplementation 'org.json:json:20240205'
     testImplementation 'org.springframework:spring-web:5.3.31'
     testImplementation 'io.mockk:mockk:1.13.9'
     testImplementation 'org.assertj:assertj-core:3.25.2'

@@ -296,6 +296,11 @@ open class SpecmaticJUnitSupport {
         }
         val protocol = System.getProperty(PROTOCOL) ?: "http"
         val port = System.getProperty(PORT)
+
+        if (!isNumeric(port)) {
+            throw TestAbortedException("Please specify a number value for $PORT environment variable")
+        }
+
         val url = "$protocol://$host:$port"
         if (!isValidURI(url)) {
             throw TestAbortedException("Please specific a valid $PROTOCOL, $HOST and $PORT environment variables")
@@ -303,17 +308,23 @@ open class SpecmaticJUnitSupport {
         return url
     }
 
-    private fun isValidURI(uri: String): Boolean {
+    private fun isNumeric(port: String?): Boolean {
+        return port?.toIntOrNull() != null
+    }
+
+    fun isValidURI(uri: String): Boolean {
         return try {
             val parsedURI = URI(uri)
             val validProtocols = listOf("http", "https")
             val validPorts = 1..65535
 
-            validProtocols.contains(parsedURI.scheme) && validPorts.contains(parsedURI.port)
+            validProtocols.contains(parsedURI.scheme) && (validPorts.contains(parsedURI.port) || portNotSpecified(parsedURI))
         } catch (e: URISyntaxException) {
             false
         }
     }
+
+    private fun portNotSpecified(parsedURI: URI) = parsedURI.port == -1
 
     fun loadTestScenarios(
         path: String,

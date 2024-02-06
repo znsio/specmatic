@@ -104,7 +104,7 @@ class SpecmaticJunitSupportTest {
         val ex = assertThrows<TestAbortedException> {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
-        assertThat(ex.message).isEqualTo("Please specific a valid $PROTOCOL, $HOST and $PORT environment variables")
+        assertThat(ex.message).isEqualTo("Please specify a number value for $PORT environment variable")
     }
 
     @Test
@@ -113,6 +113,12 @@ class SpecmaticJunitSupportTest {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
         assertThat(ex.message).isEqualTo("Please specific $TEST_BASE_URL OR host and port as environment variables")
+    }
+
+    @Test
+    fun `testBaseURL should be considered valid when the port is implied (-1)`() {
+        val url = "https://example.com/znsio/specmatic-documentation"
+        assertThat(SpecmaticJUnitSupport().isValidURI(url)).isTrue()
     }
 
     @AfterEach

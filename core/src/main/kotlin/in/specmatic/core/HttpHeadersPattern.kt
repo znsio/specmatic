@@ -180,11 +180,6 @@ data class HttpHeadersPattern(
             )
         }
 
-    fun negativeBasedOn(resolver: Resolver): List<HttpHeadersPattern> =
-        allOrNothingCombinationIn(pattern) { pattern ->
-            StringlyNegativePatterns().negativeBasedOn(pattern, resolver)
-        }.map { patternMap -> HttpHeadersPattern(patternMap.mapKeys { withoutOptionality(it.key) }) }
-
     fun encompasses(other: HttpHeadersPattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
         val otherRequiredKeys = other.pattern.keys.filter { !isOptional(it) }

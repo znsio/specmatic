@@ -38,42 +38,9 @@ interface NegativePatternsTemplate {
         }.flatten()
     }
 
-    fun negativeBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): List<Map<String, Pattern>> {
-        val patternCollection = patternMap.mapValues { (key, pattern) ->
-            attempt(breadCrumb = key) {
-                val resolvedPattern = resolvedHop(pattern, resolver)
-                if(stringlyCheck && resolvedPattern is StringPattern) {
-                    emptyList()
-                }
-                else if (stringlyCheck && isScalar(resolvedPattern)) {
-                    negativeBasedOn(key, resolvedPattern, resolver).filterNot { it is NullPattern  }
-                }
-                else {
-                    negativeBasedOn(key, resolvedPattern, resolver)
-                }
-            }
-        }
-
-        return patternValues(patternCollection)
-    }
-
-
     fun negativePatternsForKey(
         key: String,
         negativePattern: Pattern,
         resolver: Resolver,
     ): List<Pattern>
 }
-
-fun negativeBasedOn(key: String, pattern: Pattern, resolver: Resolver): List<Pattern> {
-    return resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
-        pattern.newBasedOn(cyclePreventedResolver)
-    }?:
-    // Handle cycle (represented by null value) by using empty list for optional properties
-    listOf()
-}
-
-fun isScalar(resolvedPattern: Pattern) =
-    resolvedPattern is ScalarType
-            || (resolvedPattern is QueryParameterScalarPattern && resolvedPattern.pattern is ScalarType)
-

@@ -162,7 +162,7 @@ data class HttpHeadersPattern(
 
     fun negativeBasedOn(row: Row, resolver: Resolver) =
         forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
-            negativeBasedOn(pattern, row, resolver, true)
+            StringlyNegativePatterns().negativeBasedOn(pattern, row, resolver)
         }.map { patternMap ->
             HttpHeadersPattern(
                 patternMap.mapKeys { withoutOptionality(it.key) },
@@ -182,7 +182,7 @@ data class HttpHeadersPattern(
 
     fun negativeBasedOn(resolver: Resolver): List<HttpHeadersPattern> =
         allOrNothingCombinationIn(pattern) { pattern ->
-            negativeBasedOn(pattern, resolver, true)
+            StringlyNegativePatterns().negativeBasedOn(pattern, resolver)
         }.map { patternMap -> HttpHeadersPattern(patternMap.mapKeys { withoutOptionality(it.key) }) }
 
     fun encompasses(other: HttpHeadersPattern, thisResolver: Resolver, otherResolver: Resolver): Result {

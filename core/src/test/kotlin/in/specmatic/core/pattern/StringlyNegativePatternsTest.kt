@@ -45,4 +45,18 @@ class StringlyNegativePatternsTest {
         )
 
     }
+
+    @Test
+    fun `negative patterns for multiple keys`() {
+        val patternMap = mapOf("key1" to NumberPattern(), "key2" to StringPattern())
+        val resolver = Resolver()
+        val row = Row()
+
+        val negativePatterns: List<Map<String, Pattern>> = StringlyNegativePatterns().negativeBasedOn(patternMap, row, resolver)
+
+        assertThat(negativePatterns).containsExactlyInAnyOrder(
+            mapOf("key1" to BooleanPattern(), "key2" to StringPattern()),
+            mapOf("key1" to StringPattern(), "key2" to StringPattern())
+        )
+    }
 }

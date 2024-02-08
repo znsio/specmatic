@@ -110,7 +110,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
             val optionalQueryParams = queryPatterns
 
             forEachKeyCombinationIn(row.withoutOmittedKeys(optionalQueryParams, resolver.defaultExampleResolver), row) { entry ->
-                negativeBasedOn(entry.mapKeys { withoutOptionality(it.key) }, row, resolver, true)
+                NegativeNonStringlyPatterns().negativeBasedOn(entry.mapKeys { withoutOptionality(it.key) }, row, resolver)
             }
         }
     }

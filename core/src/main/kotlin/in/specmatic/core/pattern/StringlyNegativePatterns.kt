@@ -31,17 +31,13 @@ class StringlyNegativePatterns : NegativePatternsTemplate {
         return patternMap.mapValues { (key, pattern) ->
             val resolvedPattern = resolvedHop(pattern, resolver)
 
-            if (patternIsEnum(resolvedPattern, resolver)) {
-                shortCircuitStringlyEnumGenerationToOneEnumValue(resolvedPattern, resolver)
-            } else {
-                resolvedPattern
-                    .negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
-                    .filterNot {
-                        isStringly(resolvedPattern, it, resolver)
-                    }.filterNot {
-                        it is NullPattern
-                    }
-            }
+            resolvedPattern
+                .negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
+                .filterNot {
+                    isStringly(resolvedPattern, it, resolver)
+                }.filterNot {
+                    it is NullPattern
+                }
         }
     }
 
@@ -57,15 +53,5 @@ class StringlyNegativePatterns : NegativePatternsTemplate {
         val valueOfFirstEnumOption = firstEnumOption.pattern
         val patternOfFirstValue = valueOfFirstEnumOption.type()
         return listOf(patternOfFirstValue)
-    }
-
-    private fun shortCircuitStringlyEnumGenerationToOneEnumValue(
-        pattern: Pattern,
-        resolver: Resolver
-    ): List<AnyPattern> {
-        val resolvedAnyPattern = (resolvedHop(pattern, resolver) as EnumPattern).pattern
-        val firstEnumValue = resolvedAnyPattern.pattern.first() as ExactValuePattern
-
-        return listOf(AnyPattern(listOf(firstEnumValue)))
     }
 }

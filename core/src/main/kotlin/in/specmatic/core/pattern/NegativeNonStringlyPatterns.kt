@@ -3,7 +3,7 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 
-class StringlyNegativePatterns : NegativePatternsTemplate {
+class NegativeNonStringlyPatterns : NegativePatternsTemplate() {
 
     override fun negativePatternsForKey(
         key: String,

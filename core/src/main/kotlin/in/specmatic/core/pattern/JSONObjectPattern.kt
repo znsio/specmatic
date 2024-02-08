@@ -175,7 +175,7 @@ data class JSONObjectPattern(
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> =
         allOrNothingCombinationIn(pattern.minus("...")) { pattern ->
-            StrictNegativePatterns().negativeBasedOn(pattern, row, withNullPattern(resolver))
+            AllNegativePatterns().negativeBasedOn(pattern, row, withNullPattern(resolver))
         }.map { toJSONObjectPattern(it) }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)

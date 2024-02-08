@@ -5,14 +5,14 @@ import `in`.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-class StringlyNegativePatternsTest {
+class NegativeNonStringlyPatternsTest {
     @Test
     fun `there should be no negative patterns for strings`() {
         val patternMap = mapOf("key" to StringPattern())
         val resolver = Resolver()
         val row = Row()
 
-        val negativePatterns: List<Map<String, Pattern>> = StringlyNegativePatterns().negativeBasedOn(patternMap, row, resolver)
+        val negativePatterns: List<Map<String, Pattern>> = NegativeNonStringlyPatterns().negativeBasedOn(patternMap, row, resolver)
 
         assertThat(negativePatterns).isEmpty()
 
@@ -24,7 +24,7 @@ class StringlyNegativePatternsTest {
         val resolver = Resolver()
         val row = Row()
 
-        val negativePatterns: List<Map<String, Pattern>> = StringlyNegativePatterns().negativeBasedOn(patternMap, row, resolver)
+        val negativePatterns: List<Map<String, Pattern>> = NegativeNonStringlyPatterns().negativeBasedOn(patternMap, row, resolver)
 
         assertThat(negativePatterns).containsExactlyInAnyOrder(
             mapOf("key" to BooleanPattern()),
@@ -38,7 +38,7 @@ class StringlyNegativePatternsTest {
         val resolver = Resolver()
         val row = Row()
 
-        val negativePatterns: List<Map<String, Pattern>> = StringlyNegativePatterns().negativeBasedOn(patternMap, row, resolver)
+        val negativePatterns: List<Map<String, Pattern>> = NegativeNonStringlyPatterns().negativeBasedOn(patternMap, row, resolver)
         assertThat(negativePatterns).containsExactlyInAnyOrder(
             mapOf("key" to NumberPattern()),
             mapOf("key" to BooleanPattern())
@@ -52,7 +52,7 @@ class StringlyNegativePatternsTest {
         val resolver = Resolver()
         val row = Row()
 
-        val negativePatterns: List<Map<String, Pattern>> = StringlyNegativePatterns().negativeBasedOn(patternMap, row, resolver)
+        val negativePatterns: List<Map<String, Pattern>> = NegativeNonStringlyPatterns().negativeBasedOn(patternMap, row, resolver)
 
         assertThat(negativePatterns).containsExactlyInAnyOrder(
             mapOf("key1" to BooleanPattern(), "key2" to StringPattern()),

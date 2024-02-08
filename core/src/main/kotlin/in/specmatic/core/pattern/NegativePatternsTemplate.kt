@@ -2,13 +2,7 @@ package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.Resolver
 
-interface NegativePatternsTemplate {
-    fun getNegativePatterns(
-        patternMap: Map<String, Pattern>,
-        resolver: Resolver,
-        row: Row
-    ): Map<String, List<Pattern>>
-
+abstract class NegativePatternsTemplate {
     fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
         val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
         val negativePatternsMap = getNegativePatterns(patternMap, resolver, row)
@@ -37,7 +31,13 @@ interface NegativePatternsTemplate {
         }.flatten()
     }
 
-    fun negativePatternsForKey(
+    abstract fun getNegativePatterns(
+        patternMap: Map<String, Pattern>,
+        resolver: Resolver,
+        row: Row
+    ): Map<String, List<Pattern>>
+
+    abstract fun negativePatternsForKey(
         key: String,
         negativePattern: Pattern,
         resolver: Resolver,

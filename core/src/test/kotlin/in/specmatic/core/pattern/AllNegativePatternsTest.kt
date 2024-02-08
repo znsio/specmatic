@@ -4,14 +4,14 @@ import `in`.specmatic.core.Resolver
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-class StrictNegativePatternsTest {
+class AllNegativePatternsTest {
     @Test
     fun `should return negative patterns for each key`() {
         val patternMap = mapOf("key" to StringPattern())
         val resolver = Resolver()
         val row = Row()
 
-        val negativePatterns: List<Map<String, Pattern>> = StrictNegativePatterns().negativeBasedOn(patternMap, row, resolver)
+        val negativePatterns: List<Map<String, Pattern>> = AllNegativePatterns().negativeBasedOn(patternMap, row, resolver)
 
         assertThat(negativePatterns).containsExactlyInAnyOrder(
             mapOf("key" to NumberPattern()),
@@ -26,7 +26,7 @@ class StrictNegativePatternsTest {
         val resolver = Resolver()
         val row = Row()
 
-        val negativePatterns: List<Map<String, Pattern>> = StrictNegativePatterns().negativeBasedOn(patternMap, row, resolver)
+        val negativePatterns: List<Map<String, Pattern>> = AllNegativePatterns().negativeBasedOn(patternMap, row, resolver)
 
         assertThat(negativePatterns).containsExactlyInAnyOrder(
             mapOf("key1" to BooleanPattern(), "key2" to StringPattern()),

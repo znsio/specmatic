@@ -162,7 +162,7 @@ data class HttpHeadersPattern(
 
     fun negativeBasedOn(row: Row, resolver: Resolver) =
         forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
-            StringlyNegativePatterns().negativeBasedOn(pattern, row, resolver)
+            NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
         }.map { patternMap ->
             HttpHeadersPattern(
                 patternMap.mapKeys { withoutOptionality(it.key) },

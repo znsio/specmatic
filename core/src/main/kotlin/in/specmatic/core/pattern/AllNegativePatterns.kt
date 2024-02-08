@@ -2,7 +2,7 @@ package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.Resolver
 
-class StrictNegativePatterns : NegativePatternsTemplate {
+class AllNegativePatterns : NegativePatternsTemplate() {
     override fun negativePatternsForKey(
         key: String,
         negativePattern: Pattern,

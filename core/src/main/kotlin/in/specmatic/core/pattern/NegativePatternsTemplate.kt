@@ -3,7 +3,6 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Resolver
 
 interface NegativePatternsTemplate {
-    val stringlyCheck: Boolean
     fun getNegativePatterns(
         patternMap: Map<String, Pattern>,
         resolver: Resolver,

@@ -4,8 +4,6 @@ import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 
 class StringlyNegativePatterns : NegativePatternsTemplate {
-    override val stringlyCheck: Boolean
-        get() = true
 
     override fun negativePatternsForKey(
         key: String,

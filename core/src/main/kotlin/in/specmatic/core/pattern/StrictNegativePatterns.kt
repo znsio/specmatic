@@ -11,9 +11,6 @@ class StrictNegativePatterns : NegativePatternsTemplate {
         return newBasedOn(Row(), key, negativePattern, resolver)
     }
 
-    override val stringlyCheck: Boolean
-        get() = false
-
     override fun getNegativePatterns(
         patternMap: Map<String, Pattern>,
         resolver: Resolver,

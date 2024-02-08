@@ -20,7 +20,7 @@ repositories {
 
 def ktor_version = "2.3.8"
 def jgit_version = "6.8.0.202311291450-r"
-def junit_version = "5.10.1"
+def junit_version = "5.10.2"
 
 dependencies {
     implementation 'io.cucumber:gherkin:22.0.0'

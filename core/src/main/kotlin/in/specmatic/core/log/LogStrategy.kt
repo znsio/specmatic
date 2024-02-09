@@ -10,7 +10,7 @@ interface LogStrategy {
     fun log(e: Throwable, msg: String? = null)
     fun log(msg: String)
     fun log(msg: LogMessage)
-
+    fun logError(e:Throwable)
     fun newLine()
     fun debug(msg: String): String
     fun debug(msg: LogMessage)

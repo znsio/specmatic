@@ -23,6 +23,7 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.opentest4j.TestAbortedException
 import java.io.File
+import java.lang.RuntimeException
 import java.net.URI
 import java.net.URISyntaxException
 import java.util.*
@@ -62,6 +63,9 @@ open class SpecmaticJUnitSupport {
         @AfterAll
         @JvmStatic
         fun report() {
+            if (openApiCoverageReportInput.areTestResultsEmpty()) {
+                return
+            }
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
             reportProcessors.forEach { it.process(getReportConfiguration()) }
 
@@ -229,6 +233,13 @@ open class SpecmaticJUnitSupport {
         var checkedAPIs = false
         totalTestCount = testScenarios.size
 
+        val testBaseURL = try {
+            constructTestBaseURL()
+        } catch (e: Throwable) {
+            logger.log(e)
+            return emptyList()
+        }
+
         logger.log("Executing $totalTestCount tests")
 
         return testScenarios.map { testScenario ->
@@ -245,10 +256,9 @@ open class SpecmaticJUnitSupport {
                     }
                 }
 
-                lateinit var testResult: Pair<Result, HttpResponse?>
+                var testResult: Pair<Result, HttpResponse?>? = null
 
                 try {
-                    var testBaseURL = constructTestBaseURL()
                     testResult = testScenario.runTest(testBaseURL, timeout)
                     val (result, response) = testResult
 
@@ -272,14 +282,18 @@ open class SpecmaticJUnitSupport {
                     throw e
                 }
                 finally {
-                    val (result, response) = testResult
-                    openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result, response))
+                    if(testResult != null) {
+                        val (result, response) = testResult
+                        openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result, response))
+                    }
                 }
             }
         }.toList()
     }
 
     fun constructTestBaseURL(): String {
+        throw Exception("Please specify a number value for $PORT environment variable")
+
         val testBaseURL = System.getProperty(TEST_BASE_URL)
         if (testBaseURL != null) {
             if (!isValidURI(testBaseURL)) {

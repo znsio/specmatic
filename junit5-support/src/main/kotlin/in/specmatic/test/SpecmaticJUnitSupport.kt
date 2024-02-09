@@ -240,7 +240,7 @@ open class SpecmaticJUnitSupport {
         } catch (e: Throwable) {
             logger.logError(e)
             logger.newLine()
-            return emptyList()
+            throw(e)
         }
 
         logger.log("Executing $totalTestCount tests")

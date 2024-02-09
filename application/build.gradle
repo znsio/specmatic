@@ -126,7 +126,7 @@ javadoc {
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            artifactId = 'specmatic'
+            artifactId = 'specmatic-executable'
             from components.java
             pom {
                 name = 'Specmatic Command'

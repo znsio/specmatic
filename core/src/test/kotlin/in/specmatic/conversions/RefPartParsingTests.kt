@@ -4,6 +4,7 @@ import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSONObject
+import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
@@ -320,7 +321,9 @@ paths:
             OpenApiSpecification.fromYAML(specification, "").toFeature()
         }
             .isInstanceOf(ContractException::class.java)
-            .hasMessageContaining("X-HelloResponseHeader")
+            .satisfies( {
+                assertThat(exceptionCauseMessage(it)).contains("X-HelloResponseHeader")
+            })
     }
 
     @Test

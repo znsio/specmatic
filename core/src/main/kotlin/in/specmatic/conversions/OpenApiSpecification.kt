@@ -286,7 +286,9 @@ class OpenApiSpecification(
 
                     val requestBody: RequestBody? = resolveRequestBody(operation)
 
-                    val httpResponsePatterns: List<ResponseData> = toHttpResponsePatterns(operation.responses)
+                    val httpResponsePatterns: List<ResponseData> = attempt("Error parsing responses for operation $httpMethod $openApiPath") {
+                        toHttpResponsePatterns(operation.responses)
+                    }
                     val httpRequestPatterns: List<Pair<HttpRequestPattern, Map<String, List<HttpRequest>>>> =
                         toHttpRequestPatterns(
                             specmaticPathParam, specmaticQueryParam, httpMethod, operation
@@ -462,9 +464,16 @@ class OpenApiSpecification(
 
     private fun openApiPaths() = parsedOpenApi.paths.orEmpty()
 
+    private fun isNumber(value: String): Boolean {
+        return value.toIntOrNull() != null
+    }
+
     private fun toHttpResponsePatterns(responses: ApiResponses?): List<ResponseData> {
         return responses.orEmpty().map { (status, response) ->
             val headersMap = openAPIHeadersToSpecmatic(response)
+            if(!isNumber(status) && status != "default")
+                throw ContractException("Response status codes are expected to be numbers, but \"$status\" was found")
+
             openAPIResponseToSpecmatic(response, status, headersMap)
         }.flatten()
     }

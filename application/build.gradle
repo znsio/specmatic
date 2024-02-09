@@ -129,8 +129,8 @@ publishing {
             artifactId = 'specmatic-executable'
             from components.java
             pom {
-                name = 'Specmatic Command'
-                description = 'Executable command for Specmatic'
+                name = 'Specmatic Executable'
+                description = 'Command-line standalone executable jar for Specmatic'
                 url = 'https://specmatic.in'
                 licenses {
                     license {

@@ -7015,6 +7015,43 @@ paths:
         }
     }
 
+    @Test
+    fun `show clear error for non-numerical response codes`() {
+        try {
+            OpenApiSpecification.fromYAML(
+                """
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /random1:
+                post:
+                  summary: With examples
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          required:
+                          - id
+                          properties:
+                            id:
+                              type: number
+                  responses:
+                    "2xx":
+                      description: Random
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), ""
+            ).toFeature()
+        } catch (e: Throwable) {
+            assertThat(exceptionCauseMessage(e)).contains("2xx")
+        }
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

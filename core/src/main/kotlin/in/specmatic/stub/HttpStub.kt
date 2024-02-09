@@ -272,7 +272,7 @@ class HttpStub(
     }
 
     private fun isFlushTransientStubsRequest(httpRequest: HttpRequest): Boolean {
-        return httpRequest.method?.toLowerCasePreservingASCIIRules() == "delete" && httpRequest.path?.startsWith("/_specmatic/$TRANSIENT_MOCK") == true
+        return httpRequest.method?.toLowerCasePreservingASCIIRules() == "delete" && httpRequest.path?.startsWith("/_specmatic/$TRANSIENT_MOCK/") == true
     }
 
     private fun close(

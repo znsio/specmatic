@@ -6275,6 +6275,10 @@ paths:
                 TODO("Not yet implemented")
             }
 
+            override fun logError(e: Throwable) {
+                TODO("Not yet implemented")
+            }
+
             override fun newLine() {
                 TODO("Not yet implemented")
             }
@@ -6356,6 +6360,10 @@ paths:
             }
 
             override fun log(msg: LogMessage) {
+                TODO("Not yet implemented")
+            }
+
+            override fun logError(e: Throwable) {
                 TODO("Not yet implemented")
             }
 

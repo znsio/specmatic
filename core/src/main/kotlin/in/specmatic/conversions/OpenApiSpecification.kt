@@ -471,7 +471,7 @@ class OpenApiSpecification(
     private fun toHttpResponsePatterns(responses: ApiResponses?): List<ResponseData> {
         return responses.orEmpty().map { (status, response) ->
             val headersMap = openAPIHeadersToSpecmatic(response)
-            if(!isNumber(status))
+            if(!isNumber(status) && status != "default")
                 throw ContractException("Response status codes are expected to be numbers, but \"$status\" was found")
 
             openAPIResponseToSpecmatic(response, status, headersMap)

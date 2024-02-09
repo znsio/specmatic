@@ -332,8 +332,8 @@ open class SpecmaticJUnitSupport {
 
     enum class URIValidationResult(val message: String) {
         URIParsingError("Please specify a valid URL"),
-        InvalidURLScheme("Please specify a valid scheme / protocol (http or https)"),
-        InvalidPort("Please specify a valid port number"),
+        InvalidURLSchemeError("Please specify a valid scheme / protocol (http or https)"),
+        InvalidPortError("Please specify a valid port number"),
         Success("This URL is valid");
     }
 
@@ -350,9 +350,8 @@ open class SpecmaticJUnitSupport {
         val validPorts = 1..65535
 
         return when {
-            !validProtocols.contains(parsedURI.scheme) -> InvalidURLScheme
-//            parsedURI.port != -1 && !validPorts.contains(parsedURI.port) -> InvalidPort
-            parsedURI.port == -1 && !validPorts.contains(parsedURI.port) -> InvalidPort
+            !validProtocols.contains(parsedURI.scheme) -> InvalidURLSchemeError
+            parsedURI.port == -1 && !validPorts.contains(parsedURI.port) -> InvalidPortError
 
             else -> Success
         }

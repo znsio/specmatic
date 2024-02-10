@@ -4,9 +4,12 @@ import `in`.specmatic.core.HttpRequest
 import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class BearerSecuritySchemeTest {
-    val scheme = BearerSecurityScheme()
+    private val scheme = BearerSecurityScheme()
+
     @Test
     fun `authentication header starts with Bearer when using Bearer security scheme`() {
         val request = scheme.addTo(
@@ -18,15 +21,10 @@ class BearerSecuritySchemeTest {
         assertThat(request.headers[AUTHORIZATION]).startsWith("Bearer ")
     }
 
-    @Test
-    fun `Bearer security scheme matches requests with upper case authorization header set`() {
-        val requestWithBearer = HttpRequest(method = "POST", path = "/customer", headers = mapOf(AUTHORIZATION to "Bearer foo"))
-        assertThat(scheme.matches(requestWithBearer).isSuccess()).isTrue
-    }
-
-    @Test
-    fun `Bearer security scheme matches requests with lower case authorization header set`() {
-        val requestWithBearer = HttpRequest(method = "POST", path = "/customer", headers = mapOf("authorization" to "bearer foo"))
+    @ParameterizedTest
+    @ValueSource(strings = [AUTHORIZATION, "authorization", "AUTHORIZATION"])
+    fun `Bearer security scheme authorization header matching should be case insensitive`(authorizationHeaderName: String) {
+        val requestWithBearer = HttpRequest(method = "POST", path = "/customer", headers = mapOf(authorizationHeaderName to "Bearer foo"))
         assertThat(scheme.matches(requestWithBearer).isSuccess()).isTrue
     }
 
@@ -46,5 +44,20 @@ class BearerSecuritySchemeTest {
             assertThat(isSuccess()).isFalse
             assertThat(this.reportString()).contains("must be prefixed")
         }
+    }
+
+    @Test
+    fun `adds authorization header with the token to request when request does not contain authorization header`() {
+        val updatedHttpRequest = BearerSecurityScheme("abcd1234").addTo(HttpRequest())
+        assertThat(updatedHttpRequest.headers[AUTHORIZATION]).isEqualTo("Bearer abcd1234")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = [AUTHORIZATION, "authorization", "AUTHORIZATION"])
+    fun `replaces existing authorization header with any case with a new authorization header along with set token`(authorizationHeaderName: String) {
+        val updatedHttpRequest = BearerSecurityScheme("abcd1234").addTo(HttpRequest(
+            headers = mapOf(authorizationHeaderName to "Bearer efgh5678")
+        ))
+        assertThat(updatedHttpRequest.headers[AUTHORIZATION]).isEqualTo("Bearer abcd1234")
     }
 }

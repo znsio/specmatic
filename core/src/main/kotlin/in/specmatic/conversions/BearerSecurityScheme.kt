@@ -3,13 +3,12 @@ package `in`.specmatic.conversions
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.Row
 import `in`.specmatic.core.pattern.StringPattern
-import io.ktor.http.*
 import org.apache.http.HttpHeaders.AUTHORIZATION
 
 class BearerSecurityScheme(private val token: String? = null) : OpenAPISecurityScheme {
     override fun matches(httpRequest: HttpRequest): Result {
-        val authHeaderValue: String? = httpRequest.headers["Authorization"] ?: httpRequest.headers.entries.find {
-            it.key.equals("authorization", ignoreCase = true)
+        val authHeaderValue: String? = httpRequest.headers.entries.find {
+            it.key.equals(AUTHORIZATION.lowercase(), ignoreCase = true)
         }?.value
 
         if (authHeaderValue == null) {
@@ -29,13 +28,12 @@ class BearerSecurityScheme(private val token: String? = null) : OpenAPISecurityS
     }
 
     override fun addTo(httpRequest: HttpRequest): HttpRequest {
-        val updatedHeaders = httpRequest.headers.toMutableMap().apply {
-            // Remove any existing Authorization header (case-insensitive)
-            remove(keys.firstOrNull { it.equals(AUTHORIZATION, ignoreCase = true) })
-
-            // Add the new Authorization header
-            put(AUTHORIZATION, getAuthorizationHeaderValue())
-        }
+        val updatedHeaders = httpRequest.headers.filterKeys {
+            !it.equals(
+                AUTHORIZATION,
+                ignoreCase = true
+            )
+        } + (AUTHORIZATION to getAuthorizationHeaderValue())
         return httpRequest.copy(headers = updatedHeaders)
     }
 

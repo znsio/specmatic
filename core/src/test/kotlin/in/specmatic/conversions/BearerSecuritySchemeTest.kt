@@ -59,5 +59,11 @@ class BearerSecuritySchemeTest {
             headers = mapOf(authorizationHeaderName to "Bearer efgh5678")
         ))
         assertThat(updatedHttpRequest.headers[AUTHORIZATION]).isEqualTo("Bearer abcd1234")
+        assertThat(updatedHttpRequest.headers.filterKeys {
+            it.equals(
+                AUTHORIZATION,
+                ignoreCase = true
+            )
+        }.count()).isEqualTo(1)
     }
 }

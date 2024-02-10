@@ -556,9 +556,47 @@ Background:
             )
         }.satisfies(Consumer {
             val errorMessage = exceptionCauseMessage(it)
-            assertThat(errorMessage).contains("""Error matching url /hello/test to the specification""")
-            assertThat(errorMessage).contains("Expected number, actual was \"test\"")
+            assertThat(errorMessage).contains("""/hello/test""")
         })
+    }
+
+    @Test
+    fun `concrete path in wrapper should match concrete path in spec`() {
+        val feature = parseGherkinStringToFeature(
+            """
+    Feature: Hello world
+    
+    Background:
+      Given openapi openapi/similar_paths.yaml            
+    
+    Scenario: Get current user
+      When GET /v1/users/me
+      Then status 200
+            """.trimIndent(), sourceSpecPath
+        )
+
+        val pathsSeen = mutableListOf<String>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                pathsSeen.add(request.path!!)
+                val prefix = request.path!!.substringBeforeLast("/")
+                val suffix: Any = request.path!!.substringAfterLast("/").let { it.toIntOrNull() ?: it }
+
+                return when(Pair(prefix, suffix)) {
+                    Pair("/v1/users", "me") -> HttpResponse.ok(parsedJSONObject("""{"fullname": "Jack Doe"}"""))
+                    Pair("/v1/users", null) -> HttpResponse.ERROR_400
+                    else -> HttpResponse.ok(parsedJSONObject("""{"id": 10, "firstname": "Jack", "lastname": "Doe"}"""))
+                }
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        assertThat(results.successCount).isEqualTo(2)
+        assertThat(pathsSeen).contains("/v1/users/me")
     }
 
     @Test

@@ -9,13 +9,19 @@ import `in`.specmatic.test.reports.coverage.Endpoint
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.opentest4j.TestAbortedException
+import java.util.*
 
 class SpecmaticJunitSupportTest {
+    companion object {
+        val initialPropertyKeys = System.getProperties().mapKeys { it.key.toString() }.keys
+    }
+
     @Test
     fun `should retain open api path parameter convention for parameterized endpoints`() {
         val result: Pair<List<ContractTest>, List<Endpoint>> = SpecmaticJUnitSupport().loadTestScenarios(
@@ -137,6 +143,6 @@ class SpecmaticJunitSupportTest {
 
     @AfterEach
     fun tearDown() {
-        listOf(TEST_BASE_URL, HOST, PORT, PROTOCOL).forEach { System.clearProperty(it) }
+        System.getProperties().keys.minus(initialPropertyKeys).forEach { println("Clearing $it"); System.clearProperty(it.toString()) }
     }
 }

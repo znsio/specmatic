@@ -7,9 +7,12 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PROTOCOL
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import `in`.specmatic.test.reports.coverage.Endpoint
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.opentest4j.TestAbortedException
 
 class SpecmaticJunitSupportTest {
@@ -28,11 +31,15 @@ class SpecmaticJunitSupportTest {
         assertThat(specEndpoints.all { it.path == "/sayHello/{name}" })
     }
 
-    @Test
-    fun `should pick up and use testBaseURL system property when set`() {
-        val url = "http://test.com"
-        System.setProperty(TEST_BASE_URL, url)
-        assertThat(SpecmaticJUnitSupport().constructTestBaseURL()).isEqualTo(url)
+    @ParameterizedTest
+    @ValueSource(strings = ["http://test.com", "https://my-json-server.typicode.com/znsio/specmatic-documentation"])
+    fun `should pick up and use valid testBaseURL system property when set`(validURL: String) {
+        System.setProperty(TEST_BASE_URL, validURL)
+        lateinit var url: String
+        assertThatCode {
+            url = SpecmaticJUnitSupport().constructTestBaseURL()
+        }.doesNotThrowAnyException()
+        assertThat(url).isEqualTo(validURL)
     }
 
     @Test
@@ -41,7 +48,11 @@ class SpecmaticJunitSupportTest {
         val port = "8080"
         System.setProperty(HOST, domain)
         System.setProperty(PORT, port)
-        assertThat(SpecmaticJUnitSupport().constructTestBaseURL()).isEqualTo("http://$domain:$port")
+        lateinit var url: String
+        assertThatCode {
+            url = SpecmaticJUnitSupport().constructTestBaseURL()
+        }.doesNotThrowAnyException()
+        assertThat(url).isEqualTo("http://$domain:$port")
     }
 
     @Test
@@ -51,7 +62,11 @@ class SpecmaticJunitSupportTest {
         val port = "8080"
         System.setProperty(HOST, domain)
         System.setProperty(PORT, port)
-        assertThat(SpecmaticJUnitSupport().constructTestBaseURL()).isEqualTo("http://$domainName:$port")
+        lateinit var url: String
+        assertThatCode {
+            url = SpecmaticJUnitSupport().constructTestBaseURL()
+        }.doesNotThrowAnyException()
+        assertThat(url).isEqualTo("http://$domainName:$port")
     }
 
     @Test
@@ -62,12 +77,17 @@ class SpecmaticJunitSupportTest {
         System.setProperty(HOST, domain)
         System.setProperty(PORT, port)
         System.setProperty(PROTOCOL, protocol)
-        assertThat(SpecmaticJUnitSupport().constructTestBaseURL()).isEqualTo("$protocol://$domain:$port")
+        lateinit var url: String
+        assertThatCode {
+            url = SpecmaticJUnitSupport().constructTestBaseURL()
+        }.doesNotThrowAnyException()
+        assertThat(url).isEqualTo("$protocol://$domain:$port")
     }
 
-    @Test
-    fun `testBaseURL system property should be valid URI`() {
-        System.setProperty(TEST_BASE_URL, "http://invalid url.com")
+    @ParameterizedTest
+    @ValueSource(strings = ["http://invalid url.com", "http://localhost:abcd/", "http://localhost:80 80/", "http://localhost:a123/test"])
+    fun `testBaseURL system property should be valid URI`(invalidURL: String) {
+        System.setProperty(TEST_BASE_URL, invalidURL)
         val ex = assertThrows<TestAbortedException> {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
@@ -113,12 +133,6 @@ class SpecmaticJunitSupportTest {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
         assertThat(ex.message).isEqualTo("Please specify $TEST_BASE_URL OR host and port as environment variables")
-    }
-
-    @Test
-    fun `testBaseURL should be considered valid when the port is implied (-1)`() {
-        val url = "https://example.com/znsio/specmatic-documentation"
-        assertThat(SpecmaticJUnitSupport().isValidURI(url)).isTrue()
     }
 
     @AfterEach

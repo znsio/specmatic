@@ -297,14 +297,12 @@ open class SpecmaticJUnitSupport {
     fun constructTestBaseURL(): String {
         val testBaseURL = System.getProperty(TEST_BASE_URL)
         if (testBaseURL != null) {
-
-            val validationError = validateURI(testBaseURL)
-
-            if (validationError != Success) {
-                throw TestAbortedException("${validationError.message} in $TEST_BASE_URL environment variable")
+            when (val validationResult = validateURI(testBaseURL)) {
+                Success -> return testBaseURL
+                else -> throw TestAbortedException("${validationResult.message} in $TEST_BASE_URL environment variable")
             }
-            return testBaseURL
         }
+
         val hostProperty = System.getProperty(HOST)
             ?: throw TestAbortedException("Please specify $TEST_BASE_URL OR $HOST and $PORT as environment variables")
         val host = if (hostProperty.startsWith("http")) {
@@ -319,11 +317,16 @@ open class SpecmaticJUnitSupport {
             throw TestAbortedException("Please specify a number value for $PORT environment variable")
         }
 
-        val url = "$protocol://$host:$port"
-        if (!isValidURI(url)) {
-            throw TestAbortedException("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
+        val urlConstructedFromProtocolHostAndPort = "$protocol://$host:$port"
+
+        if (urlConstructedFromProtocolHostAndPort != null) {
+            when (validateURI(urlConstructedFromProtocolHostAndPort)) {
+                Success -> return urlConstructedFromProtocolHostAndPort
+                else -> throw TestAbortedException("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
+            }
         }
-        return url
+
+        return urlConstructedFromProtocolHostAndPort
     }
 
     private fun isNumeric(port: String?): Boolean {
@@ -351,21 +354,9 @@ open class SpecmaticJUnitSupport {
 
         return when {
             !validProtocols.contains(parsedURI.scheme) -> InvalidURLSchemeError
-            parsedURI.port == -1 && !validPorts.contains(parsedURI.port) -> InvalidPortError
+            parsedURI.port != -1 && !validPorts.contains(parsedURI.port) -> InvalidPortError
 
             else -> Success
-        }
-    }
-
-    fun isValidURI(uri: String): Boolean {
-        return try {
-            val parsedURI = URI(uri)
-            val validProtocols = listOf("http", "https")
-            val validPorts = 1..65535
-
-            validProtocols.contains(parsedURI.scheme) && (validPorts.contains(parsedURI.port) || portNotSpecified(parsedURI))
-        } catch (e: URISyntaxException) {
-            false
         }
     }
 

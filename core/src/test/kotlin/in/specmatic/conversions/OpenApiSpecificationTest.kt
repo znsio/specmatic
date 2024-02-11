@@ -299,11 +299,11 @@ Pet:
     private fun containsDeferredPattern(pattern: Pattern): Boolean {
         val innerPattern = pattern.pattern
 
-        if(innerPattern !is Map<*, *>)
+        if (innerPattern !is Map<*, *>)
             return false
 
         val childPattern = (innerPattern).values.firstOrNull() ?: return false
-        if(childPattern !is Pattern)
+        if (childPattern !is Pattern)
             return false
 
         return if (childPattern.instanceOf(DeferredPattern::class)) true
@@ -6648,7 +6648,8 @@ paths:
 
     @Test
     fun `randomized response when stubbing out API with byte array request body`() {
-        val specification = OpenApiSpecification.fromYAML("""
+        val specification = OpenApiSpecification.fromYAML(
+            """
             ---
             openapi: "3.0.1"
             info:
@@ -6671,7 +6672,8 @@ paths:
                         text/plain:
                           schema:
                             type: string
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         HttpStub(specification).use { stub ->
             val base64EncodedRequestBody = Base64.getEncoder().encodeToString("hello world".encodeToByteArray())
@@ -6690,7 +6692,8 @@ paths:
 
     @Test
     fun `stubbed response when stubbing out API with byte array request body`() {
-        val specification = OpenApiSpecification.fromYAML("""
+        val specification = OpenApiSpecification.fromYAML(
+            """
             ---
             openapi: "3.0.1"
             info:
@@ -6713,7 +6716,8 @@ paths:
                         text/plain:
                           schema:
                             type: string
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         HttpStub(specification).use { stub ->
             val base64EncodedRequestBody = Base64.getEncoder().encodeToString("hello world".encodeToByteArray())
@@ -6728,7 +6732,8 @@ paths:
                 HttpRequest(
                     method = "POST",
                     path = "/_specmatic/expectations",
-                    body = StringValue("""
+                    body = StringValue(
+                        """
                         {
                             "http-request": {
                                 "method": "POST",
@@ -6740,21 +6745,25 @@ paths:
                                 "body": "success"
                             }
                         }
-                    """.trimIndent())
+                    """.trimIndent()
+                    )
                 )
             ).also { response ->
                 assertThat(response.status).isEqualTo(200)
             }
 
             val response = stub.client.execute(stubbedRequest)
-            assertThat(response.status).withFailMessage("Got a non-200 status which means that the stub did not respond to the request").isEqualTo(200)
-            assertThat(response.body.toStringLiteral()).withFailMessage("Did not get success, most likely got a random response, which means that the stubbed response was not returned").isEqualTo("success")
+            assertThat(response.status).withFailMessage("Got a non-200 status which means that the stub did not respond to the request")
+                .isEqualTo(200)
+            assertThat(response.body.toStringLiteral()).withFailMessage("Did not get success, most likely got a random response, which means that the stubbed response was not returned")
+                .isEqualTo("success")
         }
     }
 
     @Test
     fun `cannot stub out non-base64 request for a byte array request body`() {
-        val specification = OpenApiSpecification.fromYAML("""
+        val specification = OpenApiSpecification.fromYAML(
+            """
             ---
             openapi: "3.0.1"
             info:
@@ -6777,7 +6786,8 @@ paths:
                         text/plain:
                           schema:
                             type: string
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         HttpStub(specification).use { stub ->
             val vanillaNonBase64Request = "]"
@@ -6786,7 +6796,8 @@ paths:
                 HttpRequest(
                     method = "POST",
                     path = "/_specmatic/expectations",
-                    body = StringValue("""
+                    body = StringValue(
+                        """
                         {
                             "http-request": {
                                 "method": "POST",
@@ -6798,7 +6809,8 @@ paths:
                                 "body": "success"
                             }
                         }
-                    """.trimIndent())
+                    """.trimIndent()
+                    )
                 )
             ).also { response ->
                 assertThat(response.status).isEqualTo(400)
@@ -6808,7 +6820,8 @@ paths:
 
     @Test
     fun `test request of type byte array request body sends a random base64 request value`() {
-        val specification = OpenApiSpecification.fromYAML("""
+        val specification = OpenApiSpecification.fromYAML(
+            """
             ---
             openapi: "3.0.1"
             info:
@@ -6831,7 +6844,8 @@ paths:
                         text/plain:
                           schema:
                             type: string
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         val results = specification.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -6850,7 +6864,8 @@ paths:
     fun `test request of type byte array request body loads sends a base64 example`() {
         val base64EncodedRequestBody = Base64.getEncoder().encodeToString("hello world".encodeToByteArray())
 
-        val specification = OpenApiSpecification.fromYAML("""
+        val specification = OpenApiSpecification.fromYAML(
+            """
             ---
             openapi: "3.0.1"
             info:
@@ -6879,7 +6894,8 @@ paths:
                           examples:
                             SUCCESS:
                               value: success
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         val results = specification.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -6902,7 +6918,8 @@ paths:
     @Disabled
     fun `byte string request backward compatibility check`() {
         // TODO: backward compatibility check for byte arrays to string and vice versa is not working
-        val byteString = OpenApiSpecification.fromYAML("""
+        val byteString = OpenApiSpecification.fromYAML(
+            """
             ---
             openapi: "3.0.1"
             info:
@@ -6925,9 +6942,11 @@ paths:
                         text/plain:
                           schema:
                             type: string
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
-        val normalString = OpenApiSpecification.fromYAML("""
+        val normalString = OpenApiSpecification.fromYAML(
+            """
             ---
             openapi: "3.0.1"
             info:
@@ -6949,7 +6968,8 @@ paths:
                         text/plain:
                           schema:
                             type: string
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         testBackwardCompatibility(normalString, byteString).also { result ->
             assertThat(result.hasFailures()).isTrue()
@@ -7004,13 +7024,20 @@ paths:
         assertTrue(specifications.first.isNotEmpty())
         with(OpenApiSpecification.fromYAML(openAPI, "",).toFeature()) {
             val result =
-                    this.scenarios.first().matchesMock(
-                            HttpRequest(
-                                    "POST",
-                                    "/file",
-                                    multiPartFormData = listOf(MultiPartFileValue("filesPart", "test.pdf", "application/pdf", "UTF-8"))
-                            ), HttpResponse.ok("{\"filename\": \"ThIsi5ByT3sD4tA\"}")
-                    )
+                this.scenarios.first().matchesMock(
+                    HttpRequest(
+                        "POST",
+                        "/file",
+                        multiPartFormData = listOf(
+                            MultiPartFileValue(
+                                "filesPart",
+                                "test.pdf",
+                                "application/pdf",
+                                "UTF-8"
+                            )
+                        )
+                    ), HttpResponse.ok("{\"filename\": \"ThIsi5ByT3sD4tA\"}")
+                )
             assertThat(result).isInstanceOf(Result.Success::class.java)
         }
     }
@@ -7050,6 +7077,93 @@ paths:
         } catch (e: Throwable) {
             assertThat(exceptionCauseMessage(e)).contains("2xx")
         }
+    }
+
+    @Test
+    fun `should indicate the xml schema if no properties are found`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: "3.0.3"
+info:
+  description: This documentation contains REST API contract details
+  version: "1.0.0"
+  title: REST API
+paths:
+  /xyz:
+    post:
+      tags:
+        - V1
+      summary: Post an entry
+      description: Post an entry
+      operationId: postEntry
+      requestBody:
+        content:
+          application/xml:
+            schema:
+              ${"$"}ref: '#/components/schemas/PostEntryXmlRequest'
+      responses:
+        '202':
+          description: Accepted
+components:
+  schemas:
+    PostEntryXmlRequest:
+      title: PostEntryXmlRequest
+      type: object
+      xml:
+        name: Document
+        """.trimIndent(), "").toFeature()
+        }.satisfies(
+            {
+                assertThat(exceptionCauseMessage(it)).contains("Document")
+            }
+        )
+    }
+
+    @Test
+    fun `should indicate the xml schema by property name if no properties are found`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: "3.0.3"
+info:
+  description: This documentation contains REST API contract details
+  version: "1.0.0"
+  title: REST API
+paths:
+  /xyz:
+    post:
+      tags:
+        - V1
+      summary: Post an entry
+      description: Post an entry
+      operationId: postEntry
+      requestBody:
+        content:
+          application/xml:
+            schema:
+              ${"$"}ref: '#/components/schemas/PostEntryXmlRequest'
+      responses:
+        '202':
+          description: Accepted
+components:
+  schemas:
+    Id:
+      type: object
+    PostEntryXmlRequest:
+      title: PostEntryXmlRequest
+      type: object
+      properties:
+        id:
+          ${"$"}ref: '#/components/schemas/Id'
+      xml:
+        name: Document
+        """.trimIndent(), "").toFeature()
+        }.satisfies(
+            {
+                assertThat(exceptionCauseMessage(it)).withFailMessage(exceptionCauseMessage(it)).contains("Id")
+            }
+        )
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

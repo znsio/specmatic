@@ -1029,6 +1029,10 @@ class OpenApiSpecification(
 
         return when (schema) {
             is ObjectSchema -> {
+                if(schema.properties == null) {
+                    throw ContractException("XML schema named $name does not have properties.")
+                }
+
                 val nodeProperties = schema.properties.filter { entry ->
                     entry.value.xml?.attribute != true
                 }

@@ -23,7 +23,7 @@ fun responseBodyToGherkinClauses(typeName: String, body: Value?, types: Map<Stri
 }
 
 fun requestBodyToGherkinClauses(body: Value?, types: Map<String, Pattern>, exampleDeclarationsStore: ExampleDeclarations): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
-    if(body == EmptyString)
+    if(body == EmptyString || body == NoBodyValue)
         return Triple(emptyList(), types, exampleDeclarationsStore)
 
     val declarations = body?.typeDeclarationWithoutKey("RequestBody", types, exampleDeclarationsStore)?.let { (typeDeclaration, exampleDeclaration) ->

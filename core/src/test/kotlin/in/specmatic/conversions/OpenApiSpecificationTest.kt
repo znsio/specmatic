@@ -7167,6 +7167,38 @@ components:
     }
 
     @Test
+    fun `show an error when examples with no mediaType is found in the request`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /api/nocontent:
+    post:
+      requestBody:
+        content:
+          application/json:
+            example: test data
+      responses:
+        "204":
+          description: No response
+""".trimIndent(), ""
+            ).toFeature()
+        }.satisfies(
+            {
+                println(exceptionCauseMessage(it))
+                assertThat(exceptionCauseMessage(it)).contains("""Request body definition is missing""")
+            }
+        )
+    }
+
+    @Test
     fun `show an error when examples with no mediaType is found in the response`() {
         assertThatThrownBy {
             OpenApiSpecification.fromYAML(

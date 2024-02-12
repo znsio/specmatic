@@ -6,6 +6,7 @@ import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.log.LogStrategy
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.readEnvVarOrProperty
 import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
@@ -557,7 +558,7 @@ class OpenApiSpecification(
                 status = if (status == "default") 1000 else status.toInt(),
                 body = when (contentType) {
                     "application/xml" -> toXMLPattern(mediaType)
-                    else -> toSpecmaticPattern(mediaType)
+                    else -> toSpecmaticPattern(mediaType, "response")
                 }
             )
 
@@ -685,7 +686,7 @@ class OpenApiSpecification(
 
                     Pair(
                         requestPattern.copy(
-                            body = toSpecmaticPattern(mediaType),
+                            body = toSpecmaticPattern(mediaType, "request"),
                             headersPattern = headersPatternWithContentType(requestPattern, contentType)
                         ), allExamples
                     )
@@ -792,8 +793,8 @@ class OpenApiSpecification(
     ) = if (mediaType.encoding.isNullOrEmpty()) false
     else mediaType.encoding[formFieldName]?.contentType == "application/json"
 
-    private fun toSpecmaticPattern(mediaType: MediaType, jsonInFormData: Boolean = false): Pattern =
-        toSpecmaticPattern(mediaType.schema ?: throw ContractException("Response body definition is missing"), emptyList(), jsonInFormData = jsonInFormData)
+    private fun toSpecmaticPattern(mediaType: MediaType, section: String, jsonInFormData: Boolean = false): Pattern =
+        toSpecmaticPattern(mediaType.schema ?: throw ContractException("${section.capitalizeFirstChar()} body definition is missing"), emptyList(), jsonInFormData = jsonInFormData)
 
     private fun resolveDeepAllOfs(schema: Schema<Any>): List<Schema<Any>> {
         if (schema.allOf == null)

@@ -7166,6 +7166,138 @@ components:
         )
     }
 
+    @Test
+    fun `show an error when a type is not provided`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /api/nocontent:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  description: The name of the entity
+      responses:
+        204:
+          description: No content
+            """.trimIndent(), ""
+            ).toFeature()
+        }.satisfies(
+            {
+                println(exceptionCauseMessage(it))
+                assertThat(exceptionCauseMessage(it)).contains(""""type" attribute was not provided""")
+            }
+        )
+    }
+
+    @Test
+    fun `show an error when parameter name is not provided`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /api/nocontent:
+    get:
+      parameters:
+      - in: query
+        schema:
+          type: string
+      responses:
+        204:
+          description: No content
+            """.trimIndent(), ""
+            ).toFeature()
+        }.satisfies(
+            {
+                println(exceptionCauseMessage(it))
+                assertThat(exceptionCauseMessage(it)).contains("""A parameter of /api/nocontent does not have a nam""")
+            }
+        )
+    }
+
+    @Test
+    fun `show an error when parameter schema is not provided`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /api/nocontent:
+    get:
+      parameters:
+      - in: query
+        name: id
+      responses:
+        204:
+          description: No content
+            """.trimIndent(), ""
+            ).toFeature()
+        }.satisfies(
+            {
+                println(exceptionCauseMessage(it))
+                assertThat(exceptionCauseMessage(it)).contains("""A parameter of /api/nocontent does not have a schema""")
+            }
+        )
+    }
+
+    @Test
+    fun `show an error when parameter schema is array and items is not provided`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /api/nocontent:
+    get:
+      parameters:
+      - in: query
+        name: id
+        schema:
+          type: array
+      responses:
+        204:
+          description: No content
+            """.trimIndent(), ""
+            ).toFeature()
+        }.satisfies(
+            {
+                println(exceptionCauseMessage(it))
+                assertThat(exceptionCauseMessage(it)).contains("""A parameter of /api/nocontent of type "array" has not defined "items"""")
+            }
+        )
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

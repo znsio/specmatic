@@ -4,6 +4,7 @@ import com.google.common.net.HttpHeaders
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSONObject
+import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
@@ -622,7 +623,7 @@ Background:
   Given openapi openapi/unsupported-authentication.yaml
         """.trimIndent(), sourceSpecPath
                 )
-            }.also { assertThat(it.message).isEqualTo("Specmatic only supports oauth2, bearer, and api key authentication (header, query) security schemes at the moment") }
+            }.also { assertThat(exceptionCauseMessage(it)).contains("Specmatic only supports oauth2, bearer, and api key authentication (header, query) security schemes at the moment") }
         }
 
         @Test
@@ -636,7 +637,7 @@ Background:
   Given openapi openapi/apiKeyAuthCookie.yaml
         """.trimIndent(), sourceSpecPath
                 )
-            }.also { assertThat(it.message).isEqualTo("Specmatic only supports oauth2, bearer, and api key authentication (header, query) security schemes at the moment") }
+            }.also { assertThat(exceptionCauseMessage(it)).contains("Specmatic only supports oauth2, bearer, and api key authentication (header, query) security schemes at the moment") }
         }
 
         @Test

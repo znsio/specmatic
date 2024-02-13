@@ -7,7 +7,6 @@ import `in`.specmatic.core.log.LogStrategy
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.capitalizeFirstChar
-import `in`.specmatic.core.utilities.readEnvVarOrProperty
 import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
 import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
@@ -283,7 +282,12 @@ class OpenApiSpecification(
             openApiPaths().map { (openApiPath, pathItem) ->
                 openApiOperations(pathItem).map { (httpMethod, operation) ->
 
-                    validateParameters(operation.parameters, openApiPath, httpMethod)
+                    try {
+                        validateParameters(operation.parameters)
+                    } catch (e: ContractException) {
+                        throw ContractException("In $httpMethod $openApiPath: ${e.message}")
+                    }
+
                     val specmaticPathParam = toSpecmaticPathParam(openApiPath, operation)
                     val specmaticQueryParam = toSpecmaticQueryParam(operation)
 
@@ -352,16 +356,16 @@ class OpenApiSpecification(
         return scenarioInfos to examples
     }
 
-    private fun validateParameters(parameters: List<Parameter>?, openApiPath: String?, httpMethod: String) {
+    private fun validateParameters(parameters: List<Parameter>?) {
         parameters.orEmpty().forEach { parameter ->
             if(parameter.name == null)
-                throw ContractException("A parameter of $openApiPath does not have a name.")
+                throw ContractException("A parameter does not have a name.")
 
             if(parameter.schema == null)
-                throw ContractException("A parameter of $openApiPath does not have a schema.")
+                throw ContractException("A parameter does not have a schema.")
 
             if(parameter.schema.type == "array" && parameter.schema.items == null)
-                throw ContractException("A parameter of $openApiPath of type \"array\" has not defined \"items\".")
+                throw ContractException("A parameter of type \"array\" has not defined \"items\".")
 
         }
     }

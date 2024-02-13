@@ -963,10 +963,12 @@ class OpenApiSpecification(
                     DeferredPattern("(${componentName})")
                 }
                 else {
-                    if(patternName.isNotBlank())
-                        throw ContractException("\"type\" attribute was not provided in schema $patternName, please check the syntax of the specification")
+                    val schemaFragment = if(patternName.isNotBlank()) "schema $patternName" else "in one of the schemas"
+
+                    throw if(schema.javaClass.simpleName != "Schema")
+                        ContractException("\"type\" attribute was not provided in $schemaFragment, please check the syntax of the specification")
                     else
-                        throw ContractException("\"type\" attribute was not provided in one of the schemas, please check the syntax of the specification")
+                        ContractException("\"type\" attribute was not provided in $schemaFragment, please check the syntax of the specification")
                 }
             }
         }.also {

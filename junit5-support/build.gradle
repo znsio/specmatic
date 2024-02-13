@@ -12,18 +12,20 @@ repositories {
 }
 
 def ktor_version = "2.3.8"
-def junit_version = "5.10.1"
+def junit_version = "5.10.2"
 
 dependencies {
     api project(':core')
     implementation "org.junit.jupiter:junit-jupiter-engine:${junit_version}"
     implementation 'org.jetbrains.kotlin:kotlin-maven-serialization'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2'
-    implementation 'org.assertj:assertj-core:3.25.2'
-    implementation 'org.junit.jupiter:junit-jupiter-api:5.10.1'
+    implementation 'org.assertj:assertj-core:3.25.3'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
 
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
     implementation "io.ktor:ktor-client-cio:${ktor_version}"
+
+    testImplementation "org.junit.jupiter:junit-jupiter-params:${junit_version}"
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {

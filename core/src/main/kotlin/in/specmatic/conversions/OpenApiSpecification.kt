@@ -32,8 +32,8 @@ import java.io.File
 private const val BEARER_SECURITY_SCHEME = "bearer"
 const val SERVICE_TYPE_HTTP = "HTTP"
 
-private const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"
-private const val testDirectoryProperty = "specmaticTestsDirectory"
+const val testDirectoryEnvironmentVariable = "SPECMATIC_TESTS_DIRECTORY"
+const val testDirectoryProperty = "specmaticTestsDirectory"
 
 const val NO_SECURITY_SCHEMA_IN_SPECIFICATION = "NO-SECURITY-SCHEME-IN-SPECIFICATION"
 
@@ -143,26 +143,18 @@ class OpenApiSpecification(
     }
 
     override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
-        val scenarioInfosWithExamples = toScenarioInfosWithExamples()
         val (
-            openApitoScenarioInfosFromSpecification: List<ScenarioInfo>,
-            examplesAsStubs: Map<String, List<Pair<HttpRequest, HttpResponse>>>
-        ) = openApiToScenarioInfos()
+            scenarioInfos: List<ScenarioInfo>,
+            examplesAsExpectations: Map<String, List<Pair<HttpRequest, HttpResponse>>>
+        ) = openApiToScenarioInfos2()
 
-        val combinedScenariosFromSpecificationAndWrapper =
-            openApitoScenarioInfosFromSpecification.filter { scenarioInfo ->
-                scenarioInfosWithExamples.none { scenarioInfoWithExample ->
-                    scenarioInfoWithExample.matchesSignature(scenarioInfo)
-                }
-            }.plus(scenarioInfosWithExamples).filter { it.httpResponsePattern.status > 0 }
-
-        return combinedScenariosFromSpecificationAndWrapper to examplesAsStubs
+        return scenarioInfos.filter { it.httpResponsePattern.status > 0 } to examplesAsExpectations
     }
 
     override fun matches(
         specmaticScenarioInfo: ScenarioInfo, steps: List<Step>
     ): List<ScenarioInfo> {
-        val (openApiScenarioInfos, _) = openApiToScenarioInfos()
+        val (openApiScenarioInfos, _) = openApiToScenarioInfos2()
         if (openApiScenarioInfos.isEmpty() || steps.isEmpty()) return listOf(specmaticScenarioInfo)
         val result: MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> =
             specmaticScenarioInfo to openApiScenarioInfos to ::matchesPath then ::matchesMethod then ::matchesStatus then ::updateUrlMatcher otherwise ::handleError
@@ -285,26 +277,34 @@ class OpenApiSpecification(
         })
     }
 
-    private fun openApiToScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
+    private fun openApiToScenarioInfos2(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
         val data: List<Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>>> =
             openApiPaths().map { (openApiPath, pathItem) ->
                 openApiOperations(pathItem).map { (httpMethod, operation) ->
                     val specmaticPathParam = toSpecmaticPathParam(openApiPath, operation)
                     val specmaticQueryParam = toSpecmaticQueryParam(operation)
 
+                    val requestBody: RequestBody? = resolveRequestBody(operation)
+
+                    val httpResponsePatterns: List<ResponseData> = attempt("Error parsing responses for operation $httpMethod $openApiPath") {
+                        toHttpResponsePatterns(operation.responses)
+                    }
                     val httpRequestPatterns: List<Pair<HttpRequestPattern, Map<String, List<HttpRequest>>>> =
                         toHttpRequestPatterns(
                             specmaticPathParam, specmaticQueryParam, httpMethod, operation
                         )
 
-                    val httpResponsePatterns: List<ResponseData> = toHttpResponsePatterns(operation.responses)
-
                     val scenarioInfos =
-                        httpResponsePatterns.map { (response, _: MediaType, httpResponsePattern, _: Map<String, HttpResponse>) ->
+                        httpResponsePatterns.map { (response, responseMediaType: MediaType, httpResponsePattern, _: Map<String, HttpResponse>) ->
+                            val responseExamples: Map<String, Example> = responseMediaType.examples.orEmpty()
+                            val specmaticExampleRows: List<Row> = testRowsFromExamples(responseExamples, operation, requestBody)
+
                             httpRequestPatterns.map { (httpRequestPattern, _: Map<String, List<HttpRequest>>) ->
                                 val scenarioName = scenarioName(operation, response, httpRequestPattern)
 
                                 val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
+
+                                val rowsToBeUsed: List<Row> = specmaticExampleRows
 
                                 ScenarioInfo(
                                     scenarioName = scenarioName,
@@ -312,6 +312,7 @@ class OpenApiSpecification(
                                     httpRequestPattern = httpRequestPattern,
                                     httpResponsePattern = httpResponsePattern,
                                     ignoreFailure = ignoreFailure,
+                                    examples = rowsToExamples(rowsToBeUsed),
                                     sourceProvider = sourceProvider,
                                     sourceRepository = sourceRepository,
                                     sourceRepositoryBranch = sourceRepositoryBranch,
@@ -335,6 +336,7 @@ class OpenApiSpecification(
                     scenarioInfos to examples
                 }
             }.flatten()
+
 
         val scenarioInfos = data.map { it.first }.flatten()
         val examples: Map<String, List<Pair<HttpRequest, HttpResponse>>> =
@@ -365,91 +367,6 @@ class OpenApiSpecification(
     ): String = operation.summary?.let {
         """${operation.summary}. Response: ${response.description}"""
     } ?: "${httpRequestPattern.testDescription()}. Response: ${response.description}"
-
-    private fun toScenarioInfosWithExamples(): List<ScenarioInfo> {
-        val testsDirectory: File? = getTestsDirectory()
-        val externalizedJSONExamples: Map<OperationIdentifier, List<Row>> =
-            loadExternalisedJSONExamples(testsDirectory).also { it ->
-                if (it.isNotEmpty()) {
-                    logger.log("Loaded ${it.size} externalised test${if (it.size > 1) "s" else ""}")
-                    it.keys.map {
-                        logger.log("  ${it.loggableString}")
-                    }
-                }
-            }
-
-        val scenarioInfos = openApiPaths().map { (openApiPath, pathItem) ->
-            openApiOperations(pathItem).map { (httpMethod, operation) ->
-                val specmaticPathParam = toSpecmaticPathParam(openApiPath, operation)
-                val specmaticQueryParam = toSpecmaticQueryParam(operation)
-
-                val requestBody: RequestBody? = resolveRequestBody(operation)
-
-                val httpResponsePatterns = toHttpResponsePatterns(operation.responses)
-                val httpRequestPatterns =
-                    toHttpRequestPatterns(specmaticPathParam, specmaticQueryParam, httpMethod, operation)
-
-                httpResponsePatterns.map { (response, responseMediaType, httpResponsePattern) ->
-                    val responseExamples: Map<String, Example> = responseMediaType.examples.orEmpty()
-                    val specmaticExampleRows: List<Row> = testRowsFromExamples(responseExamples, operation, requestBody)
-
-                    httpRequestPatterns.map { it.first }.map { httpRequestPattern: HttpRequestPattern ->
-                        val scenarioName =
-                            scenarioName(operation, response, httpRequestPattern)
-
-                        val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
-
-                        val operationIdentifier =
-                            OperationIdentifier(httpMethod, specmaticPathParam.path, httpResponsePattern.status)
-
-                        val relevantExternalizedJSONExamples = externalizedJSONExamples[operationIdentifier]
-                        val rowsToBeUsed: List<Row> = relevantExternalizedJSONExamples ?: specmaticExampleRows
-
-                        ScenarioInfo(
-                            scenarioName = scenarioName,
-                            patterns = patterns.toMap(),
-                            httpRequestPattern = httpRequestPattern,
-                            httpResponsePattern = httpResponsePattern,
-                            ignoreFailure = ignoreFailure,
-                            examples = rowsToExamples(rowsToBeUsed),
-                            sourceProvider = sourceProvider,
-                            sourceRepository = sourceRepository,
-                            sourceRepositoryBranch = sourceRepositoryBranch,
-                            specification = specificationPath,
-                            serviceType = SERVICE_TYPE_HTTP
-                        )
-                    }
-                }.flatten()
-            }.flatten()
-        }.flatten()
-
-        val externalizedExampleFilePaths =
-            externalizedJSONExamples.entries.flatMap { (_, rows) ->
-                rows.map {
-                    it.fileSource
-                }
-            }.filterNotNull().sorted().toSet()
-        val utilizedFileSources =
-            scenarioInfos.asSequence().flatMap { scenarioInfo ->
-                scenarioInfo.examples.flatMap { examples ->
-                    examples.rows.map {
-                        it.fileSource
-                    }
-                }
-            }.filterNotNull()
-                .sorted().toSet()
-
-        val unusedExternalizedExamples = (externalizedExampleFilePaths - utilizedFileSources)
-        if (unusedExternalizedExamples.isNotEmpty()) {
-            logger.log("The following externalized examples were not used:")
-
-            unusedExternalizedExamples.sorted().forEach {
-                logger.log("  $it")
-            }
-        }
-
-        return scenarioInfos
-    }
 
     private fun rowsToExamples(specmaticExampleRows: List<Row>): List<Examples> =
         when (specmaticExampleRows) {
@@ -496,85 +413,7 @@ class OpenApiSpecification(
         }
     }
 
-    data class OperationIdentifier(val requestMethod: String, val requestPath: String, val responseStatus: Int) {
-        val loggableString: String = "$requestMethod $requestPath -> $responseStatus"
-    }
-
-    private fun loadExternalisedJSONExamples(testsDirectory: File?): Map<OperationIdentifier, List<Row>> {
-        if (testsDirectory == null)
-            return emptyMap()
-
-        if (!testsDirectory.exists())
-            return emptyMap()
-
-        val files = testsDirectory.listFiles()
-
-        if (files.isNullOrEmpty())
-            return emptyMap()
-
-        return files.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
-            try {
-                with(exampleFromFile) {
-                    logger.log("Loading test file ${exampleFromFile.expectationFilePath}")
-
-                    val examples: Map<String, String> =
-                        headers
-                            .plus(queryParams)
-                            .plus(pathParams)
-                            .plus(requestBody?.let { mapOf("(REQUEST-BODY)" to it.toStringLiteral()) } ?: emptyMap())
-
-                    val (
-                        columnNames,
-                        values
-                    ) = examples.entries.let { entry ->
-                        entry.map { it.key } to entry.map { it.value }
-                    }
-
-                    OperationIdentifier(requestMethod, requestPath, responseStatus) to Row(
-                        columnNames,
-                        values,
-                        name = testName,
-                        fileSource = exampleFromFile.file.canonicalPath
-                    )
-                }
-            } catch (e: Throwable) {
-                logger.log(e, "Error reading file ${exampleFromFile.expectationFilePath}")
-                null
-            }
-        }
-            .groupBy { (operationIdentifier, _) -> operationIdentifier }
-            .mapValues { (_, value) -> value.map { it.second } }
-    }
-
-    private fun getTestsDirectory(): File? {
-        val testDirectory = testDirectoryFileFromSpecificationPath() ?: testDirectoryFileFromEnvironmentVariable()
-
-        return when {
-            testDirectory?.exists() == true -> {
-                logger.log("Test directory ${testDirectory.canonicalPath} found")
-                testDirectory
-            }
-
-            else -> {
-                null
-            }
-        }
-    }
-
-    private fun testDirectoryFileFromEnvironmentVariable(): File? {
-        return readEnvVarOrProperty(testDirectoryEnvironmentVariable, testDirectoryProperty)?.let {
-            File(System.getenv(testDirectoryEnvironmentVariable))
-        }
-    }
-
-    private fun testDirectoryFileFromSpecificationPath(): File? {
-        if (openApiFilePath.isBlank())
-            return null
-
-        return File(openApiFilePath).canonicalFile.let {
-            it.parentFile.resolve(it.nameWithoutExtension + "_tests")
-        }
-    }
+    data class OperationIdentifier(val requestMethod: String, val requestPath: String, val responseStatus: Int)
 
     private fun requestBodyExample(
         requestBody: RequestBody?,
@@ -625,9 +464,16 @@ class OpenApiSpecification(
 
     private fun openApiPaths() = parsedOpenApi.paths.orEmpty()
 
+    private fun isNumber(value: String): Boolean {
+        return value.toIntOrNull() != null
+    }
+
     private fun toHttpResponsePatterns(responses: ApiResponses?): List<ResponseData> {
         return responses.orEmpty().map { (status, response) ->
             val headersMap = openAPIHeadersToSpecmatic(response)
+            if(!isNumber(status) && status != "default")
+                throw ContractException("Response status codes are expected to be numbers, but \"$status\" was found")
+
             openAPIResponseToSpecmatic(response, status, headersMap)
         }.flatten()
     }
@@ -1183,6 +1029,10 @@ class OpenApiSpecification(
 
         return when (schema) {
             is ObjectSchema -> {
+                if(schema.properties == null) {
+                    throw ContractException("XML schema named $name does not have properties.")
+                }
+
                 val nodeProperties = schema.properties.filter { entry ->
                     entry.value.xml?.attribute != true
                 }

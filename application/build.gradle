@@ -31,15 +31,15 @@ repositories {
 }
 
 def ktor_version = "2.3.8"
-def junit_version = "5.10.1"
+def junit_version = "5.10.2"
 def jgit_version = "6.8.0.202311291450-r"
 
 dependencies {
     implementation 'com.arakelian:java-jq:1.3.0'
     testImplementation 'com.arakelian:java-jq:1.3.0'
 
-    implementation 'org.assertj:assertj-core:3.25.2'
-    implementation 'org.junit.jupiter:junit-jupiter-api:5.10.1'
+    implementation 'org.assertj:assertj-core:3.25.3'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
 
     implementation('info.picocli:picocli-spring-boot-starter:4.7.5') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
@@ -49,13 +49,13 @@ dependencies {
     implementation "io.ktor:ktor-network-tls:$ktor_version"
     implementation "io.ktor:ktor-network-tls-certificates:$ktor_version"
 
-    implementation 'org.junit.platform:junit-platform-launcher:1.10.1'
-    implementation 'org.junit.platform:junit-platform-reporting:1.10.1'
+    implementation 'org.junit.platform:junit-platform-launcher:1.10.2'
+    implementation 'org.junit.platform:junit-platform-reporting:1.10.2'
 
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
-    implementation 'org.slf4j:slf4j-nop:2.0.11'
+    implementation 'org.slf4j:slf4j-nop:2.0.12'
 
     implementation 'org.apache.ant:ant-junit:1.10.14'
 
@@ -80,7 +80,7 @@ dependencies {
     testImplementation('com.ninja-squad:springmockk:3.1.1') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
     }
-    testImplementation 'org.assertj:assertj-core:3.25.2'
+    testImplementation 'org.assertj:assertj-core:3.25.3'
     testImplementation 'com.ginsberg:junit5-system-exit:1.1.2'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
@@ -121,4 +121,54 @@ javadoc {
     if (JavaVersion.current().isJava9Compatible()) {
         options.addBooleanOption('html5', true)
     }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = 'specmatic-executable'
+            from components.java
+            pom {
+                name = 'Specmatic Executable'
+                description = 'Command-line standalone executable jar for Specmatic'
+                url = 'https://specmatic.in'
+                licenses {
+                    license {
+                        name = 'MIT'
+                        url = 'https://github.com/znsio/specmatic/blob/main/License.md'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'specmaticBuilders'
+                        name = 'Specmatic Builders'
+                        email = 'info@specmatic.in'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git@github.com:znsio/specmatic.git'
+                    url = 'https://specmatic.in/'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2"
+            def snapshotsRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots"
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            credentials {
+                username = project.hasProperty("ossrhUsername") ? project.getProperty("ossrhUsername") : ""
+                password = project.hasProperty("ossrhPassword") ? project.getProperty("ossrhPassword") : ""
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.mavenJava
+}
+
+tasks.withType(Sign).configureEach {
+    onlyIf { project.hasProperty("signing.keyId") }
 }

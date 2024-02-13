@@ -1,6 +1,6 @@
 package `in`.specmatic.test
 
-import `in`.specmatic.conversions.convertPathParameterStyle
+import `in`.specmatic.conversions.*
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.ignoreLog
@@ -12,6 +12,7 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.isOpenAPI
 import `in`.specmatic.stub.hasOpenApiFileExtension
+import `in`.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.*
 import `in`.specmatic.test.reports.OpenApiCoverageReportProcessor
 import `in`.specmatic.test.reports.coverage.Endpoint
 import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
@@ -23,8 +24,10 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.opentest4j.TestAbortedException
 import java.io.File
+import java.net.MalformedURLException
 import java.net.URI
 import java.net.URISyntaxException
+import java.net.URL
 import java.util.*
 
 @Serializable
@@ -62,6 +65,9 @@ open class SpecmaticJUnitSupport {
         @AfterAll
         @JvmStatic
         fun report() {
+            if (openApiCoverageReportInput.areTestResultsEmpty()) {
+                return
+            }
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
             reportProcessors.forEach { it.process(getReportConfiguration()) }
 
@@ -229,6 +235,14 @@ open class SpecmaticJUnitSupport {
         var checkedAPIs = false
         totalTestCount = testScenarios.size
 
+        val testBaseURL = try {
+            constructTestBaseURL()
+        } catch (e: Throwable) {
+            logger.logError(e)
+            logger.newLine()
+            throw(e)
+        }
+
         logger.log("Executing $totalTestCount tests")
 
         return testScenarios.map { testScenario ->
@@ -245,10 +259,9 @@ open class SpecmaticJUnitSupport {
                     }
                 }
 
-                lateinit var testResult: Pair<Result, HttpResponse?>
+                var testResult: Pair<Result, HttpResponse?>? = null
 
                 try {
-                    var testBaseURL = constructTestBaseURL()
                     testResult = testScenario.runTest(testBaseURL, timeout)
                     val (result, response) = testResult
 
@@ -272,8 +285,10 @@ open class SpecmaticJUnitSupport {
                     throw e
                 }
                 finally {
-                    val (result, response) = testResult
-                    openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result, response))
+                    if(testResult != null) {
+                        val (result, response) = testResult
+                        openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result, response))
+                    }
                 }
             }
         }.toList()
@@ -282,13 +297,14 @@ open class SpecmaticJUnitSupport {
     fun constructTestBaseURL(): String {
         val testBaseURL = System.getProperty(TEST_BASE_URL)
         if (testBaseURL != null) {
-            if (!isValidURI(testBaseURL)) {
-                throw TestAbortedException("Please specific a valid URL in $TEST_BASE_URL environment variable")
+            when (val validationResult = validateURI(testBaseURL)) {
+                Success -> return testBaseURL
+                else -> throw TestAbortedException("${validationResult.message} in $TEST_BASE_URL environment variable")
             }
-            return testBaseURL
         }
+
         val hostProperty = System.getProperty(HOST)
-            ?: throw TestAbortedException("Please specific $TEST_BASE_URL OR $HOST and $PORT as environment variables")
+            ?: throw TestAbortedException("Please specify $TEST_BASE_URL OR $HOST and $PORT as environment variables")
         val host = if (hostProperty.startsWith("http")) {
             URI(hostProperty).host
         } else {
@@ -296,24 +312,55 @@ open class SpecmaticJUnitSupport {
         }
         val protocol = System.getProperty(PROTOCOL) ?: "http"
         val port = System.getProperty(PORT)
-        val url = "$protocol://$host:$port"
-        if (!isValidURI(url)) {
-            throw TestAbortedException("Please specific a valid $PROTOCOL, $HOST and $PORT environment variables")
+
+        if (!isNumeric(port)) {
+            throw TestAbortedException("Please specify a number value for $PORT environment variable")
         }
-        return url
+
+        val urlConstructedFromProtocolHostAndPort = "$protocol://$host:$port"
+
+        if (urlConstructedFromProtocolHostAndPort != null) {
+            when (validateURI(urlConstructedFromProtocolHostAndPort)) {
+                Success -> return urlConstructedFromProtocolHostAndPort
+                else -> throw TestAbortedException("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
+            }
+        }
+
+        return urlConstructedFromProtocolHostAndPort
     }
 
-    private fun isValidURI(uri: String): Boolean {
-        return try {
-            val parsedURI = URI(uri)
-            val validProtocols = listOf("http", "https")
-            val validPorts = 1..65535
+    private fun isNumeric(port: String?): Boolean {
+        return port?.toIntOrNull() != null
+    }
 
-            validProtocols.contains(parsedURI.scheme) && validPorts.contains(parsedURI.port)
+    enum class URIValidationResult(val message: String) {
+        URIParsingError("Please specify a valid URL"),
+        InvalidURLSchemeError("Please specify a valid scheme / protocol (http or https)"),
+        InvalidPortError("Please specify a valid port number"),
+        Success("This URL is valid");
+    }
+
+    fun validateURI(uri: String): URIValidationResult {
+        val parsedURI = try {
+            URL(uri).toURI()
         } catch (e: URISyntaxException) {
-            false
+            return URIParsingError
+        } catch(e: MalformedURLException) {
+            return URIParsingError
+        }
+
+        val validProtocols = listOf("http", "https")
+        val validPorts = 1..65535
+
+        return when {
+            !validProtocols.contains(parsedURI.scheme) -> InvalidURLSchemeError
+            parsedURI.port != -1 && !validPorts.contains(parsedURI.port) -> InvalidPortError
+
+            else -> Success
         }
     }
+
+    private fun portNotSpecified(parsedURI: URI) = parsedURI.port == -1
 
     fun loadTestScenarios(
         path: String,
@@ -332,7 +379,19 @@ open class SpecmaticJUnitSupport {
             return Pair(emptyList(), emptyList())
 
         val contractFile = File(path)
-        val feature = parseContractFileToFeature(contractFile.path, CommandHook(HookName.test_load_contract), sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration).copy(testVariables = config.variables, testBaseURLs = config.baseURLs)
+        val feature =
+            parseContractFileToFeature(
+                contractFile.path,
+                CommandHook(HookName.test_load_contract),
+                sourceProvider,
+                sourceRepository,
+                sourceRepositoryBranch,
+                specificationPath,
+                securityConfiguration
+            ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
+
+
+
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)
             suggestionsData.isNotEmpty() -> suggestionsFromCommandLine(suggestionsData)

@@ -90,19 +90,26 @@ class HttpStub(
                             feature.matchingStub(request, response, ExamplesAsExpectationsMismatch(exampleName))
 
                         if (stubData.matchFailure) {
+                            logger.newLine()
                             logger.log(stubData.response.body.toStringLiteral())
                             null
                         } else {
                             stubData
                         }
                     } catch (e: Throwable) {
+                        logger.newLine()
+
                         when (e) {
-                            is ContractException, is NoMatchingScenario -> {
-                                logger.log(e, "Error when loading example \"$exampleName\" as expectation")
+                            is ContractException -> {
+                                logger.log(e)
+                                null
+                            }
+                            is NoMatchingScenario -> {
+                                logger.log(e, "[Example $exampleName]")
                                 null
                             }
                             else -> {
-                                logger.log(e, "Error when loading example \"$exampleName\" as expectation")
+                                logger.log(e, "[Example $exampleName]")
                                 throw e
                             }
                         }
@@ -265,7 +272,7 @@ class HttpStub(
     }
 
     private fun isFlushTransientStubsRequest(httpRequest: HttpRequest): Boolean {
-        return httpRequest.method?.toLowerCasePreservingASCIIRules() == "delete" && httpRequest.path?.startsWith("/_specmatic/$TRANSIENT_MOCK") == true
+        return httpRequest.method?.toLowerCasePreservingASCIIRules() == "delete" && httpRequest.path?.startsWith("/_specmatic/$TRANSIENT_MOCK/") == true
     }
 
     private fun close(

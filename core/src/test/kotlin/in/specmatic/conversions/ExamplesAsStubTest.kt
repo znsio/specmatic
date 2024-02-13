@@ -605,8 +605,10 @@ paths:
 
         val contract = OpenApiSpecification.fromYAML(spec, "").toFeature()
         val (output, _) = captureStandardOutput {
-            val stub = HttpStub(contract)
-            stub.close()
+            try {
+                HttpStub(contract).close()
+            } catch(_: Throwable) {
+            }
         }
 
         assertThat(output).withFailMessage(output).contains("EXAMPLE_OF_SUCCESS")

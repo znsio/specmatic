@@ -2,6 +2,7 @@ package application
 
 import `in`.specmatic.core.Feature
 import `in`.specmatic.core.WorkingDirectory
+import `in`.specmatic.core.log.NewLineLogMessage
 import `in`.specmatic.core.log.StringLog
 import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.mock.ScenarioStub
@@ -42,6 +43,7 @@ class HTTPStubEngine {
             workingDirectory = workingDirectory,
             specmaticConfigPath = specmaticConfigPath
         ).also {
+            consoleLog(NewLineLogMessage)
             val protocol = if (keyStoreData != null) "https" else "http"
             consoleLog(StringLog("Stub server is running on ${protocol}://$host:$port. Ctrl + C to stop."))
         }

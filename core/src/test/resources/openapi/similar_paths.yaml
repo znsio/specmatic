@@ -1,0 +1,54 @@
+openapi: 3.0.1
+info:
+  title: test case
+  version: "1"
+servers:
+  - url: https://test.com
+
+paths:
+  /v1/users/me:
+    get:
+      operationId: getCurrentUser
+      responses:
+        "200":
+          description: "Ok"
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - fullname
+                properties:
+                  fullname:
+                    type: string
+  /v1/users/{userId}:
+    get:
+      operationId: getUserById
+      parameters:
+        - name: userId
+          schema:
+            type: number
+          in: path
+          required: true
+      responses:
+        "200":
+          description: "Ok"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: number
+        firstname:
+          type: string
+        lastname:
+          type: string

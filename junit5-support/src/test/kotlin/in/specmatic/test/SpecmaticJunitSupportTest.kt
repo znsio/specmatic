@@ -7,12 +7,21 @@ import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PROTOCOL
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import `in`.specmatic.test.reports.coverage.Endpoint
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.opentest4j.TestAbortedException
+import java.util.*
 
 class SpecmaticJunitSupportTest {
+    companion object {
+        val initialPropertyKeys = System.getProperties().mapKeys { it.key.toString() }.keys
+    }
+
     @Test
     fun `should retain open api path parameter convention for parameterized endpoints`() {
         val result: Pair<List<ContractTest>, List<Endpoint>> = SpecmaticJUnitSupport().loadTestScenarios(
@@ -28,11 +37,15 @@ class SpecmaticJunitSupportTest {
         assertThat(specEndpoints.all { it.path == "/sayHello/{name}" })
     }
 
-    @Test
-    fun `should pick up and use testBaseURL system property when set`() {
-        val url = "http://test.com"
-        System.setProperty(TEST_BASE_URL, url)
-        assertThat(SpecmaticJUnitSupport().constructTestBaseURL()).isEqualTo(url)
+    @ParameterizedTest
+    @ValueSource(strings = ["http://test.com", "https://my-json-server.typicode.com/znsio/specmatic-documentation"])
+    fun `should pick up and use valid testBaseURL system property when set`(validURL: String) {
+        System.setProperty(TEST_BASE_URL, validURL)
+        lateinit var url: String
+        assertThatCode {
+            url = SpecmaticJUnitSupport().constructTestBaseURL()
+        }.doesNotThrowAnyException()
+        assertThat(url).isEqualTo(validURL)
     }
 
     @Test
@@ -41,7 +54,11 @@ class SpecmaticJunitSupportTest {
         val port = "8080"
         System.setProperty(HOST, domain)
         System.setProperty(PORT, port)
-        assertThat(SpecmaticJUnitSupport().constructTestBaseURL()).isEqualTo("http://$domain:$port")
+        lateinit var url: String
+        assertThatCode {
+            url = SpecmaticJUnitSupport().constructTestBaseURL()
+        }.doesNotThrowAnyException()
+        assertThat(url).isEqualTo("http://$domain:$port")
     }
 
     @Test
@@ -51,7 +68,11 @@ class SpecmaticJunitSupportTest {
         val port = "8080"
         System.setProperty(HOST, domain)
         System.setProperty(PORT, port)
-        assertThat(SpecmaticJUnitSupport().constructTestBaseURL()).isEqualTo("http://$domainName:$port")
+        lateinit var url: String
+        assertThatCode {
+            url = SpecmaticJUnitSupport().constructTestBaseURL()
+        }.doesNotThrowAnyException()
+        assertThat(url).isEqualTo("http://$domainName:$port")
     }
 
     @Test
@@ -62,16 +83,21 @@ class SpecmaticJunitSupportTest {
         System.setProperty(HOST, domain)
         System.setProperty(PORT, port)
         System.setProperty(PROTOCOL, protocol)
-        assertThat(SpecmaticJUnitSupport().constructTestBaseURL()).isEqualTo("$protocol://$domain:$port")
+        lateinit var url: String
+        assertThatCode {
+            url = SpecmaticJUnitSupport().constructTestBaseURL()
+        }.doesNotThrowAnyException()
+        assertThat(url).isEqualTo("$protocol://$domain:$port")
     }
 
-    @Test
-    fun `testBaseURL system property should be valid URI`() {
-        System.setProperty(TEST_BASE_URL, "http://invalid url.com")
+    @ParameterizedTest
+    @ValueSource(strings = ["http://invalid url.com", "http://localhost:abcd/", "http://localhost:80 80/", "http://localhost:a123/test"])
+    fun `testBaseURL system property should be valid URI`(invalidURL: String) {
+        System.setProperty(TEST_BASE_URL, invalidURL)
         val ex = assertThrows<TestAbortedException> {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
-        assertThat(ex.message).isEqualTo("Please specific a valid URL in $TEST_BASE_URL environment variable")
+        assertThat(ex.message).isEqualTo("Please specify a valid URL in $TEST_BASE_URL environment variable")
     }
 
     @Test
@@ -82,7 +108,7 @@ class SpecmaticJunitSupportTest {
         val ex = assertThrows<TestAbortedException> {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
-        assertThat(ex.message).isEqualTo("Please specific a valid $PROTOCOL, $HOST and $PORT environment variables")
+        assertThat(ex.message).isEqualTo("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
     }
 
     @Test
@@ -93,7 +119,7 @@ class SpecmaticJunitSupportTest {
         val ex = assertThrows<TestAbortedException> {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
-        assertThat(ex.message).isEqualTo("Please specific a valid $PROTOCOL, $HOST and $PORT environment variables")
+        assertThat(ex.message).isEqualTo("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
     }
 
     @Test
@@ -104,7 +130,7 @@ class SpecmaticJunitSupportTest {
         val ex = assertThrows<TestAbortedException> {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
-        assertThat(ex.message).isEqualTo("Please specific a valid $PROTOCOL, $HOST and $PORT environment variables")
+        assertThat(ex.message).isEqualTo("Please specify a number value for $PORT environment variable")
     }
 
     @Test
@@ -112,11 +138,11 @@ class SpecmaticJunitSupportTest {
         val ex = assertThrows<TestAbortedException> {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
-        assertThat(ex.message).isEqualTo("Please specific $TEST_BASE_URL OR host and port as environment variables")
+        assertThat(ex.message).isEqualTo("Please specify $TEST_BASE_URL OR host and port as environment variables")
     }
 
     @AfterEach
     fun tearDown() {
-        listOf(TEST_BASE_URL, HOST, PORT, PROTOCOL).forEach { System.clearProperty(it) }
+        System.getProperties().keys.minus(initialPropertyKeys).forEach { println("Clearing $it"); System.clearProperty(it.toString()) }
     }
 }

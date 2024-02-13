@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.capitalizeFirstChar
@@ -471,6 +472,30 @@ data class Scenario(
             else -> status
         }
     }
+
+    fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Scenario {
+        val matchingTestData: Map<OpenApiSpecification.OperationIdentifier, List<Row>> = matchingRows(externalisedJSONExamples)
+
+        val newExamples: List<Examples> = matchingTestData.map { (operationId, rows) ->
+            if(rows.isEmpty())
+                return@map emptyList()
+
+            val rowsWithPathData: List<Row> = rows.map { row -> httpRequestPattern.addPathParamsToRows(operationId.requestPath, row, resolver) }
+
+            val columns = rowsWithPathData.first().columnNames
+
+            listOf(Examples(columns, rowsWithPathData))
+        }.flatten()
+
+        return this.copy(examples = newExamples)
+    }
+
+    private fun matchingRows(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>) =
+        externalisedJSONExamples.filter { (operationId, rows) ->
+            operationId.requestMethod.equals(method, ignoreCase = true)
+                    && operationId.responseStatus == status
+                    && httpRequestPattern.matchesPath(operationId.requestPath, resolver).isSuccess()
+        }
 }
 
 fun newExpectedServerStateBasedOn(

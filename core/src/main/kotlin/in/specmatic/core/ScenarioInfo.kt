@@ -44,12 +44,14 @@ data class ScenarioInfo(
                     Pair("exact", "exact") -> apiSpecification.exactValuePatternsAreEqual(openapiURLPart, wrapperURLPart)
                     Pair("exact", "pattern") -> false
                     Pair("pattern", "exact") -> {
-                        attempt("Error matching url ${this.httpRequestPattern.httpPathPattern.path} to the specification") {
+                        try {
                             apiSpecification.patternMatchesExact(
                                 wrapperURLPart,
                                 openapiURLPart,
                                 resolver
                             )
+                        } catch(e: Throwable) {
+                            false
                         }
                     }
                     Pair("pattern", "pattern") -> {

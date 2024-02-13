@@ -146,7 +146,7 @@ class OpenApiSpecification(
         val (
             scenarioInfos: List<ScenarioInfo>,
             examplesAsExpectations: Map<String, List<Pair<HttpRequest, HttpResponse>>>
-        ) = openApiToScenarioInfos2()
+        ) = openApiToScenarioInfos()
 
         return scenarioInfos.filter { it.httpResponsePattern.status > 0 } to examplesAsExpectations
     }
@@ -154,7 +154,7 @@ class OpenApiSpecification(
     override fun matches(
         specmaticScenarioInfo: ScenarioInfo, steps: List<Step>
     ): List<ScenarioInfo> {
-        val (openApiScenarioInfos, _) = openApiToScenarioInfos2()
+        val (openApiScenarioInfos, _) = openApiToScenarioInfos()
         if (openApiScenarioInfos.isEmpty() || steps.isEmpty()) return listOf(specmaticScenarioInfo)
         val result: MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> =
             specmaticScenarioInfo to openApiScenarioInfos to ::matchesPath then ::matchesMethod then ::matchesStatus then ::updateUrlMatcher otherwise ::handleError
@@ -277,16 +277,17 @@ class OpenApiSpecification(
         })
     }
 
-    private fun openApiToScenarioInfos2(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
+    private fun openApiToScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
         val data: List<Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>>> =
             openApiPaths().map { (openApiPath, pathItem) ->
-                openApiOperations(pathItem).map { (httpMethod, operation) ->
-
+                openApiOperations(pathItem).map { (httpMethod, openApiOperation) ->
                     try {
-                        validateParameters(operation.parameters)
+                        openApiOperation.validateParameters()
                     } catch (e: ContractException) {
                         throw ContractException("In $httpMethod $openApiPath: ${e.message}")
                     }
+
+                    val operation = openApiOperation.operation
 
                     val specmaticPathParam = toSpecmaticPathParam(openApiPath, operation)
                     val specmaticQueryParam = toSpecmaticQueryParam(operation)
@@ -1342,13 +1343,13 @@ class OpenApiSpecification(
         }
     }
 
-    private fun openApiOperations(pathItem: PathItem): Map<String, Operation> {
+    private fun openApiOperations(pathItem: PathItem): Map<String, OpenApiOperation> {
         return linkedMapOf<String, Operation?>(
             "POST" to pathItem.post,
             "GET" to pathItem.get,
             "PATCH" to pathItem.patch,
             "PUT" to pathItem.put,
             "DELETE" to pathItem.delete
-        ).filter { (_, value) -> value != null }.map { (key, value) -> key to value!! }.toMap()
+        ).filter { (_, value) -> value != null }.map { (key, value) -> key to OpenApiOperation(value!!) }.toMap()
     }
 }

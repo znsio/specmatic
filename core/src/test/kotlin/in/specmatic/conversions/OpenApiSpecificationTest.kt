@@ -7194,7 +7194,7 @@ components:
             .loadExternalisedExamples()
 
         val tests = spec.generateContractTestScenarios(emptyList())
-        assertThat(tests.single().testDescription()).contains("test_in_file_name")
+        assertThat(tests.single().testDescription()).contains("file_name_as_test_label")
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

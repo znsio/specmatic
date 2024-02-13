@@ -7331,7 +7331,7 @@ paths:
         }.satisfies(
             {
                 println(exceptionCauseMessage(it))
-                assertThat(exceptionCauseMessage(it)).contains("""A parameter of /api/nocontent does not have a nam""")
+                assertThat(exceptionCauseMessage(it)).contains("""A parameter does not have a nam""")
             }
         )
     }
@@ -7362,7 +7362,7 @@ paths:
         }.satisfies(
             {
                 println(exceptionCauseMessage(it))
-                assertThat(exceptionCauseMessage(it)).contains("""A parameter of /api/nocontent does not have a schema""")
+                assertThat(exceptionCauseMessage(it)).contains("""A parameter does not have a schema""")
             }
         )
     }
@@ -7395,7 +7395,7 @@ paths:
         }.satisfies(
             {
                 println(exceptionCauseMessage(it))
-                assertThat(exceptionCauseMessage(it)).contains("""A parameter of /api/nocontent of type "array" has not defined "items"""")
+                assertThat(exceptionCauseMessage(it)).contains("""A parameter of type "array" has not defined "items"""")
             }
         )
     }

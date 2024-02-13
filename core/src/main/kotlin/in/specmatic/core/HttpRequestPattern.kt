@@ -27,8 +27,8 @@ data class HttpRequestPattern(
     val multiPartFormDataPattern: List<MultiPartFormDataPattern> = emptyList(),
     val securitySchemes: List<OpenAPISecurityScheme> = listOf(NoSecurityScheme())
 ) {
-    fun complexity(): ULong {
-        return headersPattern.complexity() * httpPathPattern!!.complexity() * httpQueryParamPattern.complexity() * body.complexity(Resolver())
+    fun complexity(resolver: Resolver): ULong {
+        return headersPattern.complexity() * httpPathPattern!!.complexity() * httpQueryParamPattern.complexity() * body.complexity(resolver)
     }
 
     fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver, headersResolver: Resolver? = null, requestBodyReqex: Regex? = null): Result {

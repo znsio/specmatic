@@ -80,7 +80,7 @@ data class Scenario(
     )
 
     fun complexity(): ULong {
-        return httpRequestPattern.complexity()
+        return httpRequestPattern.complexity(resolver)
     }
 
     val apiIdentifier: String

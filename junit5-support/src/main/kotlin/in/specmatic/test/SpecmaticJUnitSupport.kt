@@ -360,8 +360,6 @@ open class SpecmaticJUnitSupport {
         }
     }
 
-    private fun portNotSpecified(parsedURI: URI) = parsedURI.port == -1
-
     fun loadTestScenarios(
         path: String,
         suggestionsPath: String,
@@ -390,7 +388,10 @@ open class SpecmaticJUnitSupport {
                 securityConfiguration
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
+        val complexity = feature.complexity()
 
+        logger.log("Complexity score for $path: $complexity")
+        logger.newLine()
 
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)

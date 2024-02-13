@@ -14,6 +14,7 @@ import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.HttpStubData
+import `in`.specmatic.stub.captureStandardOutput
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import io.ktor.util.reflect.*
@@ -7164,6 +7165,36 @@ components:
                 assertThat(exceptionCauseMessage(it)).withFailMessage(exceptionCauseMessage(it)).contains("Id")
             }
         )
+    }
+
+    @Test
+    fun `should load externalized test data with name in file`() {
+        val specFilePath = "core/src/test/resources/openapi/spec_with_externalized_test_data.yaml"
+        val spec = OpenApiSpecification.fromFile(specFilePath, "").toFeature().loadExternalisedExamples()
+
+        val results = spec.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.path).isEqualTo("/resource/10")
+                return HttpResponse.ok("success")
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        assertThat(results.successCount).isOne()
+    }
+
+    @Test
+    fun `should load externalized test data using filename when name is not in file`() {
+        val specFilePath = "core/src/test/resources/openapi/spec_with_unnamed_externalized_test_data.yaml"
+        val spec = OpenApiSpecification.fromFile(specFilePath, "")
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val tests = spec.generateContractTestScenarios(emptyList())
+        assertThat(tests.single().testDescription()).contains("file_name_as_test_label")
     }
 
     @Test

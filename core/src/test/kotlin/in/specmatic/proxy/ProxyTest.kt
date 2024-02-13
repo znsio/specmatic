@@ -4,6 +4,8 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.YAML
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.pattern.parsedJSONObject
+import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.stub.HttpStub
 import io.ktor.http.*
 import org.assertj.core.api.Assertions.*
@@ -38,6 +40,11 @@ internal class ProxyTest {
                 And request-body (number)
                 Then status 200
                 And response-body 100
+            
+              Scenario: Random
+                When GET /
+                Then status 200
+                And response-body (number)
         """.trimIndent()
     )
 
@@ -150,6 +157,24 @@ internal class ProxyTest {
                 .doesNotContainIgnoringCase("name: $it")
             assertThat(fakeFileWriter.receivedStub).withFailMessage("Stub should not have contained $it")
         }
+    }
+
+    @Test
+    fun `should not include a body for GET requests with no body`() {
+        HttpStub(simpleFeature).use {
+            Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
+                val client = RestTemplate()
+                val response = client.getForEntity("http://localhost:9001/", String::class.java)
+
+                assertThat(response.statusCodeValue).isEqualTo(200)
+                assertThatNoException().isThrownBy { response.body!!.toInt() }
+            }
+        }
+
+        assertThat(fakeFileWriter.receivedContract?.trim()).doesNotContainIgnoringCase("requestBody")
+
+        val requestInTheGeneratedExpectation = (parsedJSONObject(fakeFileWriter.receivedStub!!).jsonObject["http-request"] as JSONObjectValue).jsonObject
+        assertThat(requestInTheGeneratedExpectation).doesNotContainKeys("body")
     }
 }
 

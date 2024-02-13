@@ -5,8 +5,15 @@ import `in`.specmatic.core.utilities.URIUtils
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import java.net.URI
+import kotlin.math.pow
 
 data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
+    fun complexity(): ULong {
+        val keyComplexity = 2.toDouble().pow(queryPatterns.keys.count { isOptional(it) }).toULong()
+        val valueComplexity = queryPatterns.values.fold(1.toULong()) { acc, pattern -> acc * pattern.complexity(Resolver()) }
+
+        return keyComplexity * valueComplexity
+    }
 
     fun generate(resolver: Resolver): List<Pair<String, String>> {
         return attempt(breadCrumb = "QUERY-PARAMS") {

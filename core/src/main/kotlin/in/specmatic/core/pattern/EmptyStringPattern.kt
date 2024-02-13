@@ -36,6 +36,10 @@ object EmptyStringPattern : Pattern {
         return JSONArrayValue(valueList)
     }
 
+    override fun complexity(resolver: Resolver): ULong {
+        return 1.toULong()
+    }
+
     override val typeAlias: String?
         get() = null
 

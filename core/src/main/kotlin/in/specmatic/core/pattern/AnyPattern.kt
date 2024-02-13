@@ -159,7 +159,7 @@ data class AnyPattern(
                 patterns
         }
 
-        return if(negativeTypes.all { it is ScalarType })
+        return if(negativeTypes.all { it is ScalarPattern })
             negativeTypes.distinct()
         else
             negativeTypes
@@ -223,6 +223,10 @@ data class AnyPattern(
 
     override fun toNullable(defaultValue: String?): Pattern {
         return this
+    }
+
+    override fun complexity(resolver: Resolver): ULong {
+        return pattern.fold(1.toULong()) { complexity, pattern -> complexity * pattern.complexity(resolver) }
     }
 }
 

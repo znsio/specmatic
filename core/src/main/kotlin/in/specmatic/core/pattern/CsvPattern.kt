@@ -64,6 +64,10 @@ class CsvPattern(override val pattern: Pattern) : Pattern {
         return JSONArrayValue(valueList)
     }
 
+    override fun complexity(resolver: Resolver): ULong {
+        return pattern.complexity(resolver)
+    }
+
     override fun toString(): String {
         return typeName
     }

@@ -10,7 +10,7 @@ import `in`.specmatic.core.value.Value
 
 const val NULL_TYPE = "(null)"
 
-object NullPattern : Pattern, ScalarType {
+object NullPattern : Pattern, ScalarPattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
             when {
                 sampleData is NullValue -> Result.Success()

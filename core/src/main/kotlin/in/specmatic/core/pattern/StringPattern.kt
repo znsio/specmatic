@@ -14,7 +14,7 @@ data class StringPattern (
     val minLength: Int? = null,
     val maxLength: Int? = null,
     override val example: String? = null
-) : Pattern, ScalarType, HasDefaultExample {
+) : Pattern, ScalarPattern, HasDefaultExample {
     init {
         require(minLength?.let { maxLength?.let { minLength <= maxLength } }
             ?: true) { """maxLength cannot be less than minLength""" }

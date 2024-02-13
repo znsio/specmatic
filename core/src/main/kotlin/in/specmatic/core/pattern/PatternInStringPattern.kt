@@ -54,6 +54,10 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern(
         return pattern.listOf(valueList, resolver)
     }
 
+    override fun complexity(resolver: Resolver): ULong {
+        return pattern.complexity(resolver)
+    }
+
     override fun parseToType(valueString: String, resolver: Resolver): Pattern {
         return PatternInStringPattern(pattern.parse(valueString, resolver).exactMatchElseType())
     }

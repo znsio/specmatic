@@ -18,6 +18,10 @@ data class HttpHeadersPattern(
         }
     }
 
+    fun complexity(): ULong {
+        return if (pattern.any { isOptional(it.key) }) 2.toULong() else 1.toULong()
+    }
+
     fun matches(headers: Map<String, String>, resolver: Resolver): Result {
         val result = headers to resolver to
                 ::matchEach otherwise

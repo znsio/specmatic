@@ -29,7 +29,7 @@ private infix fun Boolean.yet(otherBooleanValue: Boolean): Boolean {
 data class EnumPattern(
     override val pattern: AnyPattern,
     val nullable: Boolean
-) : Pattern by pattern, ScalarType {
+) : Pattern by pattern, ScalarPattern {
     constructor(values: List<Value>,
                 key: String? = null,
                 typeAlias: String? = null,

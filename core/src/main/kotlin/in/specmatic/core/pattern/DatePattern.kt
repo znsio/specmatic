@@ -6,7 +6,7 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 
-object DatePattern : Pattern, ScalarType {
+object DatePattern : Pattern, ScalarPattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result = when (sampleData) {
         is StringValue -> resultOf {
             parse(sampleData.string, resolver)

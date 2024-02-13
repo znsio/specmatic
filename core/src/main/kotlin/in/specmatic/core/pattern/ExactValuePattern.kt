@@ -29,6 +29,10 @@ data class ExactValuePattern(override val pattern: Value, override val typeAlias
         return pattern.listOf(valueList)
     }
 
+    override fun complexity(resolver: Resolver): ULong {
+        return 1.toULong()
+    }
+
     override fun generate(resolver: Resolver) = pattern
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)

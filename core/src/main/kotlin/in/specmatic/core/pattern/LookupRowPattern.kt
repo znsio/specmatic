@@ -55,6 +55,10 @@ data class LookupRowPattern(override val pattern: Pattern, override val key: Str
         return pattern.listOf(valueList, resolver)
     }
 
+    override fun complexity(resolver: Resolver): ULong {
+        return pattern.complexity(resolver)
+    }
+
     override val typeAlias: String? = pattern.typeAlias
 
     override fun patternSet(resolver: Resolver): List<Pattern> = pattern.patternSet(resolver)

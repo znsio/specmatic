@@ -111,6 +111,11 @@ data class JSONObjectPattern(
         return JSONArrayValue(valueList)
     }
 
+    override fun complexity(resolver: Resolver): ULong {
+        val keyComplexity = if(pattern.keys.any { isOptional(it) }) 2 else 1
+        return pattern.values.fold(1.toULong()) { acc, pattern -> acc * pattern.complexity(resolver) } * keyComplexity.toULong()
+    }
+
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         val resolverWithNullType = withNullPattern(resolver)
         if (sampleData !is JSONObjectValue)

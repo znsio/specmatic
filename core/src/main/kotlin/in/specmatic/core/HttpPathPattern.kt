@@ -13,6 +13,10 @@ data class HttpPathPattern(
     val pathSegmentPatterns: List<URLPathSegmentPattern>,
     val path: String
 ) {
+    fun complexity(): ULong {
+        return pathSegmentPatterns.fold(1.toULong()) { acc, pattern -> acc * pattern.complexity(Resolver()) }
+    }
+
     fun encompasses(otherHttpPathPattern: HttpPathPattern, thisResolver: Resolver, otherResolver: Resolver): Result {
         if (this.matches(URI.create(otherHttpPathPattern.path), resolver=thisResolver) is Success)
             return Success()

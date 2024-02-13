@@ -79,6 +79,10 @@ data class Scenario(
         serviceType = scenarioInfo.serviceType
     )
 
+    fun complexity(): ULong {
+        return httpRequestPattern.complexity()
+    }
+
     val apiIdentifier: String
         get() = "$method $path $status"
 

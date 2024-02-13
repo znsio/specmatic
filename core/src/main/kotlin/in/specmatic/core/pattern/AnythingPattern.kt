@@ -47,6 +47,10 @@ object AnythingPattern: Pattern {
         return StringValue()
     }
 
+    override fun complexity(resolver: Resolver): ULong {
+        return 1.toULong()
+    }
+
     override val typeAlias: String? = null
 
     override val typeName: String = "anything"

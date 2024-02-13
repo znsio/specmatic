@@ -1,0 +1,10 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/resource/10"
+  },
+  "http-response": {
+    "status": 200
+  },
+  "name": "Get Resource"
+}

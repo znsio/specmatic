@@ -109,4 +109,13 @@ data class Row(
 
     private fun thisFieldHasAnExample(key: String) =
         this.containsField(withoutOptionality(key))
+
+    fun addFields(params: Map<String, String>): Row {
+        return params.entries.fold(this) { row, (key, value) ->
+            val newColumns = row.columnNames + key
+            val newValues = row.values + value
+
+            row.copy(columnNames = newColumns, values = newValues)
+        }
+    }
 }

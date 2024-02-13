@@ -1281,7 +1281,6 @@ data class Feature(
                     val examples: Map<String, String> =
                         headers
                             .plus(queryParams)
-                            .plus(pathParams)
                             .plus(requestBody?.let { mapOf("(REQUEST-BODY)" to it.toStringLiteral()) } ?: emptyMap())
 
                     val (

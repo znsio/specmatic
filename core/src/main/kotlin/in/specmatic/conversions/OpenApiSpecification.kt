@@ -6,7 +6,7 @@ import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.log.LogStrategy
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
-import `in`.specmatic.core.utilities.readEnvVarOrProperty
+import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.*
 import `in`.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
 import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
@@ -146,7 +146,7 @@ class OpenApiSpecification(
         val (
             scenarioInfos: List<ScenarioInfo>,
             examplesAsExpectations: Map<String, List<Pair<HttpRequest, HttpResponse>>>
-        ) = openApiToScenarioInfos2()
+        ) = openApiToScenarioInfos()
 
         return scenarioInfos.filter { it.httpResponsePattern.status > 0 } to examplesAsExpectations
     }
@@ -154,7 +154,7 @@ class OpenApiSpecification(
     override fun matches(
         specmaticScenarioInfo: ScenarioInfo, steps: List<Step>
     ): List<ScenarioInfo> {
-        val (openApiScenarioInfos, _) = openApiToScenarioInfos2()
+        val (openApiScenarioInfos, _) = openApiToScenarioInfos()
         if (openApiScenarioInfos.isEmpty() || steps.isEmpty()) return listOf(specmaticScenarioInfo)
         val result: MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> =
             specmaticScenarioInfo to openApiScenarioInfos to ::matchesPath then ::matchesMethod then ::matchesStatus then ::updateUrlMatcher otherwise ::handleError
@@ -277,22 +277,32 @@ class OpenApiSpecification(
         })
     }
 
-    private fun openApiToScenarioInfos2(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
+    private fun openApiToScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
         val data: List<Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>>> =
             openApiPaths().map { (openApiPath, pathItem) ->
-                openApiOperations(pathItem).map { (httpMethod, operation) ->
+                openApiOperations(pathItem).map { (httpMethod, openApiOperation) ->
+                    try {
+                        openApiOperation.validateParameters()
+                    } catch (e: ContractException) {
+                        throw ContractException("In $httpMethod $openApiPath: ${e.message}")
+                    }
+
+                    val operation = openApiOperation.operation
+
                     val specmaticPathParam = toSpecmaticPathParam(openApiPath, operation)
                     val specmaticQueryParam = toSpecmaticQueryParam(operation)
 
                     val requestBody: RequestBody? = resolveRequestBody(operation)
 
-                    val httpResponsePatterns: List<ResponseData> = attempt("Error parsing responses for operation $httpMethod $openApiPath") {
+                    val httpResponsePatterns: List<ResponseData> = attempt("In $httpMethod $openApiPath response") {
                         toHttpResponsePatterns(operation.responses)
                     }
-                    val httpRequestPatterns: List<Pair<HttpRequestPattern, Map<String, List<HttpRequest>>>> =
+
+                    val httpRequestPatterns: List<Pair<HttpRequestPattern, Map<String, List<HttpRequest>>>> = attempt("In $httpMethod $openApiPath request") {
                         toHttpRequestPatterns(
                             specmaticPathParam, specmaticQueryParam, httpMethod, operation
                         )
+                    }
 
                     val scenarioInfos =
                         httpResponsePatterns.map { (response, responseMediaType: MediaType, httpResponsePattern, _: Map<String, HttpResponse>) ->
@@ -345,6 +355,20 @@ class OpenApiSpecification(
             }
 
         return scenarioInfos to examples
+    }
+
+    private fun validateParameters(parameters: List<Parameter>?) {
+        parameters.orEmpty().forEach { parameter ->
+            if(parameter.name == null)
+                throw ContractException("A parameter does not have a name.")
+
+            if(parameter.schema == null)
+                throw ContractException("A parameter does not have a schema.")
+
+            if(parameter.schema.type == "array" && parameter.schema.items == null)
+                throw ContractException("A parameter of type \"array\" has not defined \"items\".")
+
+        }
     }
 
     private fun collateExamplesForExpectations(
@@ -474,7 +498,7 @@ class OpenApiSpecification(
             if(!isNumber(status) && status != "default")
                 throw ContractException("Response status codes are expected to be numbers, but \"$status\" was found")
 
-            openAPIResponseToSpecmatic(response, status, headersMap)
+            attempt("in $status response") { openAPIResponseToSpecmatic(response, status, headersMap) }
         }.flatten()
     }
 
@@ -539,7 +563,7 @@ class OpenApiSpecification(
                 status = if (status == "default") 1000 else status.toInt(),
                 body = when (contentType) {
                     "application/xml" -> toXMLPattern(mediaType)
-                    else -> toSpecmaticPattern(mediaType)
+                    else -> toSpecmaticPattern(mediaType, "response")
                 }
             )
 
@@ -667,7 +691,7 @@ class OpenApiSpecification(
 
                     Pair(
                         requestPattern.copy(
-                            body = toSpecmaticPattern(mediaType),
+                            body = toSpecmaticPattern(mediaType, "request"),
                             headersPattern = headersPatternWithContentType(requestPattern, contentType)
                         ), allExamples
                     )
@@ -774,8 +798,8 @@ class OpenApiSpecification(
     ) = if (mediaType.encoding.isNullOrEmpty()) false
     else mediaType.encoding[formFieldName]?.contentType == "application/json"
 
-    private fun toSpecmaticPattern(mediaType: MediaType, jsonInFormData: Boolean = false): Pattern =
-        toSpecmaticPattern(mediaType.schema, emptyList(), jsonInFormData = jsonInFormData)
+    private fun toSpecmaticPattern(mediaType: MediaType, section: String, jsonInFormData: Boolean = false): Pattern =
+        toSpecmaticPattern(mediaType.schema ?: throw ContractException("${section.capitalizeFirstChar()} body definition is missing"), emptyList(), jsonInFormData = jsonInFormData)
 
     private fun resolveDeepAllOfs(schema: Schema<Any>): List<Schema<Any>> {
         if (schema.allOf == null)
@@ -923,24 +947,29 @@ class OpenApiSpecification(
                     toDictionaryPattern(schema, typeStack)
                 } else if (schema.additionalProperties == true) {
                     toFreeFormDictionaryWithStringKeysPattern()
-                } else {
-                    when (schema.`$ref`) {
-                        null -> toJsonObjectPattern(schema, patternName, typeStack)
-                        else -> {
-                            val component: String = schema.`$ref`
+                } else if(schema.properties != null)
+                    toJsonObjectPattern(schema, patternName, typeStack)
+                else if (schema.`$ref` != null) {
+                    val component: String = schema.`$ref`
 
-                            val (componentName, referredSchema) = resolveReferenceToSchema(component)
-                            val cyclicReference = typeStack.contains(componentName)
-                            if (!cyclicReference) {
-                                val componentPattern = toSpecmaticPattern(
-                                    referredSchema,
-                                    typeStack.plus(componentName), componentName
-                                )
-                                cacheComponentPattern(componentName, componentPattern)
-                            }
-                            DeferredPattern("(${componentName})")
-                        }
+                    val (componentName, referredSchema) = resolveReferenceToSchema(component)
+                    val cyclicReference = typeStack.contains(componentName)
+                    if (!cyclicReference) {
+                        val componentPattern = toSpecmaticPattern(
+                            referredSchema,
+                            typeStack.plus(componentName), componentName
+                        )
+                        cacheComponentPattern(componentName, componentPattern)
                     }
+                    DeferredPattern("(${componentName})")
+                }
+                else {
+                    val schemaFragment = if(patternName.isNotBlank()) "schema $patternName" else "in one of the schemas"
+
+                    throw if(schema.javaClass.simpleName != "Schema")
+                        ContractException("\"type\" attribute was not provided in $schemaFragment, please check the syntax of the specification")
+                    else
+                        ContractException("\"type\" attribute was not provided in $schemaFragment, please check the syntax of the specification")
                 }
             }
         }.also {
@@ -1200,7 +1229,7 @@ class OpenApiSpecification(
 
     private fun toSchemaProperties(
         schema: Schema<*>, requiredFields: List<String>, patternName: String, typeStack: List<String>
-    ) = schema.properties.orEmpty().map { (propertyName, propertyType) ->
+    ): Map<String, Pattern> = schema.properties.orEmpty().map { (propertyName, propertyType) ->
         if (schema.discriminator?.propertyName == propertyName)
             propertyName to ExactValuePattern(StringValue(patternName))
         else {
@@ -1257,7 +1286,7 @@ class OpenApiSpecification(
 
     private fun toSpecmaticQueryParam(operation: Operation): HttpQueryParamPattern {
         val parameters = operation.parameters ?: return HttpQueryParamPattern(emptyMap())
-        val queryPattern: Map<String, Pattern> = parameters.filterIsInstance(QueryParameter::class.java).associate {
+        val queryPattern: Map<String, Pattern> = parameters.filterIsInstance<QueryParameter>().associate {
             val specmaticPattern: Pattern = if (it.schema.type == "array") {
                 QueryParameterArrayPattern(listOf(toSpecmaticPattern(schema = it.schema.items, typeStack = emptyList())), it.name)
             } else {
@@ -1306,7 +1335,7 @@ class OpenApiSpecification(
         parameters: List<Parameter>,
         openApiPath: String
     ): String {
-        return parameters.filterIsInstance(PathParameter::class.java).foldRight(openApiPath) { it, specmaticPath ->
+        return parameters.filterIsInstance<PathParameter>().foldRight(openApiPath) { it, specmaticPath ->
             val pattern = if (it.schema.enum != null) StringPattern("") else toSpecmaticPattern(it.schema, emptyList())
             specmaticPath.replace(
                 "{${it.name}}", "(${it.name}:${pattern.typeName})"
@@ -1314,13 +1343,13 @@ class OpenApiSpecification(
         }
     }
 
-    private fun openApiOperations(pathItem: PathItem): Map<String, Operation> {
+    private fun openApiOperations(pathItem: PathItem): Map<String, OpenApiOperation> {
         return linkedMapOf<String, Operation?>(
             "POST" to pathItem.post,
             "GET" to pathItem.get,
             "PATCH" to pathItem.patch,
             "PUT" to pathItem.put,
             "DELETE" to pathItem.delete
-        ).filter { (_, value) -> value != null }.map { (key, value) -> key to value!! }.toMap()
+        ).filter { (_, value) -> value != null }.map { (key, value) -> key to OpenApiOperation(value!!) }.toMap()
     }
 }

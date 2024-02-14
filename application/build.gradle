@@ -97,14 +97,6 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
 }
 
-configurations.configureEach {
-    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-        if (details.requested.group == 'org.springframework.boot' && details.requested.name == 'spring-boot-starter') {
-            details.useVersion '3.2.2' // Specify the newer version you want to use
-        }
-    }
-}
-
 test {
     useJUnitPlatform()
     finalizedBy jacocoTestReport

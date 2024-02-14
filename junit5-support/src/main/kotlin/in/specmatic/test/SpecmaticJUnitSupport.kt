@@ -388,10 +388,18 @@ open class SpecmaticJUnitSupport {
                 securityConfiguration
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
-        val complexity = feature.complexity()
+        if(Flags.generativeTestingEnabled()) {
+            val complexity = feature.complexity()
 
-        logger.log("Complexity score for $path: $complexity")
-        logger.newLine()
+            logger.log("Complexity score for $path: $complexity")
+
+            if(complexity > 1000.toULong()) {
+                val limit = 5
+
+                logger.log("Complexity of $path is high, limiting the tests using MAX_TEST_REQUEST_COMBINATIONS=$limit, please adjust as needed.")
+                System.setProperty(Flags.MAX_TEST_REQUEST_COMBINATIONS, "5")
+            }
+        }
 
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)

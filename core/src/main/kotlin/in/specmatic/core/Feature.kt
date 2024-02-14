@@ -86,7 +86,7 @@ data class Feature(
 ) {
     fun complexity(): ULong {
         return scenarios.fold(1.toULong()) { acc, scenario ->
-            acc * scenario.complexity()
+            acc + scenario.complexity()
         }
     }
 

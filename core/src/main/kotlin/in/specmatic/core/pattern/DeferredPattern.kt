@@ -52,7 +52,11 @@ data class DeferredPattern(override val pattern: String, val key: String? = null
     }
 
     override fun complexity(resolver: Resolver): ULong {
-        return resolver.getPattern(pattern).complexity(resolver)
+        val resolvedPattern = resolver.getPattern(pattern)
+
+        return resolver.withCyclePrevention(resolvedPattern) { cyclePreventedResolver ->
+            resolvedPattern.complexity(cyclePreventedResolver)
+        }
     }
 
     override val typeAlias: String = pattern

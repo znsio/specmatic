@@ -62,7 +62,6 @@ dependencies {
     implementation(project(':core'))
     implementation(project(':junit5-support'))
 
-// https://mvnrepository.com/artifact/org.fusesource.jansi/jansi
     implementation 'org.fusesource.jansi:jansi:2.4.1'
 
     implementation "io.ktor:ktor-client-cio:$ktor_version"
@@ -84,6 +83,14 @@ dependencies {
     testImplementation 'com.ginsberg:junit5-system-exit:1.1.2'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
+}
+
+configurations.configureEach {
+    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+        if (details.requested.group == 'org.springframework.boot' && details.requested.name == 'spring-boot-starter') {
+            details.useVersion '3.2.2' // Specify the newer version you want to use
+        }
+    }
 }
 
 test {

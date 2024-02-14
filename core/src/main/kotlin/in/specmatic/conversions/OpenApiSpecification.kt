@@ -967,7 +967,7 @@ class OpenApiSpecification(
                     val schemaFragment = if(patternName.isNotBlank()) "schema $patternName" else "in one of the schemas"
 
                     throw if(schema.javaClass.simpleName != "Schema")
-                        ContractException("\"type\" attribute was not provided in $schemaFragment, please check the syntax of the specification")
+                        ContractException("${schemaFragment.capitalizeFirstChar()} is not yet supported, please raise an issue on https://github.com/znsio/specmatic/issues")
                     else
                         ContractException("\"type\" attribute was not provided in $schemaFragment, please check the syntax of the specification")
                 }

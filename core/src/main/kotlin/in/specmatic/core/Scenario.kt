@@ -478,19 +478,28 @@ data class Scenario(
     }
 
     fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Scenario {
-        val operationIdentifier = OpenApiSpecification.OperationIdentifier(method, path, status)
+        val matchingTestData: Map<OpenApiSpecification.OperationIdentifier, List<Row>> = matchingRows(externalisedJSONExamples)
 
-        val newExamples: List<Examples> = externalisedJSONExamples[operationIdentifier]?.let { rows ->
+        val newExamples: List<Examples> = matchingTestData.map { (operationId, rows) ->
             if(rows.isEmpty())
-                return@let emptyList()
+                return@map emptyList()
 
-            val columns = rows.first().columnNames
+            val rowsWithPathData: List<Row> = rows.map { row -> httpRequestPattern.addPathParamsToRows(operationId.requestPath, row, resolver) }
 
-            listOf(Examples(columns, rows))
-        } ?: emptyList()
+            val columns = rowsWithPathData.first().columnNames
+
+            listOf(Examples(columns, rowsWithPathData))
+        }.flatten()
 
         return this.copy(examples = newExamples)
     }
+
+    private fun matchingRows(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>) =
+        externalisedJSONExamples.filter { (operationId, rows) ->
+            operationId.requestMethod.equals(method, ignoreCase = true)
+                    && operationId.responseStatus == status
+                    && httpRequestPattern.matchesPath(operationId.requestPath, resolver).isSuccess()
+        }
 }
 
 fun newExpectedServerStateBasedOn(

@@ -251,6 +251,17 @@ data class HttpPathPattern(
 
         else -> (urlPathPattern.newBasedOn(row, resolver) + urlPathPattern.negativeBasedOn(row, resolver)).distinct()
     }
+
+    fun extractPathParams(requestPath: String, resolver: Resolver): Map<String, String> {
+        val pathSegments = requestPath.split("/").filter { it.isNotEmpty() }
+
+        return pathSegmentPatterns.zip(pathSegments).mapNotNull { (pattern, value) ->
+            when {
+                pattern.pattern is ExactValuePattern -> null
+                else -> pattern.key!! to value
+            }
+        }.toMap()
+    }
 }
 
 internal fun buildHttpPathPattern(

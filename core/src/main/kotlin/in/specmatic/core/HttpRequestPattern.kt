@@ -198,13 +198,18 @@ data class HttpRequestPattern(
     private fun matchPath(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
         val (httpRequest, resolver) = parameters
 
-        val result = httpPathPattern!!.matches(httpRequest.path!!, resolver)
+        val result = matchesPath(httpRequest.path!!, resolver)
 
         return if (result is Failure)
             MatchFailure(result)
         else
             MatchSuccess(parameters)
     }
+
+    fun matchesPath(
+        path: String,
+        resolver: Resolver
+    ) = httpPathPattern!!.matches(path, resolver)
 
     private fun matchQuery(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
@@ -640,6 +645,14 @@ data class HttpRequestPattern(
             }
         }
     }
+
+    fun addPathParamsToRows(requestPath: String, row: Row, resolver: Resolver): Row {
+        return httpPathPattern?.let { httpPathPattern ->
+            val pathParams = httpPathPattern.extractPathParams(requestPath, resolver)
+            return row.addFields(pathParams)
+        } ?: row
+    }
+
 }
 
 fun missingParam(missingValue: String): ContractException {

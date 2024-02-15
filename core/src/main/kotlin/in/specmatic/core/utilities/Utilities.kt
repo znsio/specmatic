@@ -173,6 +173,12 @@ fun loadSources(specmaticConfigJson: SpecmaticConfigJson): List<ContractSource> 
 
                 LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
             }
+            SourceProvider.web -> {
+                val stubPaths = source.stub ?: emptyList()
+                val testPaths = source.test ?: emptyList()
+
+                WebSource(testPaths, stubPaths)
+            }
         }
     }
 }
@@ -208,6 +214,11 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
                 val testPaths = jsonArray(source, "test")
 
                 LocalFileSystemSource(directory, testPaths, stubPaths)
+            }
+            "web" -> {
+                val stubPaths = jsonArray(source, "stub")
+                val testPaths = jsonArray(source, "test")
+                WebSource(testPaths, stubPaths)
             }
             else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $globalConfigFileName")
         }

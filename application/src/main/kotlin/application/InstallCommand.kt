@@ -16,7 +16,7 @@ class InstallCommand: Callable<Unit> {
     var targetDirectory: String = System.getProperty("user.home")
     override fun call() {
         val userHome = File(targetDirectory)
-        val workingDirectory = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
+        val workingDirectory = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE")
 
         val sources = try { loadSources(globalConfigFileName) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
 

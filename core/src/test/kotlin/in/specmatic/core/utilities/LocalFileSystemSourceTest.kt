@@ -2,9 +2,7 @@ package `in`.specmatic.core.utilities
 
 import `in`.specmatic.core.DEFAULT_WORKING_DIRECTORY
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
-import java.io.File
 
 class LocalFileSystemSourceTest {
     @Test
@@ -14,11 +12,9 @@ class LocalFileSystemSourceTest {
 
         assertThat(specSourceData).hasSize(1)
 
-        assertThat(specSourceData).allSatisfy(
-            {
-                assertThat(it.path).isEqualTo("dir/spec.yaml")
-            }
-        )
+        assertThat(specSourceData).allSatisfy {
+            assertThat(it.path).isEqualTo("dir/spec.yaml")
+        }
     }
 
 }

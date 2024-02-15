@@ -14,6 +14,7 @@ class WebSource(override val testContracts: List<String>, override val stubContr
     }
 
     override fun install(workingDirectory: File) {
+        logger.log("Install is not currently supported for web sources")
     }
 
     override fun directoryRelativeTo(workingDirectory: File): File {
@@ -36,22 +37,26 @@ class WebSource(override val testContracts: List<String>, override val stubContr
         configFilePath: String
     ): List<ContractPathData> {
         val resolvedPath = File(workingDirectory).resolve("web")
-        return selector.select(this).map {
-            val url = URL(it)
-            val path = url.path.removePrefix("/")
+        return selector.select(this).map { url ->
+            val path = toSpecificationPath(URL(url))
 
-            val contractPath = resolvedPath.resolve(path).canonicalFile
-            contractPath.parentFile.mkdirs()
+            val initialDownloadPath = resolvedPath.resolve(path).canonicalFile
+            initialDownloadPath.parentFile.mkdirs()
 
-            download(url, contractPath)
+            val actualDownloadPath = download(URL(url), initialDownloadPath)
 
             ContractPathData(
                 resolvedPath.path,
-                contractPath.path,
+                actualDownloadPath.path,
                 provider = type,
-                specificationPath = contractPath.canonicalPath
+                specificationPath = initialDownloadPath.canonicalPath
             )
         }
+    }
+
+    private fun toSpecificationPath(url: URL): String {
+        val path = url.host + "/" + url.path.removePrefix("/")
+        return path
     }
 
     private fun download(url: URL, specificationFile: File): File {

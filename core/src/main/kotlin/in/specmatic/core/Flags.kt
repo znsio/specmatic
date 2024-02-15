@@ -32,6 +32,10 @@ object Flags {
         return flagValue(MAX_TEST_REQUEST_COMBINATIONS)?.toInt() ?: Int.MAX_VALUE
     }
 
+    fun maxTestRequestCombinationsIsSet(): Boolean {
+        return MAX_TEST_REQUEST_COMBINATIONS in System.getProperties().keys
+    }
+
     fun onlyPositive(): Boolean {
         return booleanFlag(ONLY_POSITIVE)
     }

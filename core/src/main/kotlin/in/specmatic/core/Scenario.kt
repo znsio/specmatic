@@ -80,8 +80,15 @@ data class Scenario(
     )
 
     fun complexity(): ULong {
-        return httpRequestPattern.complexity(resolver)
+        val rowCount= examples.sumOf { it.rows.size }
+
+        if(testsWillBeGenerated(rowCount))
+            return httpRequestPattern.complexity(resolver)
+
+        return rowCount.toULong()
     }
+
+    private fun testsWillBeGenerated(rowCount: Int) = Flags.maxTestRequestCombinationsIsSet() || rowCount == 0
 
     val apiIdentifier: String
         get() = "$method $path $status"

@@ -85,9 +85,7 @@ data class Feature(
     val resolverStrategies: ResolverStrategies = strategiesFromFlags()
 ) {
     fun complexity(): ULong {
-        return scenarios.fold(1.toULong()) { acc, scenario ->
-            acc + scenario.complexity()
-        }
+        return scenarios.sumOf { scenario -> scenario.complexity() }
     }
 
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {

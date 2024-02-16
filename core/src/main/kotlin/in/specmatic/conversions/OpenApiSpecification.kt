@@ -625,6 +625,8 @@ class OpenApiSpecification(
                 Pair(requestPattern.copy(body = NoBodyPattern), exampleRequestBuilder.examplesBasedOnParameters)
             )
 
+        val bodyIsRequired: Boolean = requestBody.required ?: false
+
         return requestBody.content.map { (contentType, mediaType) ->
             when (contentType.lowercase()) {
                 "multipart/form-data" -> {
@@ -688,10 +690,16 @@ class OpenApiSpecification(
 
                     val allExamples = exampleRequestBuilder.examplesWithRequestBodies(exampleBodies)
 
+                    val body = toSpecmaticPattern(mediaType, "request").let {
+                        if(bodyIsRequired)
+                            it
+                        else
+                            AnyPattern(listOf(it, NoBodyPattern))
+                    }
 
                     Pair(
                         requestPattern.copy(
-                            body = toSpecmaticPattern(mediaType, "request"),
+                            body = body,
                             headersPattern = headersPatternWithContentType(requestPattern, contentType)
                         ), allExamples
                     )

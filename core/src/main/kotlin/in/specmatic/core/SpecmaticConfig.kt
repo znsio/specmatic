@@ -65,7 +65,7 @@ data class Environment(
     val variables: Map<String, String>? = null
 )
 
-enum class SourceProvider { git, filesystem }
+enum class SourceProvider { git, filesystem, web }
 
 @Serializable
 data class Source(

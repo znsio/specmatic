@@ -9,13 +9,15 @@ import `in`.specmatic.core.git.clone
 import `in`.specmatic.core.log.logger
 import java.io.File
 
+interface GitSource
+
 data class GitRepo(
     val gitRepositoryURL: String,
     val branchName: String?,
     override val testContracts: List<String>,
     override val stubContracts: List<String>,
     override val type: String?
-) : ContractSource {
+) : ContractSource, GitSource {
     private val repoName = gitRepositoryURL.split("/").last().removeSuffix(".git")
     override fun pathDescriptor(path: String): String {
         return "${repoName}:${path}"
@@ -136,7 +138,8 @@ data class GitRepo(
     private fun localRepoDir(workingDirectory: String): File = File(workingDirectory).resolve("repos")
 
     override fun install(workingDirectory: File) {
-        val sourceDir = workingDirectory.resolve(repoName)
+        val baseReposDirectory = workingDirectory.resolve("repos")
+        val sourceDir = baseReposDirectory.resolve(repoName)
         val sourceGit = SystemGit(sourceDir.path)
 
         try {

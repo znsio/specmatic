@@ -1293,7 +1293,12 @@ class OpenApiSpecification(
                 QueryParameterScalarPattern(toSpecmaticPattern(schema = it.schema, typeStack = emptyList(), patternName = it.name))
             }
 
-            "${it.name}?" to specmaticPattern
+            val queryParamKey = if(it.required == true)
+                it.name
+            else
+                "${it.name}?"
+
+            queryParamKey to specmaticPattern
         }
         return HttpQueryParamPattern(queryPattern)
     }

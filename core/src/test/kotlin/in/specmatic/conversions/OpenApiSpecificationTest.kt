@@ -7400,6 +7400,58 @@ paths:
         )
     }
 
+    @Test
+    fun `backward compatibility should fail when a new mandatory query parameter is added`() {
+        val oldSpec = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /data:
+    get:
+      responses:
+        204:
+          description: No content
+            """.trimIndent(), ""
+        ).toFeature()
+
+
+        val newSpec = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /data:
+    get:
+      parameters:
+      - in: query
+        name: id
+        schema:
+          type: integer
+        required: true
+      responses:
+        204:
+          description: No content
+            """.trimIndent(), ""
+        ).toFeature()
+
+        val result = testBackwardCompatibility(oldSpec, newSpec)
+
+        assertThat(result.success()).isFalse()
+
+        assertThat(result.report()).contains("expects query param named \"id\"")
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

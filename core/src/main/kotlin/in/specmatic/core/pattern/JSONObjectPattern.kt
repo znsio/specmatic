@@ -112,13 +112,7 @@ data class JSONObjectPattern(
     }
 
     override fun complexity(resolver: Resolver): ULong {
-        val optional = pattern.filter { isOptional(it.key) }
-        val mandatory = pattern.filter { !isOptional(it.key) }
-
-        val optionalComplexity = optional.values.fold(1.toULong()) { acc, pattern -> acc * pattern.complexity(resolver) }
-        val mandatoryComplexity = mandatory.values.fold(1.toULong()) { acc, pattern -> acc * pattern.complexity(resolver) }
-
-        return (2.toULong() * mandatoryComplexity) + optionalComplexity
+        return allOrNothingComplexity(pattern, resolver)
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {

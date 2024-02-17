@@ -18,8 +18,27 @@ data class HttpHeadersPattern(
         }
     }
 
-    fun complexity(): ULong {
-        return if (pattern.any { isOptional(it.key) }) 2.toULong() else 1.toULong()
+    fun complexity(resolver: Resolver): ULong {
+        if(pattern.isEmpty())
+            return 1.toULong()
+
+        allOrNothingComplexity(pattern, resolver)
+
+        val mandatory = pattern.filter { !isOptional(it.key) }
+        val optional = pattern.filter { isOptional(it.key) }
+
+        if (optional.isEmpty())
+            return mandatory.values.fold(1.toULong()) { acc, pattern -> acc * pattern.complexity(Resolver()) }
+
+        val optionalCombinations = combinatorialCombinations(optional)
+
+        return optionalCombinations.fold(0.toULong()) { complexity, combination ->
+            complexity + (mandatory + optional.mapKeys { it.key in combination }).values.fold(1.toULong()) { acc, pattern ->
+                acc * pattern.complexity(
+                    Resolver()
+                )
+            }
+        }
     }
 
     fun matches(headers: Map<String, String>, resolver: Resolver): Result {

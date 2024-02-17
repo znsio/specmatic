@@ -28,7 +28,7 @@ data class HttpRequestPattern(
     val securitySchemes: List<OpenAPISecurityScheme> = listOf(NoSecurityScheme())
 ) {
     fun complexity(resolver: Resolver): ULong {
-        return headersPattern.complexity() * httpPathPattern!!.complexity() * httpQueryParamPattern.complexity() * body.complexity(resolver)
+        return headersPattern.complexity(resolver) * httpPathPattern!!.complexity() * httpQueryParamPattern.complexity() * body.complexity(resolver)
     }
 
     fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver, headersResolver: Resolver? = null, requestBodyReqex: Regex? = null): Result {

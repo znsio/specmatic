@@ -77,7 +77,7 @@ dependencies {
     implementation "io.ktor:ktor-client-cio:$ktor_version"
     implementation 'io.swagger.parser.v3:swagger-parser:2.1.20'
 
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.2"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.3"
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 

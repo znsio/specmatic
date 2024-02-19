@@ -1286,16 +1286,20 @@ class OpenApiSpecification(
 
     private fun toSpecmaticQueryParam(operation: Operation): HttpQueryParamPattern {
         val parameters = operation.parameters ?: return HttpQueryParamPattern(emptyMap())
+
         val queryPattern: Map<String, Pattern> = parameters.filterIsInstance<QueryParameter>().associate {
-            val specmaticPattern: Pattern = if (it.schema.type == "array") {
+            val specmaticPattern: Pattern? = if (it.schema.type == "array") {
                 QueryParameterArrayPattern(listOf(toSpecmaticPattern(schema = it.schema.items, typeStack = emptyList())), it.name)
-            } else {
+            } else if (it.schema.type != "object") {
                 QueryParameterScalarPattern(toSpecmaticPattern(schema = it.schema, typeStack = emptyList(), patternName = it.name))
-            }
+            } else null
 
             "${it.name}?" to specmaticPattern
-        }
-        return HttpQueryParamPattern(queryPattern)
+        }.filterValues { it != null }.mapValues { it.value!! }
+
+        val additionalProperties = parameters.filterIsInstance<QueryParameter>().find { it.schema.type == "object" && it.schema.additionalProperties != null }
+
+        return HttpQueryParamPattern(queryPattern, additionalProperties?.schema?.let { toSpecmaticPattern(it, emptyList()) })
     }
 
     private fun toSpecmaticPathParam(openApiPath: String, operation: Operation): HttpPathPattern {

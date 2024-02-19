@@ -467,6 +467,7 @@ class PostmanKtTests {
     When GET /stuff
     Then status 200
     And response-header Connection (string)
+    And response-header Content-Type text/plain
     And response-body (number)
   
   Scenario: With JSON body
@@ -476,6 +477,7 @@ class PostmanKtTests {
     And request-body (RequestBody)
     Then status 200
     And response-header Connection (string)
+    And response-header Content-Type text/plain
     And response-body (number)
   
     Examples:
@@ -486,6 +488,7 @@ class PostmanKtTests {
     When GET /stuff?one=(number)
     Then status 200
     And response-header Connection (string)
+    And response-header Content-Type text/plain
     And response-body (number)
   
     Examples:
@@ -497,6 +500,7 @@ class PostmanKtTests {
     And request-body (RequestBody: number)
     Then status 200
     And response-header Connection (number)
+    And response-header Content-Type text/plain
     And response-body (number)
   
     Examples:
@@ -508,6 +512,7 @@ class PostmanKtTests {
     And form-field field1 (number)
     Then status 200
     And response-header Connection (string)
+    And response-header Content-Type text/plain
     And response-body (number)
   
     Examples:
@@ -519,6 +524,7 @@ class PostmanKtTests {
     And request-part part1 (number)
     Then status 200
     And response-header Connection (string)
+    And response-header Content-Type text/plain
     And response-body (number)
   
     Examples:
@@ -527,7 +533,7 @@ class PostmanKtTests {
 
         assertThat(gherkinString.trim()).isEqualTo(expectedGherkinString.trim())
 
-        validate(gherkinString, stubs)
+        validate(gherkinString, stubs, mapOf("Content-Type" to "text/plain"))
     }
 
     @Test
@@ -614,9 +620,9 @@ class PostmanKtTests {
         assertThat(response.headers.getOrDefault("X-Header", "does not exist")).isEqualTo("right value")
     }
 
-    private fun validate(gherkinString: String, stubs: List<NamedStub>) {
+    private fun validate(gherkinString: String, stubs: List<NamedStub>, additionalHeaders: Map<String, String> = emptyMap()) {
         val behaviour = parseGherkinStringToFeature(gherkinString)
-        val cleanedUpStubs = stubs.map { it.stub }.map { it.copy(response = dropContentAndCORSResponseHeaders(it.response) ) }
+        val cleanedUpStubs = stubs.map { it.stub }.map { it.copy(response = dropContentAndCORSResponseHeaders(it.response).let { it.copy(headers = it.headers + additionalHeaders)} ) }
         for(stub in cleanedUpStubs) {
             behaviour.matchingStub(stub)
         }

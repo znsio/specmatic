@@ -225,5 +225,5 @@ fun toGherkinClauses(
 
 fun dropContentAndCORSResponseHeaders(response: HttpResponse) =
     response.copy(headers = response.headers.filterNot {
-        it.key in responseHeadersToExcludeFromConversion || it.key.lowercase() in listOf("content-type", "content-encoding") || it.key.startsWith("Access-Control-")
+        it.key in responseHeadersToExcludeFromConversion || it.key.lowercase() in listOf("content-type", "content-encoding", "content-length", "content-disposition") || it.key.startsWith("Access-Control-")
     })

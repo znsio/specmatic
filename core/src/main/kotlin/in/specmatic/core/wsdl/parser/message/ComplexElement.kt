@@ -13,17 +13,17 @@ import `in`.specmatic.core.wsdl.payload.ComplexTypedSOAPPayload
 import `in`.specmatic.core.wsdl.payload.SOAPPayload
 
 data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, val wsdl: WSDL, val namespaceQualification: NamespaceQualification? = null): WSDLElement {
-    override fun deriveSpecmaticTypes(qontractTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
-        if(qontractTypeName in typeStack)
+    override fun deriveSpecmaticTypes(specmaticTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
+        if(specmaticTypeName in typeStack)
             return WSDLTypeInfo(types = existingTypes)
 
         val childTypeInfo = try {
             val complexType = wsdl.getComplexTypeNode(element)
 
             complexType.generateChildren(
-                qontractTypeName,
+                specmaticTypeName,
                 existingTypes,
-                typeStack.plus(qontractTypeName)
+                typeStack.plus(specmaticTypeName)
             )
         } catch(e: ContractException) {
             logger.debug(e, "Error getting types for WSDL type \"$wsdlTypeReference\", ${element.oneLineDescription}")
@@ -32,13 +32,13 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
 
         val qualification = namespaceQualification ?: wsdl.getQualification(element, wsdlTypeReference)
 
-        val inPlaceNode = toXMLNode("<${qualification.nodeName} $TYPE_ATTRIBUTE_NAME=\"$qontractTypeName\"/>").let {
+        val inPlaceNode = toXMLNode("<${qualification.nodeName} $TYPE_ATTRIBUTE_NAME=\"$specmaticTypeName\"/>").let {
             it.copy(attributes = it.attributes.plus(deriveSpecmaticAttributes(element)))
         }
 
         val types = existingTypes
                         .plus(childTypeInfo.types)
-                        .plus(qontractTypeName to XMLPattern(childTypeInfo.nodeTypeInfo))
+                        .plus(specmaticTypeName to XMLPattern(childTypeInfo.nodeTypeInfo))
 
         val namespaces = childTypeInfo.namespacePrefixes.plus(qualification.namespacePrefix)
 
@@ -49,46 +49,70 @@ data class ComplexElement(val wsdlTypeReference: String, val element: XMLNode, v
         )
     }
 
-    internal fun generateChildren(parentTypeName: String, complexType: XMLNode, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
-        return eliminateAnnotations(complexType.childNodes.filterIsInstance<XMLNode>()).map {
+    internal fun generateChildren(
+        parentTypeName: String,
+        complexType: XMLNode,
+        existingTypes: Map<String, XMLPattern>,
+        typeStack: Set<String>
+    ): WSDLTypeInfo {
+        return eliminateAnnotationsAndAttributes(complexType.childNodes.filterIsInstance<XMLNode>()).map {
             complexTypeChildNode(it, wsdl, parentTypeName)
         }.fold(WSDLTypeInfo()) { wsdlTypeInfo, child ->
             child.process(wsdlTypeInfo, existingTypes, typeStack)
         }
     }
 
-    private fun eliminateAnnotations(childNodes: List<XMLNode>) =
-        childNodes.filterNot { it.name == "annotation" }
+    private fun eliminateAnnotationsAndAttributes(childNodes: List<XMLNode>) =
+        childNodes.filterNot { it.name == "annotation" || it.name == "attribute" }
 
     override fun getSOAPPayload(
         soapMessageType: SOAPMessageType,
         nodeNameForSOAPBody: String,
-        qontractTypeName: String,
+        specmaticTypeName: String,
         namespaces: Map<String, String>,
         typeInfo: WSDLTypeInfo
-    ): SOAPPayload =
-        ComplexTypedSOAPPayload(soapMessageType, nodeNameForSOAPBody, qontractTypeName, namespaces)
-}
+    ): SOAPPayload {
+        val complexType = wsdl.getComplexTypeNode(element)
 
-data class ComplexType(val complexType: XMLNode, val wsdl: WSDL) {
-    fun generateChildren(parentTypeName: String, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>): WSDLTypeInfo {
-        return generateChildren(parentTypeName, complexType, existingTypes, typeStack, wsdl)
+        return ComplexTypedSOAPPayload(soapMessageType, nodeNameForSOAPBody, specmaticTypeName, namespaces, complexType.getAttributes())
     }
 }
 
-internal fun generateChildren(parentTypeName: String, complexType: XMLNode, existingTypes: Map<String, XMLPattern>, typeStack: Set<String>, wsdl: WSDL): WSDLTypeInfo {
-    return eliminateAnnotations(complexType.childNodes.filterIsInstance<XMLNode>()).map {
+data class ComplexType(val complexType: XMLNode, val wsdl: WSDL) {
+    fun generateChildren(
+        parentTypeName: String,
+        existingTypes: Map<String, XMLPattern>,
+        typeStack: Set<String>
+    ): WSDLTypeInfo {
+        return generateChildren(parentTypeName, complexType, existingTypes, typeStack, wsdl)
+    }
+
+    fun getAttributes(): List<AttributeElement> {
+        return complexType.childNodes.filterIsInstance<XMLNode>().filter {
+            it.name == "attribute"
+        }.map { AttributeElement(it) }
+    }
+}
+
+internal fun generateChildren(
+    parentTypeName: String,
+    complexType: XMLNode,
+    existingTypes: Map<String, XMLPattern>,
+    typeStack: Set<String>,
+    wsdl: WSDL
+): WSDLTypeInfo {
+    return eliminateAnnotationsAndAttributes(complexType.childNodes.filterIsInstance<XMLNode>()).map {
         complexTypeChildNode(it, wsdl, parentTypeName)
     }.fold(WSDLTypeInfo()) { wsdlTypeInfo, child ->
         child.process(wsdlTypeInfo, existingTypes, typeStack)
     }
 }
 
-private fun eliminateAnnotations(childNodes: List<XMLNode>) =
-    childNodes.filterNot { it.name == "annotation" }
+private fun eliminateAnnotationsAndAttributes(childNodes: List<XMLNode>) =
+    childNodes.filterNot { it.name == "annotation" || it.name == "attribute" }
 
 fun complexTypeChildNode(child: XMLNode, wsdl: WSDL, parentTypeName: String): ComplexTypeChild {
-    return when(child.name) {
+    return when (child.name) {
         "element" -> ElementInComplexType(child, wsdl, parentTypeName)
         "sequence", "all" -> CollectionOfChildrenInComplexType(child, wsdl, parentTypeName)
         "complexContent" -> ComplexTypeExtension(child, wsdl, parentTypeName)

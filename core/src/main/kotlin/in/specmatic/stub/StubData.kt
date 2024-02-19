@@ -5,9 +5,6 @@ import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.jsonStringToValueMap
-import `in`.specmatic.core.value.KafkaMessage
-
-interface StubData
 
 data class HttpStubData(
     val requestType: HttpRequestPattern,
@@ -15,8 +12,15 @@ data class HttpStubData(
     val resolver: Resolver,
     val delayInSeconds: Int? = null,
     val responsePattern: HttpResponsePattern,
-    val contractPath: String = ""
-) : StubData {
+    val contractPath: String = "",
+    val stubToken: String? = null,
+    val requestBodyRegex: Regex? = null,
+    val feature:Feature? = null,
+    val scenario: Scenario? = null
+) {
+    val matchFailure: Boolean
+        get() = response.headers[SPECMATIC_RESULT_HEADER] == "failure"
+
     fun softCastResponseToXML(httpRequest: HttpRequest): HttpStubData = when {
         response.externalisedResponseCommand.isNotEmpty() -> invokeExternalCommand(httpRequest).copy(contractPath = contractPath)
         else -> this.copy(response = response.copy(body = softCastValueToXML(response.body)))
@@ -25,7 +29,7 @@ data class HttpStubData(
     private fun invokeExternalCommand(httpRequest: HttpRequest): HttpStubData {
         val result = executeExternalCommand(
             response.externalisedResponseCommand,
-            """SPECMATIC_REQUEST='${httpRequest.toJSON().toUnformattedStringLiteral()}'"""
+            mapOf("SPECMATIC_REQUEST" to """'${httpRequest.toJSON().toUnformattedStringLiteral()}'"""),
         )
         val responseMap = jsonStringToValueMap(result)
         val externalCommandResponse = HttpResponse.fromJSON(responseMap)
@@ -44,11 +48,9 @@ data class HttpStubData(
     }
 }
 
-fun executeExternalCommand(command: String, envParam: String): String {
-    logger.debug("Executing: $command with EnvParam: $envParam")
-    return ExternalCommand(command.split(" ").toTypedArray(), ".", arrayOf(envParam)).executeAsSeparateProcess()
+fun executeExternalCommand(command: String, envParams: Map<String, String>): String {
+    logger.debug("Executing: $command with EnvParams: $envParams")
+    return ExternalCommand(command, ".", envParams).executeAsSeparateProcess()
 }
 
-data class KafkaStubData(val kafkaMessage: KafkaMessage) : StubData
-
-data class StubDataItems(val http: List<HttpStubData> = emptyList(), val kafka: List<KafkaStubData> = emptyList())
+data class StubDataItems(val http: List<HttpStubData> = emptyList())

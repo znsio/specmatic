@@ -3,14 +3,13 @@
 package application
 
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.stereotype.Component
-import picocli.CommandLine
-import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.YAML
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.stub.customImplicitStubBase
-import `in`.specmatic.stub.implicitContractDataDir
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
+import picocli.CommandLine
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.Callable
@@ -24,8 +23,8 @@ interface Bundle {
     val bundlePath: String
 }
 
-class StubBundle(private val _bundlePath: String?, private val config: SpecmaticConfig, private val fileOperations: FileOperations) : Bundle {
-    override val bundlePath = _bundlePath ?: "./bundle.zip"
+class StubBundle(bundlePath: String?, private val config: SpecmaticConfig, private val fileOperations: FileOperations) : Bundle {
+    override val bundlePath = bundlePath ?: "./bundle.zip"
 
     override fun contractPathData(): List<ContractPathData> {
         return config.contractStubPathData()
@@ -35,10 +34,10 @@ class StubBundle(private val _bundlePath: String?, private val config: Specmatic
         val customImplicitStubBaseEntries: List<ZipperEntry> = customImplicitStubBase()?.let { zipperEntriesFromCustomImplicitBase(pathData, it) } ?: emptyList()
         val defaultBaseEntries = zipperEntriesFromDefaultBase(pathData)
 
-        return dedup(defaultBaseEntries.plus(customImplicitStubBaseEntries))
+        return deDup(defaultBaseEntries.plus(customImplicitStubBaseEntries))
     }
 
-    private fun dedup(entries: List<ZipperEntry>): List<ZipperEntry> {
+    private fun deDup(entries: List<ZipperEntry>): List<ZipperEntry> {
         val hashMap = entries.fold(HashMap<String, ZipperEntry>()) { hashMap, entry ->
             hashMap[entry.path] = entry
             hashMap
@@ -84,8 +83,8 @@ class StubBundle(private val _bundlePath: String?, private val config: Specmatic
     override fun configEntry(): List<ZipperEntry> = emptyList()
 }
 
-class TestBundle(private val _bundlePath: String?, private val config: SpecmaticConfig, private val fileOperations: FileOperations) : Bundle {
-    override val bundlePath: String = _bundlePath ?: "./test-bundle.zip"
+class TestBundle(bundlePath: String?, private val config: SpecmaticConfig, private val fileOperations: FileOperations) : Bundle {
+    override val bundlePath: String = bundlePath ?: "./test-bundle.zip"
 
     override fun contractPathData(): List<ContractPathData> {
         return config.contractTestPathData()
@@ -162,7 +161,7 @@ private fun createBundle(
     zipper.compress(bundleOutputPath ?: bundle.bundlePath, zipperEntries)
 }
 
-private fun yamlFileName(path: String): String = path.removeSuffix(".spec") + ".yaml"
+private fun yamlFileName(path: String): String = path.removeSuffix(".spec") + ".${YAML}"
 
 private fun yamlExists(pathData: String): Boolean =
         File(yamlFileName(pathData)).exists()
@@ -204,10 +203,6 @@ fun stubFilesIn(stubDataDir: String, fileOperations: FileOperations): List<Strin
                 else -> emptyList()
             }
         }
-
-fun stubDataDir(path: File): String {
-    return implicitContractDataDir(path.path).path
-}
 
 fun stubDataDirRelative(path: File): String {
     return "${path.parent}/${path.nameWithoutExtension}_data"

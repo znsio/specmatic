@@ -2,7 +2,6 @@ package `in`.specmatic.core.value
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import `in`.specmatic.core.pattern.parsedValue
 
 internal class JSONArrayValueTest {
     @Test

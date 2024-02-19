@@ -2,6 +2,7 @@
 
 package application
 
+import `in`.specmatic.core.YAML
 import `in`.specmatic.core.log.HeadingLog
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
@@ -44,7 +45,7 @@ class ToOpenAPICommand : Callable<Unit> {
             val openAPIYaml = Yaml.pretty(openAPI)
             val contractFile = File(contractPath)
             val openAPIFile: File =
-                contractFile.canonicalFile.parentFile.resolve(contractFile.nameWithoutExtension + ".yaml")
+                contractFile.canonicalFile.parentFile.resolve("${contractFile.nameWithoutExtension}.$YAML")
             openAPIFile.writeText(openAPIYaml)
         } catch(e: Throwable) {
             logger.log(e)

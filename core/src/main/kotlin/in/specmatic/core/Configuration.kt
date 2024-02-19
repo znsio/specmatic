@@ -2,28 +2,35 @@ package `in`.specmatic.core
 
 import java.io.File
 
+// moved here because when it's inside, for some reason when SpecmaticJUnitSupport.configFile
+// calls globalConfigFileName, it results in a call to the config var and we don't know why,
+// and if the configuration file is invalid, an exception is thrown and eaten silently by JUnit's
+// test discovery functionality.
+// Moving it here so we can use a function to read it which is not inside Configuration
+private var innerGlobalConfigFileName: String = "./${Configuration.DEFAULT_CONFIG_FILE_NAME}"
+fun getGlobalConfigFileName(): String = innerGlobalConfigFileName
+
 class Configuration {
     companion object {
         var gitCommand: String = System.getProperty("gitCommandPath") ?: System.getenv("SPECMATIC_GIT_COMMAND_PATH") ?: "git"
         const val TEST_BUNDLE_RELATIVE_PATH = ".${APPLICATION_NAME_LOWER_CASE}_test_bundle"
         const val DEFAULT_CONFIG_FILE_NAME = "$APPLICATION_NAME_LOWER_CASE.json"
 
-        private var _globalConfigFileName: String = "./$DEFAULT_CONFIG_FILE_NAME"
         var globalConfigFileName: String
-            get() = _globalConfigFileName
+            get() = getGlobalConfigFileName()
 
             set(value) {
-                _globalConfigFileName = value
-                _config = if(File(_globalConfigFileName).exists())
-                    loadSpecmaticJsonConfig(_globalConfigFileName)
+                innerGlobalConfigFileName = value
+                _config = if(File(innerGlobalConfigFileName).exists())
+                    loadSpecmaticJsonConfig(innerGlobalConfigFileName)
                 else
                     null
 
             }
 
         private var _config: SpecmaticConfigJson? =
-            if(File(_globalConfigFileName).exists())
-                loadSpecmaticJsonConfig(_globalConfigFileName)
+            if(File(innerGlobalConfigFileName).exists())
+                loadSpecmaticJsonConfig(innerGlobalConfigFileName)
             else
                 null
 

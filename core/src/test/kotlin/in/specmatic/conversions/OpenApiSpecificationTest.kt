@@ -11,18 +11,26 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.mock.NoMatchingScenario
+import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.HttpStubData
+import `in`.specmatic.stub.captureStandardOutput
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import io.ktor.util.reflect.*
 import io.swagger.v3.core.util.Yaml
 import io.swagger.v3.oas.models.OpenAPI
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatCode
-import org.junit.Ignore
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
+import java.util.Base64
+import java.util.function.Consumer
+import java.util.stream.Stream
 
 fun openAPIToString(openAPI: OpenAPI): String {
     return Yaml.pretty(openAPI)
@@ -30,18 +38,29 @@ fun openAPIToString(openAPI: OpenAPI): String {
 
 internal class OpenApiSpecificationTest {
     companion object {
-        const val OPENAPI_FILE = "openApiTest.yaml"
+        const val OPENAPI_FILE_WITH_YAML_EXTENSION = "openApiTest.yaml"
+        const val OPENAPI_FILE_WITH_YML_EXTENSION = "openApiTest.yaml"
         const val OPENAPI_FILE_WITH_REFERENCE = "openApiWithRef.yaml"
         const val PET_OPENAPI_FILE = "Pet.yaml"
         const val SCHEMAS_DIRECTORY = "schemas"
+
+        @JvmStatic
+        fun listOfOpenApiFiles(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of(OPENAPI_FILE_WITH_YAML_EXTENSION),
+                Arguments.of(OPENAPI_FILE_WITH_YML_EXTENSION)
+            )
+        }
     }
 
-    fun portableComparisonAcrossBuildEnvironments(actual: String, expected: String) {
-        assertThat(actual.trimIndent().replace("\"", "")).isEqualTo(expected.removePrefix("---").trimIndent().replace("\"", ""))
+    private fun portableComparisonAcrossBuildEnvironments(actual: String, expected: String) {
+        assertThat(actual.trimIndent().replace("\"", "")).isEqualTo(
+            expected.removePrefix("---").trimIndent().replace("\"", "")
+        )
     }
 
     @BeforeEach
-    fun `setup`() {
+    fun setup() {
         val openAPI = """
 openapi: 3.0.0
 info:
@@ -139,7 +158,7 @@ components:
               ${"$"}ref: '#/components/schemas/NestedTypeWithRef'
     """.trim()
 
-        var openApiWithRef = """
+        val openApiWithRef = """
 openapi: "3.0.0"
 info:
   version: 1.0.0
@@ -166,12 +185,12 @@ paths:
           content:
             application/json:
               schema:
-                ${"$"}ref: './${SCHEMAS_DIRECTORY}/Pet.yaml'
+                ${"$"}ref: './${SCHEMAS_DIRECTORY}/${PET_OPENAPI_FILE}'
 components:
   schemas:
         """.trim()
 
-        var pet = """
+        val pet = """
 Pet:
   type: object
   required:
@@ -185,9 +204,11 @@ Pet:
       format: int64
         """.trim()
 
-        val openApiFile = File(OPENAPI_FILE)
-        openApiFile.createNewFile()
-        openApiFile.writeText(openAPI)
+        listOf(OPENAPI_FILE_WITH_YAML_EXTENSION, OPENAPI_FILE_WITH_YML_EXTENSION).forEach {
+            val openApiFile = File(it)
+            openApiFile.createNewFile()
+            openApiFile.writeText(openAPI)
+        }
 
         val openApiFileWithRef = File(OPENAPI_FILE_WITH_REFERENCE)
         openApiFileWithRef.createNewFile()
@@ -200,16 +221,20 @@ Pet:
     }
 
     @AfterEach
-    fun `teardown`() {
-        File(OPENAPI_FILE).delete()
+    fun teardown() {
+        listOf(OPENAPI_FILE_WITH_YAML_EXTENSION, OPENAPI_FILE_WITH_YML_EXTENSION).forEach {
+            File(it).delete()
+        }
         File(OPENAPI_FILE_WITH_REFERENCE).delete()
         File(SCHEMAS_DIRECTORY).deleteRecursively()
     }
 
-    @Ignore
-    fun `should generate 200 OK scenarioInfos from openAPI`() {
-        val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
-        val scenarioInfos = openApiSpecification.toScenarioInfos()
+    @Disabled
+    @ParameterizedTest
+    @MethodSource("listOfOpenApiFiles")
+    fun `should generate 200 OK scenarioInfos from openAPI`(openApiFile: String) {
+        val openApiSpecification = OpenApiSpecification.fromFile(openApiFile)
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
         assertThat(scenarioInfos.size).isEqualTo(3)
     }
 
@@ -239,7 +264,7 @@ Pet:
                     "POST",
                     "/user",
                     body = parsedJSON("""{"address": {"street": "Baker Street"}}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
 
@@ -249,42 +274,52 @@ Pet:
                     "POST",
                     "/user",
                     body = parsedJSON("""{"address": null}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
     }
 
-    @Test
-    fun `should not resolve non ref nested types to Deferred Pattern`() {
-        val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
-        val scenarioInfos = openApiSpecification.toScenarioInfos()
-        val nestedTypeWithoutRef = scenarioInfos.first().patterns.getOrDefault("(NestedTypeWithoutRef)", NullPattern)
+    @ParameterizedTest
+    @MethodSource("listOfOpenApiFiles")
+    fun `should not resolve non ref nested types to Deferred Pattern`(openApiFile: String) {
+        val openApiSpecification = OpenApiSpecification.fromFile(openApiFile)
+        val (scenarioInfoData, _) = openApiSpecification.toScenarioInfos()
+        val nestedTypeWithoutRef = scenarioInfoData.first().patterns.getOrDefault("(NestedTypeWithoutRef)", NullPattern)
         assertThat(containsDeferredPattern(nestedTypeWithoutRef)).isFalse
     }
 
-    @Test
-    fun `should resolve ref nested types to Deferred Pattern`() {
-        val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
-        val scenarioInfos = openApiSpecification.toScenarioInfos()
+    @ParameterizedTest
+    @MethodSource("listOfOpenApiFiles")
+    fun `should resolve ref nested types to Deferred Pattern`(openApiFile: String) {
+        val openApiSpecification = OpenApiSpecification.fromFile(openApiFile)
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
         val nestedTypeWithRef = scenarioInfos[4].patterns["(NestedTypeWithRef)"]
         assertThat(containsDeferredPattern(nestedTypeWithRef!!)).isTrue
     }
 
     private fun containsDeferredPattern(pattern: Pattern): Boolean {
-        if (!pattern.pattern.instanceOf(Map::class)) return false
-        val childPattern = (pattern.pattern as Map<String, Pattern?>).values.firstOrNull() ?: return false
+        val innerPattern = pattern.pattern
+
+        if (innerPattern !is Map<*, *>)
+            return false
+
+        val childPattern = (innerPattern).values.firstOrNull() ?: return false
+        if (childPattern !is Pattern)
+            return false
+
         return if (childPattern.instanceOf(DeferredPattern::class)) true
         else containsDeferredPattern(childPattern)
     }
 
-    @Test
-    fun `none of the scenarios should expect the Content-Type header`() {
-        val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE)
-        val scenarioInfos = openApiSpecification.toScenarioInfos()
+    @ParameterizedTest
+    @MethodSource("listOfOpenApiFiles")
+    fun `none of the scenarios should expect the Content-Type header`(openApiFile: String) {
+        val openApiSpecification = OpenApiSpecification.fromFile(openApiFile)
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
 
         for (scenarioInfo in scenarioInfos) {
-            assertNotFoundInHeaders("Content-Type", scenarioInfo.httpRequestPattern.headersPattern)
-            assertNotFoundInHeaders("Content-Type", scenarioInfo.httpResponsePattern.headersPattern)
+            assertNotFoundInHeaders(scenarioInfo.httpRequestPattern.headersPattern)
+            assertNotFoundInHeaders(scenarioInfo.httpResponsePattern.headersPattern)
         }
     }
 
@@ -495,7 +530,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}]}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -596,7 +631,7 @@ Scenario: Get product by id
                     "POST",
                     "/person",
                     body = parsedJSON("""{"street": "baker street", "locality": "London"}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             )
         ).isTrue
     }
@@ -628,7 +663,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": "123", "address": null}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -707,7 +742,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": null}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -770,7 +805,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": null}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
             assertThat(
@@ -779,7 +814,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": "10"}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -840,15 +875,30 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(
-                this.matches(
+            with(
+                this.scenarios.first().matchesMock(
                     HttpRequest(
                         "POST",
                         "/person",
-                        body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}, null]}""")
-                    ), HttpResponse.OK("success")
+                        body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}]}""")
+                    ), HttpResponse.ok("success")
                 )
-            ).isTrue
+            ) {
+                assertThat(this).isInstanceOf(Result.Success::class.java)
+            }
+
+            with(
+                this.scenarios.first().matchesMock(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""{"id": "123", "address": null}""")
+                    ), HttpResponse.ok("success")
+                )
+            ) {
+
+                assertThat(this).isInstanceOf(Result.Success::class.java)
+            }
         }
 
         val openAPIYaml = openAPIToString(openAPI)
@@ -929,7 +979,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": "123", "address": [{"street": "baker street", "locality": "London"}, null]}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -1013,7 +1063,7 @@ Scenario: Get product by id
                     "POST",
                     "/person",
                     formFields = mapOf("person" to """{"id": "123", "address": {"street": "baker street", "locality": "London"}}""")
-                ), HttpResponse.OK("success")
+                ), HttpResponse.ok("success")
             )
         }
 
@@ -1165,7 +1215,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"id": "10", "address": "Baker street"}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -1240,7 +1290,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/person1"
-                    ), HttpResponse.OK(body = parsedJSON("""{"id": "10", "address": "Baker street"}"""))
+                    ), HttpResponse.ok(body = parsedJSON("""{"id": "10", "address": "Baker street"}"""))
                 )
             ).isTrue
             assertThat(
@@ -1248,7 +1298,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/person2"
-                    ), HttpResponse.OK(body = parsedJSON("""{"id": "10", "address": "Baker street"}"""))
+                    ), HttpResponse.ok(body = parsedJSON("""{"id": "10", "address": "Baker street"}"""))
                 )
             ).isTrue
             assertThat(
@@ -1256,7 +1306,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/person1"
-                    ), HttpResponse.OK(body = parsedJSON("""{"address": "Baker street"}"""))
+                    ), HttpResponse.ok(body = parsedJSON("""{"address": "Baker street"}"""))
                 )
             ).isTrue
             assertThat(
@@ -1264,7 +1314,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/person2"
-                    ), HttpResponse.OK(body = parsedJSON("""{"address": "Baker street"}"""))
+                    ), HttpResponse.ok(body = parsedJSON("""{"address": "Baker street"}"""))
                 )
             ).isTrue
         }
@@ -1708,7 +1758,7 @@ Scenario: Get product by id
                 HttpRequest(
                     "POST",
                     "/person"
-                ), HttpResponse.OK(NumberValue(10))
+                ), HttpResponse.ok(NumberValue(10))
             )
         }
 
@@ -1761,7 +1811,7 @@ Scenario: Get product by id
                         "GET",
                         "/person"
                     ),
-                    HttpResponse.OK(parsedJSON("""{"address": "Baker Street"}"""))
+                    HttpResponse.ok(parsedJSON("""{"address": "Baker Street"}"""))
                         .copy(headers = mapOf("X-Hello-World" to "hello"))
                 )
             ).isTrue
@@ -1827,7 +1877,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/person"
-                    ), HttpResponse.OK(parsedJSON("""{"address": "Baker Street"}"""))
+                    ), HttpResponse.ok(parsedJSON("""{"address": "Baker Street"}"""))
                 )
             ).isTrue
         }
@@ -1889,7 +1939,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"address": null}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -1956,7 +2006,7 @@ Scenario: Get product by id
                         "POST",
                         "/person",
                         body = parsedJSON("""{"address": []}""")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -2019,15 +2069,15 @@ Scenario: Get product by id
         val openAPI = feature.toOpenApi()
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
-            assertThat(
-                this.matches(
-                    HttpRequest(
-                        "POST",
-                        "/person",
-                        body = parsedJSON("""{"address": [null, "Baker Street"]}""")
-                    ), HttpResponse.OK("success")
-                )
-            ).isTrue
+            val result: Result = this.scenarios.first().matchesMock(
+                HttpRequest(
+                    "POST",
+                    "/person",
+                    body = parsedJSON("""{"address": [null, "Baker Street"]}""")
+                ), HttpResponse.ok("success")
+            )
+
+            assertThat(result).isInstanceOf(Result.Success::class.java)
         }
 
         val openAPIYaml = openAPIToString(openAPI)
@@ -2101,7 +2151,7 @@ Scenario: Get product by id
                         "GET",
                         "/data",
                         headers = mapOf("X-Data" to "data")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -2163,7 +2213,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data"
-                    ), HttpResponse.OK("success").copy(headers = mapOf("X-Data" to "data"))
+                    ), HttpResponse.ok("success").copy(headers = mapOf("X-Data" to "data"))
                 )
             ).isTrue
         }
@@ -2225,7 +2275,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data"
-                    ), HttpResponse.OK("success").copy(headers = mapOf("X-Data-One" to "data"))
+                    ), HttpResponse.ok("success").copy(headers = mapOf("X-Data-One" to "data"))
                 )
             ).isTrue
             assertThat(
@@ -2233,7 +2283,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data"
-                    ), HttpResponse.OK("success").copy(headers = mapOf("X-Data-Two" to "data"))
+                    ), HttpResponse.ok("success").copy(headers = mapOf("X-Data-Two" to "data"))
                 )
             ).isTrue
             assertThat(
@@ -2241,7 +2291,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data"
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -2308,7 +2358,7 @@ Scenario: Get product by id
                         "GET",
                         "/data",
                         headers = mapOf("X-Data-One" to "data")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
             assertThat(
@@ -2317,7 +2367,7 @@ Scenario: Get product by id
                         "GET",
                         "/data",
                         headers = mapOf("X-Data-One" to "data")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
             assertThat(
@@ -2326,7 +2376,7 @@ Scenario: Get product by id
                         "GET",
                         "/data",
                         headers = mapOf("X-Data-One" to "data")
-                    ), HttpResponse.OK("success")
+                    ), HttpResponse.ok("success")
                 )
             ).isTrue
         }
@@ -2399,7 +2449,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data",
-                        queryParams = mapOf("param" to "data")
+                        queryParametersMap = mapOf("param" to "data")
                     ), HttpResponse.OK.copy(body = StringValue("success"))
                 )
             ).isTrue
@@ -2467,7 +2517,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data",
-                        queryParams = mapOf("param1" to "data")
+                        queryParametersMap = mapOf("param1" to "data")
                     ), HttpResponse.OK.copy(body = StringValue("success"))
                 )
             ).isTrue
@@ -2476,7 +2526,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data",
-                        queryParams = mapOf("param2" to "data")
+                        queryParametersMap = mapOf("param2" to "data")
                     ), HttpResponse.OK.copy(body = StringValue("success"))
                 )
             ).isTrue
@@ -2485,7 +2535,7 @@ Scenario: Get product by id
                     HttpRequest(
                         "GET",
                         "/data",
-                        queryParams = mapOf("param1" to "data", "param2" to "data")
+                        queryParametersMap = mapOf("param1" to "data", "param2" to "data")
                     ), HttpResponse.OK.copy(body = StringValue("success"))
                 )
             ).isTrue
@@ -3250,7 +3300,6 @@ components:
                 type: integer
 """.trimIndent()
 
-        println(openAPI)
         val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
         val request = HttpRequest("POST", "/data", body = parsedValue("""{"data": [{"id": 10}]}"""))
@@ -3262,6 +3311,86 @@ components:
 
         assertThat(stub.requestType.method).isEqualTo("POST")
 
+    }
+
+    @Test
+    fun `support path parameter as enum inline`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /permissions/state/{state}:
+    get:
+      parameters:
+      - name: state
+        in: path
+        schema:
+          type: string
+          enum:
+          - ALLOW
+          - DENY
+      responses:
+        200:
+          description: API
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val request = HttpRequest("GET", "/permissions/state/ALLOW")
+        val response = HttpResponse.OK
+
+        val stub: HttpStubData = feature.matchingStub(request, response)
+
+        println(stub.requestType)
+
+        assertThat(stub.requestType.method).isEqualTo("GET")
+        assertThat(stub.response.status).isEqualTo(200)
+    }
+
+    @Test
+    fun `support path parameter as enum reference`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /permissions/state/{state}:
+    get:
+      parameters:
+      - ${'$'}ref: '#/components/parameters/stateParam'
+      responses:
+        200:
+          description: API
+components:
+  parameters:
+    stateParam:
+      name: state
+      in: path
+      schema:
+        type: string
+        enum:
+        - ALLOW
+        - DENY
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val request = HttpRequest("GET", "/permissions/state/ALLOW")
+        val response = HttpResponse.OK
+
+        val stub: HttpStubData = feature.matchingStub(request, response)
+
+        println(stub.requestType)
+
+        assertThat(stub.requestType.method).isEqualTo("GET")
+        assertThat(stub.response.status).isEqualTo(200)
     }
 
     @Test
@@ -3297,7 +3426,6 @@ components:
           type: string
 """.trimIndent()
 
-        println(openAPI)
         val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
         val request =
@@ -3341,7 +3469,6 @@ paths:
           description: API
 """.trimIndent()
 
-        println(openAPI)
         val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
         val request =
@@ -3392,13 +3519,75 @@ components:
           type: string
 """.trimIndent()
 
-        println(openAPI)
         val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
         val request = HttpRequest(
             "POST",
             "/data",
             body = parsedValue("""{"Data": {"10": {"name": "Jill"}, "20": {"name": "Jack"}}}""")
+        )
+        val response = HttpResponse.OK
+
+        val stub: HttpStubData = feature.matchingStub(request, response)
+
+        println(stub.requestType)
+
+        assertThat(stub.requestType.method).isEqualTo("POST")
+        assertThat(stub.response.status).isEqualTo(200)
+
+    }
+
+    @Test
+    fun `support dictionary object type with composed oneOf value`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                myValues:
+                  type: object
+                  additionalProperties:
+                    oneOf:
+                    - ${"$"}ref: Person
+                    - ${"$"}ref: Alien
+      responses:
+        200:
+          description: API
+components:
+  schemas:
+    Person:
+      type: object
+      properties:
+        name:
+          type: string
+    Alien:
+      type: object
+      properties:
+        moniker:
+          type: string
+        homePlanet:
+          type: string
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val request = HttpRequest(
+            "POST",
+            "/data",
+            body = parsedValue("""{"myValues": {"10": {"name": "Jill"}, "20": {"moniker": "Vin", "homePlanet": "Scadrial"}}}""")
         )
         val response = HttpResponse.OK
 
@@ -3437,7 +3626,6 @@ paths:
           description: API
 """.trimIndent()
 
-        println(openAPI)
         val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
         val request =
@@ -3450,6 +3638,122 @@ paths:
 
         assertThat(stub.requestType.method).isEqualTo("POST")
         assertThat(stub.response.status).isEqualTo(200)
+    }
+
+    @Nested
+    inner class WhenAdditionalPropertiesIsFalse {
+        private val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+              additionalProperties: false
+      responses:
+        200:
+          description: API
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        @Test
+        fun `an object with no additional properties should match the specification`() {
+            val request =
+                HttpRequest("POST", "/data", body = parsedValue("""{"id": 10}"""))
+            val response = HttpResponse.OK
+
+            val stub: HttpStubData = feature.matchingStub(request, response)
+            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `an object with additional properties should not match the specification`() {
+            val invalidRequest =
+                HttpRequest("POST", "/data", body = parsedValue("""{"id": 10, "name": "Jill"}"""))
+            val response = HttpResponse.OK
+
+            assertThatThrownBy { feature.matchingStub(invalidRequest, response) }
+                .isInstanceOf(NoMatchingScenario::class.java)
+                .hasMessageContaining("REQUEST.BODY.name")
+        }
+    }
+
+
+    @Nested
+    inner class WhenAdditionalPropertiesIsTrue {
+        private val openAPI =
+            """
+---
+openapi: 3.0.1
+info:
+  title: API
+  version: 1
+paths:
+  /data:
+    post:
+      summary: API
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        200:
+          description: API
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        @Test
+        fun `an object with string keys with values of any type should meet the specification`() {
+            val request =
+                HttpRequest(
+                    "POST",
+                    "/data",
+                    body = parsedValue("""{"id": 10, "address": {"street": "Link Road", "city": "Mumbai", "country": "India"}}""")
+                )
+            val response = HttpResponse.OK
+
+            val stub: HttpStubData = feature.matchingStub(request, response)
+            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `an object with string keys with some values set as null should match the specification`() {
+            val request =
+                HttpRequest("POST", "/data", body = parsedValue("""{"id": 10, "address": null}"""))
+            val response = HttpResponse.OK
+
+            val stub: HttpStubData = feature.matchingStub(request, response)
+            assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `a string value should not match the specification`() {
+            val invalidRequest =
+                HttpRequest("POST", "/data", body = StringValue("some data"))
+            val response = HttpResponse.OK
+
+            assertThatThrownBy { feature.matchingStub(invalidRequest, response) }
+                .isInstanceOf(NoMatchingScenario::class.java)
+                .hasMessageContaining("Expected json object, actual was some data")
+        }
     }
 
     @Test
@@ -3472,15 +3776,18 @@ paths:
         println(openAPIYaml)
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
+            val request = HttpRequest(
+                "GET",
+                "/"
+            )
+            val response = HttpResponse.ok(
+                body = parsedJSON("""{"10": {"name": "Jane"}}""")
+            )
+
             assertThat(
                 this.matches(
-                    HttpRequest(
-                        "GET",
-                        "/"
-                    ),
-                    HttpResponse.OK(
-                        body = parsedJSON("""{"10": {"name": "Jane"}}""")
-                    )
+                    request,
+                    response
                 )
             ).isTrue
         }
@@ -3514,7 +3821,7 @@ paths:
     println(openAPI)
     val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
-    val request = HttpRequest("GET", "/data", queryParams = mapOf("key1" to "myEnumVal1", "key2" to "myEnumVal2"))
+    val request = HttpRequest("GET", "/data", queryParams = QueryParameters(mapOf("key1" to "myEnumVal1", "key2" to "myEnumVal2")))
     val response = HttpResponse.OK
 
     val stub: HttpStubData = feature.matchingStub(request, response)
@@ -3555,7 +3862,7 @@ paths:
     println(openAPI)
     val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
 
-    val request = HttpRequest("GET", "/data", queryParams = mapOf("key1" to "val1", "key2" to "val2"))
+    val request = HttpRequest("GET", "/data", queryParams = QueryParameters(mapOf("key1" to "val1", "key2" to "val2")))
     val response = HttpResponse.OK
 
     val stub: HttpStubData = feature.matchingStub(request, response)
@@ -3569,12 +3876,13 @@ paths:
   @Test
     fun `should resolve ref to another file`() {
         val openApiSpecification = OpenApiSpecification.fromFile(OPENAPI_FILE_WITH_REFERENCE)
-        assertThat(openApiSpecification.toScenarioInfos().size).isEqualTo(1)
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
+        assertThat((scenarioInfos).size).isEqualTo(1)
         assertThat(openApiSpecification.patterns["(Pet)"]).isNotNull
     }
 
-    private fun assertNotFoundInHeaders(header: String, headersPattern: HttpHeadersPattern) {
-        assertThat(headersPattern.pattern.keys.map { it.lowercase() }).doesNotContain(header.lowercase())
+    private fun assertNotFoundInHeaders(headersPattern: HttpHeadersPattern) {
+        assertThat(headersPattern.pattern.keys.map { it.lowercase() }).doesNotContain(CONTENT_TYPE.lowercase())
     }
 
     @Nested
@@ -3682,10 +3990,14 @@ paths:
         """.trimIndent()
 
             val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
-
             val xmlSnippet = """<user><id>10</id></user>"""
-
-            assertDoesNotMatchesSnippet(xmlSnippet, xmlFeature)
+            val request = HttpRequest("POST", "/users", body = parsedValue(xmlSnippet))
+            assertThatThrownBy {
+                xmlFeature.matchingStub(
+                    request,
+                    HttpResponse.OK
+                )
+            }.isInstanceOf(NoMatchingScenario::class.java)
         }
 
         @Test
@@ -3766,7 +4078,8 @@ paths:
 
             val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
 
-            val xmlSnippet = """<user><id>10</id><address pincode="101010"><street>Baker street</street></address></user>"""
+            val xmlSnippet =
+                """<user><id>10</id><address pincode="101010"><street>Baker street</street></address></user>"""
 
             assertMatchesSnippet(xmlSnippet, xmlFeature)
         }
@@ -4056,7 +4369,8 @@ paths:
 
             val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
 
-            val xmlSnippet = """<productdata><products><products>10</products><products>10</products></products></productdata>"""
+            val xmlSnippet =
+                """<productdata><products><products>10</products><products>10</products></products></productdata>"""
 
             assertMatchesSnippet("/cart", xmlSnippet, xmlFeature)
         }
@@ -4206,7 +4520,8 @@ paths:
 
             val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
 
-            val xmlSnippet = """<user><id>10</id><company><id>100</id><address><flat>221B</flat><street>Baker Street</street></address></company></user>"""
+            val xmlSnippet =
+                """<user><id>10</id><company><id>100</id><address><flat>221B</flat><street>Baker Street</street></address></company></user>"""
 
             assertMatchesResponseSnippet("/user", xmlSnippet, xmlFeature)
         }
@@ -4248,7 +4563,8 @@ paths:
 
             val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
 
-            val xmlSnippet = """<user><id>10</id><address><flat>221B</flat><street>Baker Street</street></address></user>"""
+            val xmlSnippet =
+                """<user><id>10</id><address><flat>221B</flat><street>Baker Street</street></address></user>"""
 
             assertMatchesResponseSnippet("/user", xmlSnippet, xmlFeature)
         }
@@ -4293,7 +4609,8 @@ paths:
 
             val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
 
-            val xmlSnippet = """<users><user><id>10</id><name>John Doe</name></user><user><id>20</id><name>Jane Doe</name></user></users>"""
+            val xmlSnippet =
+                """<users><user><id>10</id><name>John Doe</name></user><user><id>20</id><name>Jane Doe</name></user></users>"""
 
             assertMatchesSnippet("/user", xmlSnippet, xmlFeature)
         }
@@ -4341,7 +4658,7 @@ paths:
                     name: user
         """.trimIndent()
 
-        val xmlContract2 = """
+            val xmlContract2 = """
             openapi: 3.0.3
             info:
               title: test-xml
@@ -4382,7 +4699,7 @@ paths:
                     ${"$"}ref: '#/components/schemas/UserData'
         """.trimIndent()
 
-            for(xmlContract in listOf(xmlContract1, xmlContract2)) {
+            for (xmlContract in listOf(xmlContract1, xmlContract2)) {
                 val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
 
                 val xmlSnippet =
@@ -4425,7 +4742,8 @@ paths:
 
             val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
 
-            val xmlSnippet = """<user><id>10</id><name>John Doe</name><next><id>20</id><name>Jane Doe</name></next></user>"""
+            val xmlSnippet =
+                """<user><id>10</id><name>John Doe</name><next><id>20</id><name>Jane Doe</name></next></user>"""
 
             assertMatchesSnippet("/user", xmlSnippet, xmlFeature)
         }
@@ -4499,7 +4817,8 @@ paths:
 
             val xmlFeature = OpenApiSpecification.fromYAML(xmlContract, "").toFeature()
 
-            val xmlSnippet = """<test:user xmlns:test="http://helloworld.com"><id>10</id><name>John Doe</name></test:user>"""
+            val xmlSnippet =
+                """<test:user xmlns:test="http://helloworld.com"><id>10</id><name>John Doe</name></test:user>"""
 
             assertMatchesSnippet("/user", xmlSnippet, xmlFeature)
 
@@ -4561,7 +4880,7 @@ paths:
             val feature: Feature = parseContractFileToFeature(wrapperSpecFile.path)
             var state = "not_called"
 
-            val result: Results = feature.executeTests(object: TestExecutor {
+            val result: Results = feature.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     println(request.body.toStringLiteral())
                     assertThat(request.body.toStringLiteral()).isEqualTo("""<user><id>10</id></user>""")
@@ -4588,33 +4907,22 @@ paths:
             val request = HttpRequest("POST", path, body = parsedValue(xmlSnippet))
             val stubData = xmlFeature.matchingStub(request, HttpResponse.OK)
 
-            val stubMatchResult = stubData.requestType.body.matches(parsedValue(xmlSnippet), xmlFeature.scenarios.first().resolver)
+            val stubMatchResult =
+                stubData.requestType.body.matches(parsedValue(xmlSnippet), xmlFeature.scenarios.first().resolver)
 
             assertThat(stubMatchResult).isInstanceOf(Result.Success::class.java)
         }
 
         private fun assertMatchesResponseSnippet(path: String, xmlSnippet: String, xmlFeature: Feature) {
             val request = HttpRequest("GET", path)
-            val stubData = xmlFeature.matchingStub(request, HttpResponse.OK(body = parsedValue(xmlSnippet)))
+            val stubData = xmlFeature.matchingStub(request, HttpResponse.ok(body = parsedValue(xmlSnippet)))
 
-            val stubMatchResult = stubData.responsePattern.body.matches(parsedValue(xmlSnippet), xmlFeature.scenarios.first().resolver)
+            val stubMatchResult =
+                stubData.responsePattern.body.matches(parsedValue(xmlSnippet), xmlFeature.scenarios.first().resolver)
 
             assertThat(stubMatchResult).isInstanceOf(Result.Success::class.java)
         }
 
-        private fun assertDoesNotMatchesSnippet(xmlSnippet: String, xmlFeature: Feature) {
-            val request = HttpRequest("POST", "/users", body = parsedValue(xmlSnippet))
-
-            try {
-                val stubData = xmlFeature.matchingStub(request, HttpResponse.OK)
-
-                val stubMatchResult = stubData.requestType.body.matches(parsedValue(xmlSnippet), Resolver())
-
-                assertThat(stubMatchResult).isInstanceOf(Result.Failure::class.java)
-            } catch(e: Throwable) {
-                assertThat(e).isInstanceOf(NoMatchingScenario::class.java)
-            }
-        }
     }
 
     @Test
@@ -4757,7 +5065,8 @@ paths:
         assertThat(requestPattern.multiPartFormDataPattern.single().name).isEqualTo("csv")
         assertThat(requestPattern.multiPartFormDataPattern.single().contentType).isEqualTo("text/csv")
 
-        val generatedValue: MultiPartContentValue = requestPattern.multiPartFormDataPattern.single().generate(Resolver()) as MultiPartContentValue
+        val generatedValue: MultiPartContentValue =
+            requestPattern.multiPartFormDataPattern.single().generate(Resolver()) as MultiPartContentValue
         assertThat(generatedValue.content.toStringLiteral()).isEqualTo(csvFileContent)
     }
 
@@ -4830,7 +5139,9 @@ paths:
             """.trimIndent()
 
             OpenApiSpecification.fromYAML(openAPINonOptional, "").toFeature().let {
-                assertThat(it.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single().name).doesNotEndWith("?")
+                assertThat(it.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single().name).doesNotEndWith(
+                    "?"
+                )
             }
 
             val openAPIOptional = """
@@ -4900,7 +5211,7 @@ paths:
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
 
-            var testStatus: String = "Did not run"
+            var testStatus: String
 
             createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
                 testStatus = "test ran"
@@ -4955,7 +5266,7 @@ paths:
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
 
-            var testStatus: String = "Did not run"
+            var testStatus: String
 
             createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
                 testStatus = "test ran"
@@ -5010,7 +5321,7 @@ paths:
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
 
-            var testStatus: String = "Did not run"
+            var testStatus: String
 
             createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
                 testStatus = "test ran"
@@ -5067,7 +5378,7 @@ paths:
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
 
-            var testStatus: String = "Did not run"
+            var testStatus: String
 
             createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
                 testStatus = "test ran"
@@ -5123,7 +5434,7 @@ paths:
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
 
-            var testStatus: String = "Did not run"
+            var testStatus: String
 
             createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
                 testStatus = "test ran"
@@ -5318,6 +5629,67 @@ paths:
     }
 
     @Test
+    fun `should generate tests for form fields with examples when the fields are in a ref`() {
+        val contractString = """
+                openapi: 3.0.3
+                info:
+                  title: test
+                  version: '1.0'
+                paths:
+                  '/users':
+                    post:
+                      responses:
+                        '200':
+                          description: OK
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                              examples:
+                                200_OK:
+                                  value:
+                      requestBody:
+                        content:
+                          application/x-www-form-urlencoded:
+                             examples:
+                               200_OK:
+                                 value:
+                                     Data: abc123
+                             schema:
+                               ${"$"}ref: '#/components/schemas/Data'
+                components:
+                  schemas:
+                    Data:
+                      type: object
+                      properties:
+                        Data:
+                          type: string
+            """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
+
+        val results: List<Result> = feature.generateContractTestScenarios(emptyList()).map {
+            executeTest(it, object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.formFields).containsKey("Data")
+                    assertThat(request.formFields["Data"]).isEqualTo("abc123")
+                    assertThat(request.formFields).hasSize(1)
+
+                    return HttpResponse.OK
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+        }
+
+        assertThat(results).hasSize(1)
+        println(results.single().reportString())
+
+        assertThat(results.single()).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
     fun `should generate tests for multipart fields with examples`() {
         val contractString = """
                 openapi: 3.0.3
@@ -5379,7 +5751,7 @@ paths:
     }
 
     @Test
-    fun `nullable ref in yaml`() {
+    fun `nullable oneOf ref in yaml`() {
         val openAPIText = """
             ---
             openapi: "3.0.1"
@@ -5396,12 +5768,13 @@ paths:
                       application/json:
                         schema:
                           required:
-                          - "address"
+                          - "location"
                           properties:
-                            address:
+                            location:
                               oneOf:
                               - nullable: true
                               - ${'$'}ref: '#/components/schemas/Address'
+                              - ${'$'}ref: '#/components/schemas/LatLong'
                   responses:
                     "200":
                       description: "Test"
@@ -5417,6 +5790,15 @@ paths:
                   properties:
                     street:
                       type: "string"
+                LatLong:
+                  required:
+                  - "latitude"
+                  - "longitude"
+                  properties:
+                    latitude:
+                      type: "number"
+                    longitude:
+                      type: "number"
         """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(openAPIText, "").toFeature()
@@ -5426,8 +5808,8 @@ paths:
                 HttpRequest(
                     "POST",
                     "/user",
-                    body = parsedJSON("""{"address": {"street": "Baker Street"}}""")
-                ), HttpResponse.OK("success")
+                    body = parsedJSON("""{"location": {"street": "Baker Street"}}""")
+                ), HttpResponse.ok("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
 
@@ -5436,10 +5818,215 @@ paths:
                 HttpRequest(
                     "POST",
                     "/user",
-                    body = parsedJSON("""{"address": null}""")
-                ), HttpResponse.OK("success")
+                    body = parsedJSON("""{"location": {"latitude": 51.523160, "longitude": -0.158070}}""")
+                ), HttpResponse.ok("success")
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
+
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/user",
+                    body = parsedJSON("""{"location": null}""")
+                ), HttpResponse.ok("success")
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
+    }
+
+    @Test
+    fun `non-nullable oneOf ref in yaml`() {
+        val openAPIText = """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Test"
+              version: "1"
+            paths:
+              /user:
+                post:
+                  summary: "Test"
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          required:
+                          - "location"
+                          properties:
+                            location:
+                              oneOf:
+                              - ${'$'}ref: '#/components/schemas/Address'
+                              - ${'$'}ref: '#/components/schemas/LatLong'
+                  responses:
+                    "200":
+                      description: "Test"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas:
+                Address:
+                  required:
+                  - "street"
+                  properties:
+                    street:
+                      type: "string"
+                LatLong:
+                  required:
+                  - "latitude"
+                  - "longitude"
+                  properties:
+                    latitude:
+                      type: "number"
+                    longitude:
+                      type: "number"
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPIText, "").toFeature()
+
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/user",
+                    body = parsedJSON("""{"location": {"street": "Baker Street"}}""")
+                ), HttpResponse.ok("success")
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
+
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/user",
+                    body = parsedJSON("""{"location": {"latitude": 51.523160, "longitude": -0.158070}}""")
+                ), HttpResponse.ok("success")
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
+
+        assertThatThrownBy {
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/user",
+                    body = parsedJSON("""{"location": null}""")
+                ), HttpResponse.ok("success")
+            )
+        }.satisfies(Consumer { it.instanceOf(NoMatchingScenario::class) })
+    }
+
+    // See https://swagger.io/docs/specification/data-models/oneof-anyof-allof-not/#allof
+    @Test
+    fun `oneOf with discriminator in yaml`() {
+        val openAPIText = """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Test"
+              version: "1"
+            paths:
+              /pets:
+                patch:
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: "#/components/schemas/Pet_Polymorphic"
+                  responses:
+                    "200":
+                      description: "updated"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas:
+                Pet:
+                  type: object
+                  required:
+                  - pet_type
+                  properties:
+                    pet_type:
+                      type: string
+                  discriminator:
+                    propertyName: pet_type
+                Pet_Polymorphic:
+                  oneOf:
+                    - ${'$'}ref: '#/components/schemas/Cat'
+                    - ${'$'}ref: '#/components/schemas/Dog'
+                Dog:
+                  allOf:
+                  - ${'$'}ref: '#/components/schemas/Pet'
+                  - type: object
+                    properties:
+                      bark:
+                        type: boolean
+                      breed:
+                        type: string
+                        enum: [Dingo, Husky]
+                Cat:
+                  allOf:
+                  - ${'$'}ref: '#/components/schemas/Pet'
+                  - type: object
+                    properties:
+                      hunts:
+                        type: boolean
+                      age:
+                        type: integer
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(openAPIText, "").toFeature()
+
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "PATCH",
+                    "/pets",
+                    body = parsedJSON("""{"pet_type": "Cat", "age": 3}""")
+                ), HttpResponse.ok("success")
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
+
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "PATCH",
+                    "/pets",
+                    body = parsedJSON("""{"pet_type": "Dog", "bark": true}""")
+                ), HttpResponse.ok("success")
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
+
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "PATCH",
+                    "/pets",
+                    body = parsedJSON("""{"pet_type": "Dog", "bark": false, "breed": "Dingo"}""")
+                ), HttpResponse.ok("success")
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
+
+        assertThatThrownBy {
+            feature.matchingStub(
+                HttpRequest(
+                    "PATCH",
+                    "/pets",
+                    body = parsedJSON("""{"age": 3}""")
+                ), HttpResponse.ok("success")
+            )
+        }.isInstanceOf(NoMatchingScenario::class.java)
+
+        assertThatThrownBy {
+            feature.matchingStub(
+                HttpRequest(
+                    "PATCH",
+                    "/pets",
+                    body = parsedJSON("""{"pet_type": "Cat", "bark": true}""")
+                ), HttpResponse.ok("success")
+            )
+        }.isInstanceOf(NoMatchingScenario::class.java)
     }
 
     @Test
@@ -5739,7 +6326,7 @@ paths:
                 type: string
         """.trimIndent()
 
-        val testLogger = object: LogStrategy {
+        val testLogger = object : LogStrategy {
             val messages = mutableListOf<String>()
             override val printer: CompositePrinter
                 get() = TODO("Not yet implemented")
@@ -5765,6 +6352,10 @@ paths:
             }
 
             override fun log(msg: LogMessage) {
+                TODO("Not yet implemented")
+            }
+
+            override fun logError(e: Throwable) {
                 TODO("Not yet implemented")
             }
 
@@ -5822,7 +6413,7 @@ paths:
                 type: string
         """.trimIndent()
 
-        val testLogger = object: LogStrategy {
+        val testLogger = object : LogStrategy {
             val messages = mutableListOf<String>()
             override val printer: CompositePrinter
                 get() = TODO("Not yet implemented")
@@ -5852,6 +6443,10 @@ paths:
                 TODO("Not yet implemented")
             }
 
+            override fun logError(e: Throwable) {
+                TODO("Not yet implemented")
+            }
+
             override fun newLine() {
                 TODO("Not yet implemented")
             }
@@ -5877,11 +6472,1019 @@ paths:
         assertThat(testLogger.messages).isNotEmpty
     }
 
+    @Test
+    fun `nullable empty object should translate to null when found in oneOf`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+---
+openapi: "3.0.1"
+info:
+  title: "Person API"
+  version: "1"
+paths:
+  /person:
+    post:
+      summary: "Add person by id"
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+              - "address"
+              - "id"
+              properties:
+                id:
+                  type: "string"
+                address:
+                  oneOf:
+                    - properties: {}
+                      nullable: true
+                    - type: string
+      responses:
+        200:
+          description: "Add person by id"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+""".trimIndent(), ""
+        ).toFeature()
+
+        val requestBodyType = contract.scenarios.first().httpRequestPattern.body as JSONObjectPattern
+        val addressType = requestBodyType.pattern["address"] as AnyPattern
+
+        assertThat(addressType.pattern).hasSize(2)
+        assertThat(NullPattern).isIn(addressType.pattern)
+        assertThat(StringPattern()).isIn(addressType.pattern)
+    }
+
+    @Test
+    fun `should be possible to have two stubs of authorization header with different values`() {
+        val specification = """
+            openapi: 3.0.1
+            info:
+              title: New Feature
+              version: "1"
+            paths:
+              /test:
+                post:
+                  summary: auth
+                  parameters:
+                    - in: header
+                      name: Authorization
+                      schema:
+                        type: string
+                      required: true
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Request'
+                  responses:
+                    "200":
+                      description: New scenario
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    "400":
+                      description: New scenario
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+            components:
+              schemas:
+                Request:
+                  type: object
+                  required:
+                    - item
+                  properties:
+                    item:
+                      type: string
+
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(specification, "/file.yaml").toFeature()
+
+        val validAuthStub: ScenarioStub = ScenarioStub(
+            HttpRequest(
+                "POST",
+                "/test",
+                mapOf("Authorization" to "valid"),
+                body = parsedJSONObject("""{"item": "data"}""")
+            ),
+            HttpResponse.ok("success")
+        )
+
+        val invalidAuthStub: ScenarioStub = ScenarioStub(
+            HttpRequest(
+                "POST",
+                "/test",
+                mapOf("Authorization" to "invalid"),
+                body = parsedJSONObject("""{"item": "data"}""")
+            ),
+            HttpResponse(400, "failed")
+        )
+
+        HttpStub(feature, listOf(invalidAuthStub, validAuthStub)).use { stub ->
+            val request = HttpRequest(
+                "POST",
+                "/test",
+                body = parsedJSONObject("""{"item": "data"}""")
+            )
+
+            with(stub.client.execute(request.copy(headers = mapOf("Authorization" to "valid")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success")
+                assertThat(this.status).isEqualTo(200)
+            }
+
+            with(stub.client.execute(request.copy(headers = mapOf("Authorization" to "invalid")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("failed")
+                assertThat(this.status).isEqualTo(400)
+            }
+        }
+    }
+
+    @Test
+    fun `validate the second element in a list`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  summary: "Get person by id"
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: string
+                              name:
+                                type: string
+                  responses:
+                    200:
+                      description: "Get person by id"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas: {}
+        """.trimIndent(), ""
+        ).toFeature()
+
+        with(feature) {
+            val result =
+                this.scenarios.first().matchesMock(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""[{"id": "123", "name": "Jack Sprat"}, {"id": "456"}]""")
+                    ), HttpResponse.ok("success")
+                )
+
+            assertThat(result.reportString()).isEqualTo(
+                """
+                >> REQUEST.BODY[1].name
+
+                   Expected key named "name" was missing
+            """.trimIndent()
+            )
+        }
+    }
+
+    @Test
+    fun `validate a nullable array`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  summary: "Get person by id"
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - id
+                              - names
+                            properties:
+                              id:
+                                type: string
+                              names:
+                                type: array
+                                nullable: true
+                                items:
+                                  type: string
+                  responses:
+                    200:
+                      description: "Get person by id"
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+            components:
+              schemas: {}
+        """.trimIndent(), ""
+        ).toFeature()
+
+        with(feature) {
+            val result =
+                this.scenarios.first().matchesMock(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSON("""[{"id": "123", "names": ["Jack", "Sprat"]}, {"id": "456", "names": null}]""")
+                    ), HttpResponse.ok("success")
+                )
+
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
+    @Test
+    fun `randomized response when stubbing out API with byte array request body`() {
+        val specification = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  summary: "Add data"
+                  requestBody:
+                    content:
+                      application/octet-stream:
+                        schema:
+                          type: string
+                          format: byte
+                  responses:
+                    200:
+                      description: "Result"
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), ""
+        ).toFeature()
+
+        HttpStub(specification).use { stub ->
+            val base64EncodedRequestBody = Base64.getEncoder().encodeToString("hello world".encodeToByteArray())
+
+            val response = stub.client.execute(
+                HttpRequest(
+                    method = "POST",
+                    path = "/data",
+                    body = StringValue(base64EncodedRequestBody)
+                )
+            )
+
+            assertThat(response.status).isEqualTo(200)
+        }
+    }
+
+    @Test
+    fun `stubbed response when stubbing out API with byte array request body`() {
+        val specification = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  summary: "Add data"
+                  requestBody:
+                    content:
+                      application/octet-stream:
+                        schema:
+                          type: string
+                          format: byte
+                  responses:
+                    200:
+                      description: "Result"
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), ""
+        ).toFeature()
+
+        HttpStub(specification).use { stub ->
+            val base64EncodedRequestBody = Base64.getEncoder().encodeToString("hello world".encodeToByteArray())
+
+            val stubbedRequest = HttpRequest(
+                method = "POST",
+                path = "/data",
+                body = StringValue(base64EncodedRequestBody)
+            )
+
+            stub.client.execute(
+                HttpRequest(
+                    method = "POST",
+                    path = "/_specmatic/expectations",
+                    body = StringValue(
+                        """
+                        {
+                            "http-request": {
+                                "method": "POST",
+                                "path": "/data",
+                                "body": "$base64EncodedRequestBody"
+                            },
+                            "http-response": {
+                                "status": 200,
+                                "body": "success"
+                            }
+                        }
+                    """.trimIndent()
+                    )
+                )
+            ).also { response ->
+                assertThat(response.status).isEqualTo(200)
+            }
+
+            val response = stub.client.execute(stubbedRequest)
+            assertThat(response.status).withFailMessage("Got a non-200 status which means that the stub did not respond to the request")
+                .isEqualTo(200)
+            assertThat(response.body.toStringLiteral()).withFailMessage("Did not get success, most likely got a random response, which means that the stubbed response was not returned")
+                .isEqualTo("success")
+        }
+    }
+
+    @Test
+    fun `cannot stub out non-base64 request for a byte array request body`() {
+        val specification = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  summary: "Add data"
+                  requestBody:
+                    content:
+                      application/octet-stream:
+                        schema:
+                          type: string
+                          format: byte
+                  responses:
+                    200:
+                      description: "Result"
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), ""
+        ).toFeature()
+
+        HttpStub(specification).use { stub ->
+            val vanillaNonBase64Request = "]"
+
+            stub.client.execute(
+                HttpRequest(
+                    method = "POST",
+                    path = "/_specmatic/expectations",
+                    body = StringValue(
+                        """
+                        {
+                            "http-request": {
+                                "method": "POST",
+                                "path": "/data",
+                                "body": "$vanillaNonBase64Request"
+                            },
+                            "http-response": {
+                                "status": 200,
+                                "body": "success"
+                            }
+                        }
+                    """.trimIndent()
+                    )
+                )
+            ).also { response ->
+                assertThat(response.status).isEqualTo(400)
+            }
+        }
+    }
+
+    @Test
+    fun `test request of type byte array request body sends a random base64 request value`() {
+        val specification = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  summary: "Add data"
+                  requestBody:
+                    content:
+                      application/octet-stream:
+                        schema:
+                          type: string
+                          format: byte
+                  responses:
+                    200:
+                      description: "Result"
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), ""
+        ).toFeature()
+
+        val results = specification.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.body.toStringLiteral()).isBase64()
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `test request of type byte array request body loads sends a base64 example`() {
+        val base64EncodedRequestBody = Base64.getEncoder().encodeToString("hello world".encodeToByteArray())
+
+        val specification = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  summary: "Add data"
+                  requestBody:
+                    content:
+                      application/octet-stream:
+                        schema:
+                          type: string
+                          format: byte
+                        examples:
+                          SUCCESS:
+                            value: $base64EncodedRequestBody
+                  responses:
+                    200:
+                      description: "Result"
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            SUCCESS:
+                              value: success
+        """.trimIndent(), ""
+        ).toFeature()
+
+        val results = specification.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val expectedRequestBody = "hello world".toByteArray()
+                val actualRequestBody = request.body.toStringLiteral()
+
+                assertThat(actualRequestBody).asBase64Decoded().isEqualTo(expectedRequestBody)
+
+                return HttpResponse.OK
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    @Disabled
+    fun `byte string request backward compatibility check`() {
+        // TODO: backward compatibility check for byte arrays to string and vice versa is not working
+        val byteString = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  summary: "Add data"
+                  requestBody:
+                    content:
+                      application/octet-stream:
+                        schema:
+                          type: string
+                          format: byte
+                  responses:
+                    200:
+                      description: "Result"
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), ""
+        ).toFeature()
+
+        val normalString = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Data API"
+              version: "1"
+            paths:
+              /data:
+                post:
+                  summary: "Add data"
+                  requestBody:
+                    content:
+                      application/octet-stream:
+                        schema:
+                          type: string
+                  responses:
+                    200:
+                      description: "Result"
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), ""
+        ).toFeature()
+
+        testBackwardCompatibility(normalString, byteString).also { result ->
+            assertThat(result.hasFailures()).isTrue()
+        }
+
+        testBackwardCompatibility(normalString, byteString).also { result ->
+            assertThat(result.hasFailures()).isTrue()
+        }
+    }
+
+    @Test
+    fun `support for multipart form data part array with a return type byte array string`() {
+        val openAPI = """
+                openapi: 3.0.3
+                info:
+                  title: Return type of multipart-form-data with string format byte
+                  description: Service to add a test case to a Specmatic feature
+                  version: 1.0.0
+                tags:
+                  - name: UploadFile
+                paths:
+                  "/file":
+                    post:
+                      tags:
+                        - UploadFile
+                      operationId: sendMessage
+                      requestBody:
+                        content:
+                          multipart/form-data:
+                            schema:
+                              type: object
+                              properties:
+                                filesPart:
+                                  type: string
+                                  format: binary
+                              required:
+                                - filesPart
+                      responses:
+                        "200":
+                          description: "Send Message Response"
+                          content:
+                            multipart/form-data:
+                              schema:
+                                type: object
+                                properties:
+                                  filename:
+                                    type: string
+                                    format: byte
+            """.trimIndent()
+
+        val specifications = OpenApiSpecification.fromYAML(openAPI, "").toScenarioInfos()
+        assertTrue(specifications.first.isNotEmpty())
+        with(OpenApiSpecification.fromYAML(openAPI, "",).toFeature()) {
+            val result =
+                this.scenarios.first().matchesMock(
+                    HttpRequest(
+                        "POST",
+                        "/file",
+                        multiPartFormData = listOf(
+                            MultiPartFileValue(
+                                "filesPart",
+                                "test.pdf",
+                                "application/pdf",
+                                "UTF-8"
+                            )
+                        )
+                    ), HttpResponse.ok("{\"filename\": \"ThIsi5ByT3sD4tA\"}")
+                )
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
+    @Test
+    fun `show clear error for non-numerical response codes`() {
+        try {
+            OpenApiSpecification.fromYAML(
+                """
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /random1:
+                post:
+                  summary: With examples
+                  parameters: []
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          required:
+                          - id
+                          properties:
+                            id:
+                              type: number
+                  responses:
+                    "2xx":
+                      description: Random
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), ""
+            ).toFeature()
+        } catch (e: Throwable) {
+            assertThat(exceptionCauseMessage(e)).contains("2xx")
+        }
+    }
+
+    @Test
+    fun `should indicate the xml schema if no properties are found`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: "3.0.3"
+info:
+  description: This documentation contains REST API contract details
+  version: "1.0.0"
+  title: REST API
+paths:
+  /xyz:
+    post:
+      tags:
+        - V1
+      summary: Post an entry
+      description: Post an entry
+      operationId: postEntry
+      requestBody:
+        content:
+          application/xml:
+            schema:
+              ${"$"}ref: '#/components/schemas/PostEntryXmlRequest'
+      responses:
+        '202':
+          description: Accepted
+components:
+  schemas:
+    PostEntryXmlRequest:
+      title: PostEntryXmlRequest
+      type: object
+      xml:
+        name: Document
+        """.trimIndent(), "").toFeature()
+        }.satisfies(
+            {
+                assertThat(exceptionCauseMessage(it)).contains("Document")
+            }
+        )
+    }
+
+    @Test
+    fun `should indicate the xml schema by property name if no properties are found`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: "3.0.3"
+info:
+  description: This documentation contains REST API contract details
+  version: "1.0.0"
+  title: REST API
+paths:
+  /xyz:
+    post:
+      tags:
+        - V1
+      summary: Post an entry
+      description: Post an entry
+      operationId: postEntry
+      requestBody:
+        content:
+          application/xml:
+            schema:
+              ${"$"}ref: '#/components/schemas/PostEntryXmlRequest'
+      responses:
+        '202':
+          description: Accepted
+components:
+  schemas:
+    Id:
+      type: object
+    PostEntryXmlRequest:
+      title: PostEntryXmlRequest
+      type: object
+      properties:
+        id:
+          ${"$"}ref: '#/components/schemas/Id'
+      xml:
+        name: Document
+        """.trimIndent(), "").toFeature()
+        }.satisfies(
+            {
+                assertThat(exceptionCauseMessage(it)).withFailMessage(exceptionCauseMessage(it)).contains("Id")
+            }
+        )
+    }
+
+    @Test
+    fun `should load externalized test data with name in file`() {
+        val specFilePath = "core/src/test/resources/openapi/spec_with_externalized_test_data.yaml"
+        val spec = OpenApiSpecification.fromFile(specFilePath, "").toFeature().loadExternalisedExamples()
+
+        val results = spec.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.path).isEqualTo("/resource/10")
+                return HttpResponse.ok("success")
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        assertThat(results.successCount).isOne()
+    }
+
+    @Test
+    fun `should load externalized test data using filename when name is not in file`() {
+        val specFilePath = "core/src/test/resources/openapi/spec_with_unnamed_externalized_test_data.yaml"
+        val spec = OpenApiSpecification.fromFile(specFilePath, "")
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val tests = spec.generateContractTestScenarios(emptyList())
+        assertThat(tests.single().testDescription()).contains("file_name_as_test_label")
+    }
+
+    @Test
+    fun `show an error when examples with no mediaType is found in the request`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /api/nocontent:
+    post:
+      requestBody:
+        content:
+          application/json:
+            example: test data
+      responses:
+        "204":
+          description: No response
+""".trimIndent(), ""
+            ).toFeature()
+        }.satisfies(
+            {
+                println(exceptionCauseMessage(it))
+                assertThat(exceptionCauseMessage(it)).contains("""Request body definition is missing""")
+            }
+        )
+    }
+
+    @Test
+    fun `show an error when examples with no mediaType is found in the response`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /api/nocontent:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  description: The name of the entity
+      responses:
+        "200":
+          description: Random
+          content:
+            text/plain:
+              example: sample response
+            """.trimIndent(), ""
+            ).toFeature()
+        }.satisfies(
+            {
+                println(exceptionCauseMessage(it))
+                assertThat(exceptionCauseMessage(it)).contains("""Response body definition is missing""")
+            }
+        )
+    }
+
+    @Test
+    fun `show an error when a type is not provided`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /api/nocontent:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  description: The name of the entity
+      responses:
+        204:
+          description: No content
+            """.trimIndent(), ""
+            ).toFeature()
+        }.satisfies(
+            {
+                println(exceptionCauseMessage(it))
+                assertThat(exceptionCauseMessage(it)).contains(""""type" attribute was not provided""")
+            }
+        )
+    }
+
+    @Test
+    fun `show an error when parameter name is not provided`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /api/nocontent:
+    get:
+      parameters:
+      - in: query
+        schema:
+          type: string
+      responses:
+        204:
+          description: No content
+            """.trimIndent(), ""
+            ).toFeature()
+        }.satisfies(
+            {
+                println(exceptionCauseMessage(it))
+                assertThat(exceptionCauseMessage(it)).contains("""A parameter does not have a nam""")
+            }
+        )
+    }
+
+    @Test
+    fun `show an error when parameter schema is not provided`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /api/nocontent:
+    get:
+      parameters:
+      - in: query
+        name: id
+      responses:
+        204:
+          description: No content
+            """.trimIndent(), ""
+            ).toFeature()
+        }.satisfies(
+            {
+                println(exceptionCauseMessage(it))
+                assertThat(exceptionCauseMessage(it)).contains("""A parameter does not have a schema""")
+            }
+        )
+    }
+
+    @Test
+    fun `show an error when parameter schema is array and items is not provided`() {
+        assertThatThrownBy {
+            OpenApiSpecification.fromYAML(
+                """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /api/nocontent:
+    get:
+      parameters:
+      - in: query
+        name: id
+        schema:
+          type: array
+      responses:
+        204:
+          description: No content
+            """.trimIndent(), ""
+            ).toFeature()
+        }.satisfies(
+            {
+                println(exceptionCauseMessage(it))
+                assertThat(exceptionCauseMessage(it)).contains("""A parameter of type "array" has not defined "items"""")
+            }
+        )
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()
-        } catch(e: Throwable) {
+        } catch (e: Throwable) {
             println(exceptionCauseMessage(e))
         }
     }
 }
+

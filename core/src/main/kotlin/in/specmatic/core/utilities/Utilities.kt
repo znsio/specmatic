@@ -12,6 +12,8 @@ import org.xml.sax.InputSource
 import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
+import `in`.specmatic.core.azure.AzureAuthCredentials
+import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
@@ -22,6 +24,7 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import org.eclipse.jgit.util.TemporaryBuffer.LocalFile
 import org.w3c.dom.Node.*
 import java.io.File
 import java.io.StringReader
@@ -29,7 +32,6 @@ import java.io.StringWriter
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
-import javax.xml.transform.Transformer
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
@@ -108,25 +110,14 @@ private fun isEmptyText(it: Node, node: Node) =
 private fun containsTextContent(node: Node) =
         node.childNodes.length == 1 && node.firstChild.nodeType == TEXT_NODE && node.nodeType == ELEMENT_NODE
 
-fun xmlToString(node: Node): String = xmlToString(DOMSource(node))
-
-private fun xmlToString(domSource: DOMSource, configureTransformer: (Transformer) -> Unit = {}): String {
+fun xmlToString(node: Node): String {
     val writer = StringWriter()
     val result = StreamResult(writer)
-    val tf = TransformerFactory.newInstance()
-    val transformer = tf.newTransformer()
+    val transformer = TransformerFactory.newInstance().newTransformer()
     transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes")
-    configureTransformer(transformer)
-    transformer.transform(domSource, result)
+    transformer.transform(DOMSource(node), result)
     return writer.toString()
 }
-
-val contractFilePath: String
-    get() = currentDirectory + defaultContractFilePath
-
-private const val currentDirectory = "./"
-private const val contractDirectory = "contract"
-private const val defaultContractFilePath = "$contractDirectory/service.contract"
 
 fun getTransportCallingCallback(bearerToken: String? = null): TransportConfigCallback {
     return TransportConfigCallback { transport ->
@@ -134,7 +125,7 @@ fun getTransportCallingCallback(bearerToken: String? = null): TransportConfigCal
             transport.sshSessionFactory = SshdSessionFactory()
         } else if(bearerToken != null && transport is TransportHttp) {
             logger.debug("Setting Authorization header")
-            transport.setAdditionalHeaders(mapOf("Authorization" to "Bearer $bearerToken"))
+            transport.additionalHeaders = mapOf("Authorization" to "Bearer $bearerToken")
         }
     }
 }
@@ -154,7 +145,8 @@ fun loadConfigJSON(configFile: File): JSONObjectValue {
     val configJson = try {
         parsedJSON(configFile.readText())
     } catch (e: Throwable) {
-        throw ContractException("Error reading the $globalConfigFileName: ${exceptionCauseMessage(e)}")
+        throw ContractException("Error reading the $globalConfigFileName: ${exceptionCauseMessage(e)}",
+            exceptionCause = e)
     }
 
     if (configJson !is JSONObjectValue)
@@ -171,9 +163,21 @@ fun loadSources(specmaticConfigJson: SpecmaticConfigJson): List<ContractSource> 
                 val testPaths = source.test ?: emptyList()
 
                 when (source.repository) {
-                    null -> GitMonoRepo(testPaths, stubPaths)
-                    else -> GitRepo(source.repository, testPaths, stubPaths)
+                    null -> GitMonoRepo(testPaths, stubPaths, source.provider.toString())
+                    else -> GitRepo(source.repository, source.branch, testPaths, stubPaths, source.provider.toString())
                 }
+            }
+            SourceProvider.filesystem -> {
+                val stubPaths = source.stub ?: emptyList()
+                val testPaths = source.test ?: emptyList()
+
+                LocalFileSystemSource(source.directory ?: ".", testPaths, stubPaths)
+            }
+            SourceProvider.web -> {
+                val stubPaths = source.stub ?: emptyList()
+                val testPaths = source.test ?: emptyList()
+
+                WebSource(testPaths, stubPaths)
             }
         }
     }
@@ -189,17 +193,32 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
         if (source !is JSONObjectValue)
             throw ContractException("Every element of the sources json array must be a json object, but got this: ${source.toStringLiteral()}")
 
+        val type = nativeString(source.jsonObject, "provider")
+
         when(nativeString(source.jsonObject, "provider")) {
             "git" -> {
                 val repositoryURL = nativeString(source.jsonObject, "repository")
+                val branch = nativeString(source.jsonObject, "branch")
 
                 val stubPaths = jsonArray(source, "stub")
                 val testPaths = jsonArray(source, "test")
 
                 when (repositoryURL) {
-                    null -> GitMonoRepo(testPaths, stubPaths)
-                    else -> GitRepo(repositoryURL, testPaths, stubPaths)
+                    null -> GitMonoRepo(testPaths, stubPaths, type)
+                    else -> GitRepo(repositoryURL, branch, testPaths, stubPaths, type)
                 }
+            }
+            "filesystem" -> {
+                val directory = nativeString(source.jsonObject, "directory") ?: throw ContractException("The \"directory\" key is required for the local source provider")
+                val stubPaths = jsonArray(source, "stub")
+                val testPaths = jsonArray(source, "test")
+
+                LocalFileSystemSource(directory, testPaths, stubPaths)
+            }
+            "web" -> {
+                val stubPaths = jsonArray(source, "stub")
+                val testPaths = jsonArray(source, "test")
+                WebSource(testPaths, stubPaths)
             }
             else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $globalConfigFileName")
         }
@@ -248,17 +267,14 @@ fun gitRootDir(): String {
     return gitRoot.substring(gitRoot.lastIndexOf('/') + 1)
 }
 
-data class ContractPathData(val baseDir: String, val path: String) {
-    val relativePath: String
-      get() {
-          return File(this.path).relativeTo(File(this.baseDir)).path.let {
-              when(it[0]) {
-                  '/' -> it
-                  else -> "/$it"
-              }
-          }
-      }
-}
+data class ContractPathData(
+    val baseDir: String,
+    val path: String,
+    val provider: String? = null,
+    val repository: String? = null,
+    val branch: String? = null,
+    val specificationPath: String? = null
+)
 
 fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, selector: ContractsSelectorPredicate): List<ContractPathData> {
     logger.log("Loading config file $configFilePath")
@@ -272,6 +288,14 @@ fun contractFilePathsFrom(configFilePath: String, workingDirectory: String, sele
     logger.debug(contractPathData.joinToString(System.lineSeparator()) { it.path }.prependIndent("  "))
 
     return contractPathData
+}
+
+fun getSystemGit(path: String) : GitCommand {
+    return SystemGit(path)
+}
+
+fun getSystemGitWithAuth(path: String) : GitCommand {
+    return SystemGit(path, authCredentials = AzureAuthCredentials)
 }
 
 class UncaughtExceptionHandler: Thread.UncaughtExceptionHandler {
@@ -291,3 +315,13 @@ internal fun withNumberType(resolver: Resolver) =
         resolver.copy(newPatterns = resolver.newPatterns.plus("(number)" to NumberPattern()))
 
 fun String.capitalizeFirstChar() = this.replaceFirstChar { it.uppercase() }
+
+fun saveJsonFile(jsonString: String, path: String, fileName: String) {
+    val directory = File(path)
+    directory.mkdirs()
+    File(directory, fileName).writeText(jsonString)
+}
+
+fun readEnvVarOrProperty(envVarName: String, propertyName: String): String? {
+    return System.getenv(envVarName) ?: System.getProperty(propertyName)
+}

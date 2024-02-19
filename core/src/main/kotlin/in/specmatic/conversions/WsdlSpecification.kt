@@ -36,13 +36,13 @@ class WSDLFile(private val location: String) : WSDLContent {
 }
 
 class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecification {
-    private val openApiScenarioInfos = toScenarioInfos()
+    private val openApiScenarioInfos: List<ScenarioInfo> = toScenarioInfos().first
 
     override fun matches(
         specmaticScenarioInfo: ScenarioInfo,
         steps: List<Step>
     ): List<ScenarioInfo> {
-        if (openApiScenarioInfos.isNullOrEmpty() || !steps.isNotEmpty()) return listOf(specmaticScenarioInfo)
+        if (openApiScenarioInfos.isEmpty() || steps.isEmpty()) return listOf(specmaticScenarioInfo)
         val result: MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> =
             specmaticScenarioInfo to openApiScenarioInfos to
                     ::matchesRequest then
@@ -54,14 +54,14 @@ class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecificati
         }
     }
 
-    fun matchesRequest(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
+    private fun matchesRequest(parameters: Pair<ScenarioInfo, List<ScenarioInfo>>): MatchingResult<Pair<ScenarioInfo, List<ScenarioInfo>>> {
         val (specmaticScenarioInfo, wsdlScenarioInfos) = parameters
 
-        val matchingScenarioInfos = wsdlScenarioInfos.filter {
-            it.httpRequestPattern.matches(
+        val matchingScenarioInfos = wsdlScenarioInfos.filter { scenarioInfo ->
+            scenarioInfo.httpRequestPattern.matches(
                 specmaticScenarioInfo.httpRequestPattern.generate(
-                    Resolver()
-                ), Resolver()
+                    Resolver(newPatterns = scenarioInfo.patterns)
+                ), Resolver(newPatterns = scenarioInfo.patterns)
             ).isSuccess()
         }
 
@@ -96,8 +96,8 @@ class WsdlSpecification(private val wsdlFile: WSDLContent) : IncludedSpecificati
         }
     }
 
-    override fun toScenarioInfos(): List<ScenarioInfo> {
-        return scenarioInfos(wsdlToFeatureChildren(wsdlFile), "")
+    override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
+        return scenarioInfos(wsdlToFeatureChildren(wsdlFile), "") to emptyMap()
     }
 
     private fun wsdlToFeatureChildren(wsdlFile: WSDLContent): List<FeatureChild> {

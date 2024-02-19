@@ -22,7 +22,7 @@ class Watcher(private val contractPaths: List<String>) {
             while (watchService.take().also { key = it } != null) {
                 key.reset()
 
-                val events = key.pollEvents().map { it.context().toString() }.joinToString(", ")
+                val events = key.pollEvents().joinToString(", ") { it.context().toString() }
                 consoleLog(StringLog("""Detected event(s) for $events, restarting stub server."""))
                 restartServer()
             }

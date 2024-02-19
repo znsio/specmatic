@@ -25,4 +25,9 @@ interface GitCommand {
     fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit
     fun exists(treeish: String, relativePath: String): Boolean
     fun getCurrentBranch(): String
+    fun statusPorcelain(): String
+    fun fetch(): String
+    fun revisionsBehindCount(): Int
+    fun getRemoteUrl(name: String = "origin"): String
+    fun checkIgnore(path: String): String
 }

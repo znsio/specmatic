@@ -1,35 +1,33 @@
 package application
 
-import `in`.specmatic.core.*
+import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import `in`.specmatic.core.CONTRACT_EXTENSIONS
+import `in`.specmatic.core.Configuration
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
+import `in`.specmatic.core.WorkingDirectory
 import `in`.specmatic.core.log.*
+import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.stub.ContractStub
 import `in`.specmatic.stub.HttpClientFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.ApplicationContext
 import picocli.CommandLine.*
+import java.io.File
 import java.util.concurrent.Callable
+
 
 @Command(name = "stub",
         mixinStandardHelpOptions = true,
         description = ["Start a stub server with contract"])
 class StubCommand : Callable<Unit> {
     var httpStub: ContractStub? = null
-    var kafkaStub: QontractKafka? = null
 
     @Autowired
     private var httpStubEngine: HTTPStubEngine = HTTPStubEngine()
 
     @Autowired
-    private var kafkaStubEngine: KafkaStubEngine = KafkaStubEngine()
-
-    @Autowired
     private var stubLoaderEngine: StubLoaderEngine = StubLoaderEngine()
-
-    @Autowired
-    private lateinit var context: ApplicationContext
 
     @Autowired
     private var specmaticConfig: SpecmaticConfig = SpecmaticConfig()
@@ -45,15 +43,6 @@ class StubCommand : Callable<Unit> {
 
     @Option(names = ["--port"], description = ["Port for the http stub"], defaultValue = DEFAULT_HTTP_STUB_PORT)
     var port: Int = 0
-
-    @Option(names = ["--startKafka"], description = ["Host on which to dump the stubbed kafka message"], defaultValue = "false")
-    var startKafka: Boolean = false
-
-    @Option(names = ["--kafkaHost"], description = ["Host on which to dump the stubbed kafka message"], defaultValue = "localhost", required = false)
-    lateinit var kafkaHost: String
-
-    @Option(names = ["--kafkaPort"], description = ["Port for the Kafka stub"], defaultValue = "9093", required = false)
-    lateinit var kafkaPort: String
 
     @Option(names = ["--strict"], description = ["Start HTTP stub in strict mode"], required = false)
     var strictMode: Boolean = false
@@ -106,6 +95,10 @@ class StubCommand : Callable<Unit> {
     @Autowired
     val httpClientFactory = HttpClientFactory()
 
+    private var contractSources:List<ContractPathData> = emptyList()
+
+    var specmaticConfigPath: String? = null
+
     override fun call() {
         val logPrinters = configureLogPrinters()
 
@@ -119,13 +112,22 @@ class StubCommand : Callable<Unit> {
         }
 
         try {
-            contractPaths = loadConfig()
+            contractSources = when (contractPaths.isEmpty()) {
+                true -> {
+                    logger.debug("No contractPaths specified. Using configuration file named $configFileName")
+                    specmaticConfigPath = File(Configuration.globalConfigFileName).canonicalPath
+                    specmaticConfig.contractStubPathData()
+                }
+                else -> contractPaths.map {
+                    ContractPathData("", it)
+                }
+            }
+            contractPaths = contractSources.map { it.path }
             validateContractFileExtensions(contractPaths, fileOperations)
             startServer()
 
-            if(httpStub != null || kafkaStub != null) {
+            if(httpStub != null) {
                 addShutdownHook()
-
                 val watcher = watchMaker.make(contractPaths.plus(dataDirs))
                 watcher.watchForChanges {
                     restartServer()
@@ -162,21 +164,24 @@ class StubCommand : Callable<Unit> {
         listOf(TextFilePrinter(LogDirectory(it, logPrefix, "", "log")))
     } ?: emptyList()
 
-    private fun loadConfig() = contractPaths.ifEmpty {
-        logger.debug("No contractPaths specified. Using configuration file named $configFileName")
-        specmaticConfig.contractStubPaths()
-    }
 
     private fun startServer() {
         val workingDirectory = WorkingDirectory()
-        val stubData = stubLoaderEngine.loadStubs(contractPaths, dataDirs)
+        val stubData = stubLoaderEngine.loadStubs(contractSources, dataDirs)
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 
-        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, httpClientFactory, workingDirectory)
-        kafkaStub = kafkaStubEngine.runKafkaStub(stubData, kafkaHost, kafkaPort.toInt(), startKafka)
+        port = when (isDefaultPort(port)) {
+            true -> if (portIsInUse(host, port)) findRandomFreePort() else port
+            false -> port
+        }
+        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, specmaticConfigPath, httpClientFactory, workingDirectory)
 
         LogTail.storeSnapshot()
+    }
+
+    private fun isDefaultPort(port:Int): Boolean {
+        return DEFAULT_HTTP_STUB_PORT == port.toString()
     }
 
     private fun restartServer() {
@@ -196,9 +201,6 @@ class StubCommand : Callable<Unit> {
     private fun stopServer() {
         httpStub?.close()
         httpStub = null
-
-        kafkaStub?.close()
-        kafkaStub = null
     }
 
     private fun addShutdownHook() {
@@ -207,7 +209,6 @@ class StubCommand : Callable<Unit> {
                 try {
                     consoleLog(StringLog("Shutting down stub servers"))
                     httpStub?.close()
-                    kafkaStub?.close()
                 } catch (e: InterruptedException) {
                     currentThread().interrupt()
                 }
@@ -220,7 +221,7 @@ internal fun validateContractFileExtensions(contractPaths: List<String>, fileOpe
     contractPaths.filter { fileOperations.isFile(it) && fileOperations.extensionIsNot(it, CONTRACT_EXTENSIONS) }.let {
         if (it.isNotEmpty()) {
             val files = it.joinToString("\n")
-            exitWithMessage("The following files do not end with ${CONTRACT_EXTENSIONS} and cannot be used:\n$files")
+            exitWithMessage("The following files do not end with $CONTRACT_EXTENSIONS and cannot be used:\n$files")
         }
     }
 }

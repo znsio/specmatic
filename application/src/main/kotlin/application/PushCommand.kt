@@ -16,7 +16,7 @@ import java.io.File
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
-private const val pipelineKeyInQontracConfig = "pipeline"
+private const val pipelineKeyInSpecmaticConfig = "pipeline"
 
 @CommandLine.Command(name = "push", description = ["Check the new contract for backward compatibility with the specified version, then overwrite the old one with it."], mixinStandardHelpOptions = true)
 class PushCommand: Callable<Unit> {
@@ -27,7 +27,15 @@ class PushCommand: Callable<Unit> {
         val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
         val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
 
-        for (source in sources) {
+        val unsupportedSources = sources.filter { it !is GitSource }.mapNotNull { it.type }.distinct()
+
+        if(unsupportedSources.isNotEmpty()) {
+            println("The following types of sources are not supported: ${unsupportedSources.joinToString(", ")}")
+        }
+
+        val supportedSources = sources.filter { it is GitSource }
+
+        for (source in supportedSources) {
             val sourceDir = source.directoryRelativeTo(workingDirectory)
             val sourceGit = SystemGit(sourceDir.path)
 
@@ -35,15 +43,15 @@ class PushCommand: Callable<Unit> {
                 if (sourceGit.workingDirectoryIsGitRepo()) {
                     source.getLatest(sourceGit)
 
-                    val changedQontractFiles = sourceGit.getChangedFiles().filter {
+                    val changedSpecFiles = sourceGit.getChangedFiles().filter {
                         File(it).extension in CONTRACT_EXTENSIONS
                     }
-                    for (contractPath in changedQontractFiles) {
+                    for (contractPath in changedSpecFiles) {
                         testBackwardCompatibility(sourceDir, contractPath, sourceGit, source)
                         subscribeToContract(manifestData, sourceDir.resolve(contractPath).path, sourceGit)
                     }
 
-                    for (contractPath in changedQontractFiles) {
+                    for (contractPath in changedSpecFiles) {
                         sourceGit.add(contractPath)
                     }
 
@@ -107,37 +115,37 @@ fun subscribeToContract(manifestData: Value, contractPath: String, sourceGit: Sy
     if (manifestData !is JSONObjectValue)
         exitWithMessage("Manifest must contain a json object")
 
-    if (manifestData.jsonObject.containsKey(pipelineKeyInQontracConfig))
+    if (manifestData.jsonObject.containsKey(pipelineKeyInSpecmaticConfig))
         registerPipelineCredentials(manifestData, contractPath, sourceGit)
 }
 
 fun registerPipelineCredentials(manifestData: JSONObjectValue, contractPath: String, sourceGit: SystemGit) {
     println("Manifest has pipeline credentials, checking if they are already registered")
 
-    val provider = loadFromPath(manifestData, listOf(pipelineKeyInQontracConfig, "provider"))?.toStringLiteral()
-    val pipelineInfo = manifestData.getJSONObject(pipelineKeyInQontracConfig)
+    val provider = loadFromPath(manifestData, listOf(pipelineKeyInSpecmaticConfig, "provider"))?.toStringLiteral()
+    val pipelineInfo = manifestData.getJSONObject(pipelineKeyInSpecmaticConfig)
 
     if (provider == "azure" && hasAzureData(pipelineInfo)) {
         val filePath = File(contractPath)
-        val qontractMetaDataFile = File("${filePath.parent}/${filePath.nameWithoutExtension}.json")
+        val specmaticConfigFile = File("${filePath.parent}/${filePath.nameWithoutExtension}.json")
 
         val pipelinesKeyInContractMetaData = "pipelines"
 
-        val qontractMetaData = when {
-            qontractMetaDataFile.exists() -> parsedJSON(qontractMetaDataFile.readText())
+        val specmaticConfig = when {
+            specmaticConfigFile.exists() -> parsedJSON(specmaticConfigFile.readText())
             else -> {
-                println("Could not find metadata file")
+                println("Could not find Specmatic config file")
                 JSONObjectValue(mapOf(pipelinesKeyInContractMetaData to JSONArrayValue(emptyList())))
             }
         }
 
-        if (qontractMetaData !is JSONObjectValue)
+        if (specmaticConfig !is JSONObjectValue)
             exitWithMessage("Contract meta data must contain a json object")
 
-        if (!qontractMetaData.jsonObject.containsKey(pipelinesKeyInContractMetaData))
+        if (!specmaticConfig.jsonObject.containsKey(pipelinesKeyInContractMetaData))
             exitWithMessage("Contract meta data must contain the key \"azure-pipelines\"")
 
-        val pipelines = qontractMetaData.jsonObject.getValue(pipelinesKeyInContractMetaData)
+        val pipelines = specmaticConfig.jsonObject.getValue(pipelinesKeyInContractMetaData)
         if (pipelines !is JSONArrayValue)
             exitWithMessage("\"azure-pipelines\" key must contain a list of pipelines")
 
@@ -145,9 +153,9 @@ fun registerPipelineCredentials(manifestData: JSONObjectValue, contractPath: Str
             println("Updating the contract manifest to run this project's CI when ${filePath.name} changes...")
 
             val newPipelines = JSONArrayValue(pipelines.list.plus(JSONObjectValue(pipelineInfo)))
-            val newMetaData = qontractMetaData.jsonObject.plus(pipelinesKeyInContractMetaData to newPipelines)
+            val newMetaData = specmaticConfig.jsonObject.plus(pipelinesKeyInContractMetaData to newPipelines)
 
-            qontractMetaDataFile.writeText(JSONObjectValue(newMetaData).toStringLiteral())
+            specmaticConfigFile.writeText(JSONObjectValue(newMetaData).toStringLiteral())
 
             sourceGit.add()
         }

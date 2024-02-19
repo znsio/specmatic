@@ -1,7 +1,6 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.NullPattern
-import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat

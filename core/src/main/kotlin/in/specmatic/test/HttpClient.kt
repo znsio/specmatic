@@ -1,6 +1,6 @@
 package `in`.specmatic.test
 
-import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import `in`.specmatic.core.*
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.log.HttpLogMessage
@@ -32,7 +32,12 @@ import java.util.zip.GZIPInputStream
 // API for non-Kotlin invokers
 fun createHttpClient(baseURL: String, timeout: Int) = HttpClient(baseURL, timeout)
 
-class HttpClient(val baseURL: String, private val timeout: Int = 60, private val log: (event: LogMessage) -> Unit = ::consoleLog, private val httpClientFactory: HttpClientFactory = RealHttpClientFactory) : TestExecutor {
+class HttpClient(
+    val baseURL: String,
+    private val timeout: Int = 60,
+    private val log: (event: LogMessage) -> Unit = ::consoleLog,
+    private val httpClientFactory: HttpClientFactory = RealHttpClientFactory
+) : TestExecutor {
     private val serverStateURL = "/_$APPLICATION_NAME_LOWER_CASE/state"
 
     override fun execute(request: HttpRequest): HttpResponse {
@@ -48,11 +53,11 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
         return runBlocking {
             httpClientFactory.create(timeout).use { ktorClient ->
                 val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
-                    requestWithFileContent.buildRequest(this)
+                    requestWithFileContent.buildKTORRequest(this, url)
                 }
 
                 val outboundRequest: HttpRequest =
-                    ktorHttpRequestToHttpRequest(ktorResponse.request, requestWithFileContent)
+                    ktorHttpRequestToHttpRequestForLogging(ktorResponse.request, requestWithFileContent)
                 httpLogMessage.addRequest(outboundRequest)
 
                 ktorResponseToHttpResponse(ktorResponse).also {
@@ -122,25 +127,39 @@ class HttpClient(val baseURL: String, private val timeout: Int = 60, private val
     }
 }
 
-private fun ktorHttpRequestToHttpRequest(request: io.ktor.client.request.HttpRequest, qontractRequest: HttpRequest): HttpRequest {
-    val(body, formFields, multiPartFormData) =
-        when(request.content) {
-            is FormDataContent -> Triple(EmptyString, qontractRequest.formFields, emptyList())
-            is TextContent -> Triple(qontractRequest.body, emptyMap(), emptyList())
-            is MultiPartFormDataContent -> Triple(EmptyString, emptyMap(), qontractRequest.multiPartFormData)
+private fun ktorHttpRequestToHttpRequestForLogging(
+    request: io.ktor.client.request.HttpRequest,
+    specmaticRequest: HttpRequest
+): HttpRequest {
+    val (body, formFields, multiPartFormData) =
+        when (request.content) {
+            is FormDataContent -> Triple(EmptyString, specmaticRequest.formFields, emptyList())
+            is TextContent -> {
+                val bodyValue = when (specmaticRequest.body) {
+                    is NoBodyValue -> NoBodyValue
+                    else -> specmaticRequest.body
+                }
+
+                Triple(bodyValue, emptyMap(), emptyList())
+            }
+            is MultiPartFormDataContent -> Triple(EmptyString, emptyMap(), specmaticRequest.multiPartFormData)
             is EmptyContent -> Triple(EmptyString, emptyMap(), emptyList())
             else -> throw ContractException("Unknown type of body content sent in the request")
         }
 
-    val requestHeaders = request.headers.toMap().mapValues { it.value[0] }
+    val requestHeaders: Map<String, String> = request.headers.toMap().mapValues { it.value[0] }.plus(
+        CONTENT_TYPE to (request.content.contentType?.toString() ?: "NOT SENT")
+    )
 
-    return HttpRequest(method = request.method.value,
-            path = request.url.encodedPath,
-            headers = requestHeaders,
-            body = body,
-            queryParams = toParams(request.url.parameters),
-            formFields = formFields,
-            multiPartFormData = multiPartFormData)
+    return HttpRequest(
+        method = request.method.value,
+        path = request.url.encodedPath,
+        headers = requestHeaders,
+        body = body,
+        queryParams = QueryParameters(paramPairs = toParams(request.url.parameters)),
+        formFields = formFields,
+        multiPartFormData = multiPartFormData
+    )
 }
 
 suspend fun ktorResponseToHttpResponse(ktorResponse: io.ktor.client.statement.HttpResponse): HttpResponse {
@@ -159,13 +178,20 @@ suspend fun decodeBody(ktorResponse: io.ktor.client.statement.HttpResponse): Pai
     }
 }
 
-fun decodeBody(bytes: ByteArray, encoding: String?, receivedCharset: Charset?, headers: Map<String, String>): Pair<Map<String, String>, String> =
-    when(encoding) {
+fun decodeBody(
+    bytes: ByteArray,
+    encoding: String?,
+    receivedCharset: Charset?,
+    headers: Map<String, String>
+): Pair<Map<String, String>, String> =
+    when (encoding) {
         "gzip" -> {
             Pair(
                 headers.minus("Content-Encoding"),
-                unzip(bytes, receivedCharset))
+                unzip(bytes, receivedCharset)
+            )
         }
+
         else -> Pair(headers, String(bytes))
     }
 

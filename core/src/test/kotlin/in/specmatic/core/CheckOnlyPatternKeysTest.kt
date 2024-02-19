@@ -63,7 +63,7 @@ internal class CheckOnlyPatternKeysTest {
     inner class ReturnAllErrors {
         val expected = mapOf("hello" to "value", "world" to "value")
         val actual = mapOf("hello_world" to "value")
-        val missingList: List<KeyError> = CheckOnlyPatternKeys.validateList(expected, actual)
+        private val missingList: List<KeyError> = CheckOnlyPatternKeys.validateList(expected, actual)
 
         @Test
         fun `should return as many errors as the number of missing keys`() {

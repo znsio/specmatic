@@ -1,0 +1,14 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/test",
+    "body": {
+      "item": "data"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": "success 3"
+  },
+  "http-stub-id": "123"
+}

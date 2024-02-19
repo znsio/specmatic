@@ -5,14 +5,14 @@ import `in`.specmatic.core.pattern.AnyPattern
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.DeferredPattern
 import `in`.specmatic.core.pattern.Pattern
-import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.HttpStubResponse
 import `in`.specmatic.stub.ThreadSafeListOfStubs
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Assert.assertFalse
+import org.junit.jupiter.api.Assertions.assertFalse
 import java.io.File
 
 fun toReport(result: Result, scenarioMessage: String? = null): String {
@@ -68,35 +68,14 @@ fun String.testBackwardCompatibility(oldContractGherkin: String): Results {
     return testBackwardCompatibility(oldFeature, newFeature)
 }
 
-fun stubShouldNotBreak(stubRequest: HttpRequest, stubResponse: HttpResponse, oldContract: String, newContract: String) {
-    val responseFromOldContract = testStub(oldContract, stubRequest, stubResponse)
-    assertThat(responseFromOldContract).isEqualTo(stubResponse)
-
-    val responseFromNewContract = testStub(newContract, stubRequest, stubResponse)
-    assertThat(responseFromNewContract.status).isEqualTo(200)
-}
-
-fun stubShouldBreak(stubRequest: HttpRequest, stubResponse: HttpResponse, oldContract: String, newContract: String) {
-    val responseFromOldContract = testStub(oldContract, stubRequest, stubResponse)
-    assertThat(responseFromOldContract).isEqualTo(stubResponse)
-
-    val responseFromNewContract = try {
-        testStub(newContract, stubRequest, stubResponse)
-    } catch(e: Throwable) {
-        println(exceptionCauseMessage(e))
-        return
-    }
-
-    assertThat(responseFromNewContract.status).isEqualTo(400)
-}
-
 fun stubResponse(httpRequest: HttpRequest, features: List<Feature>, threadSafeStubs: List<HttpStubData>, strictMode: Boolean): HttpStubResponse {
     return `in`.specmatic.stub.getHttpResponse(
         httpRequest,
         features,
         ThreadSafeListOfStubs(threadSafeStubs.toMutableList()),
+        ThreadSafeListOfStubs(mutableListOf()),
         strictMode
-    )
+    ).response
 }
 
 fun testStub(contractGherkin: String, stubRequest: HttpRequest, stubResponse: HttpResponse): HttpResponse {
@@ -141,3 +120,19 @@ private class TestHttpStubData(val oldContract: String, val stubs: List<TestHttp
         }
     }
 }
+
+val HttpRequest.jsonBody: JSONObjectValue
+    get() {
+        return this.body as JSONObjectValue
+    }
+
+const val GENERATION = "generation"
+
+infix fun <E> List<E>.shouldContainInAnyOrder(elementList: List<E>) {
+    assertThat(this).containsExactlyInAnyOrderElementsOf(elementList)
+}
+
+val DefaultStrategies = ResolverStrategies (
+    DoNotUseDefaultExample,
+    NonGenerativeTests
+)

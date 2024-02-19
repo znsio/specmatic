@@ -45,7 +45,7 @@ internal class HttpResponsePatternTest {
 
     @Test
     fun `all response match errors should be returned together`() {
-        val response = HttpResponse.OK(StringValue("not a number")).copy(headers = mapOf("X-Data" to "abc123"))
+        val response = HttpResponse.ok(StringValue("not a number")).copy(headers = mapOf("X-Data" to "abc123"))
         val pattern = HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern())), body = NumberPattern())
 
         val result = pattern.matches(response, Resolver())

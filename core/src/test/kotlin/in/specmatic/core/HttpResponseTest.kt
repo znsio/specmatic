@@ -1,9 +1,5 @@
 package `in`.specmatic.core
 
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Test
 import `in`.specmatic.core.GherkinSection.Then
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
@@ -12,22 +8,24 @@ import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
-import java.util.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 internal class HttpResponseTest {
     @Test
     fun createANewResponseObjectWithInitialValues() {
         val response = HttpResponse(500, "ERROR", HashMap())
-        Assertions.assertEquals(500, response.status)
-        Assertions.assertEquals(StringValue("ERROR"), response.body)
+        assertEquals(500, response.status)
+        assertEquals(StringValue("ERROR"), response.body)
     }
 
     @Test
     fun createANewResponseObjectWithoutInitialValues() {
         val response = HttpResponse.EMPTY
-        Assertions.assertEquals(0, response.status)
-        Assertions.assertEquals(EmptyString, response.body)
+        assertEquals(0, response.status)
+        assertEquals(EmptyString, response.body)
     }
 
     @Test
@@ -101,7 +99,7 @@ internal class HttpResponseTest {
 
     @Test
     fun `response-body selector with no path should return response body`() {
-        val response = HttpResponse.OK("hello")
+        val response = HttpResponse.ok("hello")
         testSelection(response, "response-body", "hello")
     }
 
@@ -112,7 +110,7 @@ internal class HttpResponseTest {
 
     @Test
     fun `response-body selector with a path should return the JSON value at that path`() {
-        val response = HttpResponse.OK(JSONObjectValue(mapOf("token" to NumberValue(10))))
+        val response = HttpResponse.ok(JSONObjectValue(mapOf("token" to NumberValue(10))))
         testSelection(response, "response-body.token", "10")
     }
 
@@ -121,7 +119,7 @@ internal class HttpResponseTest {
         val nameData = mapOf("name" to StringValue("Jack"))
         val responseBody = JSONObjectValue(mapOf("person" to JSONObjectValue(nameData)))
 
-        val response = HttpResponse.OK(responseBody)
+        val response = HttpResponse.ok(responseBody)
         val selectedValue = response.selectValue("response-body.person")
         val parsedValue = parsedValue(selectedValue)
 
@@ -136,14 +134,21 @@ internal class HttpResponseTest {
 
     @Test
     fun `exports bindings`() {
-        val response = HttpResponse.OK(JSONObjectValue(mapOf("token" to NumberValue(10))))
+        val response = HttpResponse.ok(JSONObjectValue(mapOf("token" to NumberValue(10))))
         val bindings = response.export(mapOf("token" to "response-body.token"))
         assertThat(bindings).isEqualTo(mapOf("token" to "10"))
     }
 
     @Test
     fun `throws error if export is not found`() {
-        val response = HttpResponse.OK(JSONObjectValue(mapOf("token" to NumberValue(10))))
+        val response = HttpResponse.ok(JSONObjectValue(mapOf("token" to NumberValue(10))))
         assertThatThrownBy { response.export(mapOf("token" to "response-body.notfound")) }.isInstanceOf(ContractException::class.java)
+    }
+
+    @Test
+    fun `should exclude dynamic headers`() {
+        HttpResponse.OK.copy(headers = mapOf("Content-Length" to "10").withoutDynamicHeaders()).let {
+            assertThat(it.headers).isEmpty()
+        }
     }
 }

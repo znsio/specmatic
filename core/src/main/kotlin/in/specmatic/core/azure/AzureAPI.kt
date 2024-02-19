@@ -1,6 +1,8 @@
 package `in`.specmatic.core.azure
 
 import `in`.specmatic.core.HttpRequest
+import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.attempt
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
@@ -8,16 +10,22 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.test.HttpClient
 import java.net.URI
 
-private fun undefault(jsonObject: JSONObjectValue, defaultCollectionName: String) =
-    when (val collection = jsonObject.jsonObject["collection"]!!.toStringLiteral()) {
+private fun unDefault(jsonObject: JSONObjectValue, defaultCollectionName: String) =
+    when (val collection = (jsonObject.jsonObject["collection"] ?: throw ContractException("Expected \"collection\" in Azure search result")).toStringLiteral()) {
         "DefaultCollection" -> defaultCollectionName
         else -> collection
     }
 
 class AzureAPI(private val azureAuthToken: AzureAuthToken, private val azureBaseURL: String, private val collection: String) {
     data class ContractConsumerEntry(val collection: String, val project: String, val branch: String) {
-        constructor(collection: String, jsonObject: JSONObjectValue): this(undefault(jsonObject, collection), jsonObject.jsonObject["project"]!!.toStringLiteral(), jsonObject.jsonObject["branch"]!!.toStringLiteral())
-        constructor(collection: String, jsonObject: Value): this(collection, jsonObject as JSONObjectValue)
+        constructor(collection: String, referenceToSpecificationInAzureSearchResult: JSONObjectValue): this(
+            unDefault(referenceToSpecificationInAzureSearchResult, collection),
+            (referenceToSpecificationInAzureSearchResult.jsonObject["project"]
+                ?: throw ContractException("Expected \"project\" in consumer search result")).toStringLiteral(),
+            (referenceToSpecificationInAzureSearchResult.jsonObject["branch"]
+                ?: throw ContractException("Expected \"branch\" in consumer search result")).toStringLiteral()
+        )
+        constructor(collection: String, referenceToSpecificationInAzureSearchResult: Value): this(collection, referenceToSpecificationInAzureSearchResult as JSONObjectValue)
 
         val description: String
           get() {
@@ -26,11 +34,13 @@ class AzureAPI(private val azureAuthToken: AzureAuthToken, private val azureBase
     }
 
     fun referencesToContract(searchString: String): List<ContractConsumerEntry> {
-        val jsonResponse = codeAdvancedSearch(searchString)
-        val references: JSONArrayValue = jsonResponse.findFirstChildByPath("results.values") as JSONArrayValue
+        val azureResponse = codeAdvancedSearch(searchString)
+        val referencesToSpecification: JSONArrayValue = azureResponse.findFirstChildByPath("results.values") as JSONArrayValue
 
-        return references.list.map { ref ->
-            ContractConsumerEntry(collection, ref)
+        return attempt("Error processing Azure's response to a search for a specification ($searchString)") {
+            referencesToSpecification.list.map { referenceToSpecification ->
+                ContractConsumerEntry(collection, referenceToSpecification)
+            }
         }
     }
 

@@ -29,7 +29,7 @@ class PatternDefinitionTests {
         val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)
         val responseJSON = JSONObject(response.body.displayableValue())
-        Assertions.assertTrue(StringPattern().matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
+        assertTrue(StringPattern().matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
     }
 
     @Test
@@ -109,7 +109,7 @@ class PatternDefinitionTests {
         Assertions.assertEquals(200, response.status)
         val responseObject = JSONObject(response.body.displayableValue())
         val addresses = responseObject.getJSONArray("addresses")
-        Assertions.assertTrue(responseObject.length() > 0)
+        assertTrue(responseObject.length() > 0)
         for (i in 0 until responseObject.length()) {
             val address = addresses.getJSONObject(i)
             Assertions.assertNotNull(address.getString("city"))
@@ -138,7 +138,7 @@ class PatternDefinitionTests {
                 val childNode = childNodes.item(i)
                 Assertions.assertEquals("city", childNode.nodeName)
                 val cityNode = childNode.firstChild
-                Assertions.assertTrue(cityNode.nodeValue.length > 0)
+                assertTrue(cityNode.nodeValue.isNotEmpty())
             }
         } catch(e: Throwable) {
             println(e.stackTrace)
@@ -174,7 +174,7 @@ class PatternDefinitionTests {
         val response = contractBehaviour.lookupResponse(request)
         Assertions.assertEquals(200, response.status)
         val responseJSON = JSONObject(response.body.displayableValue())
-        Assertions.assertTrue(StringPattern().matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
+        assertTrue(StringPattern().matches(StringValue(responseJSON.getString("name")), Resolver()) is Result.Success)
     }
 
     @Test
@@ -214,7 +214,7 @@ class PatternDefinitionTests {
     @Test
     fun `(boolean) should match a boolean value`() {
         val boolValue = true
-        val boolPattern = BooleanPattern
+        val boolPattern = BooleanPattern()
 
         BooleanValue(boolValue) shouldMatch  boolPattern
     }

@@ -1,18 +1,17 @@
 package `in`.specmatic.core.pattern
 
-import org.assertj.core.api.Assertions.assertThat
 import `in`.specmatic.core.Resolver
-import org.junit.jupiter.api.Test
-import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.Result
+import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.testBackwardCompatibility
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Assert.assertFalse
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
 
 internal class JSONArrayPatternTest {
     @Test
@@ -38,7 +37,7 @@ internal class JSONArrayPatternTest {
         val value = parsedValue("[1,2]")
         val pattern = parsedPattern("""[1,2,3]""")
 
-        assertFalse(pattern.matches(value, Resolver()).isSuccess())
+        Assertions.assertFalse(pattern.matches(value, Resolver()).isSuccess())
 
     }
 

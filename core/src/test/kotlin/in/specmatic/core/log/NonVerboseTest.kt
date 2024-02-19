@@ -121,6 +121,6 @@ internal class NonVerboseTest {
         logger.print(StringLog("test"))
 
         assertThat(printer.logged.first().toLogString()).isEqualTo("head")
-        assertThat(printer.logged.get(1).toLogString()).isEqualTo("test")
+        assertThat(printer.logged[1].toLogString()).isEqualTo("test")
     }
 }

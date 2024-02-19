@@ -1,5 +1,6 @@
 package `in`.specmatic.core.utilities
 
+import `in`.specmatic.core.NoBodyValue
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 
@@ -100,7 +101,7 @@ fun valueMapToPrettyJsonString(value: Map<String, Value>): String {
     return indentedJson.encodeToString(data)
 }
 
-fun valueMapToUnintendedJsonString(value: Map<String, Value>): String {
+fun valueMapToUnindentedJsonString(value: Map<String, Value>): String {
     val data = mapToStringElement(value)
     return unformattedJson.encodeToString(data)
 }
@@ -111,7 +112,7 @@ fun valueMapToPlainJsonString(value: Map<String, Value>): String {
 }
 
 fun mapToStringElement(data: Map<String, Value>): Map<String, JsonElement> {
-    return data.mapValues { valueToJsonElement(it.value) }
+    return data.filterNot { it.value is NoBodyValue }.mapValues { valueToJsonElement(it.value) }
 }
 
 private fun valueToJsonElement(value: Value): JsonElement {

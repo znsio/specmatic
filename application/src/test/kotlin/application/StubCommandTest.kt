@@ -2,6 +2,13 @@ package application
 
 import com.ginsberg.junit.exit.ExpectSystemExitWithStatus
 import com.ninjasquad.springmockk.MockkBean
+import `in`.specmatic.core.CONTRACT_EXTENSION
+import `in`.specmatic.core.CONTRACT_EXTENSIONS
+import `in`.specmatic.core.LEGACY_CONTRACT_EXTENSION
+import `in`.specmatic.core.parseGherkinStringToFeature
+import `in`.specmatic.core.utilities.ContractPathData
+import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.stub.HttpClientFactory
 import io.mockk.every
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
@@ -15,12 +22,6 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.NONE
 import picocli.CommandLine
 import picocli.CommandLine.IFactory
-import `in`.specmatic.core.LEGACY_CONTRACT_EXTENSION
-import `in`.specmatic.core.parseGherkinStringToFeature
-import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.CONTRACT_EXTENSIONS
-import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.stub.HttpClientFactory
 import java.io.File
 import java.nio.file.Path
 
@@ -45,9 +46,6 @@ internal class StubCommandTest {
     lateinit var httpStubEngine: HTTPStubEngine
 
     @MockkBean
-    lateinit var kafkaStubEngine: KafkaStubEngine
-
-    @MockkBean
     lateinit var stubLoaderEngine: StubLoaderEngine
 
     @Autowired
@@ -56,28 +54,29 @@ internal class StubCommandTest {
     @BeforeEach
     fun `clean up stub command`() {
         stubCommand.contractPaths = arrayListOf()
+        stubCommand.specmaticConfigPath = null
     }
 
     @Test
-    fun `when contract files are not given it should load from qontract config`() {
-        every { specmaticConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
+    fun `when contract files are not given it should load from specmatic config`() {
+        every { specmaticConfig.contractStubPathData() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION").map { ContractPathData("", it) })
 
         CommandLine(stubCommand, factory).execute()
 
-        verify(exactly = 1) { specmaticConfig.contractStubPaths() }
+        verify(exactly = 1) { specmaticConfig.contractStubPathData() }
     }
 
     @Test
-    fun `when contract files are given it should not load from qontract config`() {
-        every { specmaticConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
+    fun `when contract files are given it should not load from specmatic config`() {
+        every { specmaticConfig.contractStubPathData() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION").map { ContractPathData("", it) })
 
         CommandLine(stubCommand, factory).execute("/parameter/path/to/contract.$CONTRACT_EXTENSION")
 
-        verify(exactly = 0) { specmaticConfig.contractStubPaths() }
+        verify(exactly = 0) { specmaticConfig.contractStubPathData() }
     }
 
     @Test
-    fun `should attempt to start HTTP and Kafka stubs`() {
+    fun `should attempt to start a HTTP stub`() {
         val contractPath = "/path/to/contract.$CONTRACT_EXTENSION"
         val contract = """
             Feature: Math API
@@ -91,17 +90,23 @@ internal class StubCommandTest {
         every { watchMaker.make(listOf(contractPath)) }.returns(watcher)
 
         val stubInfo = listOf(Pair(feature, emptyList<ScenarioStub>()))
-        every { stubLoaderEngine.loadStubs(listOf(contractPath), emptyList()) }.returns(stubInfo)
+        every { stubLoaderEngine.loadStubs(listOf(contractPath).map { ContractPathData("", it) }, emptyList()) }.returns(stubInfo)
 
         val host = "0.0.0.0"
         val port = 9000
         val certInfo = CertInfo()
         val strictMode = false
-        val kafkaHost = "localhost"
-        val kafkaPort = 9093
 
-        every { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, any(), any(), any()) }.returns(null)
-        every { kafkaStubEngine.runKafkaStub(stubInfo, kafkaHost, kafkaPort, false) }.returns(null)
+        every { httpStubEngine.runHTTPStub(
+            stubInfo,
+            host,
+            port,
+            certInfo,
+            strictMode,
+            any(),
+            httpClientFactory = any(),
+            workingDirectory = any()
+        ) }.returns(null)
 
         every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
         every { fileOperations.isFile(contractPath) }.returns(true)
@@ -110,26 +115,34 @@ internal class StubCommandTest {
         val exitStatus = CommandLine(stubCommand, factory).execute(contractPath)
         assertThat(exitStatus).isZero()
 
-        verify(exactly = 1) { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, any(), any(), any()) }
-        verify(exactly = 1) { kafkaStubEngine.runKafkaStub(stubInfo, kafkaHost, kafkaPort, false) }
+        verify(exactly = 1) { httpStubEngine.runHTTPStub(
+            stubInfo,
+            host,
+            any(),
+            certInfo,
+            strictMode,
+            any(),
+            httpClientFactory = any(),
+            workingDirectory = any(),
+        ) }
     }
 
     @ParameterizedTest
     @ValueSource(strings = [CONTRACT_EXTENSION, LEGACY_CONTRACT_EXTENSION])
     fun `when a contract with the correct extension is given it should be loaded`(extension: String, @TempDir tempDir: Path) {
-        val validQontract = tempDir.resolve("contract.$extension")
+        val validSpec = tempDir.resolve("contract.$extension")
 
-        val qontractFilePath = validQontract.toAbsolutePath().toString()
-        File(qontractFilePath).writeText("""
+        val specFilePath = validSpec.toAbsolutePath().toString()
+        File(specFilePath).writeText("""
             Feature: Is a dummy feature
         """.trimIndent())
 
-        every { watchMaker.make(listOf(qontractFilePath)) }.returns(watcher)
+        every { watchMaker.make(listOf(specFilePath)) }.returns(watcher)
         every { specmaticConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$extension"))
-        every { fileOperations.isFile(qontractFilePath) }.returns(true)
-        every { fileOperations.extensionIsNot(qontractFilePath, CONTRACT_EXTENSIONS) }.returns(false)
+        every { fileOperations.isFile(specFilePath) }.returns(true)
+        every { fileOperations.extensionIsNot(specFilePath, CONTRACT_EXTENSIONS) }.returns(false)
 
-        val execute = CommandLine(stubCommand, factory).execute(qontractFilePath)
+        val execute = CommandLine(stubCommand, factory).execute(specFilePath)
 
         assertThat(execute).isEqualTo(0)
     }
@@ -137,19 +150,19 @@ internal class StubCommandTest {
     @Test
     @ExpectSystemExitWithStatus(1)
     fun `when a contract with the incorrect extension command should exit with non-zero`(@TempDir tempDir: Path) {
-        val invalidQontract = tempDir.resolve("contract.contract")
+        val invalidSpec = tempDir.resolve("contract.contract")
 
-        val qontractFilePath = invalidQontract.toAbsolutePath().toString()
-        File(qontractFilePath).writeText("""
+        val specFilePath = invalidSpec.toAbsolutePath().toString()
+        File(specFilePath).writeText("""
             Feature: Is a dummy feature
         """.trimIndent())
 
-        every { watchMaker.make(listOf(qontractFilePath)) }.returns(watcher)
+        every { watchMaker.make(listOf(specFilePath)) }.returns(watcher)
         every { specmaticConfig.contractStubPaths() }.returns(arrayListOf("/config/path/to/contract.$CONTRACT_EXTENSION"))
-        every { fileOperations.isFile(qontractFilePath) }.returns(true)
-        every { fileOperations.extensionIsNot(qontractFilePath, CONTRACT_EXTENSIONS) }.returns(true)
+        every { fileOperations.isFile(specFilePath) }.returns(true)
+        every { fileOperations.extensionIsNot(specFilePath, CONTRACT_EXTENSIONS) }.returns(true)
 
-        CommandLine(stubCommand, factory).execute(qontractFilePath)
+        CommandLine(stubCommand, factory).execute(specFilePath)
     }
 
     @Test
@@ -167,7 +180,7 @@ internal class StubCommandTest {
         every { watchMaker.make(listOf(contractPath)) }.returns(watcher)
 
         val stubInfo = listOf(Pair(feature, emptyList<ScenarioStub>()))
-        every { stubLoaderEngine.loadStubs(listOf(contractPath), emptyList()) }.returns(stubInfo)
+        every { stubLoaderEngine.loadStubs(listOf(contractPath).map { ContractPathData("", it) }, emptyList()) }.returns(stubInfo)
 
         val host = "0.0.0.0"
         val port = 9000
@@ -175,7 +188,16 @@ internal class StubCommandTest {
         val strictMode = false
         val passThroughTargetBase = "http://passthroughTargetBase"
 
-        every { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, passThroughTargetBase, any(), any()) }.returns(null)
+        every { httpStubEngine.runHTTPStub(
+            stubInfo,
+            host,
+            port,
+            certInfo,
+            strictMode,
+            passThroughTargetBase,
+            httpClientFactory = any(),
+            workingDirectory = any(),
+        ) }.returns(null)
 
         every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
         every { fileOperations.isFile(contractPath) }.returns(true)
@@ -184,6 +206,15 @@ internal class StubCommandTest {
         val exitStatus = CommandLine(stubCommand, factory).execute("--passThroughTargetBase=$passThroughTargetBase", contractPath)
         assertThat(exitStatus).isZero()
 
-        verify(exactly = 1) { httpStubEngine.runHTTPStub(stubInfo, host, port, certInfo, strictMode, any(), any(), any()) }
+        verify(exactly = 1) { httpStubEngine.runHTTPStub(
+            stubInfo,
+            host,
+            any(),
+            certInfo,
+            strictMode,
+            any(),
+            httpClientFactory = any(),
+            workingDirectory = any(),
+        ) }
     }
 }

@@ -1,7 +1,6 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.Result.Failure
-import `in`.specmatic.core.utilities.capitalizeFirstChar
 
 sealed class KeyError {
     abstract val name: String

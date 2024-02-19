@@ -2,12 +2,11 @@ package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.breadCrumb
 import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.value.ListValue
 import `in`.specmatic.core.value.Value
 
-data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null) : Pattern, SequenceType {
+data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null, override val example: List<String?>? = null) : Pattern, SequenceType, HasDefaultExample {
 
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
@@ -16,7 +15,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         if(sampleData !is ListValue)
             return when {
                 resolvedHop(pattern, resolver) is XMLPattern -> mismatchResult("xml nodes", sampleData, resolver.mismatchMessages)
-                else -> mismatchResult("JSON array", sampleData, resolver.mismatchMessages)
+                else -> mismatchResult(this, sampleData, resolver.mismatchMessages)
             }
 
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
@@ -39,24 +38,37 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
     override fun generate(resolver: Resolver): Value {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
+
+        return resolver.resolveExample(example, pattern) ?: generateRandomValue(resolverWithEmptyType)
+    }
+
+    private fun generateRandomValue(resolver: Resolver): Value {
         return pattern.listOf(0.until(randomNumber(3)).mapIndexed{ index, _ ->
-            attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolverWithEmptyType) }
-        }, resolverWithEmptyType)
+            attempt(breadCrumb = "[$index (random)]") { pattern.generate(resolver) }
+        }, resolver)
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-        return attempt(breadCrumb = "[]") { pattern.newBasedOn(row, resolverWithEmptyType).map { ListPattern(it) } }
+        return attempt(breadCrumb = "[]") {
+            resolverWithEmptyType.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.newBasedOn(row.dropDownIntoList(), cyclePreventedResolver).map { ListPattern(it) }
+            }
+        }
     }
 
     override fun newBasedOn(resolver: Resolver): List<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-        return attempt(breadCrumb = "[]") { pattern.newBasedOn(resolverWithEmptyType).map { ListPattern(it) } }
+        return attempt(breadCrumb = "[]") {
+            resolverWithEmptyType.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.newBasedOn(cyclePreventedResolver).map { ListPattern(it) }
+            }
+        }
     }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(NullPattern)
 
-    override fun parse(value: String, resolver: Resolver): Value = parsedJSONArray(value)
+    override fun parse(value: String, resolver: Resolver): Value = parsedJSONArray(value, resolver.mismatchMessages)
 
     override fun patternSet(resolver: Resolver): List<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
@@ -102,7 +114,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-        return pattern.listOf(valueList, resolverWithEmptyType)
+        return resolverWithEmptyType.withCyclePrevention(pattern) { pattern.listOf(valueList, it) }
     }
 
     override val typeName: String = "list of ${pattern.typeName}"

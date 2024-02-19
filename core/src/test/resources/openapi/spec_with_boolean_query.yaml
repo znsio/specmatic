@@ -1,0 +1,23 @@
+openapi: 3.0.1
+info:
+  title: Random
+  version: "1"
+paths:
+  /data:
+    get:
+      summary: Random
+      parameters:
+        - name: enabled
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Random
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer

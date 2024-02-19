@@ -2,14 +2,27 @@ package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.FailureReport
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.Scenario
 import `in`.specmatic.core.ScenarioDetailsForResult
 
-data class ContractException(val errorMessage: String = "", val breadCrumb: String = "", val exceptionCause: ContractException? = null, val scenario: ScenarioDetailsForResult? = null) : Exception(errorMessage) {
+fun isCycle(throwable: Throwable?): Boolean = when(throwable) {
+    is ContractException -> throwable.isCycle
+    else -> false
+}
+
+data class ContractException(
+    val errorMessage: String = "",
+    val breadCrumb: String = "",
+    val exceptionCause: Throwable? = null,
+    val scenario: ScenarioDetailsForResult? = null,
+    val isCycle: Boolean = isCycle(exceptionCause)
+) : Exception(errorMessage, exceptionCause) {
     constructor(failureReport: FailureReport): this(failureReport.toText())
 
     fun failure(): Result.Failure =
-        Result.Failure(errorMessage, exceptionCause?.failure(), breadCrumb).also { result ->
+        Result.Failure(errorMessage,
+            if (exceptionCause is ContractException) exceptionCause.failure() else null,
+            breadCrumb
+        ).also { result ->
             if(scenario != null) result.updateScenario(scenario)
         }
 
@@ -24,7 +37,7 @@ fun <ReturnType> attempt(errorMessage: String = "", breadCrumb: String = "", f: 
         throw ContractException(errorMessage, breadCrumb, contractException)
     }
     catch(throwable: Throwable) {
-        throw ContractException("$errorMessage\nException thrown: $throwable", breadCrumb)
+        throw ContractException("$errorMessage\nError: $throwable", breadCrumb, throwable)
     }
 }
 
@@ -33,7 +46,7 @@ fun <ReturnType> attempt(f: ()->ReturnType): ReturnType {
         return f()
     }
     catch(throwable: Throwable) {
-        throw ContractException("Exception thrown: ${throwable.localizedMessage}")
+        throw ContractException("Error: ${throwable.localizedMessage}", exceptionCause = throwable)
     }
 }
 

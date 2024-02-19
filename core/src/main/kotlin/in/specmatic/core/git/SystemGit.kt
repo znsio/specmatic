@@ -9,7 +9,7 @@ import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
 
 class SystemGit(override val workingDirectory: String = ".", private val prefix: String = "- ", val authCredentials: AuthCredentials = NoGitAuthCredentials) : GitCommand {
-    fun executeWithAuth(vararg command: String): String {
+    private fun executeWithAuth(vararg command: String): String {
         val gitExecutable = listOf(Configuration.gitCommand)
         val auth = authCredentials.gitCommandAuthHeaders()
 
@@ -31,7 +31,7 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         return ExternalCommand(
             command,
             workingDirectory,
-            listOf("GIT_SSL_NO_VERIFY=true").toTypedArray()
+            mapOf("GIT_SSL_NO_VERIFY" to "true")
         ).executeAsSeparateProcess()
     }
 
@@ -61,6 +61,25 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         return execute(Configuration.gitCommand, "git", "diff", "--name-only", "master")
     }
 
+    override fun statusPorcelain(): String {
+        return execute(Configuration.gitCommand, "status", "--porcelain")
+    }
+
+    override fun fetch(): String {
+        return executeWithAuth("fetch")
+    }
+
+    override fun revisionsBehindCount(): Int {
+        return execute(Configuration.gitCommand, "rev-list", "--count", "HEAD..@{u}").trim().toInt()
+    }
+
+    override fun checkIgnore(path: String): String {
+        return try {
+            execute(Configuration.gitCommand, "check-ignore", path)
+        } catch (nonZeroExitError:NonZeroExitError) {
+            ""
+        }
+    }
 
     override fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =
         this.also {
@@ -110,6 +129,8 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     fun getChangesFromMainBranch(mainBranch: String): List<String> {
         return execute(Configuration.gitCommand, "diff", "--name-only", mainBranch).split(System.lineSeparator())
     }
+
+    override fun getRemoteUrl(name: String): String = execute(Configuration.gitCommand, "remote", "get-url", name)
 }
 
 fun exitErrorMessageContains(exception: NonZeroExitError, snippets: List<String>): Boolean {
@@ -119,4 +140,4 @@ fun exitErrorMessageContains(exception: NonZeroExitError, snippets: List<String>
     }
 }
 
-class NonZeroExitError(error: String) : Throwable(error)
+class NonZeroExitError(error: String, val exitCode:Int) : Throwable(error)

@@ -34,9 +34,20 @@ fun clone(workingDirectory: File, gitRepo: GitRepo): File {
     return cloneDirectory
 }
 
+fun checkout(workingDirectory: File, branchName: String) {
+    logger.log("Checking out branch: $branchName")
+    try {
+        SystemGit(workingDirectory.path).checkout(branchName)
+    } catch(exception: Exception) {
+        logger.debug("Could not checkout branch $branchName")
+        logger.debug(exception.localizedMessage ?: exception.message ?: "")
+        logger.debug(exception.stackTraceToString())
+    }
+}
+
 private fun clone(gitRepositoryURI: String, cloneDirectory: File) {
     try {
-        SystemGit(cloneDirectory.parent, "-", AzureAuthCredentials).shallowClone(gitRepositoryURI, cloneDirectory)
+        SystemGit(cloneDirectory.parent, "-", AzureAuthCredentials).clone(gitRepositoryURI, cloneDirectory)
     } catch(exception: Exception) {
         logger.debug("Falling back to jgit after trying shallow clone")
         logger.debug(exception.localizedMessage ?: exception.message ?: "")
@@ -111,12 +122,12 @@ fun loadFromPath(json: Value?, path: List<String>): Value? {
 }
 
 fun getBearerToken(): String? {
-    val qontractConfigFile = File(globalConfigFileName)
+    val specmaticConfigFile = File(globalConfigFileName)
 
     return when {
-        qontractConfigFile.exists() ->
-            readQontractConfig(qontractConfigFile).let { qontractConfig ->
-                readBearerFromEnvVariable(qontractConfig) ?: readBearerFromFile(qontractConfig)
+        specmaticConfigFile.exists() ->
+            readConfig(specmaticConfigFile).let { config ->
+                readBearerFromEnvVariable(config) ?: readBearerFromFile(config)
             }
         else -> null.also {
             logger.log("$globalConfigFileName not found")
@@ -125,8 +136,8 @@ fun getBearerToken(): String? {
     }
 }
 
-private fun readBearerFromEnvVariable(qontractConfig: Value): String? {
-    return loadFromPath(qontractConfig, listOf("auth", "bearer-environment-variable"))?.toStringLiteral()?.let { bearerName ->
+private fun readBearerFromEnvVariable(config: Value): String? {
+    return loadFromPath(config, listOf("auth", "bearer-environment-variable"))?.toStringLiteral()?.let { bearerName ->
         logger.log("Found bearer environment variable name \"$bearerName\"")
 
         System.getenv(bearerName).also {
@@ -136,8 +147,8 @@ private fun readBearerFromEnvVariable(qontractConfig: Value): String? {
     }
 }
 
-private fun readBearerFromFile(qontractConfig: Value): String? {
-    return loadFromPath(qontractConfig, listOf("auth", "bearer-file"))?.toStringLiteral()?.let { bearerFileName ->
+private fun readBearerFromFile(config: Value): String? {
+    return loadFromPath(config, listOf("auth", "bearer-file"))?.toStringLiteral()?.let { bearerFileName ->
         logger.log("Found bearer file name $bearerFileName")
 
         val bearerFile = File(bearerFileName).absoluteFile
@@ -164,19 +175,19 @@ private fun getPersonalAccessTokenConfig(): String? {
     val configFile = homeDir.resolve("specmatic-azure.json")
 
     if (configFile.exists()) {
-        val qontractConfig = readQontractConfig(configFile)
+        val config = readConfig(configFile)
 
         "azure-access-token".let { azureAccessTokenKey ->
-            if (qontractConfig is JSONObjectValue && qontractConfig.jsonObject.containsKey(azureAccessTokenKey)) {
-                return qontractConfig.getString(azureAccessTokenKey).also {
+            if (config is JSONObjectValue && config.jsonObject.containsKey(azureAccessTokenKey)) {
+                return config.getString(azureAccessTokenKey).also {
                     println("Using personal access token from home directory config")
                 }
             }
         }
 
         "personal-access-token".let { azureAccessTokenKey ->
-            if (qontractConfig is JSONObjectValue && qontractConfig.jsonObject.containsKey(azureAccessTokenKey)) {
-                return qontractConfig.getString(azureAccessTokenKey).also {
+            if (config is JSONObjectValue && config.jsonObject.containsKey(azureAccessTokenKey)) {
+                return config.getString(azureAccessTokenKey).also {
                     println("Using personal access token from home directory config")
                 }
             }
@@ -202,4 +213,4 @@ private fun getPersonalAccessTokenProperty(): String? {
     }
 }
 
-private fun readQontractConfig(qontractConfigFile: File) = parsedJSON(qontractConfigFile.readText())
+private fun readConfig(configFile: File) = parsedJSON(configFile.readText())

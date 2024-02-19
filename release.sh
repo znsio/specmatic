@@ -4,14 +4,14 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 JAVA_VERSION=$(java -version 2>&1)
 
-if [[ "$JAVA_VERSION" == *'1.8.0'* ]]
+if [[ "$JAVA_VERSION" == *'17.0.'* ]]
 then
-	echo √ Using JDK8
+	echo √ Using JDK17
 else
   echo
-  echo Error: JDK version is not 8
+  echo Error: JDK version is not 17
   echo
-  echo To fix this, ensure that the result of "java -version" shows java 1.8.
+  echo To fix this, ensure that the result of "java -version" shows java 17.0.*
   exit 1
 fi
 
@@ -79,15 +79,46 @@ else
 	echo √ Specified version matches ./version.properties
 fi
 
+if [ ! -d ../specmatic-documentation ]
+then
+	echo
+	echo Error: cannot find the specmatic-documentation checkout. Make sure that git@github.com:znsio/specmatic-documentation.git is checked out at ../specmatic-documentation
+	exit 1
+fi
+
+if [ ! -f ../specmatic-documentation/_config.yml ]
+then
+	echo
+	echo Error: cannot find specmatic-documentation/_config.yml, need to check this file to ensure that it is in sync with the latest version of Specmatic.
+	exit 1
+fi
+
+DOCUMENTATION_VERSION=$(cat ../specmatic-documentation/_config.yml | grep latest_release | cut -d ' ' -f 2)
+
+if [ "$DOCUMENTATION_VERSION" != $ACTUAL_VERSION ]
+then
+  echo
+  echo Error: The version in specmatic-documentation/_config.yml is $DOCUMENTATION_VERSION, but the version in version.properties is $ACTUAL_VERSION.
+  echo
+  echo To fix this, update the version in specmatic-documentation/_config.yml to $ACTUAL_VERSION, commit and push the change, and try again.
+  exit 1
+else
+  echo √ Version in specmatic-documentation/_config.yml matches version in version.properties
+fi
+
 echo
+
+
+echo Building
+./gradlew clean build
 
 echo Pushing to remote
 git push
 
-echo
+echo Publishing
+./gradlew publish
 
-echo Building and publishing
-./gradlew clean build publish
+echo
 
 echo Tagging release $1
 git tag $1

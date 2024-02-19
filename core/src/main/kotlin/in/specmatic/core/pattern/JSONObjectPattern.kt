@@ -7,8 +7,10 @@ import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
+import java.util.Optional
 
-fun toJSONObjectPattern(jsonContent: String, typeAlias: String?): JSONObjectPattern = toJSONObjectPattern(stringToPatternMap(jsonContent), typeAlias)
+fun toJSONObjectPattern(jsonContent: String, typeAlias: String?): JSONObjectPattern =
+    toJSONObjectPattern(stringToPatternMap(jsonContent), typeAlias)
 
 fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String? = null): JSONObjectPattern {
     val missingKeyStrategy: UnexpectedKeyCheck = when ("...") {
@@ -19,22 +21,78 @@ fun toJSONObjectPattern(map: Map<String, Pattern>, typeAlias: String? = null): J
     return JSONObjectPattern(map.minus("..."), missingKeyStrategy, typeAlias)
 }
 
-data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyMap(), private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys, override val typeAlias: String? = null) : Pattern {
+data class JSONObjectPattern(
+    override val pattern: Map<String, Pattern> = emptyMap(),
+    private val unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys,
+    override val typeAlias: String? = null,
+    val minProperties: Int? = null,
+    val maxProperties: Int? = null
+) : Pattern {
     override fun equals(other: Any?): Boolean = when (other) {
         is JSONObjectPattern -> this.pattern == other.pattern
         else -> false
     }
 
-    override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
+    override fun encompasses(
+        otherPattern: Pattern,
+        thisResolver: Resolver,
+        otherResolver: Resolver,
+        typeStack: TypeStack
+    ): Result {
         val thisResolverWithNullType = withNullPattern(thisResolver)
         val otherResolverWithNullType = withNullPattern(otherResolver)
 
         return when (otherPattern) {
-            is ExactValuePattern -> otherPattern.fitsWithin(listOf(this), otherResolverWithNullType, thisResolverWithNullType, typeStack)
-            is TabularPattern -> mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack)
-            is JSONObjectPattern -> mapEncompassesMap(pattern, otherPattern.pattern, thisResolverWithNullType, otherResolverWithNullType, typeStack)
+            is ExactValuePattern -> otherPattern.fitsWithin(
+                listOf(this),
+                otherResolverWithNullType,
+                thisResolverWithNullType,
+                typeStack
+            )
+
+            is TabularPattern -> {
+                mapEncompassesMap(
+                    pattern,
+                    otherPattern.pattern,
+                    thisResolverWithNullType,
+                    otherResolverWithNullType,
+                    typeStack
+                )
+            }
+
+            is JSONObjectPattern -> {
+                val propertyLimitResults: List<Result.Failure> = olderPropertyLimitsEncompassNewer(this, otherPattern)
+                mapEncompassesMap(
+                    pattern,
+                    otherPattern.pattern,
+                    thisResolverWithNullType,
+                    otherResolverWithNullType,
+                    typeStack,
+                    propertyLimitResults
+                )
+            }
+
             else -> Result.Failure("Expected json type, got ${otherPattern.typeName}")
         }
+    }
+
+    private fun olderPropertyLimitsEncompassNewer(
+        newer: JSONObjectPattern,
+        older: JSONObjectPattern
+    ): List<Result.Failure> {
+        val minPropertiesResult =
+            if (older.minProperties != null && newer.minProperties != null && older.minProperties > newer.minProperties)
+                Result.Failure("Expected at least ${older.minProperties} properties, got ${newer.minProperties}")
+            else
+                Result.Success()
+
+        val maxPropertiesResult =
+            if (older.maxProperties != null && newer.maxProperties != null && older.maxProperties < newer.maxProperties)
+                Result.Failure("Expected at most ${older.maxProperties} properties, got ${newer.maxProperties}")
+            else
+                Result.Success()
+
+        return listOf(minPropertiesResult, maxPropertiesResult).filterIsInstance<Result.Failure>()
     }
 
     override fun generateWithAll(resolver: Resolver): Value {
@@ -58,31 +116,57 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
         if (sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData, resolver.mismatchMessages)
 
-        val keyErrors: List<Result.Failure> = resolverWithNullType.findKeyErrorList(pattern, sampleData.jsonObject).map {
-            it.missingKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
-        }
+        val minCountErrors: List<Result.Failure> = if (sampleData.jsonObject.keys.size < (minProperties ?: 0))
+            listOf(Result.Failure("Expected at least $minProperties properties, got ${sampleData.jsonObject.keys.size}"))
+        else
+            emptyList()
 
-        val results: List<Result.Failure> = mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
-            resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
-        }.filterIsInstance<Result.Failure>()
+        val maxCountErrors: List<Result.Failure> =
+            if (sampleData.jsonObject.keys.size > (maxProperties ?: Int.MAX_VALUE))
+                listOf(Result.Failure("Expected at most $maxProperties properties, got ${sampleData.jsonObject.keys.size}"))
+            else
+                emptyList()
 
-        val failures = keyErrors.plus(results)
+        val keyErrors: List<Result.Failure> =
+            resolverWithNullType.findKeyErrorList(pattern, sampleData.jsonObject).map {
+                it.missingKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
+            }
 
-        return if(failures.isEmpty())
+        val results: List<Result.Failure> =
+            mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
+                resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
+            }.filterIsInstance<Result.Failure>()
+
+        val failures: List<Result.Failure> = minCountErrors + maxCountErrors + keyErrors + results
+
+        return if (failures.isEmpty())
             Result.Success()
         else
             Result.Failure.fromFailures(failures)
     }
 
-    override fun generate(resolver: Resolver): JSONObjectValue =
-        JSONObjectValue(generate(pattern, withNullPattern(resolver)))
+    override fun generate(resolver: Resolver): JSONObjectValue {
+        return JSONObjectValue(
+            generate(
+                selectPropertiesWithinMaxAndMin(pattern, minProperties, maxProperties),
+                withNullPattern(resolver)
+            )
+        )
+    }
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<JSONObjectPattern> =
-        allOrNothingCombinationIn(pattern.minus("..."), if(resolver.generativeTestingEnabled) Row() else row) { pattern ->
+        allOrNothingCombinationIn(
+            pattern.minus("..."),
+            resolver.resolveRow(row),
+            minProperties,
+            maxProperties
+        ) { pattern ->
             newBasedOn(pattern, row, withNullPattern(resolver))
-        }.map { toJSONObjectPattern(it.mapKeys { (key, _) ->
-            withoutOptionality(key)
-        }) }
+        }.map {
+            toJSONObjectPattern(it.mapKeys { (key, _) ->
+                withoutOptionality(key)
+            })
+        }
 
     override fun newBasedOn(resolver: Resolver): List<JSONObjectPattern> =
         allOrNothingCombinationIn(pattern.minus("...")) { pattern ->
@@ -91,7 +175,7 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> =
         allOrNothingCombinationIn(pattern.minus("...")) { pattern ->
-            negativeBasedOn(pattern, row, withNullPattern(resolver))
+            AllNegativePatterns().negativeBasedOn(pattern, row, withNullPattern(resolver))
         }.map { toJSONObjectPattern(it) }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)
@@ -102,28 +186,108 @@ data class JSONObjectPattern(override val pattern: Map<String, Pattern> = emptyM
 
 fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String, Value> {
     val resolverWithNullType = withNullPattern(resolver)
-    return jsonPattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
-        attempt(breadCrumb = key) { resolverWithNullType.generate(key, pattern) }
-    }
+
+    val optionalProps = jsonPattern.keys.filter { isOptional(it) }.map { withoutOptionality(it) }
+
+    return jsonPattern
+        .mapKeys { entry -> withoutOptionality(entry.key) }
+        .mapValues { (key, pattern) ->
+            attempt(breadCrumb = key) {
+                // Handle cycle (represented by null value) by marking this property as removable
+                Optional.ofNullable(resolverWithNullType.withCyclePrevention(pattern, optionalProps.contains(key)) {
+                    it.generate(key, pattern)
+                })
+            }
+        }
+        .filterValues { it.isPresent }
+        .mapValues { (_, opt) -> opt.get() }
 }
 
-internal fun mapEncompassesMap(pattern: Map<String, Pattern>, otherPattern: Map<String, Pattern>, thisResolverWithNullType: Resolver, otherResolverWithNullType: Resolver, typeStack: TypeStack = emptySet()): Result {
+private fun selectPropertiesWithinMaxAndMin(
+    jsonPattern: Map<String, Pattern>,
+    minProperties: Int?,
+    maxProperties: Int?
+): Map<String, Pattern> {
+    val withAtMostMaxProperties = selectAtMostMaxProperties(jsonPattern, maxProperties)
+
+    return selectAtMostMinProperties(withAtMostMaxProperties, minProperties)
+}
+
+private fun selectAtMostMinProperties(
+    properties: Map<String, Pattern>,
+    minProperties: Int?
+): Map<String, Pattern> {
+    return if (minProperties != null) {
+        val mandatoryKeys = properties.keys.filter { !isOptional(it) }
+        val optionalKeys = properties.keys.filter { isOptional(it) }
+
+        if (mandatoryKeys.size >= minProperties)
+            properties.filterKeys { it in mandatoryKeys }
+        else {
+            val countOfOptionalKeysToPick = minProperties - mandatoryKeys.size
+            val selectedOptionalKeys = optionalKeys.shuffled().take(countOfOptionalKeysToPick)
+            val selectedKeys = mandatoryKeys + selectedOptionalKeys
+
+            if (selectedKeys.size < minProperties)
+                throw ContractException("Cannot generate a JSON object with at least $minProperties properties as there are only ${selectedKeys.size} properties in the specification.")
+
+            properties.filterKeys { it in selectedKeys }
+        }
+    } else
+        properties
+}
+
+
+private fun selectAtMostMaxProperties(
+    properties: Map<String, Pattern>,
+    maxProperties: Int?
+) = if (maxProperties != null) {
+    val mandatoryKeys = properties.keys.filter { !isOptional(it) }
+    if (mandatoryKeys.size > maxProperties)
+        throw ContractException("Cannot generate a JSON object with at most $maxProperties properties as there are ${mandatoryKeys.size} mandatory properties in the specification.")
+
+    val optionalKeys = properties.keys.filter { isOptional(it) }
+    val countOfOptionalKeysToPick = maxProperties - mandatoryKeys.size
+    val selectedOptionalKeys = optionalKeys.shuffled().take(countOfOptionalKeysToPick)
+    val selectedKeys = mandatoryKeys + selectedOptionalKeys
+
+    properties.filterKeys { it in selectedKeys }
+} else
+    properties
+
+internal fun mapEncompassesMap(
+    pattern: Map<String, Pattern>,
+    otherPattern: Map<String, Pattern>,
+    thisResolverWithNullType: Resolver,
+    otherResolverWithNullType: Resolver,
+    typeStack: TypeStack = emptySet(),
+    previousResults: List<Result.Failure> = emptyList()
+): Result {
     val myRequiredKeys = pattern.keys.filter { !isOptional(it) }
     val otherRequiredKeys = otherPattern.keys.filter { !isOptional(it) }
 
-    val missingFixedKeyErrors: List<Result.Failure> = myRequiredKeys.filter { it !in otherRequiredKeys }.map { missingFixedKey ->
-        MissingKeyError(missingFixedKey).missingKeyToResult("key", thisResolverWithNullType.mismatchMessages).breadCrumb(withoutOptionality(missingFixedKey))
-    }
+    val missingFixedKeyErrors: List<Result.Failure> =
+        myRequiredKeys.filter { it !in otherRequiredKeys }.map { missingFixedKey ->
+            MissingKeyError(missingFixedKey).missingKeyToResult("key", thisResolverWithNullType.mismatchMessages)
+                .breadCrumb(withoutOptionality(missingFixedKey))
+        }
 
     val keyErrors = pattern.keys.map { key ->
         val bigger = pattern.getValue(key)
         val smaller = otherPattern[key] ?: otherPattern[withoutOptionality(key)]
 
         when {
-            smaller != null -> biggerEncompassesSmaller(bigger, smaller, thisResolverWithNullType, otherResolverWithNullType, typeStack).breadCrumb(withoutOptionality(key))
+            smaller != null -> biggerEncompassesSmaller(
+                bigger,
+                smaller,
+                thisResolverWithNullType,
+                otherResolverWithNullType,
+                typeStack
+            ).breadCrumb(withoutOptionality(key))
+
             else -> Result.Success()
         }
     }
 
-    return Result.fromResults(missingFixedKeyErrors.plus(keyErrors))
+    return Result.fromResults(previousResults + missingFixedKeyErrors + keyErrors)
 }

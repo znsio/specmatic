@@ -161,25 +161,6 @@ internal class ScenarioStubKtTest {
     }
 
     @Test
-    fun `should load a kafka message from stub info`() {
-        val mockText = """
-{
-  "kafka-message": {
-    "topic": "the weather",
-    "key": "status",
-    "value": "cloudy"
-  }
-}
-        """.trim()
-
-        val mock = mockFromJSON(jsonStringToValueMap((mockText)))
-        assertThat(mock.kafkaMessage).isNotNull
-        assertThat(mock.kafkaMessage?.topic).isEqualTo("the weather")
-        assertThat(mock.kafkaMessage?.key).isEqualTo(StringValue("status"))
-        assertThat(mock.kafkaMessage?.value).isEqualTo(StringValue("cloudy"))
-    }
-
-    @Test
     fun `should generate request pattern containing multipart file from mock data`() {
         val mockText = """
 {
@@ -211,7 +192,7 @@ internal class ScenarioStubKtTest {
 
     @Test
     fun `request-response with json body in request to gherkin string`() {
-        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParams = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
+        val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParametersMap = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
         validateStubAndQontract(request, response, """Feature: New Feature
@@ -236,7 +217,7 @@ internal class ScenarioStubKtTest {
 
     @Test
     fun `request-response with headers to gherkin string`() {
-        val request = HttpRequest(method = "POST", path="/customer", headers = mapOf("X-Header1" to "value 1", "X-Header2" to "value 2"), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParams = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
+        val request = HttpRequest(method = "POST", path="/customer", headers = mapOf("X-Header1" to "value 1", "X-Header2" to "value 2"), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParametersMap = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
         val response = HttpResponse(status = 200, headers = mapOf("X-Required" to "this is a must", "X-Extra" to "something more"), body = parsedValue("""{"id": 10}"""))
 
         validateStubAndQontract(request, response, """Feature: New Feature
@@ -869,7 +850,7 @@ paths:
 
         val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
         val request = HttpRequest(method = "GET", path = "/hello/10", headers = mapOf("X-Value" to "data"))
-        val response = HttpResponse.OK("success")
+        val response = HttpResponse.ok("success")
 
         assertThatThrownBy {
             feature.matchingStub(request, response, ContractAndStubMismatchMessages)

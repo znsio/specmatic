@@ -1,10 +1,8 @@
 package `in`.specmatic.core
 
-import org.assertj.core.api.Assertions
 import `in`.specmatic.core.utilities.exceptionCauseMessage
-import `in`.specmatic.stubShouldBreak
-import `in`.specmatic.stubShouldNotBreak
 import `in`.specmatic.testStub
+import org.assertj.core.api.Assertions
 
 class TestHttpStub(private val stubRequest: HttpRequest, private val stubResponse: HttpResponse) {
     fun shouldWorkWith(contractGherkin: String) {

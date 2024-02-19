@@ -1,33 +1,25 @@
 package application
 
 import `in`.specmatic.core.Configuration
-import `in`.specmatic.core.git.GitCommand
-import `in`.specmatic.core.git.SystemGit
 import io.ktor.util.*
 import io.ktor.utils.io.streams.*
 import io.mockk.clearAllMocks
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.jgit.api.Git
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.io.TempDir
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import picocli.CommandLine
 import java.io.File
-import java.io.FileFilter
 import java.io.FileInputStream
 import java.util.function.Consumer
-import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
 class BundleTestData(tempDir: File) {
     val projectDir: File
     val specmaticJSONContent: String
-    val configFilename: String
+    private val configFilename: String
 
     init {
         val bundleTestDir = tempDir.resolve("bundle_tests")
@@ -85,7 +77,7 @@ private fun createFile(gitDir: File, filename: String, content: String? = null):
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, BundleCommand::class])
 internal class BundleCommandTestE2E {
     companion object {
-        lateinit var configFilename: String
+        private lateinit var configFilename: String
 
         @BeforeAll
         @JvmStatic
@@ -97,7 +89,6 @@ internal class BundleCommandTestE2E {
         @JvmStatic
         fun tearDown() {
             Configuration.globalConfigFileName = configFilename
-            cleanupSpecmaticDirectories(File("."))
         }
 
         fun cleanupSpecmaticDirectories(dir: File) {
@@ -124,6 +115,11 @@ internal class BundleCommandTestE2E {
     @BeforeEach
     fun setupEachTest() {
         clearAllMocks()
+    }
+
+    @AfterEach
+    fun teardownEachTest() {
+        cleanupSpecmaticDirectories(File("."))
     }
 
     @Test

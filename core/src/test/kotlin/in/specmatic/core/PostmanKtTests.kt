@@ -68,7 +68,7 @@ class PostmanKtTests {
         val request = postmanItemRequest(parsedJSON(postmanJSON) as JSONObjectValue)
 
         assertThat(request.first).isEqualTo("https://localhost")
-        assertThat(request.second.queryParams).isEqualTo(mapOf("one" to "1"))
+        assertThat(request.second.queryParams).isEqualTo(QueryParameters(listOf("one" to "1")))
     }
 
     @Test
@@ -249,7 +249,6 @@ class PostmanKtTests {
         assertThat(stub.second.name).isEqualTo("Original name")
 
         val request = stub.second.stub
-        assertThat(request.kafkaMessage).isNull()
         assertThat(request.request.method).isEqualTo("POST")
         assertThat(request.request.headers).isEqualTo(mapOf("X-Header" to "10"))
         assertThat(request.request.path).isEqualTo("")

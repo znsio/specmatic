@@ -5,6 +5,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
@@ -12,19 +13,259 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stubResponse
 import `in`.specmatic.test.HttpClient
 import io.mockk.InternalPlatformDsl.toStr
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
-import org.testcontainers.shaded.okhttp3.MediaType
-import org.testcontainers.shaded.okhttp3.OkHttpClient
-import org.testcontainers.shaded.okhttp3.Request
-import org.testcontainers.shaded.okhttp3.RequestBody
 import java.security.KeyStore
 import java.util.*
 import java.util.function.Consumer
 
 internal class HttpStubKtTest {
+
+    @Test
+    fun `flush transient stub`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    get:
+      summary: hello world
+      description: test
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: number
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(contract).use { stub ->
+            stub.setExpectation("""
+                {
+                    "http-request": {
+                        "method": "GET",
+                        "path": "/data"
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": 10
+                    },
+                    "http-stub-id": "123"
+                }
+            """.trimIndent())
+
+            stub.client.execute(HttpRequest("DELETE", "/_specmatic/http-stub/123"))
+
+            val response = stub.client.execute(HttpRequest("GET", "/data"))
+            assertThat(response.headers["X-Specmatic-Type"]).isEqualTo("random")
+        }
+    }
+
+    @Test
+    fun `transient stub`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    get:
+      summary: hello world
+      description: test
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: number
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(contract).use { stub ->
+            stub.setExpectation("""
+                {
+                    "http-request": {
+                        "method": "GET",
+                        "path": "/data"
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": 10
+                    },
+                    "http-stub-id": "123"
+                }
+            """.trimIndent())
+
+            val firstResponse = stub.client.execute(HttpRequest("GET", "/data"))
+            assertThat(firstResponse.headers.toMap()).doesNotContainKey("X-Specmatic-Type")
+
+            val secondResponse = stub.client.execute(HttpRequest("GET", "/data"))
+            assertThat(secondResponse.headers["X-Specmatic-Type"]).isEqualTo("random")
+        }
+    }
+
+    @Test
+    fun `transient stub matches in reverse order`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - item
+              properties:
+                item:
+                  type: string
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(contract).use { stub ->
+            stub.setExpectation("""
+                {
+                    "http-request": {
+                        "method": "POST",
+                        "path": "/data",
+                        "body": {
+                            "item": "123"
+                        }
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": "first"
+                    },
+                    "http-stub-id": "123"
+                }
+            """.trimIndent())
+
+            stub.setExpectation("""
+                {
+                    "http-request": {
+                        "method": "POST",
+                        "path": "/data",
+                        "body": {
+                            "item": "123"
+                        }
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": "second"
+                    },
+                    "http-stub-id": "123"
+                }
+            """.trimIndent())
+
+            val request = HttpRequest("POST", "/data", body = parsedJSON("""{"item": "123"}"""))
+            val firstResponse = stub.client.execute(request)
+            assertThat(firstResponse.body.toStringLiteral()).isEqualTo("first")
+
+            val secondResponse = stub.client.execute(request)
+            assertThat(secondResponse.body.toStringLiteral()).isEqualTo("second")
+        }
+    }
+
+    @Test
+    fun `transient match precedes non-transient stub match`() {
+        val contract = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - item
+              properties:
+                item:
+                  type: string
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(contract).use { stub ->
+            stub.setExpectation("""
+                {
+                    "http-request": {
+                        "method": "POST",
+                        "path": "/data",
+                        "body": {
+                            "item": "123"
+                        }
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": "transient"
+                    },
+                    "http-stub-id": "123"
+                }
+            """.trimIndent())
+
+            stub.setExpectation("""
+                {
+                    "http-request": {
+                        "method": "POST",
+                        "path": "/data",
+                        "body": {
+                            "item": "123"
+                        }
+                    },
+                    "http-response": {
+                        "status": 200,
+                        "body": "non-transient"
+                    }
+                }
+            """.trimIndent())
+
+            val request = HttpRequest("POST", "/data", body = parsedJSON("""{"item": "123"}"""))
+            val firstResponse = stub.client.execute(request)
+            assertThat(firstResponse.body.toStringLiteral()).isEqualTo("transient")
+
+            val secondResponse = stub.client.execute(request)
+            assertThat(secondResponse.body.toStringLiteral()).isEqualTo("non-transient")
+
+            val thirdResponse = stub.client.execute(request)
+            assertThat(thirdResponse.body.toStringLiteral()).isEqualTo("non-transient")
+        }
+    }
+
     @Test
     fun `SSE test`() {
         val gherkin = """
@@ -38,18 +279,18 @@ Feature: Test
         val feature = parseGherkinStringToFeature(gherkin)
 
         HttpStub(feature).use {
-            val body = RequestBody.create(MediaType.parse("application/json"), """{
+            val body = """{
 "event": "features",
 "id": "332f8278",
 "data": "[{\"id\":\"b5bf7f9e-9391-40a4-8808-61ad73f800e9\",\"key\":\"FT01\",\"l\":true,\"version\":1,\"type\":\"BOOLEAN\",\"value\":true},{\"id\":\"8b6002e8-e97a-4ebe-8cae-ac68fb99fc33\",\"key\":\"FT02\",\"l\":true,\"version\":1,\"type\":\"BOOLEAN\",\"value\":false}]"
-}""")
+}""".toRequestBody("application/json".toMediaTypeOrNull())
             val request = Request.Builder().url(it.endPoint + "/_specmatic/sse-expectations").addHeader("Content-Type", "application/json").post(body).build()
             val call = OkHttpClient().newCall(request)
             val response = call.execute()
 
             println(response.toStr())
-            println(response.body()?.string())
-            assertThat(response.code()).isEqualTo(200)
+            println(response.body?.string())
+            assertThat(response.code).isEqualTo(200)
         }
     }
 
@@ -185,8 +426,8 @@ Scenario: Square of a number
   And response-body (string)
 """.trim())
 
-        val stubRequest = HttpRequest(method = "GET", path = "/count", queryParams = mapOf("status" to "available"))
-        val stubResponse = HttpResponse.OK("data")
+        val stubRequest = HttpRequest(method = "GET", path = "/count", queryParametersMap = mapOf("status" to "available"))
+        val stubResponse = HttpResponse.ok("data")
         val stubData = HttpStubData(
             stubRequest.toPattern(),
             stubResponse,
@@ -294,7 +535,7 @@ Feature: POST API
         val errors: Vector<String> = Vector()
 
         HttpStub(feature).use { stub ->
-            usingMultipleThreads(30) { stubNumber ->
+            usingMultipleThreads { stubNumber ->
                 `set an expectation and exercise it`(stubNumber, stub)?.let {
                     errors.add(it)
                 }
@@ -307,8 +548,8 @@ Feature: POST API
         }
     }
 
-    private fun usingMultipleThreads(threadCount: Int, fn: (Int) -> Unit) {
-        val range = 0 until threadCount
+    private fun usingMultipleThreads(fn: (Int) -> Unit) {
+        val range = 0 until 20
         val threads = range.map { stubNumber ->
             Thread {
                 val base = stubNumber * 10
@@ -369,33 +610,12 @@ Feature: POST API
     }
 
     @Test
-    fun `kafka stubs should not be picked up when creating http expectations`() {
-        val feature = parseGherkinStringToFeature("""
-            Feature: Kafka
-              Scenario: Kafka 
-                * kafka-message customer data
-        """.trimIndent())
-        val kafkaStubs = contractInfoToHttpExpectations(listOf(feature to emptyList()))
-        assertThat(kafkaStubs.isEmpty())
-    }
-
-    @Test
     fun `routing functions`() {
         assertThat(isFetchLogRequest(HttpRequest("GET", "/_$APPLICATION_NAME_LOWER_CASE/log"))).isTrue()
         assertThat(isFetchLoadLogRequest(HttpRequest("GET", "/_$APPLICATION_NAME_LOWER_CASE/load_log"))).isTrue()
         assertThat(isFetchContractsRequest(HttpRequest("GET", "/_$APPLICATION_NAME_LOWER_CASE/contracts"))).isTrue()
         assertThat(isExpectationCreation(HttpRequest("POST", "/_$APPLICATION_NAME_LOWER_CASE/expectations"))).isTrue()
         assertThat(isStateSetupRequest(HttpRequest("POST", "/_$APPLICATION_NAME_LOWER_CASE/state"))).isTrue()
-    }
-
-    private fun createStubsUsingMultipleThreads(range: IntRange, stub: HttpStub) {
-        val threads = range.map { i ->
-            println("STARTING THREAD $i")
-            Thread { createExpectation(i, stub) }
-        }
-
-        start(threads)
-        waitFor(threads)
     }
 
     private fun waitFor(threads: List<Thread>) = threads.forEach { it.join() }
@@ -465,7 +685,7 @@ paths:
               schema:
                 type: string
         """.trimIndent(), "").toFeature()
-        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc123"}""")), listOf(contract), ThreadSafeListOfStubs(mutableListOf()), false)
+        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc123"}""")), listOf(contract), ThreadSafeListOfStubs(mutableListOf()), ThreadSafeListOfStubs(mutableListOf()), false).response
 
         println(response.response.toLogString())
 
@@ -498,15 +718,15 @@ paths:
               schema:
                 type: number
         """.trimIndent(), "").toFeature()
-        val stub: HttpStubData = HttpStubData(
+        val stub = HttpStubData(
             HttpRequest("POST", "/data", body = StringValue("Hello")).toPattern(),
-            HttpResponse.OK("abc123").copy(externalisedResponseCommand = """echo {"status": 200, "body": "abc123"}"""),
+            HttpResponse.ok("abc123").copy(externalisedResponseCommand = """echo {"status": 200, "body": "abc123"}"""),
             Resolver(),
             responsePattern = contract.scenarios.single().httpResponsePattern
         )
 
         assertThatThrownBy {
-            getHttpResponse(HttpRequest("POST", "/data", body = StringValue("Hello")), listOf(contract), ThreadSafeListOfStubs(mutableListOf(stub)), false)
+            getHttpResponse(HttpRequest("POST", "/data", body = StringValue("Hello")), listOf(contract), ThreadSafeListOfStubs(mutableListOf(stub)), ThreadSafeListOfStubs(mutableListOf()), false)
         }.satisfies(Consumer {
             it as ContractException
 
@@ -547,12 +767,12 @@ paths:
         """.trimIndent(), "").toFeature()
         val stub = HttpStubData(
             HttpRequest("POST", "/data", body = parsedJSON("""{"data": 10}""")).toPattern(),
-            HttpResponse.OK("123"),
+            HttpResponse.ok("123"),
             Resolver(),
             responsePattern = contract.scenarios.single().httpResponsePattern
         )
 
-        val response = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc"}""")), listOf(contract), ThreadSafeListOfStubs(mutableListOf(stub)), true)
+        val response: HttpStubResponse = getHttpResponse(HttpRequest("POST", "/data", body = parsedJSON("""{"data": "abc"}""")), listOf(contract), ThreadSafeListOfStubs(mutableListOf(stub)), ThreadSafeListOfStubs(mutableListOf()),true).response
         val requestString = response.response.toLogString()
 
         println(requestString)
@@ -651,6 +871,100 @@ paths:
             assertThat(responseString).contains("Contract expected")
             assertThat(responseString).contains("request contained")
             assertThat(responseString).contains("json array")
+        }
+    }
+
+    @Test
+    fun `transient stubs can be loaded from the file system`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/contractWithTransientMock.yaml")).use { stub ->
+            with(stub.client.execute(HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}""")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success")
+            }
+
+            with(stub.client.execute(HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}""")))) {
+                assertThat(this.body.toStringLiteral()).isNotEqualTo("success")
+            }
+        }
+    }
+
+    @Test
+    fun `multiple stubs for a non 200 with a value specified for a header will load and match incoming requests correctly`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/multiple400StubsWithHeader.yaml")).use { stub ->
+            val request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}"""))
+
+            with(stub.client.execute(request.copy(headers = mapOf("Authorization" to "valid")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success")
+            }
+
+            with(stub.client.execute(request.copy(headers = mapOf("Authorization" to "invalid")))) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("failed")
+            }
+        }
+    }
+
+    @Test
+    fun `stubs are loaded in order sorted by filename`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/contractWithOrderedStubs.yaml")).use { stub ->
+            val request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}"""))
+
+            with(stub.client.execute(request)) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success 1")
+            }
+
+            with(stub.client.execute(request)) {
+                assertThat(this.body.toStringLiteral()).isEqualTo("success 2")
+            }
+        }
+    }
+
+    @Test
+    fun `transient stubs are loaded in order sorted by filename across nested dirs where the first item in sorted order is the first item in the queue`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/contractWithOrderedStubsInNestedDirs.yaml")).use { stub ->
+            val request = HttpRequest("POST", "/test", body = parsedJSONObject("""{"item": "data"}"""))
+
+            (0..4).map { ctr ->
+                with(stub.client.execute(request)) {
+                    assertThat(this.body.toStringLiteral()).isEqualTo("success $ctr")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `test stub with scalar query parameter`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+    openapi: 3.0.0
+    info:
+      title: Sample API
+      version: 0.1.9
+    paths:
+      /products:
+        get:
+          summary: get products
+          description: Get products filtered by Brand Id
+          parameters:
+            - name: brand_id
+              in: query
+              required: true
+              schema:
+                type: number
+          responses:
+            '200':
+              description: OK
+              content:
+                application/json:
+                  schema:
+                    type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        HttpStub(contract, emptyList()).use { stub ->
+            val queryParameters = QueryParameters(paramPairs = listOf("brand_id" to "1"))
+            val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toString()).isNotEmpty
         }
     }
 }

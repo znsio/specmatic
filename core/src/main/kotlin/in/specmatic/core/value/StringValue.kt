@@ -1,19 +1,17 @@
 package `in`.specmatic.core.value
 
-import io.ktor.http.quote
-import io.ktor.util.InternalAPI
-import org.w3c.dom.Document
-import org.w3c.dom.Node
 import `in`.specmatic.core.ExampleDeclarations
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.pattern.*
+import io.ktor.http.*
+import org.w3c.dom.Document
+import org.w3c.dom.Node
 
 data class StringValue(val string: String = "") : Value, ScalarValue, XMLValue {
     override val httpContentType = "text/plain"
 
     override fun valueErrorSnippet(): String = displayableValue()
 
-    @OptIn(InternalAPI::class)
     override fun displayableValue(): String = toStringLiteral().quote()
     override fun toStringLiteral() = string
     override fun displayableType(): String = "string"

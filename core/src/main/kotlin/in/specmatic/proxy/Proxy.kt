@@ -55,9 +55,10 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
 
                             val httpResponse = client.execute(requestToSend)
 
+                            //TODO: Fix toQueryString for array query parameter support in proxy
                             val name =
-                                "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams)}"
-                            stubs.add(NamedStub(name, ScenarioStub(httpRequest, httpResponse)))
+                                "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams.asMap())}"
+                            stubs.add(NamedStub(name, ScenarioStub(httpRequest.withoutDynamicHeaders(), httpResponse.withoutDynamicHeaders())))
 
                             respondToKtorHttpResponse(call, withoutContentEncodingGzip(httpResponse))
                         } catch (e: Throwable) {
@@ -119,7 +120,8 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
     }
 
     private fun isFullURL(path: String?): Boolean {
-        return path != null && try { URL(path); true } catch(e: Throwable) { false }
+        return path != null && try {
+            URL(URLParts(path).withEncodedPathSegments()); true } catch(e: Throwable) { false }
     }
 
     init {

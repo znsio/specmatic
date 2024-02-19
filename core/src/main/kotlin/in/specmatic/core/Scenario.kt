@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.capitalizeFirstChar
@@ -26,21 +27,13 @@ object ContractAndStubMismatchMessages : MismatchMessages {
 }
 
 interface ScenarioDetailsForResult {
+    val status: Int
     val ignoreFailure: Boolean
     val name: String
     val method: String
     val path: String
-    val status: Int
-    val requestTestDescription: String
-    fun testDescription(): String {
-        val scenarioDescription = StringBuilder()
-        scenarioDescription.append("Scenario: ")
-        when {
-            name.isNotEmpty() -> scenarioDescription.append("$name ")
-        }
 
-        return scenarioDescription.append(requestTestDescription).toString()
-    }
+    fun testDescription(): String
 }
 
 data class Scenario(
@@ -51,13 +44,22 @@ data class Scenario(
     val examples: List<Examples>,
     val patterns: Map<String, Pattern>,
     val fixtures: Map<String, Value>,
-    val kafkaMessagePattern: KafkaMessagePattern? = null,
     override val ignoreFailure: Boolean = false,
     val references: Map<String, References> = emptyMap(),
     val bindings: Map<String, String> = emptyMap(),
     val isGherkinScenario: Boolean = false,
     val isNegative: Boolean = false,
     val badRequestOrDefault: BadRequestOrDefault? = null,
+    val exampleName: String? = null,
+    val generatedFromExamples: Boolean = examples.isNotEmpty(),
+    val sourceProvider:String? = null,
+    val sourceRepository:String? = null,
+    val sourceRepositoryBranch:String? = null,
+    val specification:String? = null,
+    val serviceType:String? = null,
+    val generativePrefix: String = "",
+    val statusInDescription: String = httpResponsePattern.status.toString(),
+    val disambiguate: () -> String = { "" }
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -67,14 +69,19 @@ data class Scenario(
         scenarioInfo.examples,
         scenarioInfo.patterns,
         scenarioInfo.fixtures,
-        scenarioInfo.kafkaMessage,
         scenarioInfo.ignoreFailure,
         scenarioInfo.references,
-        scenarioInfo.bindings
+        scenarioInfo.bindings,
+        sourceProvider = scenarioInfo.sourceProvider,
+        sourceRepository = scenarioInfo.sourceRepository,
+        sourceRepositoryBranch = scenarioInfo.sourceRepositoryBranch,
+        specification = scenarioInfo.specification,
+        serviceType = scenarioInfo.serviceType
     )
 
-    override val requestTestDescription: String
-        get() = httpRequestPattern.testDescription()
+    val apiIdentifier: String
+        get() = "$method $path $status"
+
     override val method: String
         get() {
             return httpRequestPattern.method ?: ""
@@ -82,12 +89,12 @@ data class Scenario(
 
     override val path: String
         get() {
-            return httpRequestPattern.urlMatcher?.path ?: ""
+            return httpRequestPattern.httpPathPattern?.path ?: ""
         }
 
     override val status: Int
         get() {
-            return httpResponsePattern.status
+            return if(isNegative) 400 else httpResponsePattern.status
         }
 
     private fun serverStateMatches(actualState: Map<String, Value>, resolver: Resolver) =
@@ -207,12 +214,13 @@ data class Scenario(
             )
                 code()
         } catch (e: Throwable) {
-            throw ContractException("Couldn't match state values. Expected $expectedValue in key $key, actual value is $actualValue")
+            throw ContractException("Couldn't match state values. Expected $expectedValue in key $key" +
+                ", actual value is $actualValue", exceptionCause = e)
         }
     }
 
-    fun generateHttpRequest(): HttpRequest =
-        scenarioBreadCrumb(this) { httpRequestPattern.generate(Resolver(expectedFacts, false, patterns)) }
+    fun generateHttpRequest(resolverStrategies: ResolverStrategies = DefaultStrategies): HttpRequest =
+        scenarioBreadCrumb(this) { httpRequestPattern.generate(resolverStrategies.update(Resolver(expectedFacts, false, patterns))) }
 
     fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
         val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = mismatchMessages).let {
@@ -224,7 +232,7 @@ data class Scenario(
 
         if (this.isNegative) {
             return if (is4xxResponse(httpResponse)) {
-                if(badRequestOrDefault != null && badRequestOrDefault.supports(httpResponse))
+                if(badRequestOrDefault != null && badRequestOrDefault.supports(httpResponse.status))
                     badRequestOrDefault.matches(httpResponse, resolver).updateScenario(this)
                 else
                     Result.Failure("Received ${httpResponse.status}, but the specification does not contain a 4xx response, hence unable to verify this response", breadCrumb = "RESPONSE.STATUS").updateScenario(this)
@@ -250,114 +258,60 @@ data class Scenario(
         override fun unexpectedKey(keyLabel: String, keyName: String): String {
             return "${
                 keyLabel.lowercase().capitalizeFirstChar()
-            } named $keyName in the row value was not in the contract"
+            } named $keyName in the example was not in the specification"
         }
 
         override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
             return "${
                 keyLabel.lowercase().capitalizeFirstChar()
-            } named $keyName in the contract was not found in the row value"
+            } named $keyName in the specification was not found in the example"
         }
     }
 
-    private fun newBasedOn(row: Row, generativeTestingEnabled: Boolean = false): List<Scenario> {
-        val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = ContractAndRowValueMismatch, generativeTestingEnabled = generativeTestingEnabled)
+    private fun newBasedOn(row: Row, resolverStrategies: ResolverStrategies): List<Scenario> {
+        val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
+        val resolver =
+            Resolver(expectedFacts, false, patterns)
+            .copy(
+                mismatchMessages = ContractAndRowValueMismatch
+            ).let { resolverStrategies.update(it) }
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 
-        return when (kafkaMessagePattern) {
-            null -> scenarioBreadCrumb(this) {
-                attempt {
-                    when (isNegative) {
-                        false -> httpRequestPattern.newBasedOn(row, resolver)
-                        else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true))
-                    }.map { newHttpRequestPattern ->
-                        Scenario(
-                            name,
-                            newHttpRequestPattern,
-                            httpResponsePattern,
-                            newExpectedServerState,
-                            examples,
-                            patterns,
-                            fixtures,
-                            kafkaMessagePattern,
-                            ignoreFailure,
-                            references,
-                            bindings,
-                            isGherkinScenario,
-                            isNegative,
-                            badRequestOrDefault
-                        )
-                    }
-                }
-            }
-            else -> {
-                kafkaMessagePattern.newBasedOn(row, resolver).map { newKafkaMessagePattern ->
-                    Scenario(
-                        name,
-                        httpRequestPattern,
-                        httpResponsePattern,
-                        newExpectedServerState,
-                        examples,
-                        patterns,
-                        fixtures,
-                        newKafkaMessagePattern,
-                        ignoreFailure,
-                        references,
-                        bindings,
-                        isGherkinScenario,
-                        isNegative
+        return scenarioBreadCrumb(this) {
+            attempt {
+                when (isNegative) {
+                    false -> httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status)
+                    else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true))
+                }.map { newHttpRequestPattern ->
+                    this.copy(
+                        httpRequestPattern = newHttpRequestPattern,
+                        expectedFacts = newExpectedServerState,
+                        ignoreFailure = ignoreFailure,
+                        exampleName = row.name
                     )
                 }
             }
         }
     }
 
-    private fun newBasedOnBackwarCompatibility(row: Row): List<Scenario> {
+    private fun newBasedOnBackwardCompatibility(row: Row): List<Scenario> {
         val resolver = Resolver(expectedFacts, false, patterns)
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 
-        return when (kafkaMessagePattern) {
-            null -> httpRequestPattern.newBasedOn(resolver).map { newHttpRequestPattern ->
-                Scenario(
-                    name,
-                    newHttpRequestPattern,
-                    httpResponsePattern,
-                    newExpectedServerState,
-                    examples,
-                    patterns,
-                    fixtures,
-                    kafkaMessagePattern,
-                    ignoreFailure,
-                    references,
-                    bindings
-                )
-            }
-            else -> {
-                kafkaMessagePattern.newBasedOn(row, resolver).map { newKafkaMessagePattern ->
-                    Scenario(
-                        name,
-                        httpRequestPattern,
-                        httpResponsePattern,
-                        newExpectedServerState,
-                        examples,
-                        patterns,
-                        fixtures,
-                        newKafkaMessagePattern,
-                        ignoreFailure,
-                        references,
-                        bindings
-                    )
-                }
-            }
+        return httpRequestPattern.newBasedOn(resolver).map { newHttpRequestPattern ->
+            this.copy(
+                httpRequestPattern = newHttpRequestPattern,
+                expectedFacts = newExpectedServerState
+            )
         }
     }
 
     fun generateTestScenarios(
+        resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-        enableNegativeTesting: Boolean = false
     ): List<Scenario> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
@@ -372,15 +326,17 @@ data class Scenario(
                     }
                 }
             }.flatMap { row ->
-                newBasedOn(row, enableNegativeTesting)
+                newBasedOn(row, resolverStrategies)
+            }.map {
+                it.copy(generativePrefix = resolverStrategies.generation.positivePrefix)
             }
         }
     }
 
     fun generateContractTests(
+        resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-        generativeTestingEnabled: Boolean = false
     ): List<ContractTest> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
@@ -396,7 +352,7 @@ data class Scenario(
                 }
             }.flatMap { row ->
                 try {
-                    newBasedOn(row, generativeTestingEnabled).map { ScenarioTest(it, generativeTestingEnabled) }
+                    newBasedOn(row, resolverStrategies).map { ScenarioTest(it, resolverStrategies) }
                 } catch (e: Throwable) {
                     listOf(ScenarioTestGenerationFailure(this, e))
                 }
@@ -421,7 +377,7 @@ data class Scenario(
                     }
                 }
             }.flatMap { row ->
-                newBasedOnBackwarCompatibility(row)
+                newBasedOnBackwardCompatibility(row)
             }
         }
     }
@@ -436,7 +392,7 @@ data class Scenario(
         response: HttpResponse,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): Result {
-        return scenarioBreadCrumb(this) {
+        scenarioBreadCrumb(this) {
             val resolver = Resolver(
                 IgnoreFacts(),
                 true,
@@ -471,11 +427,6 @@ data class Scenario(
         }
     }
 
-    fun matchesMock(kafkaMessage: KafkaMessage): Result {
-        return kafkaMessagePattern?.matches(kafkaMessage, resolver)
-            ?: Result.Failure("This scenario does not have a Kafka mock")
-    }
-
     fun resolverAndResponseFrom(response: HttpResponse): Pair<Resolver, HttpResponse> =
         scenarioBreadCrumb(this) {
             attempt(breadCrumb = "RESPONSE") {
@@ -485,55 +436,66 @@ data class Scenario(
         }
 
     override fun testDescription(): String {
-        val scenarioDescription = StringBuilder()
-        scenarioDescription.append("Scenario: ")
-        when {
-            name.isNotEmpty() -> scenarioDescription.append("$name ")
-        }
+        val method = this.httpRequestPattern.method
+        val path = this.httpRequestPattern.httpPathPattern?.path ?: ""
+        val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | EX:${exampleName.trim()}" }
 
-        return if (kafkaMessagePattern != null)
-            scenarioDescription.append(kafkaMessagePattern.topic).toString()
-        else
-            scenarioDescription.append(httpRequestPattern.testDescription()).toString()
+        val generativePrefix = this.generativePrefix
+
+        return "$generativePrefix Scenario: $method $path ${disambiguate()}-> $statusInDescription$exampleIdentifier"
     }
 
-    fun newBasedOn(scenario: Scenario): Scenario =
-        Scenario(
-            if(Flags.generativeTestingEnabled()) "+ve: ${this.name}" else this.name,
-            this.httpRequestPattern,
-            this.httpResponsePattern,
-            this.expectedFacts,
-            scenario.examples,
-            this.patterns,
-            this.fixtures,
-            this.kafkaMessagePattern,
-            this.ignoreFailure,
-            scenario.references,
-            bindings,
-            isGherkinScenario,
-            isNegative
+    fun newBasedOn(scenario: Scenario): Scenario {
+        return this.copy(
+            examples = scenario.examples,
+            references = scenario.references
         )
+    }
 
     fun newBasedOn(suggestions: List<Scenario>) =
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
-    fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?) = Scenario(
-        "-ve: ${this.name}",
-        this.httpRequestPattern,
-        this.httpResponsePattern,
-        this.expectedFacts,
-        this.examples,
-        this.patterns,
-        this.fixtures,
-        this.kafkaMessagePattern,
-        this.ignoreFailure,
-        this.references,
-        bindings,
-        this.isGherkinScenario,
-        isNegative = true,
-        badRequestOrDefault
-    )
+    fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?): Scenario {
+        return this.copy(
+            isNegative = true,
+            badRequestOrDefault = badRequestOrDefault,
+            statusInDescription = "4xx"
+        )
+    }
+
+    fun getStatus(response: HttpResponse?): Int {
+        // TODO: This should return a string so that we can return a 4xx when response is null for a negative scenario
+        return when {
+            response == null -> status
+            isNegative -> response.status
+            else -> status
+        }
+    }
+
+    fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Scenario {
+        val matchingTestData: Map<OpenApiSpecification.OperationIdentifier, List<Row>> = matchingRows(externalisedJSONExamples)
+
+        val newExamples: List<Examples> = matchingTestData.map { (operationId, rows) ->
+            if(rows.isEmpty())
+                return@map emptyList()
+
+            val rowsWithPathData: List<Row> = rows.map { row -> httpRequestPattern.addPathParamsToRows(operationId.requestPath, row, resolver) }
+
+            val columns = rowsWithPathData.first().columnNames
+
+            listOf(Examples(columns, rowsWithPathData))
+        }.flatten()
+
+        return this.copy(examples = newExamples)
+    }
+
+    private fun matchingRows(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>) =
+        externalisedJSONExamples.filter { (operationId, rows) ->
+            operationId.requestMethod.equals(method, ignoreCase = true)
+                    && operationId.responseStatus == status
+                    && httpRequestPattern.matchesPath(operationId.requestPath, resolver).isSuccess()
+        }
 }
 
 fun newExpectedServerStateBasedOn(
@@ -550,7 +512,10 @@ fun newExpectedServerStateBasedOn(
 
                     when {
                         fixtures.containsKey(fieldValue) -> fixtures.getValue(fieldValue)
-                        isPatternToken(fieldValue) -> resolver.getPattern(fieldValue).generate(resolver)
+                        isPatternToken(fieldValue) -> {
+                            val fieldPattern = resolver.getPattern(fieldValue)
+                            resolver.withCyclePrevention(fieldPattern, fieldPattern::generate)
+                        }
                         else -> StringValue(fieldValue)
                     }
                 }
@@ -566,18 +531,26 @@ object ContractAndResponseMismatch : MismatchMessages {
     }
 
     override fun unexpectedKey(keyLabel: String, keyName: String): String {
-        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the response was not in the contract"
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the response was not in the specification"
     }
 
     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
         return "${
             keyLabel.lowercase().capitalizeFirstChar()
-        } named $keyName in the contract was not found in the response"
+        } named $keyName in the specification was not found in the response"
     }
 }
 
-fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
-    val request = testScenario.generateHttpRequest()
+fun executeTest(testScenario: Scenario, testExecutor: TestExecutor, resolverStrategies: ResolverStrategies = DefaultStrategies): Result {
+    return executeTestAndReturnResultAndResponse(testScenario, testExecutor, resolverStrategies).first
+}
+
+fun executeTestAndReturnResultAndResponse(
+    testScenario: Scenario,
+    testExecutor: TestExecutor,
+    resolverStrategies: ResolverStrategies
+): Pair<Result, HttpResponse?> {
+    val request = testScenario.generateHttpRequest(resolverStrategies)
 
     return try {
         testExecutor.setServerState(testScenario.serverState)
@@ -586,10 +559,10 @@ fun executeTest(testScenario: Scenario, testExecutor: TestExecutor): Result {
 
         val result = testResult(response, testScenario)
 
-        result.withBindings(testScenario.bindings, response)
+        Pair(result.withBindings(testScenario.bindings, response), response)
     } catch (exception: Throwable) {
-        Result.Failure(exceptionCauseMessage(exception))
-            .also { failure -> failure.updateScenario(testScenario) }
+        Pair(Result.Failure(exceptionCauseMessage(exception))
+            .also { failure -> failure.updateScenario(testScenario) }, null)
     }
 }
 

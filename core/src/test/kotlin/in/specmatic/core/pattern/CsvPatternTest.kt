@@ -1,5 +1,6 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATION
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
@@ -10,6 +11,7 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import java.util.function.Consumer
@@ -100,20 +102,22 @@ paths:
 
     @Test
     fun `should read array in query params as CsvString type`() {
-        val result: Result = contract.scenarios.first().matches(HttpRequest("GET", "/hello", queryParams = mapOf("data" to "1,2,3")), emptyMap())
+        val queryParameters = QueryParameters(paramPairs = listOf("data" to "1", "data" to "2", "data" to "3"))
+        val result: Result = contract.scenarios.first().matches(HttpRequest("GET", "/hello", queryParams = queryParameters), emptyMap())
         assertThat(result).isInstanceOf(Success::class.java)
     }
 
     @Test
     fun `should stub out CsvString type`() {
-        val request = HttpRequest("GET", "/hello", queryParams = mapOf("data" to "1,2,3"))
+        val queryParameters = QueryParameters(paramPairs = listOf("data" to "1", "data" to "2", "data" to "3"))
+        val request = HttpRequest("GET", "/hello", queryParams = queryParameters)
         val stub = contract.matchingStub(request, HttpResponse.OK)
 
-        assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Result.Success::class.java)
+        assertThat(stub.requestType.matches(request, Resolver())).isInstanceOf(Success::class.java)
 
         HttpStub(listOf(contract), listOf(stub)).use {
             assertDoesNotThrow {
-                it.createStub(ScenarioStub(request, HttpResponse.OK))
+                it.setExpectation(ScenarioStub(request, HttpResponse.OK))
             }
         }
     }
@@ -201,7 +205,7 @@ paths:
         - in: query
           name: data
           schema:
-            type: number
+            type: boolean
       responses:
         '200':
           description: Says hello
@@ -214,5 +218,17 @@ paths:
         val result = testBackwardCompatibility(contract, newContract)
 
         assertThat(result.success()).isFalse()
+    }
+
+
+    @Test
+    @Tag(GENERATION)
+    fun `negative patterns should be generated`() {
+        val result = StringPattern().negativeBasedOn(Row(), Resolver())
+        assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
+            "null",
+            "number",
+            "boolean"
+        )
     }
 }

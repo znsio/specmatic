@@ -1,0 +1,41 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+TestRunner -> SpecmaticJUnitSupport: Generate Contract Tests
+SpecmaticJUnitSupport -> GherkinParser: Parse Contract as Feature
+SpecmaticJUnitSupport <-- GherkinParser: Returns Feature
+SpecmaticJUnitSupport -> Feature: Generate Test Scenarios
+Feature -> Scenario: newBasedOn(row) - Outline to Scenario explosion
+Scenario -> HTTPRequestPattern: newBasedOn(row) - Generate all possible HTTPRequestPatterns
+HTTPRequestPattern -> HttpPathPattern: newBasedOn(row) - Generate all relevant Paths and Paths Params
+HTTPRequestPattern <-- HttpPathPattern: returns all relevant Paths and Paths Params
+HTTPRequestPattern -> HttpQueryParamPattern: newBasedOn(row) - Generate all relevant Query Params
+HTTPRequestPattern <-- HttpQueryParamPattern: returns all relevant Query Params
+HTTPRequestPattern -> HTTPHeadersPattern: newBasedOn(row) - Generate all relevant HTTPHeaderPatterns
+HTTPRequestPattern <-- HTTPHeadersPattern: returns all relevant HTTPHeaderPatterns
+HTTPRequestPattern -> Pattern: newBasedOn(row) - Dispatch to relevant Pattern
+Pattern -> JSONObjectPattern: newBasedOn(row) - Generate all relevant JSONObjectPattern
+Pattern <-- JSONObjectPattern: return all relevant JSONObjectPattern
+HTTPRequestPattern <-- Pattern: returns all relevant JSONObjectPattern
+Scenario <-- HTTPRequestPattern: Combine and return all possible HTTPRequestPatterns
+Feature <-- Scenario: return one ScenarioTest per row
+SpecmaticJUnitSupport <-- Feature: List of Scenarios (contract tests)
+SpecmaticJUnitSupport -> DynamicTestFactory: Generate Dynamic Test per Scenario
+SpecmaticJUnitSupport <-- DynamicTestFactory: Returns Tests
+TestRunner <-- SpecmaticJUnitSupport: Returns Tests
+TestRunner -> JUnitRunner: Execute Tests
+JUnitRunner -> DynamicTest: execute()
+DynamicTest -> ScenarioTest: execute()
+ScenarioTest -> Feature: executeTest(scenario)
+Feature -> Scenario: generateHTTPRequest()
+Feature <-- Scenario: return HTTPRequest
+Feature -> HTTPClient: execute(HTTPRequest)
+Feature <-- HTTPClient: return HTTPResponse
+Feature -> Scenario: validate(HTTPResponse)
+Feature <-- Scenario: return Result
+ScenarioTest <-- Feature: return Result
+DynamicTest <-- ScenarioTest: return Result
+JUnitRunner <-- DynamicTest: assert the result, do nothing if pass else throw AssertionException
+TestRunner <-- JUnitRunner: Show TestResults
+@enduml

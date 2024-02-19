@@ -1,0 +1,15 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/da ta",
+    "query": {
+      "id": 5
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": 10
+    }
+  }
+}

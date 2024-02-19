@@ -1,10 +1,8 @@
 package `in`.specmatic.core.wsdl.payload
 
+import `in`.specmatic.core.wsdl.parser.SOAPMessageType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import `in`.specmatic.core.pattern.TYPE_ATTRIBUTE_NAME
-import `in`.specmatic.core.wsdl.parser.SOAPMessageType
-import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 
 internal class ComplexTypedSOAPPayloadTest {
     @Test

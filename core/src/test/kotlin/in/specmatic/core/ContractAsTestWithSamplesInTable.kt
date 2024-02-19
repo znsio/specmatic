@@ -1,21 +1,21 @@
 package `in`.specmatic.core
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.value.*
 import `in`.specmatic.test.TestExecutor
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
-import java.util.*
 
 class ContractAsTestWithSamplesInTable {
     @Test
     @Throws(Throwable::class)
-    fun GETAndResponseBodyGeneratedThroughDataTableWithPathParams() {
+    fun `GET And Response Body Generated Through Data Table With Path Params`() {
         val contractGherkin = """Feature: Contract for /balance API
 
   Scenario Outline: api call
@@ -40,8 +40,8 @@ class ContractAsTestWithSamplesInTable {
                     val pathParts = request.path!!.split("/".toRegex()).toTypedArray()
                     pathParts[pathParts.size - 1]
                 }
-                Assertions.assertEquals("GET", request.method)
-                Assertions.assertTrue( NumberPattern().matches(NumberValue(accountId.toInt()), Resolver()) is Result.Success)
+                assertEquals("GET", request.method)
+                assertTrue( NumberPattern().matches(NumberValue(accountId.toInt()), Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -64,7 +64,7 @@ class ContractAsTestWithSamplesInTable {
 
     @Test
     @Throws(Throwable::class)
-    fun POSTBodyAndResponseGeneratedThroughDataTable() {
+    fun `POST Body And Response Generated Through Data Table`() {
         val contractGherkin = """
 Feature: Contract for /balance API
 
@@ -132,8 +132,8 @@ Feature: Contract for /balance API
                 val requestJSON = jsonObject(request.body)
                 val name = requestJSON["name"] as StringValue
                 val city = (requestJSON["address"] as JSONObjectValue).jsonObject["city"] as StringValue
-                Assertions.assertEquals("POST", request.method)
-                Assertions.assertTrue(StringPattern().matches(city, Resolver()) is Result.Success)
+                assertEquals("POST", request.method)
+                assertTrue(StringPattern().matches(city, Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -148,7 +148,7 @@ Feature: Contract for /balance API
                     "Jane Doe" -> assertThat(city.string).isEqualTo("Bangalore")
                 }
 
-                val jsonResponseString: String? = when (name.string) {
+                val jsonResponseString: String = when (name.string) {
                     "John Doe" -> "{account_id: 10}"
                     else -> "{account_id: 20}"
                 }
@@ -176,7 +176,7 @@ Feature: Contract for /balance API
                 if (requestJSON is JSONObjectValue) {
                     val name = requestJSON.jsonObject.getValue("name") as StringValue
 
-                    Assertions.assertEquals("POST", request.method)
+                    assertEquals("POST", request.method)
 
                     val headers: HashMap<String, String> = object : HashMap<String, String>() {
                         init {
@@ -209,7 +209,7 @@ Feature: Contract for /balance API
 
     @Test
     @Throws(Throwable::class)
-    fun POSTBodyAndResponseXMLGeneratedThroughDataTable() {
+    fun `POST Body And Response XML Generated Through Data Table`() {
         val contractGherkin = """Feature: Contract for /balance API
 
   Scenario Outline: api call

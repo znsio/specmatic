@@ -6,7 +6,7 @@ data class Results(val results: List<Result> = emptyList()) {
     fun hasResults(): Boolean = results.isNotEmpty()
 
     fun hasFailures(): Boolean = results.any { it is Result.Failure }
-    fun success(): Boolean = !hasFailures()
+    fun success(): Boolean = if(hasResults()) successCount > 0 && failureCount == 0 else true
 
     fun withoutFluff(fluffLevel: Int): Results = copy(results = results.filterNot { it.isFluffy(fluffLevel) })
 
@@ -59,7 +59,7 @@ data class Results(val results: List<Result> = emptyList()) {
 
         return when {
             filteredResults.isNotEmpty() -> listToDistinctReport(filteredResults)
-            else -> defaultMessage.trim()
+            else -> if(successCount > 0 && failureCount == 0) "" else defaultMessage.trim()
         }
     }
 
@@ -92,9 +92,10 @@ data class Results(val results: List<Result> = emptyList()) {
 }
 
 private fun listToReport(results: List<Result>): String {
-    return results.filterIsInstance<Result.Failure>().map {
-        it.toFailureReport().toText()
-    }.joinToString("${System.lineSeparator()}${System.lineSeparator()}")
+    return results.filterIsInstance<Result.Failure>()
+        .joinToString("${System.lineSeparator()}${System.lineSeparator()}") {
+            it.toFailureReport().toText()
+        }
 }
 
 private fun listToDistinctReport(results: List<Result>): String {

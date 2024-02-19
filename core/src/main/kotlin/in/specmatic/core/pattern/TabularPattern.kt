@@ -53,7 +53,7 @@ data class TabularPattern(
     override fun generate(resolver: Resolver): JSONObjectValue {
         val resolverWithNullType = withNullPattern(resolver)
         return JSONObjectValue(pattern.mapKeys { entry -> withoutOptionality(entry.key) }.mapValues { (key, pattern) ->
-            attempt(breadCrumb = key) { resolverWithNullType.generate(key, pattern) }
+            attempt(breadCrumb = key) { resolverWithNullType.withCyclePrevention(pattern) {it.generate(key, pattern)} }
         })
     }
 
@@ -70,7 +70,7 @@ data class TabularPattern(
     }
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
         val resolverWithNullType = withNullPattern(resolver)
-        return allOrNothingCombinationIn(pattern, if(resolver.generativeTestingEnabled) Row() else row) { pattern ->
+        return allOrNothingCombinationIn(pattern, resolver.resolveRow(row)) { pattern ->
             newBasedOn(pattern, row, resolverWithNullType)
         }.map {
             toTabularPattern(it.mapKeys { (key, _) ->
@@ -130,7 +130,7 @@ data class TabularPattern(
 }
 
 fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
-    val patternCollection = patternMap.mapValues { (key, pattern) ->
+    val patternCollection: Map<String, List<Pattern>> = patternMap.mapValues { (key, pattern) ->
         attempt(breadCrumb = key) {
             newBasedOn(row, key, pattern, resolver)
         }
@@ -139,34 +139,10 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
     return patternList(patternCollection)
 }
 
-fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
-    val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
-    val negativePatternsMap = patternMap.mapValues { (_, pattern) -> pattern.negativeBasedOn(row, resolver) }
-    val modifiedPatternMap: Map<String, List<Map<String, List<Pattern>>>> = eachKeyMappedToPatternMap.mapValues { (keyToNegate, patterns) ->
-        val negativePatterns = negativePatternsMap[keyToNegate]
-        negativePatterns!!.map { negativePattern ->
-            patterns.mapValues { (key, pattern) ->
-                attempt(breadCrumb = key) {
-                    when (key == keyToNegate) {
-                        true ->
-                            attempt(breadCrumb = "Setting $key to $negativePattern for negative test scenario") {
-                                newBasedOn(Row(), key, negativePattern, resolver)
-                            }
-                        else -> newBasedOn(row, key, pattern, resolver)
-                    }
-                }
-            }
-        }
-    }
-    return modifiedPatternMap.values.map { list: List<Map<String, List<Pattern>>> ->
-        list.toList().map { patternList(it) }.flatten()
-    }.flatten()
-}
-
 fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): List<Map<String, Pattern>> {
     val patternCollection = patternMap.mapValues { (key, pattern) ->
         attempt(breadCrumb = key) {
-            newBasedOn(pattern, resolver)
+            newBasedOn(key, pattern, resolver)
         }
     }
 
@@ -180,12 +156,18 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
         row.containsField(keyWithoutOptionality) -> {
             val rowValue = row.getField(keyWithoutOptionality)
 
-            val fromExamples = if (isPatternToken(rowValue)) {
+            if (isPatternToken(rowValue)) {
                 val rowPattern = resolver.getPattern(rowValue)
 
                 attempt(breadCrumb = key) {
                     when (val result = pattern.encompasses(rowPattern, resolver, resolver)) {
-                        is Result.Success -> rowPattern.newBasedOn(row, resolver)
+                        is Result.Success -> {
+                            resolver.withCyclePrevention(rowPattern, isOptional(key)) { cyclePreventedResolver ->
+                                rowPattern.newBasedOn(row, cyclePreventedResolver)
+                            }?:
+                            // Handle cycle (represented by null value) by using empty list for optional properties
+                            listOf()
+                        }
                         is Result.Failure -> throw ContractException(result.toFailureReport())
                     }
                 }
@@ -194,32 +176,33 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Lis
                     resolver.parse(pattern, rowValue)
                 }
 
-                when (val matchResult = pattern.matches(parsedRowValue, resolver)) {
-                    is Result.Failure -> throw ContractException(matchResult.toFailureReport())
-                    else -> listOf(ExactValuePattern(parsedRowValue))
+                val exactValuePattern =
+                    when (val matchResult = resolver.matchesPattern(null, pattern, parsedRowValue)) {
+                        is Result.Failure -> throw ContractException(matchResult.toFailureReport())
+                        else -> ExactValuePattern(parsedRowValue)
+                    }
+
+                val generativeTests: List<Pattern> = resolver.generatedPatternsForGenerativeTests(pattern, key)
+
+                listOf(exactValuePattern) + generativeTests.filterNot {
+                    it.encompasses(exactValuePattern, resolver, resolver) is Result.Success
                 }
             }
-
-            fromExamples
-
-//            if(Flags.negativeTestingEnabled()) {
-//                val vanilla = pattern.newBasedOn(Row(), resolver)
-//
-//                val remainder = vanilla.filterNot { vanillaType ->
-//                    fromExamples.any { item -> vanillaType.encompasses(item, resolver, resolver) is Result.Success }
-//                }
-//
-//                fromExamples.plus(remainder)
-//            } else {
-//                fromExamples
-//            }
         }
-        else -> pattern.newBasedOn(row, resolver)
+        else -> resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
+            pattern.newBasedOn(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver)
+        }?:
+        // Handle cycle (represented by null value) by using empty list for optional properties
+        listOf()
     }
 }
 
-fun newBasedOn(pattern: Pattern, resolver: Resolver): List<Pattern> {
-    return pattern.newBasedOn(resolver)
+fun newBasedOn(key: String, pattern: Pattern, resolver: Resolver): List<Pattern> {
+    return resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
+        pattern.newBasedOn(cyclePreventedResolver)
+    }?:
+    // Handle cycle (represented by null value) by using empty list for optional properties
+    listOf()
 }
 
 fun key(pattern: Pattern, key: String): String {
@@ -235,15 +218,8 @@ fun <ValueType> patternList(patternCollection: Map<String, List<ValueType>>): Li
     if (patternCollection.isEmpty())
         return listOf(emptyMap())
 
-    val key = patternCollection.keys.first()
-
-    return (patternCollection[key] ?: throw ContractException("key $key should not be empty in $patternCollection"))
-        .flatMap { pattern ->
-            val subLists = patternList(patternCollection - key)
-            subLists.map { generatedPatternMap ->
-                generatedPatternMap.plus(Pair(key, pattern))
-            }
-        }
+    val spec = CombinationSpec(patternCollection, Flags.maxTestRequestCombinations())
+    return spec.selectedCombinations
 }
 
 fun <ValueType> patternValues(patternCollection: Map<String, List<ValueType>>): List<Map<String, ValueType>> {
@@ -266,10 +242,24 @@ private fun <ValueType> keyCombinations(
     patternCollection: Map<String, List<ValueType>>,
     optionalSelector: (String, List<ValueType>) -> Pair<String, ValueType>
 ): Map<String, ValueType> {
-    return patternCollection.map { (key, value) ->
+    return patternCollection
+        .filterValues { it.isNotEmpty() }
+        .map { (key, value) ->
         optionalSelector(key, value)
     }.toMap()
 }
+
+fun <ValueType> forEachKeyCombinationIn(
+    patternMap: Map<String, ValueType>,
+    row: Row,
+    resolver: Resolver,
+    creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>
+): List<Map<String, ValueType>> =
+    keySets(patternMap.keys.toList(), row, resolver).map { keySet ->
+        patternMap.filterKeys { key -> key in keySet }
+    }.map { newPattern ->
+        creator(newPattern)
+    }.flatten()
 
 fun <ValueType> forEachKeyCombinationIn(
     patternMap: Map<String, ValueType>,
@@ -285,11 +275,36 @@ fun <ValueType> forEachKeyCombinationIn(
 fun <ValueType> allOrNothingCombinationIn(
     patternMap: Map<String, ValueType>,
     row: Row = Row(),
+    minPropertiesOrNull: Int? = null,
+    maxPropertiesOrNull: Int? = null,
     creator: (Map<String, ValueType>) -> List<Map<String, ValueType>>
 ): List<Map<String, ValueType>> {
     val keyLists = if (patternMap.keys.any { isOptional(it) }) {
-        val nothingList: Set<String> = patternMap.keys.filter { k -> !isOptional(k) || row.containsField(withoutOptionality(k)) }.toSet()
-        val allList: Set<String> = patternMap.keys
+        val nothingList: Set<String> =
+            patternMap.keys.filter { k -> !isOptional(k) || row.containsField(withoutOptionality(k)) }.toSet()
+                .let { propertyNames ->
+                    minPropertiesOrNull?.let { minProperties ->
+                        if (propertyNames.size >= minProperties)
+                            propertyNames
+                        else {
+                            val remainingPropertyNames = patternMap.keys.minus(propertyNames)
+                            propertyNames + remainingPropertyNames.shuffled().toList()
+                                .take(minProperties - propertyNames.size).toSet()
+                        }
+                    } ?: propertyNames
+                }
+
+        val allList: Set<String> = patternMap.keys.let { propertyNames ->
+            maxPropertiesOrNull?.let { maxProperties ->
+                if (propertyNames.size <= maxProperties)
+                    propertyNames
+                else {
+                    val remainingPropertyNames = patternMap.keys.minus(nothingList)
+                    nothingList + remainingPropertyNames.shuffled().toList().take(maxProperties - nothingList.size)
+                        .toSet()
+                }
+            } ?: propertyNames
+        }
 
         listOf(allList, nothingList).distinct()
     } else {
@@ -304,9 +319,24 @@ fun <ValueType> allOrNothingCombinationIn(
         creator(newPattern)
     }
 
-    val flatten: List<Map<String, ValueType>> = keySetValues.flatten()
+    return keySetValues.flatten()
+}
 
-    return flatten
+internal fun keySets(listOfKeys: List<String>, row: Row, resolver: Resolver): List<List<String>> {
+    if (listOfKeys.isEmpty())
+        return listOf(listOfKeys)
+
+    val key = listOfKeys.last()
+    val subLists = keySets(listOfKeys.dropLast(1), row)
+
+    return subLists.flatMap { subList ->
+        when {
+            row.containsField(withoutOptionality(key)) ->
+                resolver.generateKeySubLists(key, subList)
+            isOptional(key) -> listOf(subList, subList + key)
+            else -> listOf(subList + key)
+        }
+    }
 }
 
 internal fun keySets(listOfKeys: List<String>, row: Row): List<List<String>> {

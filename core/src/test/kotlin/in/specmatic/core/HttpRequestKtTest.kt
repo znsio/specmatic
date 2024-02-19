@@ -51,7 +51,7 @@ internal class HttpRequestKtTest {
 
     @Test
     fun `gherkin clauses from request with query`() {
-        val request = HttpRequest("GET", "/data", queryParams = mapOf("count" to "1"))
+        val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("count" to "1"))
         val (clauses, _) = toGherkinClauses(request)
 
         assertThat(clauses).hasSize(1)
@@ -104,7 +104,7 @@ internal class HttpRequestKtTest {
 
     @Test
     fun `query param pattern value should not be added as an example`() {
-        val request = HttpRequest(method = "POST", path = "/customer", queryParams = mapOf("key" to "(string)"))
+        val request = HttpRequest(method = "POST", path = "/customer", queryParametersMap = mapOf("key" to "(string)"))
 
         val (clauses, _, examples) = toGherkinClauses(request)
         assertThat(clauses.first().content).isEqualTo("POST /customer?key=(string)")
@@ -164,7 +164,7 @@ internal class HttpRequestKtTest {
 
     @Test
     fun `examples of conflicting keys between header and query param should be resolved by introducing a new key`() {
-        val request = HttpRequest(method = "POST", path = "/customer", queryParams = mapOf("one" to "one query"), headers = mapOf("one" to "one header"))
+        val request = HttpRequest(method = "POST", path = "/customer", queryParametersMap = mapOf("one" to "one query"), headers = mapOf("one" to "one header"))
 
         val (clauses, _, examples) = toGherkinClauses(request)
 
@@ -179,7 +179,7 @@ internal class HttpRequestKtTest {
 
     @Test
     fun `examples of conflicting keys between query param and json body should be resolved by introducing a new key`() {
-        val request = HttpRequest(method = "POST", path = "/customer", queryParams = mapOf("one" to "one query"), body = parsedValue("""{"one": "one json"}"""))
+        val request = HttpRequest(method = "POST", path = "/customer", queryParametersMap = mapOf("one" to "one query"), body = parsedValue("""{"one": "one json"}"""))
 
         val (clauses, types, examples) = toGherkinClauses(request)
 
@@ -198,7 +198,7 @@ internal class HttpRequestKtTest {
 
     @Test
     fun `examples of conflicting keys between query param and form fields should be resolved by introducing a new key`() {
-        val request = HttpRequest(method = "POST", path = "/customer", queryParams = mapOf("one" to "one query"), formFields = mapOf("one" to "one field"))
+        val request = HttpRequest(method = "POST", path = "/customer", queryParametersMap = mapOf("one" to "one query"), formFields = mapOf("one" to "one field"))
 
         val (clauses, _, examples) = toGherkinClauses(request)
 
@@ -215,7 +215,7 @@ internal class HttpRequestKtTest {
 
     @Test
     fun `examples of conflicting keys between query param and a request part should be resolved by introducing a new key`() {
-        val request = HttpRequest(method = "POST", path = "/customer", queryParams = mapOf("one" to "one query"), multiPartFormData = listOf(MultiPartContentValue(name = "one", content = StringValue("one part"))))
+        val request = HttpRequest(method = "POST", path = "/customer", queryParametersMap = mapOf("one" to "one query"), multiPartFormData = listOf(MultiPartContentValue(name = "one", content = StringValue("one part"))))
 
         val (clauses, _, examples) = toGherkinClauses(request)
 

@@ -11,6 +11,7 @@ import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.stub.hasOpenApiFileExtension
 import `in`.specmatic.test.ResultAssert
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -90,7 +91,7 @@ class GitCompatibleCommand : Callable<Int> {
         if(verbose)
             logger = Verbose(CompositePrinter())
 
-        if(!inputContractPath.isContractFile() && !inputContractPath.endsWith(".yaml") && !File(inputContractPath).isDirectory) {
+        if(!inputContractPath.isContractFile() && !hasOpenApiFileExtension(inputContractPath) && !File(inputContractPath).isDirectory) {
             logger.log(invalidContractExtensionMessage(inputContractPath))
             return 1
         }
@@ -189,7 +190,7 @@ interface BackwardCompatibilityScope {
     fun executeCheck(): Int
 }
 
-class FileBackwardCompatibilityScope(val path: String, val fileOperations: FileOperations, val fn: (String) -> Outcome<Results>): BackwardCompatibilityScope {
+class FileBackwardCompatibilityScope(val path: String, val fn: (String) -> Outcome<Results>): BackwardCompatibilityScope {
     override fun executeCheck(): Int {
         val outcome: Outcome<Results> = fn(path)
 
@@ -201,7 +202,7 @@ class FileBackwardCompatibilityScope(val path: String, val fileOperations: FileO
     }
 }
 
-class DirectoryBackwardCompatibilityScope(val path: String, val fileOperations: FileOperations, val fn: (String) -> Outcome<Results>): BackwardCompatibilityScope {
+class DirectoryBackwardCompatibilityScope(val path: String, val fn: (String) -> Outcome<Results>): BackwardCompatibilityScope {
     override fun executeCheck(): Int {
         val file = File(path)
         val outputs = file.walkTopDown().filter {
@@ -231,8 +232,8 @@ private fun backwardCompatibleOnFileOrDirectory(
     fn: (String) -> Outcome<Results>
 ): Int {
     val scope = when {
-        fileOperations.isFile(path) -> FileBackwardCompatibilityScope(path, fileOperations, fn)
-        fileOperations.isDirectory(path) -> DirectoryBackwardCompatibilityScope(path, fileOperations, fn)
+        fileOperations.isFile(path) -> FileBackwardCompatibilityScope(path, fn)
+        fileOperations.isDirectory(path) -> DirectoryBackwardCompatibilityScope(path, fn)
         else -> throw ContractException("$path was of an unexpected file type.")
     }
 
@@ -339,10 +340,10 @@ internal fun generateCommitBackwardCompatibleTests(
 
 internal fun parseContract(content: String, path: String): Feature {
     return when(val extension = File(path).extension) {
-        "yaml" -> OpenApiSpecification.fromYAML(content, path).toFeature()
-        "wsdl" -> wsdlContentToFeature(content, path)
+        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(content, path).toFeature()
+        WSDL -> wsdlContentToFeature(content, path)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(content, path)
-        else -> throw ContractException("Current file extension is $extension, but supported extensions are ${CONTRACT_EXTENSIONS.joinToString(", ")}")
+        else -> throw unsupportedFileExtensionContractException(path, extension)
     }
 }
 
@@ -360,8 +361,8 @@ internal data class CompatibilityOutput(val exitCode: Int, val message: String)
 internal fun compatibilityMessage(results: Outcome<Results>): CompatibilityOutput {
     return when {
         results.result == null -> CompatibilityOutput(1, results.errorMessage)
-        results.result.success() -> CompatibilityOutput(0, results.errorMessage.ifEmpty { "The newer contract is backward compatible" })
-        else -> CompatibilityOutput(1, compatibilityReport(results.result, "The newer contract is NOT backward compatible"))
+        results.result.hasFailures() -> CompatibilityOutput(1, compatibilityReport(results.result, "The newer contract is NOT backward compatible"))
+        else -> CompatibilityOutput(0, results.errorMessage.ifEmpty { "The newer contract is backward compatible" })
     }
 }
 
@@ -369,5 +370,5 @@ internal fun checkCompatibility(results: Outcome<Results>): CompatibilityOutput 
     try {
         compatibilityMessage(results)
     } catch(e: Throwable) {
-        CompatibilityOutput(1, "Could not run backwad compatibility check, got exception\n${exceptionCauseMessage(e)}")
+        CompatibilityOutput(1, "Could not run backward compatibility check, got exception\n${exceptionCauseMessage(e)}")
     }

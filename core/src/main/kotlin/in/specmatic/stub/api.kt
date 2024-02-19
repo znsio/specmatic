@@ -1,22 +1,21 @@
 @file:JvmName("API")
 package `in`.specmatic.stub
 
-import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.*
 import `in`.specmatic.core.git.SystemGit
-import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.log.StringLog
-import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.log.consoleLog
+import `in`.specmatic.core.log.logger
+import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.core.utilities.contractStubPaths
-import `in`.specmatic.core.utilities.jsonStringToValueMap
-import `in`.specmatic.core.value.KafkaMessage
 import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.mock.*
+import `in`.specmatic.mock.NoMatchingScenario
+import `in`.specmatic.mock.ScenarioStub
+import org.yaml.snakeyaml.Yaml
 import java.io.File
-import java.time.Duration
 
 // Used by stub client code
-fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000): HttpStub {
+fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000): ContractStub {
     val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
 
     val mocks = (File(dataDirectory).listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()).map { file ->
@@ -35,43 +34,47 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
 fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
-fun createStub(host: String = "localhost", port: Int = 9000): HttpStub {
+fun createStub(host: String = "localhost", port: Int = 9000): ContractStub {
     val workingDirectory = WorkingDirectory()
-    val contractPaths = contractStubPaths().map { it.path }
-    val stubs = loadContractStubsFromImplicitPaths(contractPaths)
+    val stubs = loadContractStubsFromImplicitPaths(contractStubPaths())
     val features = stubs.map { it.first }
     val expectations = contractInfoToHttpExpectations(stubs)
 
-    return HttpStub(features, expectations, host, port, log = ::consoleLog, workingDirectory = workingDirectory)
+    return HttpStub(features, expectations, host, port, log = ::consoleLog, workingDirectory = workingDirectory, specmaticConfigPath  = File(getGlobalConfigFileName()).canonicalPath)
 }
 
 // Used by stub client code
-fun createStub(dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): HttpStub {
+fun createStub(dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
     val contractPaths = contractStubPaths().map { it.path }
-    val contractInfo = loadContractStubsFromFiles(contractPaths, dataDirPaths)
+    val contractInfo = loadContractStubsFromFiles(contractPaths.map { ContractPathData("", it) }, dataDirPaths)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
 
-    return HttpStub(features, httpExpectations, host, port, ::consoleLog)
+    return HttpStub(features, httpExpectations, host, port, ::consoleLog, specmaticConfigPath = File(getGlobalConfigFileName()).canonicalPath)
 }
 
-fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): HttpStub {
-    val contractInfo = loadContractStubsFromFiles(contractPaths, dataDirPaths)
+fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
+    val contractInfo = loadContractStubsFromFiles(contractPaths.map { ContractPathData("", it) }, dataDirPaths)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
 
-    return HttpStub(features, httpExpectations, host, port, ::consoleLog)
+    return HttpStub(features, httpExpectations, host, port, ::consoleLog, specmaticConfigPath  = File(getGlobalConfigFileName()).canonicalPath)
 }
 
-fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
-    return contractPaths.map { File(it) }.flatMap { contractPath ->
+fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathData>): List<Pair<Feature, List<ScenarioStub>>> {
+    return contractPathDataList.map { Pair(File(it.path), it) }.flatMap { (contractPath, contractSource) ->
         when {
             contractPath.isFile && contractPath.extension in CONTRACT_EXTENSIONS -> {
                 consoleLog(StringLog("Loading $contractPath"))
-                try {
-                    val feature = parseContractFileToFeature(contractPath, CommandHook(HookName.stub_load_contract))
 
-                    val implicitDataDirs = listOf(implicitContractDataDir(contractPath.path)).plus(if(customImplicitStubBase() != null) listOf(implicitContractDataDir(contractPath.path, customImplicitStubBase())) else emptyList())
+                if(hasOpenApiFileExtension(contractPath.path) && !isOpenAPI(contractPath.path.trim())) {
+                    logger.log("Ignoring ${contractPath.path} as it is not an OpenAPI specification")
+                    emptyList()
+                }
+                else try {
+                    val feature = parseContractFileToFeature(contractPath, CommandHook(HookName.stub_load_contract), contractSource.provider, contractSource.repository, contractSource.branch, contractSource.specificationPath)
+
+                    val implicitDataDirs = listOf(implicitContractDataDir(contractPath.path)).plus(if(customImplicitStubBase() != null) listOf(implicitContractDataDir(contractPath.path, customImplicitStubBase())) else emptyList()).sorted()
 
                     val stubData = when {
                         implicitDataDirs.any { it.isDirectory } -> {
@@ -79,17 +82,17 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
                                 consoleLog("Loading stub expectations from ${implicitDataDir.path}".prependIndent("  "))
                                 logIgnoredFiles(implicitDataDir)
 
-                                val stubDataFiles = filesInDir(implicitDataDir)?.toList()?.filter { it.extension == "json" }.orEmpty()
+                                val stubDataFiles = filesInDir(implicitDataDir)?.toList()?.filter { it.extension == "json" }.orEmpty().sorted()
                                 printDataFiles(stubDataFiles)
 
-                                stubDataFiles.map {
+                                stubDataFiles.mapNotNull {
                                     try {
                                         Pair(it.path, stringToMockScenario(StringValue(it.readText())))
-                                    } catch(e: Throwable) {
-                                        logger.log(e, "    Could not load stub file ${it.canonicalPath}")
+                                    } catch (e: Throwable) {
+                                        logger.log(e, "  Could not load stub file ${it.canonicalPath}")
                                         null
                                     }
-                                }.filterNotNull()
+                                }
                             }
                         }
                         else -> emptyList()
@@ -97,17 +100,20 @@ fun loadContractStubsFromImplicitPaths(contractPaths: List<String>): List<Pair<F
 
                     loadContractStubs(listOf(Pair(contractPath.path, feature)), stubData)
                 } catch(e: Throwable) {
-                    logger.log(e, "    Could not load ${contractPath.canonicalPath}")
+                    logger.log(e, "  Could not load ${contractPath.canonicalPath}")
                     emptyList()
                 }
             }
             contractPath.isDirectory -> {
-                loadContractStubsFromImplicitPaths(contractPath.listFiles()?.toList()?.map { it.absolutePath } ?: emptyList())
+                loadContractStubsFromImplicitPaths(contractPath.listFiles()?.toList()?.map { ContractPathData("",  it.absolutePath) } ?: emptyList())
             }
             else -> emptyList()
         }
     }
 }
+
+fun hasOpenApiFileExtension(contractPath: String): Boolean =
+    OPENAPI_FILE_EXTENSIONS.any { contractPath.trim().endsWith(".$it") }
 
 private fun logIgnoredFiles(implicitDataDir: File) {
     val ignoredFiles = implicitDataDir.listFiles()?.toList()?.filter { it.extension != "json" }?.filter { it.isFile } ?: emptyList()
@@ -119,22 +125,22 @@ private fun logIgnoredFiles(implicitDataDir: File) {
     }
 }
 
-fun loadContractStubsFromFiles(contractPaths: List<String>, dataDirPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
-    val contactPathsString = contractPaths.joinToString(System.lineSeparator())
+fun loadContractStubsFromFiles(contractPathDataList: List<ContractPathData>, dataDirPaths: List<String>): List<Pair<Feature, List<ScenarioStub>>> {
+    val contactPathsString = contractPathDataList.joinToString(System.lineSeparator()) { it.path }
     consoleLog(StringLog("Loading the following contracts:${System.lineSeparator()}$contactPathsString"))
     consoleLog(StringLog(""))
 
-    val dataDirFileList = allDirsInTree(dataDirPaths)
+    val dataDirFileList = allDirsInTree(dataDirPaths).sorted()
 
-    val features = contractPaths.map { path ->
-        Pair(path, parseContractFileToFeature(path, CommandHook(HookName.stub_load_contract)))
+    val features = contractPathDataList.mapNotNull { contractPathData ->
+        loadIfOpenAPISpecification(contractPathData)
     }
 
     val dataFiles = dataDirFileList.flatMap {
         consoleLog(StringLog("Loading stub expectations from ${it.path}".prependIndent("  ")))
         logIgnoredFiles(it)
         it.listFiles()?.toList() ?: emptyList<File>()
-    }.filter { it.extension == "json" }
+    }.filter { it.extension == "json" }.sorted()
     printDataFiles(dataFiles)
 
     val mockData = dataFiles.mapNotNull {
@@ -203,32 +209,27 @@ fun stubMatchErrorMessage(
 
 
 
-    return errorReports.map { (exceptionReport, contractFilePath) ->
+    return errorReports.joinToString("${System.lineSeparator()}${System.lineSeparator()}") { (exceptionReport, contractFilePath) ->
         "$stubFile didn't match $contractFilePath${System.lineSeparator()}${
             exceptionReport.message.prependIndent(
                 "  "
             )
         }"
-    }.joinToString("${System.lineSeparator()}${System.lineSeparator()}")
+    }
 }
 
 fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair<String, ScenarioStub>>): List<Pair<Feature, List<ScenarioStub>>> {
-    val contractInfoFromStubs = stubData.mapNotNull { (stubFile, stub) ->
-        val matchResults = features.map { (qontractFile, feature) ->
+    val contractInfoFromStubs: List<Pair<Feature, List<ScenarioStub>>> = stubData.mapNotNull { (stubFile, stub) ->
+        val matchResults = features.map { (specFile, feature) ->
             try {
-                val kafkaMessage = stub.kafkaMessage
-                if (kafkaMessage != null) {
-                    feature.assertMatchesMockKafkaMessage(kafkaMessage)
-                } else {
-                    feature.matchingStub(stub.request, stub.response, ContractAndStubMismatchMessages)
-                }
+                feature.matchingStub(stub.request, stub.response, ContractAndStubMismatchMessages)
                 StubMatchResults(feature, null)
             } catch (e: NoMatchingScenario) {
-                StubMatchResults(null, StubMatchErrorReport(StubMatchExceptionReport(stub.request, e), qontractFile))
+                StubMatchResults(null, StubMatchErrorReport(StubMatchExceptionReport(stub.request, e), specFile))
             }
         }
 
-        when (val feature = matchResults.mapNotNull { it.feature }.firstOrNull()) {
+        when (val feature = matchResults.firstNotNullOfOrNull { it.feature }) {
             null -> {
                 val errorMessage = stubMatchErrorMessage(matchResults, stubFile).prependIndent("  ")
 
@@ -238,12 +239,12 @@ fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair
             }
             else -> Pair(feature, stub)
         }
-    }.groupBy { it.first }.mapValues { it.value.map { it.second } }.entries.map { Pair(it.key, it.value) }
+    }.groupBy { it.first }.mapValues { (_, value) -> value.map { it.second } }.entries.map { Pair(it.key, it.value) }
 
     val stubbedFeatures = contractInfoFromStubs.map { it.first }
     val missingFeatures = features.map { it.second }.filter { it !in stubbedFeatures }
 
-    return contractInfoFromStubs.plus(missingFeatures.map { Pair(it, emptyList<ScenarioStub>()) })
+    return contractInfoFromStubs.plus(missingFeatures.map { Pair(it, emptyList()) })
 }
 
 fun allDirsInTree(dataDirPath: String): List<File> = allDirsInTree(listOf(dataDirPath))
@@ -315,43 +316,22 @@ fun implicitContractDataDir(contractPath: String, customBase: String? = null): F
     }
 }
 
-// Used by stub client code
-fun stubKafkaMessage(contractPath: String, message: String, bootstrapServers: String) {
-    val kafkaMessage = kafkaMessageFromJSON(getJSONObjectValue(MOCK_KAFKA_MESSAGE, jsonStringToValueMap(message)))
-    parseGherkinStringToFeature(File(contractPath).readText()).assertMatchesMockKafkaMessage(kafkaMessage)
-    createProducer(bootstrapServers).use {
-        it.send(producerRecord(kafkaMessage))
-    }
+fun loadIfOpenAPISpecification(contractPathData: ContractPathData): Pair<String, Feature>? {
+    if (!hasOpenApiFileExtension(contractPathData.path))
+        return Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath))
+
+    if (isOpenAPI(contractPathData.path))
+        return Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath))
+
+    logger.log("Ignoring ${contractPathData.path} as it is not an OpenAPI specification")
+    return null
 }
 
-// Used by stub client code
-fun testKafkaMessage(contractPath: String, bootstrapServers: String, commit: Boolean) {
-    val feature = parseGherkinStringToFeature(File(contractPath).readText())
-
-    val results = feature.scenarios.map {
-        testKafkaMessages(it, bootstrapServers, commit)
+fun isOpenAPI(path: String): Boolean =
+    try {
+        Yaml().load<MutableMap<String, Any?>>(File(path).reader()).contains("openapi")
+    } catch(e: Throwable) {
+        logger.log(e, "Could not parse $path")
+        false
     }
 
-    if(results.any { it is Result.Failure }) {
-        throw ContractException(Results(results.toMutableList()).report(PATH_NOT_RECOGNIZED_ERROR))
-    }
-}
-
-fun testKafkaMessages(scenario: Scenario, bootstrapServers: String, commit: Boolean): Result {
-    return createConsumer(bootstrapServers, commit).use { consumer ->
-        if(scenario.kafkaMessagePattern == null) throw ContractException("No kafka message found to test with")
-
-        val topic = scenario.kafkaMessagePattern.topic
-        consumer.subscribe(listOf(topic))
-
-        val messages = consumer.poll(Duration.ofSeconds(1)).map {
-            KafkaMessage(topic, it.key()?.let { key -> StringValue(key) }, StringValue(it.value()))
-        }
-
-        val results = messages.map {
-            scenario.kafkaMessagePattern.matches(it, scenario.resolver)
-        }
-
-        Results(results.toMutableList()).toResultIfAny()
-    }
-}

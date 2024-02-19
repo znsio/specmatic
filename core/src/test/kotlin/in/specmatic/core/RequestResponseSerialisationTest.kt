@@ -1,11 +1,10 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.mock.MockException
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Test
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.mock.MockException
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class RequestResponseSerialisationTest {
     @Test
@@ -59,7 +58,7 @@ class RequestResponseSerialisationTest {
         assertEquals(request, requestDeserialised)
     }
 
-    fun s(json: Map<String, Value>, key: String): String = (json.getValue(key) as StringValue).string
+    private fun s(json: Map<String, Value>, key: String): String = (json.getValue(key) as StringValue).string
 
     @Test
     fun testResponseSerialisation() {

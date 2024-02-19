@@ -1,7 +1,6 @@
 package `in`.specmatic.core.log
 
 import java.io.File
-import java.util.*
 
 class LogDirectory(directory: File, prefix: String, tag: String, extension: String): LogFile {
     constructor(directory: String, prefix: String, tag: String, extension: String): this(File(directory), prefix, tag, extension)

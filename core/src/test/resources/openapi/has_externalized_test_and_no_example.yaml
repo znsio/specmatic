@@ -1,0 +1,37 @@
+openapi: 3.0.0
+info:
+  title: Order API
+  version: 1.0.0
+paths:
+  /order_action_figure:
+    post:
+      summary: Create a new order
+      parameters:
+          - in: header
+            name: X-Request-ID
+            schema:
+              type: string
+            description: Unique ID for the request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+              required:
+                - name
+                - description
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer

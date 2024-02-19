@@ -29,10 +29,12 @@ internal fun containsKey(jsonObject: Map<String, Any?>, key: String) =
 internal val builtInPatterns = mapOf(
     "(number)" to NumberPattern(),
     "(string)" to StringPattern(),
-    "(boolean)" to BooleanPattern,
+    "(boolean)" to BooleanPattern(),
     "(null)" to NullPattern,
     "(empty)" to EmptyStringPattern,
+    "(date)" to DatePattern,
     "(datetime)" to DateTimePattern,
+    "(uuid)" to UUIDPattern,
     "(url)" to URLPattern(URLScheme.EITHER),
     "(url-http)" to URLPattern(URLScheme.HTTP),
     "(url-https)" to URLPattern(URLScheme.HTTPS),
@@ -177,7 +179,7 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
                 val tokens = it.split(" ")
 
                 val restrictions =
-                    tokens.drop(1).chunked(2).map { restriction -> restriction[0] to restriction[1] }.toMap()
+                    tokens.drop(1).chunked(2).associate { restriction -> restriction[0] to restriction[1] }
                 try {
                     StringPattern(
                         typeAlias = typeAlias,
@@ -185,14 +187,14 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
                         maxLength = restrictions["maxLength"]?.toIntOrNull()
                     )
                 } catch (e: IllegalArgumentException) {
-                    throw ContractException(e.message?:"")
+                    throw ContractException(e.message?:"", exceptionCause = e)
                 }
             }
             isNumberPatternWithRestrictions(it) -> {
                 val tokens = it.split(" ")
 
                 val restrictions =
-                    tokens.drop(1).chunked(2).map { restriction -> restriction[0] to restriction[1] }.toMap()
+                    tokens.drop(1).chunked(2).associate { restriction -> restriction[0] to restriction[1] }
                 try {
                     NumberPattern(
                         typeAlias = typeAlias,
@@ -200,7 +202,7 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
                         maxLength = restrictions["maxLength"]?.toIntOrNull()
                     )
                 } catch (e: IllegalArgumentException) {
-                    throw ContractException(e.message?:"")
+                    throw ContractException(e.message?:"", exceptionCause = e)
                 }
             }
             isPatternToken(it) -> when {
@@ -250,12 +252,14 @@ fun parsedJSON(content: String, mismatchMessages: MismatchMessages = DefaultMism
             it.startsWith("{") -> try {
                 JSONObjectValue(jsonStringToValueMap(it))
             } catch (e: Throwable) {
-                throw ContractException("Could not parse json object, got error: ${e.localizedMessage ?: e.message}")
+                throw ContractException("Could not parse json object, got error: ${e.localizedMessage ?: e.message}",
+                    exceptionCause = e)
             }
             it.startsWith("[") -> try {
                 JSONArrayValue(jsonStringToValueArray(it))
             } catch (e: Throwable) {
-                throw ContractException("Could not parse json array, got error: ${e.localizedMessage ?: e.message}")
+                throw ContractException("Could not parse json array, got error: ${e.localizedMessage ?: e.message}",
+                    exceptionCause = e)
             }
             else -> throw ContractException(mismatchMessages.mismatchMessage("json value", stringInErrorMessage(content)))
         }
@@ -274,7 +278,8 @@ fun parsedJSONObject(content: String, mismatchMessages: MismatchMessages = Defau
             it.startsWith("{") -> try {
                 JSONObjectValue(jsonStringToValueMap(it))
             } catch (e: Throwable) {
-                throw ContractException("Could not parse json object, got error: ${e.localizedMessage ?: e.message}")
+                throw ContractException("Could not parse json object, got error: ${e.localizedMessage ?: e.message}",
+                    exceptionCause = e)
             }
             else -> throw ContractException(mismatchMessages.mismatchMessage("json object", stringInErrorMessage(content)))
         }
@@ -287,7 +292,8 @@ fun parsedJSONArray(content: String, mismatchMessages: MismatchMessages = Defaul
             it.startsWith("[") -> try {
                 JSONArrayValue(jsonStringToValueArray(it))
             } catch (e: Throwable) {
-                throw ContractException("Could not parse json array, got error: ${e.localizedMessage ?: e.message}")
+                throw ContractException("Could not parse json array, got error: ${e.localizedMessage ?: e.message}",
+                    exceptionCause = e)
             }
             else -> throw ContractException(mismatchMessages.mismatchMessage("json array", stringInErrorMessage(content)))
         }

@@ -1,10 +1,9 @@
 package `in`.specmatic.core.wsdl.parser.message
 
+import `in`.specmatic.core.value.toXMLNode
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import `in`.specmatic.core.value.toXMLNode
-import `in`.specmatic.core.wsdl.parser.WSDL
 
 internal class TypeReferenceTest {
     @Test

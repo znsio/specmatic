@@ -4,6 +4,7 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 
 internal class TestBackwardCompatibilityKtTest {
@@ -884,7 +885,7 @@ Then status 200
 
         assertThat(results.successCount).isZero()
         assertThat(results.failureCount).isZero()
-        assertThat(results.success()).isTrue()
+        assertThat(results.hasFailures()).isFalse()
     }
 
     @Test
@@ -1069,8 +1070,8 @@ Then status 200
     }
 
     @Nested
-    inner class EnumStringIsBackardCompatibleWithString {
-        val olderContract: Feature =
+    inner class EnumStringIsBackwardCompatibleWithString {
+        private val specWithStringInResponse: Feature =
             """
         openapi: 3.0.0
         info:
@@ -1097,7 +1098,7 @@ Then status 200
                             type: string
             """.trimIndent().openAPIToContract()
 
-        val newerContract: Feature =
+        private val specWithEnumInResponse: Feature =
             """
         openapi: 3.0.0
         info:
@@ -1130,19 +1131,22 @@ Then status 200
 
         @Test
         fun `new should be should be backward compatible with old`() {
-            val results: Results = testBackwardCompatibility(olderContract, newerContract)
+            val results: Results = testBackwardCompatibility(specWithStringInResponse, specWithEnumInResponse)
 
-            assertThat(results.success()).isTrue
+            assertThat(results.success()).withFailMessage(results.report()).isTrue
         }
 
         @Test
         fun `old should be backward incompatible with new`() {
-            val results: Results = testBackwardCompatibility(newerContract, olderContract)
+            val results: Results = testBackwardCompatibility(specWithEnumInResponse, specWithStringInResponse)
+
+            println(results.report())
 
             assertThat(results.hasFailures()).isTrue
         }
     }
 
+    @Test
     fun `backward compatibility error in request shows contextual error message`() {
         val oldContract = OpenApiSpecification.fromYAML(
             """
@@ -1222,8 +1226,8 @@ paths:
 
         val result: Results = testBackwardCompatibility(oldContract, newContract)
 
-        assertThat(result.report()).contains("New contract expected")
-        assertThat(result.report()).contains("old contract sent")
+        assertThat(result.report()).contains("string in the new contract")
+        assertThat(result.report()).contains("number in the old contract")
     }
 
     @Test
@@ -1500,7 +1504,7 @@ paths:
 
     @Nested
     inner class FluffyBackwardCompatibilityErrors {
-        val oldContract = OpenApiSpecification.fromYAML(
+        private val oldContract = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.0
 info:
@@ -1535,7 +1539,7 @@ paths:
 """.trimIndent(), ""
         ).toFeature()
 
-        val newContract = OpenApiSpecification.fromYAML(
+        private val newContract = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.0
 info:
@@ -1572,7 +1576,7 @@ paths:
 
         val result: Results = testBackwardCompatibility(oldContract, newContract)
 
-        val reportText: String = result.report().also { println(it) }
+        private val reportText: String = result.report().also { println(it) }
 
         @Test
         fun `fluffy backward compatibility errors should be eliminated`() {
@@ -1895,6 +1899,218 @@ paths:
     }
 
     @Test
+    fun `backward compatibility check going from nullable to non-nullable`() {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  oneOf:
+                    - nullable: true
+                    - type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result = testBackwardCompatibility(oldContract, newContract)
+        assertThat(result.success()).isFalse()
+    }
+
+    @Test
+    fun `backward compatibility check going from oneOf number to number`() {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  oneOf:
+                    - type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: number
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result = testBackwardCompatibility(oldContract, newContract)
+        assertThat(result.success()).isTrue()
+    }
+
+    @Test
+    fun `backward compatibility check going null number string to number string`() {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  oneOf:
+                    - nullable: true
+                    - type: number
+                    - type: string
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  oneOf:
+                    - type: number
+                    - type: string
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result = testBackwardCompatibility(oldContract, newContract)
+        assertThat(result.success()).isFalse()
+    }
+
+    @Test
     fun `removing a key in the request should be backward compatible`() {
         val older = parseGherkinStringToFeature("""
             Feature: test
@@ -1916,11 +2132,488 @@ paths:
         """.trimIndent())
 
         val result = testBackwardCompatibility(older, newer)
-        val reportText = result.report().also { println(it) }
-
-        println(reportText)
-        assertThat(result.success()).isTrue
+        assertThat(result.success()).withFailMessage(result.report()).isTrue
     }
+
+    @Test
+    fun `backward compatibility check going from string to nothing in request`() {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result = testBackwardCompatibility(oldContract, newContract)
+        assertThat(result.success()).withFailMessage(result.report()).isFalse()
+    }
+
+    @Test
+    @Disabled
+    fun `backward compatibility check going from nothing to string in request`() {
+        val oldContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val newContract = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), ""
+        ).toFeature()
+
+        val result = testBackwardCompatibility(oldContract, newContract)
+        assertThat(result.success()).withFailMessage(result.report()).isFalse()
+    }
+
+    @Test
+    fun `should pass for scalar query parameter when type is changed from number to string`() {
+        val olderContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          version: 0.1.9
+        paths:
+          /products:
+            get:
+              summary: get products
+              description: Get multiple products filtered by Brand Ids
+              parameters:
+                - name: brand_ids
+                  required: true
+                  in: query
+                  schema:
+                    type: number
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        type: string
+            """.trimIndent().openAPIToContract()
+
+        val newerContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          version: 0.1.9
+        paths:
+          /products:
+            get:
+              summary: get products
+              description: Get multiple products filtered by Brand Ids
+              parameters:
+                - name: brand_ids
+                  required: true
+                  in: query
+                  schema:
+                    type: string
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        type: string
+            """.trimIndent().openAPIToContract()
+
+        val results: Results = testBackwardCompatibility(olderContract, newerContract)
+
+        assertThat(results.success()).isTrue
+    }
+
+    @Test
+    fun `should fail for scalar query parameter when type is changed from string to number`() {
+        val olderContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          version: 0.1.9
+        paths:
+          /products:
+            get:
+              summary: get products
+              description: Get multiple products filtered by Brand Ids
+              parameters:
+                - name: brand_ids
+                  required: true
+                  in: query
+                  schema:
+                    type: string
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        type: string
+            """.trimIndent().openAPIToContract()
+
+        val newerContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          version: 0.1.9
+        paths:
+          /products:
+            get:
+              summary: get products
+              description: Get multiple products filtered by Brand Ids
+              parameters:
+                - name: brand_ids
+                  required: true
+                  in: query
+                  schema:
+                    type: number
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        type: string
+            """.trimIndent().openAPIToContract()
+
+        val results: Results = testBackwardCompatibility(olderContract, newerContract)
+
+        assertThat(results.success()).isFalse
+//        assertThat(results.report()).isEqualTo("""
+//            In scenario "get products. Response: OK"
+//            API: GET /products -> 200
+//
+//              >> REQUEST.QUERY-PARAMS.brand_ids
+//
+//                 This is number in the new contract, string in the old contract
+//        """.trimIndent())
+    }
+
+    @Test
+    fun `should pass for array query parameter when type is changed from number to string`() {
+        val olderContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          version: 0.1.9
+        paths:
+          /products:
+            get:
+              summary: get products
+              description: Get multiple products filtered by Brand Ids
+              parameters:
+                - name: brand_ids
+                  required: true
+                  in: query
+                  schema:
+                    items:
+                      type: number
+                    type: array
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        type: string
+            """.trimIndent().openAPIToContract()
+
+        val newerContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          version: 0.1.9
+        paths:
+          /products:
+            get:
+              summary: get products
+              description: Get multiple products filtered by Brand Ids
+              parameters:
+                - name: brand_ids
+                  required: true
+                  in: query
+                  schema:
+                    items:
+                      type: string
+                    type: array
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        type: string
+            """.trimIndent().openAPIToContract()
+
+        val results: Results = testBackwardCompatibility(olderContract, newerContract)
+
+        assertThat(results.success()).isTrue
+    }
+
+    @Test
+    fun `should fail for array query parameter when type is changed from string to number`() {
+        val olderContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          version: 0.1.9
+        paths:
+          /products:
+            get:
+              summary: get products
+              description: Get multiple products filtered by Brand Ids
+              parameters:
+                - name: brand_ids
+                  required: true
+                  in: query
+                  schema:
+                    items:
+                      type: string
+                    type: array
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        type: string
+            """.trimIndent().openAPIToContract()
+
+        val newerContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          version: 0.1.9
+        paths:
+          /products:
+            get:
+              summary: get products
+              description: Get multiple products filtered by Brand Ids
+              parameters:
+                - name: brand_ids
+                  required: true
+                  in: query
+                  schema:
+                    items:
+                      type: number
+                    type: array
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        type: string
+            """.trimIndent().openAPIToContract()
+
+        val results: Results = testBackwardCompatibility(olderContract, newerContract)
+        println(results.report())
+        assertThat(results.success()).isFalse
+    }
+
+    @Test
+    fun `should pass when scalar number query parameter is changed from to array number`() {
+        val olderContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          version: 0.1.9
+        paths:
+          /products:
+            get:
+              summary: get products
+              description: Get multiple products filtered by Brand Ids
+              parameters:
+                - name: brand_ids
+                  required: true
+                  in: query
+                  schema:
+                    type: number
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        type: string
+            """.trimIndent().openAPIToContract()
+
+        val newerContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          version: 0.1.9
+        paths:
+          /products:
+            get:
+              summary: get products
+              description: Get multiple products filtered by Brand Ids
+              parameters:
+                - name: brand_ids
+                  required: true
+                  in: query
+                  schema:
+                    items:
+                      type: number
+                    type: array
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        type: string
+            """.trimIndent().openAPIToContract()
+
+        val results: Results = testBackwardCompatibility(olderContract, newerContract)
+        assertThat(results.success()).isTrue
+    }
+
+    @Test
+    fun `should pass when array number query parameter is changed to scalar number`() {
+        val olderContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          version: 0.1.9
+        paths:
+          /products:
+            get:
+              summary: get products
+              description: Get multiple products filtered by Brand Ids
+              parameters:
+                - name: brand_ids
+                  required: true
+                  in: query
+                  schema:
+                    items:
+                      type: number
+                    type: array
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        type: string
+            """.trimIndent().openAPIToContract()
+
+        val newerContract: Feature =
+            """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          version: 0.1.9
+        paths:
+          /products:
+            get:
+              summary: get products
+              description: Get multiple products filtered by Brand Ids
+              parameters:
+                - name: brand_ids
+                  required: true
+                  in: query
+                  schema:
+                    type: number
+              responses:
+                '200':
+                  description: OK
+                  content:
+                    application/json:
+                      schema:
+                        type: string
+            """.trimIndent().openAPIToContract()
+
+        val results: Results = testBackwardCompatibility(olderContract, newerContract)
+        assertThat(results.success()).isFalse
+    }
+
 }
 
 private fun String.openAPIToContract(): Feature {

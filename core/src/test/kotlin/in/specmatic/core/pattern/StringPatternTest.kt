@@ -1,16 +1,19 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.GENERATION
 import `in`.specmatic.core.Resolver
+import `in`.specmatic.core.UseDefaultExample
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldNotMatch
+import org.apache.commons.lang3.RandomStringUtils
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.testcontainers.shaded.org.apache.commons.lang.RandomStringUtils
 import java.util.stream.Stream
 import `in`.specmatic.core.Result as Result
 
@@ -119,5 +122,27 @@ internal class StringPatternTest {
 
         println(result.reportString())
         assertThat(result).isInstanceOf(Result.Failure::class.java)
+    }
+
+    @Test
+    fun `it should use the example if provided when generating`() {
+        val generated = StringPattern(example = "sample data").generate(Resolver(defaultExampleResolver = UseDefaultExample))
+        assertThat(generated).isEqualTo(StringValue("sample data"))
+    }
+
+    @Test
+    @Tag(GENERATION)
+    fun `negative values should be generated`() {
+        val result = StringPattern().negativeBasedOn(Row(), Resolver())
+        assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
+            "null",
+            "number",
+            "boolean",
+        )
+    }
+
+    @Test
+    fun `string pattern encompasses email`() {
+        assertThat(StringPattern().encompasses(EmailPattern(), Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
 }

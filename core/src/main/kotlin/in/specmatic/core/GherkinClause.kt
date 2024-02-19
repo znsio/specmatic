@@ -2,7 +2,9 @@ package `in`.specmatic.core
 
 import `in`.specmatic.core.GherkinSection.*
 import `in`.specmatic.core.pattern.*
-import `in`.specmatic.core.value.*
+import `in`.specmatic.core.value.EmptyString
+import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.value.dictionaryToDeclarations
 
 data class GherkinClause(val content: String, val section: GherkinSection)
 
@@ -21,7 +23,7 @@ fun responseBodyToGherkinClauses(typeName: String, body: Value?, types: Map<Stri
 }
 
 fun requestBodyToGherkinClauses(body: Value?, types: Map<String, Pattern>, exampleDeclarationsStore: ExampleDeclarations): Triple<List<GherkinClause>, Map<String, Pattern>, ExampleDeclarations> {
-    if(body == EmptyString)
+    if(body == EmptyString || body == NoBodyValue)
         return Triple(emptyList(), types, exampleDeclarationsStore)
 
     val declarations = body?.typeDeclarationWithoutKey("RequestBody", types, exampleDeclarationsStore)?.let { (typeDeclaration, exampleDeclaration) ->
@@ -107,31 +109,6 @@ fun toGherkinScenario(scenarioName: String, clauses: List<GherkinClause>, exampl
 
 private fun hasAtLeastOneExample(examplesList: List<ExampleDeclarations>) =
     examplesList.isNotEmpty() && examplesList.first().examples.isNotEmpty()
-
-fun toGherkinScenario(scenarioName: String, declarations: Pair<List<GherkinClause>, ExampleDeclarations>): String {
-    val (clauses, exampleDeclaration) = declarations
-    val groupedClauses = clauses.groupBy { it.section }
-
-    val prefixesInOrder = listOf(Given, When, Then, Star)
-
-    val statements = prefixesInOrder.flatMap { section ->
-        val sectionClauses = groupedClauses[section] ?: emptyList()
-        val prefixes = listOf(section.prefix).plus(1.until(sectionClauses.size).map { "And" })
-        sectionClauses.zip(prefixes).map { (clause, prefix) -> GherkinStatement(clause.content, prefix) }
-    }
-
-    val statementString = statements.joinToString("\n") { it.toGherkinString() }
-
-    val scenarioGherkin = when {
-        exampleDeclaration.examples.isNotEmpty() -> {
-            val examplesString = toExampleGherkinString(exampleDeclaration)
-            "$statementString\n\n$examplesString"
-        }
-        else -> statementString
-    }
-
-    return withScenarioClause(scenarioName, scenarioGherkin)
-}
 
 internal fun toExampleGherkinString(exampleDeclarationsStore: ExampleDeclarations): String {
     val entries = exampleDeclarationsStore.examples.entries.toList()

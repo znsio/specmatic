@@ -2,7 +2,6 @@ package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.breadCrumb
 import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.utilities.stringTooPatternArray
 import `in`.specmatic.core.utilities.withNullPattern
@@ -133,20 +132,24 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
     override val typeName: String = "json array"
 }
 
-fun newBasedOn(jsonPattern: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {
-    val values = jsonPattern.mapIndexed { index, pattern ->
+fun newBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {
+    val values = patterns.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
-            pattern.newBasedOn(row, resolver)
+            resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.newBasedOn(row, cyclePreventedResolver)
+            }
         }
     }
 
     return listCombinations(values)
 }
 
-fun newBasedOn(jsonPattern: List<Pattern>, resolver: Resolver): List<List<Pattern>> {
-    val values = jsonPattern.mapIndexed { index, pattern ->
+fun newBasedOn(patterns: List<Pattern>, resolver: Resolver): List<List<Pattern>> {
+    val values = patterns.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
-            pattern.newBasedOn(resolver)
+            resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.newBasedOn(cyclePreventedResolver)
+            }
         }
     }
 
@@ -174,7 +177,7 @@ fun allOrNothingListCombinations(values: List<List<Pattern?>>): List<List<Patter
     if (values.isEmpty())
         return listOf(emptyList())
 
-    val maxKeyValues = values.map { it.size }.maxOrNull() ?: 0
+    val maxKeyValues = values.maxOfOrNull { it.size } ?: 0
 
     return (0 until maxKeyValues).map {
         keyCombinations(values) { value ->
@@ -195,12 +198,15 @@ private fun keyCombinations(values: List<List<Pattern?>>,
 
 fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =
         jsonPattern.mapIndexed { index, pattern ->
-            when (pattern) {
-                is RestPattern -> attempt(breadCrumb = "[$index...${jsonPattern.lastIndex}]") {
-                    val list = pattern.generate(resolver) as ListValue
-                    list.list
+            resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                when (pattern) {
+                    is RestPattern -> attempt(breadCrumb = "[$index...${jsonPattern.lastIndex}]") {
+                        val list = pattern.generate(cyclePreventedResolver) as ListValue
+                        list.list
+                    }
+
+                    else -> attempt(breadCrumb = "[$index]") { listOf(pattern.generate(cyclePreventedResolver)) }
                 }
-                else -> attempt(breadCrumb = "[$index]") { listOf(pattern.generate(resolver)) }
             }
         }.flatten()
 

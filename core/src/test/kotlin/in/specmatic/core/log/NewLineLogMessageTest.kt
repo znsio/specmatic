@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Test
 
 internal class NewLineLogMessageTest {
     @Test
-    fun `returns a newline string`() {
-        assertThat(NewLineLogMessage.toLogString()).isEqualTo("\n")
+    fun `returns an empty string`() {
+        assertThat(NewLineLogMessage.toLogString()).isEqualTo("")
     }
 
     @Test

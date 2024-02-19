@@ -1,12 +1,11 @@
 package `in`.specmatic.core.pattern
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import `in`.specmatic.core.value.EmptyString
-import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.optionalPattern
 import `in`.specmatic.shouldMatch
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 
 internal class ConvertTest {
     @Test

@@ -3,20 +3,18 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
-import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-private const val INFINITY = 999999999
-
-data class StringPattern(
+data class StringPattern (
     override val typeAlias: String? = null,
     val minLength: Int? = null,
-    val maxLength: Int? = null
-) : Pattern, ScalarType {
+    val maxLength: Int? = null,
+    override val example: String? = null
+) : Pattern, ScalarType, HasDefaultExample {
     init {
         require(minLength?.let { maxLength?.let { minLength <= maxLength } }
             ?: true) { """maxLength cannot be less than minLength""" }
@@ -59,12 +57,12 @@ data class StringPattern(
             else -> 5
         }
     
-    override fun generate(resolver: Resolver): Value = StringValue(randomString(randomStringLength))
+    override fun generate(resolver: Resolver): Value = resolver.resolveExample(example, this) ?: StringValue(randomString(randomStringLength))
 
     override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
     override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
     override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(NullPattern, NumberPattern(), BooleanPattern)
+        return listOf(NullPattern, NumberPattern(), BooleanPattern())
     }
 
     override fun parse(value: String, resolver: Resolver): Value = StringValue(value)

@@ -5,10 +5,6 @@ import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.StringValue
 import java.io.File
-import java.util.*
-import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.Path
-import kotlin.io.path.name
 
 sealed class MultiPartFormDataPattern(open val name: String, open val contentType: String?) {
     abstract fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?>
@@ -31,7 +27,7 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
             }
 
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
-            MultiPartContentValue(name, content.generate(resolver), specifiedContentType = contentType)
+            MultiPartContentValue(name, resolver.withCyclePrevention(content, content::generate), specifiedContentType = contentType)
 
     override fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result {
         if(withoutOptionality(name) != value.name)
@@ -80,7 +76,7 @@ data class MultiPartFilePattern(override val name: String, val filename: Pattern
     }
 
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
-            MultiPartFileValue(name, filename.generate(resolver).toStringLiteral(), contentType ?: "", contentEncoding)
+            MultiPartFileValue(name, resolver.withCyclePrevention(filename, filename::generate).toStringLiteral(), contentType ?: "", contentEncoding)
 
     override fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result {
         return when {
@@ -137,9 +133,6 @@ data class MultiPartFilePattern(override val name: String, val filename: Pattern
                 !filename.matches(StringValue(value.filename), resolver).isSuccess()
         }
     }
-
-    @OptIn(ExperimentalPathApi::class)
-    private fun fileNameFromPath(patternFilePath: String) = Path(patternFilePath).name
 
     override fun nonOptional(): MultiPartFormDataPattern {
         return copy(name = withoutOptionality(name))

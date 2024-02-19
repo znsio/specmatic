@@ -5,16 +5,16 @@ import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.Value
 
-fun testBackwardCompatibility(older: Feature, newerBehaviour: Feature): Results {
+fun testBackwardCompatibility(older: Feature, newer: Feature): Results {
     return older.generateBackwardCompatibilityTestScenarios().filter { !it.ignoreFailure }.fold(Results()) { results, olderScenario ->
-        val scenarioResults: List<Result> = testBackwardCompatibility(olderScenario, newerBehaviour)
+        val scenarioResults: List<Result> = testBackwardCompatibility(olderScenario, newer)
         results.copy(results = results.results.plus(scenarioResults))
     }.distinct()
 }
 
-fun findDifferences(older: Feature, newerBehaviour: Feature): Results {
+fun findDifferences(older: Feature, newer: Feature): Results {
     return older.generateBackwardCompatibilityTestScenarios().filter { !it.ignoreFailure }.fold(Results()) { results, olderScenario ->
-        val scenarioResults: List<Result> = findDifferences(olderScenario, newerBehaviour)
+        val scenarioResults: List<Result> = findDifferences(olderScenario, newer)
         results.copy(results = results.results.plus(scenarioResults))
     }.distinct()
 }
@@ -38,123 +38,105 @@ fun generateBackwardCompatibilityTests(older: Feature, newerContract: Feature): 
 
 fun testBackwardCompatibility(
     oldScenario: Scenario,
-    newFeature_: Feature
+    newIncomingFeature: Feature
 ): List<Result> {
-    val newFeature = newFeature_.copy()
+    val newFeature = newIncomingFeature.copy()
 
-    return if (oldScenario.kafkaMessagePattern != null) {
-        val scenarioMatchResults =
-            newFeature.lookupKafkaScenario(oldScenario.kafkaMessagePattern, oldScenario.resolver)
+    newFeature.setServerState(oldScenario.expectedFacts)
 
-        val result = Results(scenarioMatchResults.map { it.second }.toMutableList()).toResultIfAny()
+    return try {
+        val request = oldScenario.generateHttpRequest()
 
-        listOf(result)
-    } else {
-        newFeature.setServerState(oldScenario.expectedFacts)
-
-        try {
-            val request = oldScenario.generateHttpRequest()
-
-            val wholeMatchResults: List<Pair<Result, Result>> =
-                newFeature.compatibilityLookup(request).map { (scenario, result) ->
-                    Pair(scenario, result.updateScenario(scenario))
-                }.filterNot { (_, result) ->
-                    result is Result.Failure && result.isFluffy()
-                }.mapNotNull { (newerScenario, requestResult) ->
-                    val newerResponsePattern = newerScenario.httpResponsePattern
-                    val responseResult = oldScenario.httpResponsePattern.encompasses(
-                        newerResponsePattern,
-                        oldScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
-                        newerScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
-                    ).also {
-                        it.scenario = newerScenario
-                    }
-
-                    if (responseResult.isFluffy())
-                        null
-                    else
-                        Pair(requestResult, responseResult)
+        val wholeMatchResults: List<Pair<Result, Result>> =
+            newFeature.compatibilityLookup(request).map { (scenario, result) ->
+                Pair(scenario, result.updateScenario(scenario))
+            }.filterNot { (_, result) ->
+                result is Result.Failure && result.isFluffy()
+            }.mapNotNull { (newerScenario, requestResult) ->
+                val newerResponsePattern = newerScenario.httpResponsePattern
+                val responseResult = oldScenario.httpResponsePattern.encompasses(
+                    newerResponsePattern,
+                    oldScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
+                    newerScenario.resolver.copy(mismatchMessages = NewAndOldContractResponseMismatches),
+                ).also {
+                    it.scenario = newerScenario
                 }
 
-            if(wholeMatchResults.isEmpty())
-                listOf(Result.Failure("""This API exists in the old contract but not in the new contract""").updateScenario(oldScenario))
-            else if (wholeMatchResults.any { it.first is Result.Success && it.second is Result.Success })
-                listOf(Result.Success())
-            else {
-                wholeMatchResults.map {
-                    it.toList()
-                }.flatten().filterIsInstance<Result.Failure>()
+                if (responseResult.isFluffy())
+                    null
+                else
+                    Pair(requestResult, responseResult)
             }
-        } catch(emptyContract: EmptyContract) {
-            val atThisFilePath = if(newFeature.path.isNotEmpty()) " at ${newFeature.path}" else ""
-            listOf(Result.Failure("The contract$atThisFilePath had no operations"))
+
+        if(wholeMatchResults.isEmpty())
+            listOf(Result.Failure("""This API exists in the old contract but not in the new contract""").updateScenario(oldScenario))
+        else if (wholeMatchResults.any { it.first is Result.Success && it.second is Result.Success })
+            listOf(Result.Success())
+        else {
+            wholeMatchResults.map {
+                it.toList()
+            }.flatten().filterIsInstance<Result.Failure>()
         }
-        catch (contractException: ContractException) {
-            listOf(contractException.failure())
-        } catch (stackOverFlowException: StackOverflowError) {
-            listOf(Result.Failure("Exception: Stack overflow error, most likely caused by a recursive definition. Please report this with a sample contract as a bug!"))
-        } catch (throwable: Throwable) {
-            listOf(Result.Failure("Exception: ${throwable.localizedMessage}"))
-        }
+    } catch(emptyContract: EmptyContract) {
+        val atThisFilePath = if(newFeature.path.isNotEmpty()) " at ${newFeature.path}" else ""
+        listOf(Result.Failure("The contract$atThisFilePath had no operations"))
+    }
+    catch (contractException: ContractException) {
+        listOf(contractException.failure())
+    } catch (stackOverFlowException: StackOverflowError) {
+        listOf(Result.Failure("Exception: Stack overflow error, most likely caused by a recursive definition. Please report this with a sample contract as a bug!"))
+    } catch (throwable: Throwable) {
+        listOf(Result.Failure("Exception: ${throwable.localizedMessage}"))
     }
 }
 
 fun findDifferences(
     oldScenario: Scenario,
-    newFeature_: Feature
+    newIncomingFeature: Feature
 ): List<Result> {
-    val newFeature = newFeature_.copy()
+    val newFeature = newIncomingFeature.copy()
 
-    return if (oldScenario.kafkaMessagePattern != null) {
-        val scenarioMatchResults =
-            newFeature.lookupKafkaScenario(oldScenario.kafkaMessagePattern, oldScenario.resolver)
+    newFeature.setServerState(oldScenario.expectedFacts)
 
-        val result = Results(scenarioMatchResults.map { it.second }.toMutableList()).toResultIfAny()
+    return try {
+        val request = oldScenario.generateHttpRequest()
 
-        listOf(result)
-    } else {
-        newFeature.setServerState(oldScenario.expectedFacts)
+        val wholeMatchResults: List<Pair<Result, Result>> =
+            newFeature.compatibilityLookup(request).map { (scenario, result) ->
+                Pair(scenario, result.updateScenario(scenario))
+            }.filterNot { (_, result) ->
+                result is Result.Failure && result.isFluffy()
+            }.mapNotNull { (newerScenario, requestResult) ->
+                val newerResponsePattern = newerScenario.httpResponsePattern
+                val newerResponse = newerResponsePattern.generateResponseWithAll(newerScenario.resolver)
 
-        try {
-            val request = oldScenario.generateHttpRequest()
+                val responseResult = oldScenario.httpResponsePattern.matches(newerResponse, oldScenario.resolver.copy(mismatchMessages = ContractResponseComparisonMismatches))
 
-            val wholeMatchResults: List<Pair<Result, Result>> =
-                newFeature.compatibilityLookup(request).map { (scenario, result) ->
-                    Pair(scenario, result.updateScenario(scenario))
-                }.filterNot { (_, result) ->
-                    result is Result.Failure && result.isFluffy()
-                }.mapNotNull { (newerScenario, requestResult) ->
-                    val newerResponsePattern = newerScenario.httpResponsePattern
-                    val newerResponse = newerResponsePattern.generateResponseWithAll(newerScenario.resolver)
-
-                    val responseResult = oldScenario.httpResponsePattern.matches(newerResponse, oldScenario.resolver.copy(mismatchMessages = ContractResponseComparisonMismatches))
-
-                    if (responseResult.isFluffy())
-                        null
-                    else
-                        Pair(requestResult, responseResult)
-                }
-
-            if(wholeMatchResults.isEmpty())
-                listOf(Result.Failure("""This API exists in the old contract but not in the new contract""").updateScenario(oldScenario))
-            else if (wholeMatchResults.any { it.first is Result.Success && it.second is Result.Success })
-                listOf(Result.Success())
-            else {
-                wholeMatchResults.map {
-                    val failures: List<Result.Failure> = it.toList().filterIsInstance<Result.Failure>()
-                    Result.fromFailures(failures).updateScenario(oldScenario)
-                }
+                if (responseResult.isFluffy())
+                    null
+                else
+                    Pair(requestResult, responseResult)
             }
-        } catch(emptyContract: EmptyContract) {
-            val atThisFilePath = if(newFeature.path.isNotEmpty()) " at ${newFeature.path}" else ""
-            listOf(Result.Failure("The contract$atThisFilePath had no operations"))
-        } catch (contractException: ContractException) {
-            listOf(contractException.failure())
-        } catch (stackOverFlowException: StackOverflowError) {
-            listOf(Result.Failure("Exception: Stack overflow error, most likely caused by a recursive definition. Please report this with a sample contract as a bug!"))
-        } catch (throwable: Throwable) {
-            listOf(Result.Failure("Exception: ${throwable.localizedMessage}"))
+
+        if(wholeMatchResults.isEmpty())
+            listOf(Result.Failure("""This API exists in the old contract but not in the new contract""").updateScenario(oldScenario))
+        else if (wholeMatchResults.any { it.first is Result.Success && it.second is Result.Success })
+            listOf(Result.Success())
+        else {
+            wholeMatchResults.map {
+                val failures: List<Result.Failure> = it.toList().filterIsInstance<Result.Failure>()
+                Result.fromFailures(failures).updateScenario(oldScenario)
+            }
         }
+    } catch(emptyContract: EmptyContract) {
+        val atThisFilePath = if(newFeature.path.isNotEmpty()) " at ${newFeature.path}" else ""
+        listOf(Result.Failure("The contract$atThisFilePath had no operations"))
+    } catch (contractException: ContractException) {
+        listOf(contractException.failure())
+    } catch (stackOverFlowException: StackOverflowError) {
+        listOf(Result.Failure("Exception: Stack overflow error, most likely caused by a recursive definition. Please report this with a sample contract as a bug!"))
+    } catch (throwable: Throwable) {
+        listOf(Result.Failure("Exception: ${throwable.localizedMessage}"))
     }
 }
 

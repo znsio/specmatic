@@ -1,53 +1,56 @@
 package application
 
-import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import application.test.ContractExecutionListener
-import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
-import org.junit.platform.launcher.Launcher
-import org.junit.platform.launcher.LauncherDiscoveryRequest
-import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
-import org.springframework.beans.factory.annotation.Autowired
-import picocli.CommandLine
-import picocli.CommandLine.Command
-import picocli.CommandLine.Option
+import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import `in`.specmatic.core.Configuration
-import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME
+import `in`.specmatic.core.Flags
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.core.utilities.newXMLBuilder
 import `in`.specmatic.core.utilities.xmlToString
 import `in`.specmatic.test.SpecmaticJUnitSupport
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONFIG_FILE_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.WORKING_DIRECTORY
+import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
+import org.junit.platform.launcher.Launcher
+import org.junit.platform.launcher.LauncherDiscoveryRequest
+import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
+import org.springframework.beans.factory.annotation.Autowired
 import org.w3c.dom.Document
+import org.w3c.dom.Node
+import org.w3c.dom.NodeList
 import org.xml.sax.InputSource
-import java.io.ByteArrayOutputStream
+import picocli.CommandLine
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringReader
 import java.nio.file.Paths
 import java.util.concurrent.Callable
-import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
-import kotlin.io.path.Path
+
+private const val SYSTEM_OUT_TESTCASE_TAG = "system-out"
+
+private const val DISPLAY_NAME_PREFIX_IN_SYSTEM_OUT_TAG_TEXT = "display-name: "
+
+private const val s = "Contract"
 
 @Command(name = "test",
         mixinStandardHelpOptions = true,
         description = ["Run contract as tests"])
 class TestCommand : Callable<Unit> {
-    @Autowired
-    lateinit var specmaticConfig: SpecmaticConfig
 
     @Autowired
     lateinit var junitLauncher: Launcher
@@ -70,8 +73,11 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--suggestions"], description = ["A json value with scenario name and multiple suggestions"], defaultValue = "")
     var suggestions: String = ""
 
-    @Option(names = ["--filter-name"], description = ["Run only tests with this value in their name"], defaultValue = "")
+    @Option(names = ["--filter-name"], description = ["Run only tests with this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NAME}")
     var filterName: String = ""
+
+    @Option(names = ["--filter-not-name"], description = ["Run only tests which do not have this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}")
+    var filterNotName: String = ""
 
     @Option(names = ["--env"], description = ["Environment name"])
     var envName: String = ""
@@ -81,18 +87,6 @@ class TestCommand : Callable<Unit> {
 
     @Option(names = ["--timeout"], description = ["Specify a timeout for the test requests"], required = false, defaultValue = "60")
     var timeout: Int = 60
-
-    @Option(names = ["--kafkaBootstrapServers"], description = ["Kafka's Bootstrap servers"], required=false)
-    var kafkaBootstrapServers: String = ""
-
-    @Option(names = ["--kafkaHost"], description = ["The host on which to connect to Kafka"], required=false)
-    var kafkaHost: String = "localhost"
-
-    @Option(names = ["--kafkaPort"], description = ["The port on which to connect to Kafka"], required=false)
-    var kafkaPort: Int = 9093
-
-    @Option(names = ["--commit"], description = ["Commit kafka messages that have been read"], required=false)
-    var commit: Boolean = false
 
     @Option(names = ["--junitReportDir"], description = ["Create junit xml reports in this directory"])
     var junitReportDirName: String? = null
@@ -107,6 +101,8 @@ class TestCommand : Callable<Unit> {
     var verboseMode: Boolean = false
 
     override fun call() = try {
+        setParallelism()
+
         if(verboseMode) {
             logger = Verbose()
         }
@@ -115,8 +111,6 @@ class TestCommand : Callable<Unit> {
             Configuration.globalConfigFileName = it
             System.setProperty(CONFIG_FILE_NAME, it)
         }
-
-        contractPaths = loadContractPaths()
 
         if(port == 0) {
             port = when {
@@ -143,22 +137,18 @@ class TestCommand : Callable<Unit> {
             System.setProperty(FILTER_NAME, filterName)
         }
 
-        System.setProperty("kafkaBootstrapServers", kafkaBootstrapServers)
-        System.setProperty("kafkaHost", kafkaHost)
-        System.setProperty("kafkaPort", kafkaPort.toString())
-        System.setProperty("commit", commit.toString())
+        if(filterNotName.isNotBlank()) {
+            System.setProperty(FILTER_NOT_NAME, filterNotName)
+        }
 
-        if(variablesFileName != null)
-            System.setProperty(VARIABLES_FILE_NAME, variablesFileName)
+        variablesFileName?.let {
+            System.setProperty(VARIABLES_FILE_NAME, it)
+        }
 
         if(testBaseURL.isNotEmpty())
             System.setProperty(TEST_BASE_URL, testBaseURL)
 
-        if(kafkaPort != 0)
-            System.setProperty("kafkaPort", kafkaPort.toString())
-
-
-        System.setProperty(CONTRACT_PATHS, contractPaths.joinToString(","))
+        if(contractPaths.isNotEmpty()) System.setProperty(CONTRACT_PATHS, contractPaths.joinToString(","))
 
         val request: LauncherDiscoveryRequest = LauncherDiscoveryRequestBuilder.request()
                 .selectors(selectClass(SpecmaticJUnitSupport::class.java))
@@ -172,75 +162,15 @@ class TestCommand : Callable<Unit> {
             junitLauncher.registerTestExecutionListeners(reportListener)
         }
 
-        val bundleDir: File? = if(contractPaths.size == 1 && contractPaths.first().lowercase().endsWith("zip")) {
-            val zipFilePath = contractPaths.first()
-            val path = Path(".${APPLICATION_NAME_LOWER_CASE}_test_bundle")
-
-            logger.debug("Unzipping bundle into ${path.toFile().canonicalPath}")
-
-            val bundleDir = path.toFile()
-            bundleDir.mkdirs()
-
-            zipFileEntries(zipFilePath) { name, content ->
-                bundleDir.resolve(name).apply {
-                    logger.debug("Creating file ${this.canonicalPath}")
-                    parentFile.mkdirs()
-                    createNewFile()
-                    writeText(content)
-                }
-            }
-
-            System.setProperty(WORKING_DIRECTORY, bundleDir.canonicalPath)
-            System.clearProperty(CONTRACT_PATHS)
-
-            val bundledConfigFile = bundleDir.resolve(DEFAULT_CONFIG_FILE_NAME)
-
-            logger.debug("Checking for the existence of bundled config file ${bundledConfigFile.canonicalPath}")
-            if(!bundledConfigFile.exists())
-                throw ContractException("$DEFAULT_CONFIG_FILE_NAME must be included in the test bundle.")
-            logger.debug("Found bundled config file")
-
-            System.setProperty(CONFIG_FILE_NAME, bundledConfigFile.canonicalPath)
-
-            bundleDir
-        } else {
-            null
-        }
-
         junitLauncher.execute(request)
-
-        bundleDir?.deleteRecursively()
 
         junitReportDirName?.let {
             val reportDirectory = File(it)
             val reportFile = reportDirectory.resolve("TEST-junit-jupiter.xml")
 
             if(reportFile.isFile) {
-                val newText = reportFile.readText().let { text ->
-                    text.replace("JUnit Jupiter", "Contract Tests")
-                }.let { text ->
-                    val builder = newXMLBuilder()
-                    val reportXML: Document = builder.parse(InputSource(StringReader(text)))
-
-                    val actualTestNameMap: Map<String, String> = SpecmaticJUnitSupport.testsNames.mapIndexed { index, actualTestName ->
-                        val nodeTestName = "contractAsTest()[${index + 1}]"
-                        nodeTestName to actualTestName
-                    }.toMap()
-
-                    for(i in 0..reportXML.documentElement.childNodes.length.minus(1)) {
-                        val node = reportXML.documentElement.childNodes.item(i)
-
-                        if(node.nodeName == "testcase") {
-                            val nodeTestName: String = node.attributes.getNamedItem("name").nodeValue
-                            val actualTestName = actualTestNameMap[nodeTestName]
-                            node.attributes.getNamedItem("name").nodeValue = actualTestName
-                        }
-                    }
-
-                    xmlToString(reportXML)
-                }
-
-                reportFile.writeText(newText)
+                val updatedJUnitXML = updateNamesInJUnitXML(reportFile.readText())
+                reportFile.writeText(updatedJUnitXML)
             } else {
                 throw ContractException("Was expecting a JUnit report file called TEST-junit-jupiter.xml inside $junitReportDirName but could not find it.")
             }
@@ -252,40 +182,81 @@ class TestCommand : Callable<Unit> {
         logger.log(e)
     }
 
-    private fun loadContractPaths(): List<String> {
-        return when {
-            contractPaths.isEmpty() -> {
-                logger.debug("No contractPaths specified. Using configuration file named ${Configuration.globalConfigFileName}")
-                specmaticConfig.contractTestPaths()
+    private fun setParallelism() {
+        Flags.testParallelism()?.let { parallelism ->
+            validateParallelism(parallelism)
+
+            System.setProperty("junit.jupiter.execution.parallel.enabled", "true");
+
+            when (parallelism) {
+                "auto" -> {
+                    logger.log("Running contract tests in parallel (dynamically determined number of threads)")
+                    System.setProperty("junit.jupiter.execution.parallel.config.strategy", "dynamic")
+                }
+
+                else -> {
+                    logger.log("Running contract tests in parallel in $parallelism threads")
+                    System.setProperty("junit.jupiter.execution.parallel.config.strategy", "fixed")
+                    System.setProperty("junit.jupiter.execution.parallel.config.fixed.parallelism", parallelism)
+                }
             }
-            else -> contractPaths
+        }
+    }
+
+    private fun validateParallelism(parallelism: String) {
+        if(parallelism == "auto")
+            return
+
+        try {
+            parallelism.toInt()
+        } catch(e: Throwable) {
+            exitWithMessage("The value of the ${Flags.SPECMATIC_TEST_PARALLELISM} environment variable must be either 'true' or an integer value")
         }
     }
 }
 
-fun zipFileEntries(zipFilePath: String, fn: (String, String) -> Unit) {
-    File(zipFilePath).inputStream().use {
-        val zipFile = ZipInputStream(it)
+private const val ORIGINAL_JUNIT_TEST_SUITE_NAME = "JUnit Jupiter"
+private const val UPDATED_JUNIT_TEST_SUITE_NAME = "Contract Tests"
 
-        var entry: ZipEntry? = zipFile.nextEntry
+private const val TEST_NAME_ATTRIBUTE = "name"
 
-        while(entry != null) {
-            val buffer = ByteArrayOutputStream()
+internal fun updateNamesInJUnitXML(junitReport: String): String {
+    val junitReportWithUpdatedTestSuiteTitle = junitReport.replace(
+        ORIGINAL_JUNIT_TEST_SUITE_NAME,
+        UPDATED_JUNIT_TEST_SUITE_NAME
+    )
 
-            while(zipFile.available() == 1) {
-                val bytes = ByteArray(1024)
-                val readCount = zipFile.read(bytes)
-                if(readCount > 0)
-                    buffer.write(bytes, 0, readCount)
-            }
+    val builder = newXMLBuilder()
+    val reportDocument: Document = builder.parse(InputSource(StringReader(junitReportWithUpdatedTestSuiteTitle)))
 
-            val rawData = buffer.toByteArray()
+    for (i in 0..reportDocument.documentElement.childNodes.length.minus(1)) {
+        val testCaseNode = reportDocument.documentElement.childNodes.item(i)
 
-            val content = String(rawData)
+        if (testCaseNode.nodeName != "testcase") continue
 
-            fn(entry.name, content)
+        val systemOutChildNode = findFirstChildNodeByName(testCaseNode.childNodes, SYSTEM_OUT_TESTCASE_TAG) ?: continue
+        val cdataChildNode = systemOutChildNode.childNodes.item(0) ?: continue
+        val systemOutTextContent = cdataChildNode.textContent ?: continue
 
-            entry = zipFile.nextEntry
-        }
+        val displayNameLine = systemOutTextContent.lines().find { line ->
+            line.startsWith(DISPLAY_NAME_PREFIX_IN_SYSTEM_OUT_TAG_TEXT)
+        } ?: continue
+
+        val testName = displayNameLine.removePrefix(DISPLAY_NAME_PREFIX_IN_SYSTEM_OUT_TAG_TEXT).trim()
+
+        testCaseNode.attributes.getNamedItem(TEST_NAME_ATTRIBUTE).nodeValue = testName
     }
+
+    return xmlToString(reportDocument)
+}
+
+internal fun findFirstChildNodeByName(nodes: NodeList, nodeName: String): Node? {
+    for(i in 0..nodes.length.minus(1)) {
+        val childNode = nodes.item(i)
+
+        if(childNode.nodeName == nodeName)
+            return childNode
+    }
+
+    return null
 }

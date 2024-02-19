@@ -1,13 +1,14 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.conversions.*
+import `in`.specmatic.conversions.Environment
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.jsonStringToValueMap
+import `in`.specmatic.core.utilities.readEnvVarOrProperty
 import `in`.specmatic.core.value.*
-import `in`.specmatic.core.wsdl.parser.MappedURLType
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
@@ -30,19 +31,8 @@ import io.swagger.v3.oas.models.responses.ApiResponses
 import java.io.File
 import java.net.URI
 
-class BadRequestOrDefault(private val badRequestResponses: Map<Int, HttpResponsePattern>, private val defaultResponse: HttpResponsePattern?) {
-    fun matches(httpResponse: HttpResponse, resolver: Resolver): Result =
-        when(httpResponse.status) {
-            in badRequestResponses -> badRequestResponses.getValue(httpResponse.status).matches(httpResponse, resolver)
-            else -> defaultResponse?.matches(httpResponse, resolver)?.partialSuccess("The response matched the default response, but the contract should declare a ${httpResponse.status} response.") ?: Result.Failure("Neither is the status code declared nor is there a default response.")
-        }
-
-    fun supports(httpResponse: HttpResponse): Boolean =
-        httpResponse.status in badRequestResponses || defaultResponse != null
-}
-
-fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook()): Feature {
-    return parseContractFileToFeature(File(contractPath), hook)
+fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null, environment: Environment = DefaultEnvironment()): Feature {
+    return parseContractFileToFeature(File(contractPath), hook, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration, environment)
 }
 
 fun checkExists(file: File) = file.also {
@@ -50,27 +40,33 @@ fun checkExists(file: File) = file.also {
         throw ContractException("File ${file.path} does not exist (absolute path ${file.canonicalPath})")
 }
 
-fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook()): Feature {
+fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null, environment: Environment = DefaultEnvironment()): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
 
     return when (file.extension) {
-        "yaml" -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path).toFeature()
-        "wsdl" -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
+        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath, securityConfiguration = securityConfiguration, environment = environment).toFeature()
+        WSDL -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
-        else -> throw ContractException("File extension of ${file.path} not recognized")
+        else -> throw unsupportedFileExtensionContractException(file.path, file.extension)
     }
 }
+
+fun unsupportedFileExtensionContractException(
+    path: String,
+    extension: String
+) =
+    ContractException(
+        "Current file $path has an unsupported extension $extension. Supported extensions are ${
+            CONTRACT_EXTENSIONS.joinToString(
+                ", "
+            )
+        }."
+    )
 
 fun parseGherkinStringToFeature(gherkinData: String, sourceFilePath: String = ""): Feature {
     val gherkinDocument = parseGherkinString(gherkinData, sourceFilePath)
     val (name, scenarios) = lex(gherkinDocument, sourceFilePath)
     return Feature(scenarios = scenarios, name = name, path = sourceFilePath)
-}
-
-class ResponseBuilder(val scenario: Scenario, val serverState: Map<String, Value>) {
-    fun build(): HttpResponse {
-        return scenario.generateHttpResponse(serverState)
-    }
 }
 
 data class Feature(
@@ -80,8 +76,22 @@ data class Feature(
     val testVariables: Map<String, String> = emptyMap(),
     val testBaseURLs: Map<String, String> = emptyMap(),
     val path: String = "",
-    val generativeTestingEnabled: Boolean = Flags.generativeTestingEnabled()
+    val sourceProvider:String? = null,
+    val sourceRepository:String? = null,
+    val sourceRepositoryBranch:String? = null,
+    val specification:String? = null,
+    val serviceType:String? = null,
+    val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
+    val resolverStrategies: ResolverStrategies = strategiesFromFlags()
 ) {
+    fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
+        return this.copy(resolverStrategies = this.resolverStrategies.copy(generation = GenerativeTestsEnabled(onlyPositive)))
+    }
+
+    fun enableSchemaExampleDefault(): Feature {
+        return this.copy(resolverStrategies = this.resolverStrategies.copy(defaultExampleResolver = UseDefaultExample))
+    }
+
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
         try {
             val resultList = lookupScenario(httpRequest, scenarios)
@@ -155,14 +165,13 @@ data class Feature(
 
     private fun lookupScenario(
         httpRequest: HttpRequest,
-        scenarios: List<Scenario>,
-        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+        scenarios: List<Scenario>
     ): Sequence<Pair<Scenario, Result>> {
         val scenarioSequence = scenarios.asSequence()
 
         val localCopyOfServerState = serverState
         return scenarioSequence.zip(scenarioSequence.map {
-            it.matches(httpRequest, localCopyOfServerState, mismatchMessages)
+            it.matches(httpRequest, localCopyOfServerState, DefaultMismatchMessages)
         })
     }
 
@@ -182,7 +191,7 @@ data class Feature(
         val testScenarios = generateContractTestScenarios(suggestions)
 
         return testScenarios.fold(Results()) { results, scenario ->
-            Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
+            Results(results = results.results.plus(executeTest(scenario, testExecutorFn, resolverStrategies)).toMutableList())
         }
     }
 
@@ -194,7 +203,7 @@ data class Feature(
         generateContractTestScenarios(suggestions)
             .filter { scenarioNames.contains(it.name) }
             .fold(Results()) { results, scenario ->
-                Results(results = results.results.plus(executeTest(scenario, testExecutorFn)).toMutableList())
+                Results(results = results.results.plus(executeTest(scenario, testExecutorFn, resolverStrategies)).toMutableList())
             }
 
     fun setServerState(serverState: Map<String, Value>) {
@@ -216,35 +225,7 @@ data class Feature(
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): HttpStubData {
         try {
-            val results = scenarios.map { scenario ->
-                try {
-                    when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
-                        is Result.Success -> Pair(
-                            scenario.resolverAndResponseFrom(response).let { (resolver, resolvedResponse) ->
-                                val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
-                                val requestTypeWithAncestors =
-                                    newRequestType.copy(
-                                        headersPattern = newRequestType.headersPattern.copy(
-                                            ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern
-                                        )
-                                    )
-                                HttpStubData(
-                                    response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
-                                    resolver = resolver,
-                                    requestType = requestTypeWithAncestors,
-                                    responsePattern = scenario.httpResponsePattern,
-                                    contractPath = this.path
-                                )
-                            }, Result.Success()
-                        )
-                        is Result.Failure -> {
-                            Pair(null, matchResult.updateScenario(scenario).updatePath(path))
-                        }
-                    }
-                } catch (contractException: ContractException) {
-                    Pair(null, contractException.failure().updatePath(path))
-                }
-            }
+            val results = stubMatchResult(request, response, mismatchMessages)
 
             return results.find {
                 it.first != null
@@ -259,22 +240,63 @@ data class Feature(
         }
     }
 
+    fun stubMatchResult(
+        request: HttpRequest,
+        response: HttpResponse,
+        mismatchMessages: MismatchMessages
+    ): List<Pair<HttpStubData?, Result>> {
+        val results = scenarios.map { scenario ->
+            try {
+                when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
+                    is Result.Success -> Pair(
+                        scenario.resolverAndResponseFrom(response).let { (resolver, resolvedResponse) ->
+                            val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
+                            val requestTypeWithAncestors =
+                                newRequestType.copy(
+                                    headersPattern = newRequestType.headersPattern.copy(
+                                        ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern
+                                    )
+                                )
+                            HttpStubData(
+                                response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
+                                resolver = resolver,
+                                requestType = requestTypeWithAncestors,
+                                responsePattern = scenario.httpResponsePattern,
+                                contractPath = this.path,
+                                feature = this,
+                                scenario = scenario
+                            )
+                        }, Result.Success()
+                    )
+
+                    is Result.Failure -> {
+                        Pair(null, matchResult.updateScenario(scenario).updatePath(path))
+                    }
+                }
+            } catch (contractException: ContractException) {
+                Pair(null, contractException.failure().updatePath(path))
+            }
+        }
+        return results
+    }
+
     private fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
     fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> =
         generateContractTestScenarios(suggestions).map {
-            ScenarioTest(it, Flags.generativeTestingEnabled())
+            ScenarioTest(it, resolverStrategies,
+                it.sourceProvider, it.sourceRepository, it.sourceRepositoryBranch, it.specification, it.serviceType)
         }
 
     private fun getBadRequestsOrDefault(scenario: Scenario): BadRequestOrDefault? {
         val badRequestResponses = scenarios.filter {
-            it.httpRequestPattern.urlMatcher!!.path == scenario.httpRequestPattern.urlMatcher!!.path
+            it.httpRequestPattern.httpPathPattern!!.path == scenario.httpRequestPattern.httpPathPattern!!.path
                     && it.httpResponsePattern.status.toString().startsWith("4")
         }.associate { it.httpResponsePattern.status to it.httpResponsePattern }
 
         val defaultResponse: HttpResponsePattern? = scenarios.find {
-            it.httpRequestPattern.urlMatcher!!.path == scenario.httpRequestPattern.urlMatcher!!.path
+            it.httpRequestPattern.httpPathPattern!!.path == scenario.httpRequestPattern.httpPathPattern!!.path
                     && it.httpResponsePattern.status == DEFAULT_RESPONSE_CODE
         }?.httpResponsePattern
 
@@ -285,52 +307,41 @@ data class Feature(
     }
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> {
-        return if (generativeTestingEnabled)
-            positiveTestScenarios(suggestions) + negativeTestScenarios()
-        else
-            positiveTestScenarios(suggestions)
+        return resolverStrategies.generation.let {
+            it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
+        }
     }
 
     fun positiveTestScenarios(suggestions: List<Scenario>) =
         scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
         }.flatMap {
-            it.generateTestScenarios(testVariables, testBaseURLs, generativeTestingEnabled)
+            it.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
         }
 
     fun negativeTestScenarios() =
         scenarios.filter {
             it.isA2xxScenario()
-        }.map { scenario ->
+        }.flatMap { scenario ->
             val negativeScenario = scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
-            val negativeTestScenarios = negativeScenario.generateTestScenarios(testVariables, testBaseURLs)
+
+            val negativeTestScenarios = negativeScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
 
             negativeTestScenarios.filterNot { negativeTestScenario ->
                 val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
                 scenario.httpRequestPattern.matches(sampleRequest, scenario.resolver).isSuccess()
+            }.mapIndexed { index, negativeScenario ->
+                negativeScenario.copy(
+                    generativePrefix = resolverStrategies.generation.negativePrefix,
+                    disambiguate = { "[${(index + 1)}] " }
+                )
             }
-
-        }.flatten()
+        }
 
     fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =
         scenarios.flatMap { scenario ->
             scenario.copy(examples = emptyList()).generateBackwardCompatibilityScenarios()
         }
-
-    fun assertMatchesMockKafkaMessage(kafkaMessage: KafkaMessage) {
-        val result = matchesMockKafkaMessage(kafkaMessage)
-        if (result is Result.Failure)
-            throw NoMatchingScenario(Results(), cachedMessage = result.toFailureReport().toText())
-    }
-
-    fun matchesMockKafkaMessage(kafkaMessage: KafkaMessage): Result {
-        val results = scenarios.asSequence().map {
-            it.matchesMock(kafkaMessage)
-        }
-
-        return results.find { it is Result.Success } ?: results.firstOrNull()
-        ?: Result.Failure("No match found, couldn't check the message")
-    }
 
     fun matchingStub(
         scenarioStub: ScenarioStub,
@@ -340,35 +351,13 @@ data class Feature(
             scenarioStub.request,
             scenarioStub.response,
             mismatchMessages
-        ).copy(delayInSeconds = scenarioStub.delayInSeconds)
+        ).copy(delayInSeconds = scenarioStub.delayInSeconds, requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) }, stubToken = scenarioStub.stubToken)
 
     fun clearServerState() {
         serverState = emptyMap()
     }
 
-    fun lookupKafkaScenario(
-        olderKafkaMessagePattern: KafkaMessagePattern,
-        olderResolver: Resolver
-    ): Sequence<Pair<Scenario, Result>> {
-        try {
-            return scenarios.asSequence()
-                .filter { it.kafkaMessagePattern != null }
-                .map { newerScenario ->
-                    Pair(
-                        newerScenario,
-                        olderKafkaMessagePattern.encompasses(
-                            newerScenario.kafkaMessagePattern as KafkaMessagePattern,
-                            newerScenario.resolver,
-                            olderResolver
-                        )
-                    )
-                }
-        } finally {
-            serverState = emptyMap()
-        }
-    }
-
-    fun combine(baseScenario: Scenario, newScenario: Scenario): Scenario {
+    private fun combine(baseScenario: Scenario, newScenario: Scenario): Scenario {
         return convergeURLMatcher(baseScenario, newScenario).let { convergedScenario ->
             convergeHeaders(convergedScenario, newScenario)
         }.let { convergedScenario ->
@@ -381,25 +370,25 @@ data class Feature(
     }
 
     private fun convergeURLMatcher(baseScenario: Scenario, newScenario: Scenario): Scenario {
-        if (baseScenario.httpRequestPattern.urlMatcher!!.encompasses(
-                newScenario.httpRequestPattern.urlMatcher!!,
+        if (baseScenario.httpRequestPattern.httpPathPattern!!.encompasses(
+                newScenario.httpRequestPattern.httpPathPattern!!,
                 baseScenario.resolver,
                 newScenario.resolver
             ) is Result.Success
         )
             return baseScenario
 
-        val basePathParts = baseScenario.httpRequestPattern.urlMatcher.pathPattern
-        val newPathParts = newScenario.httpRequestPattern.urlMatcher.pathPattern
+        val basePathParts = baseScenario.httpRequestPattern.httpPathPattern.pathSegmentPatterns
+        val newPathParts = newScenario.httpRequestPattern.httpPathPattern.pathSegmentPatterns
 
-        val convergedPathPattern: List<URLPathPattern> = basePathParts.zip(newPathParts).map { (base, new) ->
+        val convergedPathPattern: List<URLPathSegmentPattern> = basePathParts.zip(newPathParts).map { (base, new) ->
             if(base.pattern.encompasses(new.pattern, baseScenario.resolver, newScenario.resolver) is Result.Success)
                 base
             else {
                 if(isInteger(base) && isInteger(new))
-                    URLPathPattern(NumberPattern(), key = "id")
+                    URLPathSegmentPattern(NumberPattern(), key = "id")
                 else
-                    throw ContractException("Can't figure out how to converge these URLs: ${baseScenario.httpRequestPattern.urlMatcher.path}, ${newScenario.httpRequestPattern.urlMatcher.path}")
+                    throw ContractException("Can't figure out how to converge these URLs: ${baseScenario.httpRequestPattern.httpPathPattern.path}, ${newScenario.httpRequestPattern.httpPathPattern.path}")
             }
         }
 
@@ -410,11 +399,11 @@ data class Feature(
             }
         }.let { if(it.startsWith("/")) it else "/$it"}
 
-        val convergedURLMatcher: URLMatcher = baseScenario.httpRequestPattern.urlMatcher.copy(pathPattern = convergedPathPattern, path = convergedPath)
+        val convergedHttpPathPattern: HttpPathPattern = baseScenario.httpRequestPattern.httpPathPattern.copy(pathSegmentPatterns = convergedPathPattern, path = convergedPath)
 
         return baseScenario.copy(
             httpRequestPattern =  baseScenario.httpRequestPattern.copy(
-                urlMatcher = convergedURLMatcher
+                httpPathPattern = convergedHttpPathPattern
             )
         )
     }
@@ -438,7 +427,7 @@ data class Feature(
 
         return if (baseScenario.httpRequestPattern.formFieldsPattern.size == 1) {
             if (newScenario.httpRequestPattern.formFieldsPattern.size != 1)
-                throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} exists with different form fields")
+                throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.httpPathPattern?.path} exists with different form fields")
 
             val baseRawPattern = baseScenario.httpRequestPattern.formFieldsPattern.values.first()
             val resolvedBasePattern = resolvedHop(baseRawPattern, baseScenario.resolver)
@@ -447,12 +436,12 @@ data class Feature(
             val resolvedNewPattern = resolvedHop(newRawPattern, newScenario.resolver)
 
             if (isObjectType(resolvedBasePattern) && !isObjectType(resolvedNewPattern))
-                throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} exists with multiple payload types")
+                throw ContractException("${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.httpPathPattern?.path} exists with multiple payload types")
 
             val converged: Pattern = when {
                 resolvedBasePattern.pattern is String && builtInPatterns.contains(resolvedBasePattern.pattern) -> {
                     if (resolvedBasePattern.pattern != resolvedNewPattern.pattern)
-                        throw ContractException("Cannot converge ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path} because there are multiple types of request payloads")
+                        throw ContractException("Cannot converge ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.httpPathPattern?.path} because there are multiple types of request payloads")
 
                     resolvedBasePattern
                 }
@@ -460,10 +449,10 @@ data class Feature(
                     if (baseRawPattern.pattern == newRawPattern.pattern && isObjectType(resolvedBasePattern))
                         baseRawPattern
                     else
-                        throw ContractException("Cannot converge different types ${baseRawPattern.pattern} and ${newRawPattern.pattern} found in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path}")
+                        throw ContractException("Cannot converge different types ${baseRawPattern.pattern} and ${newRawPattern.pattern} found in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.httpPathPattern?.path}")
                 }
                 else ->
-                    TODO("Converging of type ${resolvedBasePattern.pattern} and ${resolvedNewPattern.pattern} in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.urlMatcher?.path}")
+                    TODO("Converging of type ${resolvedBasePattern.pattern} and ${resolvedNewPattern.pattern} in ${baseScenario.httpRequestPattern.method} ${baseScenario.httpRequestPattern.httpPathPattern?.path}")
             }
 
             baseScenario.copy(
@@ -498,16 +487,34 @@ data class Feature(
         newPayload: Pattern,
         scenarioName: String,
         updateConverged: (Pattern) -> Scenario
-    ): Scenario = if (basePayload is TabularPattern && newPayload is TabularPattern) {
-        val converged = TabularPattern(convergePatternMap(basePayload.pattern, newPayload.pattern))
+    ): Scenario {
+        return updateConverged(converge(basePayload, newPayload, scenarioName))
+    }
 
-        updateConverged(converged)
-    } else if (bothAreIdenticalDeferreds(basePayload, newPayload)) {
-        updateConverged(basePayload)
-    } else if (bothAreTheSamePrimitive(basePayload, newPayload)) {
-        updateConverged(basePayload)
-    } else {
-        throw ContractException("Payload definitions with different names found (seen in Scenario named ${scenarioName}: ${basePayload.typeAlias ?: basePayload.typeName}, ${newPayload.typeAlias ?: newPayload.typeName})")
+    private fun converge(
+        basePayload: Pattern,
+        newPayload: Pattern,
+        scenarioName: String,
+    ): Pattern {
+        return if (basePayload is TabularPattern && newPayload is TabularPattern) {
+            TabularPattern(convergePatternMap(basePayload.pattern, newPayload.pattern))
+        } else if (basePayload is ListPattern && newPayload is JSONArrayPattern) {
+            val convergedNewPattern: Pattern = newPayload.pattern.fold(basePayload.pattern) { acc, newPattern ->
+                converge(acc, newPattern, scenarioName)
+            }
+
+            ListPattern(convergedNewPattern)
+        } else if (basePayload is ListPattern && newPayload is ListPattern) {
+            val convergedNewPattern: Pattern = converge(basePayload.pattern, newPayload.pattern, scenarioName)
+
+            ListPattern(convergedNewPattern)
+        } else if (bothAreIdenticalDeferredPatterns(basePayload, newPayload)) {
+            basePayload
+        } else if (bothAreTheSamePrimitive(basePayload, newPayload)) {
+            basePayload
+        } else {
+            throw ContractException("Payload definitions could not be converged (seen in Scenario named ${scenarioName}: ${basePayload.typeAlias ?: basePayload.typeName}, ${newPayload.typeAlias ?: newPayload.typeName})")
+        }
     }
 
     private fun bothAreTheSamePrimitive(
@@ -521,21 +528,21 @@ data class Feature(
                 && builtInPatterns.contains(newRequestBody.pattern as String)
                 && baseRequestBody.pattern == newRequestBody.pattern)
 
-    private fun bothAreIdenticalDeferreds(
+    private fun bothAreIdenticalDeferredPatterns(
         baseRequestBody: Pattern,
         newRequestBody: Pattern
     ) =
         baseRequestBody is DeferredPattern && newRequestBody is DeferredPattern && baseRequestBody.pattern == newRequestBody.pattern
 
     private fun convergeQueryParameters(baseScenario: Scenario, newScenario: Scenario): Scenario {
-        val baseQueryParams = baseScenario.httpRequestPattern.urlMatcher?.queryPattern!!
-        val newQueryParams = newScenario.httpRequestPattern.urlMatcher?.queryPattern!!
+        val baseQueryParams = baseScenario.httpRequestPattern.httpQueryParamPattern.queryPatterns
+        val newQueryParams = newScenario.httpRequestPattern.httpQueryParamPattern.queryPatterns
 
         val convergedQueryParams = convergePatternMap(baseQueryParams, newQueryParams)
 
         return baseScenario.copy(
             httpRequestPattern = baseScenario.httpRequestPattern.copy(
-                urlMatcher = baseScenario.httpRequestPattern.urlMatcher.copy(queryPattern = convergedQueryParams)
+                httpQueryParamPattern = baseScenario.httpRequestPattern.httpQueryParamPattern.copy(queryPatterns = convergedQueryParams)
             )
         )
     }
@@ -559,19 +566,21 @@ data class Feature(
         )
     }
 
-    fun toOpenAPIURLPrefixMap(urls: List<String>, mappedURLType: MappedURLType): Map<String, String> {
+    private fun toOpenAPIURLPrefixMap(urls: List<String>): Map<String, String> {
         val normalisedURL = urls.map { url ->
-            url.removeSuffix("/").removePrefix("http://").removePrefix("https://").split("/").joinToString("/") {
-                if(it.toIntOrNull() != null)
-                    "1"
-                else
-                    it
-            }.let { if(it.startsWith("/")) it else "/$it"}
+            val path =
+                url.removeSuffix("/").removePrefix("http://").removePrefix("https://").split("/").joinToString("/") {
+                    if (it.toIntOrNull() != null)
+                        "1"
+                    else
+                        it
+                }
+            path.let { if(it.startsWith("/")) it else "/$it"}
         }.distinct()
 
-        val minLength = normalisedURL.map {
+        val minLength = normalisedURL.minOfOrNull {
             it.split("/").size
-        }.minOrNull() ?: throw ContractException("No schema namespaces found")
+        } ?: throw ContractException("No schema namespaces found")
 
         val segmentCount = 1.until(minLength + 1).first { length ->
             val segments = normalisedURL.map { url ->
@@ -599,7 +608,7 @@ data class Feature(
             throw ContractException("Scenario ${it.name} has no method")
         }
 
-        scenarios.find { it.httpRequestPattern.urlMatcher == null }?.let {
+        scenarios.find { it.httpRequestPattern.httpPathPattern == null }?.let {
             throw ContractException("Scenario ${it.name} has no path")
         }
 
@@ -611,13 +620,13 @@ data class Feature(
         }.let { if(it.startsWith("/")) it else "/$it"}
 
         val urlPrefixMap = toOpenAPIURLPrefixMap(scenarios.mapNotNull {
-            it.httpRequestPattern.urlMatcher?.path
+            it.httpRequestPattern.httpPathPattern?.path
         }.map {
             normalize(it)
-        }.toSet().toList(), MappedURLType.pathOnly)
+        }.toSet().toList())
 
         val payloadAdjustedScenarios: List<Scenario> = scenarios.map { rawScenario ->
-            val prefix = urlPrefixMap.getValue(normalize(rawScenario.httpRequestPattern.urlMatcher?.path!!))
+            val prefix = urlPrefixMap.getValue(normalize(rawScenario.httpRequestPattern.httpPathPattern?.path!!))
 
             var scenario = rawScenario
 
@@ -638,7 +647,7 @@ data class Feature(
                     patterns = newTypes,
                     httpRequestPattern = scenario.httpRequestPattern.copy(
                         body = newRequestBody,
-                        urlMatcher = numberTemplatized(scenario.httpRequestPattern.urlMatcher)
+                        httpPathPattern = toPathPatternWithId(scenario.httpRequestPattern.httpPathPattern)
                     )
                 )
             }
@@ -683,7 +692,7 @@ data class Feature(
         }
 
         val paths: List<Pair<String, PathItem>> = rawCombinedScenarios.fold(emptyList()) { acc, scenario ->
-            val pathName = scenario.httpRequestPattern.urlMatcher!!.toOpenApiPath()
+            val pathName = scenario.httpRequestPattern.httpPathPattern!!.toOpenApiPath()
 
             val existingPathItem = acc.find { it.first == pathName }?.second
             val pathItem = existingPathItem ?: PathItem()
@@ -695,10 +704,10 @@ data class Feature(
                 "DELETE" -> pathItem.delete
                 else -> TODO("Method \"${scenario.httpRequestPattern.method}\" in scenario ${scenario.name}")
             } ?: Operation().apply {
-                this.summary = scenario.name
+                this.summary = withoutQueryParams(scenario.name)
             }
 
-            val pathParameters = scenario.httpRequestPattern.urlMatcher.pathParameters()
+            val pathParameters = scenario.httpRequestPattern.httpPathPattern.pathParameters()
 
             val openApiPathParameters = pathParameters.map {
                 val pathParameter: Parameter = PathParameter()
@@ -706,7 +715,7 @@ data class Feature(
                 pathParameter.schema = toOpenApiSchema(it.pattern)
                 pathParameter
             }
-            val queryParameters = scenario.httpRequestPattern.urlMatcher.queryPattern
+            val queryParameters = scenario.httpRequestPattern.httpQueryParamPattern.queryPatterns
             val openApiQueryParameters = queryParameters.map { (key, pattern) ->
                 val queryParameter: Parameter = QueryParameter()
                 queryParameter.name = key.removeSuffix("?")
@@ -739,7 +748,7 @@ data class Feature(
 
             val apiResponse = ApiResponse()
 
-            apiResponse.description = scenario.name
+            apiResponse.description = withoutQueryParams(scenario.name)
 
             val openApiResponseHeaders = scenario.httpResponsePattern.headersPattern.pattern.map { (key, pattern) ->
                 val header = Header()
@@ -757,7 +766,7 @@ data class Feature(
                 apiResponse.content = Content().apply {
                     val responseBodyType = scenario.httpResponsePattern.body
 
-                    val responseBodySchema: Pair<String, MediaType>? = when {
+                    val responseBodySchema: Pair<String, MediaType> = when {
                         isJSONPayload(responseBodyType) || responseBodyType is DeferredPattern && isJSONPayload(
                             responseBodyType.resolvePattern(scenario.resolver)
                         ) -> {
@@ -775,8 +784,7 @@ data class Feature(
                         }
                     }
 
-                    if (responseBodySchema != null)
-                        this.addMediaType(responseBodySchema.first, responseBodySchema.second)
+                    this.addMediaType(responseBodySchema.first, responseBodySchema.second)
                 }
             }
 
@@ -827,25 +835,29 @@ data class Feature(
         return openAPI
     }
 
-    private fun numberTemplatized(urlMatcher: URLMatcher?): URLMatcher? {
-        if(urlMatcher!!.pathPattern.any { it.pattern !is ExactValuePattern })
-            return urlMatcher
+    private fun withoutQueryParams(name: String): String {
+        return name.replace(Regex("""\?.*$"""), "")
+    }
 
-        val numberTemplatizedPathPattern: List<URLPathPattern> = urlMatcher.pathPattern.map { type ->
+    private fun toPathPatternWithId(httpPathPattern: HttpPathPattern?): HttpPathPattern {
+        if(httpPathPattern!!.pathSegmentPatterns.any { it.pattern !is ExactValuePattern })
+            return httpPathPattern
+
+        val pathSegmentPatternsWithIds: List<URLPathSegmentPattern> = httpPathPattern.pathSegmentPatterns.map { type ->
             if(isInteger(type))
-                URLPathPattern(NumberPattern(), key = "id")
+                URLPathSegmentPattern(NumberPattern(), key = "id")
             else
                 type
         }
 
-        val numberTemplatizedPath: String = numberTemplatizedPathPattern.joinToString("/") {
+        val pathWithIds: String = pathSegmentPatternsWithIds.joinToString("/") {
             when (it.pattern) {
                 is ExactValuePattern -> it.pattern.pattern.toStringLiteral()
                 else -> "(${it.key}:${it.pattern.typeName})"
             }
         }.let { if(it.startsWith("/")) it else "/$it"}
 
-        return urlMatcher.copy(pathPattern = numberTemplatizedPathPattern, path = numberTemplatizedPath)
+        return httpPathPattern.copy(pathSegmentPatterns = pathSegmentPatternsWithIds, path = pathWithIds)
     }
 
     private fun requestBodySchema(
@@ -913,7 +925,7 @@ data class Feature(
 
                 Pair("application/x-www-form-urlencoded", mediaType)
             } else if (scenario.httpRequestPattern.multiPartFormDataPattern.isNotEmpty()) {
-                throw NotImplementedError("mulitpart form data not yet supported")
+                throw NotImplementedError("multipart form data not yet supported")
             } else {
                 null
             }
@@ -926,7 +938,7 @@ data class Feature(
         return Pair("application/json", mediaType)
     }
 
-    fun cleanupDescriptor(descriptor: String): String {
+    private fun cleanupDescriptor(descriptor: String): String {
         val withoutBrackets = withoutPatternDelimiters(descriptor)
         val modifiersTrimmed = withoutBrackets.trimEnd('*', '?')
 
@@ -940,7 +952,7 @@ data class Feature(
         return "${base.trim('_')}$modifiers"
     }
 
-    fun getTypeAndDescriptor(map: Map<String, Pattern>, key: String): Pair<String, Pattern> {
+    private fun getTypeAndDescriptor(map: Map<String, Pattern>, key: String): Pair<String, Pattern> {
         val nonOptionalKey = withoutOptionality(key)
         val optionalKey = "$nonOptionalKey?"
         val commonValueType = map.getOrElse(nonOptionalKey) { map.getValue(optionalKey) }
@@ -989,9 +1001,9 @@ data class Feature(
                 ) {
                     val type: Pattern = listOf(map1, map2).map {
                         getTypeAndDescriptor(it, entry.key)
-                    }.map {
+                    }.associate {
                         cleanupDescriptor(it.first) to it.second
-                    }.toMap().getValue(cleanedUpDescriptors.second())
+                    }.getValue(cleanedUpDescriptors.second())
 
                     type
                 } else {
@@ -1048,22 +1060,20 @@ data class Feature(
             pattern is JSONObjectPattern -> jsonObjectToSchema(pattern)
             isArrayOfNullables(pattern) -> {
                 ArraySchema().apply {
-                    val arrayItemSchema = Schema<Any>().apply {
-                        val typeAlias =
-                            ((pattern as ListPattern).pattern as AnyPattern).pattern.first { !isEmptyOrNull(it) }.let {
-                                if (it.pattern is String && builtInPatterns.contains(it.pattern.toString()))
-                                    it.pattern as String
-                                else
-                                    it.typeAlias?.let { typeAlias ->
-                                        if (!typeAlias.startsWith("("))
-                                            "($typeAlias)"
-                                        else
-                                            typeAlias
-                                    } ?: throw ContractException("Unknown type: $it")
-                            }
+                    val typeAlias =
+                        ((pattern as ListPattern).pattern as AnyPattern).pattern.first { !isEmptyOrNull(it) }.let {
+                            if (it.pattern is String && builtInPatterns.contains(it.pattern.toString()))
+                                it.pattern as String
+                            else
+                                it.typeAlias?.let { typeAlias ->
+                                    if (!typeAlias.startsWith("("))
+                                        "($typeAlias)"
+                                    else
+                                        typeAlias
+                                } ?: throw ContractException("Unknown type: $it")
+                        }
 
-                        setSchemaType(typeAlias, this)
-                    }
+                    val arrayItemSchema = getSchemaType(typeAlias)
 
                     this.items = nullableSchemaAsOneOf(arrayItemSchema)
                 }
@@ -1072,11 +1082,11 @@ data class Feature(
                 ArraySchema().apply {
                     pattern as AnyPattern
 
-                    this.items = Schema<Any>().apply {
-                        setSchemaType(pattern.pattern.first { !isEmptyOrNull(it) }.let {
+                    this.items =
+                        getSchemaType(pattern.pattern.first { !isEmptyOrNull(it) }.let {
                             listInnerTypeDescriptor(it as ListPattern)
-                        }, this)
-                    }
+                        })
+
                     this.nullable = true
                 }
             }
@@ -1109,9 +1119,7 @@ data class Feature(
             pattern is ListPattern -> {
                 if (pattern.pattern is DeferredPattern) {
                     ArraySchema().apply {
-                        this.items = Schema<Any>().apply {
-                            setSchemaType(pattern.pattern.typeAlias!!, this)
-                        }
+                        this.items = getSchemaType(pattern.pattern.typeAlias)
                     }
                 } else if (isArrayOfNullables(pattern)) {
                     ArraySchema().apply {
@@ -1162,11 +1170,14 @@ data class Feature(
                     it.enum = values
                 }
             }
+            pattern is QueryParameterScalarPattern -> {
+                toOpenApiSchema(pattern.pattern)
+            }
             else ->
                 TODO("Not supported: ${pattern.typeAlias ?: pattern.typeName}, ${pattern.javaClass.name}")
         }
 
-        return schema as Schema<Any>;
+        return schema as Schema<Any>
     }
 
     private fun nullableSchemaAsOneOf(typeSchema: Schema<Any>): ComposedSchema {
@@ -1197,12 +1208,15 @@ data class Feature(
             }
     }
 
-    private fun setSchemaType(type: String, schema: Schema<Any>) {
-        val cleanedUpType = withoutPatternDelimiters(type)
-        if (builtInPatterns.contains(type))
-            schema.type = cleanedUpType
-        else
-            schema.`$ref` = cleanedUpType
+    private fun getSchemaType(type: String): Schema<Any> {
+        return if (builtInPatterns.contains(type)) {
+            toOpenApiSchema(builtInPatterns.getValue(type))
+        }
+        else {
+            val cleanedUpType = withoutPatternDelimiters(type)
+
+            Schema<Any>().also { it.`$ref` = cleanedUpType }
+        }
     }
 
     private fun isArrayOrNull(pattern: Pattern): Boolean =
@@ -1238,11 +1252,131 @@ data class Feature(
 
         return schema
     }
+
+    fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Feature {
+        val scenariosWithExamples: List<Scenario> = scenarios.map {
+            it.useExamples(externalisedJSONExamples)
+        }
+
+        return this.copy(scenarios = scenariosWithExamples)
+    }
+
+    private fun loadExternalisedJSONExamples(testsDirectory: File?): Map<OpenApiSpecification.OperationIdentifier, List<Row>> {
+        if (testsDirectory == null)
+            return emptyMap()
+
+        if (!testsDirectory.exists())
+            return emptyMap()
+
+        val files = testsDirectory.listFiles()
+
+        if (files.isNullOrEmpty())
+            return emptyMap()
+
+        return files.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
+            try {
+                with(exampleFromFile) {
+                    logger.log("Loading test file ${exampleFromFile.expectationFilePath}")
+
+                    val examples: Map<String, String> =
+                        headers
+                            .plus(queryParams)
+                            .plus(requestBody?.let { mapOf("(REQUEST-BODY)" to it.toStringLiteral()) } ?: emptyMap())
+
+                    val (
+                        columnNames,
+                        values
+                    ) = examples.entries.let { entry ->
+                        entry.map { it.key } to entry.map { it.value }
+                    }
+
+                    OpenApiSpecification.OperationIdentifier(requestMethod, requestPath, responseStatus) to Row(
+                        columnNames,
+                        values,
+                        name = testName,
+                        fileSource = exampleFromFile.file.canonicalPath
+                    )
+                }
+            } catch (e: Throwable) {
+                logger.log(e, "Error reading file ${exampleFromFile.expectationFilePath}")
+                null
+            }
+        }
+            .groupBy { (operationIdentifier, _) -> operationIdentifier }
+            .mapValues { (_, value) -> value.map { it.second } }
+    }
+
+    fun loadExternalisedExamples(): Feature {
+        val testsDirectory = getTestsDirectory(File(this.path))
+        val externalisedJSONExamples = loadExternalisedJSONExamples(testsDirectory)
+
+        if(externalisedJSONExamples.isEmpty())
+            return this
+
+        val featureWithExternalisedExamples = useExamples(externalisedJSONExamples)
+
+        val externalizedExampleFilePaths =
+            externalisedJSONExamples.entries.flatMap { (_, rows) ->
+                rows.map {
+                    it.fileSource
+                }
+            }.filterNotNull().sorted().toSet()
+
+        val utilizedFileSources =
+            featureWithExternalisedExamples.scenarios.asSequence().flatMap { scenarioInfo ->
+                scenarioInfo.examples.flatMap { examples ->
+                    examples.rows.map {
+                        it.fileSource
+                    }
+                }
+            }.filterNotNull()
+                .sorted().toSet()
+
+        val unusedExternalizedExamples = (externalizedExampleFilePaths - utilizedFileSources)
+        if (unusedExternalizedExamples.isNotEmpty()) {
+            logger.log("The following externalized examples were not used:")
+
+            unusedExternalizedExamples.sorted().forEach {
+                logger.log("  $it")
+            }
+        }
+
+        return featureWithExternalisedExamples
+    }
+
+    private fun testDirectoryFileFromEnvironmentVariable(): File? {
+        return readEnvVarOrProperty(testDirectoryEnvironmentVariable, testDirectoryProperty)?.let {
+            File(System.getenv(testDirectoryEnvironmentVariable))
+        }
+    }
+
+    private fun testDirectoryFileFromSpecificationPath(openApiFilePath: String): File? {
+        if (openApiFilePath.isBlank())
+            return null
+
+        return File(openApiFilePath).canonicalFile.let {
+            it.parentFile.resolve(it.nameWithoutExtension + "_tests")
+        }
+    }
+
+
+    private fun getTestsDirectory(contractFile: File): File? {
+        val testDirectory = testDirectoryFileFromSpecificationPath(contractFile.path) ?: testDirectoryFileFromEnvironmentVariable()
+
+        return when {
+            testDirectory?.exists() == true -> {
+                logger.log("Test directory ${testDirectory.canonicalPath} found")
+                testDirectory
+            }
+
+            else -> {
+                null
+            }
+        }
+    }
 }
 
-class EmptyContract : Throwable() {
-
-}
+class EmptyContract : Throwable()
 
 private fun toFixtureInfo(rest: String): Pair<String, Value> {
     val fixtureTokens = breakIntoPartsMaxLength(rest.trim(), 2)
@@ -1298,12 +1432,13 @@ private fun lexScenario(
     val filteredSteps =
         steps.map { step -> StepInfo(step.text, listOfDatatableRows(step), step) }.filterNot { it.isEmpty }
 
-    val parsedScenarioInfo = filteredSteps.fold(backgroundScenarioInfo ?: ScenarioInfo()) { scenarioInfo, step ->
+    val parsedScenarioInfo = filteredSteps.fold(backgroundScenarioInfo ?: ScenarioInfo(httpRequestPattern = HttpRequestPattern())) { scenarioInfo, step ->
         when (step.keyword) {
             in HTTP_METHODS -> {
                 step.words.getOrNull(1)?.let {
-                    val urlMatcher = try {
-                        toURLMatcherWithOptionalQueryParams(URI.create(step.rest))
+                    val urlInSpec = step.rest
+                    val pathParamPattern = try {
+                        buildHttpPathPattern(URI.create(urlInSpec))
                     } catch (e: Throwable) {
                         throw Exception(
                             "Could not parse the contract URL \"${step.rest}\" in scenario \"${scenarioInfo.scenarioName}\"",
@@ -1311,9 +1446,12 @@ private fun lexScenario(
                         )
                     }
 
+                    val queryParamPattern = buildQueryPattern(URI.create(urlInSpec))
+
                     scenarioInfo.copy(
                         httpRequestPattern = scenarioInfo.httpRequestPattern.copy(
-                            urlMatcher = urlMatcher,
+                            httpPathPattern = pathParamPattern,
+                            httpQueryParamPattern = queryParamPattern,
                             method = step.keyword.uppercase()
                         )
                     )
@@ -1382,8 +1520,6 @@ private fun lexScenario(
                         )
                     )
                 )
-            "KAFKA-MESSAGE" ->
-                scenarioInfo.copy(kafkaMessage = toAsyncMessage(step))
             "VALUE" ->
                 scenarioInfo.copy(
                     references = values(
@@ -1454,7 +1590,7 @@ fun parseEnum(step: StepInfo): Pair<String, Pattern> {
         val enumPattern = parsedPattern(enumType).run {
             when (this) {
                 is DeferredPattern -> this.resolvePattern(Resolver())
-                is AnyPattern -> throw ContractException("Enums ${enumName} type $enumType cannot be nullable. To mark the enum nullable please use it with nullable syntax. Suggested Usage: (${enumName}?)")
+                is AnyPattern -> throw ContractException("Enums $enumName type $enumType cannot be nullable. To mark the enum nullable please use it with nullable syntax. Suggested Usage: (${enumName}?)")
                 else -> this
             }
         }
@@ -1509,36 +1645,20 @@ fun values(
         throw ContractException("Incorrect syntax for value statement: $rest - it should be \"Given value <value name> from <$APPLICATION_NAME file name>\"")
 
     val valueStoreName = parts[0]
-    val qontractFileName = parts[2]
+    val specFileName = parts[2]
 
-    val qontractFilePath = ContractFileWithExports(qontractFileName, AnchorFile(filePath))
+    val specFilePath = ContractFileWithExports(specFileName, AnchorFile(filePath))
 
     return backgroundReferences.plus(scenarioReferences).plus(
         valueStoreName to References(
             valueStoreName,
-            qontractFilePath,
+            specFilePath,
             contractCache = contractCache
         )
     )
 }
 
 private val contractCache = ContractCache()
-
-fun toAsyncMessage(step: StepInfo): KafkaMessagePattern {
-    val parts = breakIntoPartsMaxLength(step.rest, 3)
-
-    return when (parts.size) {
-        2 -> {
-            val (name, type) = parts
-            KafkaMessagePattern(name, value = parsedPattern(type))
-        }
-        3 -> {
-            val (name, key, contentType) = parts
-            KafkaMessagePattern(name, parsedPattern(key), parsedPattern(contentType))
-        }
-        else -> throw ContractException("The message keyword must have either 2 params (topic, value) or 3 (topic, key, value)")
-    }
-}
 
 fun toFormDataPart(step: StepInfo, contractFilePath: String): MultiPartFormDataPattern {
     val parts = breakIntoPartsMaxLength(step.rest, 4)
@@ -1644,7 +1764,6 @@ internal fun lex(featureChildren: List<FeatureChild>, filePath: String): List<Sc
                 scenarioInfo.examples,
                 scenarioInfo.patterns,
                 scenarioInfo.fixtures,
-                scenarioInfo.kafkaMessage,
                 scenarioInfo.ignoreFailure,
                 scenarioInfo.references,
                 scenarioInfo.bindings,
@@ -1671,7 +1790,7 @@ fun scenarioInfos(
     val includedSpecifications = listOfNotNull(openApiSpecification, wsdlSpecification)
 
     val scenarioInfosBelongingToIncludedSpecifications =
-        includedSpecifications.mapNotNull { it.toScenarioInfos() }.flatten()
+        includedSpecifications.map { it.toScenarioInfos().first }.flatten()
 
     val backgroundInfo = backgroundScenario(featureChildren)?.let { feature ->
         lexScenario(
@@ -1703,8 +1822,9 @@ fun scenarioInfos(
     }
 
     return specmaticScenarioInfos.plus(scenarioInfosBelongingToIncludedSpecifications.filter { scenarioInfo ->
-        !specmaticScenarioInfos.any {
+        specmaticScenarioInfos.none {
             it.httpResponsePattern.status == scenarioInfo.httpResponsePattern.status
+                    && it.httpRequestPattern.matchesSignature(scenarioInfo.httpRequestPattern)
         }
     })
 }
@@ -1743,20 +1863,15 @@ private fun scenarios(featureChildren: List<FeatureChild>) =
 fun toGherkinFeature(stub: NamedStub): String = toGherkinFeature("New Feature", listOf(stub))
 
 private fun stubToClauses(namedStub: NamedStub): Pair<List<GherkinClause>, ExampleDeclarations> {
-    return when (namedStub.stub.kafkaMessage) {
-        null -> {
-            val (requestClauses, typesFromRequest, examples) = toGherkinClauses(namedStub.stub.request)
+        val (requestClauses, typesFromRequest, examples) = toGherkinClauses(namedStub.stub.request)
 
-            for (message in examples.messages) {
-                logger.log(message)
-            }
-
-            val (responseClauses, allTypes, _) = toGherkinClauses(namedStub.stub.response, typesFromRequest)
-            val typeClauses = toGherkinClauses(allTypes)
-            Pair(typeClauses.plus(requestClauses).plus(responseClauses), examples)
+        for (message in examples.messages) {
+            logger.log(message)
         }
-        else -> Pair(toGherkinClauses(namedStub.stub.kafkaMessage), UseExampleDeclarations())
-    }
+
+        val (responseClauses, allTypes, _) = toGherkinClauses(namedStub.stub.response, typesFromRequest)
+        val typeClauses = toGherkinClauses(allTypes)
+        return Pair(typeClauses.plus(requestClauses).plus(responseClauses), examples)
 }
 
 data class GherkinScenario(val scenarioName: String, val clauses: List<GherkinClause>)
@@ -1790,11 +1905,11 @@ private fun List<String>.second(): String {
 }
 
 fun similarURLPath(baseScenario: Scenario, newScenario: Scenario): Boolean {
-    if(baseScenario.httpRequestPattern.urlMatcher?.encompasses(newScenario.httpRequestPattern.urlMatcher!!, baseScenario.resolver, newScenario.resolver) is Result.Success)
+    if(baseScenario.httpRequestPattern.httpPathPattern?.encompasses(newScenario.httpRequestPattern.httpPathPattern!!, baseScenario.resolver, newScenario.resolver) is Result.Success)
         return true
 
-    val basePathParts = baseScenario.httpRequestPattern.urlMatcher!!.pathPattern
-    val newPathParts = newScenario.httpRequestPattern.urlMatcher!!.pathPattern
+    val basePathParts = baseScenario.httpRequestPattern.httpPathPattern!!.pathSegmentPatterns
+    val newPathParts = newScenario.httpRequestPattern.httpPathPattern!!.pathSegmentPatterns
 
     if(basePathParts.size != newPathParts.size)
         return false
@@ -1806,5 +1921,5 @@ fun similarURLPath(baseScenario: Scenario, newScenario: Scenario): Boolean {
 }
 
 fun isInteger(
-    base: URLPathPattern
+    base: URLPathSegmentPattern
 ) = base.pattern is ExactValuePattern && base.pattern.pattern.toStringLiteral().toIntOrNull() != null

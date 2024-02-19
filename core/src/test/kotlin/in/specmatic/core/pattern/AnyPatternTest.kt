@@ -1,19 +1,19 @@
 package `in`.specmatic.core.pattern
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
+import `in`.specmatic.GENERATION
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.utilities.withNullPattern
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.NumberValue
-import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.value.*
 import `in`.specmatic.emptyPattern
+import `in`.specmatic.shouldContainInAnyOrder
 import `in`.specmatic.shouldMatch
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 
 internal class AnyPatternTest {
     @Test
@@ -59,6 +59,20 @@ internal class AnyPatternTest {
     }
 
     @Test
+    @Tag(GENERATION)
+    fun `should generate new patterns for all available types`() {
+        AnyPattern(
+            listOf(
+                NumberPattern(),
+                EnumPattern(listOf(StringValue("one"), StringValue("two")))
+            )
+        ).newBasedOn(Row(), Resolver()).let { patterns ->
+            patterns.map { it.typeName } shouldContainInAnyOrder listOf("number", "\"one\"", "\"two\"")
+        }
+    }
+
+    @Test
+    @Tag(GENERATION)
     fun `should create a new pattern based on the given row`() {
         val pattern = AnyPattern(listOf(parsedPattern("""{"id": "(number)"}""")))
         val row = Row(listOf("id"), listOf("10"))
@@ -72,6 +86,19 @@ internal class AnyPatternTest {
                 assertEquals(10, id.number)
             else fail("Expected NumberValue")
         } else fail("Expected JSONObjectValue")
+    }
+
+    @Test
+    @Tag(GENERATION)
+    fun `should create new patterns when the row has no values`() {
+        val pattern = AnyPattern(listOf(parsedPattern("""{"id": "(number)"}""")))
+        val value = pattern.newBasedOn(Row(), Resolver()).first().generate(Resolver())
+
+        value as JSONObjectValue
+
+        val id = value.jsonObject.getValue("id")
+
+        assertThat(id).isInstanceOf(NumberValue::class.java)
     }
 
     @Test
@@ -144,7 +171,7 @@ internal class AnyPatternTest {
     }
 
     @Nested
-    inner class EnumBackwardComaptibility {
+    inner class EnumBackwardCompatibility {
         private val enum = toStringEnum("sold", "available")
 
         @Test
@@ -187,5 +214,63 @@ internal class AnyPatternTest {
         val type = AnyPattern(listOf(NullPattern, StringPattern()))
         val parsedValue = type.parse("22B Baker Street", Resolver(isNegative = true))
         assertThat(parsedValue.toStringLiteral()).isEqualTo("22B Baker Street")
+    }
+
+    @Test
+    @Tag(GENERATION)
+    fun `values for negative tests`() {
+        val negativeTypes = AnyPattern(listOf(NullPattern, StringPattern())).negativeBasedOn(Row(), Resolver())
+
+        assertThat(negativeTypes).containsExactlyInAnyOrder(
+            NumberPattern(),
+            BooleanPattern()
+        )
+    }
+
+    @Test
+    fun `we should get deep errors errors with breadcrumbs for each possible type in a oneOf list`() {
+        val customerType = JSONObjectPattern(mapOf("name" to StringPattern()), typeAlias = "(Customer)")
+        val employeeType = JSONObjectPattern(mapOf("name" to StringPattern(), "manager" to StringPattern()), typeAlias = "(Employee)")
+        val oneOfCustomerOrEmployeeType = AnyPattern(listOf(customerType, employeeType))
+
+        val personType = JSONObjectPattern(mapOf("personInfo" to oneOfCustomerOrEmployeeType))
+
+        val personData = parsedJSONObject("""{ "personInfo": { "name": "Sherlock Holmes", "salutation": "Mr" } }""")
+
+        val personMatchResult = personType.matches(personData, Resolver()).reportString()
+
+        assertThat(personMatchResult).contains("""
+            >> personInfo (when Customer object).salutation
+            
+               Key named "salutation" was unexpected
+            
+            >> personInfo (when Employee object).manager
+            
+               Expected key named "manager" was missing
+            
+            >> personInfo (when Employee object).salutation
+            
+               Key named "salutation" was unexpected
+       """.trimIndent())
+    }
+
+    @Test
+    fun `should wrap values in the relevant list type`() {
+        val type = AnyPattern(listOf(NullPattern, StringPattern()))
+        val wrappedList = type.listOf(listOf(StringValue("It's me"), StringValue("Hi"), StringValue("I'm the problem it's me")), Resolver()) as JSONArrayValue
+
+        val wrappedValues = wrappedList.list.map { it.toStringLiteral() }
+        val expectedValues = listOf("It's me", "Hi", "I'm the problem it's me")
+
+        assertThat(wrappedValues).isEqualTo(expectedValues)
+    }
+
+    @Test
+    fun `should wrap values in the relevant list type when the AnyPattern object represents an enum with 3 options`() {
+        val type = AnyPattern(listOf(
+            ExactValuePattern(StringValue("one")), ExactValuePattern(StringValue("two")), ExactValuePattern(StringValue("three"))))
+        val listOf = type.listOf(listOf(StringValue("one"), StringValue("two"), StringValue("three")), Resolver())
+
+        assertEquals(3, (listOf as JSONArrayValue).list.size)
     }
 }

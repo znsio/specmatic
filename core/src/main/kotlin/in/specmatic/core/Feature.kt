@@ -240,7 +240,7 @@ data class Feature(
         }
     }
 
-    fun stubMatchResult(
+    private fun stubMatchResult(
         request: HttpRequest,
         response: HttpResponse,
         mismatchMessages: MismatchMessages
@@ -249,7 +249,7 @@ data class Feature(
             try {
                 when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
                     is Result.Success -> Pair(
-                        scenario.resolverAndResponseFrom(response).let { (resolver, resolvedResponse) ->
+                        scenario.resolverAndResponseForExpectation(response).let { (resolver, resolvedResponse) ->
                             val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
                             val requestTypeWithAncestors =
                                 newRequestType.copy(
@@ -665,6 +665,7 @@ data class Feature(
                 val type = scenario.patterns.getValue(oldTypeName)
                 val newTypes = scenario.patterns.minus(oldTypeName).plus(newTypeName to type)
 
+
                 scenario = scenario.copy(
                     patterns = newTypes,
                     httpResponsePattern = scenario.httpResponsePattern.copy(
@@ -672,6 +673,24 @@ data class Feature(
                     )
                 )
             }
+
+            val (contentTypePattern, rawResponseHeadersWithoutContentType) = scenario.httpResponsePattern.headersPattern.pattern.entries.find {
+                it.key.equals(CONTENT_TYPE, ignoreCase = true)
+            }?.let {
+                it.value to scenario.httpResponsePattern.headersPattern.pattern.minus(it.key)
+            } ?: (null to scenario.httpResponsePattern.headersPattern.pattern)
+
+            val responseContentType: String? = if(contentTypePattern is ExactValuePattern)
+                contentTypePattern.pattern.toStringLiteral()
+            else null
+
+            val updatedResponseHeaders = HttpHeadersPattern(rawResponseHeadersWithoutContentType, contentType = responseContentType)
+
+            scenario = scenario.copy(
+                httpResponsePattern = scenario.httpResponsePattern.copy(
+                    headersPattern = updatedResponseHeaders
+                )
+            )
 
             scenario
         }
@@ -780,7 +799,10 @@ data class Feature(
                         else -> {
                             val mediaType = MediaType()
                             mediaType.schema = toOpenApiSchema(responseBodyType)
-                            Pair("text/plain", mediaType)
+
+                            val responseContentType = scenario.httpResponsePattern.headersPattern.contentType ?: "text/plain"
+
+                            Pair(responseContentType, mediaType)
                         }
                     }
 

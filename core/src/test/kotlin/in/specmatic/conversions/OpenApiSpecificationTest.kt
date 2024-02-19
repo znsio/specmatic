@@ -6408,6 +6408,7 @@ paths:
       summary: "Add person by id"
       parameters: []
       requestBody:
+        required: true
         content:
           application/json:
             schema:

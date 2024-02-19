@@ -1297,9 +1297,25 @@ class OpenApiSpecification(
             "${it.name}?" to specmaticPattern
         }.filterValues { it != null }.mapValues { it.value!! }
 
-        val additionalProperties = parameters.filterIsInstance<QueryParameter>().find { it.schema.type == "object" && it.schema.additionalProperties != null }
+        val additionalProperties = additionalPropertiesInQueryParam(parameters)
 
-        return HttpQueryParamPattern(queryPattern, additionalProperties?.schema?.let { toSpecmaticPattern(it, emptyList()) })
+        return HttpQueryParamPattern(queryPattern, additionalProperties)
+    }
+
+    private fun additionalPropertiesInQueryParam(parameters: List<Parameter>): Pattern? {
+        val additionalProperties = parameters.filterIsInstance<QueryParameter>()
+            .find { it.schema.type == "object" && it.schema.additionalProperties != null }?.schema?.additionalProperties
+
+        if(additionalProperties == false)
+            return null
+
+        if(additionalProperties == true)
+            return AnythingPattern
+
+        if(additionalProperties is Schema<*>)
+            return toSpecmaticPattern(additionalProperties, emptyList())
+
+        return null
     }
 
     private fun toSpecmaticPathParam(openApiPath: String, operation: Operation): HttpPathPattern {

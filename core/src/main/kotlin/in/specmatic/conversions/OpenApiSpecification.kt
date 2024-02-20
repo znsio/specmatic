@@ -1302,7 +1302,12 @@ class OpenApiSpecification(
                 QueryParameterScalarPattern(toSpecmaticPattern(schema = it.schema, typeStack = emptyList(), patternName = it.name))
             } else null
 
-            "${it.name}?" to specmaticPattern
+            val queryParamKey = if(it.required == true)
+                it.name
+            else
+                "${it.name}?"
+
+            queryParamKey to specmaticPattern
         }.filterValues { it != null }.mapValues { it.value!! }
 
         val additionalProperties = additionalPropertiesInQueryParam(parameters)

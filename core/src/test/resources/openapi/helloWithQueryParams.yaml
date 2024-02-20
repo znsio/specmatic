@@ -18,19 +18,16 @@ paths:
           name: message
           schema:
             type: string
-          required: true
           description: Greeting Message
         - in: query
           name: name
           schema:
             type: string
-          required: true
           description: Name of person to greet
         - in: query
           name: another_message
           schema:
             type: string
-          required: true
           description: additional message
       responses:
         '200':

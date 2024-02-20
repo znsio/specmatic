@@ -425,6 +425,7 @@ Scenario: Get product by id
                               properties:
                                 id:
                                   type: "string"
+                        required: true
                       responses:
                         200:
                           description: "Get person by id"
@@ -481,6 +482,7 @@ Scenario: Get product by id
                               type: "string"
                             address:
                               ${"$"}ref: '#/components/schemas/Address'
+                    required: true
                   responses:
                     200:
                       description: "Add person by id"
@@ -563,6 +565,7 @@ Scenario: Get product by id
                               type: "array"
                               items:
                                 ${"$"}ref: '#/components/schemas/Address'
+                    required: true
                   responses:
                     200:
                       description: "Get person by id"
@@ -697,6 +700,7 @@ Scenario: Get product by id
                               - properties: {}
                                 nullable: true
                               - ${"$"}ref: '#/components/schemas/Address'
+                    required: true
                   responses:
                     200:
                       description: "Get person by id"
@@ -771,6 +775,7 @@ Scenario: Get product by id
                             id:
                               type: "string"
                               nullable: true
+                    required: true
                   responses:
                     200:
                       description: "Get person by id"
@@ -843,6 +848,7 @@ Scenario: Get product by id
                             id:
                               type: "string"
                               nullable: true
+                    required: true
                   responses:
                     200:
                       description: "Get person by id"
@@ -930,6 +936,7 @@ Scenario: Get product by id
                               nullable: true
                               items:
                                 ${"$"}ref: '#/components/schemas/Address'
+                    required: true
                   responses:
                     200:
                       description: "Get person by id"
@@ -1015,6 +1022,7 @@ Scenario: Get product by id
                                 - properties: {}
                                   nullable: true
                                 - ${"$"}ref: '#/components/schemas/Address'
+                    required: true
                   responses:
                     200:
                       description: "Get person by id"
@@ -1093,6 +1101,7 @@ Scenario: Get product by id
                         encoding:
                           person:
                             contentType: "application/json"
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1175,6 +1184,7 @@ Scenario: Get product by id
                           properties:
                             data:
                               type: "string"
+                    required: true
                   responses:
                     200:
                       description: "Add Data"
@@ -1239,6 +1249,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Person'
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1408,6 +1419,7 @@ Scenario: Get product by id
                       text/plain:
                         schema:
                           type: "string"
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1460,6 +1472,7 @@ Scenario: Get product by id
                           type: "string"
                           enum:
                           - "hello"
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1562,6 +1575,7 @@ Scenario: Get product by id
                       text/plain:
                         schema:
                           type: "number"
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1617,6 +1631,7 @@ Scenario: Get product by id
                           properties:
                             id:
                               type: "string"
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1672,6 +1687,7 @@ Scenario: Get product by id
                           properties:
                             id:
                               type: "string"
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1727,6 +1743,7 @@ Scenario: Get product by id
                       text/plain:
                         schema:
                           type: "string"
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1963,6 +1980,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Person'
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -2030,6 +2048,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Person'
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -2099,6 +2118,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Person'
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -2637,6 +2657,7 @@ Scenario: Get product by id
                         encoding:
                           Data:
                             contentType: "application/json"
+                    required: true
                   responses:
                     200:
                       description: "Get details"
@@ -2824,6 +2845,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Data1_RequestBody'
+                    required: true
                   responses:
                     200:
                       description: API 1
@@ -2836,6 +2858,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Data2_RequestBody'
+                    required: true
                   responses:
                     200:
                       description: API 2
@@ -2920,6 +2943,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Data_RequestBody'
+                    required: true
                   responses:
                     200:
                       description: API 1
@@ -3001,6 +3025,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Data_RequestBody'
+                    required: true
                   responses:
                     200:
                       description: API 1
@@ -3090,6 +3115,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Data_RequestBody'
+                    required: true
                   responses:
                     200:
                       description: API 1
@@ -3159,6 +3185,7 @@ Scenario: Get product by id
                       text/plain:
                         schema:
                           type: string
+                    required: true
                   responses:
                     200:
                       description: API
@@ -3214,6 +3241,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Data'
+                    required: true
                   responses:
                     200:
                       description: API
@@ -3655,6 +3683,7 @@ paths:
       summary: API
       parameters: []
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -3708,6 +3737,7 @@ paths:
       summary: API
       parameters: []
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -4860,6 +4890,7 @@ paths:
                   summary: "Get person by id"
                   parameters: []
                   requestBody:
+                    required: true
                     content:
                       application/json:
                         schema:
@@ -6130,6 +6161,7 @@ paths:
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/1_RequestBody'
+                    required: true
                   responses:
                     200:
                       description: API 1
@@ -6197,6 +6229,7 @@ paths:
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/1_RequestBody'
+                    required: true
                   responses:
                     200:
                       description: API 1
@@ -6463,6 +6496,7 @@ paths:
                       application/json:
                         schema:
                           ${'$'}ref: '#/components/schemas/Request'
+                    required: true
                   responses:
                     "200":
                       description: New scenario
@@ -6544,6 +6578,7 @@ paths:
                   summary: "Get person by id"
                   parameters: []
                   requestBody:
+                    required: true
                     content:
                       application/json:
                         schema:

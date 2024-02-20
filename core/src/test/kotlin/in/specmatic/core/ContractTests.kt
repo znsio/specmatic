@@ -757,6 +757,7 @@ Examples:
                       text/plain:
                         schema:
                           type: string
+                    required: true
                   responses:
                     '200':
                       description: OK
@@ -1029,6 +1030,7 @@ Examples:
                 post:
                   summary: Random
                   requestBody:
+                    required: true
                     content:
                       application/json:
                         schema:

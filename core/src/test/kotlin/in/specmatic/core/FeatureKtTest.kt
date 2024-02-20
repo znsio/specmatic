@@ -327,6 +327,7 @@ class FeatureKtTest {
                     application/json:
                       schema:
                         ${"$"}ref: '#/components/schemas/Body_RequestBody'
+                  required: true
                 responses:
                   "200":
                     description: stub0
@@ -382,6 +383,7 @@ class FeatureKtTest {
                         application/json:
                           schema:
                             ${"$"}ref: '#/components/schemas/Data_RequestBody'
+                      required: true
                     responses:
                       "200":
                         description: http://localhost
@@ -696,6 +698,7 @@ paths:
       summary: hello world
       description: test
       requestBody:
+        required: true
         content:
           application/json:
             schema:

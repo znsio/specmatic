@@ -23,6 +23,7 @@ class CyclePrevention {
                 post:
                   description: Get data
                   requestBody:
+                    required: true
                     content:
                       application/json:
                         schema:
@@ -69,6 +70,7 @@ class CyclePrevention {
                 post:
                   description: Get data
                   requestBody:
+                    required: true
                     content:
                       application/json:
                         schema:

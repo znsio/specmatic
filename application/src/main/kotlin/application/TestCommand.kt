@@ -14,8 +14,8 @@ import `in`.specmatic.test.SpecmaticJUnitSupport
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONFIG_FILE_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME_PROPERTY
+import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME_PROPERTY
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
@@ -134,11 +134,11 @@ class TestCommand : Callable<Unit> {
         System.setProperty("protocol", protocol)
 
         if(filterName.isNotBlank()) {
-            System.setProperty(FILTER_NAME, filterName)
+            System.setProperty(FILTER_NAME_PROPERTY, filterName)
         }
 
         if(filterNotName.isNotBlank()) {
-            System.setProperty(FILTER_NOT_NAME, filterNotName)
+            System.setProperty(FILTER_NOT_NAME_PROPERTY, filterNotName)
         }
 
         variablesFileName?.let {

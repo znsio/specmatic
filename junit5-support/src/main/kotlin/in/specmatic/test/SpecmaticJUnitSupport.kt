@@ -49,8 +49,10 @@ open class SpecmaticJUnitSupport {
         const val TEST_BASE_URL = "testBaseURL"
         const val ENV_NAME = "environment"
         const val VARIABLES_FILE_NAME = "variablesFileName"
-        const val FILTER_NAME = "filterName"
-        const val FILTER_NOT_NAME = "filterNotName"
+        const val FILTER_NAME_PROPERTY = "filterName"
+        const val FILTER_NOT_NAME_PROPERTY = "filterNotName"
+        const val FILTER_NAME_ENVIRONMENT_VARIABLE = "FILTER_NAME"
+        const val FILTER_NOT_NAME_ENVIRONMENT_VARIABLE = "FILTER_NOT_NAME"
         private const val ENDPOINTS_API = "endpointsAPI"
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
@@ -170,8 +172,8 @@ open class SpecmaticJUnitSupport {
     fun contractTest(): Collection<DynamicTest> {
         val contractPaths = System.getProperty(CONTRACT_PATHS)
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
-        val filterName: String? = System.getProperty(FILTER_NAME)
-        val filterNotName: String? = System.getProperty(FILTER_NOT_NAME)
+        val filterName: String? = System.getProperty(FILTER_NAME_PROPERTY) ?: System.getenv(FILTER_NAME_ENVIRONMENT_VARIABLE)
+        val filterNotName: String? = System.getProperty(FILTER_NOT_NAME_PROPERTY) ?: System.getenv(FILTER_NOT_NAME_ENVIRONMENT_VARIABLE)
 
         val timeout = System.getProperty(TIMEOUT, DEFAULT_TIMEOUT).toInt()
 

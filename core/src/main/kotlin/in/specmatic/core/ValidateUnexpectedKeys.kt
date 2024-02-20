@@ -10,6 +10,10 @@ object ValidateUnexpectedKeys: UnexpectedKeyCheck {
     }
 
     override fun validateList(pattern: Map<String, Any>, actual: Map<String, Any>): List<UnexpectedKeyError> {
+        if (pattern.containsKey("(string)?")) {
+            // Supports free-form dictionaries
+            return listOf()
+        }
         val patternKeys = pattern.minus("...").keys.map { withoutOptionality(it) }
         val actualKeys = actual.keys.map { withoutOptionality(it) }
 

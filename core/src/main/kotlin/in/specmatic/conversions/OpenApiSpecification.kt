@@ -1286,12 +1286,13 @@ class OpenApiSpecification(
 
     private fun toSpecmaticQueryParam(operation: Operation): HttpQueryParamPattern {
         val parameters = operation.parameters ?: return HttpQueryParamPattern(emptyMap())
+
         val queryPattern: Map<String, Pattern> = parameters.filterIsInstance<QueryParameter>().associate {
-            val specmaticPattern: Pattern = if (it.schema.type == "array") {
+            val specmaticPattern: Pattern? = if (it.schema.type == "array") {
                 QueryParameterArrayPattern(listOf(toSpecmaticPattern(schema = it.schema.items, typeStack = emptyList())), it.name)
-            } else {
+            } else if (it.schema.type != "object") {
                 QueryParameterScalarPattern(toSpecmaticPattern(schema = it.schema, typeStack = emptyList(), patternName = it.name))
-            }
+            } else null
 
             val queryParamKey = if(it.required == true)
                 it.name
@@ -1299,8 +1300,27 @@ class OpenApiSpecification(
                 "${it.name}?"
 
             queryParamKey to specmaticPattern
-        }
-        return HttpQueryParamPattern(queryPattern)
+        }.filterValues { it != null }.mapValues { it.value!! }
+
+        val additionalProperties = additionalPropertiesInQueryParam(parameters)
+
+        return HttpQueryParamPattern(queryPattern, additionalProperties)
+    }
+
+    private fun additionalPropertiesInQueryParam(parameters: List<Parameter>): Pattern? {
+        val additionalProperties = parameters.filterIsInstance<QueryParameter>()
+            .find { it.schema.type == "object" && it.schema.additionalProperties != null }?.schema?.additionalProperties
+
+        if(additionalProperties == false)
+            return null
+
+        if(additionalProperties == true)
+            return AnythingPattern
+
+        if(additionalProperties is Schema<*>)
+            return toSpecmaticPattern(additionalProperties, emptyList())
+
+        return null
     }
 
     private fun toSpecmaticPathParam(openApiPath: String, operation: Operation): HttpPathPattern {

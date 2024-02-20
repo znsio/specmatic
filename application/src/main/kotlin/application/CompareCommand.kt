@@ -34,7 +34,7 @@ class CompareCommand : Callable<Unit> {
             exitProcess(1)
         }
 
-        logException {
+        val exitCode = logException {
             val olderContract = olderContractFilePath.loadContract()
             val newerContract = newerContractFilePath.loadContract()
 
@@ -51,6 +51,8 @@ class CompareCommand : Callable<Unit> {
             val mirrorReport = backwardCompatible(newerContract, olderContract)
             println(mirrorReport.message())
         }
+
+        exitProcess(exitCode)
     }
 }
 

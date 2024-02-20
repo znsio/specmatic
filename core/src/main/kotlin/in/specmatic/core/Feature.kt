@@ -219,6 +219,22 @@ data class Feature(
         } != null
     }
 
+    fun matchResult(request: HttpRequest, response: HttpResponse): Result {
+        val matchResults = scenarios.map {
+            it.matches(
+                request,
+                serverState
+            ) to it.matches(response)
+        }
+
+        if (matchResults.any {
+            it.first is Result.Success && it.second is Result.Success
+        })
+            return Result.Success()
+
+        return Result.fromResults(matchResults.flatMap { it.toList() })
+    }
+
     fun matchingStub(
         request: HttpRequest,
         response: HttpResponse,

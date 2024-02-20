@@ -14,7 +14,6 @@ import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.HttpStubData
-import `in`.specmatic.stub.captureStandardOutput
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import io.ktor.util.reflect.*
@@ -7434,6 +7433,42 @@ paths:
                 assertThat(exceptionCauseMessage(it)).contains("""A parameter of type "array" has not defined "items"""")
             }
         )
+    }
+
+    @Test
+    fun `should recognize a mandatory query param`() {
+        val feature = OpenApiSpecification.fromYAML(
+                """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /api/nocontent:
+    get:
+      parameters:
+      - in: query
+        name: id
+        schema:
+          type: string
+        required: true
+      responses:
+        200:
+          description: Success message
+          content:
+            text/plain:
+              schema:
+                type: string
+            """.trimIndent(), ""
+        ).toFeature()
+
+        val request = HttpRequest("GET", "/api/nocontent", queryParams = QueryParameters(mapOf("id" to "123")))
+        feature.matchResult(request, HttpResponse.OK).let { result ->
+            assertThat(result).withFailMessage(result.reportString()).isInstanceOf(Result.Success::class.java)
+        }
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

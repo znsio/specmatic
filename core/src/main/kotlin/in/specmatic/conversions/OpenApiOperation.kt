@@ -1,7 +1,12 @@
 package `in`.specmatic.conversions
 
+import `in`.specmatic.core.HttpQueryParamPattern
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.Pattern
+import `in`.specmatic.core.pattern.QueryParameterArrayPattern
+import `in`.specmatic.core.pattern.QueryParameterScalarPattern
 import io.swagger.v3.oas.models.Operation
+import io.swagger.v3.oas.models.parameters.QueryParameter
 
 class OpenApiOperation(val operation: Operation) {
     fun validateParameters() {
@@ -17,5 +22,4 @@ class OpenApiOperation(val operation: Operation) {
 
         }
     }
-
 }

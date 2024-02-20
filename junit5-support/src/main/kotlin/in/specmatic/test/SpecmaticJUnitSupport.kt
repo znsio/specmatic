@@ -390,13 +390,14 @@ open class SpecmaticJUnitSupport {
 
         val complexity = feature.complexity()
 
-        logger.log("Complexity score for $path: $complexity")
-        logger.newLine()
+        logger.debug("Complexity score for $path: $complexity")
 
-        if(complexity > 1000.toULong()) {
+        if(complexity > 1000.toULong() && System.getProperty(Flags.MAX_TEST_REQUEST_COMBINATIONS) == null) {
             val limit = 5
 
             logger.log("Complexity of $path is high and may generate more tests than your machine may handle. Limiting the tests using the environment variable MAX_TEST_REQUEST_COMBINATIONS=$limit. Please adjust as needed.")
+            logger.newLine()
+
             System.setProperty(Flags.MAX_TEST_REQUEST_COMBINATIONS, "5")
         }
 

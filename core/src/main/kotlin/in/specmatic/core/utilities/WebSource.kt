@@ -3,6 +3,7 @@ package `in`.specmatic.core.utilities
 import `in`.specmatic.core.CONTRACT_EXTENSIONS
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.log.logger
+import `in`.specmatic.core.pattern.ContractException
 import java.io.File
 import java.net.ServerSocket
 import java.net.URL
@@ -83,7 +84,8 @@ class WebSource(override val testContracts: List<String>, override val stubContr
         }
 
         val renamedFile = File(specificationFile.path + ".$extension")
-        specificationFile.renameTo(renamedFile)
+        if (!specificationFile.renameTo(renamedFile))
+            throw ContractException("Could not rename file $specificationFile to $renamedFile")
 
         return renamedFile
     }

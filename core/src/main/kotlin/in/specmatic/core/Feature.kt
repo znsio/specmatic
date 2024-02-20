@@ -771,6 +771,7 @@ data class Feature(
 
             if (requestBodySchema != null) {
                 operation.requestBody = RequestBody().apply {
+                    this.required = true
                     this.content = Content().apply {
                         this[requestBodySchema.first] = requestBodySchema.second
                     }

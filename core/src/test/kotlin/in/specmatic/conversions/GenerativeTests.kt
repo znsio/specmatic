@@ -91,6 +91,7 @@ class GenerativeTests {
                 post:
                   summary: Create person record
                   requestBody:
+                    required: true
                     content:
                       application/json:
                         examples:
@@ -162,6 +163,7 @@ class GenerativeTests {
                         CREATE_PERSON:
                           value: 987
                   requestBody:
+                    required: true
                     content:
                       application/json:
                         examples:
@@ -224,6 +226,7 @@ class GenerativeTests {
                         CREATE_PERSON:
                           value: 987
                   requestBody:
+                    required: true
                     content:
                       application/json:
                         examples:
@@ -284,6 +287,7 @@ class GenerativeTests {
                         SUCCESS:
                           value: true
                   requestBody:
+                    required: true
                     content:
                       application/json:
                         examples:
@@ -471,6 +475,7 @@ class GenerativeTests {
                   summary: "Get person by id"
                   parameters: []
                   requestBody:
+                    required: true
                     content:
                       application/json:
                         examples:
@@ -536,6 +541,7 @@ class GenerativeTests {
             post:
               summary: Create a new product
               requestBody:
+                required: true
                 content:
                   application/json:
                     schema:

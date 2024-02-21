@@ -694,7 +694,7 @@ class OpenApiSpecification(
                         if(bodyIsRequired)
                             it
                         else
-                            AnyPattern(listOf(it, NoBodyPattern))
+                            OptionalBodyPattern.fromPattern(it)
                     }
 
                     Pair(

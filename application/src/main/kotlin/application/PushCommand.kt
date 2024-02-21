@@ -27,7 +27,15 @@ class PushCommand: Callable<Unit> {
         val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
         val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
 
-        for (source in sources) {
+        val unsupportedSources = sources.filter { it !is GitSource }.mapNotNull { it.type }.distinct()
+
+        if(unsupportedSources.isNotEmpty()) {
+            println("The following types of sources are not supported: ${unsupportedSources.joinToString(", ")}")
+        }
+
+        val supportedSources = sources.filter { it is GitSource }
+
+        for (source in supportedSources) {
             val sourceDir = source.directoryRelativeTo(workingDirectory)
             val sourceGit = SystemGit(sourceDir.path)
 

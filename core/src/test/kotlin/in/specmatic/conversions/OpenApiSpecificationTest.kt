@@ -14,7 +14,6 @@ import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.HttpStubData
-import `in`.specmatic.stub.captureStandardOutput
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import io.ktor.util.reflect.*
@@ -28,7 +27,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
-import java.util.Base64
+import java.util.*
 import java.util.function.Consumer
 import java.util.stream.Stream
 
@@ -425,6 +424,7 @@ Scenario: Get product by id
                               properties:
                                 id:
                                   type: "string"
+                        required: true
                       responses:
                         200:
                           description: "Get person by id"
@@ -481,6 +481,7 @@ Scenario: Get product by id
                               type: "string"
                             address:
                               ${"$"}ref: '#/components/schemas/Address'
+                    required: true
                   responses:
                     200:
                       description: "Add person by id"
@@ -563,6 +564,7 @@ Scenario: Get product by id
                               type: "array"
                               items:
                                 ${"$"}ref: '#/components/schemas/Address'
+                    required: true
                   responses:
                     200:
                       description: "Get person by id"
@@ -697,6 +699,7 @@ Scenario: Get product by id
                               - properties: {}
                                 nullable: true
                               - ${"$"}ref: '#/components/schemas/Address'
+                    required: true
                   responses:
                     200:
                       description: "Get person by id"
@@ -771,6 +774,7 @@ Scenario: Get product by id
                             id:
                               type: "string"
                               nullable: true
+                    required: true
                   responses:
                     200:
                       description: "Get person by id"
@@ -843,6 +847,7 @@ Scenario: Get product by id
                             id:
                               type: "string"
                               nullable: true
+                    required: true
                   responses:
                     200:
                       description: "Get person by id"
@@ -930,6 +935,7 @@ Scenario: Get product by id
                               nullable: true
                               items:
                                 ${"$"}ref: '#/components/schemas/Address'
+                    required: true
                   responses:
                     200:
                       description: "Get person by id"
@@ -1015,6 +1021,7 @@ Scenario: Get product by id
                                 - properties: {}
                                   nullable: true
                                 - ${"$"}ref: '#/components/schemas/Address'
+                    required: true
                   responses:
                     200:
                       description: "Get person by id"
@@ -1093,6 +1100,7 @@ Scenario: Get product by id
                         encoding:
                           person:
                             contentType: "application/json"
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1175,6 +1183,7 @@ Scenario: Get product by id
                           properties:
                             data:
                               type: "string"
+                    required: true
                   responses:
                     200:
                       description: "Add Data"
@@ -1239,6 +1248,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Person'
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1408,6 +1418,7 @@ Scenario: Get product by id
                       text/plain:
                         schema:
                           type: "string"
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1460,6 +1471,7 @@ Scenario: Get product by id
                           type: "string"
                           enum:
                           - "hello"
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1562,6 +1574,7 @@ Scenario: Get product by id
                       text/plain:
                         schema:
                           type: "number"
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1617,6 +1630,7 @@ Scenario: Get product by id
                           properties:
                             id:
                               type: "string"
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1672,6 +1686,7 @@ Scenario: Get product by id
                           properties:
                             id:
                               type: "string"
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1727,6 +1742,7 @@ Scenario: Get product by id
                       text/plain:
                         schema:
                           type: "string"
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -1963,6 +1979,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Person'
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -2030,6 +2047,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Person'
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -2099,6 +2117,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Person'
+                    required: true
                   responses:
                     200:
                       description: "Add Person"
@@ -2637,6 +2656,7 @@ Scenario: Get product by id
                         encoding:
                           Data:
                             contentType: "application/json"
+                    required: true
                   responses:
                     200:
                       description: "Get details"
@@ -2824,6 +2844,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Data1_RequestBody'
+                    required: true
                   responses:
                     200:
                       description: API 1
@@ -2836,6 +2857,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Data2_RequestBody'
+                    required: true
                   responses:
                     200:
                       description: API 2
@@ -2920,6 +2942,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Data_RequestBody'
+                    required: true
                   responses:
                     200:
                       description: API 1
@@ -3001,6 +3024,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Data_RequestBody'
+                    required: true
                   responses:
                     200:
                       description: API 1
@@ -3090,6 +3114,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Data_RequestBody'
+                    required: true
                   responses:
                     200:
                       description: API 1
@@ -3159,6 +3184,7 @@ Scenario: Get product by id
                       text/plain:
                         schema:
                           type: string
+                    required: true
                   responses:
                     200:
                       description: API
@@ -3214,6 +3240,7 @@ Scenario: Get product by id
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/Data'
+                    required: true
                   responses:
                     200:
                       description: API
@@ -3655,6 +3682,7 @@ paths:
       summary: API
       parameters: []
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -3708,6 +3736,7 @@ paths:
       summary: API
       parameters: []
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -4860,6 +4889,7 @@ paths:
                   summary: "Get person by id"
                   parameters: []
                   requestBody:
+                    required: true
                     content:
                       application/json:
                         schema:
@@ -6130,6 +6160,7 @@ paths:
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/1_RequestBody'
+                    required: true
                   responses:
                     200:
                       description: API 1
@@ -6197,6 +6228,7 @@ paths:
                       application/json:
                         schema:
                           ${"$"}ref: '#/components/schemas/1_RequestBody'
+                    required: true
                   responses:
                     200:
                       description: API 1
@@ -6408,6 +6440,7 @@ paths:
       summary: "Add person by id"
       parameters: []
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -6462,6 +6495,7 @@ paths:
                       application/json:
                         schema:
                           ${'$'}ref: '#/components/schemas/Request'
+                    required: true
                   responses:
                     "200":
                       description: New scenario
@@ -6543,6 +6577,7 @@ paths:
                   summary: "Get person by id"
                   parameters: []
                   requestBody:
+                    required: true
                     content:
                       application/json:
                         schema:
@@ -7398,6 +7433,94 @@ paths:
                 assertThat(exceptionCauseMessage(it)).contains("""A parameter of type "array" has not defined "items"""")
             }
         )
+    }
+
+    @Test
+    fun `should recognize a mandatory query param`() {
+        val feature = OpenApiSpecification.fromYAML(
+                """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /api/nocontent:
+    get:
+      parameters:
+      - in: query
+        name: id
+        schema:
+          type: string
+        required: true
+      responses:
+        200:
+          description: Success message
+          content:
+            text/plain:
+              schema:
+                type: string
+            """.trimIndent(), ""
+        ).toFeature()
+
+        val request = HttpRequest("GET", "/api/nocontent", queryParams = QueryParameters(mapOf("id" to "123")))
+        feature.matchResult(request, HttpResponse.OK).let { result ->
+            assertThat(result).withFailMessage(result.reportString()).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
+    @Test
+    fun `backward compatibility should fail when a new mandatory query parameter is added`() {
+        val oldSpec = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /data:
+    get:
+      responses:
+        204:
+          description: No content
+            """.trimIndent(), ""
+        ).toFeature()
+
+
+        val newSpec = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.3
+info:
+  title: My service
+  description: My service
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080'
+paths:
+  /data:
+    get:
+      parameters:
+      - in: query
+        name: id
+        schema:
+          type: integer
+        required: true
+      responses:
+        204:
+          description: No content
+            """.trimIndent(), ""
+        ).toFeature()
+
+        val result = testBackwardCompatibility(oldSpec, newSpec)
+
+        assertThat(result.success()).isFalse()
+
+        assertThat(result.report()).contains("expects query param named \"id\"")
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

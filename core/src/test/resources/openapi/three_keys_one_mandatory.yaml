@@ -8,6 +8,7 @@ paths:
       summary: Test
       description: Test
       requestBody:
+        required: true
         content:
           application/json:
             schema:

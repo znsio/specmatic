@@ -13,6 +13,7 @@ paths:
               type: string
             description: Unique ID for the request
       requestBody:
+        required: true
         content:
           application/json:
             schema:

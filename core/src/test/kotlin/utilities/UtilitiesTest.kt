@@ -15,6 +15,12 @@ import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.stub.createStub
+import io.ktor.network.sockets.*
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import io.mockk.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -24,6 +30,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.io.File
+import java.net.ServerSocket
 
 private const val testSystemProperty = "THIS_PROPERTY_EXISTS"
 
@@ -500,6 +507,79 @@ internal class UtilitiesTest {
         } finally {
             specFile.delete()
             specmaticJSON.delete()
+        }
+    }
+
+    @Test
+    fun `should load sources from the web`() {
+        val specSourcePort = ServerSocket(0).use { it.localPort }
+
+        val spec = """
+                openapi: 3.0.1
+                info:
+                  title: Random
+                  version: "1"
+                paths:
+                  /random:
+                    post:
+                      summary: Random
+                      parameters: []
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - id
+                              properties:
+                                id:
+                                  type: number
+                      responses:
+                        "200":
+                          description: Random
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+            """.trimIndent()
+
+        val server = embeddedServer(Netty, port = specSourcePort) {
+            routing {
+                get("/random.yaml") {
+                    call.respondText(spec)
+                }
+            }
+        }
+
+        server.start(wait = false)
+
+        val specmaticJSON = File("./specmatic.json")
+
+        try {
+            specmaticJSON.createNewFile()
+
+            specmaticJSON.writeText("""
+                {
+                    "sources": [
+                        {
+                            "provider": "web",
+                            "stub": ["http://localhost:$specSourcePort/random.yaml"]
+                        }
+                    ]
+                }
+            """.trimIndent())
+
+            val stubPort = ServerSocket(0).use { it.localPort }
+
+            createStub("localhost", stubPort).use { stub ->
+                val response = stub.client.execute(HttpRequest("POST", "/random", body = parsedJSONObject("""{"id": 1}""")))
+                assertThat(response.status).isEqualTo(200)
+            }
+
+        } finally {
+            if(specmaticJSON.exists())
+                specmaticJSON.delete()
+
+            server.stop(0, 0)
         }
     }
 

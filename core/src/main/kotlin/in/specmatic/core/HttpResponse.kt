@@ -194,6 +194,13 @@ fun toGherkinClauses(
             }
             Triple(clauses.plus(GherkinClause("status $status", Then)), types, examples)
         }.let { (clauses, types, _) ->
+            val contentTypeHeader: List<GherkinClause> = response.headers.entries.find {
+                it.key.equals(CONTENT_TYPE, ignoreCase = true)
+            }?.let {
+                val contentType = it.value.split(";")[0]
+                listOf(GherkinClause("response-header ${it.key} $contentType", Then))
+            } ?: emptyList()
+
             val (newClauses, newTypes, _) = headersToGherkin(
                 cleanedUpResponse.headers,
                 "response-header",
@@ -201,7 +208,7 @@ fun toGherkinClauses(
                 DiscardExampleDeclarations(),
                 Then
             )
-            Triple(clauses.plus(newClauses), newTypes, DiscardExampleDeclarations())
+            Triple(clauses.plus(newClauses).plus(contentTypeHeader), newTypes, DiscardExampleDeclarations())
         }.let { (clauses, types, examples) ->
             when (val result = responseBodyToGherkinClauses("ResponseBody", guessType(cleanedUpResponse.body), types)) {
                 null -> Triple(clauses, types, examples)
@@ -218,7 +225,5 @@ fun toGherkinClauses(
 
 fun dropContentAndCORSResponseHeaders(response: HttpResponse) =
     response.copy(headers = response.headers.filterNot {
-        it.key in responseHeadersToExcludeFromConversion || it.key.startsWith(
-            "Content-"
-        ) || it.key.startsWith("Access-Control-")
+        it.key in responseHeadersToExcludeFromConversion || it.key.lowercase() in listOf("content-type", "content-encoding", "content-length", "content-disposition") || it.key.startsWith("Access-Control-")
     })

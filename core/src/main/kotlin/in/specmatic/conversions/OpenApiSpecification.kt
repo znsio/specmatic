@@ -625,6 +625,8 @@ class OpenApiSpecification(
                 Pair(requestPattern.copy(body = NoBodyPattern), exampleRequestBuilder.examplesBasedOnParameters)
             )
 
+        val bodyIsRequired: Boolean = requestBody.required ?: false
+
         return requestBody.content.map { (contentType, mediaType) ->
             when (contentType.lowercase()) {
                 "multipart/form-data" -> {
@@ -688,10 +690,16 @@ class OpenApiSpecification(
 
                     val allExamples = exampleRequestBuilder.examplesWithRequestBodies(exampleBodies)
 
+                    val body = toSpecmaticPattern(mediaType, "request").let {
+                        if(bodyIsRequired)
+                            it
+                        else
+                            AnyPattern(listOf(it, NoBodyPattern))
+                    }
 
                     Pair(
                         requestPattern.copy(
-                            body = toSpecmaticPattern(mediaType, "request"),
+                            body = body,
                             headersPattern = headersPatternWithContentType(requestPattern, contentType)
                         ), allExamples
                     )
@@ -1286,16 +1294,41 @@ class OpenApiSpecification(
 
     private fun toSpecmaticQueryParam(operation: Operation): HttpQueryParamPattern {
         val parameters = operation.parameters ?: return HttpQueryParamPattern(emptyMap())
-        val queryPattern: Map<String, Pattern> = parameters.filterIsInstance<QueryParameter>().associate {
-            val specmaticPattern: Pattern = if (it.schema.type == "array") {
-                QueryParameterArrayPattern(listOf(toSpecmaticPattern(schema = it.schema.items, typeStack = emptyList())), it.name)
-            } else {
-                QueryParameterScalarPattern(toSpecmaticPattern(schema = it.schema, typeStack = emptyList(), patternName = it.name))
-            }
 
-            "${it.name}?" to specmaticPattern
-        }
-        return HttpQueryParamPattern(queryPattern)
+        val queryPattern: Map<String, Pattern> = parameters.filterIsInstance<QueryParameter>().associate {
+            val specmaticPattern: Pattern? = if (it.schema.type == "array") {
+                QueryParameterArrayPattern(listOf(toSpecmaticPattern(schema = it.schema.items, typeStack = emptyList())), it.name)
+            } else if (it.schema.type != "object") {
+                QueryParameterScalarPattern(toSpecmaticPattern(schema = it.schema, typeStack = emptyList(), patternName = it.name))
+            } else null
+
+            val queryParamKey = if(it.required == true)
+                it.name
+            else
+                "${it.name}?"
+
+            queryParamKey to specmaticPattern
+        }.filterValues { it != null }.mapValues { it.value!! }
+
+        val additionalProperties = additionalPropertiesInQueryParam(parameters)
+
+        return HttpQueryParamPattern(queryPattern, additionalProperties)
+    }
+
+    private fun additionalPropertiesInQueryParam(parameters: List<Parameter>): Pattern? {
+        val additionalProperties = parameters.filterIsInstance<QueryParameter>()
+            .find { it.schema.type == "object" && it.schema.additionalProperties != null }?.schema?.additionalProperties
+
+        if(additionalProperties == false)
+            return null
+
+        if(additionalProperties == true)
+            return AnythingPattern
+
+        if(additionalProperties is Schema<*>)
+            return toSpecmaticPattern(additionalProperties, emptyList())
+
+        return null
     }
 
     private fun toSpecmaticPathParam(openApiPath: String, operation: Operation): HttpPathPattern {

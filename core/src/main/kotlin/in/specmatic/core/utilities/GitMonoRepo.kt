@@ -4,7 +4,7 @@ import `in`.specmatic.core.git.SystemGit
 import java.io.File
 
 data class GitMonoRepo(override val testContracts: List<String>, override val stubContracts: List<String>,
-                       override val type: String?) : ContractSource {
+                       override val type: String?) : ContractSource, GitSource {
     override fun pathDescriptor(path: String): String = path
     override fun install(workingDirectory: File) {
         println("Checking list of mono repo paths...")

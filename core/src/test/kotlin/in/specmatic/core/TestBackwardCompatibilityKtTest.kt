@@ -1429,6 +1429,7 @@ paths:
       summary: hello world
       description: test
       requestBody:
+        required: true
         content:
           application/json:
             schema:

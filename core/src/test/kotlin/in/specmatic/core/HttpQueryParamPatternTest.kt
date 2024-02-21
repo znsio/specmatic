@@ -468,4 +468,57 @@ class HttpQueryParamPatternTest {
             """.trimIndent())
         }
     }
+
+    @Test
+    fun `an additional query param matching additional parameters should match successfully`() {
+        val queryPattern = HttpQueryParamPattern(mapOf("key" to QueryParameterScalarPattern(NumberPattern())), NumberPattern())
+
+        val matchResult = queryPattern.matches(
+            HttpRequest(queryParams = QueryParameters(mapOf("key" to "10", "data" to "20"))),
+            Resolver()
+        )
+
+        assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Success::class.java)
+    }
+
+    @Test
+    fun `an additional query param not matching additional parameters should not match successfully`() {
+        val queryPattern = HttpQueryParamPattern(mapOf("key" to QueryParameterScalarPattern(NumberPattern())), NumberPattern())
+
+        val matchResult = queryPattern.matches(
+            HttpRequest(queryParams = QueryParameters(mapOf("key" to "10", "data" to "true"))),
+            Resolver()
+        )
+
+        assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Failure::class.java)
+    }
+
+    @Test
+    fun `an additional query param should be added in a generated value`() {
+        val queryPattern = HttpQueryParamPattern(mapOf("key" to QueryParameterScalarPattern(NumberPattern())), NumberPattern())
+
+        val generatedValue = queryPattern.generate(Resolver())
+
+        val keys = generatedValue.map { it.first }
+        val values = generatedValue.map { it.second }
+
+        assertThat(generatedValue).hasSize(2)
+        assertThat(keys).contains("key")
+        assertThat(keys.filter { it != "key" }).hasSize(1)
+        assertThat(values).allSatisfy {
+            assertThat(it.toIntOrNull()).withFailMessage("$it was expected to be a number").isNotNull()
+        }
+    }
+
+    @Test
+    fun `an additional query param should be added in a test`() {
+        val queryPattern = HttpQueryParamPattern(mapOf("key" to QueryParameterScalarPattern(NumberPattern())), NumberPattern())
+
+        val generatedValue = queryPattern.newBasedOn(Row(), Resolver())
+
+        assertThat(generatedValue).hasSize(1)
+        assertThat(generatedValue.first()).hasSize(2)
+        assertThat(generatedValue.first().keys).contains("key")
+        assertThat(generatedValue.first().keys.filter { it != "key" }).hasSize(1)
+ }
 }

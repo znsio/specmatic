@@ -238,7 +238,7 @@ data class HttpRequestPattern(
             requestType = attempt(breadCrumb = "URL") {
                 val path = request.path ?: ""
                 val pathTypes = pathToPattern(path)
-                val queryParamTypes = toTypeMapForQueryParameters(request.queryParams, httpQueryParamPattern.queryPatterns, resolver)
+                val queryParamTypes = toTypeMapForQueryParameters(request.queryParams, httpQueryParamPattern, resolver)
                 requestType.copy(httpPathPattern = HttpPathPattern(pathTypes, path), httpQueryParamPattern = HttpQueryParamPattern(queryParamTypes))
             }
 
@@ -304,10 +304,12 @@ data class HttpRequestPattern(
 
     private fun toTypeMapForQueryParameters(
         queryParams: QueryParameters,
-        patterns: Map<String, Pattern>,
+        httpQueryParamPattern: HttpQueryParamPattern,
         resolver: Resolver
     ): Map<String, Pattern> {
-        return patterns.filterKeys { withoutOptionality(it) in queryParams.paramPairs.map { it.first } }.map {
+        val patterns: Map<String, Pattern> = httpQueryParamPattern.queryPatterns
+
+        val paramsWithinPattern = patterns.filterKeys { withoutOptionality(it) in queryParams.paramPairs.map { it.first } }.map {
             val key = withoutOptionality(it.key)
             val pattern = it.value
 
@@ -322,7 +324,14 @@ data class HttpRequestPattern(
                     }
 
                     is QueryParameterScalarPattern -> {
-                        key to QueryParameterScalarPattern(encompassedType(values.single(), key, pattern.pattern, resolver))
+                        key to QueryParameterScalarPattern(
+                            encompassedType(
+                                values.single(),
+                                key,
+                                pattern.pattern,
+                                resolver
+                            )
+                        )
                     }
 
                     else -> {
@@ -331,6 +340,40 @@ data class HttpRequestPattern(
                 }
             }
         }.toMap()
+
+        val paramsUnaccountedFor = queryParams.paramPairs.filter { (name, _) ->
+            name !in paramsWithinPattern
+        }.groupBy { (name, _) ->
+            name
+        }
+
+        val paramsOutsidePattern = if(httpQueryParamPattern.additionalProperties != null) {
+            val results = paramsUnaccountedFor.map { (name, values) ->
+                values.map { (_, rawValue) ->
+                    val value = httpQueryParamPattern.additionalProperties.parse(rawValue, resolver)
+                    httpQueryParamPattern.additionalProperties.matches(value, resolver)
+                }
+            }.flatten()
+
+            val matchResult = Result.fromResults(results)
+
+            if(matchResult is Failure)
+                throw ContractException(matchResult.toFailureReport())
+
+            paramsUnaccountedFor.map { (name, values) ->
+                val pattern = if (values.size > 1) {
+                    QueryParameterArrayPattern(values.map { ExactValuePattern(StringValue(it.second)) }, name)
+                } else {
+                    QueryParameterScalarPattern(ExactValuePattern(StringValue(values.single().second)))
+                }
+
+                name to pattern
+            }.toMap()
+        } else {
+            emptyMap()
+        }
+
+        return paramsWithinPattern + paramsOutsidePattern
     }
 
     private fun encompassedType(valueString: String, key: String?, type: Pattern, resolver: Resolver): Pattern {

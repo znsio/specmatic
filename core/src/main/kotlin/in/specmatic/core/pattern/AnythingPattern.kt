@@ -47,7 +47,7 @@ object AnythingPattern: Pattern {
         return StringValue()
     }
 
-    override fun complexity(resolver: Resolver): ULong {
+    override fun testCount(resolver: Resolver): ULong {
         return 1.toULong()
     }
 

@@ -49,9 +49,9 @@ data class TabularPattern(
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value = JSONArrayValue(valueList)
-    override fun complexity(resolver: Resolver): ULong {
-        val keyComplexity = if(pattern.keys.any { isOptional(it) }) 2 else 1
-        return pattern.values.fold(1.toULong()) { acc, pattern -> acc * pattern.complexity(resolver) } * keyComplexity.toULong()
+    override fun testCount(resolver: Resolver): ULong {
+        val testCountBasedOnKeys = if(pattern.keys.any { isOptional(it) }) 2 else 1
+        return pattern.values.fold(1.toULong()) { acc, pattern -> acc * pattern.testCount(resolver) } * testCountBasedOnKeys.toULong()
     }
 
     override fun generate(resolver: Resolver): JSONObjectValue {

@@ -36,7 +36,7 @@ object EmptyStringPattern : Pattern {
         return JSONArrayValue(valueList)
     }
 
-    override fun complexity(resolver: Resolver): ULong {
+    override fun testCount(resolver: Resolver): ULong {
         return 1.toULong()
     }
 

@@ -84,8 +84,8 @@ data class Feature(
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val resolverStrategies: ResolverStrategies = strategiesFromFlags()
 ) {
-    fun complexity(): ULong {
-        return scenarios.sumOf { scenario -> scenario.complexity() }
+    fun testCount(): ULong {
+        return scenarios.sumOf { scenario -> scenario.testCount() }
     }
 
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {

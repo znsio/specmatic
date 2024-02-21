@@ -45,7 +45,7 @@ data class URLPattern(val scheme: URLScheme = URLScheme.HTTPS, override val type
         return JSONArrayValue(valueList)
     }
 
-    override fun complexity(resolver: Resolver): ULong {
+    override fun testCount(resolver: Resolver): ULong {
         return 1.toULong()
     }
 

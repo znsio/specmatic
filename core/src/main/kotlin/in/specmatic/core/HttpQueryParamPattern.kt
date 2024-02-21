@@ -8,11 +8,11 @@ import java.net.URI
 import kotlin.math.pow
 
 data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>) {
-    fun complexity(): ULong {
-        val keyComplexity = 2.toDouble().pow(queryPatterns.keys.count { isOptional(it) }).toULong()
-        val valueComplexity = queryPatterns.values.fold(1.toULong()) { acc, pattern -> acc * pattern.complexity(Resolver()) }
+    fun testCount(): ULong {
+        val testCountBasedOnKeys = 2.toDouble().pow(queryPatterns.keys.count { isOptional(it) }).toULong()
+        val testCountBasedOnValues = queryPatterns.values.fold(1.toULong()) { acc, pattern -> acc * pattern.testCount(Resolver()) }
 
-        return keyComplexity * valueComplexity
+        return testCountBasedOnKeys * testCountBasedOnValues
     }
 
     fun generate(resolver: Resolver): List<Pair<String, String>> {

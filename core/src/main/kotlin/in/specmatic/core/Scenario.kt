@@ -79,11 +79,11 @@ data class Scenario(
         serviceType = scenarioInfo.serviceType
     )
 
-    fun complexity(): ULong {
+    fun testCount(): ULong {
         val rowCount= examples.sumOf { it.rows.size }
 
         if(testsWillBeGenerated(rowCount))
-            return httpRequestPattern.complexity(resolver)
+            return httpRequestPattern.testCount(resolver)
 
         return rowCount.toULong()
     }

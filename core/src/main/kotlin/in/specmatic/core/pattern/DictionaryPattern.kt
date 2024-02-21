@@ -93,8 +93,8 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
         return JSONArrayValue(valueList)
     }
 
-    override fun complexity(resolver: Resolver): ULong {
-        return valuePattern.complexity(resolver)
+    override fun testCount(resolver: Resolver): ULong {
+        return valuePattern.testCount(resolver)
     }
 
     override val typeName: String = "object with key type ${keyPattern.typeName} and value type ${valuePattern.typeName}"

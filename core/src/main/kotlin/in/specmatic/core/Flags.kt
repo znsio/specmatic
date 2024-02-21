@@ -33,7 +33,7 @@ object Flags {
     }
 
     fun maxTestRequestCombinationsIsSet(): Boolean {
-        return MAX_TEST_REQUEST_COMBINATIONS in System.getProperties().keys
+        return MAX_TEST_REQUEST_COMBINATIONS in System.getProperties().keys || MAX_TEST_REQUEST_COMBINATIONS in System.getenv()
     }
 
     fun onlyPositive(): Boolean {

@@ -111,8 +111,8 @@ data class JSONObjectPattern(
         return JSONArrayValue(valueList)
     }
 
-    override fun complexity(resolver: Resolver): ULong {
-        return allOrNothingComplexity(pattern, resolver)
+    override fun testCount(resolver: Resolver): ULong {
+        return allOrNothingTestCount(pattern, resolver)
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {

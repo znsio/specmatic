@@ -14,17 +14,17 @@ fun <ValueType> combinatorialCombinations(map: Map<String, ValueType>): List<Lis
     return combinations(map.keys.toList())
 }
 
-fun allOrNothingComplexity(pattern: Map<String, Pattern>, resolver: Resolver): ULong {
+fun allOrNothingTestCount(pattern: Map<String, Pattern>, resolver: Resolver): ULong {
     val optional = pattern.filter { isOptional(it.key) }
     val mandatory = pattern.filter { !isOptional(it.key) }
 
-    val mandatoryComplexity =
-        mandatory.values.fold(1.toULong()) { acc, mandatoryPattern -> acc * mandatoryPattern.complexity(resolver) }
+    val mandatoryTestCount =
+        mandatory.values.fold(1.toULong()) { acc, mandatoryPattern -> acc * mandatoryPattern.testCount(resolver) }
 
     if (optional.isEmpty())
-        return mandatoryComplexity
+        return mandatoryTestCount
 
-    val optionalComplexity =
-        optional.values.fold(1.toULong()) { acc, optionalPattern -> acc * optionalPattern.complexity(resolver) }
-    return mandatoryComplexity + (mandatoryComplexity * optionalComplexity)
+    val optionalTestCount =
+        optional.values.fold(1.toULong()) { acc, optionalPattern -> acc * optionalPattern.testCount(resolver) }
+    return mandatoryTestCount + (mandatoryTestCount * optionalTestCount)
 }

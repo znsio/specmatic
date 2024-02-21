@@ -29,7 +29,7 @@ data class ExactValuePattern(override val pattern: Value, override val typeAlias
         return pattern.listOf(valueList)
     }
 
-    override fun complexity(resolver: Resolver): ULong {
+    override fun testCount(resolver: Resolver): ULong {
         return 1.toULong()
     }
 

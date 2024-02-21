@@ -131,8 +131,8 @@ class QueryParameterArrayPattern(override val pattern: List<Pattern>, val parame
         return JSONArrayValue(valueList)
     }
 
-    override fun complexity(resolver: Resolver): ULong {
-        return pattern.first().complexity(resolver)
+    override fun testCount(resolver: Resolver): ULong {
+        return pattern.first().testCount(resolver)
     }
 
     override val typeAlias: String?

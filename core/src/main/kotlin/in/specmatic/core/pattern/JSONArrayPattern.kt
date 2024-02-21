@@ -67,8 +67,8 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         return JSONArrayValue(valueList)
     }
 
-    override fun complexity(resolver: Resolver): ULong {
-        return pattern.fold(1.toULong()) { acc, pattern -> acc * pattern.complexity(resolver) }
+    override fun testCount(resolver: Resolver): ULong {
+        return pattern.fold(1.toULong()) { acc, pattern -> acc * pattern.testCount(resolver) }
     }
 
     override fun generate(resolver: Resolver): Value {

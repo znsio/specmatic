@@ -76,11 +76,11 @@ data class XMLTypeData(val name: String = "", val realName: String, val attribut
         }
     }
 
-    fun complexity(resolver: Resolver): ULong {
-        val attributeKeyComplexity = if(attributes.any { isOptional(it) }) 2.toULong() else 1.toULong()
-        val attributeValueComplexity = attributes.values.fold(1.toULong()) { acc, pattern -> acc * pattern.complexity(resolver) }
-        val nodeComplexity = nodes.fold(1.toULong()) { acc, pattern -> acc * pattern.complexity(resolver) }
+    fun testCount(resolver: Resolver): ULong {
+        val testCountBasedOnAttributeKeys = if(attributes.any { isOptional(it) }) 2.toULong() else 1.toULong()
+        val testCountBasedOnAttributeValues = attributes.values.fold(1.toULong()) { acc, pattern -> acc * pattern.testCount(resolver) }
+        val testCountForNode = nodes.fold(1.toULong()) { acc, pattern -> acc * pattern.testCount(resolver) }
 
-        return attributeKeyComplexity * attributeValueComplexity * nodeComplexity
+        return testCountBasedOnAttributeKeys * testCountBasedOnAttributeValues * testCountForNode
     }
 }

@@ -225,8 +225,8 @@ data class AnyPattern(
         return this
     }
 
-    override fun complexity(resolver: Resolver): ULong {
-        return pattern.sumOf { pattern -> pattern.complexity(resolver) }
+    override fun testCount(resolver: Resolver): ULong {
+        return pattern.sumOf { pattern -> pattern.testCount(resolver) }
     }
 }
 

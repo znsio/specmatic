@@ -361,7 +361,7 @@ open class SpecmaticJUnitSupport {
     }
 
     fun loadTestScenarios(
-        path: String,
+        specFilePath: String,
         suggestionsPath: String,
         suggestionsData: String,
         config: TestConfig,
@@ -373,10 +373,10 @@ open class SpecmaticJUnitSupport {
         filterName: String?,
         filterNotName: String?
     ): Pair<List<ContractTest>, List<Endpoint>> {
-        if(hasOpenApiFileExtension(path) && !isOpenAPI(path))
+        if(hasOpenApiFileExtension(specFilePath) && !isOpenAPI(specFilePath))
             return Pair(emptyList(), emptyList())
 
-        val contractFile = File(path)
+        val contractFile = File(specFilePath)
         val feature =
             parseContractFileToFeature(
                 contractFile.path,
@@ -388,14 +388,14 @@ open class SpecmaticJUnitSupport {
                 securityConfiguration
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
-        val complexity = feature.complexity()
+        val testCount = feature.testCount()
 
-        logger.debug("Complexity score for $path: $complexity")
+        logger.debug("Estimated test count for $specFilePath: $testCount")
 
-        if(complexity > 1000.toULong() && System.getProperty(Flags.MAX_TEST_REQUEST_COMBINATIONS) == null) {
+        if(testCount > 500.toULong() && !Flags.maxTestRequestCombinationsIsSet()) {
             val limit = 5
 
-            logger.log("Complexity of $path is high and may generate more tests than your machine may handle. Limiting the tests using the environment variable MAX_TEST_REQUEST_COMBINATIONS=$limit. Please adjust as needed.")
+            logger.log("WARNING: API design for one or more endpoints in $specFilePath will result in a combinatorial explosion of test cases (refer to <link> for more details). To avoid the same, Specmatic has chosen a subset of the tests, by setting the environment variable MAX_TEST_REQUEST_COMBINATIONS=$limit. Please consider revisiting your API design, or tweaking this value to suit your needs.")
             logger.newLine()
 
             System.setProperty(Flags.MAX_TEST_REQUEST_COMBINATIONS, "5")

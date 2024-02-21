@@ -2,10 +2,9 @@ package `in`.specmatic.core
 
 import `in`.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
-class ComplexityTest {
+class TestCountTest {
     @Test
     fun `request body is string`() {
         val spec = """
@@ -30,7 +29,7 @@ class ComplexityTest {
                             type: string
         """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -62,7 +61,7 @@ class ComplexityTest {
                             type: string
         """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -92,7 +91,7 @@ class ComplexityTest {
                             type: string
         """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -129,7 +128,7 @@ class ComplexityTest {
                             type: string
         """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -164,7 +163,7 @@ class ComplexityTest {
                             type: string
         """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -199,7 +198,7 @@ class ComplexityTest {
                             type: string
         """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -233,7 +232,7 @@ class ComplexityTest {
                             type: string
         """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -265,7 +264,7 @@ class ComplexityTest {
                             type: string
         """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -316,7 +315,7 @@ class ComplexityTest {
                             type: string
         """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -365,7 +364,7 @@ class ComplexityTest {
                             type: string
         """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -457,7 +456,7 @@ class ComplexityTest {
                         type: string
     """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -505,7 +504,7 @@ class ComplexityTest {
                         type: string
     """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -551,7 +550,7 @@ class ComplexityTest {
                         type: string
     """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -586,7 +585,7 @@ class ComplexityTest {
                             type: string
         """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -621,7 +620,7 @@ class ComplexityTest {
                             type: string
         """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     @Test
@@ -666,10 +665,10 @@ class ComplexityTest {
                             type: string
         """.trimIndent()
 
-        Assertions.assertThat(spec.complexity()).isEqualTo(spec.contractTests().size)
+        Assertions.assertThat(spec.testCount()).isEqualTo(spec.contractTests().size)
     }
 
     private fun String.contractTests() = OpenApiSpecification.fromYAML(this, "").toFeature().generateContractTestScenarios(emptyList())
-    private fun String.complexity() = OpenApiSpecification.fromYAML(this, "").toFeature().complexity().toInt()
+    private fun String.testCount() = OpenApiSpecification.fromYAML(this, "").toFeature().testCount().toInt()
 
 }

@@ -117,8 +117,8 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         return resolverWithEmptyType.withCyclePrevention(pattern) { pattern.listOf(valueList, it) }
     }
 
-    override fun complexity(resolver: Resolver): ULong {
-        return pattern.complexity(resolver)
+    override fun testCount(resolver: Resolver): ULong {
+        return pattern.testCount(resolver)
     }
 
     override val typeName: String = "list of ${pattern.typeName}"

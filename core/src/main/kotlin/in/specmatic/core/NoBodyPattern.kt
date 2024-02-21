@@ -50,7 +50,7 @@ object NoBodyPattern : Pattern {
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value = JSONArrayValue(valueList)
-    override fun complexity(resolver: Resolver): ULong {
+    override fun testCount(resolver: Resolver): ULong {
         return 1.toULong()
     }
 

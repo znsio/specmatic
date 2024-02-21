@@ -2,17 +2,15 @@ package application
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.log.logException
-import `in`.specmatic.core.pattern.ContractException
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
-@Command(name = "complexity",
+@Command(name = "test-count",
         hidden = true,
-        description = ["Show the complexity of a specification"])
-class ComplexityCommand : Callable<Unit> {
+        description = ["Estimate the count of tests that a specification will generate when without examples"])
+class TestCountCommand : Callable<Unit> {
     @Parameters(index = "0", description = ["Specification file path"])
     lateinit var specification: String
 
@@ -24,6 +22,6 @@ class ComplexityCommand : Callable<Unit> {
 
         val feature = parseContractFileToFeature(specification)
 
-        println(feature.complexity())
+        println(feature.testCount())
     }
 }

@@ -10,7 +10,7 @@ import java.util.concurrent.Callable
         name = "specmatic",
         mixinStandardHelpOptions = true,
         versionProvider = VersionProvider::class,
-        subcommands = [BundleCommand::class, CompareCommand::class, CompatibleCommand::class, ComplexityCommand::class, DifferenceCommand::class, GenerateCompletion::class, GraphCommand::class, MergeCommand::class, ToOpenAPICommand::class, ImportCommand::class, InstallCommand::class, ProxyCommand::class, PushCommand::class, ReDeclaredAPICommand::class, SamplesCommand::class, StubCommand::class, SubscribeCommand::class, TestCommand::class, ValidateViaLogs::class, CentralContractRepoReportCommand::class]
+        subcommands = [BundleCommand::class, CompareCommand::class, CompatibleCommand::class, TestCountCommand::class, DifferenceCommand::class, GenerateCompletion::class, GraphCommand::class, MergeCommand::class, ToOpenAPICommand::class, ImportCommand::class, InstallCommand::class, ProxyCommand::class, PushCommand::class, ReDeclaredAPICommand::class, SamplesCommand::class, StubCommand::class, SubscribeCommand::class, TestCommand::class, ValidateViaLogs::class, CentralContractRepoReportCommand::class]
 )
 class SpecmaticCommand : Callable<Int> {
     override fun call(): Int {

@@ -390,7 +390,11 @@ open class SpecmaticJUnitSupport {
                 securityConfiguration
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
-        val testCount = feature.testCount()
+        val testCounts = feature.testCounts().filter { (scenarioName, testCount) ->
+            scenarioName.split(" ").last() == "200"
+        }
+
+        val testCount = testCounts.sumOf { (scenarioName, testCount) -> testCount }
 
         logger.debug("Estimated test count for $specFilePath: $testCount")
 
@@ -398,6 +402,14 @@ open class SpecmaticJUnitSupport {
             val limit = 5
 
             logger.log("WARNING: API design for one or more endpoints in $specFilePath will result in a combinatorial explosion of test cases (refer to <link> for more details). To avoid the same, Specmatic has chosen a subset of the tests, by setting the environment variable MAX_TEST_REQUEST_COMBINATIONS=$limit. Please consider revisiting your API design, or tweaking this value to suit your needs.")
+            logger.newLine()
+
+            logger.log("Estimated Test counts")
+
+            testCounts.forEach { (scenarioName, testCount) ->
+                logger.log("$scenarioName --> $testCount")
+            }
+
             logger.newLine()
 
             System.setProperty(Flags.MAX_TEST_REQUEST_COMBINATIONS, "5")

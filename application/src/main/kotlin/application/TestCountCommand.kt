@@ -22,6 +22,6 @@ class TestCountCommand : Callable<Unit> {
 
         val feature = parseContractFileToFeature(specification)
 
-        println(feature.testCount())
+        println(feature.testCounts())
     }
 }

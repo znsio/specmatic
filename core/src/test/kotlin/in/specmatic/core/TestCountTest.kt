@@ -669,6 +669,6 @@ class TestCountTest {
     }
 
     private fun String.contractTests() = OpenApiSpecification.fromYAML(this, "").toFeature().generateContractTestScenarios(emptyList())
-    private fun String.testCount() = OpenApiSpecification.fromYAML(this, "").toFeature().testCounts().toInt()
+    private fun String.testCount(): Int = OpenApiSpecification.fromYAML(this, "").toFeature().testCounts().sumOf { it.second }.toInt()
 
 }

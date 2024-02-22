@@ -13,7 +13,7 @@ object NoBodyPattern : Pattern {
         if(sampleData == null)
             return Result.Success()
 
-        if(sampleData is NoBodyValue)
+            if(sampleData is NoBodyValue)
             return Result.Success()
 
         return Result.Failure("Expected no body, but found ${sampleData.displayableType()}")

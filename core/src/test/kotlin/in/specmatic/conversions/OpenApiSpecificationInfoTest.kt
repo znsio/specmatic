@@ -31,7 +31,7 @@ class OpenApiSpecificationInfoTest {
           API Specification Summary: testFilePath
             OpenAPI Version: 3.0.0
             API Paths: 1, API Operations: 1
-            Schema components: 1, Security Schemes: null
+            Schema components: 1, Security Schemes: none
 
         """.trimIndent()
 
@@ -90,7 +90,7 @@ class OpenApiSpecificationInfoTest {
           API Specification Summary: testFilePath
             OpenAPI Version: 3.0.0
             API Paths: 0, API Operations: 0
-            Schema components: null, Security Schemes: null
+            Schema components: null, Security Schemes: none
 
         """.trimIndent()
 

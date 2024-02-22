@@ -13,9 +13,6 @@ object NoBodyPattern : Pattern {
         if(sampleData == null)
             return Result.Success()
 
-//        if(sampleData is StringValue && sampleData.string.isEmpty())
-//            return Result.Success()
-
         if(sampleData is NoBodyValue)
             return Result.Success()
 

@@ -4,7 +4,6 @@ import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class OptionalBodyPatternTest {

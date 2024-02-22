@@ -15,11 +15,35 @@ import org.junit.jupiter.api.Test
 
 internal class JSONArrayPatternTest {
     @Test
-    fun `An empty array should match an array matcher`() {
+    fun `An empty array should match an array pattern`() {
         val value = parsedValue("[]")
         val pattern = parsedPattern("""["(number*)"]""")
 
         value shouldMatch pattern
+    }
+
+    @Test
+    fun `An empty array should match an empty array pattern`() {
+        val value = parsedValue("[]")
+        val pattern = parsedPattern("""[]""")
+
+        value shouldMatch pattern
+    }
+
+    @Test
+    fun `An empty array should not match an populated array pattern`() {
+        val value = parsedValue("[]")
+        val pattern = parsedPattern("""["(number)"]""")
+
+        value shouldNotMatch pattern
+    }
+
+    @Test
+    fun `A populated array should not match an empty array pattern`() {
+        val value = parsedValue("[1]")
+        val pattern = parsedPattern("""[]""")
+
+        value shouldNotMatch pattern
     }
 
     @Test

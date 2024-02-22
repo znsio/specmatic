@@ -35,12 +35,15 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         if (sampleData !is JSONArrayValue)
             return mismatchResult(this, sampleData, resolver.mismatchMessages)
 
-        if (sampleData.list.isEmpty())
+        if (sampleData.list.isEmpty() && (pattern.isEmpty()))
             return Result.Success()
 
         val resolverWithNumberType = withNumberType(withNullPattern(resolver))
-
         val resolvedTypes = pattern.map { resolvedHop(it, resolverWithNumberType) }
+
+        if(resolvedTypes.singleOrNull() is ListPattern) {
+            return resolvedTypes.single().matches(sampleData, resolver)
+        }
 
         return resolvedTypes.asSequence().mapIndexed { index, patternValue ->
             when {

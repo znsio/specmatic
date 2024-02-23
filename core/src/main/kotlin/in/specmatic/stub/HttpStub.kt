@@ -703,16 +703,6 @@ fun getHttpResponse(
         } else {
             fakeHttpResponse(features, httpRequest)
         }
-
-//        matchingStubResponse?.let { FoundStubbedResponse(matchingStubResponse) }
-//            ?: if (httpClientFactory != null && passThroughTargetBase.isNotBlank()) {
-//                NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
-//            } else {
-//                if (strictMode)
-//                    NotStubbed(HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults)))
-//                else
-//                    fakeHttpResponse(features, httpRequest)
-//            }
     } finally {
         features.forEach { feature ->
             feature.clearServerState()

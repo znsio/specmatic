@@ -81,7 +81,7 @@ dependencies {
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
-    testImplementation('org.springframework.boot:spring-boot-starter-test:3.2.2') {
+    testImplementation('org.springframework.boot:spring-boot-starter-test:3.2.3') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude module: 'mockito-core'
     }

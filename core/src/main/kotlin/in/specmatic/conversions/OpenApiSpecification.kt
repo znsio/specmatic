@@ -1272,8 +1272,11 @@ class OpenApiSpecification(
 
     private fun resolveReferenceToSchema(component: String): Pair<String, Schema<Any>> {
         val componentName = extractComponentName(component)
+        val components = parsedOpenApi.components ?: throw ContractException("Could not find components in the specification (trying to dereference $component")
+        val schemas = components.schemas ?: throw ContractException("Could not find schemas components in the specification (trying to dereference $component)")
+
         val schema =
-            parsedOpenApi.components.schemas[componentName] ?: ObjectSchema().also { it.properties = emptyMap() }
+            schemas[componentName] ?: ObjectSchema().also { it.properties = emptyMap() }
 
         return componentName to schema as Schema<Any>
     }
@@ -1286,7 +1289,23 @@ class OpenApiSpecification(
     }
 
     private fun extractComponentName(component: String): String {
-        if (!component.startsWith("#")) throw UnsupportedOperationException("Specmatic only supports local component references.")
+        println(component)
+        if(!component.startsWith("#")) {
+            val filePath = component.substringBeforeLast("#")
+            val message = try {
+                val file = File(filePath)
+
+                if (file.isAbsolute)
+                    "Could not dereference $component because $filePath does not exist."
+                else
+                    "Could not dereference $component because $filePath (absolute path ${file.absolutePath} does not exist."
+            } catch(e: Throwable) {
+                "Could not dereference $component due an an error (${e.message})."
+            }
+
+            throw ContractException(message)
+        }
+
         return componentNameFromReference(component)
     }
 

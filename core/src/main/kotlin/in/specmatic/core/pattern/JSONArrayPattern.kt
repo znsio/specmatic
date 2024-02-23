@@ -35,40 +35,28 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         if (sampleData !is JSONArrayValue)
             return mismatchResult(this, sampleData, resolver.mismatchMessages)
 
-        if(pattern.isEmpty()) {
-            return if(sampleData.list.isEmpty())
-                Result.Success()
-            else
-                Result.Failure("Expected no elements in the list but got a value with ${sampleData.list.size} elements")
-        }
-
         val resolverWithNumberType = withNumberType(withNullPattern(resolver))
-        val resolvedTypes = pattern.map { resolvedHop(it, resolverWithNumberType) }
+        val resolvedPatterns = pattern.map { resolvedHop(it, resolverWithNumberType) }
 
-        if(resolvedTypes.singleOrNull() is ListPattern) {
-            return resolvedTypes.single().matches(sampleData, resolver)
+        val theOnlyPatternInTheArray = resolvedPatterns.singleOrNull()
+
+        if(theOnlyPatternInTheArray is ListPattern || theOnlyPatternInTheArray is RestPattern) {
+            return theOnlyPatternInTheArray.matches(sampleData, resolverWithNumberType)
         }
 
-        return resolvedTypes.asSequence().mapIndexed { index, patternValue ->
-            when {
-                patternValue is RestPattern -> {
-                    val rest = when (index) {
-                        sampleData.list.size -> emptyList()
-                        else -> sampleData.list.slice(index..sampleData.list.lastIndex)
-                    }
-                    patternValue.matches(JSONArrayValue(rest), resolverWithNumberType).breadCrumb("[$index...${sampleData.list.lastIndex}]")
-                }
-                index >= sampleData.list.size ->
-                    Result.Failure("Expected an array of length ${pattern.size}, actual length ${sampleData.list.size}")
-                else -> {
-                    val sampleValue = sampleData.list[index]
-                    resolverWithNumberType.matchesPattern(null, patternValue, sampleValue).breadCrumb("""[$index]""")
-                }
-            }
+        if(resolvedPatterns.size != sampleData.list.size)
+            return Result.Failure(arrayLengthMismatchMessage(resolvedPatterns.size, sampleData.list.size))
+
+        return resolvedPatterns.asSequence().mapIndexed { index, patternValue ->
+            val sampleValue = sampleData.list[index]
+            resolverWithNumberType.matchesPattern(null, patternValue, sampleValue).breadCrumb("""[$index]""")
         }.find {
             it is Result.Failure
         } ?: Result.Success()
     }
+
+    private fun arrayLengthMismatchMessage(expectedLength: Int, actualLength: Int) =
+        "Expected an array of length $expectedLength, actual length $actualLength"
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         return JSONArrayValue(valueList)

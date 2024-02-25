@@ -50,13 +50,13 @@ internal class CsvPatternTest {
 
     @Test
     fun `generates values for negative tests`() {
-        val negativeTypes = CsvPattern(NumberPattern()).negativeBasedOn(Row(), Resolver())
+        val negativeTypes = CsvPattern(NumberPattern()).negativeBasedOn(Row(), Resolver()).toList()
         assertThat(negativeTypes).hasSize(3)
     }
 
     @Test
     fun `generates values for tests`() {
-        assertThat(CsvPattern(NumberPattern()).newBasedOn(Row(), Resolver())).satisfies(Consumer {
+        assertThat(CsvPattern(NumberPattern()).newBasedOn(Row(), Resolver()).toList()).satisfies(Consumer {
             assertThat(it).hasSize(1)
             assertThat(it.first()).isInstanceOf(CsvPattern::class.java)
             assertThat(it.first().pattern).isInstanceOf(NumberPattern::class.java)
@@ -65,7 +65,7 @@ internal class CsvPatternTest {
 
     @Test
     fun `generates values for backward compatibility check`() {
-        assertThat(CsvPattern(NumberPattern()).newBasedOn(Resolver())).satisfies(Consumer {
+        assertThat(CsvPattern(NumberPattern()).newBasedOn(Resolver()).toList()).satisfies(Consumer {
             assertThat(it).hasSize(1)
             assertThat(it.first()).isInstanceOf(CsvPattern::class.java)
             assertThat(it.first().pattern).isInstanceOf(NumberPattern::class.java)
@@ -224,7 +224,7 @@ paths:
     @Test
     @Tag(GENERATION)
     fun `negative patterns should be generated`() {
-        val result = StringPattern().negativeBasedOn(Row(), Resolver())
+        val result = StringPattern().negativeBasedOn(Row(), Resolver()).toList()
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null",
             "number",

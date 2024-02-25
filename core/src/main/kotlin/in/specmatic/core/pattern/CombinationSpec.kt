@@ -17,14 +17,17 @@ import kotlin.math.min
  * all combinations using the second candidate value of the first set, and so on for each subsequent value and set.
  */
 class CombinationSpec<ValueType>(
-    keyToCandidatesOrig: Map<String, List<ValueType>>,
+    keyToCandidatesOrig: Map<String, Sequence<ValueType>>,
     private val maxCombinations: Int,
 ) {
     init {
         if (maxCombinations < 1) throw IllegalArgumentException("maxCombinations must be > 0 and <= ${Int.MAX_VALUE}")
     }
+
+    //TODO: STREAMING
+
     // Omit entries without any candidate values
-    private val keyToCandidates = keyToCandidatesOrig.filterValues { it.isNotEmpty() }
+    private val keyToCandidates = keyToCandidatesOrig.mapValues { it.value.toList() }.filterValues { it.isNotEmpty() }
     private val indexToKeys = keyToCandidates.keys.toList()
     private val indexToCandidates = keyToCandidates.values
     private val maxCandidateCount = indexToCandidates.maxOfOrNull { it.size } ?: 0
@@ -36,10 +39,10 @@ class CombinationSpec<ValueType>(
 
     val selectedCombinations = toSelectedCombinations()
 
-    private fun calculatePrioritizedComboIndexes(): List<Int> {
+    private fun calculatePrioritizedComboIndexes(): Sequence<Int> {
         // Prioritizes using each candidate value as early as possible so uses first candidate of each set,
         // then second candidate, and so on.
-        val prioritizedCombos = (0 until maxCandidateCount).map { lockStepOffset ->
+        val prioritizedCombos = (0 until maxCandidateCount).asSequence().map { lockStepOffset ->
             val fullComboIndex = indexToCandidates.fold(0) {acc, candidates ->
                 // Lower-cardinality sets run out of candidates first so are reused round-robin until other sets finish
                 val candidateOffset = lockStepOffset % candidates.size
@@ -56,8 +59,8 @@ class CombinationSpec<ValueType>(
     private fun toComboIndex(candidateSetSize: Int, candidateOffset: Int, comboIndexSoFar: Int) =
         (comboIndexSoFar * candidateSetSize) + candidateOffset
 
-    private fun toSelectedCombinations(): List<Map<String, ValueType>> {
-        val prioritizedCombos = prioritizedComboIndexes.map { toCombo(it) }
+    private fun toSelectedCombinations(): Sequence<Map<String, ValueType>> {
+        val prioritizedCombos = prioritizedComboIndexes.map { toCombo(it) }.toList()
         val remainingCombos = (0..lastCombination)
             .filterNot { prioritizedComboIndexes.contains(it) }
             .map { toCombo(it) }
@@ -65,8 +68,8 @@ class CombinationSpec<ValueType>(
         val combined = prioritizedCombos.plus(remainingCombos)
 
         return if (combined.size > maxCombinations)
-            combined.subList(0, maxCombinations)
-        else combined
+            combined.subList(0, maxCombinations).asSequence()
+        else combined.asSequence()
     }
     private fun toCombo(comboIndex: Int): Map<String, ValueType> {
         var subIndex = comboIndex

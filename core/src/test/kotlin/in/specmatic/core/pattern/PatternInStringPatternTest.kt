@@ -38,7 +38,7 @@ internal class PatternInStringPatternTest {
 
     @Test
     fun `should generate a list of patterns based on a Row`() {
-        val patterns = PatternInStringPattern(NumberPattern()).newBasedOn(Row(), Resolver())
+        val patterns = PatternInStringPattern(NumberPattern()).newBasedOn(Row(), Resolver()).toList()
 
         assertThat(patterns).hasSize(1)
 
@@ -93,7 +93,7 @@ internal class PatternInStringPatternTest {
     @Test
     @Tag(GENERATION)
     fun `negative values should be generated`() {
-        val result = PatternInStringPattern().negativeBasedOn(Row(), Resolver())
+        val result = PatternInStringPattern().negativeBasedOn(Row(), Resolver()).toList()
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null"
         )

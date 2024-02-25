@@ -61,9 +61,6 @@ open class SpecmaticJUnitSupport {
 
         private val threads: Vector<String> = Vector<String>()
 
-        var totalTestCount: Int = 0
-
-
         @AfterAll
         @JvmStatic
         fun report() {
@@ -202,7 +199,7 @@ open class SpecmaticJUnitSupport {
                             filterNotName = filterNotName
                         )
                     }
-                    val tests: List<ContractTest> = testScenariosAndEndpointsPairList.flatMap { it.first }
+                    val tests: Sequence<ContractTest> = testScenariosAndEndpointsPairList.asSequence().flatMap { it.first }
                     val endpoints: List<Endpoint> = testScenariosAndEndpointsPairList.flatMap { it.second }
                     Pair(tests, endpoints)
                 }
@@ -219,7 +216,7 @@ open class SpecmaticJUnitSupport {
 
                     val testScenariosAndEndpointsPairList = contractFilePaths.map { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security, filterName, filterNotName) }
 
-                    val tests: List<ContractTest> = testScenariosAndEndpointsPairList.flatMap { it.first }
+                    val tests: Sequence<ContractTest> = testScenariosAndEndpointsPairList.asSequence().flatMap { it.first }
 
                     val endpoints: List<Endpoint> = testScenariosAndEndpointsPairList.flatMap { it.second }
 
@@ -235,7 +232,6 @@ open class SpecmaticJUnitSupport {
         }
 
         var checkedAPIs = false
-        totalTestCount = testScenarios.size
 
         val testBaseURL = try {
             constructTestBaseURL()
@@ -244,8 +240,6 @@ open class SpecmaticJUnitSupport {
             logger.newLine()
             throw(e)
         }
-
-        logger.log("Executing $totalTestCount tests")
 
         return testScenarios.map { testScenario ->
             DynamicTest.dynamicTest(testScenario.testDescription()) {
@@ -376,9 +370,9 @@ open class SpecmaticJUnitSupport {
         securityConfiguration: SecurityConfiguration? = null,
         filterName: String?,
         filterNotName: String?
-    ): Pair<List<ContractTest>, List<Endpoint>> {
+    ): Pair<Sequence<ContractTest>, List<Endpoint>> {
         if(hasOpenApiFileExtension(path) && !isOpenAPI(path))
-            return Pair(emptyList(), emptyList())
+            return Pair(emptySequence(), emptyList())
 
         val contractFile = File(path)
         val feature =
@@ -413,8 +407,8 @@ open class SpecmaticJUnitSupport {
             )
         }
 
-        val tests: List<ContractTest> = feature
-            .copy(scenarios = selectTestsToRun(feature.scenarios, filterName, filterNotName) { it.testDescription() })
+        val tests: Sequence<ContractTest> = feature
+            .copy(scenarios = selectTestsToRun(feature.scenarios.asSequence(), filterName, filterNotName) { it.testDescription() }.toList())
             .also {
                 if (it.scenarios.isEmpty())
                     logger.log("All scenarios were filtered out.")
@@ -497,11 +491,11 @@ private fun asJSONObjectValue(value: Value): Map<String, Value> {
 }
 
 fun <T> selectTestsToRun(
-    testScenarios: List<T>,
+    testScenarios: Sequence<T>,
     filterName: String? = null,
     filterNotName: String? = null,
     getTestDescription: (T) -> String
-): List<T> {
+): Sequence<T> {
     val filteredByName = if (!filterName.isNullOrBlank()) {
         val filterNames = filterName.split(",").map { it.trim() }
 
@@ -511,7 +505,7 @@ fun <T> selectTestsToRun(
     } else
         testScenarios
 
-    val filteredByNotName: List<T> = if(!filterNotName.isNullOrBlank()) {
+    val filteredByNotName: Sequence<T> = if(!filterNotName.isNullOrBlank()) {
         val filterNotNames = filterNotName.split(",").map { it.trim() }
 
         filteredByName.filterNot { test ->

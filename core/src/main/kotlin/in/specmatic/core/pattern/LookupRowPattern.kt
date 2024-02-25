@@ -21,7 +21,7 @@ data class LookupRowPattern(override val pattern: Pattern, override val key: Str
         }
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         return when(key) {
             null -> resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
                 pattern.newBasedOn(row, cyclePreventedResolver)
@@ -31,7 +31,7 @@ data class LookupRowPattern(override val pattern: Pattern, override val key: Str
         }
     }
 
-    override fun newBasedOn(resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         return when(key) {
             null -> resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
                 pattern.newBasedOn(cyclePreventedResolver)
@@ -41,8 +41,8 @@ data class LookupRowPattern(override val pattern: Pattern, override val key: Str
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(this)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        return sequenceOf(this)
     }
 
     override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)

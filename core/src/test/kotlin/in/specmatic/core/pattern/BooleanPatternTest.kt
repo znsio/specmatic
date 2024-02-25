@@ -25,7 +25,7 @@ internal class BooleanPatternTest {
     @Test
     @Tag(GENERATION)
     fun `negative patterns should be generated`() {
-        val result = BooleanPattern().negativeBasedOn(Row(), Resolver())
+        val result = BooleanPattern().negativeBasedOn(Row(), Resolver()).toList()
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null"
         )

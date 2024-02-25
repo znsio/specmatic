@@ -75,17 +75,17 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         return JSONArrayValue(generate(pattern, resolverWithNullType))
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<JSONArrayPattern> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<JSONArrayPattern> {
         val resolverWithNullType = withNullPattern(resolver)
         return newBasedOn(pattern, row, resolverWithNullType).map { JSONArrayPattern(it) }
     }
 
-    override fun newBasedOn(resolver: Resolver): List<JSONArrayPattern> {
+    override fun newBasedOn(resolver: Resolver): Sequence<JSONArrayPattern> {
         val resolverWithNullType = withNullPattern(resolver)
         return newBasedOn(pattern, resolverWithNullType).map { JSONArrayPattern(it) }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(NullPattern).let {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(NullPattern).let {
         if(pattern.size == 1)
             it.plus(pattern[0])
         else
@@ -135,7 +135,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
     override val typeName: String = "json array"
 }
 
-fun newBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {
+fun newBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): Sequence<List<Pattern>> {
     val values = patterns.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
             resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
@@ -147,7 +147,7 @@ fun newBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): List<List
     return listCombinations(values)
 }
 
-fun newBasedOn(patterns: List<Pattern>, resolver: Resolver): List<List<Pattern>> {
+fun newBasedOn(patterns: List<Pattern>, resolver: Resolver): Sequence<List<Pattern>> {
     val values = patterns.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
             resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
@@ -159,11 +159,11 @@ fun newBasedOn(patterns: List<Pattern>, resolver: Resolver): List<List<Pattern>>
     return listCombinations(values)
 }
 
-fun listCombinations(values: List<List<Pattern?>>): List<List<Pattern>> {
+fun listCombinations(values: List<Sequence<Pattern?>>): Sequence<List<Pattern>> {
     if (values.isEmpty())
-        return listOf(emptyList())
+        return sequenceOf(emptyList())
 
-    val lastValueTypes: List<Pattern?> = values.last()
+    val lastValueTypes: Sequence<Pattern?> = values.last()
     val subLists = listCombinations(values.dropLast(1))
 
     return subLists.flatMap { subList ->
@@ -176,27 +176,56 @@ fun listCombinations(values: List<List<Pattern?>>): List<List<Pattern>> {
     }
 }
 
-fun allOrNothingListCombinations(values: List<List<Pattern?>>): List<List<Pattern>> {
+fun <ValueType> allOrNothingListCombinations(values: List<List<ValueType?>>): Sequence<List<ValueType>> {
     if (values.isEmpty())
-        return listOf(emptyList())
+        return sequenceOf(emptyList())
 
-    val maxKeyValues = values.maxOfOrNull { it.size } ?: 0
+    val iterators = values.filter {
+        it.any()
+    }.map {
+        it.iterator()
+    }
 
-    return (0 until maxKeyValues).map {
-        keyCombinations(values) { value ->
-            when {
-                value.size > it -> value[it]
-                else -> value[0]
+    val first = mutableListOf<ValueType?>()
+    val ranOut = iterators.map { false }.toMutableList()
+
+    var oneRoundDone = false
+
+    return sequence {
+        while(true) {
+            val nextValue = iterators.mapIndexed { index, iterator ->
+                val nextValueFromIterator = if (iterator.hasNext()) {
+                    val value = iterator.next()
+
+                    if(!oneRoundDone)
+                        first.add(value)
+
+                    value
+                } else {
+                    ranOut[index] = true
+                    first[index]
+                }
+
+                nextValueFromIterator
             }
+
+            if (ranOut.all { it }) {
+                break
+            }
+
+            oneRoundDone = true
+
+            yield(nextValue.filterNotNull())
         }
-    } as List<List<Pattern>>
+
+    }
 }
 
 private fun keyCombinations(values: List<List<Pattern?>>,
-                            optionalSelector: (List<Pattern?>) -> Pattern?): List<Pattern?> {
+                            optionalSelector: (List<Pattern?>) -> Pattern?): Sequence<Pattern?> {
     return values.map {
         optionalSelector(it)
-    }.toList().filterNotNull()
+    }.asSequence().filterNotNull()
 }
 
 fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =

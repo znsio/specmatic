@@ -24,18 +24,18 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern(
         return StringValue(resolver.withCyclePrevention(pattern, pattern::generate).toStringLiteral())
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> =
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> =
         resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
             pattern.newBasedOn(row, cyclePreventedResolver).map { PatternInStringPattern(it) }
         }
 
-    override fun newBasedOn(resolver: Resolver): List<Pattern> =
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> =
         resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
             pattern.newBasedOn(cyclePreventedResolver).map { PatternInStringPattern(it) }
         }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(NullPattern)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        return sequenceOf(NullPattern)
     }
 
     override fun parse(value: String, resolver: Resolver): Value = StringValue(pattern.parse(value, resolver).toStringLiteral())

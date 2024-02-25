@@ -24,7 +24,7 @@ class SpecmaticJunitSupportTest {
 
     @Test
     fun `should retain open api path parameter convention for parameterized endpoints`() {
-        val result: Pair<List<ContractTest>, List<Endpoint>> = SpecmaticJUnitSupport().loadTestScenarios(
+        val result: Pair<Sequence<ContractTest>, List<Endpoint>> = SpecmaticJUnitSupport().loadTestScenarios(
             "./src/test/resources/spec_with_parameterized_paths.yaml",
             "",
             "",

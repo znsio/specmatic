@@ -95,7 +95,7 @@ data class HttpPathPattern(
     fun newBasedOn(
         row: Row,
         resolver: Resolver
-    ): List<List<URLPathSegmentPattern>> {
+    ): Sequence<List<URLPathSegmentPattern>> {
         val generatedPatterns = newBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathParamPattern ->
             val key = urlPathParamPattern.key
             if (key === null || !row.containsField(key)) return@mapIndexed urlPathParamPattern
@@ -128,10 +128,11 @@ data class HttpPathPattern(
         }, row, resolver)
 
         //TODO: replace this with Generics
-        return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }
+        //TODO: STREAMING
+        return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }.asSequence()
     }
 
-    fun newBasedOn(resolver: Resolver): List<List<URLPathSegmentPattern>> {
+    fun newBasedOn(resolver: Resolver): Sequence<List<URLPathSegmentPattern>> {
         val generatedPatterns = newBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathPattern ->
             attempt(breadCrumb = "[$index]") {
                 urlPathPattern
@@ -139,7 +140,8 @@ data class HttpPathPattern(
         }, resolver)
 
         //TODO: replace this with Generics
-        return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }
+        //TODO: STREAMING
+        return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }.asSequence()
     }
 
     override fun toString(): String {
@@ -156,11 +158,8 @@ data class HttpPathPattern(
         return pathSegmentPatterns.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
     }
 
-    private fun negatively(patterns: List<URLPathSegmentPattern>, row: Row, resolver: Resolver): List<List<URLPathSegmentPattern>> {
-        if(patterns.isEmpty())
-            return emptyList()
-
-        val current = patterns.first()
+    private fun negatively(patterns: List<URLPathSegmentPattern>, row: Row, resolver: Resolver): Sequence<List<URLPathSegmentPattern>> {
+        val current = patterns.firstOrNull() ?: return emptySequence()
 
         val negativesOfCurrent = current.negativeBasedOn(row, resolver).map { negative ->
             listOf(negative) + positively(patterns.drop(1), row, resolver)
@@ -174,7 +173,7 @@ data class HttpPathPattern(
         val negativesFromSubsequent =
             negatively(patterns.drop(1), row, resolver)
 
-        val negativesFromSubsequent1: List<List<URLPathSegmentPattern>> = negativesFromSubsequent
+        val negativesFromSubsequent1: Sequence<List<URLPathSegmentPattern>> = negativesFromSubsequent
             .filterNot { it.isEmpty() }
             .flatMap { subsequentNegatives: List<URLPathSegmentPattern> ->
                 val subsequents = current.newBasedOn(row, resolver).map { positive ->
@@ -206,7 +205,7 @@ data class HttpPathPattern(
     fun negativeBasedOn(
         row: Row,
         resolver: Resolver
-    ): List<List<URLPathSegmentPattern>> {
+    ): Sequence<List<URLPathSegmentPattern>> {
         return negatively(pathSegmentPatterns, row, resolver)
     }
 
@@ -215,7 +214,7 @@ data class HttpPathPattern(
         row: Row,
         urlPathPattern: URLPathSegmentPattern,
         resolver: Resolver
-    ) = when {
+    ): List<Pattern> = when {
         key !== null && row.containsField(key) -> {
             val rowValue = row.getField(key)
             when {
@@ -245,7 +244,8 @@ data class HttpPathPattern(
             }
         }
 
-        else -> (urlPathPattern.newBasedOn(row, resolver) + urlPathPattern.negativeBasedOn(row, resolver)).distinct()
+        //TODO: STREAMING
+        else -> (urlPathPattern.newBasedOn(row, resolver) + urlPathPattern.negativeBasedOn(row, resolver)).toList().distinct()
     }
 
     fun extractPathParams(requestPath: String, resolver: Resolver): Map<String, String> {

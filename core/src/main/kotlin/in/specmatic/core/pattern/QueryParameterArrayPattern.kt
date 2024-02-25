@@ -99,15 +99,15 @@ class QueryParameterArrayPattern(override val pattern: List<Pattern>, val parame
         }.map { StringValue(it.toStringLiteral()) })
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         return pattern.first().newBasedOn(row, resolver).map { QueryParameterArrayPattern(listOf(it), parameterName) }
     }
 
-    override fun newBasedOn(resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         return pattern.first().newBasedOn(resolver).map { QueryParameterArrayPattern(listOf(it), parameterName) }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         return pattern.first().negativeBasedOn(row, resolver).map { QueryParameterArrayPattern(listOf(it), parameterName) }
     }
 

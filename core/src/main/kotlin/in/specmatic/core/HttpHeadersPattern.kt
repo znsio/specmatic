@@ -154,7 +154,7 @@ data class HttpHeadersPattern(
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): List<HttpHeadersPattern> {
+    fun newBasedOn(row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
         return forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
             newBasedOn(pattern, row, resolver)
         }.map { map -> HttpHeadersPattern(map.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
@@ -170,7 +170,7 @@ data class HttpHeadersPattern(
             )
         }
 
-    fun newBasedOn(resolver: Resolver): List<HttpHeadersPattern> =
+    fun newBasedOn(resolver: Resolver): Sequence<HttpHeadersPattern> =
         allOrNothingCombinationIn(pattern) { pattern ->
             newBasedOn(pattern, resolver)
         }.map { patternMap ->

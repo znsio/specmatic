@@ -299,7 +299,7 @@ data class Feature(
     private fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
-    fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> =
+    fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> =
         generateContractTestScenarios(suggestions).map {
             ScenarioTest(it, resolverStrategies,
                 it.sourceProvider, it.sourceRepository, it.sourceRepositoryBranch, it.specification, it.serviceType)
@@ -322,21 +322,25 @@ data class Feature(
         return BadRequestOrDefault(badRequestResponses, defaultResponse)
     }
 
-    fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> {
+    fun generateContractTestScenarios(suggestions: List<Scenario>): Sequence<Scenario> {
         return resolverStrategies.generation.let {
             it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
         }
     }
 
+    fun generateContractTestScenariosL(suggestions: List<Scenario>): List<Scenario> {
+        return generateContractTestScenarios(suggestions).toList()
+    }
+
     fun positiveTestScenarios(suggestions: List<Scenario>) =
-        scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
+        scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
         }.flatMap {
             it.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
         }
 
     fun negativeTestScenarios() =
-        scenarios.filter {
+        scenarios.asSequence().filter {
             it.isA2xxScenario()
         }.flatMap { scenario ->
             val negativeScenario = scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))

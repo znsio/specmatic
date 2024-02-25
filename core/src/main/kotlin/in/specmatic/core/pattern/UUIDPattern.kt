@@ -19,11 +19,11 @@ object UUIDPattern : Pattern, ScalarType {
 
     override fun generate(resolver: Resolver): StringValue = StringValue(UUID.randomUUID().toString())
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<UUIDPattern> = listOf(this)
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<UUIDPattern> = sequenceOf(this)
 
-    override fun newBasedOn(resolver: Resolver): List<UUIDPattern> = listOf(this)
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(NullPattern)
+    override fun newBasedOn(resolver: Resolver): Sequence<UUIDPattern> = sequenceOf(this)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        return sequenceOf(NullPattern)
     }
 
     override fun parse(value: String, resolver: Resolver): StringValue =

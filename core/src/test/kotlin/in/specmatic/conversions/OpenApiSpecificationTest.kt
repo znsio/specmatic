@@ -4936,7 +4936,7 @@ paths:
 
         val feature = parseContractFileToFeature(specFile)
 
-        val testScenario = feature.generateContractTestScenarios(emptyList()).single()
+        val testScenario = feature.generateContractTestScenariosL(emptyList()).single()
 
         assertThat(testScenario.bindings).containsEntry("id", "response-body.id")
     }
@@ -5010,7 +5010,7 @@ paths:
 
         val feature = parseContractFileToFeature(specFile)
 
-        val testScenario = feature.generateContractTestScenarios(emptyList()).single()
+        val testScenario = feature.generateContractTestScenariosL(emptyList()).single()
 
         val requestPattern = testScenario.httpRequestPattern
         assertThat(requestPattern.multiPartFormDataPattern.single().name).isEqualTo("csv")
@@ -5489,7 +5489,7 @@ paths:
 
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
-        val results: List<Result> = feature.generateContractTestScenarios(emptyList()).map {
+        val results: List<Result> = feature.generateContractTestScenariosL(emptyList()).map {
             executeTest(it, object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     assertThat(request.body).isInstanceOf(JSONObjectValue::class.java)
@@ -5555,7 +5555,7 @@ paths:
 
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
-        val results: List<Result> = feature.generateContractTestScenarios(emptyList()).map {
+        val results: List<Result> = feature.generateContractTestScenariosL(emptyList()).map {
             executeTest(it, object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     assertThat(request.formFields).containsKey("Data")
@@ -5619,7 +5619,7 @@ paths:
 
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
-        val results: List<Result> = feature.generateContractTestScenarios(emptyList()).map {
+        val results: List<Result> = feature.generateContractTestScenariosL(emptyList()).map {
             executeTest(it, object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     assertThat(request.formFields).containsKey("Data")
@@ -5678,7 +5678,7 @@ paths:
 
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
-        val results: List<Result> = feature.generateContractTestScenarios(emptyList()).map {
+        val results: List<Result> = feature.generateContractTestScenariosL(emptyList()).map {
             executeTest(it, object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     assertThat(request.multiPartFormData.first().name).isEqualTo("Data")
@@ -7228,7 +7228,7 @@ components:
             .toFeature()
             .loadExternalisedExamples()
 
-        val tests = spec.generateContractTestScenarios(emptyList())
+        val tests = spec.generateContractTestScenariosL(emptyList())
         assertThat(tests.single().testDescription()).contains("file_name_as_test_label")
     }
 

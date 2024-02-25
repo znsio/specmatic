@@ -271,7 +271,7 @@ Given request-body
 
         val patternWithNullValue = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
         val example = Row(listOf("nothing"), listOf("(null)"))
-        val newPatterns = patternWithNullValue.newBasedOn(example, Resolver())
+        val newPatterns = patternWithNullValue.newBasedOn(example, Resolver()).toList()
 
         assertEquals(1, newPatterns.size)
 
@@ -296,7 +296,7 @@ Given request-body
 
         val patternWithNullValue = rowsToTabularPattern(scenario.steps[0].dataTable.rows)
         val example = Row(listOf("nothing"), listOf("(null)"))
-        assertThrows<ContractException> { patternWithNullValue.newBasedOn(example, Resolver()) }
+        assertThrows<ContractException> { patternWithNullValue.newBasedOn(example, Resolver()).toList() }
     }
 
     @Test

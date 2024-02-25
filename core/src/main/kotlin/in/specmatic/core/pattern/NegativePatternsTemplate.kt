@@ -3,7 +3,6 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Resolver
 
 abstract class NegativePatternsTemplate {
-    //TODO: STREAMING
     fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
         val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
         val negativePatternsMap = getNegativePatterns(patternMap, resolver, row)
@@ -27,9 +26,9 @@ abstract class NegativePatternsTemplate {
         }
         if (modifiedPatternMap.values.isEmpty())
             return sequenceOf(emptyMap())
-        return modifiedPatternMap.values.map { list: Sequence<Map<String, Sequence<Pattern>>> ->
-            list.toList().map { patternList(it) }
-        }.flatten().asSequence().flatten()
+        return modifiedPatternMap.values.asSequence().flatMap { list: Sequence<Map<String, Sequence<Pattern>>> ->
+            list.flatMap { patternList(it) }
+        }
     }
 
     abstract fun getNegativePatterns(

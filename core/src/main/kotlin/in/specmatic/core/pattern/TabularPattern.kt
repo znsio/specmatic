@@ -165,7 +165,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Seq
                             resolver.withCyclePrevention(rowPattern, isOptional(key)) { cyclePreventedResolver ->
                                 rowPattern.newBasedOn(row, cyclePreventedResolver)
                             }?:
-                            // Handle cycle (represented by null value) by using empty list for optional properties
+                            // Handle cycle (represented by null value) by using empty sequence for optional properties
                             emptySequence()
                         }
                         is Result.Failure -> throw ContractException(result.toFailureReport())
@@ -329,10 +329,10 @@ fun <ValueType> allOrNothingCombinationIn(
             } ?: propertyNames
         }
 
-        listOf(allList, nothingList).distinct()
+        sequenceOf(allList, nothingList).distinct()
     } else {
-        listOf(patternMap.keys)
-    }.asSequence()
+        sequenceOf(patternMap.keys)
+    }
 
     val keySets: Sequence<Map<String, ValueType>> = keyLists.map { keySet ->
         patternMap.filterKeys { key -> key in keySet }

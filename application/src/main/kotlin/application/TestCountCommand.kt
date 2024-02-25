@@ -22,6 +22,14 @@ class TestCountCommand : Callable<Unit> {
 
         val feature = parseContractFileToFeature(specification)
 
-        println(feature.testCounts())
+        val testCounts = feature.testCounts()
+
+        testCounts.forEach {
+            println("${it.first}: ${it.second} tests")
+        }
+
+        val totalCount = testCounts.sumOf { it.second }
+
+        println("Total: $totalCount tests")
     }
 }

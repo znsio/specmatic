@@ -64,6 +64,14 @@ fi
 
 set -e
 
+if [[ "$1" == *-* ]]
+then
+	echo
+	echo Error: The version number must be of the form major.minor.patch. It must contain no hyphens.
+	echo
+	exit 1
+fi
+
 ACTUAL_VERSION=`cat version.properties | sed s/version=//g`
 
 if [ "$1" != $ACTUAL_VERSION ]

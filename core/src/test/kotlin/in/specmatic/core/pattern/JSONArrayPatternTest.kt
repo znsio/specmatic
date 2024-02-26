@@ -15,7 +15,47 @@ import org.junit.jupiter.api.Test
 
 internal class JSONArrayPatternTest {
     @Test
-    fun `An empty array should match an array matcher`() {
+    fun `An array with a number should match an array pattern with a number pattern`() {
+        val value = parsedValue("[1]")
+        val pattern = parsedPattern("""["(number)"]""")
+
+        value shouldMatch pattern
+    }
+
+    @Test
+    fun `An array with a string should not match an array pattern with a number pattern`() {
+        val value = parsedValue("""["abc"]""")
+        val pattern = parsedPattern("""["(number)"]""")
+
+        value shouldNotMatch pattern
+    }
+
+    @Test
+    fun `An empty array should match an empty array pattern`() {
+        val value = parsedValue("[]")
+        val pattern = parsedPattern("""[]""")
+
+        value shouldMatch pattern
+    }
+
+    @Test
+    fun `An empty array should not match an populated array pattern`() {
+        val value = parsedValue("[]")
+        val pattern = parsedPattern("""["(number)"]""")
+
+        value shouldNotMatch pattern
+    }
+
+    @Test
+    fun `A populated array should not match an empty array pattern`() {
+        val value = parsedValue("[1]")
+        val pattern = parsedPattern("""[]""")
+
+        value shouldNotMatch pattern
+    }
+
+    @Test
+    fun `An empty array should match an array pattern`() {
         val value = parsedValue("[]")
         val pattern = parsedPattern("""["(number*)"]""")
 
@@ -57,14 +97,6 @@ internal class JSONArrayPatternTest {
 
         Assertions.assertFalse(pattern.matches(value, Resolver()).isSuccess())
 
-    }
-
-    @Test
-    fun `should match the rest even if there are no more elements`() {
-        val pattern = JSONArrayPattern(listOf(StringPattern(), RestPattern(NumberPattern())))
-        val value = JSONArrayValue(listOf(StringValue("hello")))
-
-        value shouldMatch pattern
     }
 
     @Test

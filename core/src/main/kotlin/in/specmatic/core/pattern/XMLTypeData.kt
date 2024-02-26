@@ -1,5 +1,6 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.XMLNode
 import `in`.specmatic.core.wsdl.parser.message.*
@@ -73,5 +74,13 @@ data class XMLTypeData(val name: String = "", val realName: String, val attribut
         return attributes[NILLABLE_ATTRIBUTE_NAME].let {
             it is ExactValuePattern && it.pattern.toStringLiteral().lowercase() == "true"
         }
+    }
+
+    fun testCount(resolver: Resolver): ULong {
+        val testCountBasedOnAttributeKeys = if(attributes.any { isOptional(it) }) 2.toULong() else 1.toULong()
+        val testCountBasedOnAttributeValues = attributes.values.fold(1.toULong()) { acc, pattern -> acc * pattern.testCount(resolver) }
+        val testCountForNode = nodes.fold(1.toULong()) { acc, pattern -> acc * pattern.testCount(resolver) }
+
+        return testCountBasedOnAttributeKeys * testCountBasedOnAttributeValues * testCountForNode
     }
 }

@@ -51,6 +51,14 @@ data class DeferredPattern(override val pattern: String, val key: String? = null
         return resolver.getPattern(pattern).listOf(valueList, resolver)
     }
 
+    override fun testCount(resolver: Resolver): ULong {
+        val resolvedPattern = resolver.getPattern(pattern)
+
+        return resolver.withCyclePrevention(resolvedPattern) { cyclePreventedResolver ->
+            resolvedPattern.testCount(cyclePreventedResolver)
+        }
+    }
+
     override val typeAlias: String = pattern
 
     override fun parse(value: String, resolver: Resolver): Value =

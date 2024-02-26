@@ -266,6 +266,10 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         return XMLNode("", "", emptyMap(), valueList.map { it as XMLNode }, "", emptyMap())
     }
 
+    override fun testCount(resolver: Resolver): ULong {
+        return pattern.testCount(resolver)
+    }
+
     override fun generate(resolver: Resolver): XMLNode {
         val name = pattern.name
 

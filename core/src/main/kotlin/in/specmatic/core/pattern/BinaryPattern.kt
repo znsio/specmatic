@@ -11,7 +11,7 @@ import java.security.SecureRandom
 
 data class BinaryPattern(
     override val typeAlias: String? = null,
-) : Pattern, ScalarType {
+) : Pattern, ScalarPattern {
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (sampleData) {

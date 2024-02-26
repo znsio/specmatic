@@ -84,6 +84,10 @@ data class Feature(
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val resolverStrategies: ResolverStrategies = strategiesFromFlags()
 ) {
+    fun testCounts(): List<Pair<String, ULong>> {
+        return scenarios.map { scenario -> scenario.apiIdentifier to scenario.testCount() }
+    }
+
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         return this.copy(resolverStrategies = this.resolverStrategies.copy(generation = GenerativeTestsEnabled(onlyPositive)))
     }

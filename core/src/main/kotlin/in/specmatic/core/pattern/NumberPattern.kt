@@ -13,7 +13,7 @@ data class NumberPattern(
     val minLength: Int? = null,
     val maxLength: Int? = null,
     override val example: String? = null
-) : Pattern, ScalarType, HasDefaultExample {
+) : Pattern, ScalarPattern, HasDefaultExample {
     init {
         require(minLength?.let { minLength > 0 } ?: true) {"minLength cannot be less than 1"}
         require(minLength?.let { maxLength?.let { minLength <= maxLength } }
@@ -111,6 +111,6 @@ fun encompasses(
         otherPattern is EnumPattern -> {
             encompasses(thisPattern, otherPattern.pattern, thisResolver, otherResolver, typeStack)
         }
-        thisPattern is ScalarType && otherPattern is ScalarType && thisPattern.matches(otherPattern.generate(otherResolver), thisResolver) is Result.Success -> Result.Success()
+        thisPattern is ScalarPattern && otherPattern is ScalarPattern && thisPattern.matches(otherPattern.generate(otherResolver), thisResolver) is Result.Success -> Result.Success()
         else -> mismatchResult(thisPattern, otherPattern, thisResolver.mismatchMessages)
     }

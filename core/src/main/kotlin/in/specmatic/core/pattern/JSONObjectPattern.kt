@@ -111,6 +111,10 @@ data class JSONObjectPattern(
         return JSONArrayValue(valueList)
     }
 
+    override fun testCount(resolver: Resolver): ULong {
+        return allOrNothingTestCount(pattern, resolver)
+    }
+
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         val resolverWithNullType = withNullPattern(resolver)
         if (sampleData !is JSONObjectValue)

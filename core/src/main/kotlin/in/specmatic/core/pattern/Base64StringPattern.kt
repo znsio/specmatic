@@ -9,7 +9,7 @@ import `in`.specmatic.core.value.Value
 import org.apache.commons.codec.binary.Base64
 import java.util.*
 
-data class Base64StringPattern(override val typeAlias: String? = null) : Pattern, ScalarType {
+data class Base64StringPattern(override val typeAlias: String? = null) : Pattern, ScalarPattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (sampleData) {
             is StringValue -> {

@@ -64,6 +64,10 @@ class CsvPattern(override val pattern: Pattern) : Pattern {
         return JSONArrayValue(valueList)
     }
 
+    override fun testCount(resolver: Resolver): ULong {
+        return pattern.testCount(resolver)
+    }
+
     override fun toString(): String {
         return typeName
     }

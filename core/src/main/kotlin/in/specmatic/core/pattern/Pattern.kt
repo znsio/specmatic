@@ -61,6 +61,8 @@ interface Pattern {
         return AnyPattern(listOf(NullPattern, this), example = defaultValue)
     }
 
+    fun testCount(resolver: Resolver): ULong
+
     val typeAlias: String?
     val typeName: String
     val pattern: Any

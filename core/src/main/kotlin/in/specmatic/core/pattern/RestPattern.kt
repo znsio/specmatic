@@ -46,6 +46,10 @@ data class RestPattern(override val pattern: Pattern, override val typeAlias: St
         return pattern.listOf(valueList, resolver)
     }
 
+    override fun testCount(resolver: Resolver): ULong {
+        return pattern.testCount(resolver)
+    }
+
     override val typeName: String = "the rest are ${pattern.typeName}"
 }
 

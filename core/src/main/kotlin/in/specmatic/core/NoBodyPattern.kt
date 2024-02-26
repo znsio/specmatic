@@ -47,6 +47,9 @@ object NoBodyPattern : Pattern {
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value = JSONArrayValue(valueList)
+    override fun testCount(resolver: Resolver): ULong {
+        return 1.toULong()
+    }
 
     override val typeAlias: String?
         get() = null

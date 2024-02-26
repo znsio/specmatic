@@ -8,7 +8,7 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.Value
 import java.util.*
 
-data class BooleanPattern(override val example: String? = null) : Pattern, ScalarType, HasDefaultExample {
+data class BooleanPattern(override val example: String? = null) : Pattern, ScalarPattern, HasDefaultExample {
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
         when(sampleData) {
             is BooleanValue -> Result.Success()

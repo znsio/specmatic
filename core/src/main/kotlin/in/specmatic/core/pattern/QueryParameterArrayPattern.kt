@@ -131,6 +131,10 @@ class QueryParameterArrayPattern(override val pattern: List<Pattern>, val parame
         return JSONArrayValue(valueList)
     }
 
+    override fun testCount(resolver: Resolver): ULong {
+        return pattern.first().testCount(resolver)
+    }
+
     override val typeAlias: String?
         get() = null
 

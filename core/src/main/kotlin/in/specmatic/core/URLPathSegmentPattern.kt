@@ -51,6 +51,10 @@ data class URLPathSegmentPattern(override val pattern: Pattern, override val key
         return JSONArrayValue(valueList)
     }
 
+    override fun testCount(resolver: Resolver): ULong {
+        return pattern.testCount(resolver)
+    }
+
     fun tryParse(token: String, resolver: Resolver): Value {
         return try {
             this.pattern.parse(token, resolver)

@@ -79,6 +79,17 @@ data class Scenario(
         serviceType = scenarioInfo.serviceType
     )
 
+    fun testCount(): ULong {
+        val rowCount= examples.sumOf { it.rows.size }
+
+        if(testsWillBeGenerated(rowCount))
+            return httpRequestPattern.testCount(resolver)
+
+        return rowCount.toULong()
+    }
+
+    private fun testsWillBeGenerated(rowCount: Int) = Flags.maxTestRequestCombinationsIsSet() || rowCount == 0
+
     val apiIdentifier: String
         get() = "$method $path $status"
 

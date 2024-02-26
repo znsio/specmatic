@@ -93,6 +93,10 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
         return JSONArrayValue(valueList)
     }
 
+    override fun testCount(resolver: Resolver): ULong {
+        return valuePattern.testCount(resolver)
+    }
+
     override val typeName: String = "object with key type ${keyPattern.typeName} and value type ${valuePattern.typeName}"
 
     override val pattern: Any = "(${withoutPatternDelimiters(keyPattern.pattern.toString())}:${withoutPatternDelimiters(valuePattern.pattern.toString())})"

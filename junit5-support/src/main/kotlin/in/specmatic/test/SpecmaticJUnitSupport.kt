@@ -29,6 +29,8 @@ import java.net.URI
 import java.net.URISyntaxException
 import java.net.URL
 import java.util.*
+import java.util.stream.Stream
+import kotlin.streams.asStream
 
 @Serializable
 data class API(val method: String, val path: String)
@@ -158,15 +160,15 @@ open class SpecmaticJUnitSupport {
         return envConfig
     }
 
-    private fun loadExceptionAsTestError(e: Throwable): Collection<DynamicTest> {
-        return listOf(DynamicTest.dynamicTest("Load Error") {
+    private fun loadExceptionAsTestError(e: Throwable): Stream<DynamicTest> {
+        return sequenceOf(DynamicTest.dynamicTest("Load Error") {
             logger.log(e)
             ResultAssert.assertThat(Result.Failure(exceptionCauseMessage(e))).isSuccess()
-        })
+        }).asStream()
     }
 
     @TestFactory
-    fun contractTest(): Collection<DynamicTest> {
+    fun contractTest(): Stream<DynamicTest> {
         val contractPaths = System.getProperty(CONTRACT_PATHS)
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
         val filterName: String? = System.getProperty(FILTER_NAME_PROPERTY) ?: System.getenv(FILTER_NAME_ENVIRONMENT_VARIABLE)
@@ -287,7 +289,7 @@ open class SpecmaticJUnitSupport {
                     }
                 }
             }
-        }.toList()
+        }.asStream()
     }
 
     fun constructTestBaseURL(): String {

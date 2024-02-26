@@ -1315,18 +1315,18 @@ Background:
                                 }
 
                                 "POST" -> {
-                                    assertThat(request.bodyString).containsAnyOf(
-                                        """
+                                    assertThat(request.body).isIn(
+                                        parsedJSONObject("""
                                         {
                                             "tag": "testing",
                                             "name": "test"
                                         }
-                                    """.trimIndent(),
-                                        """
+                                    """.trimIndent()),
+                                        parsedJSONObject("""
                                         {
                                             "name": "test"
                                         }
-                                    """.trimIndent()
+                                    """.trimIndent())
                                     )
                                     HttpResponse(
                                         201,
@@ -1770,6 +1770,7 @@ Scenario: zero should return not found
 
         assertThat(results.success()).isTrue
         assertThat(queryParameters.size).isEqualTo(4)
+        println(queryParameters)
         assertThat(queryParameters.map { it.keys }).containsAll(
             listOf(
                 setOf("message"),
@@ -1778,10 +1779,10 @@ Scenario: zero should return not found
                 setOf("message", "another_message"),
             )
         )
-        assertThat(queryParameters.map { it.values.toList() }).containsAll(
+        assertThat(queryParameters.map { it.values.toSet() }).containsAll(
             listOf(
-                listOf("Hari", "hello"),
-                listOf("hello")
+                setOf("Hari", "hello"),
+                setOf("hello")
             )
         )
     }

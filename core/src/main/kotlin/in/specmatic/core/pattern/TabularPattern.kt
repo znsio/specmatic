@@ -329,6 +329,7 @@ fun <ValueType> allOrNothingCombinationIn(
             } ?: propertyNames
         }
 
+        //TODO: STREAMING (review again)
         sequenceOf(allList, nothingList).distinct()
     } else {
         sequenceOf(patternMap.keys)

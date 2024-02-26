@@ -130,6 +130,7 @@ paths:
         contract.executeTests(object: TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 count ++
+                println(request.toLogString())
                 params.addAll(request.queryParams.keys)
                 return HttpResponse.OK
             }
@@ -138,6 +139,9 @@ paths:
             }
 
         })
+
+        println(count)
+        println(params)
 
         assertThat(params).isEqualTo(listOf("data"))
         assertThat(count).isEqualTo(2)

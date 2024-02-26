@@ -8,7 +8,7 @@ import `in`.specmatic.core.value.ListValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 
-class QueryParameterArrayPattern(override val pattern: List<Pattern>, val parameterName: String): Pattern {
+data class QueryParameterArrayPattern(override val pattern: List<Pattern>, val parameterName: String): Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is ListValue) {
             return resolver.mismatchMessages.valueMismatchFailure("Array", sampleData)

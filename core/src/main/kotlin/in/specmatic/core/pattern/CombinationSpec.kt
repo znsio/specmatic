@@ -24,8 +24,6 @@ class CombinationSpec<ValueType>(
         if (maxCombinations < 1) throw IllegalArgumentException("maxCombinations must be > 0 and <= ${Int.MAX_VALUE}")
     }
 
-    //TODO: STREAMING
-
     // Omit entries without any candidate values
     private val keyToCandidates = keyToCandidatesOrig.mapValues { it.value.toList() }.filterValues { it.isNotEmpty() }
     private val indexToKeys = keyToCandidates.keys.toList()
@@ -37,7 +35,87 @@ class CombinationSpec<ValueType>(
     private val lastCombination = min(maxCombinations, min(allCombosCount, Int.MAX_VALUE.toLong()).toInt()) - 1
     private val prioritizedComboIndexes = calculatePrioritizedComboIndexes()
 
-    val selectedCombinations = toSelectedCombinations()
+    val selectedCombinations: Sequence<Map<String, ValueType>> = toSelectedCombinations2(keyToCandidatesOrig, maxCombinations)
+
+    fun <ValueType> toSelectedCombinations2(rawPatternCollection: Map<String, Sequence<ValueType>>, maxCombinations: Int): Sequence<Map<String, ValueType>> {
+        val patternCollection = rawPatternCollection.filterValues { it.any() }
+
+        if (patternCollection.isEmpty())
+            return emptySequence()
+
+        //TODO: STREAMING (we should be able to avoid maintaining cachedValues)
+        val cachedValues = patternCollection.mapValues { mutableListOf<ValueType>() }
+        val prioritisedGenerations = mutableSetOf<Map<String, ValueType>>()
+
+        val ranOut = cachedValues.mapValues { false }.toMutableMap()
+
+        val iterators = patternCollection.mapValues {
+            it.value.iterator()
+        }.filter {
+            it.value.hasNext()
+        }
+
+        return sequence {
+            //TODO: STREAMING (can we manage without this ctr?)
+            var ctr = 0
+
+            while (true) {
+                val nextValue = iterators.mapValues { (key, iterator) ->
+                    val nextValueFromIterator = if (iterator.hasNext()) {
+                        val value = iterator.next()
+
+                        cachedValues.getValue(key).add(value)
+
+                        value
+                    } else {
+                        ranOut[key] = true
+
+                        val cachedValuesForKey = cachedValues.getValue(key)
+                        val value = cachedValuesForKey.get(ctr % cachedValuesForKey.size)
+
+                        value
+                    }
+
+                    nextValueFromIterator
+                }
+
+                if(ranOut.all { it.value })
+                    break
+
+                ctr ++
+
+                yield(nextValue)
+                prioritisedGenerations.add(nextValue)
+
+                if(prioritisedGenerations.size == maxCombinations)
+                    break
+            }
+
+            if(prioritisedGenerations.size == maxCombinations)
+                return@sequence
+
+            val otherPatterns = patternValues2(patternCollection)
+
+            val maxCountOfUnPrioritisedGenerations = maxCombinations - prioritisedGenerations.size
+
+            val filtered = otherPatterns.filter { it !in prioritisedGenerations }
+            val limited = filtered.take(maxCountOfUnPrioritisedGenerations)
+
+            yieldAll(limited)
+        }
+    }
+    fun <ValueType> patternValues2(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {
+        if(patternCollection.isEmpty())
+            return sequenceOf(emptyMap())
+
+        val entry = patternCollection.entries.first()
+
+        val subsequentGenerations: Sequence<Map<String, ValueType>> = patternValues2(patternCollection - entry.key)
+
+        return entry.value.flatMap { value ->
+            subsequentGenerations.map { mapOf(entry.key to value) + it }
+        }
+    }
 
     private fun calculatePrioritizedComboIndexes(): Sequence<Int> {
         // Prioritizes using each candidate value as early as possible so uses first candidate of each set,

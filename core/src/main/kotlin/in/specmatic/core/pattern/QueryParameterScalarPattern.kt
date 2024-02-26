@@ -5,7 +5,7 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 
-class QueryParameterScalarPattern(override val pattern: Pattern): Pattern by pattern {
+data class QueryParameterScalarPattern(override val pattern: Pattern): Pattern by pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData == null){
             return Result.Failure("Null found, expected a scalar value")

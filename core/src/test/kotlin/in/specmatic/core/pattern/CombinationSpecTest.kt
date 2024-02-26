@@ -123,7 +123,7 @@ class CombinationSpecTest {
       ),
       3,
     )
-    assertThat(spec.selectedCombinations.toList()).containsExactly(
+    assertThat(spec.selectedCombinations.toList()).withFailMessage(spec.selectedCombinations.toString()).containsExactly(
       // Prioritized first
       mapOf("k1" to 12, "k2" to 25, "k3" to 39),
       mapOf("k1" to 14, "k2" to 22, "k3" to 33),

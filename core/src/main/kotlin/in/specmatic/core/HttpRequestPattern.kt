@@ -703,18 +703,18 @@ fun newMultiPartBasedOn(
 ): Sequence<List<MultiPartFormDataPattern>> {
     val values = partList.map { part ->
         attempt(breadCrumb = part.name) {
-            part.newBasedOn(row, resolver).toList()
+            part.newBasedOn(row, resolver)
         }
     }
 
-    return multiPartListCombinations(values).asSequence()
+    return multiPartListCombinations(values)
 }
 
-fun multiPartListCombinations(values: List<List<MultiPartFormDataPattern?>>): List<List<MultiPartFormDataPattern>> {
+fun multiPartListCombinations(values: List<Sequence<MultiPartFormDataPattern?>>): Sequence<List<MultiPartFormDataPattern>> {
     if (values.isEmpty())
-        return listOf(emptyList())
+        return sequenceOf(emptyList())
 
-    val value: List<MultiPartFormDataPattern?> = values.last()
+    val value: Sequence<MultiPartFormDataPattern?> = values.last()
     val subLists = multiPartListCombinations(values.dropLast(1))
 
     return subLists.flatMap { list ->

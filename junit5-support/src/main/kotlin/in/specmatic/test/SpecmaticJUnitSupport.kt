@@ -10,8 +10,8 @@ import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
-import `in`.specmatic.stub.isOpenAPI
 import `in`.specmatic.stub.hasOpenApiFileExtension
+import `in`.specmatic.stub.isOpenAPI
 import `in`.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.*
 import `in`.specmatic.test.reports.OpenApiCoverageReportProcessor
 import `in`.specmatic.test.reports.coverage.Endpoint
@@ -24,13 +24,24 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.opentest4j.TestAbortedException
 import java.io.File
+import java.lang.management.ManagementFactory
 import java.net.MalformedURLException
 import java.net.URI
 import java.net.URISyntaxException
 import java.net.URL
 import java.util.*
 import java.util.stream.Stream
+import javax.management.ObjectName
 import kotlin.streams.asStream
+
+
+interface ContractTestStatisticsMBean {
+    fun testsExecuted(): Int
+}
+
+class ContractTestStatistics : ContractTestStatisticsMBean {
+    override fun testsExecuted(): Int = SpecmaticJUnitSupport.openApiCoverageReportInput.testResultRecords.size
+}
 
 @Serializable
 data class API(val method: String, val path: String)
@@ -59,7 +70,7 @@ open class SpecmaticJUnitSupport {
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfigJson: SpecmaticConfigJson? = null
-        private val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
+        val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
 
         private val threads: Vector<String> = Vector<String>()
 
@@ -169,6 +180,13 @@ open class SpecmaticJUnitSupport {
 
     @TestFactory
     fun contractTest(): Stream<DynamicTest> {
+        val statistics = ContractTestStatistics()
+        var name = ObjectName("in.specmatic:type=ContractTestStatistics")
+
+        var mbs = ManagementFactory.getPlatformMBeanServer()
+        mbs.registerMBean(statistics, name)
+
+
         val contractPaths = System.getProperty(CONTRACT_PATHS)
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
         val filterName: String? = System.getProperty(FILTER_NAME_PROPERTY) ?: System.getenv(FILTER_NAME_ENVIRONMENT_VARIABLE)

@@ -695,7 +695,6 @@ fun missingParam(missingValue: String): ContractException {
     return ContractException("$missingValue is missing. Can't generate the contract test.")
 }
 
-//TODO: STREAMING
 fun newMultiPartBasedOn(
     partList: List<MultiPartFormDataPattern>,
     row: Row,

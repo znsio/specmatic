@@ -128,8 +128,7 @@ data class HttpPathPattern(
         }, row, resolver)
 
         //TODO: replace this with Generics
-        //TODO: STREAMING
-        return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }.asSequence()
+        return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }
     }
 
     fun newBasedOn(resolver: Resolver): Sequence<List<URLPathSegmentPattern>> {
@@ -140,8 +139,7 @@ data class HttpPathPattern(
         }, resolver)
 
         //TODO: replace this with Generics
-        //TODO: STREAMING
-        return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }.asSequence()
+        return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }
     }
 
     override fun toString(): String {
@@ -189,9 +187,9 @@ data class HttpPathPattern(
         patterns: List<URLPathSegmentPattern>,
         row: Row,
         resolver: Resolver
-    ): List<URLPathSegmentPattern> {
+    ): Sequence<URLPathSegmentPattern> {
         if(patterns.isEmpty())
-            return emptyList()
+            return emptySequence()
 
         val patternToPositively = patterns.first()
 
@@ -214,14 +212,14 @@ data class HttpPathPattern(
         row: Row,
         urlPathPattern: URLPathSegmentPattern,
         resolver: Resolver
-    ): List<Pattern> = when {
+    ): Sequence<Pattern> = when {
         key !== null && row.containsField(key) -> {
             val rowValue = row.getField(key)
             when {
                 isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathPattern.key}\"") {
                     val rowPattern = resolver.getPattern(rowValue)
                     when (val result = urlPathPattern.encompasses(rowPattern, resolver, resolver)) {
-                        is Success -> listOf(urlPathPattern.copy(pattern = rowPattern))
+                        is Success -> sequenceOf(urlPathPattern.copy(pattern = rowPattern))
                         is Failure -> throw ContractException(result.toFailureReport())
                     }
                 }
@@ -233,7 +231,7 @@ data class HttpPathPattern(
                     if (matchResult is Failure)
                         throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
 
-                    listOf(
+                    sequenceOf(
                         URLPathSegmentPattern(
                             ExactValuePattern(
                                 value
@@ -244,8 +242,7 @@ data class HttpPathPattern(
             }
         }
 
-        //TODO: STREAMING
-        else -> (urlPathPattern.newBasedOn(row, resolver) + urlPathPattern.negativeBasedOn(row, resolver)).toList().distinct()
+        else -> (urlPathPattern.newBasedOn(row, resolver) + urlPathPattern.negativeBasedOn(row, resolver)).distinct()
     }
 
     fun extractPathParams(requestPath: String, resolver: Resolver): Map<String, String> {

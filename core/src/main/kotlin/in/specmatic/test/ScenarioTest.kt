@@ -23,7 +23,7 @@ class ScenarioTest(
     override fun generateTestScenarios(
         testVariables: Map<String, String>,
         testBaseURLs: Map<String, String>
-    ): List<ContractTest> {
+    ): Sequence<ContractTest> {
         return scenario.generateContractTests(resolverStrategies, testVariables, testBaseURLs)
     }
 

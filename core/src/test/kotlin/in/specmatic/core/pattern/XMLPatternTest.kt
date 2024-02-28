@@ -237,7 +237,7 @@ internal class XMLPatternTest {
 
             val resolver = Resolver(newPatterns = mapOf("(Address)" to addressType))
 
-            val testTypes = personType.newBasedOn(resolver).map { it.toPrettyString() }
+            val testTypes = personType.newBasedOn(resolver).map { it.toPrettyString() }.toList()
 
             for (type in testTypes) {
                 println(type)
@@ -281,7 +281,7 @@ internal class XMLPatternTest {
 
             val resolver = Resolver(newPatterns = mapOf("(Address)" to addressType))
 
-            val testTypes = personType.newBasedOn(resolver).map { it.toPrettyString() }
+            val testTypes = personType.newBasedOn(resolver).map { it.toPrettyString() }.toList()
 
             for (type in testTypes) {
                 println(type)
@@ -530,7 +530,7 @@ internal class XMLPatternTest {
             val xmlType = XMLPattern("<data><name>(string)</name><age>(number)</age></data>")
             val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
 
-            val newTypes = xmlType.newBasedOn(example, Resolver())
+            val newTypes = xmlType.newBasedOn(example, Resolver()).toList()
 
             val xmlNode = newTypes[0].generate(Resolver())
             assertThat(xmlNode.toStringLiteral()).isEqualTo("<data><name>John Doe</name><age>10</age></data>")
@@ -541,7 +541,7 @@ internal class XMLPatternTest {
             val xmlType = XMLPattern("""<data name="(string)" age="(number)"></data>""")
             val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
 
-            val newTypes = xmlType.newBasedOn(example, Resolver())
+            val newTypes = xmlType.newBasedOn(example, Resolver()).toList()
 
             val xmlNode = newTypes[0].generate(Resolver())
             assertThat(xmlNode).isEqualTo(toXMLNode("""<data age="10" name="John Doe"/>"""))
@@ -552,7 +552,7 @@ internal class XMLPatternTest {
             val xmlType = XMLPattern("""<data name="(string?)" age="(number?)"></data>""")
             val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
 
-            val newTypes = xmlType.newBasedOn(example, Resolver())
+            val newTypes = xmlType.newBasedOn(example, Resolver()).toList()
 
             val xmlNode = newTypes[0].generate(Resolver())
             assertThat(xmlNode).isEqualTo(toXMLNode("""<data age="10" name="John Doe"/>"""))
@@ -563,7 +563,7 @@ internal class XMLPatternTest {
             val xmlType = XMLPattern("""<data name="(string?)" age="(number?)"></data>""")
             val example = Row(listOf("name", "age"), listOf("", ""))
 
-            val newTypes = xmlType.newBasedOn(example, Resolver())
+            val newTypes = xmlType.newBasedOn(example, Resolver()).toList()
             assertThat(newTypes.size).isOne()
 
             val xmlNode = newTypes[0].generate(Resolver())
@@ -575,7 +575,7 @@ internal class XMLPatternTest {
             val type = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX="(number)"></number>""")
             val example = Row(listOf("val"), listOf("10"))
 
-            val newTypes = type.newBasedOn(example, Resolver())
+            val newTypes = type.newBasedOn(example, Resolver()).toList()
             assertThat(newTypes.size).isOne()
 
             val xmlNode = newTypes[0].generate(Resolver())
@@ -586,7 +586,7 @@ internal class XMLPatternTest {
         fun `optional attribute without examples should generate two tests`() {
             val type = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX="(number)"></number>""")
 
-            val newTypes = type.newBasedOn(Row(), Resolver())
+            val newTypes = type.newBasedOn(Row(), Resolver()).toList()
             assertThat(newTypes.size).isEqualTo(2)
 
             val flags = mutableListOf<String>()
@@ -607,7 +607,7 @@ internal class XMLPatternTest {
         fun `sanity test that double optional gets handled right`() {
             val type = XMLPattern("""<number val$XML_ATTR_OPTIONAL_SUFFIX$XML_ATTR_OPTIONAL_SUFFIX="(number)"></number>""")
 
-            val newTypes = type.newBasedOn(Row(), Resolver())
+            val newTypes = type.newBasedOn(Row(), Resolver()).toList()
             assertThat(newTypes.size).isEqualTo(2)
 
             val flags = mutableListOf<String>()
@@ -632,7 +632,7 @@ internal class XMLPatternTest {
             val xmlType = XMLPattern("<data><name>(string?)</name><age>(number?)</age></data>")
             val example = Row(listOf("name", "age"), listOf("John Doe", "10"))
 
-            val newTypes = xmlType.newBasedOn(example, Resolver())
+            val newTypes = xmlType.newBasedOn(example, Resolver()).toList()
 
             val xmlNode = newTypes[0].generate(Resolver())
             assertThat(xmlNode.toStringLiteral()).isEqualTo("<data><name>John Doe</name><age>10</age></data>")
@@ -643,7 +643,7 @@ internal class XMLPatternTest {
             val xmlType = XMLPattern("<data><name>(string?)</name><age>(number?)</age></data>")
             val example = Row(listOf("name", "age"), listOf("John Doe", "ABC"))
 
-            assertThatThrownBy { xmlType.newBasedOn(example, Resolver()) }.isInstanceOf(ContractException::class.java)
+            assertThatThrownBy { xmlType.newBasedOn(example, Resolver()).toList() }.isInstanceOf(ContractException::class.java)
         }
     }
 
@@ -732,7 +732,7 @@ internal class XMLPatternTest {
         @Test
         fun `xml with optional nodes generates 2 samples`() {
             val nameType = XMLPattern("<name><nameid $isOptional>(number)</nameid></name>")
-            val newTypes = nameType.newBasedOn(Row(), Resolver())
+            val newTypes = nameType.newBasedOn(Row(), Resolver()).toList()
 
             assertThat(newTypes.size).isEqualTo(2)
 
@@ -758,7 +758,7 @@ internal class XMLPatternTest {
         @Test
         fun `xml with optional node generates one sample with the node and one without`() {
             val nameType = XMLPattern("<name><nameid $isOptional>(number)</nameid></name>")
-            val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver()) }
+            val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver()) }.toList()
 
             assertThat(newValues).anySatisfy(Consumer {
                 assertThat(it.name).isEqualTo("name")
@@ -781,7 +781,7 @@ internal class XMLPatternTest {
             val nameIdType = XMLPattern("<nameid>(number)</nameid>")
             val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
 
-            val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver) }
+            val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver) }.toList()
 
             assertThat(newValues).anySatisfy(Consumer {
                 assertThat(it.name).isEqualTo("name")
@@ -804,7 +804,7 @@ internal class XMLPatternTest {
             val nameIdType = XMLPattern("<nameid>(number)</nameid>")
             val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
             val row = Row(listOf("nameid"), listOf("10"))
-            val newValues = nameType.newBasedOn(row, resolver).map { it.generate(resolver) }
+            val newValues = nameType.newBasedOn(row, resolver).map { it.generate(resolver) }.toList()
 
             assertThat(newValues.isNotEmpty())
 
@@ -840,7 +840,7 @@ internal class XMLPatternTest {
         @Test
         fun `xml with a node that occurs multiple times generates a single sample`() {
             val nameType = XMLPattern("<name><title $occursMultipleTimes>(number)</title></name>")
-            val newTypes = nameType.newBasedOn(Row(), Resolver())
+            val newTypes = nameType.newBasedOn(Row(), Resolver()).toList()
 
             assertThat(newTypes.size).isOne
         }
@@ -848,7 +848,7 @@ internal class XMLPatternTest {
         @Test
         fun `xml with a node that occurs multiple times generates multiple nodes`() {
             val nameType = XMLPattern("<name><title $occursMultipleTimes>(number)</title></name>")
-            val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver()) }
+            val newValues = nameType.newBasedOn(Row(), Resolver()).map { it.generate(Resolver()) }.toList()
 
             assertThat(newValues.isNotEmpty())
 
@@ -867,7 +867,7 @@ internal class XMLPatternTest {
             val nameType = XMLPattern("<name><nameid $occursMultipleTimes $TYPE_ATTRIBUTE_NAME=\"Nameid\" /></name>")
             val nameIdType = XMLPattern("<nameid>(number)</nameid>")
             val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
-            val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver) }
+            val newValues = nameType.newBasedOn(Row(), resolver).map { it.generate(resolver) }.toList()
 
             assertThat(newValues.isNotEmpty())
 
@@ -887,7 +887,7 @@ internal class XMLPatternTest {
             val nameIdType = XMLPattern("<nameid>(number)</nameid>")
             val resolver = Resolver(newPatterns = mapOf("(Nameid)" to nameIdType))
             val row = Row(listOf("nameid"), listOf("10"))
-            val newValues = nameType.newBasedOn(row, resolver).map { it.generate(resolver) }
+            val newValues = nameType.newBasedOn(row, resolver).map { it.generate(resolver) }.toList()
 
             assertThat(newValues.isNotEmpty())
 

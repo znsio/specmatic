@@ -1,7 +1,5 @@
 package `in`.specmatic.core.pattern
 
-import kotlin.math.min
-
 /**
  * Provides utility access to all combinations of multiple sets of candidate values. Represented as the cartesian
  * product of all sets where each combination is represented as a numerical index from 0 to (MAX_COMBOS - 1).
@@ -15,67 +13,96 @@ import kotlin.math.min
  * stackoverflow article</a> accepted answer. A notable difference is that our representation is reversed such that
  * a sequential iteration produces all combinations with the first candidate value of the first set before producing
  * all combinations using the second candidate value of the first set, and so on for each subsequent value and set.
+ *
+ * Note: This code now returns a sequence instead of a list, and no longer calculates up-front the max size of any
+ * sequence. There are significant changes to how it works. However, it continues to prioritise combinations in the
+ * same way as before.
  */
 class CombinationSpec<ValueType>(
-    keyToCandidatesOrig: Map<String, List<ValueType>>,
+    keyToCandidatesOrig: Map<String, Sequence<ValueType>>,
     private val maxCombinations: Int,
 ) {
     init {
         if (maxCombinations < 1) throw IllegalArgumentException("maxCombinations must be > 0 and <= ${Int.MAX_VALUE}")
     }
-    // Omit entries without any candidate values
-    private val keyToCandidates = keyToCandidatesOrig.filterValues { it.isNotEmpty() }
-    private val indexToKeys = keyToCandidates.keys.toList()
-    private val indexToCandidates = keyToCandidates.values
-    private val maxCandidateCount = indexToCandidates.maxOfOrNull { it.size } ?: 0
-    private val allCombosCount = indexToCandidates.map { it.size.toLong()}.reduceOrNull{ acc, cnt -> acc * cnt} ?: 0
-    private val reversedIndexToKeys = indexToKeys.reversed()
-    private val reversedIndexToCandidates = indexToCandidates.reversed()
-    private val lastCombination = min(maxCombinations, min(allCombosCount, Int.MAX_VALUE.toLong()).toInt()) - 1
-    private val prioritizedComboIndexes = calculatePrioritizedComboIndexes()
 
-    val selectedCombinations = toSelectedCombinations()
+    val selectedCombinations: Sequence<Map<String, ValueType>> = toSelectedCombinations(keyToCandidatesOrig, maxCombinations)
 
-    private fun calculatePrioritizedComboIndexes(): List<Int> {
-        // Prioritizes using each candidate value as early as possible so uses first candidate of each set,
-        // then second candidate, and so on.
-        val prioritizedCombos = (0 until maxCandidateCount).map { lockStepOffset ->
-            val fullComboIndex = indexToCandidates.fold(0) {acc, candidates ->
-                // Lower-cardinality sets run out of candidates first so are reused round-robin until other sets finish
-                val candidateOffset = lockStepOffset % candidates.size
+    fun <ValueType> toSelectedCombinations(rawPatternCollection: Map<String, Sequence<ValueType>>, maxCombinations: Int): Sequence<Map<String, ValueType>> {
+        val patternCollection = rawPatternCollection.filterValues { it.any() }
 
-                toComboIndex(candidates.size, candidateOffset, acc)
-            }
-            // val combo = toCombo(finalComboIndex)
-            fullComboIndex
+        if (patternCollection.isEmpty())
+            return emptySequence()
+
+        val cachedValues = patternCollection.mapValues { mutableListOf<ValueType>() }
+        val prioritisedGenerations = mutableSetOf<Map<String, ValueType>>()
+
+        val ranOut = cachedValues.mapValues { false }.toMutableMap()
+
+        val iterators = patternCollection.mapValues {
+            it.value.iterator()
+        }.filter {
+            it.value.hasNext()
         }
-        return prioritizedCombos
+
+        return sequence {
+            var ctr = 0
+
+            while (true) {
+                val nextValue = iterators.mapValues { (key, iterator) ->
+                    val nextValueFromIterator = if (iterator.hasNext()) {
+                        val value = iterator.next()
+
+                        cachedValues.getValue(key).add(value)
+
+                        value
+                    } else {
+                        ranOut[key] = true
+
+                        val cachedValuesForKey = cachedValues.getValue(key)
+                        val value = cachedValuesForKey.get(ctr % cachedValuesForKey.size)
+
+                        value
+                    }
+
+                    nextValueFromIterator
+                }
+
+                if(ranOut.all { it.value })
+                    break
+
+                ctr ++
+
+                yield(nextValue)
+                prioritisedGenerations.add(nextValue)
+
+                if(prioritisedGenerations.size == maxCombinations)
+                    break
+            }
+
+            if(prioritisedGenerations.size == maxCombinations)
+                return@sequence
+
+            val otherPatterns = allCombinations(patternCollection)
+
+            val maxCountOfUnPrioritisedGenerations = maxCombinations - prioritisedGenerations.size
+
+            val filtered = otherPatterns.filter { it !in prioritisedGenerations }
+            val limited = filtered.take(maxCountOfUnPrioritisedGenerations)
+
+            yieldAll(limited)
+        }
     }
+    fun <ValueType> allCombinations(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {
+        if(patternCollection.isEmpty())
+            return sequenceOf(emptyMap())
 
-    // Combo index is based on each candidate set size and offset, plus any index accumulated so far
-    private fun toComboIndex(candidateSetSize: Int, candidateOffset: Int, comboIndexSoFar: Int) =
-        (comboIndexSoFar * candidateSetSize) + candidateOffset
+        val entry = patternCollection.entries.first()
 
-    private fun toSelectedCombinations(): List<Map<String, ValueType>> {
-        val prioritizedCombos = prioritizedComboIndexes.map { toCombo(it) }
-        val remainingCombos = (0..lastCombination)
-            .filterNot { prioritizedComboIndexes.contains(it) }
-            .map { toCombo(it) }
+        val subsequentGenerations: Sequence<Map<String, ValueType>> = allCombinations(patternCollection - entry.key)
 
-        val combined = prioritizedCombos.plus(remainingCombos)
-
-        return if (combined.size > maxCombinations)
-            combined.subList(0, maxCombinations)
-        else combined
+        return entry.value.flatMap { value ->
+            subsequentGenerations.map { mapOf(entry.key to value) + it }
+        }
     }
-    private fun toCombo(comboIndex: Int): Map<String, ValueType> {
-        var subIndex = comboIndex
-
-        return reversedIndexToCandidates.mapIndexed{ reversedIndex, candidates ->
-            val candidateOffset = subIndex % candidates.size
-            subIndex /= candidates.size
-            reversedIndexToKeys[reversedIndex] to  candidates[candidateOffset]
-        }.toMap()
-    }
-
 }

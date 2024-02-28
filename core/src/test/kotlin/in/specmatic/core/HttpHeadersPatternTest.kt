@@ -172,7 +172,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate new header objects given an empty row`() {
         val headers = HttpHeadersPattern(mapOf("Content-Type" to stringToPattern("(string)", "Content-Type")))
-        val newHeaders = headers.newBasedOn(Row(), Resolver())
+        val newHeaders = headers.newBasedOn(Row(), Resolver()).toList()
         assertEquals("(string)", newHeaders[0].pattern.getValue("Content-Type").toString())
     }
 
@@ -180,7 +180,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate new header object with the value of the example in the given row`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern()))
-        val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver())
+        val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver()).toList()
         assertThat(newHeaders[0].pattern.getValue("X-TraceID")).isEqualTo(ExactValuePattern(StringValue("123")))
     }
 
@@ -188,7 +188,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate two header object given one optional header and an empty row`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern(), "X-Identifier?" to StringPattern()))
-        val newHeaders = headers.newBasedOn(Row(), Resolver())
+        val newHeaders = headers.newBasedOn(Row(), Resolver()).toList()
 
         assertThat(newHeaders).containsExactlyInAnyOrder(
             HttpHeadersPattern(mapOf("X-TraceID" to StringPattern())),
@@ -200,7 +200,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate two header object given one optional header an example of the mandatory header`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern(), "X-Identifier?" to StringPattern()))
-        val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver())
+        val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver()).toList()
 
         assertThat(newHeaders).containsExactlyInAnyOrder(
             HttpHeadersPattern(mapOf("X-TraceID" to ExactValuePattern(StringValue("123")))),
@@ -212,7 +212,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate one header object given one optional header an example of the optional header`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern()))
-        val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver())
+        val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver()).toList()
         assertThat(newHeaders[0].pattern.getValue("X-TraceID")).isEqualTo(ExactValuePattern(StringValue("123")))
     }
 
@@ -220,7 +220,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate negative values for a string`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern()))
-        val newHeaders = headers.negativeBasedOn(Row(), Resolver())
+        val newHeaders = headers.negativeBasedOn(Row(), Resolver()).toList()
 
         assertThat(newHeaders).isEmpty()
     }
@@ -229,7 +229,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate negative values for a number`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to NumberPattern()))
-        val newHeaders = headers.negativeBasedOn(Row(), Resolver())
+        val newHeaders = headers.negativeBasedOn(Row(), Resolver()).toList()
 
         assertThat(newHeaders).containsExactlyInAnyOrder(
             HttpHeadersPattern(mapOf("X-TraceID" to StringPattern())),
@@ -265,7 +265,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `an optional header should result in 2 new header patterns for newBasedOn`() {
         val pattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))
-        val list = pattern.newBasedOn(Row(), Resolver())
+        val list = pattern.newBasedOn(Row(), Resolver()).toList()
 
         assertThat(list).hasSize(2)
 

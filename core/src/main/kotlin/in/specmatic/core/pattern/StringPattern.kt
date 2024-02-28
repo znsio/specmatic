@@ -59,10 +59,10 @@ data class StringPattern (
     
     override fun generate(resolver: Resolver): Value = resolver.resolveExample(example, this) ?: StringValue(randomString(randomStringLength))
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
-    override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(NullPattern, NumberPattern(), BooleanPattern())
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        return sequenceOf(NullPattern, NumberPattern(), BooleanPattern())
     }
 
     override fun parse(value: String, resolver: Resolver): Value = StringValue(value)

@@ -7,21 +7,21 @@ import `in`.specmatic.core.value.StringValue
 import java.io.File
 
 sealed class MultiPartFormDataPattern(open val name: String, open val contentType: String?) {
-    abstract fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?>
+    abstract fun newBasedOn(row: Row, resolver: Resolver): Sequence<MultiPartFormDataPattern?>
     abstract fun generate(resolver: Resolver): MultiPartFormDataValue
     abstract fun matches(value: MultiPartFormDataValue, resolver: Resolver): Result
     abstract fun nonOptional(): MultiPartFormDataPattern
 }
 
 data class MultiPartContentPattern(override val name: String, val content: Pattern, override val contentType: String? = null) : MultiPartFormDataPattern(name, contentType) {
-    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartContentPattern?> =
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<MultiPartContentPattern?> =
             newBasedOn(row, withoutOptionality(name), content, resolver).map { newContent: Pattern -> MultiPartContentPattern(
                 withoutOptionality(name),
                 newContent,
                 contentType
             ) }.let {
                 when{
-                    isOptional(name) && !row.containsField(withoutOptionality(name)) -> listOf(null).plus(it)
+                    isOptional(name) && !row.containsField(withoutOptionality(name)) -> sequenceOf(null).plus(it)
                     else -> it
                 }
             }
@@ -70,9 +70,9 @@ data class MultiPartContentPattern(override val name: String, val content: Patte
 }
 
 data class MultiPartFilePattern(override val name: String, val filename: Pattern, override val contentType: String? = null, val contentEncoding: String? = null) : MultiPartFormDataPattern(name, contentType) {
-    override fun newBasedOn(row: Row, resolver: Resolver): List<MultiPartFormDataPattern?> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<MultiPartFormDataPattern?> {
         val rowKey = "${name}_filename"
-        return listOf(this.copy(filename = if(row.containsField(rowKey)) ExactValuePattern(StringValue(row.getField(rowKey))) else filename))
+        return sequenceOf(this.copy(filename = if(row.containsField(rowKey)) ExactValuePattern(StringValue(row.getField(rowKey))) else filename))
     }
 
     override fun generate(resolver: Resolver): MultiPartFormDataValue =

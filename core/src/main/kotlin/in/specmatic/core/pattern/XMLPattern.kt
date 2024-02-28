@@ -308,7 +308,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         return XMLNode(pattern.realName, newAttributes, nodes)
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<XMLPattern> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<XMLPattern> {
         return forEachKeyCombinationIn(pattern.attributes, row) { attributePattern ->
             attempt(breadCrumb = this.pattern.name) {
                 newBasedOn(attributePattern, row, resolver).map {
@@ -330,7 +330,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                         if (matchResult is Failure)
                             throw ContractException(matchResult.toFailureReport())
 
-                        listOf(listOf(ExactValuePattern(parsedData)))
+                        sequenceOf(listOf(ExactValuePattern(parsedData)))
                     }
                 }
                 else -> {
@@ -369,7 +369,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         }
     }
 
-    override fun newBasedOn(resolver: Resolver): List<XMLPattern> {
+    override fun newBasedOn(resolver: Resolver): Sequence<XMLPattern> {
         return allOrNothingCombinationIn(pattern.attributes) { attributePattern ->
             attempt(breadCrumb = this.pattern.name) {
                 newBasedOn(attributePattern, resolver).map {
@@ -402,15 +402,16 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                         }
                     }
                 }
-            })
+            }
+        )
 
             newNodesList.map { newNodes ->
-                XMLPattern(XMLTypeData(pattern.name, pattern.realName, newAttributes, newNodes))
+                XMLPattern(XMLTypeData(pattern.name, pattern.realName, newAttributes, newNodes.toList()))
             }
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         return newBasedOn(row, resolver)
     }
 

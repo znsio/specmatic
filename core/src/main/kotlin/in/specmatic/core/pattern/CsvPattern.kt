@@ -32,16 +32,16 @@ class CsvPattern(override val pattern: Pattern) : Pattern {
         }.joinToString(",") { it.toStringLiteral() })
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(this)
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        return sequenceOf(this)
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         return StringPattern().negativeBasedOn(row, resolver)
     }
 
-    override fun newBasedOn(resolver: Resolver): List<Pattern> {
-        return listOf(this)
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
+        return sequenceOf(this)
     }
 
     override fun parse(value: String, resolver: Resolver): Value {

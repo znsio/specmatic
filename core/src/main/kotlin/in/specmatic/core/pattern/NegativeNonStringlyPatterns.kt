@@ -9,7 +9,7 @@ class NegativeNonStringlyPatterns : NegativePatternsTemplate() {
         key: String,
         negativePattern: Pattern,
         resolver: Resolver,
-    ): List<Pattern> {
+    ): Sequence<Pattern> {
         return if (patternIsEnum(negativePattern, resolver)) {
             negativeBasedOnForEnum(negativePattern)
         } else {
@@ -27,7 +27,7 @@ class NegativeNonStringlyPatterns : NegativePatternsTemplate() {
         patternMap: Map<String, Pattern>,
         resolver: Resolver,
         row: Row
-    ): Map<String, List<Pattern>> {
+    ): Map<String, Sequence<Pattern>> {
         return patternMap.mapValues { (key, pattern) ->
             val resolvedPattern = resolvedHop(pattern, resolver)
 
@@ -47,11 +47,11 @@ class NegativeNonStringlyPatterns : NegativePatternsTemplate() {
         resolver: Resolver
     ) = resolvedPattern.matches(it.generate(resolver).toStringValue(), resolver) is Result.Success
 
-    private fun negativeBasedOnForEnum(pattern: Pattern): List<Pattern> {
+    private fun negativeBasedOnForEnum(pattern: Pattern): Sequence<Pattern> {
         val enumPattern = (pattern as EnumPattern).pattern
         val firstEnumOption = enumPattern.pattern.first() as ExactValuePattern
         val valueOfFirstEnumOption = firstEnumOption.pattern
         val patternOfFirstValue = valueOfFirstEnumOption.type()
-        return listOf(patternOfFirstValue)
+        return sequenceOf(patternOfFirstValue)
     }
 }

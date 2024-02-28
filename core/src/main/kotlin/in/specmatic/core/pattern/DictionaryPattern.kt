@@ -51,7 +51,7 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
         })
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         val newValuePatterns = resolver.withCyclePrevention(valuePattern) { cyclePreventedResolver ->
             valuePattern.newBasedOn(Row(), cyclePreventedResolver)
         }
@@ -61,7 +61,7 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
         }
     }
 
-    override fun newBasedOn(resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         val newValuePatterns = resolver.withCyclePrevention(valuePattern) { cyclePreventedResolver ->
             valuePattern.newBasedOn(cyclePreventedResolver)
         }
@@ -71,8 +71,8 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(this)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        return sequenceOf(this)
     }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value)

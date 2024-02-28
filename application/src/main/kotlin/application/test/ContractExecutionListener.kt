@@ -48,11 +48,6 @@ class ContractExecutionListener : TestExecutionListener {
                     return
         }
 
-        totalRun += 1
-        logger.newLine()
-        logger.log(progressUpdate(totalRun, SpecmaticJUnitSupport.totalTestCount))
-        logger.newLine()
-
         printer.printTestSummary(testIdentifier, testExecutionResult)
 
         when(testExecutionResult?.status) {

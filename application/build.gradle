@@ -47,12 +47,12 @@ dependencies {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter'
         exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
     }
-    implementation('org.springframework.boot:spring-boot-starter:3.2.2') {
+    implementation('org.springframework.boot:spring-boot-starter:3.2.3') {
         exclude group: 'org.springframework', module: 'spring-core'
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude group: 'ch.qos.logback', module: 'logback-core'
     }
-    implementation('org.springframework.boot:spring-boot-autoconfigure:3.2.2')
+    implementation('org.springframework.boot:spring-boot-autoconfigure:3.2.3')
     implementation('org.springframework:spring-core:6.1.4')
     implementation 'info.picocli:picocli:4.7.5'
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
@@ -81,7 +81,7 @@ dependencies {
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
-    testImplementation('org.springframework.boot:spring-boot-starter-test:3.2.2') {
+    testImplementation('org.springframework.boot:spring-boot-starter-test:3.2.3') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude module: 'mockito-core'
     }

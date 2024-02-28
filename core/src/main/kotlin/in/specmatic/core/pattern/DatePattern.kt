@@ -17,11 +17,11 @@ object DatePattern : Pattern, ScalarType {
 
     override fun generate(resolver: Resolver): StringValue = StringValue(RFC3339.currentDate())
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<DatePattern> = listOf(this)
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<DatePattern> = sequenceOf(this)
 
-    override fun newBasedOn(resolver: Resolver): List<DatePattern> = listOf(this)
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(NullPattern)
+    override fun newBasedOn(resolver: Resolver): Sequence<DatePattern> = sequenceOf(this)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        return sequenceOf(NullPattern)
     }
 
     override fun parse(value: String, resolver: Resolver): StringValue =

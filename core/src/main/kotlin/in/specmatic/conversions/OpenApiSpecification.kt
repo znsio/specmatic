@@ -294,7 +294,7 @@ class OpenApiSpecification(
 
                     val requestBody: RequestBody? = resolveRequestBody(operation)
 
-                    val httpResponsePatterns: List<ResponseData> = attempt("In $httpMethod $openApiPath response") {
+                    val httpResponsePatterns: List<ResponseData> = attempt(breadCrumb = "$httpMethod $openApiPath -> RESPONSE") {
                         toHttpResponsePatterns(operation.responses)
                     }
 
@@ -498,7 +498,7 @@ class OpenApiSpecification(
             if(!isNumber(status) && status != "default")
                 throw ContractException("Response status codes are expected to be numbers, but \"$status\" was found")
 
-            attempt("in $status response") { openAPIResponseToSpecmatic(response, status, headersMap) }
+            attempt(breadCrumb = status) { openAPIResponseToSpecmatic(response, status, headersMap) }
         }.flatten()
     }
 
@@ -972,12 +972,12 @@ class OpenApiSpecification(
                     DeferredPattern("(${componentName})")
                 }
                 else {
-                    val schemaFragment = if(patternName.isNotBlank()) "schema $patternName" else "in one of the schemas"
+                    val schemaFragment = if(patternName.isNotBlank()) " in schema $patternName" else " in the schema"
 
                     throw if(schema.javaClass.simpleName != "Schema")
                         ContractException("${schemaFragment.capitalizeFirstChar()} is not yet supported, please raise an issue on https://github.com/znsio/specmatic/issues")
                     else
-                        ContractException("\"type\" attribute was not provided in $schemaFragment, please check the syntax of the specification")
+                        ContractException("\"type\" attribute was not provided$schemaFragment, please check the syntax of the specification")
                 }
             }
         }.also {
@@ -1242,7 +1242,7 @@ class OpenApiSpecification(
             propertyName to ExactValuePattern(StringValue(patternName))
         else {
             val optional = !requiredFields.contains(propertyName)
-            toSpecmaticParamName(optional, propertyName) to toSpecmaticPattern(propertyType, typeStack)
+            toSpecmaticParamName(optional, propertyName) to attempt(breadCrumb = propertyName) { toSpecmaticPattern(propertyType, typeStack) }
         }
     }.toMap()
 

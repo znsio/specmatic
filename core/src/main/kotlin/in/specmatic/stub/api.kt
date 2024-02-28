@@ -89,7 +89,7 @@ fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathDa
                                     try {
                                         Pair(it.path, stringToMockScenario(StringValue(it.readText())))
                                     } catch (e: Throwable) {
-                                        logger.log(e, "  Could not load stub file ${it.canonicalPath}")
+                                        logger.log(e, "Could not load stub file ${it.canonicalPath}...")
                                         null
                                     }
                                 }
@@ -100,7 +100,8 @@ fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathDa
 
                     loadContractStubs(listOf(Pair(contractPath.path, feature)), stubData)
                 } catch(e: Throwable) {
-                    logger.log(e, "  Could not load ${contractPath.canonicalPath}")
+                    logger.log("Could not load ${contractPath.canonicalPath}")
+                    logger.log(e)
                     emptyList()
                 }
             }

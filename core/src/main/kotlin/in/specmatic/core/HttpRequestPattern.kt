@@ -630,8 +630,6 @@ data class HttpRequestPattern(
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
             val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
 
-            //TODO: figure out a way to optimise generating all positive scenarios
-
             sequence {
                 // If security schemes are present, for now we'll just take the first scheme and assign it to each negative request pattern.
                 // Ideally we should generate negative patterns from the security schemes and use them.

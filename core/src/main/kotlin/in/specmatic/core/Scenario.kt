@@ -268,7 +268,7 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOn(row: Row, resolverStrategies: ResolverStrategies): List<Scenario> {
+    private fun newBasedOn(row: Row, resolverStrategies: ResolverStrategies): Sequence<Scenario> {
         val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
         val resolver =
             Resolver(expectedFacts, false, patterns)
@@ -295,7 +295,7 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOnBackwardCompatibility(row: Row): List<Scenario> {
+    private fun newBasedOnBackwardCompatibility(row: Row): Sequence<Scenario> {
         val resolver = Resolver(expectedFacts, false, patterns)
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
@@ -312,15 +312,15 @@ data class Scenario(
         resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-    ): List<Scenario> {
+    ): Sequence<Scenario> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
         }
 
         return scenarioBreadCrumb(this) {
             when (examples.size) {
-                0 -> listOf(Row())
-                else -> examples.flatMap {
+                0 -> sequenceOf(Row())
+                else -> examples.asSequence().flatMap {
                     it.rows.map { row ->
                         row.copy(variables = variables, references = referencesWithBaseURLs)
                     }
@@ -337,15 +337,15 @@ data class Scenario(
         resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-    ): List<ContractTest> {
+    ): Sequence<ContractTest> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
         }
 
         return scenarioBreadCrumb(this) {
             when (examples.size) {
-                0 -> listOf(Row())
-                else -> examples.flatMap {
+                0 -> sequenceOf(Row())
+                else -> examples.asSequence().flatMap {
                     it.rows.map { row ->
                         row.copy(variables = variables, references = referencesWithBaseURLs)
                     }
@@ -354,7 +354,7 @@ data class Scenario(
                 try {
                     newBasedOn(row, resolverStrategies).map { ScenarioTest(it, resolverStrategies) }
                 } catch (e: Throwable) {
-                    listOf(ScenarioTestGenerationFailure(this, e))
+                    sequenceOf(ScenarioTestGenerationFailure(this, e))
                 }
             }
         }

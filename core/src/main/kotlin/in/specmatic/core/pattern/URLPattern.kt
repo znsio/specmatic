@@ -24,10 +24,10 @@ data class URLPattern(val scheme: URLScheme = URLScheme.HTTPS, override val type
     override fun generate(resolver: Resolver): StringValue =
             StringValue("${scheme.prefix}${randomString().lowercase()}.com/${randomString().lowercase()}")
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
-    override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         return newBasedOn(row, resolver)
     }
 

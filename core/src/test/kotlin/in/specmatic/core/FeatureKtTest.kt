@@ -722,7 +722,7 @@ paths:
 
         val withGenerativeTestsEnabled = contract.enableGenerativeTesting()
 
-        val tests: List<Scenario> = withGenerativeTestsEnabled.generateContractTestScenarios(emptyList())
+        val tests: List<Scenario> = withGenerativeTestsEnabled.generateContractTestScenariosL(emptyList())
 
         val expectedRequestTypes: List<Pair<String, String>> = listOf(
             Pair("(string)", "(string)"),

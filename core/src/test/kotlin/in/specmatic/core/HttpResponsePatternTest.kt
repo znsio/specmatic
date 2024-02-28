@@ -8,7 +8,7 @@ import `in`.specmatic.core.value.StringValue
 internal class HttpResponsePatternTest {
     @Test
     fun `it should result in 2 tests` () {
-        val list = HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))).newBasedOn(Row(), Resolver())
+        val list = HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))).newBasedOn(Row(), Resolver()).toList()
 
         assertThat(list).hasSize(2)
 

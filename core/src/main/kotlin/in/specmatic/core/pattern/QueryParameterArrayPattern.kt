@@ -8,7 +8,7 @@ import `in`.specmatic.core.value.ListValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 
-class QueryParameterArrayPattern(override val pattern: List<Pattern>, val parameterName: String): Pattern {
+data class QueryParameterArrayPattern(override val pattern: List<Pattern>, val parameterName: String): Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is ListValue) {
             return resolver.mismatchMessages.valueMismatchFailure("Array", sampleData)
@@ -99,15 +99,15 @@ class QueryParameterArrayPattern(override val pattern: List<Pattern>, val parame
         }.map { StringValue(it.toStringLiteral()) })
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         return pattern.first().newBasedOn(row, resolver).map { QueryParameterArrayPattern(listOf(it), parameterName) }
     }
 
-    override fun newBasedOn(resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         return pattern.first().newBasedOn(resolver).map { QueryParameterArrayPattern(listOf(it), parameterName) }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         return pattern.first().negativeBasedOn(row, resolver).map { QueryParameterArrayPattern(listOf(it), parameterName) }
     }
 

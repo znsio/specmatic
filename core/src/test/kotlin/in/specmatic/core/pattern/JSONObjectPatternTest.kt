@@ -420,7 +420,7 @@ internal class JSONObjectPatternTest {
 
             System.setProperty("MAX_TEST_REQUEST_COMBINATIONS", "64")
             val newPatterns = try {
-                objPattern.newBasedOn(Row(), resolver)
+                objPattern.newBasedOn(Row(), resolver).toList()
             } finally {
                 System.clearProperty("MAX_TEST_REQUEST_COMBINATIONS")
             }
@@ -457,7 +457,7 @@ internal class JSONObjectPatternTest {
 
             val personPattern = parsedPattern("""{"name": "(string)", "address?": "(Address)"}""")
 
-            val combinations = personPattern.newBasedOn(resolver)
+            val combinations = personPattern.newBasedOn(resolver).toList()
 
             assertThat(combinations.size).isEqualTo(3)
 
@@ -478,7 +478,7 @@ internal class JSONObjectPatternTest {
 
             val personPattern = parsedPattern("""{"name": "(string)", "address?": "(Address)"}""")
 
-            val combinations = personPattern.newBasedOn(resolver)
+            val combinations = personPattern.newBasedOn(resolver).toList()
 
             assertThat(combinations.size).isEqualTo(4)
 
@@ -502,7 +502,7 @@ internal class JSONObjectPatternTest {
 
             val personPattern = parsedPattern("""{"name": "(string)", "address?": "(Address?)"}""")
 
-            val combinations = personPattern.newBasedOn(resolver)
+            val combinations = personPattern.newBasedOn(resolver).toList()
 
             assertThat(combinations.size).isEqualTo(5)
 
@@ -535,7 +535,7 @@ internal class JSONObjectPatternTest {
                 maxProperties = 3
             )
 
-            val newPatterns: List<JSONObjectPattern> = pattern.newBasedOn(Row(), Resolver())
+            val newPatterns: List<JSONObjectPattern> = pattern.newBasedOn(Row(), Resolver()).toList()
 
             assertThat(newPatterns).allSatisfy {
                 assertThat(it.pattern.keys).hasSizeGreaterThanOrEqualTo(2)
@@ -632,7 +632,7 @@ internal class JSONObjectPatternTest {
                 )
             )
 
-            val negativePatterns: List<Pattern> = pattern.negativeBasedOn(Row(), Resolver())
+            val negativePatterns: List<Pattern> = pattern.negativeBasedOn(Row(), Resolver()).toList()
 
             val jsonInternalPatterns = negativePatterns.filterIsInstance<JSONObjectPattern>().map { it.pattern }
 

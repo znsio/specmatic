@@ -11,8 +11,8 @@ class ScenarioTestGenerationFailure(val scenario: Scenario, val e: Throwable) : 
         return TestResultRecord(convertPathParameterStyle(scenario.path), scenario.method, scenario.httpResponsePattern.status, result.testResult())
     }
 
-    override fun generateTestScenarios(testVariables: Map<String, String>, testBaseURLs: Map<String, String>): List<ContractTest> {
-        return listOf(this)
+    override fun generateTestScenarios(testVariables: Map<String, String>, testBaseURLs: Map<String, String>): Sequence<ContractTest> {
+        return sequenceOf(this)
     }
 
     override fun testDescription(): String {

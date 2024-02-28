@@ -18,20 +18,20 @@ data class URLPathSegmentPattern(override val pattern: Pattern, override val key
         }
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<URLPathSegmentPattern> =
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<URLPathSegmentPattern> =
         resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
             pattern.newBasedOn(row, cyclePreventedResolver).map { URLPathSegmentPattern(it, key) }
         }
 
-    override fun newBasedOn(resolver: Resolver): List<URLPathSegmentPattern> =
+    override fun newBasedOn(resolver: Resolver): Sequence<URLPathSegmentPattern> =
         resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
             pattern.newBasedOn(cyclePreventedResolver).map { URLPathSegmentPattern(it, key) }
         }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         return when (pattern) {
-            is ExactValuePattern -> emptyList()
-            is StringPattern -> emptyList()
+            is ExactValuePattern -> emptySequence()
+            is StringPattern -> emptySequence()
             else -> resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
                 pattern.negativeBasedOn(row, cyclePreventedResolver).filterNot { it is NullPattern }.map { URLPathSegmentPattern(it, key) }
             }

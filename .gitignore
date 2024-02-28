@@ -15,4 +15,4 @@ perfiz/*_data
 **/.settings
 **/.project
 **/.classpath
-
+**/*.hprof

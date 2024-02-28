@@ -32,7 +32,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
     fun newBasedOn(
         row: Row,
         resolver: Resolver
-    ): List<Map<String, Pattern>> {
+    ): Sequence<Map<String, Pattern>> {
         val newQueryParamsList = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams = queryPatterns.let {
                 if(additionalProperties != null)
@@ -103,7 +103,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
             Result.Success()
     }
 
-    fun newBasedOn(resolver: Resolver): List<Map<String, Pattern>> {
+    fun newBasedOn(resolver: Resolver): Sequence<Map<String, Pattern>> {
         return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams = queryPatterns.let {
                 if(additionalProperties != null)
@@ -125,7 +125,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         } else ""
     }
 
-    fun negativeBasedOn(row: Row, resolver: Resolver): List<Map<String, Pattern>> {
+    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
         return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams = queryPatterns.let {
                 if(additionalProperties != null)

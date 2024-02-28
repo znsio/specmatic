@@ -14,10 +14,10 @@ object EmptyStringPattern : Pattern {
     }
 
     override fun generate(resolver: Resolver): Value = StringValue("")
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
-    override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(this)
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        return sequenceOf(this)
     }
 
     override fun parse(value: String, resolver: Resolver): Value {

@@ -52,7 +52,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         }
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): List<HttpResponsePattern> =
+    fun newBasedOn(row: Row, resolver: Resolver): Sequence<HttpResponsePattern> =
         attempt(breadCrumb = "RESPONSE") {
             resolver.withCyclePrevention(body) { cyclePreventedResolver ->
                 body.newBasedOn(row, cyclePreventedResolver)

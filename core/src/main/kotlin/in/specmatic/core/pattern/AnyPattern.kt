@@ -85,19 +85,19 @@ data class AnyPattern(
         } ?: NullValue // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         resolver.resolveExample(example, pattern)?.let {
-            return listOf(ExactValuePattern(it))
+            return sequenceOf(ExactValuePattern(it))
         }
 
         val isNullable = pattern.any { it is NullPattern }
-        val patternResults: List<Pair<List<Pattern>?, Throwable?>> =
-            pattern.sortedBy { it is NullPattern }.map { innerPattern ->
+        val patternResults: Sequence<Pair<Sequence<Pattern>?, Throwable?>> =
+            pattern.asSequence().sortedBy { it is NullPattern }.map { innerPattern ->
                 try {
                     val patterns =
                         resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
                             innerPattern.newBasedOn(row, cyclePreventedResolver)
-                        } ?: listOf()
+                        } ?: sequenceOf()
                     Pair(patterns, null)
                 } catch (e: Throwable) {
                     Pair(null, e)
@@ -107,10 +107,10 @@ data class AnyPattern(
         return newTypesOrExceptionIfNone(patternResults, "Could not generate new tests")
     }
 
-    private fun newTypesOrExceptionIfNone(patternResults: List<Pair<List<Pattern>?, Throwable?>>, message: String): List<Pattern> {
-        val newPatterns: List<Pattern> = patternResults.mapNotNull { it.first }.flatten()
+    private fun newTypesOrExceptionIfNone(patternResults: Sequence<Pair<Sequence<Pattern>?, Throwable?>>, message: String): Sequence<Pattern> {
+        val newPatterns: Sequence<Pattern> = patternResults.mapNotNull { it.first }.flatten()
 
-        if (newPatterns.isEmpty() && pattern.isNotEmpty()) {
+        if (!newPatterns.any() && pattern.isNotEmpty()) {
             val exceptions = patternResults.mapNotNull { it.second }.map {
                 when (it) {
                     is ContractException -> it
@@ -120,26 +120,26 @@ data class AnyPattern(
 
             val failures = exceptions.map { it.failure() }
 
-            val failure = Result.Failure.fromFailures(failures)
+            val failure = Result.Failure.fromFailures(failures.toList())
 
             throw ContractException(failure.toFailureReport(message))
         }
         return newPatterns
     }
 
-    override fun newBasedOn(resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         val isNullable = pattern.any {it is NullPattern}
-        return pattern.flatMap { innerPattern ->
+        return pattern.asSequence().flatMap { innerPattern ->
             resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
                 innerPattern.newBasedOn(cyclePreventedResolver)
-            }?: listOf()  // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
+            }?: emptySequence()  // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         val nullable = pattern.any { it is NullPattern }
 
-        val negativeTypeResults = pattern.map {
+        val negativeTypeResults = pattern.asSequence().map {
             try {
                 val patterns =
                     it.negativeBasedOn(row, resolver)

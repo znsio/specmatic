@@ -498,7 +498,7 @@ class OpenApiSpecification(
             if(!isNumber(status) && status != "default")
                 throw ContractException("Response status codes are expected to be numbers, but \"$status\" was found")
 
-            attempt(breadCrumb = "200") { openAPIResponseToSpecmatic(response, status, headersMap) }
+            attempt(breadCrumb = status) { openAPIResponseToSpecmatic(response, status, headersMap) }
         }.flatten()
     }
 

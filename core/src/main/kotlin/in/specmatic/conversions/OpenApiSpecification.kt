@@ -1289,7 +1289,6 @@ class OpenApiSpecification(
     }
 
     private fun extractComponentName(component: String): String {
-        println(component)
         if(!component.startsWith("#")) {
             val filePath = component.substringBeforeLast("#")
             val message = try {

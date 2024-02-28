@@ -619,19 +619,6 @@ data class HttpRequestPattern(
                         if (result is Failure)
                             throw ContractException(result.toFailureReport())
 
-                        val originalRequest = if (value is JSONObjectValue) {
-                            body.negativeBasedOn(row.noteRequestBody(), resolver)
-                        } else {
-                            sequenceOf(ExactValuePattern(value))
-                        }
-
-                        val flattenedRequests: Sequence<Pattern> =
-                            resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                                body.newBasedOn(row.noteRequestBody(), cyclePreventedResolver)
-                            }
-
-                        flattenedRequests.plus(originalRequest)
-
                         body.negativeBasedOn(row.noteRequestBody(), resolver)
                     } else {
                         body.negativeBasedOn(row, resolver)

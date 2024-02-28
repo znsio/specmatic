@@ -34,7 +34,6 @@ class CombinationSpec<ValueType>(
         if (patternCollection.isEmpty())
             return emptySequence()
 
-        //TODO: STREAMING (we should be able to avoid maintaining cachedValues)
         val cachedValues = patternCollection.mapValues { mutableListOf<ValueType>() }
         val prioritisedGenerations = mutableSetOf<Map<String, ValueType>>()
 
@@ -47,7 +46,6 @@ class CombinationSpec<ValueType>(
         }
 
         return sequence {
-            //TODO: STREAMING (can we manage without this ctr?)
             var ctr = 0
 
             while (true) {

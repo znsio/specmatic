@@ -1290,15 +1290,11 @@ class OpenApiSpecification(
 
     private fun extractComponentName(component: String): String {
         if(!component.startsWith("#")) {
+            val componentPath = component.substringAfterLast("#")
             val filePath = component.substringBeforeLast("#")
             val message = try {
-                val file = File(filePath)
-
-                if (file.isAbsolute)
-                    "Could not dereference $component because $filePath does not exist."
-                else
-                    "Could not dereference $component because $filePath (absolute path ${file.absolutePath} does not exist."
-            } catch(e: Throwable) {
+                "Could not dereference $component. Either the file $filePath does not exist, or $componentPath is missing from it."
+            } catch (e: Throwable) {
                 "Could not dereference $component due an an error (${e.message})."
             }
 

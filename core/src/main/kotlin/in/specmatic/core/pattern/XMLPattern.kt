@@ -402,12 +402,11 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                         }
                     }
                 }
-                //TODO: STREAMING
-            }.map { it.toList() }
+            }
         )
 
             newNodesList.map { newNodes ->
-                XMLPattern(XMLTypeData(pattern.name, pattern.realName, newAttributes, newNodes))
+                XMLPattern(XMLTypeData(pattern.name, pattern.realName, newAttributes, newNodes.toList()))
             }
         }
     }

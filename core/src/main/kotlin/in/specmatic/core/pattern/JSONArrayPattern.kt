@@ -168,8 +168,12 @@ fun listCombinations(values: List<Sequence<Pattern?>>): Sequence<List<Pattern>> 
     }
 }
 
-fun <ValueType> allOrNothingListCombinations(values: List<List<ValueType?>>): Sequence<List<ValueType>> {
-    if (values.isEmpty())
+private enum class ValueSource {
+    CACHE, ITERATOR
+}
+
+fun <ValueType> allOrNothingListCombinations(values: List<Sequence<ValueType?>>): Sequence<List<ValueType>> {
+    if (values.none())
         return sequenceOf(emptyList())
 
     val iterators = values.filter {
@@ -178,36 +182,43 @@ fun <ValueType> allOrNothingListCombinations(values: List<List<ValueType?>>): Se
         it.iterator()
     }
 
-    val first = mutableListOf<ValueType?>()
-    val ranOut = iterators.map { false }.toMutableList()
+    val cacheOfFirstValue = mutableListOf<ValueType?>()
 
-    var oneRoundDone = false
+    val iteratorCache: MutableMap<Int, Iterator<ValueType?>> = mutableMapOf()
 
     return sequence {
         while(true) {
-            val nextValue = iterators.mapIndexed { index, iterator ->
-                val nextValueFromIterator = if (iterator.hasNext()) {
-                    val value = iterator.next()
-
-                    if(!oneRoundDone)
-                        first.add(value)
-
-                    value
-                } else {
-                    ranOut[index] = true
-                    first[index]
+            val nextValuesInArray: List<Pair<ValueType?, ValueSource>> = iterators.mapIndexed { index, rawIterator ->
+                val cachedIterator = if (index in iteratorCache)
+                    iteratorCache.getValue(index)
+                else {
+                    iteratorCache[index] = rawIterator
+                    rawIterator
                 }
 
-                nextValueFromIterator
+                if (cachedIterator.hasNext()) {
+                    val value = cachedIterator.next()
+
+                    if(index >= cacheOfFirstValue.size)
+                        cacheOfFirstValue.add(value)
+
+                    Pair(value, ValueSource.ITERATOR)
+                } else {
+                    Pair(cacheOfFirstValue[index], ValueSource.CACHE)
+                }
             }
 
-            if (ranOut.all { it }) {
-                break
-            }
+            val allIteratorsRanOut =
+                nextValuesInArray
+                    .all { (_, valueSource) ->
+                    valueSource == ValueSource.CACHE
+                }
 
-            oneRoundDone = true
+            if (allIteratorsRanOut) break
 
-            yield(nextValue.filterNotNull())
+            val nextArray = nextValuesInArray.map { (value, _) -> value }.filterNotNull()
+
+            yield(nextArray)
         }
 
     }

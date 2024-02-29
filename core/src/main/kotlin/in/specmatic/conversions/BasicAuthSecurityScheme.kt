@@ -2,9 +2,10 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.Row
 import `in`.specmatic.core.pattern.StringPattern
+import `in`.specmatic.core.pattern.randomString
+import io.ktor.util.*
 import org.apache.http.HttpHeaders.AUTHORIZATION
 import java.util.Base64
 
@@ -70,10 +71,10 @@ data class BasicAuthSecurityScheme(private val token: String? = null) : OpenAPIS
         return token
     }
 
-    private fun randomBasicAuthCredentials(): String =
-        StringPattern()
-            .generate(Resolver())
-            .toStringLiteral().let {
-                String(Base64.getEncoder().encode("$it:$it".toByteArray()))
-            }
+    private fun randomBasicAuthCredentials(): String {
+        val randomUsername = randomString()
+        val randomPassword = randomString()
+
+        return Base64.getEncoder().encodeToString("$randomUsername:$randomPassword".toByteArray())
+    }
 }

@@ -1,6 +1,7 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.APIKeySecuritySchemeConfiguration
+import `in`.specmatic.core.BasicAuthSecuritySchemeConfiguration
 import `in`.specmatic.core.SecuritySchemeConfiguration
 import `in`.specmatic.core.SecuritySchemeWithOAuthToken
 
@@ -14,7 +15,9 @@ fun getSecurityTokenForBasicAuthScheme(
     environmentVariable: String,
     environment: Environment
 ): String? {
-    return environment.getEnvironmentVariable(environmentVariable) ?: environment.getEnvironmentVariable(SPECMATIC_BASIC_AUTH_TOKEN)
+    return environment.getEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
+        (securitySchemeConfiguration as BasicAuthSecuritySchemeConfiguration).token
+    } ?: environment.getEnvironmentVariable(SPECMATIC_BASIC_AUTH_TOKEN)
 }
 
 fun getSecurityTokenForBearerScheme(

@@ -168,6 +168,10 @@ interface SecuritySchemeWithOAuthToken {
 data class OAuth2SecuritySchemeConfiguration(override val type: String, override val token: String) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
 
 @Serializable
+@SerialName("basicAuth")
+data class BasicAuthSecuritySchemeConfiguration(override val type: String, val token: String) : SecuritySchemeConfiguration()
+
+@Serializable
 @SerialName("bearer")
 data class BearerSecuritySchemeConfiguration(override val type: String, override val token: String) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
 

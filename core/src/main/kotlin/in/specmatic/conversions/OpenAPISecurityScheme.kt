@@ -13,8 +13,6 @@ interface OpenAPISecurityScheme {
     fun addTo(httpRequest: HttpRequest): HttpRequest
     fun addTo(requestPattern: HttpRequestPattern, row: Row): HttpRequestPattern
     fun isInRow(row: Row): Boolean
-    fun headerInRequest(request: HttpRequest, resolver: Resolver): Map<String, Pattern>
-    fun queryInRequest(request: HttpRequest, resolver: Resolver): Map<String, Pattern>
 }
 
 fun addToHeaderType(

@@ -796,7 +796,7 @@ private fun stubThatMatchesRequest(
         }
     }
 
-        val mock = listMatchResults.find { (result, _) -> result is Result.Success }
+    val mock = listMatchResults.find { (result, _) -> result is Result.Success }
 
     return Pair(mock?.second, listMatchResults)
 }

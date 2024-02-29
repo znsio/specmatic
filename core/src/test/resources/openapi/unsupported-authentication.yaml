@@ -43,5 +43,5 @@ paths:
 components:
   securitySchemes:
     basicAuth:
-      type: http
+      type: openIdConnect
       scheme: basic

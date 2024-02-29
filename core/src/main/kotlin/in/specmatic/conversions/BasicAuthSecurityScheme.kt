@@ -52,14 +52,6 @@ data class BasicAuthSecurityScheme(private val token: String? = null) : OpenAPIS
     }
 
     override fun isInRow(row: Row): Boolean = row.containsField(AUTHORIZATION)
-    override fun headerInRequest(request: HttpRequest, resolver: Resolver): Map<String, Pattern> {
-        return headerPatternFromRequest(request, AUTHORIZATION)
-    }
-
-    override fun queryInRequest(request: HttpRequest, resolver: Resolver): Map<String, Pattern> {
-        return emptyMap()
-    }
-
     private fun getAuthorizationHeaderValue(): String {
         val validToken = if(token != null)
             validatedToken(token)

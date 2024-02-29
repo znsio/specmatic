@@ -36,11 +36,4 @@ data class APIKeyInQueryParamSecurityScheme(val name: String, private val apiKey
     }
 
     override fun isInRow(row: Row): Boolean = row.containsField(name)
-    override fun headerInRequest(request: HttpRequest, resolver: Resolver): Map<String, Pattern> {
-        return emptyMap()
-    }
-
-    override fun queryInRequest(request: HttpRequest, resolver: Resolver): Map<String, Pattern> {
-        return queryPatternFromRequest(request, name)
-    }
 }

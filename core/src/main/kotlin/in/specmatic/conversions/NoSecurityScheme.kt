@@ -35,12 +35,4 @@ class NoSecurityScheme : OpenAPISecurityScheme {
     override fun isInRow(row: Row): Boolean {
         return false
     }
-
-    override fun headerInRequest(request: HttpRequest, resolver: Resolver): Map<String, Pattern> {
-        return emptyMap()
-    }
-
-    override fun queryInRequest(request: HttpRequest, resolver: Resolver): Map<String, Pattern> {
-        return emptyMap()
-    }
 }

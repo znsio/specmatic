@@ -45,13 +45,6 @@ data class BearerSecurityScheme(private val configuredToken: String? = null) : O
     override fun isInRow(row: Row): Boolean {
         return row.columnNames.any { it.equals(AUTHORIZATION, ignoreCase = true) }
     }
-    override fun headerInRequest(request: HttpRequest, resolver: Resolver): Map<String, Pattern> {
-        return headerPatternFromRequest(request, AUTHORIZATION)
-    }
-
-    override fun queryInRequest(request: HttpRequest, resolver: Resolver): Map<String, Pattern> {
-        return emptyMap()
-    }
 
     private fun getAuthorizationHeaderValue(): String {
         return "Bearer " + (configuredToken ?: StringPattern().generate(Resolver()).toStringLiteral())

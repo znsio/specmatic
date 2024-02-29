@@ -692,14 +692,6 @@ Background:
                     assertThat(response.status).isEqualTo(200)
                     assertThat(response.body.toStringLiteral()).isEqualTo("success")
                 }
-
-                val unexpectedCredentials = "frankie:abcdef"
-                val unexpectedBase64EncodedCredentials = String(java.util.Base64.getEncoder().encode(unexpectedCredentials.toByteArray()))
-
-                stub.client.execute(HttpRequest("GET", "/hello", headers = mapOf("Authorization" to "Basic $unexpectedBase64EncodedCredentials"))).let { response ->
-                    assertThat(response.status).isEqualTo(200)
-                    assertThat(response.body.toStringLiteral()).isNotEqualTo("success")
-                }
             }
         }
     }

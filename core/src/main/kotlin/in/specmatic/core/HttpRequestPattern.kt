@@ -234,11 +234,7 @@ data class HttpRequestPattern(
             requestPattern = attempt(breadCrumb = "URL") {
                 val path = request.path ?: ""
                 val pathTypes = pathToPattern(path)
-                val queryParamTypes = toTypeMapForQueryParameters(request.queryParams, httpQueryParamPattern, resolver).plus(
-                    requestPattern.securitySchemes.fold(emptyMap()) { acc, securityScheme ->
-                        acc.plus(securityScheme.queryInRequest(request, resolver))
-                    }
-                )
+                val queryParamTypes = toTypeMapForQueryParameters(request.queryParams, httpQueryParamPattern, resolver)
                 requestPattern.copy(httpPathPattern = HttpPathPattern(pathTypes, path), httpQueryParamPattern = HttpQueryParamPattern(queryParamTypes))
             }
 
@@ -247,10 +243,6 @@ data class HttpRequestPattern(
                     toLowerCaseKeys(request.headers) as Map<String, String>,
                     toLowerCaseKeys(headersPattern.pattern) as Map<String, Pattern>,
                     resolver
-                ).plus(
-                    this.securitySchemes.fold(emptyMap()) { acc, securityScheme ->
-                        acc.plus(securityScheme.headerInRequest(request, resolver))
-                    }
                 )
 
                 requestPattern.copy(headersPattern = HttpHeadersPattern(headersFromRequest))

@@ -240,8 +240,8 @@ data class HttpRequestPattern(
 
             requestPattern = attempt(breadCrumb = "HEADERS") {
                 val headersFromRequest = toTypeMap(
-                    toLowerCaseKeys(request.headers) as Map<String, String>,
-                    toLowerCaseKeys(headersPattern.pattern) as Map<String, Pattern>,
+                    toLowerCaseKeys(request.headers),
+                    toLowerCaseKeys(headersPattern.pattern),
                     resolver
                 )
 
@@ -277,7 +277,7 @@ data class HttpRequestPattern(
         }
     }
 
-    private fun toLowerCaseKeys(map: Map<String, Any?>) =
+    private fun <ValueType> toLowerCaseKeys(map: Map<String, ValueType>) =
         map.map { (key, value) -> key.toLowerCasePreservingASCIIRules() to value }.toMap()
 
     private fun toTypeMap(
@@ -391,9 +391,6 @@ data class HttpRequestPattern(
             }
             if (httpPathPattern == null) {
                 throw missingParam("URL path")
-            }
-            if (httpQueryParamPattern == null) {
-                throw missingParam("Query params")
             }
             newRequest = newRequest.updateMethod(method)
             attempt(breadCrumb = "URL") {

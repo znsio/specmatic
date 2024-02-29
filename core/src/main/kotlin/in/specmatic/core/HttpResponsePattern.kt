@@ -3,12 +3,11 @@ package `in`.specmatic.core
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.softCastValueToXML
 
 const val DEFAULT_RESPONSE_CODE = 1000
 
-data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int = 0, val body: Pattern = EmptyStringPattern) {
+data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int = 0, val body: Pattern = EmptyStringPattern, val bodyValue: String? = null) {
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body.exactMatchElseType())
 
     fun generateResponse(resolver: Resolver): HttpResponse {
@@ -100,10 +99,44 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
             else -> response.body
         }
 
-        return when (val result = body.matches(parsedValue, resolver)) {
-            is Result.Failure -> MatchSuccess(Triple(response, resolver, failures.plus(result.breadCrumb("BODY"))))
-            else -> MatchSuccess(parameters)
+        val result = body.matches(parsedValue, resolver)
+        if(result is Result.Failure)
+            return MatchSuccess(Triple(response, resolver, failures.plus(result.breadCrumb("BODY"))))
+
+        if(bodyValue == null)
+            return MatchSuccess(parameters)
+
+        try {
+            val expectedBodyValue = parsedJSON(bodyValue)
+            val expectedBodyAsPattern = expectedBodyValue.exactMatchElseType()
+
+            val valueMismatchMessages: MismatchMessages = object : MismatchMessages {
+                override fun mismatchMessage(expected: String, actual: String): String {
+                    return "Value mismatch: Expected $expected, got value $actual"
+                }
+
+                override fun unexpectedKey(keyLabel: String, keyName: String): String {
+                    return "Value mismatch: $keyLabel $$keyName in value was unexpected"
+                }
+
+                override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+                    return "Value mismatch: $keyLabel $$keyName was missing"
+                }
+
+            }
+
+            val valueMatchResult = expectedBodyAsPattern.matches(parsedValue, resolver.copy(mismatchMessages = valueMismatchMessages)).breadCrumb("BODY")
+
+            if (valueMatchResult is Result.Failure)
+                return MatchSuccess(Triple(response, resolver, failures.plus(valueMatchResult)))
+        } catch(e: Throwable) {
+            if(bodyValue != response.body.toStringLiteral()) {
+                val failureResult = mismatchResult(StringValue(bodyValue), response.body).breadCrumb("BODY")
+                return MatchSuccess(Triple(response, resolver, failures.plus(failureResult)))
+            }
         }
+
+        return MatchSuccess(parameters)
     }
 
     fun bodyPattern(newBody: Pattern): HttpResponsePattern = this.copy(body = newBody)

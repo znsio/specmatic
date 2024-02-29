@@ -3,6 +3,7 @@ package `in`.specmatic.core
 import org.apache.commons.lang3.BooleanUtils
 
 object Flags {
+    const val VALIDATE_RESPONSE = "VALIDATE_RESPONSE"
     private const val CUSTOM_RESPONSE_NAME = "CUSTOM_RESPONSE"
     const val SPECMATIC_GENERATIVE_TESTS = "SPECMATIC_GENERATIVE_TESTS"
     private const val MAX_TEST_REQUEST_COMBINATIONS = "MAX_TEST_REQUEST_COMBINATIONS"
@@ -38,5 +39,9 @@ object Flags {
 
     fun testParallelism(): String? {
         return flagValue(SPECMATIC_TEST_PARALLELISM)
+    }
+
+    fun validateResponse(): Boolean {
+        return booleanFlag(VALIDATE_RESPONSE, "false")
     }
 }

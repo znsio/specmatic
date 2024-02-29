@@ -409,7 +409,7 @@ class OpenApiSpecification(
         responseExamples: Map<String, Example>,
         operation: Operation,
         requestBody: RequestBody?
-    ) = responseExamples.map { (exampleName, _) ->
+    ): List<Row> = responseExamples.map { (exampleName, responseExample) ->
         val parameterExamples: Map<String, Any> = parameterExamples(operation, exampleName)
 
         val requestBodyExample: Map<String, Any> =
@@ -430,7 +430,8 @@ class OpenApiSpecification(
                                 .toString()
                         } else valueString
                     },
-                name = exampleName
+                name = exampleName,
+                responseBody = if(Flags.validateResponse()) responseExample.value?.toString() else null
             )
 
             else -> Row()

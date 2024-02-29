@@ -17,7 +17,8 @@ data class Row(
     val references: Map<String, References> = emptyMap(),
     val name: String = "",
     val fileSource: String? = null,
-    val requestBodyJSONExample: JSONExample? = null
+    val requestBodyJSONExample: JSONExample? = null,
+    val responseBody: String? = null
 ) {
     constructor(examples: Map<String, String>) :this(examples.keys.toList(), examples.values.toList())
 

@@ -277,6 +277,10 @@ class HttpStubWithArrayQueryParameterTest {
             In scenario "get products. Response: OK"
             API: GET /products -> 200
             
+              >> REQUEST.QUERY-PARAMS.brand_ids
+              
+                 Query param named brand_ids in the contract was not found in the request
+              
               >> REQUEST.QUERY-PARAMS.category_id
               
                  Query param named category_id in the request was not in the contract

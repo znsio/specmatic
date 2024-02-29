@@ -20,14 +20,7 @@ fun portIsInUse(host: String, port: Int): Boolean {
 fun findRandomFreePort(): Int {
     logger.log("Checking for a free port")
 
-    var serverSocket: ServerSocket? = null
-
-    val port = try {
-        serverSocket = ServerSocket(0)
-        serverSocket.localPort
-    } finally {
-        serverSocket?.close()
-    }
+    val port = ServerSocket(0).use { it.localPort }
 
     if (port > 0) {
         logger.log("Free port found: $port")

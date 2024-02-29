@@ -15,7 +15,7 @@ internal class HttpRequestPatternKtTest {
             AnyPattern(listOf(StringPattern(), NumberPattern())),
         ))
 
-        val newTypes = newMultiPartBasedOn(multiPartTypes, Row(), Resolver())
+        val newTypes = newMultiPartBasedOn(multiPartTypes, Row(), Resolver()).toList()
 
         assertThat(newTypes).hasSize(2)
 
@@ -27,7 +27,7 @@ internal class HttpRequestPatternKtTest {
     fun `when a part is optional there should be two lists generated in which one has the part and the other does not`() {
         val multiPartTypes = listOf(MultiPartContentPattern("data?", StringPattern()))
 
-        val newTypes = newMultiPartBasedOn(multiPartTypes, Row(), Resolver())
+        val newTypes = newMultiPartBasedOn(multiPartTypes, Row(), Resolver()).toList()
 
         assertThat(newTypes).hasSize(2)
 

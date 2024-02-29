@@ -48,7 +48,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         }, resolver)
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
         return attempt(breadCrumb = "[]") {
             resolverWithEmptyType.withCyclePrevention(pattern) { cyclePreventedResolver ->
@@ -57,7 +57,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         }
     }
 
-    override fun newBasedOn(resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
         return attempt(breadCrumb = "[]") {
             resolverWithEmptyType.withCyclePrevention(pattern) { cyclePreventedResolver ->
@@ -66,7 +66,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(NullPattern)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(NullPattern)
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONArray(value, resolver.mismatchMessages)
 

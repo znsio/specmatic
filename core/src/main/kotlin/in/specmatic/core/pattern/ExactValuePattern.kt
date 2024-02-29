@@ -30,10 +30,10 @@ data class ExactValuePattern(override val pattern: Value, override val typeAlias
     }
 
     override fun generate(resolver: Resolver) = pattern
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
-    override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(NullPattern).plus(pattern.type().negativeBasedOn(Row(), resolver).filterNot { it == NullPattern })
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        return sequenceOf(NullPattern).plus(pattern.type().negativeBasedOn(Row(), resolver).filterNot { it == NullPattern })
     }
 
     override fun parse(value: String, resolver: Resolver): Value = pattern.type().parse(value, resolver)

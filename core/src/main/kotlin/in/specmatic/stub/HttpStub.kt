@@ -272,7 +272,7 @@ class HttpStub(
     }
 
     private fun isFlushTransientStubsRequest(httpRequest: HttpRequest): Boolean {
-        return httpRequest.method?.toLowerCasePreservingASCIIRules() == "delete" && httpRequest.path?.startsWith("/_specmatic/$TRANSIENT_MOCK") == true
+        return httpRequest.method?.toLowerCasePreservingASCIIRules() == "delete" && httpRequest.path?.startsWith("/_specmatic/$TRANSIENT_MOCK/") == true
     }
 
     private fun close(
@@ -692,17 +692,17 @@ fun getHttpResponse(
     httpClientFactory: HttpClientFactory? = null
 ): StubbedResponseResult {
     return try {
-        val (matchResults, stubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
+        val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
 
-        stubResponse?.let { FoundStubbedResponse(stubResponse) }
-            ?: if (httpClientFactory != null && passThroughTargetBase.isNotBlank()) {
-                NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
-            } else {
-                if (strictMode)
-                    NotStubbed(HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults)))
-                else
-                    fakeHttpResponse(features, httpRequest)
-            }
+        if(matchingStubResponse != null)
+            FoundStubbedResponse(matchingStubResponse)
+        else if (httpClientFactory != null && passThroughTargetBase.isNotBlank())
+            NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
+        else if (strictMode) {
+            NotStubbed(HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults)))
+        } else {
+            fakeHttpResponse(features, httpRequest)
+        }
     } finally {
         features.forEach { feature ->
             feature.clearServerState()
@@ -796,7 +796,7 @@ private fun stubThatMatchesRequest(
         }
     }
 
-    val mock = listMatchResults.find { (result, _) -> result is Result.Success }
+        val mock = listMatchResults.find { (result, _) -> result is Result.Success }
 
     return Pair(mock?.second, listMatchResults)
 }

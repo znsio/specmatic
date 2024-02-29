@@ -3,6 +3,7 @@ package `in`.specmatic.core
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.softCastValueToXML
 
 const val DEFAULT_RESPONSE_CODE = 1000
@@ -51,7 +52,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         }
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): List<HttpResponsePattern> =
+    fun newBasedOn(row: Row, resolver: Resolver): Sequence<HttpResponsePattern> =
         attempt(breadCrumb = "RESPONSE") {
             resolver.withCyclePrevention(body) { cyclePreventedResolver ->
                 body.newBasedOn(row, cyclePreventedResolver)
@@ -115,5 +116,15 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         val bodyResult = resolvedHop(body, olderResolver).encompasses(resolvedHop(other.body, newerResolver), olderResolver, newerResolver).breadCrumb("BODY")
 
         return Result.fromResults(listOf(headerResult, bodyResult)).breadCrumb("RESPONSE")
+    }
+
+    companion object {
+        fun fromResponseExpectation(response: HttpResponse): HttpResponsePattern {
+            return HttpResponsePattern(
+                HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }),
+                response.status,
+                response.body.exactMatchElseType()
+            )
+        }
     }
 }

@@ -39,6 +39,10 @@ class Verbose(override val printer: CompositePrinter = CompositePrinter()) : Log
         print(msg)
     }
 
+    override fun logError(e: Throwable) {
+        log(e,"ERROR")
+    }
+
     override fun newLine() {
         print(NewLineLogMessage)
     }

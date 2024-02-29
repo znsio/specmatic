@@ -158,7 +158,7 @@ data class Resolver(
         return this.copy(patternMatchStrategy = matchAnything, parseStrategy = alwaysReturnStringValue)
     }
 
-    fun generatedPatternsForGenerativeTests(pattern: Pattern, key: String): List<Pattern> {
+    fun generatedPatternsForGenerativeTests(pattern: Pattern, key: String): Sequence<Pattern> {
         return generation.generatedPatternsForGenerativeTests(this, pattern, key)
     }
 
@@ -174,11 +174,11 @@ data class Resolver(
         return defaultExampleResolver.resolveExample(example, pattern, this)
     }
 
-    fun generateHttpRequests(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): List<Pattern> {
+    fun generateHttpRequests(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<Pattern> {
         return generation.generateHttpRequests(this, body, row, requestBodyAsIs, value)
     }
 
-    fun generateHttpRequests(body: Pattern, row: Row): List<Pattern> {
+    fun generateHttpRequests(body: Pattern, row: Row): Sequence<Pattern> {
         return generation.generateHttpRequests(this, body, row)
     }
 
@@ -186,7 +186,7 @@ data class Resolver(
         return generation.resolveRow(row)
     }
 
-    fun generateKeySubLists(key: String, subList: List<String>): List<List<String>> {
+    fun generateKeySubLists(key: String, subList: List<String>): Sequence<List<String>> {
         return generation.generateKeySubLists(key, subList)
     }
 }

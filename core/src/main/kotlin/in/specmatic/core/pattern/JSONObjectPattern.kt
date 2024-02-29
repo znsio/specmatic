@@ -154,7 +154,7 @@ data class JSONObjectPattern(
         )
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<JSONObjectPattern> =
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<JSONObjectPattern> =
         allOrNothingCombinationIn(
             pattern.minus("..."),
             resolver.resolveRow(row),
@@ -168,12 +168,12 @@ data class JSONObjectPattern(
             })
         }
 
-    override fun newBasedOn(resolver: Resolver): List<JSONObjectPattern> =
+    override fun newBasedOn(resolver: Resolver): Sequence<JSONObjectPattern> =
         allOrNothingCombinationIn(pattern.minus("...")) { pattern ->
             newBasedOn(pattern, withNullPattern(resolver))
         }.map { toJSONObjectPattern(it) }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> =
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> =
         allOrNothingCombinationIn(pattern.minus("...")) { pattern ->
             AllNegativePatterns().negativeBasedOn(pattern, row, withNullPattern(resolver))
         }.map { toJSONObjectPattern(it) }

@@ -123,7 +123,7 @@ class HttpQueryParamPatternTest {
     fun `should generate a valid query string when there is a single row with matching columns`() {
         val resolver = Resolver()
         val row = Row(listOf("status", "type"), listOf("available", "dog"))
-        val generatedPatterns = buildQueryPattern(URI("/pets?status=(string)&type=(string)")).newBasedOn(row, resolver)
+        val generatedPatterns = buildQueryPattern(URI("/pets?status=(string)&type=(string)")).newBasedOn(row, resolver).toList()
         assertEquals(1, generatedPatterns.size)
         val values = HttpQueryParamPattern(generatedPatterns.first()).generate(resolver)
         assertThat(values.single{ it.first == "status"}.second).isEqualTo("available")
@@ -159,7 +159,7 @@ class HttpQueryParamPatternTest {
     @Tag(GENERATION)
     fun `should generate a path with a concrete value given a query param with newBasedOn`() {
         val matcher = buildQueryPattern(URI("/pets?available=(boolean)"))
-        val matchers = matcher.newBasedOn(Row(), Resolver())
+        val matchers = matcher.newBasedOn(Row(), Resolver()).toList()
         assertThat(matchers).hasSize(2)
         assertThat(matchers).contains(emptyMap())
         assertThat(matchers).contains(mapOf("available" to BooleanPattern()))
@@ -178,7 +178,7 @@ class HttpQueryParamPatternTest {
     @Tag(GENERATION)
     @Test
     fun `should generate negative values for a string`() {
-        val urlMatchers = buildQueryPattern(URI("/pets?name=(string)")).negativeBasedOn(Row(), Resolver())
+        val urlMatchers = buildQueryPattern(URI("/pets?name=(string)")).negativeBasedOn(Row(), Resolver()).toList()
         assertThat(urlMatchers).containsExactly(emptyMap())
     }
 
@@ -186,7 +186,7 @@ class HttpQueryParamPatternTest {
     @Tag(GENERATION)
     fun `should create 2^n matchers on an empty Row`() {
         val patterns = buildQueryPattern(URI("/pets?status=(string)&type=(string)"))
-        val generatedPatterns = patterns.newBasedOn(Row(), Resolver())
+        val generatedPatterns = patterns.newBasedOn(Row(), Resolver()).toList()
         assertThat(generatedPatterns).containsExactlyInAnyOrder(
             emptyMap(),
             mapOf("status" to StringPattern()),
@@ -468,4 +468,57 @@ class HttpQueryParamPatternTest {
             """.trimIndent())
         }
     }
+
+    @Test
+    fun `an additional query param matching additional parameters should match successfully`() {
+        val queryPattern = HttpQueryParamPattern(mapOf("key" to QueryParameterScalarPattern(NumberPattern())), NumberPattern())
+
+        val matchResult = queryPattern.matches(
+            HttpRequest(queryParams = QueryParameters(mapOf("key" to "10", "data" to "20"))),
+            Resolver()
+        )
+
+        assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Success::class.java)
+    }
+
+    @Test
+    fun `an additional query param not matching additional parameters should not match successfully`() {
+        val queryPattern = HttpQueryParamPattern(mapOf("key" to QueryParameterScalarPattern(NumberPattern())), NumberPattern())
+
+        val matchResult = queryPattern.matches(
+            HttpRequest(queryParams = QueryParameters(mapOf("key" to "10", "data" to "true"))),
+            Resolver()
+        )
+
+        assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Failure::class.java)
+    }
+
+    @Test
+    fun `an additional query param should be added in a generated value`() {
+        val queryPattern = HttpQueryParamPattern(mapOf("key" to QueryParameterScalarPattern(NumberPattern())), NumberPattern())
+
+        val generatedValue = queryPattern.generate(Resolver())
+
+        val keys = generatedValue.map { it.first }
+        val values = generatedValue.map { it.second }
+
+        assertThat(generatedValue).hasSize(2)
+        assertThat(keys).contains("key")
+        assertThat(keys.filter { it != "key" }).hasSize(1)
+        assertThat(values).allSatisfy {
+            assertThat(it.toIntOrNull()).withFailMessage("$it was expected to be a number").isNotNull()
+        }
+    }
+
+    @Test
+    fun `an additional query param should be added in a test`() {
+        val queryPattern = HttpQueryParamPattern(mapOf("key" to QueryParameterScalarPattern(NumberPattern())), NumberPattern())
+
+        val generatedValue = queryPattern.newBasedOn(Row(), Resolver()).toList()
+
+        assertThat(generatedValue).hasSize(1)
+        assertThat(generatedValue.first()).hasSize(2)
+        assertThat(generatedValue.first().keys).contains("key")
+        assertThat(generatedValue.first().keys.filter { it != "key" }).hasSize(1)
+ }
 }

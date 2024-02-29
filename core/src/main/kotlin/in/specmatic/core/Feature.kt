@@ -219,6 +219,22 @@ data class Feature(
         } != null
     }
 
+    fun matchResult(request: HttpRequest, response: HttpResponse): Result {
+        val matchResults = scenarios.map {
+            it.matches(
+                request,
+                serverState
+            ) to it.matches(response)
+        }
+
+        if (matchResults.any {
+            it.first is Result.Success && it.second is Result.Success
+        })
+            return Result.Success()
+
+        return Result.fromResults(matchResults.flatMap { it.toList() })
+    }
+
     fun matchingStub(
         request: HttpRequest,
         response: HttpResponse,
@@ -240,7 +256,7 @@ data class Feature(
         }
     }
 
-    fun stubMatchResult(
+    private fun stubMatchResult(
         request: HttpRequest,
         response: HttpResponse,
         mismatchMessages: MismatchMessages
@@ -248,30 +264,26 @@ data class Feature(
         val results = scenarios.map { scenario ->
             try {
                 when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
-                    is Result.Success -> {
-                        val (resolver, resolvedResponse) = scenario.resolverAndResponseFrom(response)
-
-                        val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
-
-                        val requestTypeWithAncestors =
-                            newRequestType.copy(
-                                headersPattern = newRequestType.headersPattern.copy(
-                                    ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern
+                    is Result.Success -> Pair(
+                        scenario.resolverAndResponseForExpectation(response).let { (resolver, resolvedResponse) ->
+                            val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
+                            val requestTypeWithAncestors =
+                                newRequestType.copy(
+                                    headersPattern = newRequestType.headersPattern.copy(
+                                        ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern
+                                    )
                                 )
+                            HttpStubData(
+                                response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
+                                resolver = resolver,
+                                requestType = requestTypeWithAncestors,
+                                responsePattern = scenario.httpResponsePattern,
+                                contractPath = this.path,
+                                feature = this,
+                                scenario = scenario
                             )
-
-                        val httpStubData = HttpStubData(
-                            response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
-                            resolver = resolver,
-                            requestType = requestTypeWithAncestors,
-                            responsePattern = scenario.httpResponsePattern,
-                            contractPath = this.path,
-                            feature = this,
-                            scenario = scenario
-                        )
-
-                        Pair(httpStubData, Result.Success())
-                    }
+                        }, Result.Success()
+                    )
 
                     is Result.Failure -> {
                         Pair(null, matchResult.updateScenario(scenario).updatePath(path))
@@ -287,7 +299,7 @@ data class Feature(
     private fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
-    fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> =
+    fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> =
         generateContractTestScenarios(suggestions).map {
             ScenarioTest(it, resolverStrategies,
                 it.sourceProvider, it.sourceRepository, it.sourceRepositoryBranch, it.specification, it.serviceType)
@@ -310,21 +322,25 @@ data class Feature(
         return BadRequestOrDefault(badRequestResponses, defaultResponse)
     }
 
-    fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> {
+    fun generateContractTestScenarios(suggestions: List<Scenario>): Sequence<Scenario> {
         return resolverStrategies.generation.let {
             it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
         }
     }
 
+    fun generateContractTestScenariosL(suggestions: List<Scenario>): List<Scenario> {
+        return generateContractTestScenarios(suggestions).toList()
+    }
+
     fun positiveTestScenarios(suggestions: List<Scenario>) =
-        scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
+        scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
         }.flatMap {
             it.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
         }
 
     fun negativeTestScenarios() =
-        scenarios.filter {
+        scenarios.asSequence().filter {
             it.isA2xxScenario()
         }.flatMap { scenario ->
             val negativeScenario = scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
@@ -669,6 +685,7 @@ data class Feature(
                 val type = scenario.patterns.getValue(oldTypeName)
                 val newTypes = scenario.patterns.minus(oldTypeName).plus(newTypeName to type)
 
+
                 scenario = scenario.copy(
                     patterns = newTypes,
                     httpResponsePattern = scenario.httpResponsePattern.copy(
@@ -676,6 +693,24 @@ data class Feature(
                     )
                 )
             }
+
+            val (contentTypePattern, rawResponseHeadersWithoutContentType) = scenario.httpResponsePattern.headersPattern.pattern.entries.find {
+                it.key.equals(CONTENT_TYPE, ignoreCase = true)
+            }?.let {
+                it.value to scenario.httpResponsePattern.headersPattern.pattern.minus(it.key)
+            } ?: (null to scenario.httpResponsePattern.headersPattern.pattern)
+
+            val responseContentType: String? = if(contentTypePattern is ExactValuePattern)
+                contentTypePattern.pattern.toStringLiteral()
+            else null
+
+            val updatedResponseHeaders = HttpHeadersPattern(rawResponseHeadersWithoutContentType, contentType = responseContentType)
+
+            scenario = scenario.copy(
+                httpResponsePattern = scenario.httpResponsePattern.copy(
+                    headersPattern = updatedResponseHeaders
+                )
+            )
 
             scenario
         }
@@ -740,6 +775,7 @@ data class Feature(
 
             if (requestBodySchema != null) {
                 operation.requestBody = RequestBody().apply {
+                    this.required = true
                     this.content = Content().apply {
                         this[requestBodySchema.first] = requestBodySchema.second
                     }
@@ -784,7 +820,10 @@ data class Feature(
                         else -> {
                             val mediaType = MediaType()
                             mediaType.schema = toOpenApiSchema(responseBodyType)
-                            Pair("text/plain", mediaType)
+
+                            val responseContentType = scenario.httpResponsePattern.headersPattern.contentType ?: "text/plain"
+
+                            Pair(responseContentType, mediaType)
                         }
                     }
 
@@ -1285,7 +1324,6 @@ data class Feature(
                     val examples: Map<String, String> =
                         headers
                             .plus(queryParams)
-                            .plus(pathParams)
                             .plus(requestBody?.let { mapOf("(REQUEST-BODY)" to it.toStringLiteral()) } ?: emptyMap())
 
                     val (

@@ -3,11 +3,11 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Resolver
 
 abstract class NegativePatternsTemplate {
-    fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): List<Map<String, Pattern>> {
+    fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
         val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
         val negativePatternsMap = getNegativePatterns(patternMap, resolver, row)
 
-        val modifiedPatternMap: Map<String, List<Map<String, List<Pattern>>>> = eachKeyMappedToPatternMap.mapValues { (keyToNegate, patterns) ->
+        val modifiedPatternMap: Map<String, Sequence<Map<String, Sequence<Pattern>>>> = eachKeyMappedToPatternMap.mapValues { (keyToNegate, patterns) ->
             val negativePatterns = negativePatternsMap[keyToNegate]
             negativePatterns!!.map { negativePattern ->
                 patterns.mapValues { (key, pattern) ->
@@ -25,21 +25,21 @@ abstract class NegativePatternsTemplate {
             }
         }
         if (modifiedPatternMap.values.isEmpty())
-            return listOf(emptyMap())
-        return modifiedPatternMap.values.map { list: List<Map<String, List<Pattern>>> ->
-            list.toList().map { patternList(it) }.flatten()
-        }.flatten()
+            return sequenceOf(emptyMap())
+        return modifiedPatternMap.values.asSequence().flatMap { list: Sequence<Map<String, Sequence<Pattern>>> ->
+            list.flatMap { patternList(it) }
+        }
     }
 
     abstract fun getNegativePatterns(
         patternMap: Map<String, Pattern>,
         resolver: Resolver,
         row: Row
-    ): Map<String, List<Pattern>>
+    ): Map<String, Sequence<Pattern>>
 
     abstract fun negativePatternsForKey(
         key: String,
         negativePattern: Pattern,
         resolver: Resolver,
-    ): List<Pattern>
+    ): Sequence<Pattern>
 }

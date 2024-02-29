@@ -118,7 +118,7 @@ internal class StubCommandTest {
         verify(exactly = 1) { httpStubEngine.runHTTPStub(
             stubInfo,
             host,
-            port,
+            any(),
             certInfo,
             strictMode,
             any(),
@@ -209,7 +209,7 @@ internal class StubCommandTest {
         verify(exactly = 1) { httpStubEngine.runHTTPStub(
             stubInfo,
             host,
-            port,
+            any(),
             certInfo,
             strictMode,
             any(),

@@ -43,7 +43,17 @@ dependencies {
 
     implementation('info.picocli:picocli-spring-boot-starter:4.7.5') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
+        exclude group: 'org.springframework.boot', module: 'spring-boot'
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter'
+        exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
     }
+    implementation('org.springframework.boot:spring-boot-starter:3.2.3') {
+        exclude group: 'org.springframework', module: 'spring-core'
+        exclude group: 'ch.qos.logback', module: 'logback-classic'
+        exclude group: 'ch.qos.logback', module: 'logback-core'
+    }
+    implementation('org.springframework.boot:spring-boot-autoconfigure:3.2.3')
+    implementation('org.springframework:spring-core:6.1.4')
     implementation 'info.picocli:picocli:4.7.5'
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
     implementation "io.ktor:ktor-network-tls:$ktor_version"
@@ -55,24 +65,23 @@ dependencies {
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
-    implementation 'org.slf4j:slf4j-nop:2.0.11'
+    implementation 'org.slf4j:slf4j-nop:2.0.12'
 
     implementation 'org.apache.ant:ant-junit:1.10.14'
 
     implementation(project(':core'))
     implementation(project(':junit5-support'))
 
-// https://mvnrepository.com/artifact/org.fusesource.jansi/jansi
     implementation 'org.fusesource.jansi:jansi:2.4.1'
 
     implementation "io.ktor:ktor-client-cio:$ktor_version"
     implementation 'io.swagger.parser.v3:swagger-parser:2.1.20'
 
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.2"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.3"
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
-    testImplementation('org.springframework.boot:spring-boot-starter-test:3.2.2') {
+    testImplementation('org.springframework.boot:spring-boot-starter-test:3.2.3') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude module: 'mockito-core'
     }
@@ -121,4 +130,54 @@ javadoc {
     if (JavaVersion.current().isJava9Compatible()) {
         options.addBooleanOption('html5', true)
     }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = 'specmatic-executable'
+            from components.java
+            pom {
+                name = 'Specmatic Executable'
+                description = 'Command-line standalone executable jar for Specmatic'
+                url = 'https://specmatic.in'
+                licenses {
+                    license {
+                        name = 'MIT'
+                        url = 'https://github.com/znsio/specmatic/blob/main/License.md'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'specmaticBuilders'
+                        name = 'Specmatic Builders'
+                        email = 'info@specmatic.in'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git@github.com:znsio/specmatic.git'
+                    url = 'https://specmatic.in/'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2"
+            def snapshotsRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots"
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            credentials {
+                username = project.hasProperty("ossrhUsername") ? project.getProperty("ossrhUsername") : ""
+                password = project.hasProperty("ossrhPassword") ? project.getProperty("ossrhPassword") : ""
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.mavenJava
+}
+
+tasks.withType(Sign).configureEach {
+    onlyIf { project.hasProperty("signing.keyId") }
 }

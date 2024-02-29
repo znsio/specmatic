@@ -7,7 +7,7 @@ class MonochromePrinter: ContractExecutionPrinter {
     override fun printFinalSummary(testSummary: TestSummary) {
         println(testSummary.message)
         println()
-        println("Tests ran at ${currentDateAndTime()}")
+        println("Executed at ${currentDateAndTime()}")
     }
 
     override fun printTestSummary(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {

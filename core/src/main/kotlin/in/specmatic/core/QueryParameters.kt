@@ -1,7 +1,9 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.parsedJSONArray
 import `in`.specmatic.core.value.JSONArrayValue
+import `in`.specmatic.core.value.Value
 import kotlin.collections.Map
 
 data class QueryParameters(val paramPairs: List<Pair<String, String>> = emptyList())  {
@@ -72,6 +74,21 @@ data class QueryParameters(val paramPairs: List<Pair<String, String>> = emptyLis
         return paramPairs.joinToString(" "){ (key, value) ->
             "$key=$value"
         }
+    }
+
+    fun withoutMatching(patternKeys: Set<String>, additionalProperties: Pattern, resolver: Resolver): QueryParameters {
+        return QueryParameters(paramPairs.filterNot { (key, value) ->
+            if(key in patternKeys)
+                return@filterNot false
+
+            try {
+                val parsedValue: Value = additionalProperties.parse(value, resolver)
+                additionalProperties.matches(parsedValue, resolver) is Result.Success
+            } catch(e: Throwable) {
+                false
+            }
+
+        })
     }
 }
 

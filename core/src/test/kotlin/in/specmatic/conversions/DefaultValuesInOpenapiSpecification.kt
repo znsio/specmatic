@@ -37,6 +37,7 @@ class DefaultValuesInOpenapiSpecification {
           /employees:
             post:
               requestBody:
+                required: true
                 content:
                   application/json:
                     schema:
@@ -200,6 +201,7 @@ class DefaultValuesInOpenapiSpecification {
           /employees:
             post:
               requestBody:
+                required: true
                 content:
                   application/json:
                     schema:

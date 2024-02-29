@@ -37,6 +37,10 @@ class NonVerbose(override val printer: CompositePrinter) : LogStrategy {
         print(msg)
     }
 
+    override fun logError(e: Throwable) {
+        log(e,"ERROR")
+    }
+
     override fun newLine() {
         print(NewLineLogMessage)
     }

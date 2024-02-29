@@ -61,7 +61,7 @@ paths:
                     type: integer
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.generateContractTestScenarios(emptyList())
+        val scenarios: List<Scenario> = contract.generateContractTestScenariosL(emptyList())
 
         assertThat(scenarios.map { it.testDescription() }).allSatisfy {
             assertThat(it).doesNotContain("|")
@@ -120,7 +120,7 @@ paths:
                     type: integer
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenarios(emptyList())
+        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenariosL(emptyList())
 
         assertThat(scenarios.map { it.testDescription() }).allSatisfy {
             assertThat(it).containsAnyOf("+ve", "-ve")
@@ -179,7 +179,7 @@ paths:
                     type: integer
 """.trimIndent(), "").toFeature()
 
-        val scenario: Scenario = contract.generateContractTestScenarios(emptyList()).first()
+        val scenario: Scenario = contract.generateContractTestScenariosL(emptyList()).first()
         assertThat(scenario.testDescription()).contains("SUCCESS")
     }
 
@@ -235,7 +235,7 @@ paths:
                     type: integer
 """.trimIndent(), "").toFeature()
 
-        val scenario: Scenario = contract.generateContractTestScenarios(emptyList()).first()
+        val scenario: Scenario = contract.generateContractTestScenariosL(emptyList()).first()
         assertThat(scenario.testDescription()).contains("[WIP] SUCCESS")
     }
     @DisplayName("Single Feature Contract")
@@ -1142,7 +1142,7 @@ Then status 200
                     | 10 | Justin |
         """.trimIndent(), "src/test/resources/test.spec")
 
-        val testScenarios: List<Scenario> = contract.generateContractTestScenarios(emptyList())
+        val testScenarios: List<Scenario> = contract.generateContractTestScenariosL(emptyList())
         assertThat(testScenarios).hasSize(1)
     }
 
@@ -1193,7 +1193,7 @@ paths:
                     type: string
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenarios(emptyList())
+        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenariosL(emptyList())
         assertThat(scenarios.count { it.testDescription().contains("-ve") }).isEqualTo(0)
     }
 
@@ -1244,7 +1244,7 @@ paths:
                     type: string
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenarios(emptyList())
+        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenariosL(emptyList())
         val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
         assertThat(negativeTestScenarios.count()).isEqualTo(2)
         val headerPattern = negativeTestScenarios.first().httpRequestPattern.headersPattern.pattern
@@ -1298,7 +1298,7 @@ paths:
                     type: string
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenarios(emptyList())
+        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenariosL(emptyList())
         val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
         assertThat(negativeTestScenarios.count()).isEqualTo(0)
     }
@@ -1378,7 +1378,7 @@ paths:
                     type: string
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenarios(emptyList())
+        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenariosL(emptyList())
         val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
         assertThat(negativeTestScenarios.count()).isEqualTo(10)
     }
@@ -1431,7 +1431,7 @@ paths:
                     type: integer
 """.trimIndent(), "").toFeature()
 
-        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenarios(emptyList())
+        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenariosL(emptyList())
         val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
         assertThat(negativeTestScenarios.map { it.testDescription() }).allSatisfy {
             assertThat(it).contains("-> 4xx")

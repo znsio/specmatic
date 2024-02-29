@@ -166,7 +166,7 @@ internal class HttpPathPatternTest {
     @Tag(GENERATION)
     fun `should generate a path with a concrete value given a path pattern with newBasedOn`() {
         val matcher = buildHttpPathPattern(URI("/pets/(status:boolean)"))
-        val matchers = matcher.newBasedOn(Row(), Resolver())
+        val matchers = matcher.newBasedOn(Row(), Resolver()).toList()
         assertThat(matchers).hasSize(1)
         assertThat(matchers.single()).isEqualTo(
             listOf(
@@ -180,7 +180,7 @@ internal class HttpPathPatternTest {
     @Test
     fun `should generate negative values for a number`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to NumberPattern()))
-        val newHeaders = headers.negativeBasedOn(Row(), Resolver())
+        val newHeaders = headers.negativeBasedOn(Row(), Resolver()).toList()
 
         assertThat(newHeaders).containsExactlyInAnyOrder(
             HttpHeadersPattern(mapOf("X-TraceID" to StringPattern())),

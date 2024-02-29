@@ -31,6 +31,6 @@ internal class NullPatternTest {
 
     @Test
     fun `should create a new array of patterns containing itself`() {
-        assertEquals(listOf(NullPattern), NullPattern.newBasedOn(Row(), Resolver()))
+        assertEquals(listOf(NullPattern), NullPattern.newBasedOn(Row(), Resolver()).toList())
     }
 }

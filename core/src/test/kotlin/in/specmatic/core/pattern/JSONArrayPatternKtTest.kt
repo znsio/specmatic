@@ -12,7 +12,7 @@ internal class JSONArrayPatternKtTest {
     fun `when there is one nullable in a list two array types should be generated`() {
         val arrayType = parsedPattern("""["(number?)", "(number)"]""")
 
-        val patterns = arrayType.newBasedOn(Row(), Resolver()).map { it as JSONArrayPattern }
+        val patterns = arrayType.newBasedOn(Row(), Resolver()).map { it as JSONArrayPattern }.toList()
         assertThat(patterns).hasSize(2)
         assertThat(patterns).contains(JSONArrayPattern(listOf<Pattern>(NullPattern, NumberPattern())))
         assertThat(patterns).contains(JSONArrayPattern(listOf<Pattern>(NullPattern, NumberPattern())))
@@ -24,7 +24,7 @@ internal class JSONArrayPatternKtTest {
     @Nested
     @DisplayName("Given [optional, required]")
     inner class FirstCompulsorySecondRequired {
-        private val combinations = allOrNothingListCombinations(listOf(listOf(StringPattern(), null), listOf(NumberPattern())))
+        private val combinations = allOrNothingListCombinations(listOf(sequenceOf(StringPattern(), null), sequenceOf(NumberPattern()))).toList()
 
         @Test
         fun `two results should be generated`() {
@@ -45,7 +45,14 @@ internal class JSONArrayPatternKtTest {
     @Nested
     @DisplayName("Given [optional, required, optional, required]")
     inner class OneCompulsoryAndOneRequired {
-        private val combinations = allOrNothingListCombinations(listOf(listOf(StringPattern(), null), listOf(NumberPattern()), listOf(BooleanPattern(), null), listOf(DateTimePattern)))
+        private val combinations: List<List<Pattern>> = allOrNothingListCombinations(
+            listOf(
+                sequenceOf(StringPattern(), null),
+                sequenceOf(NumberPattern()),
+                sequenceOf(BooleanPattern(), null),
+                sequenceOf(DateTimePattern)
+            )
+        ).toList()
 
         @Test
         fun `two results should be generated`() {

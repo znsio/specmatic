@@ -42,7 +42,7 @@ internal class DatePatternTest {
 
     @Test
     fun `should return itself when generating a new pattern based on a row`() {
-        val datePatterns = DatePattern.newBasedOn(Row(), Resolver())
+        val datePatterns = DatePattern.newBasedOn(Row(), Resolver()).toList()
         assertThat(datePatterns.size).isEqualTo(1)
         assertThat(datePatterns.first() ).isEqualTo(DatePattern)
     }
@@ -60,7 +60,7 @@ internal class DatePatternTest {
     @Test
     @Tag(GENERATION)
     fun `negative patterns should be generated`() {
-        val result = BooleanPattern().negativeBasedOn(Row(), Resolver())
+        val result = BooleanPattern().negativeBasedOn(Row(), Resolver()).toList()
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null"
         )

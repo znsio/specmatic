@@ -25,7 +25,7 @@ internal class DeferredPatternTest {
     @Test
     @Tag(GENERATION)
     fun `negative patterns should be generated`() {
-        val result = DeferredPattern("(string)").negativeBasedOn(Row(), Resolver())
+        val result = DeferredPattern("(string)").negativeBasedOn(Row(), Resolver()).toList()
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null",
             "number",

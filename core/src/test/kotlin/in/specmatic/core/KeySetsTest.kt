@@ -11,6 +11,6 @@ class KeySetsTest {
         val listOfKeys = listOf("key1", "key2?")
         val expectedKeySets = listOf(listOf("key1"), listOf("key1", "key2?"))
 
-        assertEquals(expectedKeySets, keySets(listOfKeys, Row()))
+        assertEquals(expectedKeySets, keySets(listOfKeys, Row()).toList())
     }
 }

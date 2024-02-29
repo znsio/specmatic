@@ -35,33 +35,28 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         if (sampleData !is JSONArrayValue)
             return mismatchResult(this, sampleData, resolver.mismatchMessages)
 
-        if (sampleData.list.isEmpty())
-            return Result.Success()
-
         val resolverWithNumberType = withNumberType(withNullPattern(resolver))
+        val resolvedPatterns = pattern.map { resolvedHop(it, resolverWithNumberType) }
 
-        val resolvedTypes = pattern.map { resolvedHop(it, resolverWithNumberType) }
+        val theOnlyPatternInTheArray = resolvedPatterns.singleOrNull()
 
-        return resolvedTypes.asSequence().mapIndexed { index, patternValue ->
-            when {
-                patternValue is RestPattern -> {
-                    val rest = when (index) {
-                        sampleData.list.size -> emptyList()
-                        else -> sampleData.list.slice(index..sampleData.list.lastIndex)
-                    }
-                    patternValue.matches(JSONArrayValue(rest), resolverWithNumberType).breadCrumb("[$index...${sampleData.list.lastIndex}]")
-                }
-                index >= sampleData.list.size ->
-                    Result.Failure("Expected an array of length ${pattern.size}, actual length ${sampleData.list.size}")
-                else -> {
-                    val sampleValue = sampleData.list[index]
-                    resolverWithNumberType.matchesPattern(null, patternValue, sampleValue).breadCrumb("""[$index]""")
-                }
-            }
+        if(theOnlyPatternInTheArray is ListPattern || theOnlyPatternInTheArray is RestPattern) {
+            return theOnlyPatternInTheArray.matches(sampleData, resolverWithNumberType)
+        }
+
+        if(resolvedPatterns.size != sampleData.list.size)
+            return Result.Failure(arrayLengthMismatchMessage(resolvedPatterns.size, sampleData.list.size))
+
+        return resolvedPatterns.asSequence().mapIndexed { index, patternValue ->
+            val sampleValue = sampleData.list[index]
+            resolverWithNumberType.matchesPattern(null, patternValue, sampleValue).breadCrumb("""[$index]""")
         }.find {
             it is Result.Failure
         } ?: Result.Success()
     }
+
+    private fun arrayLengthMismatchMessage(expectedLength: Int, actualLength: Int) =
+        "Expected an array of length $expectedLength, actual length $actualLength"
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         return JSONArrayValue(valueList)
@@ -72,17 +67,17 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         return JSONArrayValue(generate(pattern, resolverWithNullType))
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<JSONArrayPattern> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<JSONArrayPattern> {
         val resolverWithNullType = withNullPattern(resolver)
         return newBasedOn(pattern, row, resolverWithNullType).map { JSONArrayPattern(it) }
     }
 
-    override fun newBasedOn(resolver: Resolver): List<JSONArrayPattern> {
+    override fun newBasedOn(resolver: Resolver): Sequence<JSONArrayPattern> {
         val resolverWithNullType = withNullPattern(resolver)
         return newBasedOn(pattern, resolverWithNullType).map { JSONArrayPattern(it) }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(NullPattern).let {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(NullPattern).let {
         if(pattern.size == 1)
             it.plus(pattern[0])
         else
@@ -132,7 +127,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
     override val typeName: String = "json array"
 }
 
-fun newBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): List<List<Pattern>> {
+fun newBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): Sequence<List<Pattern>> {
     val values = patterns.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
             resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
@@ -144,7 +139,7 @@ fun newBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): List<List
     return listCombinations(values)
 }
 
-fun newBasedOn(patterns: List<Pattern>, resolver: Resolver): List<List<Pattern>> {
+fun newBasedOn(patterns: List<Pattern>, resolver: Resolver): Sequence<List<Pattern>> {
     val values = patterns.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
             resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
@@ -156,11 +151,11 @@ fun newBasedOn(patterns: List<Pattern>, resolver: Resolver): List<List<Pattern>>
     return listCombinations(values)
 }
 
-fun listCombinations(values: List<List<Pattern?>>): List<List<Pattern>> {
+fun listCombinations(values: List<Sequence<Pattern?>>): Sequence<List<Pattern>> {
     if (values.isEmpty())
-        return listOf(emptyList())
+        return sequenceOf(emptyList())
 
-    val lastValueTypes: List<Pattern?> = values.last()
+    val lastValueTypes: Sequence<Pattern?> = values.last()
     val subLists = listCombinations(values.dropLast(1))
 
     return subLists.flatMap { subList ->
@@ -173,27 +168,67 @@ fun listCombinations(values: List<List<Pattern?>>): List<List<Pattern>> {
     }
 }
 
-fun allOrNothingListCombinations(values: List<List<Pattern?>>): List<List<Pattern>> {
-    if (values.isEmpty())
-        return listOf(emptyList())
+private enum class ValueSource {
+    CACHE, ITERATOR
+}
 
-    val maxKeyValues = values.maxOfOrNull { it.size } ?: 0
+fun <ValueType> allOrNothingListCombinations(values: List<Sequence<ValueType?>>): Sequence<List<ValueType>> {
+    if (values.none())
+        return sequenceOf(emptyList())
 
-    return (0 until maxKeyValues).map {
-        keyCombinations(values) { value ->
-            when {
-                value.size > it -> value[it]
-                else -> value[0]
+    val iterators = values.filter {
+        it.any()
+    }.map {
+        it.iterator()
+    }
+
+    val cacheOfFirstValue = mutableListOf<ValueType?>()
+
+    val iteratorCache: MutableMap<Int, Iterator<ValueType?>> = mutableMapOf()
+
+    return sequence {
+        while(true) {
+            val nextValuesInArray: List<Pair<ValueType?, ValueSource>> = iterators.mapIndexed { index, rawIterator ->
+                val cachedIterator = if (index in iteratorCache)
+                    iteratorCache.getValue(index)
+                else {
+                    iteratorCache[index] = rawIterator
+                    rawIterator
+                }
+
+                if (cachedIterator.hasNext()) {
+                    val value = cachedIterator.next()
+
+                    if(index >= cacheOfFirstValue.size)
+                        cacheOfFirstValue.add(value)
+
+                    Pair(value, ValueSource.ITERATOR)
+                } else {
+                    Pair(cacheOfFirstValue[index], ValueSource.CACHE)
+                }
             }
+
+            val allIteratorsRanOut =
+                nextValuesInArray
+                    .all { (_, valueSource) ->
+                    valueSource == ValueSource.CACHE
+                }
+
+            if (allIteratorsRanOut) break
+
+            val nextArray = nextValuesInArray.map { (value, _) -> value }.filterNotNull()
+
+            yield(nextArray)
         }
-    } as List<List<Pattern>>
+
+    }
 }
 
 private fun keyCombinations(values: List<List<Pattern?>>,
-                            optionalSelector: (List<Pattern?>) -> Pattern?): List<Pattern?> {
+                            optionalSelector: (List<Pattern?>) -> Pattern?): Sequence<Pattern?> {
     return values.map {
         optionalSelector(it)
-    }.toList().filterNotNull()
+    }.asSequence().filterNotNull()
 }
 
 fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =

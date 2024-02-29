@@ -31,4 +31,8 @@ class ThreadSafeLog(val logger: LogStrategy) : LogStrategy by logger {
         logger.debug(e, msg)
     }
 
+    @Synchronized
+    override fun logError(e: Throwable) {
+        logger.logError(e)
+    }
 }

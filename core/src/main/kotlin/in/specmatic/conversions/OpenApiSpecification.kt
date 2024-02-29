@@ -736,6 +736,9 @@ class OpenApiSpecification(
                 return APIKeyInQueryParamSecurityScheme(securityScheme.name, apiKey)
         }
 
+        if(securityScheme.type == SecurityScheme.Type.HTTP && securityScheme.scheme == "basic")
+            return toBasicAuthSecurityScheme(securitySchemeConfiguration, schemeName)
+
         throw ContractException("Specmatic only supports oauth2, bearer, and api key authentication (header, query) security schemes at the moment")
     }
 
@@ -745,6 +748,14 @@ class OpenApiSpecification(
     ): BearerSecurityScheme {
         val token = getSecurityTokenForBearerScheme(securitySchemeConfiguration, environmentVariable, environment)
         return BearerSecurityScheme(token)
+    }
+
+    private fun toBasicAuthSecurityScheme(
+        securitySchemeConfiguration: SecuritySchemeConfiguration?,
+        environmentVariable: String,
+    ): BasicAuthSecurityScheme {
+        val token = getSecurityTokenForBasicAuthScheme(securitySchemeConfiguration, environmentVariable, environment)
+        return BasicAuthSecurityScheme(token)
     }
 
     private fun toFormFields(mediaType: MediaType): Map<String, Pattern> {

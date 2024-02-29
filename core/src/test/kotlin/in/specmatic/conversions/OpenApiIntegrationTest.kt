@@ -5,6 +5,8 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.Value
+import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import io.mockk.every
@@ -572,6 +574,133 @@ Background:
             )
         )
 
+    }
+
+    @Nested
+    inner class BasicAuthSecurityTest {
+        val openapiSpecificationWithGETAPIHavingBasicAuth = """
+            openapi: 3.0.0
+            info:
+              title: Hello world
+              version: "1.0"
+            paths:
+              /hello:
+                get:
+                  summary: Returns a greeting
+                  operationId: getGreeting
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                  security:
+                    - basicAuth: []
+            components:
+              securitySchemes:
+                basicAuth:
+                  type: http
+                  scheme: basic
+        """.trimIndent()
+
+        fun feature(environmentVariables: Map<String, String> = emptyMap()): Feature {
+            val environment = object : Environment {
+                override fun getEnvironmentVariable(variableName: String): String? {
+                    return environmentVariables[variableName]
+                }
+            }
+
+            return OpenApiSpecification.fromYAML(openapiSpecificationWithGETAPIHavingBasicAuth, "", environment = environment).toFeature()
+        }
+
+        val credentials = "charlie123:pqrxyz"
+        val base64EncodedCredentials = String(java.util.Base64.getEncoder().encode(credentials.toByteArray()))
+
+        @Test
+        fun `contract test sends authorization header`() {
+            val feature = feature()
+
+            val results = feature.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.headers).containsKey("Authorization")
+                    return HttpResponse.OK
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        }
+
+        @Test
+        fun `contract test reads auth token from env var named after the securityScheme`() {
+            val feature = feature(mapOf("basicAuth" to base64EncodedCredentials))
+
+            val results = feature.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.headers).containsEntry("Authorization", "Basic $base64EncodedCredentials")
+                    return HttpResponse.OK
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        }
+
+        @Test
+        fun `contract test reads auth token from default env var`() {
+            val feature = feature(mapOf("SPECMATIC_BASIC_AUTH_TOKEN" to base64EncodedCredentials))
+
+            val results = feature.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.headers).containsEntry("Authorization", "Basic $base64EncodedCredentials")
+                    return HttpResponse.OK
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        }
+
+        @Test
+        fun `stub matches basic auth header`() {
+            val feature = feature()
+
+            HttpStub(feature).use { stub ->
+                val response = stub.client.execute(HttpRequest("GET", "/hello", headers = mapOf("Authorization" to "Basic $base64EncodedCredentials")))
+                assertThat(response.status).isEqualTo(200)
+            }
+        }
+
+        @Test
+        fun `can set expectations with basic auth header`() {
+            val feature = feature()
+
+            HttpStub(feature).use { stub ->
+                val expectedRequest = HttpRequest("GET", "/hello", headers = mapOf("Authorization" to "Basic $base64EncodedCredentials"), body = NoBodyValue)
+
+                stub.setExpectation(ScenarioStub(expectedRequest, HttpResponse.ok("success")))
+
+                stub.client.execute(expectedRequest).let { response ->
+                    assertThat(response.status).isEqualTo(200)
+                    assertThat(response.body.toStringLiteral()).isEqualTo("success")
+                }
+
+                val unexpectedCredentials = "frankie:abcdef"
+                val unexpectedBase64EncodedCredentials = String(java.util.Base64.getEncoder().encode(unexpectedCredentials.toByteArray()))
+
+                stub.client.execute(HttpRequest("GET", "/hello", headers = mapOf("Authorization" to "Basic $unexpectedBase64EncodedCredentials"))).let { response ->
+                    assertThat(response.status).isEqualTo(200)
+                    assertThat(response.body.toStringLiteral()).isNotEqualTo("success")
+                }
+            }
+        }
     }
 
     @Nested

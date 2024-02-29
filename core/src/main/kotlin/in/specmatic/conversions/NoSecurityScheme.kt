@@ -2,7 +2,9 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpRequestPattern
+import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
+import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.Row
 
 class NoSecurityScheme : OpenAPISecurityScheme {
@@ -32,5 +34,13 @@ class NoSecurityScheme : OpenAPISecurityScheme {
 
     override fun isInRow(row: Row): Boolean {
         return false
+    }
+
+    override fun headerInRequest(request: HttpRequest, resolver: Resolver): Map<String, Pattern> {
+        return emptyMap()
+    }
+
+    override fun queryInRequest(request: HttpRequest, resolver: Resolver): Map<String, Pattern> {
+        return emptyMap()
     }
 }

@@ -2,11 +2,9 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpRequestPattern
+import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.pattern.ExactValuePattern
-import `in`.specmatic.core.pattern.Row
-import `in`.specmatic.core.pattern.isPatternToken
-import `in`.specmatic.core.pattern.parsedPattern
+import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.StringValue
 
 interface OpenAPISecurityScheme {
@@ -15,6 +13,8 @@ interface OpenAPISecurityScheme {
     fun addTo(httpRequest: HttpRequest): HttpRequest
     fun addTo(requestPattern: HttpRequestPattern, row: Row): HttpRequestPattern
     fun isInRow(row: Row): Boolean
+    fun headerInRequest(request: HttpRequest, resolver: Resolver): Map<String, Pattern>
+    fun queryInRequest(request: HttpRequest, resolver: Resolver): Map<String, Pattern>
 }
 
 fun addToHeaderType(
@@ -33,5 +33,32 @@ fun addToHeaderType(
         headersPattern = requestPattern.headersPattern.copy(
             pattern = requestPattern.headersPattern.pattern.plus(headerName to headerValueType)
         )
+    )
+}
+
+internal fun headerPatternFromRequest(
+    request: HttpRequest,
+    headerName: String
+): Map<String, Pattern> {
+    val headerValue = request.headers[headerName]
+
+    if (headerValue != null) {
+        return mapOf(headerName to ExactValuePattern(StringValue(headerValue)))
+    }
+
+    return emptyMap()
+}
+
+internal fun queryPatternFromRequest(
+    request: HttpRequest,
+    queryParamName: String
+): Map<String, Pattern> {
+    val queryParamValue = request.queryParams.getValues(queryParamName)
+
+    if(queryParamValue.isEmpty())
+        return emptyMap()
+
+    return mapOf(
+        queryParamName to ExactValuePattern(StringValue(queryParamValue.first()))
     )
 }

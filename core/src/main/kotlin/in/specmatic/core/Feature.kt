@@ -248,26 +248,30 @@ data class Feature(
         val results = scenarios.map { scenario ->
             try {
                 when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
-                    is Result.Success -> Pair(
-                        scenario.resolverAndResponseFrom(response).let { (resolver, resolvedResponse) ->
-                            val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
-                            val requestTypeWithAncestors =
-                                newRequestType.copy(
-                                    headersPattern = newRequestType.headersPattern.copy(
-                                        ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern
-                                    )
+                    is Result.Success -> {
+                        val (resolver, resolvedResponse) = scenario.resolverAndResponseFrom(response)
+
+                        val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
+
+                        val requestTypeWithAncestors =
+                            newRequestType.copy(
+                                headersPattern = newRequestType.headersPattern.copy(
+                                    ancestorHeaders = scenario.httpRequestPattern.headersPattern.pattern
                                 )
-                            HttpStubData(
-                                response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
-                                resolver = resolver,
-                                requestType = requestTypeWithAncestors,
-                                responsePattern = scenario.httpResponsePattern,
-                                contractPath = this.path,
-                                feature = this,
-                                scenario = scenario
                             )
-                        }, Result.Success()
-                    )
+
+                        val httpStubData = HttpStubData(
+                            response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
+                            resolver = resolver,
+                            requestType = requestTypeWithAncestors,
+                            responsePattern = scenario.httpResponsePattern,
+                            contractPath = this.path,
+                            feature = this,
+                            scenario = scenario
+                        )
+
+                        Pair(httpStubData, Result.Success())
+                    }
 
                     is Result.Failure -> {
                         Pair(null, matchResult.updateScenario(scenario).updatePath(path))

@@ -72,6 +72,10 @@
         "ApiKeyAuthQuery": {
           "type": "apiKey",
           "value": "API-QUERY-PARAM-USER"
+        },
+        "BasicAuth": {
+          "type": "basicAuth",
+          "token": "Abc123"
         }
       }
     }

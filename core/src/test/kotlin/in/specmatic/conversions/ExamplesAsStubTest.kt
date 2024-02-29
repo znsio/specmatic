@@ -10,6 +10,7 @@ import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.captureStandardOutput
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.util.*
 
 class ExamplesAsStubTest {
     private val featureWithQueryParamExamples = OpenApiSpecification.fromYAML(
@@ -227,11 +228,13 @@ security:
   - BearerAuth: []
          """.trimIndent(), "").toFeature()
 
+        val credentials = "Basic " + Base64.getEncoder().encodeToString("user:password".toByteArray())
+
         HttpStub(feature).use {
             val response = it.client.execute(HttpRequest(
                 "POST",
                 "/hello",
-                mapOf("Authorization" to "Bearer 1234"),
+                mapOf("Authorization" to "Bearer $credentials"),
                 parsedJSONObject("""{"message": "Hello World!"}""")
             ))
 
@@ -342,11 +345,13 @@ security:
   - BearerAuth: []
          """.trimIndent(), "").toFeature()
 
+        val credentials = "Basic " + Base64.getEncoder().encodeToString("user:password".toByteArray())
+
         HttpStub(feature).use {
             val response = it.client.execute(HttpRequest(
                 "GET",
                 "/hello",
-                mapOf("Authorization" to "Bearer 1234"),
+                mapOf("Authorization" to "Bearer $credentials"),
                 queryParametersMap = mapOf("greeting" to "Hello")
             ))
 

@@ -219,7 +219,7 @@ data class HttpRequestPattern(
     }
 
     fun generate(request: HttpRequest, resolver: Resolver): HttpRequestPattern {
-        var requestType = HttpRequestPattern()
+        var requestPattern = HttpRequestPattern()
 
         return attempt(breadCrumb = "REQUEST") {
             if (method == null) {
@@ -229,29 +229,27 @@ data class HttpRequestPattern(
                 throw missingParam("URL path")
             }
 
-            requestType = requestType.copy(method = request.method)
+            requestPattern = requestPattern.copy(method = request.method)
 
-            requestType = attempt(breadCrumb = "URL") {
+            requestPattern = attempt(breadCrumb = "URL") {
                 val path = request.path ?: ""
                 val pathTypes = pathToPattern(path)
                 val queryParamTypes = toTypeMapForQueryParameters(request.queryParams, httpQueryParamPattern, resolver)
-                requestType.copy(httpPathPattern = HttpPathPattern(pathTypes, path), httpQueryParamPattern = HttpQueryParamPattern(queryParamTypes))
+                requestPattern.copy(httpPathPattern = HttpPathPattern(pathTypes, path), httpQueryParamPattern = HttpQueryParamPattern(queryParamTypes))
             }
 
-            requestType = attempt(breadCrumb = "HEADERS") {
-                requestType.copy(
-                    headersPattern = HttpHeadersPattern(
-                        toTypeMap(
-                            toLowerCaseKeys(request.headers) as Map<String, String>,
-                            toLowerCaseKeys(headersPattern.pattern) as Map<String, Pattern>,
-                            resolver
-                        )
-                    )
+            requestPattern = attempt(breadCrumb = "HEADERS") {
+                val headersFromRequest = toTypeMap(
+                    toLowerCaseKeys(request.headers) as Map<String, String>,
+                    toLowerCaseKeys(headersPattern.pattern) as Map<String, Pattern>,
+                    resolver
                 )
+
+                requestPattern.copy(headersPattern = HttpHeadersPattern(headersFromRequest))
             }
 
-            requestType = attempt(breadCrumb = "BODY") {
-                requestType.copy(
+            requestPattern = attempt(breadCrumb = "BODY") {
+                requestPattern.copy(
                     body = when (request.body) {
                         is StringValue -> encompassedType(request.bodyString, null, body, resolver)
                         else -> request.body.exactMatchElseType()
@@ -259,8 +257,8 @@ data class HttpRequestPattern(
                 )
             }
 
-            requestType = attempt(breadCrumb = "FORM FIELDS") {
-                requestType.copy(formFieldsPattern = toTypeMap(request.formFields, formFieldsPattern, resolver))
+            requestPattern = attempt(breadCrumb = "FORM FIELDS") {
+                requestPattern.copy(formFieldsPattern = toTypeMap(request.formFields, formFieldsPattern, resolver))
             }
 
             val multiPartFormDataRequestMap =
@@ -269,7 +267,7 @@ data class HttpRequestPattern(
                 }
 
             attempt(breadCrumb = "MULTIPART DATA") {
-                requestType.copy(multiPartFormDataPattern = multiPartFormDataPattern.filter {
+                requestPattern.copy(multiPartFormDataPattern = multiPartFormDataPattern.filter {
                     withoutOptionality(it.name) in multiPartFormDataRequestMap
                 }.map {
                     val key = withoutOptionality(it.name)

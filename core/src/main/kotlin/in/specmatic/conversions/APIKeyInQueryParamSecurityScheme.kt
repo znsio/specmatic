@@ -7,7 +7,7 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.StringValue
 
-class APIKeyInQueryParamSecurityScheme(val name: String, private val apiKey:String?) : OpenAPISecurityScheme {
+data class APIKeyInQueryParamSecurityScheme(val name: String, private val apiKey:String?) : OpenAPISecurityScheme {
     override fun matches(httpRequest: HttpRequest): Result {
         return if (httpRequest.queryParams.containsKey(name)) Result.Success() else Result.Failure("API-key named $name was not present in query string")
     }

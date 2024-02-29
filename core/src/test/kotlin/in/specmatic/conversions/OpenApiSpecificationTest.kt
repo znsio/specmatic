@@ -7523,6 +7523,146 @@ paths:
         assertThat(result.report()).contains("expects query param named \"id\"")
     }
 
+    @Test
+    fun `requestBody is required by default`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /person:
+                    post:
+                      summary: "Get person by id"
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - id
+                              properties:
+                                id:
+                                  type: string
+                      responses:
+                        200:
+                          description: "Get person by id"
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                """.trimIndent(), "").toFeature()
+
+        feature.matchResult(
+            HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
+            HttpResponse.OK
+        ).let { matchResult ->
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+        }
+
+        feature.matchResult(
+            HttpRequest("POST", "/person", body = NoBodyValue),
+            HttpResponse.OK
+        ).let { matchResult ->
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Failure::class.java)
+        }
+    }
+
+    @Test
+    fun `requestBody can be made required explicitly`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /person:
+                    post:
+                      summary: "Get person by id"
+                      requestBody:
+                        required: true
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - id
+                              properties:
+                                id:
+                                  type: string
+                      responses:
+                        200:
+                          description: "Get person by id"
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                """.trimIndent(), "").toFeature()
+
+        feature.matchResult(
+            HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
+            HttpResponse.OK
+        ).let { matchResult ->
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+        }
+
+        feature.matchResult(
+            HttpRequest("POST", "/person", body = NoBodyValue),
+            HttpResponse.OK
+        ).let { matchResult ->
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Failure::class.java)
+        }
+    }
+
+    @Test
+    fun `requestBody can be made optional`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /person:
+                    post:
+                      summary: "Get person by id"
+                      requestBody:
+                        required: false
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - id
+                              properties:
+                                id:
+                                  type: string
+                      responses:
+                        200:
+                          description: "Get person by id"
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                """.trimIndent(), "").toFeature()
+
+        feature.matchResult(
+            HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
+            HttpResponse.OK
+        ).let { matchResult ->
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+        }
+
+        feature.matchResult(
+            HttpRequest("POST", "/person", body = NoBodyValue),
+            HttpResponse.OK
+        ).let { matchResult ->
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

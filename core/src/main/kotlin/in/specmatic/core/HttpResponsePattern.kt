@@ -51,6 +51,21 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         }
     }
 
+    fun withBodyValue(row: Row, resolver: Resolver): HttpResponsePattern =
+        attempt(breadCrumb = "RESPONSE") {
+            if(row.responseBody == null)
+                this
+            else {
+                val bodyValue = body.parse(row.responseBody, resolver)
+                val bodyValueMatchResult = body.matches(bodyValue, resolver)
+
+                if(bodyValueMatchResult is Result.Failure)
+                    this
+                else
+                    this.copy(bodyValue = row.responseBody)
+            }
+        }
+
     fun newBasedOn(row: Row, resolver: Resolver): Sequence<HttpResponsePattern> =
         attempt(breadCrumb = "RESPONSE") {
             resolver.withCyclePrevention(body) { cyclePreventedResolver ->
@@ -106,35 +121,13 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         if(bodyValue == null)
             return MatchSuccess(parameters)
 
-        try {
-            val expectedBodyValue = parsedJSON(bodyValue)
-            val expectedBodyAsPattern = expectedBodyValue.exactMatchElseType()
+        val expectedBodyValue = body.parse(bodyValue, resolver)
+        val expectedBodyAsPattern = expectedBodyValue.exactMatchElseType()
 
-            val valueMismatchMessages: MismatchMessages = object : MismatchMessages {
-                override fun mismatchMessage(expected: String, actual: String): String {
-                    return "Value mismatch: Expected $expected, got value $actual"
-                }
+        val valueMatchResult = expectedBodyAsPattern.matches(parsedValue, resolver.copy(mismatchMessages = valueMismatchMessages)).breadCrumb("BODY")
 
-                override fun unexpectedKey(keyLabel: String, keyName: String): String {
-                    return "Value mismatch: $keyLabel $$keyName in value was unexpected"
-                }
-
-                override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
-                    return "Value mismatch: $keyLabel $$keyName was missing"
-                }
-
-            }
-
-            val valueMatchResult = expectedBodyAsPattern.matches(parsedValue, resolver.copy(mismatchMessages = valueMismatchMessages)).breadCrumb("BODY")
-
-            if (valueMatchResult is Result.Failure)
-                return MatchSuccess(Triple(response, resolver, failures.plus(valueMatchResult)))
-        } catch(e: Throwable) {
-            if(bodyValue != response.body.toStringLiteral()) {
-                val failureResult = mismatchResult(StringValue(bodyValue), response.body).breadCrumb("BODY")
-                return MatchSuccess(Triple(response, resolver, failures.plus(failureResult)))
-            }
-        }
+        if (valueMatchResult is Result.Failure)
+            return MatchSuccess(Triple(response, resolver, failures.plus(valueMatchResult)))
 
         return MatchSuccess(parameters)
     }
@@ -160,4 +153,19 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
             )
         }
     }
+}
+
+private val valueMismatchMessages = object : MismatchMessages {
+    override fun mismatchMessage(expected: String, actual: String): String {
+        return "Value mismatch: Expected $expected, got value $actual"
+    }
+
+    override fun unexpectedKey(keyLabel: String, keyName: String): String {
+        return "Value mismatch: $keyLabel $$keyName in value was unexpected"
+    }
+
+    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+        return "Value mismatch: $keyLabel $$keyName was missing"
+    }
+
 }

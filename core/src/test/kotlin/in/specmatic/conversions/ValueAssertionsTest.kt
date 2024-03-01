@@ -8,7 +8,7 @@ import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-class AssertionsTest {
+class ValueAssertionsTest {
     @Test
     fun `temp`() {
         try {

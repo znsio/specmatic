@@ -12,8 +12,6 @@ class ValueAssertionsTest {
     @Test
     fun `temp`() {
         try {
-            System.setProperty(Flags.VALIDATE_RESPONSE, "true")
-
             val feature = OpenApiSpecification.fromYAML(
                 """
 openapi: 3.0.3
@@ -54,7 +52,22 @@ paths:
               examples:
                 NEW_PRODUCT:
                   value: "Product added successfully"
-            """.trimIndent(), ""
+            """.trimIndent(), "", environmentConfiguration = object : EnvironmentConfiguration {
+                    override fun getEnvironmentVariable(variableName: String): String? {
+                        return null
+                    }
+
+                    override fun getSystemProperty(variableName: String): String? {
+                        return null
+                    }
+
+                    override fun getSetting(variableName: String): String? {
+                        return when (variableName) {
+                            Flags.VALIDATE_RESPONSE -> "true"
+                            else -> null
+                        }
+                    }
+            }
             ).toFeature()
             feature.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {

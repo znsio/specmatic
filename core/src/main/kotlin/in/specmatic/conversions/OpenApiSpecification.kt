@@ -45,7 +45,7 @@ class OpenApiSpecification(
     private val sourceRepositoryBranch: String? = null,
     private val specificationPath: String? = null,
     private val securityConfiguration: SecurityConfiguration? = null,
-    private val environment: Environment = DefaultEnvironment()
+    private val environmentConfiguration: EnvironmentConfiguration = RealEnvironmentConfiguration()
 ) : IncludedSpecification, ApiSpecification {
     init {
         logger.log(openApiSpecificationInfo(openApiFilePath, parsedOpenApi))
@@ -78,7 +78,7 @@ class OpenApiSpecification(
             sourceRepositoryBranch: String? = null,
             specificationPath: String? = null,
             securityConfiguration: SecurityConfiguration? = null,
-            environment: Environment = DefaultEnvironment()
+            environmentConfiguration: EnvironmentConfiguration = RealEnvironmentConfiguration()
         ): OpenApiSpecification {
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), openApiFilePath)
@@ -104,7 +104,7 @@ class OpenApiSpecification(
                 sourceRepositoryBranch,
                 specificationPath,
                 securityConfiguration,
-                environment
+                environmentConfiguration
             )
         }
 
@@ -431,7 +431,7 @@ class OpenApiSpecification(
                         } else valueString
                     },
                 name = exampleName,
-                responseBody = if(Flags.validateResponse()) responseExample.value?.toString() else null
+                responseBody = if(environmentConfiguration.getSetting(Flags.VALIDATE_RESPONSE)?.lowercase() == "true") responseExample.value?.toString() else null
             )
 
             else -> Row()
@@ -770,7 +770,7 @@ class OpenApiSpecification(
         }
 
         if (securityScheme.type == SecurityScheme.Type.APIKEY) {
-            val apiKey = getSecurityTokenForApiKeyScheme(securitySchemeConfiguration, schemeName, environment)
+            val apiKey = getSecurityTokenForApiKeyScheme(securitySchemeConfiguration, schemeName, environmentConfiguration)
             if (securityScheme.`in` == SecurityScheme.In.HEADER)
                 return APIKeyInHeaderSecurityScheme(securityScheme.name, apiKey)
 
@@ -788,7 +788,7 @@ class OpenApiSpecification(
         securitySchemeConfiguration: SecuritySchemeConfiguration?,
         environmentVariable: String,
     ): BearerSecurityScheme {
-        val token = getSecurityTokenForBearerScheme(securitySchemeConfiguration, environmentVariable, environment)
+        val token = getSecurityTokenForBearerScheme(securitySchemeConfiguration, environmentVariable, environmentConfiguration)
         return BearerSecurityScheme(token)
     }
 
@@ -796,7 +796,7 @@ class OpenApiSpecification(
         securitySchemeConfiguration: SecuritySchemeConfiguration?,
         environmentVariable: String,
     ): BasicAuthSecurityScheme {
-        val token = getSecurityTokenForBasicAuthScheme(securitySchemeConfiguration, environmentVariable, environment)
+        val token = getSecurityTokenForBasicAuthScheme(securitySchemeConfiguration, environmentVariable, environmentConfiguration)
         return BasicAuthSecurityScheme(token)
     }
 

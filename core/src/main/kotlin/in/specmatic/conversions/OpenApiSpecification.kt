@@ -306,7 +306,6 @@ class OpenApiSpecification(
 
                     val scenarioInfos =
                         httpResponsePatterns.map { (response, responseMediaType: MediaType, httpResponsePattern, responseExamples: Map<String, HttpResponse>) ->
-//                            val responseExamples: Map<String, Example> = responseMediaType.examples.orEmpty()
                             val specmaticExampleRows: List<Row> = testRowsFromExamples(responseExamples, operation, requestBody)
 
                             httpRequestPatterns.map { (httpRequestPattern, _: Map<String, List<HttpRequest>>) ->

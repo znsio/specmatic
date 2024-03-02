@@ -1,5 +1,7 @@
-package `in`.specmatic.conversions
+package integration_tests
 
+import `in`.specmatic.conversions.EnvironmentAndPropertiesConfiguration
+import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.Flags
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
@@ -12,7 +14,7 @@ class ValueAssertionsTest {
     @Test
     fun `should validate exact header and body values in the response`() {
         val feature = OpenApiSpecification.fromYAML(
-                """
+            """
 openapi: 3.0.3
 info:
   title: My service
@@ -60,7 +62,10 @@ paths:
                   value: "Product added successfully"
             """.trimIndent(),
             "",
-            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(emptyMap(), mapOf(Flags.VALIDATE_RESPONSE to "true"))
+            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
+                emptyMap(),
+                mapOf(Flags.VALIDATE_RESPONSE to "true")
+            )
         ).toFeature()
         feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -147,7 +152,7 @@ paths:
     @Test
     fun `validation should fail if there are extra response headers`() {
         val feature = OpenApiSpecification.fromYAML(
-                """
+            """
 openapi: 3.0.3
 info:
   title: My service
@@ -187,9 +192,12 @@ paths:
                 NEW_PRODUCT:
                   value: "Header 1 value"
             """.trimIndent(),
-                "",
-                environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(emptyMap(), mapOf(Flags.VALIDATE_RESPONSE to "true"))
-            ).toFeature()
+            "",
+            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
+                emptyMap(),
+                mapOf(Flags.VALIDATE_RESPONSE to "true")
+            )
+        ).toFeature()
             feature.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     return HttpResponse(200, headers = mapOf("Header1" to "10"))
@@ -251,7 +259,10 @@ paths:
                   value: "Product added successfully"
             """.trimIndent(),
             "",
-            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(emptyMap(), mapOf(Flags.VALIDATE_RESPONSE to "true"))
+            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
+                emptyMap(),
+                mapOf(Flags.VALIDATE_RESPONSE to "true")
+            )
         ).toFeature()
         feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -281,7 +292,7 @@ paths:
     @Test
     fun `breadcrumb for response value validation failure should not duplicate RESPONSE`() {
         val feature = OpenApiSpecification.fromYAML(
-                """
+            """
 openapi: 3.0.3
 info:
   title: My service
@@ -328,8 +339,11 @@ paths:
                 NEW_PRODUCT:
                   value: "Product added successfully"
             """.trimIndent(),
-                "",
-            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(emptyMap(), mapOf(Flags.VALIDATE_RESPONSE to "true"))
+            "",
+            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
+                emptyMap(),
+                mapOf(Flags.VALIDATE_RESPONSE to "true")
+            )
         ).toFeature()
         feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {

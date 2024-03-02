@@ -13,29 +13,29 @@ const val SPECMATIC_BASIC_AUTH_TOKEN = "SPECMATIC_BASIC_AUTH_TOKEN"
 fun getSecurityTokenForBasicAuthScheme(
     securitySchemeConfiguration: SecuritySchemeConfiguration?,
     environmentVariable: String,
-    environmentConfiguration: EnvironmentConfiguration
+    environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration
 ): String? {
-    return environmentConfiguration.getEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
+    return environmentAndPropertiesConfiguration.getEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
         (securitySchemeConfiguration as BasicAuthSecuritySchemeConfiguration).token
-    } ?: environmentConfiguration.getEnvironmentVariable(SPECMATIC_BASIC_AUTH_TOKEN)
+    } ?: environmentAndPropertiesConfiguration.getEnvironmentVariable(SPECMATIC_BASIC_AUTH_TOKEN)
 }
 
 fun getSecurityTokenForBearerScheme(
     securitySchemeConfiguration: SecuritySchemeConfiguration?,
     environmentVariable: String,
-    environmentConfiguration: EnvironmentConfiguration
+    environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration
 ): String? {
-    return environmentConfiguration.getEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
+    return environmentAndPropertiesConfiguration.getEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
         (it as SecuritySchemeWithOAuthToken).token
-    } ?: environmentConfiguration.getEnvironmentVariable(SPECMATIC_OAUTH2_TOKEN)
+    } ?: environmentAndPropertiesConfiguration.getEnvironmentVariable(SPECMATIC_OAUTH2_TOKEN)
 }
 
 fun getSecurityTokenForApiKeyScheme(
     securitySchemeConfiguration: SecuritySchemeConfiguration?,
     environmentVariable: String,
-    environmentConfiguration: EnvironmentConfiguration
+    environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration
 ): String? {
-    return environmentConfiguration.getEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
+    return environmentAndPropertiesConfiguration.getEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
         (it as APIKeySecuritySchemeConfiguration).value
     }
 }

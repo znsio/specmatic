@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test
 
 class ValueAssertionsTest {
     @Test
-    fun `temp`() {
+    fun `should match the values in the response`() {
         try {
             val feature = OpenApiSpecification.fromYAML(
                 """
@@ -52,22 +52,9 @@ paths:
               examples:
                 NEW_PRODUCT:
                   value: "Product added successfully"
-            """.trimIndent(), "", environmentConfiguration = object : EnvironmentConfiguration {
-                    override fun getEnvironmentVariable(variableName: String): String? {
-                        return null
-                    }
-
-                    override fun getSystemProperty(variableName: String): String? {
-                        return null
-                    }
-
-                    override fun getSetting(variableName: String): String? {
-                        return when (variableName) {
-                            Flags.VALIDATE_RESPONSE -> "true"
-                            else -> null
-                        }
-                    }
-            }
+            """.trimIndent(),
+                "",
+                environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(emptyMap(), mapOf(Flags.VALIDATE_RESPONSE to "true"))
             ).toFeature()
             feature.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {

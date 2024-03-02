@@ -45,7 +45,7 @@ class OpenApiSpecification(
     private val sourceRepositoryBranch: String? = null,
     private val specificationPath: String? = null,
     private val securityConfiguration: SecurityConfiguration? = null,
-    private val environmentConfiguration: EnvironmentConfiguration = RealEnvironmentConfiguration()
+    private val environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration()
 ) : IncludedSpecification, ApiSpecification {
     init {
         logger.log(openApiSpecificationInfo(openApiFilePath, parsedOpenApi))
@@ -78,7 +78,7 @@ class OpenApiSpecification(
             sourceRepositoryBranch: String? = null,
             specificationPath: String? = null,
             securityConfiguration: SecurityConfiguration? = null,
-            environmentConfiguration: EnvironmentConfiguration = RealEnvironmentConfiguration()
+            environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration()
         ): OpenApiSpecification {
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), openApiFilePath)
@@ -104,7 +104,7 @@ class OpenApiSpecification(
                 sourceRepositoryBranch,
                 specificationPath,
                 securityConfiguration,
-                environmentConfiguration
+                environmentAndPropertiesConfiguration
             )
         }
 
@@ -305,8 +305,8 @@ class OpenApiSpecification(
                     }
 
                     val scenarioInfos =
-                        httpResponsePatterns.map { (response, responseMediaType: MediaType, httpResponsePattern, _: Map<String, HttpResponse>) ->
-                            val responseExamples: Map<String, Example> = responseMediaType.examples.orEmpty()
+                        httpResponsePatterns.map { (response, responseMediaType: MediaType, httpResponsePattern, responseExamples: Map<String, HttpResponse>) ->
+//                            val responseExamples: Map<String, Example> = responseMediaType.examples.orEmpty()
                             val specmaticExampleRows: List<Row> = testRowsFromExamples(responseExamples, operation, requestBody)
 
                             httpRequestPatterns.map { (httpRequestPattern, _: Map<String, List<HttpRequest>>) ->
@@ -406,7 +406,7 @@ class OpenApiSpecification(
         }
 
     private fun testRowsFromExamples(
-        responseExamples: Map<String, Example>,
+        responseExamples: Map<String, HttpResponse>,
         operation: Operation,
         requestBody: RequestBody?
     ): List<Row> = responseExamples.map { (exampleName, responseExample) ->
@@ -431,7 +431,7 @@ class OpenApiSpecification(
                         } else valueString
                     },
                 name = exampleName,
-                responseBody = if(environmentConfiguration.getSetting(Flags.VALIDATE_RESPONSE)?.lowercase() == "true") responseExample.value?.toString() else null
+                responseBody = if(environmentAndPropertiesConfiguration.getSetting(Flags.VALIDATE_RESPONSE)?.lowercase() == "true") responseExample.body.toStringLiteral() else null
             )
 
             else -> Row()
@@ -516,9 +516,9 @@ class OpenApiSpecification(
         }.toMap()
 
     data class ResponseData(
-        val first: ApiResponse,
-        val second: MediaType,
-        val third: HttpResponsePattern,
+        val response: ApiResponse,
+        val mediaType: MediaType,
+        val responsePattern: HttpResponsePattern,
         val examples: Map<String, HttpResponse>
     )
 
@@ -770,7 +770,7 @@ class OpenApiSpecification(
         }
 
         if (securityScheme.type == SecurityScheme.Type.APIKEY) {
-            val apiKey = getSecurityTokenForApiKeyScheme(securitySchemeConfiguration, schemeName, environmentConfiguration)
+            val apiKey = getSecurityTokenForApiKeyScheme(securitySchemeConfiguration, schemeName, environmentAndPropertiesConfiguration)
             if (securityScheme.`in` == SecurityScheme.In.HEADER)
                 return APIKeyInHeaderSecurityScheme(securityScheme.name, apiKey)
 
@@ -788,7 +788,7 @@ class OpenApiSpecification(
         securitySchemeConfiguration: SecuritySchemeConfiguration?,
         environmentVariable: String,
     ): BearerSecurityScheme {
-        val token = getSecurityTokenForBearerScheme(securitySchemeConfiguration, environmentVariable, environmentConfiguration)
+        val token = getSecurityTokenForBearerScheme(securitySchemeConfiguration, environmentVariable, environmentAndPropertiesConfiguration)
         return BearerSecurityScheme(token)
     }
 
@@ -796,7 +796,7 @@ class OpenApiSpecification(
         securitySchemeConfiguration: SecuritySchemeConfiguration?,
         environmentVariable: String,
     ): BasicAuthSecurityScheme {
-        val token = getSecurityTokenForBasicAuthScheme(securitySchemeConfiguration, environmentVariable, environmentConfiguration)
+        val token = getSecurityTokenForBasicAuthScheme(securitySchemeConfiguration, environmentVariable, environmentAndPropertiesConfiguration)
         return BasicAuthSecurityScheme(token)
     }
 

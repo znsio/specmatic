@@ -109,11 +109,11 @@ Examples:
             @Test
             fun `should generate test with oauth2 authorization code security scheme with token in authorization header from environment variable`() {
                 val token = "ENV1234"
-                val environmentConfiguration = mockk<EnvironmentConfiguration>()
-                every { environmentConfiguration.getEnvironmentVariable("oAuth2AuthCode") }.returns(token)
+                val environmentAndPropertiesConfiguration = mockk<EnvironmentAndPropertiesConfiguration>()
+                every { environmentAndPropertiesConfiguration.getEnvironmentVariable("oAuth2AuthCode") }.returns(token)
                 val feature = parseContractFileToFeature(
                     "./src/test/resources/openapi/hello_with_oauth2_authorization_code_flow.yaml",
-                    environmentConfiguration = environmentConfiguration
+                    environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration
                 )
                 val contractTests = feature.generateContractTestScenarios(emptyList())
                 val result = executeTest(contractTests.single(), object : TestExecutor {
@@ -157,9 +157,9 @@ Examples:
 
             @Test
             fun `should match http request for spec with oauth2 security scheme with token defined in environment variable even if the token value in the request is different`() {
-                val environmentConfiguration = mockk<EnvironmentConfiguration>()
-                every { environmentConfiguration.getEnvironmentVariable("oAuth2AuthCode") }.returns("ENV1234")
-                val feature = parseContractFileToFeature("src/test/resources/openapi/hello_with_oauth2_authorization_code_flow.yaml", environmentConfiguration = environmentConfiguration)
+                val environmentAndPropertiesConfiguration = mockk<EnvironmentAndPropertiesConfiguration>()
+                every { environmentAndPropertiesConfiguration.getEnvironmentVariable("oAuth2AuthCode") }.returns("ENV1234")
+                val feature = parseContractFileToFeature("src/test/resources/openapi/hello_with_oauth2_authorization_code_flow.yaml", environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration)
                 val httpRequest = HttpRequest(
                     "GET",
                     "/hello/1",
@@ -451,13 +451,13 @@ Feature: Authenticated
         @Test
         fun `should generate test with bearer security scheme with token in authorization header from environment variable`() {
             val token = "ENV1234"
-            val environmentConfiguration = mockk<EnvironmentConfiguration>()
-            every { environmentConfiguration.getEnvironmentVariable("BearerAuth") }.returns(token)
-            every { environmentConfiguration.getEnvironmentVariable("ApiKeyAuthQuery") }.returns(token)
-            every { environmentConfiguration.getEnvironmentVariable("ApiKeyAuthHeader") }.returns(token)
+            val environmentAndPropertiesConfiguration = mockk<EnvironmentAndPropertiesConfiguration>()
+            every { environmentAndPropertiesConfiguration.getEnvironmentVariable("BearerAuth") }.returns(token)
+            every { environmentAndPropertiesConfiguration.getEnvironmentVariable("ApiKeyAuthQuery") }.returns(token)
+            every { environmentAndPropertiesConfiguration.getEnvironmentVariable("ApiKeyAuthHeader") }.returns(token)
             val feature = parseContractFileToFeature(
                 "./src/test/resources/openapi/authenticated.yaml",
-                environmentConfiguration = environmentConfiguration
+                environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration
             )
             val contractTests = feature.generateContractTestScenarios(emptyList())
             var requestMadeWithTokenFromSpecmaticJson = false
@@ -505,13 +505,13 @@ Background:
         @Test
         fun `should match http request for spec with bearer security scheme with token defined in environment variable even if the token value in the request is different`() {
             val token = "ENV1234"
-            val environmentConfiguration = mockk<EnvironmentConfiguration>()
-            every { environmentConfiguration.getEnvironmentVariable("BearerAuth") }.returns(token)
-            every { environmentConfiguration.getEnvironmentVariable("ApiKeyAuthQuery") }.returns(token)
-            every { environmentConfiguration.getEnvironmentVariable("ApiKeyAuthHeader") }.returns(token)
+            val environmentAndPropertiesConfiguration = mockk<EnvironmentAndPropertiesConfiguration>()
+            every { environmentAndPropertiesConfiguration.getEnvironmentVariable("BearerAuth") }.returns(token)
+            every { environmentAndPropertiesConfiguration.getEnvironmentVariable("ApiKeyAuthQuery") }.returns(token)
+            every { environmentAndPropertiesConfiguration.getEnvironmentVariable("ApiKeyAuthHeader") }.returns(token)
             val feature = parseContractFileToFeature(
                 "./src/test/resources/openapi/authenticated.yaml",
-                environmentConfiguration = environmentConfiguration
+                environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration
             )
             val httpRequest = HttpRequest(
                 "GET",
@@ -606,17 +606,9 @@ Background:
         """.trimIndent()
 
         fun feature(environmentVariables: Map<String, String> = emptyMap()): Feature {
-            val environmentConfiguration = object : EnvironmentConfiguration {
-                override fun getEnvironmentVariable(variableName: String): String? {
-                    return environmentVariables[variableName]
-                }
+            val environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(environmentVariables, emptyMap())
 
-                override fun getSystemProperty(variableName: String): String? {
-                    return null
-                }
-            }
-
-            return OpenApiSpecification.fromYAML(openapiSpecificationWithGETAPIHavingBasicAuth, "", environmentConfiguration = environmentConfiguration).toFeature()
+            return OpenApiSpecification.fromYAML(openapiSpecificationWithGETAPIHavingBasicAuth, "", environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration).toFeature()
         }
 
         val credentials = "charlie123:pqrxyz"
@@ -832,14 +824,14 @@ Feature: Authenticated
         @Test
         fun `should generate test with api key in header security scheme with token in header from environment variable`() {
             val token = "ENV1234"
-            val environmentConfiguration = mockk<EnvironmentConfiguration>()
-            every { environmentConfiguration.getEnvironmentVariable("ApiKeyAuthHeader") }.returns(token)
-            every { environmentConfiguration.getEnvironmentVariable("ApiKeyAuthQuery") }.returns(token)
-            every { environmentConfiguration.getEnvironmentVariable("BearerAuth") }.returns(token)
+            val environmentAndPropertiesConfiguration = mockk<EnvironmentAndPropertiesConfiguration>()
+            every { environmentAndPropertiesConfiguration.getEnvironmentVariable("ApiKeyAuthHeader") }.returns(token)
+            every { environmentAndPropertiesConfiguration.getEnvironmentVariable("ApiKeyAuthQuery") }.returns(token)
+            every { environmentAndPropertiesConfiguration.getEnvironmentVariable("BearerAuth") }.returns(token)
 
             val feature = parseContractFileToFeature(
                 "./src/test/resources/openapi/authenticated.yaml",
-                environmentConfiguration = environmentConfiguration
+                environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration
             )
             val contractTests = feature.generateContractTestScenarios(emptyList())
             var requestMadeWithApiKeyInHeaderFromSpecmaticJson = false
@@ -924,13 +916,13 @@ Feature: Authenticated
         @Test
         fun `should match http request for spec with apikey security scheme with token defined in environment variable even if the token value in the request is different`() {
             val token = "ENV1234"
-            val environmentConfiguration = mockk<EnvironmentConfiguration>()
-            every { environmentConfiguration.getEnvironmentVariable("BearerAuth") }.returns(token)
-            every { environmentConfiguration.getEnvironmentVariable("ApiKeyAuthQuery") }.returns(token)
-            every { environmentConfiguration.getEnvironmentVariable("ApiKeyAuthHeader") }.returns(token)
+            val environmentAndPropertiesConfiguration = mockk<EnvironmentAndPropertiesConfiguration>()
+            every { environmentAndPropertiesConfiguration.getEnvironmentVariable("BearerAuth") }.returns(token)
+            every { environmentAndPropertiesConfiguration.getEnvironmentVariable("ApiKeyAuthQuery") }.returns(token)
+            every { environmentAndPropertiesConfiguration.getEnvironmentVariable("ApiKeyAuthHeader") }.returns(token)
             val feature = parseContractFileToFeature(
                 "./src/test/resources/openapi/authenticated.yaml",
-                environmentConfiguration = environmentConfiguration
+                environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration
             )
             val httpRequest = HttpRequest(
                 "GET",

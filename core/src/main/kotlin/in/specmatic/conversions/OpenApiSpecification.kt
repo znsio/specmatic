@@ -420,18 +420,25 @@ class OpenApiSpecification(
         }.toMap()
 
         when {
-            requestExamples.isNotEmpty() -> Row(
-                requestExamples.keys.toList().map { keyName: String -> keyName },
-                requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" }
-                    .map { valueString: String ->
-                        if (valueString.contains("externalValue")) {
-                            ObjectMapper().readValue(valueString, Map::class.java).values.first()
-                                .toString()
-                        } else valueString
-                    },
-                name = exampleName,
-                responseBody = if(environmentAndPropertiesConfiguration.getSetting(Flags.VALIDATE_RESPONSE)?.lowercase() == "true") responseExample.body.toStringLiteral() else null
-            )
+            requestExamples.isNotEmpty() -> {
+                val responseExampleValueForRow = if (environmentAndPropertiesConfiguration.getSetting(Flags.VALIDATE_RESPONSE)?.lowercase() == "true")
+                    responseExample
+                else
+                    null
+
+                Row(
+                    requestExamples.keys.toList().map { keyName: String -> keyName },
+                    requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" }
+                        .map { valueString: String ->
+                            if (valueString.contains("externalValue")) {
+                                ObjectMapper().readValue(valueString, Map::class.java).values.first()
+                                    .toString()
+                            } else valueString
+                        },
+                    name = exampleName,
+                    responseExample = responseExampleValueForRow
+                )
+            }
 
             else -> Row()
         }

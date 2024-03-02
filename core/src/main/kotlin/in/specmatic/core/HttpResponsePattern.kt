@@ -7,7 +7,7 @@ import `in`.specmatic.stub.softCastValueToXML
 
 const val DEFAULT_RESPONSE_CODE = 1000
 
-data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int = 0, val body: Pattern = EmptyStringPattern, val bodyValue: String? = null) {
+data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int = 0, val body: Pattern = EmptyStringPattern, val expectedBodyValue: HttpResponsePattern? = null) {
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body.exactMatchElseType())
 
     fun generateResponse(resolver: Resolver): HttpResponse {
@@ -37,13 +37,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
     }
 
     fun matches(response: HttpResponse, resolver: Resolver): Result {
-        val result = response to resolver to
-                ::matchStatus then
-                ::matchHeaders then
-                ::matchBody then
-                ::summarize otherwise
-                ::handleError toResult
-                ::returnResult
+        val result = _matches(response, resolver)
 
         return when(result) {
             is Result.Failure -> result.breadCrumb("RESPONSE")
@@ -51,30 +45,28 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         }
     }
 
-    fun withBodyValue(row: Row, resolver: Resolver): HttpResponsePattern =
-        attempt(breadCrumb = "RESPONSE") {
-            if(row.responseBody == null)
-                this
-            else {
-                val bodyValue = body.parse(row.responseBody, resolver)
-                val bodyValueMatchResult = body.matches(bodyValue, resolver)
+    fun _matches(response: HttpResponse, resolver: Resolver): Result {
+        return response to resolver to
+            ::matchStatus then
+            ::matchHeaders then
+            ::matchBody then
+            ::matchExactValue then
+            ::summarize otherwise
+            ::handleError toResult
+            ::returnResult
+    }
 
-                if(bodyValueMatchResult is Result.Failure)
-                    this
-                else
-                    this.copy(bodyValue = row.responseBody)
-            }
-        }
-
-    fun newBasedOn(row: Row, resolver: Resolver): Sequence<HttpResponsePattern> =
+    fun withExactResponseValue(row: Row, resolver: Resolver): HttpResponsePattern =
         attempt(breadCrumb = "RESPONSE") {
-            resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                body.newBasedOn(row, cyclePreventedResolver)
-            }.flatMap { newBody ->
-                headersPattern.newBasedOn(row, resolver).map { newHeadersPattern ->
-                    HttpResponsePattern(newHeadersPattern, status, newBody)
-                }
-            }
+            if(row.responseExample == null)
+                return@attempt this
+
+            val responseExampleMatchResult = matches(row.responseExample, resolver)
+
+            if(responseExampleMatchResult is Result.Failure)
+                throw ContractException("""Error in response in example "${row.name}": ${responseExampleMatchResult.reportString()}""")
+
+            this.copy(expectedBodyValue = fromResponseExpectation(row.responseExample))
         }
 
     fun matchesMock(response: HttpResponse, resolver: Resolver) = matches(response, resolver)
@@ -118,16 +110,19 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         if(result is Result.Failure)
             return MatchSuccess(Triple(response, resolver, failures.plus(result.breadCrumb("BODY"))))
 
-        if(bodyValue == null)
+        return MatchSuccess(parameters)
+    }
+
+    private fun matchExactValue(parameters: Triple<HttpResponse, Resolver, List<Result.Failure>>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
+        if(expectedBodyValue == null)
             return MatchSuccess(parameters)
 
-        val expectedBodyValue = body.parse(bodyValue, resolver)
-        val expectedBodyAsPattern = expectedBodyValue.exactMatchElseType()
+        val (response, resolver, failures) = parameters
 
-        val valueMatchResult = expectedBodyAsPattern.matches(parsedValue, resolver.copy(mismatchMessages = valueMismatchMessages)).breadCrumb("BODY")
+        val result = expectedBodyValue._matches(response, resolver)
 
-        if (valueMatchResult is Result.Failure)
-            return MatchSuccess(Triple(response, resolver, failures.plus(valueMatchResult)))
+        if(result is Result.Failure)
+            return MatchSuccess(Triple(response, resolver, failures.plus(result)))
 
         return MatchSuccess(parameters)
     }

@@ -280,7 +280,7 @@ data class Scenario(
 
         return scenarioBreadCrumb(this) {
             attempt {
-                val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withBodyValue(row, resolver)
+                val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withExactResponseValue(row, resolver)
 
                 when (isNegative) {
                     false -> httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status)

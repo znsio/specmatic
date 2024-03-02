@@ -66,7 +66,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
             if(responseExampleMatchResult is Result.Failure)
                 throw ContractException("""Error in response in example "${row.name}": ${responseExampleMatchResult.reportString()}""")
 
-            this.copy(expectedResponseValue = ExpectedResponse(fromResponseExpectation(row.responseExample)))
+            this.copy(expectedResponseValue = SpecificResponse(fromResponseExpectation(row.responseExample)))
         }
 
     fun matchesMock(response: HttpResponse, resolver: Resolver) = matches(response, resolver)

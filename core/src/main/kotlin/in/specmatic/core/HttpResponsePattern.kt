@@ -7,7 +7,12 @@ import `in`.specmatic.stub.softCastValueToXML
 
 const val DEFAULT_RESPONSE_CODE = 1000
 
-data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int = 0, val body: Pattern = EmptyStringPattern, val expectedResponseValue: ResponseValueAssertion = AnyResponse) {
+data class HttpResponsePattern(
+    val headersPattern: HttpHeadersPattern = HttpHeadersPattern(),
+    val status: Int = 0,
+    val body: Pattern = EmptyStringPattern,
+    val expectedResponseValue: ResponseValueAssertion = AnyResponse
+) {
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body.exactMatchElseType())
 
     fun generateResponse(resolver: Resolver): HttpResponse {
@@ -66,7 +71,9 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
             if(responseExampleMatchResult is Result.Failure)
                 throw ContractException("""Error in response in example "${row.name}": ${responseExampleMatchResult.reportString()}""")
 
-            this.copy(expectedResponseValue = SpecificResponse(fromResponseExpectation(row.responseExample)))
+            val expectedExactResponsePattern = fromResponseExpectation(row.responseExample)
+
+            this.copy(expectedResponseValue = SpecificResponse(expectedExactResponsePattern))
         }
 
     fun matchesMock(response: HttpResponse, resolver: Resolver) = matches(response, resolver)
@@ -116,7 +123,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
     private fun matchExactValue(parameters: Triple<HttpResponse, Resolver, List<Result.Failure>>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
         val (response, resolver, failures) = parameters
 
-        val result = expectedResponseValue.matches(response, resolver)
+        val result = expectedResponseValue.matches(response, resolver.copy(mismatchMessages = valueMismatchMessages))
 
         if(result is Result.Failure)
             return MatchSuccess(Triple(response, resolver, failures.plus(result)))

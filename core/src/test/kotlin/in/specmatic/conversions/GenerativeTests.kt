@@ -398,7 +398,7 @@ class GenerativeTests {
     }
 
     @Test
-    fun `generative tests for query params with no examples`() {
+    fun `generative tests for mandatory query params with no examples`() {
         val feature = OpenApiSpecification.fromYAML(
             """
             ---
@@ -437,6 +437,162 @@ class GenerativeTests {
         try {
             val results = runGenerativeTests(feature)
             assertThat(results.results).hasSize(3)
+        } catch (e: ContractException) {
+            println(e.report())
+            throw e
+        }
+    }
+
+    @Test
+    fun `generative tests for optional query params with no examples`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                get:
+                  summary: Fetch person's record
+                  parameters:
+                    - name: id
+                      in: query
+                      required: false
+                      schema:
+                        type: integer
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+            """.trimIndent(), ""
+        ).toFeature()
+
+        try {
+            val results = runGenerativeTests(feature)
+            assertThat(results.results).hasSize(4)
+        } catch (e: ContractException) {
+            println(e.report())
+            throw e
+        }
+    }
+
+    @Test
+    fun `generative tests with one optional and one mandatory query params with no examples`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                get:
+                  summary: Fetch person's record
+                  parameters:
+                    - name: category
+                      in: query
+                      required: true
+                      schema:
+                        type: integer
+                    - name: status
+                      in: query
+                      required: false
+                      schema:
+                        type: integer
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+            """.trimIndent(), ""
+        ).toFeature()
+
+        try {
+            val results = runGenerativeTests(feature)
+            assertThat(results.results).hasSize(8)
+        } catch (e: ContractException) {
+            println(e.report())
+            throw e
+        }
+    }
+
+    @Test
+    fun `generative tests with one optional query param with no example and one mandatory query params with an example`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                get:
+                  summary: Fetch person's record
+                  parameters:
+                    - name: category
+                      in: query
+                      required: false
+                      schema:
+                        type: integer
+                    - name: status
+                      in: query
+                      required: true
+                      schema:
+                        type: integer
+                      examples:
+                        FETCH:
+                          value: 10
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+                          examples:
+                            FETCH:
+                              value:
+                                id: 123
+                                name: "John Doe"
+            """.trimIndent(), ""
+        ).toFeature()
+
+        try {
+            val results = runGenerativeTests(feature)
+            assertThat(results.results).hasSize(12)
         } catch (e: ContractException) {
             println(e.report())
             throw e

@@ -45,5 +45,5 @@ jobs:
         with:
           token: ${{ secrets.VERSION_UPDATE_TOKEN }}
           repository: ${{ matrix.repository }}
-          event-type: new_release
+          event-type: specmatic-core-release
           client-payload: '{"version": "${{ github.ref }}"}'

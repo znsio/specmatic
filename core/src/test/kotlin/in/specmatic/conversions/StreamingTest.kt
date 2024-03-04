@@ -33,7 +33,7 @@ $parameters
                 type: string
 """.trimIndent()
 
-        val feature = OpenApiSpecification.fromYAML(specWith30QueryParams, "").toFeature()
+        val feature = OpenApiSpecification.fromYAML(specWith30QueryParams, "").toFeature().enableGenerativeTesting()
 
         val streamOfTestsWithOverABillionTests = feature.generateContractTests(emptyList())
         val first100TestsFromTheStreamingTest = streamOfTestsWithOverABillionTests.take(100)

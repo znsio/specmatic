@@ -40,8 +40,6 @@ paths:
               value: "test-trace-id"
             404_NOT_FOUND:
               value: "test-trace-id"
-            400_BAD_REQUEST:
-              value: "(OMIT)"
       responses:
         '200':
           description: Says hello

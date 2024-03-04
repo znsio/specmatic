@@ -70,11 +70,27 @@ data class Row(
 
     fun containsField(key: String): Boolean = requestBodyJSONExample?.hasScalarValueForKey(key) ?: cells.containsKey(key)
 
-    fun withoutOmittedKeys(keys: Map<String, Pattern>, defaultExampleResolver: DefaultExampleResolver) = keys.filter {
-        !this.containsField(withoutOptionality(it.key)) || this.getField(withoutOptionality(it.key)) !in OMIT
-    }.filter {
-        thisFieldHasAnExample(it.key) || defaultExampleResolver.theDefaultExampleForThisKeyIsNotOmit(it.value)
+    fun withoutOmittedKeys(keys: Map<String, Pattern>, defaultExampleResolver: DefaultExampleResolver): Map<String, Pattern> {
+        if(this.hasNoRequestExamples())
+            return keys
+
+        return keys.filter { (key, pattern) ->
+            keyIsMandatory(key) || keyHasExample(withoutOptionality(key), pattern, defaultExampleResolver)
+        }
     }
+
+    fun hasNoRequestExamples() = columnNames.isEmpty() && requestBodyJSONExample == null
+
+    fun keyHasExample(key: String, pattern: Pattern, defaultExampleResolver: DefaultExampleResolver): Boolean {
+        return this.containsField(key) ||  defaultExampleResolver.hasExample(pattern)
+    }
+
+    fun keyIsMandatory(key: String): Boolean {
+        return !isOptional(key)
+    }
+
+    private fun keyisNotOmitted(it: Map.Entry<String, Pattern>) =
+        this.getField(withoutOptionality(it.key)) !in OMIT
 
     fun stepDownOneLevelInJSONHierarchy(key: String): Row {
         if(requestBodyJSONExample == null)
@@ -119,5 +135,9 @@ data class Row(
 
             row.copy(columnNames = newColumns, values = newValues)
         }
+    }
+
+    fun hasRequestParameters(): Boolean {
+        return values.isNotEmpty() || requestBodyJSONExample != null
     }
 }

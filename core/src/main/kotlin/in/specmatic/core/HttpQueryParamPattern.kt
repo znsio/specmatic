@@ -42,7 +42,9 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
             }
 
             forEachKeyCombinationIn(row.withoutOmittedKeys(queryParams, resolver.defaultExampleResolver), row) { entry ->
-                newBasedOn(entry.mapKeys { withoutOptionality(it.key) }, row, resolver)
+                newBasedOn(entry, row, resolver)
+            }.map {
+                it.mapKeys { withoutOptionality(it.key) }
             }
         }
         return newQueryParamsList

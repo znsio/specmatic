@@ -344,6 +344,106 @@ class GenerativeTests {
     }
 
     @Test
+    fun `generative tests for query params with an example`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                get:
+                  summary: Fetch person's record
+                  parameters:
+                    - name: id
+                      in: query
+                      required: true
+                      schema:
+                        type: integer
+                      examples:
+                        DETAILS:
+                          value: 987
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+                          examples:
+                            DETAILS:
+                              value:
+                                id: 123
+                                name: "John Doe"
+            """.trimIndent(), ""
+        ).toFeature()
+
+        try {
+            val results = runGenerativeTests(feature)
+            assertThat(results.results).hasSize(3)
+        } catch (e: ContractException) {
+            println(e.report())
+            throw e
+        }
+    }
+
+    @Test
+    fun `generative tests for query params with no examples`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                get:
+                  summary: Fetch person's record
+                  parameters:
+                    - name: id
+                      in: query
+                      required: true
+                      schema:
+                        type: integer
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+            """.trimIndent(), ""
+        ).toFeature()
+
+        try {
+            val results = runGenerativeTests(feature)
+            assertThat(results.results).hasSize(3)
+        } catch (e: ContractException) {
+            println(e.report())
+            throw e
+        }
+    }
+
+    @Test
     fun `generative tests should correctly generate values of the right type where the same key appears with different types in the request payload`() {
         val feature = OpenApiSpecification.fromYAML(
             """

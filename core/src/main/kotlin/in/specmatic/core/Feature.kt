@@ -1,7 +1,6 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.conversions.*
-import `in`.specmatic.conversions.Environment
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
@@ -31,8 +30,8 @@ import io.swagger.v3.oas.models.responses.ApiResponses
 import java.io.File
 import java.net.URI
 
-fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null, environment: Environment = DefaultEnvironment()): Feature {
-    return parseContractFileToFeature(File(contractPath), hook, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration, environment)
+fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null, sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null, environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration()): Feature {
+    return parseContractFileToFeature(File(contractPath), hook, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration, environmentAndPropertiesConfiguration)
 }
 
 fun checkExists(file: File) = file.also {
@@ -40,11 +39,11 @@ fun checkExists(file: File) = file.also {
         throw ContractException("File ${file.path} does not exist (absolute path ${file.canonicalPath})")
 }
 
-fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null, environment: Environment = DefaultEnvironment()): Feature {
+fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null, sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null, environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration()): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
 
     return when (file.extension) {
-        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath, securityConfiguration = securityConfiguration, environment = environment).toFeature()
+        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath, securityConfiguration = securityConfiguration, environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration).toFeature()
         WSDL -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
         else -> throw unsupportedFileExtensionContractException(file.path, file.extension)

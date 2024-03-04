@@ -20,13 +20,6 @@ class ScenarioTest(
             responseStatus, resultStatus, sourceProvider, sourceRepository, sourceRepositoryBranch, specification, serviceType)
     }
 
-    override fun generateTestScenarios(
-        testVariables: Map<String, String>,
-        testBaseURLs: Map<String, String>
-    ): Sequence<ContractTest> {
-        return scenario.generateContractTests(resolverStrategies, testVariables, testBaseURLs)
-    }
-
     override fun testDescription(): String {
         return scenario.testDescription()
     }

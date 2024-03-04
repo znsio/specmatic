@@ -3,12 +3,16 @@ package `in`.specmatic.core
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.softCastValueToXML
 
 const val DEFAULT_RESPONSE_CODE = 1000
 
-data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHeadersPattern(), val status: Int = 0, val body: Pattern = EmptyStringPattern) {
+data class HttpResponsePattern(
+    val headersPattern: HttpHeadersPattern = HttpHeadersPattern(),
+    val status: Int = 0,
+    val body: Pattern = EmptyStringPattern,
+    val expectedResponseValue: ResponseValueAssertion = AnyResponse
+) {
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body.exactMatchElseType())
 
     fun generateResponse(resolver: Resolver): HttpResponse {
@@ -38,13 +42,7 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
     }
 
     fun matches(response: HttpResponse, resolver: Resolver): Result {
-        val result = response to resolver to
-                ::matchStatus then
-                ::matchHeaders then
-                ::matchBody then
-                ::summarize otherwise
-                ::handleError toResult
-                ::returnResult
+        val result = _matches(response, resolver)
 
         return when(result) {
             is Result.Failure -> result.breadCrumb("RESPONSE")
@@ -52,15 +50,30 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
         }
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): Sequence<HttpResponsePattern> =
+    fun _matches(response: HttpResponse, resolver: Resolver): Result {
+        return response to resolver to
+            ::matchStatus then
+            ::matchHeaders then
+            ::matchBody then
+            ::matchExactValue then
+            ::summarize otherwise
+            ::handleError toResult
+            ::returnResult
+    }
+
+    fun withExactResponseValue(row: Row, resolver: Resolver): HttpResponsePattern =
         attempt(breadCrumb = "RESPONSE") {
-            resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                body.newBasedOn(row, cyclePreventedResolver)
-            }.flatMap { newBody ->
-                headersPattern.newBasedOn(row, resolver).map { newHeadersPattern ->
-                    HttpResponsePattern(newHeadersPattern, status, newBody)
-                }
-            }
+            if(row.responseExample == null)
+                return@attempt this
+
+            val responseExampleMatchResult = matches(row.responseExample, resolver)
+
+            if(responseExampleMatchResult is Result.Failure)
+                throw ContractException("""Error in response in example "${row.name}": ${responseExampleMatchResult.reportString()}""")
+
+            val expectedExactResponsePattern = fromResponseExpectation(row.responseExample)
+
+            this.copy(expectedResponseValue = SpecificResponse(expectedExactResponsePattern))
         }
 
     fun matchesMock(response: HttpResponse, resolver: Resolver) = matches(response, resolver)
@@ -100,10 +113,22 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
             else -> response.body
         }
 
-        return when (val result = body.matches(parsedValue, resolver)) {
-            is Result.Failure -> MatchSuccess(Triple(response, resolver, failures.plus(result.breadCrumb("BODY"))))
-            else -> MatchSuccess(parameters)
-        }
+        val result = body.matches(parsedValue, resolver)
+        if(result is Result.Failure)
+            return MatchSuccess(Triple(response, resolver, failures.plus(result.breadCrumb("BODY"))))
+
+        return MatchSuccess(parameters)
+    }
+
+    private fun matchExactValue(parameters: Triple<HttpResponse, Resolver, List<Result.Failure>>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
+        val (response, resolver, failures) = parameters
+
+        val result = expectedResponseValue.matches(response, resolver.copy(mismatchMessages = valueMismatchMessages))
+
+        if(result is Result.Failure)
+            return MatchSuccess(Triple(response, resolver, failures.plus(result)))
+
+        return MatchSuccess(parameters)
     }
 
     fun bodyPattern(newBody: Pattern): HttpResponsePattern = this.copy(body = newBody)
@@ -127,4 +152,19 @@ data class HttpResponsePattern(val headersPattern: HttpHeadersPattern = HttpHead
             )
         }
     }
+}
+
+private val valueMismatchMessages = object : MismatchMessages {
+    override fun mismatchMessage(expected: String, actual: String): String {
+        return "Value mismatch: Expected $expected, got value $actual"
+    }
+
+    override fun unexpectedKey(keyLabel: String, keyName: String): String {
+        return "Value mismatch: $keyLabel $$keyName in value was unexpected"
+    }
+
+    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+        return "Value mismatch: $keyLabel $$keyName was missing"
+    }
+
 }

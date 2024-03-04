@@ -36,6 +36,8 @@ dependencies {
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
+    implementation 'com.flipkart.zjsonpatch:zjsonpatch:0.4.16'
+
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
 
     implementation 'io.swagger.parser.v3:swagger-parser:2.1.20'

@@ -281,7 +281,7 @@ internal class UtilitiesTest {
     }
 
     @Nested
-    inner class ReadingEnvironmentVariableOrProperty {
+    inner class ReadingEnvironmentVariableOrPropertyConfiguration {
         @Test
         fun `read property when environment variable does not exist`() {
             System.setProperty(testSystemProperty, "true")

@@ -344,7 +344,7 @@ class GenerativeTests {
     }
 
     @Test
-    fun `generative tests for query params with an example`() {
+    fun `generative mandatory tests for query params with an example`() {
         val feature = OpenApiSpecification.fromYAML(
             """
             ---

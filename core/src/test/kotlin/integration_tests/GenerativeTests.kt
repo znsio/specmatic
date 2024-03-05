@@ -11,6 +11,11 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
+private val Results.testCount: Int
+    get() {
+        return this.successCount + this.failureCount
+    }
+
 @Tag(GENERATION)
 class GenerativeTests {
     @Test
@@ -1638,5 +1643,419 @@ class GenerativeTests {
             { assertThat(it).matches("^/person/(false|true)") },
             { assertThat(it).matches("/person/[A-Z]+$") }
         )
+    }
+
+    @Test
+    fun `should not run generative tests for body examples for non-200 scenarios`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /status:
+                post:
+                  summary: Create person record
+                  requestBody:
+                    content:
+                      application/json:
+                        examples:
+                          SERVER_ERROR:
+                            value:
+                              status: enabled
+                          BAD_REQUEST:
+                            value:
+                              status: enabled
+                        schema:
+                          required:
+                          - status
+                          properties:
+                            status:
+                              type: string
+                              enum:
+                                - enabled
+                                - disabled
+                  responses:
+                    200:
+                      description: Person record created
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+                    400:
+                      description: Server error
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+                          examples:
+                            BAD_REQUEST:
+                              value: "Bad request"
+                    500:
+                      description: Server error
+                      content:
+                        text/plain:
+                          schema:
+                            type: "string"
+                          examples:
+                            SERVER_ERROR:
+                              value: "Server error"
+            """.trimIndent(), ""
+        ).toFeature().enableGenerativeTesting()
+
+        val testsSeen: MutableList<Pair<String, String?>> = mutableListOf()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                val testType = if(scenario.isNegative) "-ve" else "+ve"
+                val exampleName = scenario.exampleName
+
+                testsSeen.add(Pair(testType, exampleName))
+            }
+        })
+
+        assertThat(results.testCount).isEqualTo(7)
+        assertThat(testsSeen).doesNotContain("-ve" to "BAD_REQUEST")
+        assertThat(testsSeen).doesNotContain("-ve" to "SERVER_ERROR")
+    }
+
+    @Test
+    fun `should not run generative tests for query param examples for non-200 scenarios`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                get:
+                  summary: Fetch person's record
+                  parameters:
+                    - name: id
+                      in: query
+                      required: true
+                      schema:
+                        type: integer
+                      examples:
+                        BAD_REQUEST:
+                          value: 100
+                        SERVER_ERROR:
+                          value: 200
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+                    400:
+                      description: Person's record
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            BAD_REQUEST:
+                              value: "Bad request"
+                    500:
+                      description: Person's record
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            SERVER_ERROR:
+                              value: "Server error"
+            """.trimIndent(), ""
+        ).toFeature().enableGenerativeTesting()
+
+        val testsSeen: MutableList<Pair<String, String?>> = mutableListOf()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                println(scenario.testDescription())
+                println(request.toLogString())
+                val testType = if(scenario.isNegative) "-ve" else "+ve"
+                val exampleName = scenario.exampleName
+
+                testsSeen.add(Pair(testType, exampleName))
+            }
+        })
+
+        assertThat(results.testCount).isEqualTo(5)
+        assertThat(testsSeen).doesNotContain("-ve" to "BAD_REQUEST")
+        assertThat(testsSeen).doesNotContain("-ve" to "SERVER_ERROR")
+    }
+
+    @Test
+    fun `should not run generative tests for enum query param examples for non-200 scenarios`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                get:
+                  summary: Fetch person's record
+                  parameters:
+                    - name: category
+                      in: query
+                      required: true
+                      schema:
+                        type: string
+                        enum:
+                          - enabled
+                          - disabled
+                      examples:
+                        BAD_REQUEST:
+                          value: enabled
+                        SERVER_ERROR:
+                          value: enabled
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+                    400:
+                      description: Person's record
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            BAD_REQUEST:
+                              value: "Bad request"
+                    500:
+                      description: Person's record
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            SERVER_ERROR:
+                              value: "Server error"
+            """.trimIndent(), ""
+        ).toFeature().enableGenerativeTesting()
+
+        val testsSeen: MutableList<Pair<String, String?>> = mutableListOf()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                println(scenario.testDescription())
+                println(request.toLogString())
+                val testType = if(scenario.isNegative) "-ve" else "+ve"
+                val exampleName = scenario.exampleName
+
+                testsSeen.add(Pair(testType, exampleName))
+            }
+        })
+
+        assertThat(testsSeen).doesNotContain("-ve" to "BAD_REQUEST")
+        assertThat(testsSeen).doesNotContain("-ve" to "SERVER_ERROR")
+        assertThat(results.testCount).isEqualTo(6)
+    }
+
+    @Test
+    fun `should not run generative tests for enum header examples for non-200 scenarios`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                get:
+                  summary: Fetch person's record
+                  parameters:
+                    - name: category
+                      in: header
+                      required: true
+                      schema:
+                        type: string
+                        enum:
+                          - enabled
+                          - disabled
+                      examples:
+                        BAD_REQUEST:
+                          value: enabled
+                        SERVER_ERROR:
+                          value: enabled
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+                    400:
+                      description: Person's record
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            BAD_REQUEST:
+                              value: "Bad request"
+                    500:
+                      description: Person's record
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            SERVER_ERROR:
+                              value: "Server error"
+            """.trimIndent(), ""
+        ).toFeature().enableGenerativeTesting()
+
+        val testsSeen: MutableList<Pair<String, String?>> = mutableListOf()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                println(scenario.testDescription())
+                println(request.toLogString())
+                val testType = if(scenario.isNegative) "-ve" else "+ve"
+                val exampleName = scenario.exampleName
+
+                testsSeen.add(Pair(testType, exampleName))
+            }
+        })
+
+        assertThat(testsSeen).doesNotContain("-ve" to "BAD_REQUEST")
+        assertThat(testsSeen).doesNotContain("-ve" to "SERVER_ERROR")
+        assertThat(results.testCount).isEqualTo(6)
+    }
+
+    @Test
+    fun `should not run generative tests for path param examples for non-200 scenarios`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person/{id}:
+                get:
+                  summary: Fetch person's record
+                  parameters:
+                    - name: id
+                      in: path
+                      required: true
+                      schema:
+                        type: integer
+                      examples:
+                        BAD_REQUEST:
+                          value: 100
+                        SERVER_ERROR:
+                          value: 200
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+                    400:
+                      description: Person's record
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            BAD_REQUEST:
+                              value: "Bad request"
+                    500:
+                      description: Person's record
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            SERVER_ERROR:
+                              value: "Server error"
+            """.trimIndent(), ""
+        ).toFeature().enableGenerativeTesting()
+
+        val testsSeen: MutableList<Pair<String, String?>> = mutableListOf()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                println(scenario.testDescription())
+                println(request.toLogString())
+                val testType = if(scenario.isNegative) "-ve" else "+ve"
+                val exampleName = scenario.exampleName
+
+                testsSeen.add(Pair(testType, exampleName))
+            }
+        })
+
+        assertThat(results.testCount).isEqualTo(5)
+        assertThat(testsSeen).doesNotContain("-ve" to "BAD_REQUEST")
+        assertThat(testsSeen).doesNotContain("-ve" to "SERVER_ERROR")
     }
 }

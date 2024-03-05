@@ -20,6 +20,7 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.jsonBody
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
+import net.bytebuddy.implementation.bytecode.Throw
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -2125,21 +2126,25 @@ components:
 
         var contractInvalidValueReceived = false
 
-        contract.executeTests(object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                val dataHeaderValue: String? = request.queryParams.getValues("data").first()
+        try {
+            contract.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val dataHeaderValue: String? = request.queryParams.getValues("data").first()
 
-                if (dataHeaderValue == "hello")
-                    contractInvalidValueReceived = true
+                    if (dataHeaderValue == "hello")
+                        contractInvalidValueReceived = true
 
-                return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
-            }
+                    return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
+                }
 
-            override fun setServerState(serverState: Map<String, Value>) {
-            }
-        })
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
 
-        assertThat(contractInvalidValueReceived).isTrue
+            assertThat(contractInvalidValueReceived).isTrue
+        } catch(e: Throwable) {
+            throw e
+        }
     }
 
     @Test

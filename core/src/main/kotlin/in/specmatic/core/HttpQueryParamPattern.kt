@@ -6,6 +6,8 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import java.net.URI
 
+const val QUERY_PARAMS_BREADCRUMB = "QUERY-PARAMS"
+
 data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val additionalProperties: Pattern? = null) {
 
     fun generate(resolver: Resolver): List<Pair<String, String>> {
@@ -33,7 +35,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         row: Row,
         resolver: Resolver
     ): Sequence<Map<String, Pattern>> {
-        val newQueryParamsList = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
+        val createdBasedOnExamples = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams = queryPatterns.let {
                 if(additionalProperties != null)
                     it.plus(randomString(5) to additionalProperties)
@@ -47,7 +49,12 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
                 it.mapKeys { withoutOptionality(it.key) }
             }
         }
-        return newQueryParamsList
+
+        val generatedWithoutExamples: Sequence<Map<String, Pattern>> = resolver.generation.fillInTheMissingMapPatterns(createdBasedOnExamples, queryPatterns, additionalProperties, row, resolver)
+
+        return (createdBasedOnExamples + generatedWithoutExamples).map {
+            it.mapKeys { withoutOptionality(it.key) }
+        }
     }
 
     fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
@@ -130,14 +137,18 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
     fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
         return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams = queryPatterns.let {
-                if(additionalProperties != null)
+                if (additionalProperties != null)
                     it.plus(randomString(5) to additionalProperties)
                 else
                     it
             }
 
-            forEachKeyCombinationIn(row.withoutOmittedKeys(queryParams, resolver.defaultExampleResolver), row) { entry ->
-                NegativeNonStringlyPatterns().negativeBasedOn(entry.mapKeys { withoutOptionality(it.key) }, row, resolver)
+            forEachKeyCombinationIn(queryParams, row) { entry ->
+                NegativeNonStringlyPatterns().negativeBasedOn(
+                    entry.mapKeys { withoutOptionality(it.key) },
+                    row,
+                    resolver
+                )
             }
         }
     }
@@ -165,5 +176,3 @@ internal fun buildQueryPattern(
     }
     return HttpQueryParamPattern(queryPattern)
 }
-
-const val QUERY_PARAMS_BREADCRUMB = "QUERY-PARAMS"

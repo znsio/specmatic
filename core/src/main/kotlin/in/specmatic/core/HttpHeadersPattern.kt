@@ -155,13 +155,25 @@ data class HttpHeadersPattern(
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
-        return forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
+        val basedOnExamples = forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
             newBasedOn(pattern, row, resolver)
-        }.map { map -> HttpHeadersPattern(map.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
+        }
+
+        val generatedWithoutExamples: Sequence<Map<String, Pattern>> = resolver.generation.fillInTheMissingMapPatterns(
+            basedOnExamples,
+            pattern,
+            null,
+            row,
+            resolver
+        ).map {
+            noOverlapBetween(it, basedOnExamples, resolver)
+        }.filterNotNull()
+
+        return (basedOnExamples + generatedWithoutExamples).map { map -> HttpHeadersPattern(map.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
     }
 
     fun negativeBasedOn(row: Row, resolver: Resolver) =
-        forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
+        forEachKeyCombinationIn(pattern, row, resolver) { pattern ->
             NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
         }.map { patternMap ->
             HttpHeadersPattern(

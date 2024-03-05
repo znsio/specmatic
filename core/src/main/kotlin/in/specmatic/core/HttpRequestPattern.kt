@@ -5,7 +5,6 @@ import `in`.specmatic.conversions.OpenAPISecurityScheme
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
-import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import io.ktor.util.*
 
@@ -487,9 +486,9 @@ data class HttpRequestPattern(
 
                         val requestBodyAsIs = ExactValuePattern(value)
 
-                        resolver.generateHttpRequests(body, row, requestBodyAsIs, value)
+                        resolver.generateHttpRequestbodies(body, row, requestBodyAsIs, value)
                     } else {
-                        resolver.generateHttpRequests(body, row)
+                        resolver.generateHttpRequestbodies(body, row)
                     }
                 }
             }

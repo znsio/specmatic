@@ -100,7 +100,7 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
         row: Row,
         resolver: Resolver
     ): Sequence<Map<String, Pattern>> {
-        return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
+        val additionalPatterns = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams = queryPatterns.let {
                 if(additionalProperties != null)
                     it.plus(randomString(5) to additionalProperties)
@@ -108,12 +108,14 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
                     it
             }
 
-            forEachKeyCombinationIn(queryParams, row) { entry ->
+            forEachKeyCombinationIn(queryParams, Row()) { entry ->
                 newBasedOn(entry, row, resolver)
             }.map {
                 it.mapKeys { withoutOptionality(it.key) }
             }
-        }.map {
+        }
+
+        return additionalPatterns.map {
             noOverlapBetween(it, newQueryParamsList, resolver)
         }.filterNotNull()
     }
@@ -165,22 +167,30 @@ object NonGenerativeTests : GenerationStrategies {
 }
 
 internal fun noOverlapBetween(
-    item: Map<String, Pattern>,
-    otherItems: Sequence<Map<String, Pattern>>,
+    map: Map<String, Pattern>,
+    otherMaps: Sequence<Map<String, Pattern>>,
     resolver: Resolver
 ): Map<String, Pattern>? {
-    val otherItemWithSameKeys = otherItems.find { it.keys.map(::withoutOptionality) == item.keys.map(::withoutOptionality) } ?: return item
-
-    val itemWithoutOptionality = item.mapKeys { withoutOptionality(it.key) }
-
-    val results: List<Result> = otherItemWithSameKeys.mapKeys { withoutOptionality(it.key) }.map { (key, otherPattern) ->
-        val itemPattern = itemWithoutOptionality.getValue(key)
-
-        itemPattern.encompasses(otherPattern, resolver, resolver)
+    val otherMapsWithSameKeys = otherMaps.filter {
+        it.keys.map(::withoutOptionality) == map.keys.map(::withoutOptionality)
+    }.map {
+        it.mapKeys { withoutOptionality(it.key) }
     }
 
-    if(results.all { it is Result.Success })
+    val mapWithoutOptionality = map.mapKeys { withoutOptionality(it.key) }
+
+    val results: Sequence<Result> = otherMapsWithSameKeys.map { otherMap ->
+        val valueMatchResults = otherMap.map { (key, otherPattern) ->
+            val itemPattern = mapWithoutOptionality.getValue(key)
+
+            itemPattern.encompasses(otherPattern, resolver, resolver)
+        }
+
+        Result.fromResults(valueMatchResults)
+    }
+
+    if(results.any { it is Result.Success })
         return null
 
-    return item
+    return map
 }

@@ -660,6 +660,200 @@ class GenerativeTests {
     }
 
     @Test
+    fun `generative tests with one optional query param that is an enum and has no examples`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Products API"
+              version: "1"
+            paths:
+              /products:
+                get:
+                  summary: GET Products based on type
+                  parameters:
+                    - name: type
+                      in: query
+                      schema:
+                        type: string
+                        enum:
+                          - gadget
+                          - book
+                  responses:
+                    "200":
+                      description: List of products in the response
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+
+            """.trimIndent(), ""
+        ).toFeature()
+
+        try {
+            val results = runGenerativeTests(feature)
+            assertThat(results.results).hasSize(5)
+        } catch (e: ContractException) {
+            println(e.report())
+            throw e
+        }
+    }
+
+    @Test
+    fun `generative tests with one optional query param that is an enum and has an example`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                get:
+                  summary: Fetch person's record
+                  parameters:
+                    - name: category
+                      in: query
+                      schema:
+                        type: string
+                        enum:
+                          - active
+                          - inactive
+                      examples:
+                        FETCH:
+                          value: active
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+                          examples:
+                            FETCH:
+                              value:
+                                id: 123
+                                name: "John Doe"
+            """.trimIndent(), ""
+        ).toFeature()
+
+        try {
+            val results = runGenerativeTests(feature)
+            assertThat(results.results).hasSize(5)
+        } catch (e: ContractException) {
+            println(e.report())
+            throw e
+        }
+    }
+
+    @Test
+    fun `generative tests with one optional header that is an enum and has no examples`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Products API"
+              version: "1"
+            paths:
+              /products:
+                get:
+                  summary: GET Products based on type
+                  parameters:
+                    - name: type
+                      in: header
+                      schema:
+                        type: string
+                        enum:
+                          - gadget
+                          - book
+                  responses:
+                    "200":
+                      description: List of products in the response
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+
+            """.trimIndent(), ""
+        ).toFeature()
+
+        try {
+            val results = runGenerativeTests(feature)
+            assertThat(results.results).hasSize(5)
+        } catch (e: ContractException) {
+            println(e.report())
+            throw e
+        }
+    }
+
+    @Test
+    fun `generative tests with one optional header that is an enum and has an example`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                get:
+                  summary: Fetch person's record
+                  parameters:
+                    - name: category
+                      in: header
+                      schema:
+                        type: string
+                        enum:
+                          - active
+                          - inactive
+                      examples:
+                        FETCH:
+                          value: active
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+                          examples:
+                            FETCH:
+                              value:
+                                id: 123
+                                name: "John Doe"
+            """.trimIndent(), ""
+        ).toFeature()
+
+        try {
+            val results = runGenerativeTests(feature)
+            assertThat(results.results).hasSize(5)
+        } catch (e: ContractException) {
+            println(e.report())
+            throw e
+        }
+    }
+
+    @Test
     fun `generative tests should correctly generate values of the right type where the same key appears with different types in the request payload`() {
         val feature = OpenApiSpecification.fromYAML(
             """

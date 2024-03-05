@@ -165,9 +165,7 @@ data class HttpHeadersPattern(
             null,
             row,
             resolver
-        ).map {
-            noOverlapBetween(it, basedOnExamples, resolver)
-        }.filterNotNull()
+        )
 
         return (basedOnExamples + generatedWithoutExamples).map { map -> HttpHeadersPattern(map.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
     }

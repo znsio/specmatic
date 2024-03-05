@@ -1,6 +1,7 @@
-package `in`.specmatic.conversions
+package integration_tests
 
 import `in`.specmatic.GENERATION
+import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.*

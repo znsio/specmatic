@@ -1,11 +1,15 @@
 package `in`.specmatic.proxy
 
 import `in`.specmatic.conversions.OpenApiSpecification
+import `in`.specmatic.core.HttpRequest
+import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.YAML
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.JSONObjectValue
+import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import io.ktor.http.*
 import org.assertj.core.api.Assertions.*
@@ -176,7 +180,78 @@ internal class ProxyTest {
         val requestInTheGeneratedExpectation = (parsedJSONObject(fakeFileWriter.receivedStub!!).jsonObject["http-request"] as JSONObjectValue).jsonObject
         assertThat(requestInTheGeneratedExpectation).doesNotContainKeys("body")
     }
-}
+
+    @Test
+    fun `should use the text-html content type from the actual response instead of inferring it`() {
+        val featureWithHTMLResponse = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Data
+              version: "1"
+            paths:
+              /:
+                get:
+                  summary: Data
+                  responses:
+                    "200":
+                      description: Data
+                      content:
+                        text/html:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(featureWithHTMLResponse).use {
+            Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
+                val client = RestTemplate()
+                client.getForEntity("http://localhost:9001/", String::class.java)
+            }
+        }
+
+        assertThat(fakeFileWriter.receivedStub).withFailMessage(fakeFileWriter.receivedStub).contains("text/html")
+        assertThat(fakeFileWriter.receivedContract).withFailMessage(fakeFileWriter.receivedStub).contains("text/html")
+
+        HttpStub(OpenApiSpecification.fromYAML(fakeFileWriter.receivedContract!!, "").toFeature()).use { stub ->
+
+        }
+    }
+
+    @Test
+    fun `should use the text-plain content type from the actual response instead of inferring it`() {
+        val featureWithHTMLResponse = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.1
+            info:
+              title: Data
+              version: "1"
+            paths:
+              /:
+                get:
+                  summary: Data
+                  responses:
+                    "200":
+                      description: Data
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(featureWithHTMLResponse).use {
+            val jsonContent = parsedJSONObject("""{"id": 10}""").toStringLiteral()
+
+            it.setExpectation(ScenarioStub(HttpRequest("GET", "/"), HttpResponse.ok(StringValue(jsonContent))))
+
+            Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
+                val client = RestTemplate()
+                client.getForEntity("http://localhost:9001/", String::class.java)
+            }
+        }
+
+        assertThat(fakeFileWriter.receivedStub).withFailMessage(fakeFileWriter.receivedStub).contains("text/plain")
+        assertThat(fakeFileWriter.receivedContract).withFailMessage(fakeFileWriter.receivedContract).contains("text/plain")
+
+
+    }}
 
 class FakeFileWriter : FileWriter {
     var receivedContract: String? = null

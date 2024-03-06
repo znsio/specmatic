@@ -1,5 +1,6 @@
-package `in`.specmatic.conversions
+package integration_tests
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.log.*
@@ -16,7 +17,8 @@ import java.util.function.Consumer
 class LoadTestsFromExternalisedFiles {
     @Test
     fun `should load and execute externalized tests for header and request body from _tests directory`() {
-        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test_and_no_example.yaml").toFeature().loadExternalisedExamples()
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test_and_no_example.yaml")
+            .toFeature().loadExternalisedExamples()
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -39,7 +41,8 @@ class LoadTestsFromExternalisedFiles {
 
     @Test
     fun `externalized tests should replace example tests`() {
-        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test_and_one_example.yaml").toFeature().loadExternalisedExamples()
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test_and_one_example.yaml")
+            .toFeature().loadExternalisedExamples()
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -96,7 +99,8 @@ class LoadTestsFromExternalisedFiles {
 
     @Test
     fun `externalized tests with query parameters`() {
-        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalised_test_with_query_params.yaml").toFeature().loadExternalisedExamples()
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalised_test_with_query_params.yaml")
+            .toFeature().loadExternalisedExamples()
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -130,7 +134,8 @@ class LoadTestsFromExternalisedFiles {
         try {
             logger = testLogger
 
-            val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_irrelevant_externalized_test.yaml").toFeature().loadExternalisedExamples()
+            val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_irrelevant_externalized_test.yaml")
+                .toFeature().loadExternalisedExamples()
 
             feature.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {

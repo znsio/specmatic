@@ -1,5 +1,6 @@
-package `in`.specmatic.conversions
+package integration_tests
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.pattern.parsedJSONArray

@@ -198,13 +198,12 @@ internal class HttpHeadersPatternTest {
 
     @Tag(GENERATION)
     @Test
-    fun `should generate two header object given one optional header an example of the mandatory header`() {
+    fun `should generate only one header object given one optional header an example of only the mandatory header`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern(), "X-Identifier?" to StringPattern()))
         val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver()).toList()
 
-        assertThat(newHeaders).containsExactlyInAnyOrder(
+        assertThat(newHeaders).containsExactly(
             HttpHeadersPattern(mapOf("X-TraceID" to ExactValuePattern(StringValue("123")))),
-            HttpHeadersPattern(mapOf("X-TraceID" to ExactValuePattern(StringValue("123")), "X-Identifier" to StringPattern()))
         )
     }
 

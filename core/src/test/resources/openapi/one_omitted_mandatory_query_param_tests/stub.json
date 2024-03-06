@@ -1,0 +1,12 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/products"
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": 10
+    }
+  }
+}

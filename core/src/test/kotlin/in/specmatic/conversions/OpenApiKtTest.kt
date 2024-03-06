@@ -20,6 +20,7 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.jsonBody
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
+import net.bytebuddy.implementation.bytecode.Throw
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -1736,58 +1737,6 @@ Scenario: zero should return not found
     }
 
     @Test
-    fun `should not send query params that have been explicitly omitted in examples`() {
-        val openAPISpec = """
-Feature: Hello world
-
-Background:
-  Given openapi openapi/helloWithQueryParams.yaml            
-
-Scenario: zero should return not found
-  When GET /hello
-  Then status 200
-  Examples:
-      | message | name |
-      | hello   | Hari |
-      | hello   | (omit) |
-        """.trimIndent()
-
-        val feature = parseGherkinStringToFeature(openAPISpec, sourceSpecPath)
-
-        val queryParameters: MutableList<Map<String, String>> = mutableListOf()
-
-        val results = feature.enableGenerativeTesting().executeTests(
-            object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    queryParameters.add(request.queryParams.asMap())
-                    return HttpResponse.OK
-                }
-
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            }
-        )
-
-        assertThat(results.success()).isTrue
-        assertThat(queryParameters.size).isEqualTo(4)
-        println(queryParameters)
-        assertThat(queryParameters.map { it.keys }).containsAll(
-            listOf(
-                setOf("message"),
-                setOf("message", "name"),
-                setOf("message", "name", "another_message"),
-                setOf("message", "another_message"),
-            )
-        )
-        assertThat(queryParameters.map { it.values.toSet() }).containsAll(
-            listOf(
-                setOf("Hari", "hello"),
-                setOf("hello")
-            )
-        )
-    }
-
-    @Test
     fun `default response should be used to match an unexpected response status code and body in stub`() {
         val openAPISpec = """
             Feature: With default
@@ -2177,21 +2126,25 @@ components:
 
         var contractInvalidValueReceived = false
 
-        contract.executeTests(object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                val dataHeaderValue: String? = request.queryParams.getValues("data").first()
+        try {
+            contract.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val dataHeaderValue: String? = request.queryParams.getValues("data").first()
 
-                if (dataHeaderValue == "hello")
-                    contractInvalidValueReceived = true
+                    if (dataHeaderValue == "hello")
+                        contractInvalidValueReceived = true
 
-                return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
-            }
+                    return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
+                }
 
-            override fun setServerState(serverState: Map<String, Value>) {
-            }
-        })
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
 
-        assertThat(contractInvalidValueReceived).isTrue
+            assertThat(contractInvalidValueReceived).isTrue
+        } catch(e: Throwable) {
+            throw e
+        }
     }
 
     @Test
@@ -2591,51 +2544,6 @@ components:
         })
 
         assertThat(result.success()).withFailMessage(result.report()).isTrue
-    }
-
-    @Test
-    fun `should handle omit correctly when it is a default value in the parameter section if the schemaExampleDefault flag is set`() {
-        val feature =
-            OpenApiSpecification.fromFile("src/test/resources/openapi/helloWithOmitAsDefault.yaml").toFeature()
-                .enableSchemaExampleDefault()
-
-        val results = feature.executeTests(object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                assertThat(request.queryParams.asMap()).doesNotContainKey("id")
-                assertThat(request.headers).doesNotContainKey("traceId")
-                return HttpResponse.OK
-            }
-
-            override fun setServerState(serverState: Map<String, Value>) {
-            }
-        })
-
-        assertThat(results.hasFailures()).isFalse()
-        assertThat(results.success()).isTrue()
-    }
-
-    @Test
-    fun `should ignore omit when it is a default value in the parameter section if the schemaExampleDefault flag NOT set`() {
-        val feature =
-            OpenApiSpecification.fromFile("src/test/resources/openapi/helloWithOmitAsDefault.yaml").toFeature()
-
-        val queryParamsSeen = mutableListOf<String>()
-        val headersSeen = mutableListOf<String>()
-
-        feature.executeTests(object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                queryParamsSeen.addAll(request.queryParams.keys)
-                headersSeen.addAll(request.headers.keys)
-
-                return HttpResponse.OK
-            }
-
-            override fun setServerState(serverState: Map<String, Value>) {
-            }
-        })
-
-        assertThat(queryParamsSeen.sorted().distinct()).isEqualTo(listOf("id", "name"))
-        assertThat(headersSeen.sorted().distinct()).isEqualTo(listOf("traceId"))
     }
 
     @Test

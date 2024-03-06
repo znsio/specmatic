@@ -412,7 +412,7 @@ internal class HttpHeadersPatternTest {
     }
 
     @Test
-    fun `should not match invalid content type`() {
+    fun `should not match a different content type`() {
         val headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern()), contentType = "application/json")
         assertThat(headersPattern.matches(mapOf("X-Data" to "10", "Content-Type" to "text/plain"), Resolver())).isInstanceOf(Result.Failure::class.java)
     }

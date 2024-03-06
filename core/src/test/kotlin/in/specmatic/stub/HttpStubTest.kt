@@ -1385,8 +1385,6 @@ paths:
             }
         })
 
-//        println(results.results.)
-        println(results.report())
         assertThat(results.success()).isFalse()
         assertThat(results.report()).contains("Content-Type")
     }

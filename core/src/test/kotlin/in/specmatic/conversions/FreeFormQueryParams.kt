@@ -108,7 +108,7 @@ paths:
         200:
           description: API
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
 """.trimIndent()
@@ -156,7 +156,7 @@ paths:
         200:
           description: API
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
 """.trimIndent()

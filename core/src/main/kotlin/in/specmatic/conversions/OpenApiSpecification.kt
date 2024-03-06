@@ -566,7 +566,7 @@ class OpenApiSpecification(
 
         return response.content.map { (contentType, mediaType) ->
             val responsePattern = HttpResponsePattern(
-                headersPattern = HttpHeadersPattern(headersMap),
+                headersPattern = HttpHeadersPattern(headersMap, contentType = contentType),
                 status = if (status == "default") 1000 else status.toInt(),
                 body = when (contentType) {
                     "application/xml" -> toXMLPattern(mediaType)

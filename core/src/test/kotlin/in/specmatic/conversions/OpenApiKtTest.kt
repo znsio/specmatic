@@ -1770,16 +1770,11 @@ Scenario: zero should return not found
             override fun execute(request: HttpRequest): HttpResponse {
                 val jsonBody = request.body as JSONObjectValue
                 if (jsonBody.jsonObject["id"]?.toStringLiteral()?.toIntOrNull() != null)
-                    return HttpResponse(200, body = StringValue("it worked"))
+                    return HttpResponse(200, body = StringValue("""{"data": "it worked!"}"""))
 
-                return HttpResponse(400, body = parsedJSONObject("""{"data": "information"}"""))
-            }
-
-            override fun setServerState(serverState: Map<String, Value>) {
+                return HttpResponse(400, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"data": "information"}"""))
             }
         })
-
-        println(results.report())
 
         assertThat(results.success()).isTrue
     }

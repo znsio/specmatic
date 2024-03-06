@@ -213,6 +213,7 @@ enum class FailureReason(val fluffLevel: Int) {
     PartNameMisMatch(0),
     StatusMismatch(1),
     MethodMismatch(1),
+    ContentTypeMismatch(0),
     RequestMismatchButStatusAlsoWrong(1),
     URLPathMisMatch(2),
     SOAPActionMismatch(2)

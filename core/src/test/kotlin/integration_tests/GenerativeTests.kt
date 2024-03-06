@@ -11,7 +11,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-private val Results.testCount: Int
+internal val Results.testCount: Int
     get() {
         return this.successCount + this.failureCount
     }

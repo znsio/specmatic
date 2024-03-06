@@ -1,0 +1,15 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/products",
+    "query": {
+      "source": "farm"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": 10
+    }
+  }
+}

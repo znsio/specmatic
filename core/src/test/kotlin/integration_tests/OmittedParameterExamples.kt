@@ -468,4 +468,60 @@ components:
 
         assertThat(results.success()).isTrue()
     }
+
+    @Test
+    fun `omitted optional query param in an externalized test should be omitted in the contract test`() {
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/one_omitted_optional_query_param.yaml")
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.queryParams.keys).doesNotContain("brand_id")
+                return HttpResponse.OK
+            }
+        })
+
+        assertThat(results.successCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `omitted mandatory query param in an externalized test should be generated in the contract test`() {
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/one_omitted_mandatory_query_param.yaml")
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.queryParams.keys).contains("brand_id")
+                return HttpResponse.OK
+            }
+        })
+
+        assertThat(results.successCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `omitted optional query param in an externalized test with a mandatory param should be omitted in the contract test`() {
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/mandatory_and_omitted_optional_query_params.yaml")
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
+
+                assertThat(request.queryParams.keys).doesNotContain("brand_id")
+                assertThat(request.queryParams.keys).contains("source")
+
+                val (_, sourceValue) = request.queryParams.paramPairs.single { it.first == "source" }
+                assertThat(sourceValue).isEqualTo("farm")
+
+                return HttpResponse.OK
+            }
+        })
+
+        assertThat(results.successCount).isEqualTo(1)
+    }
+
 }

@@ -71,7 +71,7 @@ data class Row(
     fun containsField(key: String): Boolean = requestBodyJSONExample?.hasScalarValueForKey(key) ?: cells.containsKey(key)
 
     fun withoutOmittedKeys(keys: Map<String, Pattern>, defaultExampleResolver: DefaultExampleResolver): Map<String, Pattern> {
-        if(this.hasNoRequestExamples())
+        if(this.hasNoRequestExamples() && this.fileSource == null)
             return keys
 
         return keys.filter { (key, pattern) ->

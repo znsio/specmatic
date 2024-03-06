@@ -25,6 +25,11 @@ data class HttpResponse(
         headers: Map<String, String> = mapOf(CONTENT_TYPE to "text/plain")
     ) : this(status, headers, body?.let { parsedValue(it) } ?: EmptyString)
 
+    constructor(
+        status: Int = 0,
+        body: Value,
+    ) : this(status, headers = mapOf(CONTENT_TYPE to body.httpContentType), body = body)
+
     private val statusText: String
         get() =
             when (status) {

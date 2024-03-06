@@ -3794,15 +3794,12 @@ paths:
                 | name | (string) |
                 When GET /
                 Then status 200
+                And response-header Content-Type application/json
                 And response-body (dictionary string Data)
         """.trimIndent()
 
         val feature = parseGherkinStringToFeature(gherkin)
         val openAPI = feature.toOpenApi()
-
-        val openAPIYaml = openAPIToString(openAPI)
-
-        println(openAPIYaml)
 
         with(OpenApiSpecification("/file.yaml", openAPI).toFeature()) {
             val request = HttpRequest(
@@ -3813,12 +3810,13 @@ paths:
                 body = parsedJSON("""{"10": {"name": "Jane"}}""")
             )
 
-            assertThat(
-                this.matches(
+            val matchResult =
+                this.matchResult(
                     request,
                     response
                 )
-            ).isTrue
+
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
         }
 
     }
@@ -4865,7 +4863,7 @@ paths:
 
         private fun assertMatchesResponseSnippet(path: String, xmlSnippet: String, xmlFeature: Feature) {
             val request = HttpRequest("GET", path)
-            val stubData = xmlFeature.matchingStub(request, HttpResponse.ok(body = parsedValue(xmlSnippet)))
+            val stubData = xmlFeature.matchingStub(request, HttpResponse(200, headers = mapOf(CONTENT_TYPE to "application/xml"), body = parsedValue(xmlSnippet)))
 
             val stubMatchResult =
                 stubData.responsePattern.body.matches(parsedValue(xmlSnippet), xmlFeature.scenarios.first().resolver)
@@ -6718,6 +6716,7 @@ paths:
                 HttpRequest(
                     method = "POST",
                     path = "/data",
+                    headers = mapOf(CONTENT_TYPE to "application/octet-stream"),
                     body = StringValue(base64EncodedRequestBody)
                 )
             )
@@ -7047,7 +7046,7 @@ paths:
                         "200":
                           description: "Send Message Response"
                           content:
-                            multipart/form-data:
+                            application/json:
                               schema:
                                 type: object
                                 properties:
@@ -7072,7 +7071,7 @@ paths:
                                 "UTF-8"
                             )
                         )
-                    ), HttpResponse.ok("{\"filename\": \"ThIsi5ByT3sD4tA\"}")
+                    ), HttpResponse(200, parsedJSONObject("{\"filename\": \"ThIsi5ByT3sD4tA\"}"))
                 )
             assertThat(result).isInstanceOf(Result.Success::class.java)
         }

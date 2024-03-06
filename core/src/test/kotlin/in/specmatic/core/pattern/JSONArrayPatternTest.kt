@@ -270,7 +270,7 @@ paths:
         '200':
           description: Order created successfully
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
         """.trimIndent()

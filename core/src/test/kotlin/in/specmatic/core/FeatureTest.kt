@@ -1491,7 +1491,7 @@ paths:
         '422':
           description: Bad Request
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
               examples:

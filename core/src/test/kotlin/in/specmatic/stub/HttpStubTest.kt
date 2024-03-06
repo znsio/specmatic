@@ -966,7 +966,7 @@ paths:
         '200':
           description: Successful response
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
 """.trimIndent()

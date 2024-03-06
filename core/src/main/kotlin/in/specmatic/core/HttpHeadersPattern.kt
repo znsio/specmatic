@@ -36,14 +36,20 @@ data class HttpHeadersPattern(
         val (headers, resolver) = parameters
 
         val contentTypeHeaderValue = headers["Content-Type"]
-        if(contentType != null && contentTypeHeaderValue != null && contentType != contentTypeHeaderValue)
-            return MatchFailure(
-                Result.Failure(
-                    "Content-Type header mismatch, expected \"$contentType\", found \"$contentTypeHeaderValue\"",
-                    breadCrumb = "Content-Type",
-                    failureReason = FailureReason.ContentTypeMismatch
+
+        if(contentType != null && contentTypeHeaderValue != null) {
+            val parsedContentType = simplifiedContentType(contentType.lowercase())
+            val parsedContentTypeHeaderValue  = simplifiedContentType(contentTypeHeaderValue.lowercase())
+
+            if(parsedContentType != parsedContentTypeHeaderValue)
+                return MatchFailure(
+                    Result.Failure(
+                        "Content-Type header mismatch, expected \"$contentType\", found \"$contentTypeHeaderValue\"",
+                        breadCrumb = "Content-Type",
+                        failureReason = FailureReason.ContentTypeMismatch
+                    )
                 )
-            )
+        }
 
 
         val headersWithRelevantKeys = when {
@@ -108,6 +114,16 @@ data class HttpHeadersPattern(
             MatchFailure(Result.Failure.fromFailures(failures))
         else
             MatchSuccess(parameters)
+    }
+
+    private fun simplifiedContentType(contentType: String): String {
+        return try {
+            ContentType.parse(contentType).let {
+                "${it.contentType}/${it.contentSubtype}"
+            }
+        } catch (e: Throwable) {
+            contentType
+        }
     }
 
     private fun highlightIfSOAPActionMismatch(missingKey: String): FailureReason? =

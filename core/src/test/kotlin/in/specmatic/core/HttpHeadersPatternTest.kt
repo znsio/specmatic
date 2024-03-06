@@ -398,4 +398,22 @@ internal class HttpHeadersPatternTest {
         assertThat(resultText).contains("HEADER.X-Data")
         assertThat(resultText).contains("HEADER.Y-Data")
     }
+
+    @Test
+    fun `should match content type without charset`() {
+        val headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern()), contentType = "application/json")
+        assertThat(headersPattern.matches(mapOf("X-Data" to "10", "Content-Type" to "application/json"), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should match content type with charset`() {
+        val headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern()), contentType = "application/json")
+        assertThat(headersPattern.matches(mapOf("X-Data" to "10", "Content-Type" to "application/json; charset=UTF-8"), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should not match invalid content type`() {
+        val headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern()), contentType = "application/json")
+        assertThat(headersPattern.matches(mapOf("X-Data" to "10", "Content-Type" to "text/plain"), Resolver())).isInstanceOf(Result.Failure::class.java)
+    }
 }

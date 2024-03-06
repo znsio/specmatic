@@ -1,5 +1,6 @@
-package `in`.specmatic.conversions
+package integration_tests
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.Flags
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
@@ -361,7 +362,8 @@ class DefaultValuesInOpenapiSpecification {
                           format: float
                           description: The price of the product
                           example: 10
-                    """, "").toFeature()
+                    """, ""
+            ).toFeature()
 
             val results = feature.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {

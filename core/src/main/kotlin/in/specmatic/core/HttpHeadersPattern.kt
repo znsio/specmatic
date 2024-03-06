@@ -6,6 +6,8 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import io.ktor.http.*
 
+const val HEADERS_BREADCRUMB = "HEADERS"
+
 data class HttpHeadersPattern(
     val pattern: Map<String, Pattern> = emptyMap(),
     val ancestorHeaders: Map<String, Pattern>? = null,
@@ -166,13 +168,23 @@ data class HttpHeadersPattern(
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
-        return forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
+        val basedOnExamples = forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
             newBasedOn(pattern, row, resolver)
-        }.map { map -> HttpHeadersPattern(map.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
+        }
+
+        val generatedWithoutExamples: Sequence<Map<String, Pattern>> = resolver.generation.fillInTheMissingMapPatterns(
+            basedOnExamples,
+            pattern,
+            null,
+            row,
+            resolver
+        )
+
+        return (basedOnExamples + generatedWithoutExamples).map { map -> HttpHeadersPattern(map.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
     }
 
     fun negativeBasedOn(row: Row, resolver: Resolver) =
-        forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
+        forEachKeyCombinationIn(pattern, row, resolver) { pattern ->
             NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
         }.map { patternMap ->
             HttpHeadersPattern(
@@ -226,6 +238,31 @@ data class HttpHeadersPattern(
         }
 
         return Result.fromFailures(failures)
+    }
+
+    fun addComplimentaryPatterns(basePatterns: Sequence<HttpHeadersPattern>, row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
+        return `in`.specmatic.core.addComplimentaryPatterns(
+            basePatterns.map {it.pattern},
+            pattern,
+            null,
+            row,
+            resolver,
+        ).map {
+            HttpHeadersPattern(it, contentType = contentType)
+        }
+    }
+
+    fun matches(row: Row, resolver: Resolver): Result {
+        return matches(this.pattern, row, resolver, "header")
+    }
+
+    fun readFrom(row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
+        return attempt(breadCrumb = HEADERS_BREADCRUMB) {
+            readFrom(this.pattern, row, resolver)
+        }.map {
+            HttpHeadersPattern(it, contentType = contentType)
+
+        }
     }
 }
 

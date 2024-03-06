@@ -21,4 +21,8 @@ object DoNotUseDefaultExample : DefaultExampleResolver {
         return true
     }
 
+    override fun hasExample(pattern: Pattern): Boolean {
+        return false
+    }
+
 }

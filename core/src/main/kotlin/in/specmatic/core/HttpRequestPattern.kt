@@ -5,7 +5,6 @@ import `in`.specmatic.conversions.OpenAPISecurityScheme
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.*
-import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import io.ktor.util.*
 
@@ -461,7 +460,32 @@ data class HttpRequestPattern(
                 newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }
             } ?: sequenceOf<HttpPathPattern?>(null)
 
-            val newQueryParamsPatterns = httpQueryParamPattern.newBasedOn(row, resolver).map { HttpQueryParamPattern(it) }
+            val newQueryParamsPatterns =
+                if(status.toString().startsWith("2")) {
+                    val new = httpQueryParamPattern.newBasedOn(row, resolver)
+                    httpQueryParamPattern.addComplimentaryPatterns(new, row, resolver)
+                } else {
+                    if(status.toString().startsWith("4")) {
+                        httpQueryParamPattern.matches(row, resolver).throwOnFailure()
+                    }
+
+                    httpQueryParamPattern.readFrom(row, resolver)
+                }.map {
+                    HttpQueryParamPattern(it)
+                }
+
+            val newHeadersPattern = if(status.toString().startsWith("2")) {
+                val new = headersPattern.newBasedOn(row, resolver)
+                headersPattern.addComplimentaryPatterns(new, row, resolver)
+            } else {
+                if(status.toString().startsWith("4")) {
+                    headersPattern.matches(row, resolver).throwOnFailure()
+                }
+
+                headersPattern.readFrom(row, resolver)
+            }
+
+//            val newHeadersPattern = headersPattern.newBasedOn(row, resolver)
 
             val newBodies: Sequence<Pattern> = attempt(breadCrumb = "BODY") {
                 body.let {
@@ -487,14 +511,16 @@ data class HttpRequestPattern(
 
                         val requestBodyAsIs = ExactValuePattern(value)
 
-                        resolver.generateHttpRequests(body, row, requestBodyAsIs, value)
+                        if(status.toString().startsWith("2"))
+                            resolver.generateHttpRequestbodies(body, row, requestBodyAsIs, value)
+                        else
+                            sequenceOf(requestBodyAsIs)
                     } else {
-                        resolver.generateHttpRequests(body, row)
+                        resolver.generateHttpRequestbodies(body, row)
                     }
                 }
             }
 
-            val newHeadersPattern = headersPattern.newBasedOn(row, resolver)
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
             val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
 

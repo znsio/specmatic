@@ -6,6 +6,8 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import java.net.URI
 
+const val QUERY_PARAMS_BREADCRUMB = "QUERY-PARAMS"
+
 data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val additionalProperties: Pattern? = null) {
 
     fun generate(resolver: Resolver): List<Pair<String, String>> {
@@ -33,7 +35,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         row: Row,
         resolver: Resolver
     ): Sequence<Map<String, Pattern>> {
-        val newQueryParamsList = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
+        val createdBasedOnExamples = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams = queryPatterns.let {
                 if(additionalProperties != null)
                     it.plus(randomString(5) to additionalProperties)
@@ -41,11 +43,27 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
                     it
             }
 
-            forEachKeyCombinationIn(row.withoutOmittedKeys(queryParams, resolver.defaultExampleResolver), row) { entry ->
-                newBasedOn(entry.mapKeys { withoutOptionality(it.key) }, row, resolver)
+            val combinations = forEachKeyCombinationIn(row.withoutOmittedKeys(queryParams, resolver.defaultExampleResolver), row) { entry ->
+                newBasedOn(entry, row, resolver)
+            }
+
+            combinations.map {
+                it.mapKeys { withoutOptionality(it.key) }
             }
         }
-        return newQueryParamsList
+
+        return createdBasedOnExamples
+    }
+
+
+    fun addComplimentaryPatterns(basePatterns: Sequence<Map<String, Pattern>>, row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
+        return addComplimentaryPatterns(
+            basePatterns,
+            queryPatterns,
+            additionalProperties,
+            row,
+            resolver
+        )
     }
 
     fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
@@ -128,20 +146,33 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
     fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
         return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams = queryPatterns.let {
-                if(additionalProperties != null)
+                if (additionalProperties != null)
                     it.plus(randomString(5) to additionalProperties)
                 else
                     it
             }
 
-            forEachKeyCombinationIn(row.withoutOmittedKeys(queryParams, resolver.defaultExampleResolver), row) { entry ->
-                NegativeNonStringlyPatterns().negativeBasedOn(entry.mapKeys { withoutOptionality(it.key) }, row, resolver)
+            forEachKeyCombinationIn(queryParams, row) { entry ->
+                NegativeNonStringlyPatterns().negativeBasedOn(
+                    entry.mapKeys { withoutOptionality(it.key) },
+                    row,
+                    resolver
+                )
             }
         }
     }
 
     fun matches(uri: URI, queryParams: Map<String, String>, resolver: Resolver = Resolver()): Result {
         return matches(HttpRequest(path = uri.path, queryParametersMap =  queryParams), resolver)
+    }
+
+    fun readFrom(row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
+        return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
+            readFrom(queryPatterns, row, resolver)
+        }
+    }
+    fun matches(row: Row, resolver: Resolver): Result {
+        return matches(queryPatterns, row, resolver, "query param")
     }
 }
 
@@ -164,4 +195,52 @@ internal fun buildQueryPattern(
     return HttpQueryParamPattern(queryPattern)
 }
 
-const val QUERY_PARAMS_BREADCRUMB = "QUERY-PARAMS"
+fun addComplimentaryPatterns(baseGeneratedPatterns: Sequence<Map<String, Pattern>>, patterns: Map<String, Pattern>, additionalProperties: Pattern?, row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
+    val generatedWithoutExamples: Sequence<Map<String, Pattern>> =
+        resolver
+            .generation
+            .fillInTheMissingMapPatterns(baseGeneratedPatterns, patterns, additionalProperties, row, resolver)
+            .map {
+                it.mapKeys { withoutOptionality(it.key) }
+            }
+
+    return baseGeneratedPatterns + generatedWithoutExamples
+}
+
+fun matches(patterns: Map<String, Pattern>, row: Row, resolver: Resolver, paramType: String): Result {
+    val results = patterns.entries.fold(emptyList<Result>()) { results, (key, pattern) ->
+        val withoutOptionality = withoutOptionality(key)
+
+        if (row.containsField(withoutOptionality)) {
+            val value = row.getField(withoutOptionality)
+            val patternValue = resolver.parse(pattern, value)
+
+            results.plus(resolver.matchesPattern(withoutOptionality, pattern, patternValue))
+        } else if (isOptional(key)) {
+            results.plus(Result.Success())
+        } else {
+            results.plus(Result.Failure("Mandatory $paramType $key not found in row"))
+        }
+    }
+
+    return Result.fromResults(results)
+}
+
+fun readFrom(patterns: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
+    val rowAsPattern = patterns.entries.fold(emptyMap<String, Pattern>()) { acc, (key, pattern) ->
+        val withoutOptionality = withoutOptionality(key)
+
+        if (row.containsField(withoutOptionality)) {
+            val value = row.getField(withoutOptionality)
+            val patternValue = resolver.parse(pattern, value)
+
+            acc.plus(withoutOptionality to patternValue.exactMatchElseType())
+        } else if (isOptional(key)) {
+            acc
+        } else {
+            acc.plus(withoutOptionality to pattern.generate(resolver).exactMatchElseType())
+        }
+    }
+
+    return sequenceOf(rowAsPattern)
+}

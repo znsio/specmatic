@@ -80,7 +80,7 @@ internal class HttpRequestPatternTest {
                 method = "GET"
         )
 
-        val newPatterns = pattern.newBasedOn(Row(), Resolver()).toList()
+        val newPatterns = pattern.newBasedOn(Row(), Resolver(), 200).toList()
         assertEquals("(string)", newPatterns[0].headersPattern.pattern["Test-Header"].toString())
     }
 
@@ -101,10 +101,10 @@ internal class HttpRequestPatternTest {
     }
 
     @Test
-    fun `a request with an optional header should result in 2 options for newBasedOn`() {
+    fun `a 200 request with an optional header should result in 2 options for newBasedOn`() {
         val requests = HttpRequestPattern(method = "GET",
                 httpPathPattern = buildHttpPathPattern(URI("/")),
-                headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))).newBasedOn(Row(), Resolver()).toList()
+                headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))).newBasedOn(Row(), Resolver(), 200).toList()
 
         assertThat(requests).hasSize(2)
 
@@ -116,6 +116,42 @@ internal class HttpRequestPatternTest {
         }
 
         flagsContain(flags, listOf("with", "without"))
+    }
+
+    @Test
+    fun `a 400 request with an optional header should result in 1 options for newBasedOn`() {
+        val requests = HttpRequestPattern(method = "GET",
+            httpPathPattern = buildHttpPathPattern(URI("/")),
+            headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))).newBasedOn(Row(), Resolver(), 400).toList()
+
+        assertThat(requests).hasSize(1)
+
+        val flags = requests.map {
+            when {
+                it.headersPattern.pattern.containsKey("X-Optional") -> "with"
+                else -> "without"
+            }
+        }
+
+        flagsContain(flags, listOf("without"))
+    }
+
+    @Test
+    fun `a 500 request with an optional header should result in 1 options for newBasedOn`() {
+        val requests = HttpRequestPattern(method = "GET",
+            httpPathPattern = buildHttpPathPattern(URI("/")),
+            headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))).newBasedOn(Row(), Resolver(), 500).toList()
+
+        assertThat(requests).hasSize(1)
+
+        val flags = requests.map {
+            when {
+                it.headersPattern.pattern.containsKey("X-Optional") -> "with"
+                else -> "without"
+            }
+        }
+
+        flagsContain(flags, listOf("without"))
     }
 
     @Test

@@ -9,4 +9,5 @@ interface DefaultExampleResolver {
     fun resolveExample(example: List<String?>?, pattern: Pattern, resolver: Resolver): JSONArrayValue?
     fun resolveExample(example: String?, pattern: List<Pattern>, resolver: Resolver): Value?
     fun theDefaultExampleForThisKeyIsNotOmit(valuePattern: Pattern): Boolean
+    fun hasExample(pattern: Pattern): Boolean
 }

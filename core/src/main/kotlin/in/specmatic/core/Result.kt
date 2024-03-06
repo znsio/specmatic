@@ -1,6 +1,7 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.Result.Failure
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.Value
@@ -70,6 +71,7 @@ sealed class Result {
 
     abstract fun testResult(): TestResult
     abstract fun withFailureReason(urlPathMisMatch: FailureReason): Result
+    abstract fun throwOnFailure(): Success
 
     data class FailureCause(val message: String="", var cause: Failure? = null)
 
@@ -114,6 +116,10 @@ sealed class Result {
 
         override fun withFailureReason(failureReason: FailureReason): Result {
             return copy(failureReason = failureReason)
+        }
+
+        override fun throwOnFailure(): Success {
+            throw ContractException(this.toFailureReport())
         }
 
         fun reason(errorMessage: String) = Failure(errorMessage, this)
@@ -185,6 +191,10 @@ sealed class Result {
         }
 
         override fun withFailureReason(urlPathMisMatch: FailureReason): Result {
+            return this
+        }
+
+        override fun throwOnFailure(): Success {
             return this
         }
     }

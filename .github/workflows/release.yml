@@ -32,3 +32,18 @@ jobs:
         files: application/build/libs/specmatic.jar
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dispatch:
+    needs: build
+    strategy:
+      matrix:
+        repository: [znsio/specmatic-documentation]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.SPECMATIC_CORE_VERSION_UPDATE_TOKEN }}
+          repository: ${{ matrix.repository }}
+          event-type: specmatic-core-release
+          client-payload: '{"version": "${{ github.ref }}"}'

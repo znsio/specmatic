@@ -558,6 +558,8 @@ fun executeTestAndReturnResultAndResponse(
     return try {
         testExecutor.setServerState(testScenario.serverState)
 
+        testExecutor.preExecuteScenario(testScenario, request)
+
         val response = testExecutor.execute(request)
 
         val result = testResult(response, testScenario)

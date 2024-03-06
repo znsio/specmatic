@@ -1,9 +1,7 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.Result.Success
-import `in`.specmatic.core.pattern.ExactValuePattern
-import `in`.specmatic.core.pattern.Pattern
-import `in`.specmatic.core.pattern.Row
+import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.isOptional
 import `in`.specmatic.core.value.Value
 
@@ -18,6 +16,13 @@ interface GenerationStrategies {
     fun generateKeySubLists(key: String, subList: List<String>): Sequence<List<String>>
     fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): Sequence<Scenario>
     fun negativeTestScenarios(feature: Feature): Sequence<Scenario>
+    fun fillInTheMissingMapPatterns(
+        newQueryParamsList: Sequence<Map<String, Pattern>>,
+        queryPatterns: Map<String, Pattern>,
+        additionalProperties: Pattern?,
+        row: Row,
+        resolver: Resolver
+    ): Sequence<Map<String, Pattern>>
 }
 
 data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.onlyPositive()) : GenerationStrategies {
@@ -87,6 +92,33 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
         else
             feature.negativeTestScenarios()
     }
+
+    override fun fillInTheMissingMapPatterns(
+        newQueryParamsList: Sequence<Map<String, Pattern>>,
+        queryPatterns: Map<String, Pattern>,
+        additionalProperties: Pattern?,
+        row: Row,
+        resolver: Resolver
+    ): Sequence<Map<String, Pattern>> {
+        val additionalPatterns = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
+            val queryParams = queryPatterns.let {
+                if(additionalProperties != null)
+                    it.plus(randomString(5) to additionalProperties)
+                else
+                    it
+            }
+
+            forEachKeyCombinationIn(queryParams, Row()) { entry ->
+                newBasedOn(entry, row, resolver)
+            }.map {
+                it.mapKeys { withoutOptionality(it.key) }
+            }
+        }
+
+        return additionalPatterns.map {
+            noOverlapBetween(it, newQueryParamsList, resolver)
+        }.filterNotNull()
+    }
 }
 
 object NonGenerativeTests : GenerationStrategies {
@@ -122,4 +154,43 @@ object NonGenerativeTests : GenerationStrategies {
     override fun negativeTestScenarios(feature: Feature): Sequence<Scenario> {
         return sequenceOf()
     }
+
+    override fun fillInTheMissingMapPatterns(
+        newQueryParamsList: Sequence<Map<String, Pattern>>,
+        queryPatterns: Map<String, Pattern>,
+        additionalProperties: Pattern?,
+        row: Row,
+        resolver: Resolver
+    ): Sequence<Map<String, Pattern>> {
+        return emptySequence()
+    }
+}
+
+internal fun noOverlapBetween(
+    map: Map<String, Pattern>,
+    otherMaps: Sequence<Map<String, Pattern>>,
+    resolver: Resolver
+): Map<String, Pattern>? {
+    val otherMapsWithSameKeys = otherMaps.filter {
+        it.keys.map(::withoutOptionality) == map.keys.map(::withoutOptionality)
+    }.map {
+        it.mapKeys { withoutOptionality(it.key) }
+    }
+
+    val mapWithoutOptionality = map.mapKeys { withoutOptionality(it.key) }
+
+    val results: Sequence<Result> = otherMapsWithSameKeys.map { otherMap ->
+        val valueMatchResults = otherMap.map { (key, otherPattern) ->
+            val itemPattern = mapWithoutOptionality.getValue(key)
+
+            itemPattern.encompasses(otherPattern, resolver, resolver)
+        }
+
+        Result.fromResults(valueMatchResults)
+    }
+
+    if(results.any { it is Result.Success })
+        return null
+
+    return map
 }

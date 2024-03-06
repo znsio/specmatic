@@ -159,7 +159,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Seq
             if (isPatternToken(rowValue)) {
                 val rowPattern = resolver.getPattern(rowValue)
 
-                attempt(breadCrumb = key) {
+                attempt(breadCrumb = keyWithoutOptionality) {
                     when (val result = pattern.encompasses(rowPattern, resolver, resolver)) {
                         is Result.Success -> {
                             resolver.withCyclePrevention(rowPattern, isOptional(key)) { cyclePreventedResolver ->

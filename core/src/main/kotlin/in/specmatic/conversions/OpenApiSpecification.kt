@@ -421,7 +421,7 @@ class OpenApiSpecification(
 
         when {
             requestExamples.isNotEmpty() -> {
-                val responseExampleValueForRow = if (environmentAndPropertiesConfiguration.getSetting(Flags.VALIDATE_RESPONSE)?.lowercase() == "true")
+                val responseExampleValueForRow = if (environmentAndPropertiesConfiguration.getCachedSetting(Flags.VALIDATE_RESPONSE)?.lowercase() == "true")
                     responseExample
                 else
                     null

@@ -579,6 +579,8 @@ internal class UtilitiesTest {
             if(specmaticJSON.exists())
                 specmaticJSON.delete()
 
+            File(".specmatic/web/localhost/random.yaml").delete()
+
             server.stop(0, 0)
         }
     }

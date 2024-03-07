@@ -11,6 +11,8 @@ object Flags {
     const val ONLY_POSITIVE = "ONLY_POSITIVE"
     const val SPECMATIC_TEST_PARALLELISM = "SPECMATIC_TEST_PARALLELISM"
 
+    const val EXTENDABLE_SCHEMA = "EXTENDABLE_SCHEMA"
+
     private fun flagValue(flagName: String): String? {
         return System.getenv(flagName) ?: System.getProperty(flagName)
     }
@@ -20,6 +22,10 @@ object Flags {
     }
 
     private fun booleanFlag(flagName: String, default: String = "false") = BooleanUtils.toBoolean(flagValue(flagName) ?: default)
+
+    fun extendableSchemaEnabled(): Boolean {
+        return booleanFlag(EXTENDABLE_SCHEMA)
+    }
 
     fun schemaExampleDefaultEnabled(): Boolean {
         return booleanFlag(SCHEMA_EXAMPLE_DEFAULT)

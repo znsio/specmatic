@@ -322,8 +322,20 @@ data class Feature(
     }
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): Sequence<Scenario> {
-        return resolverStrategies.generation.let {
-            it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
+        return try {
+            resolverStrategies.generation.let {
+                it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
+            }
+        }
+        catch(e: Throwable) {
+            logger.log(e)
+            throw e
+        }
+    }
+
+    fun validateExampleRows() {
+        scenarios.forEach { scenario ->
+            scenario.validateExamples(resolverStrategies)
         }
     }
 

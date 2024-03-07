@@ -311,6 +311,16 @@ data class Scenario(
         }
     }
 
+    fun validateExamples(
+        resolverStrategies: ResolverStrategies,
+    ) {
+        val rowsToValidate = examples.flatMap { it.rows }
+
+        rowsToValidate.forEach { row ->
+            newBasedOn(row, resolverStrategies).first()
+        }
+    }
+
     fun generateTestScenarios(
         resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),

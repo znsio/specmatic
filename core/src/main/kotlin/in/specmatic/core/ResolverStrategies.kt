@@ -25,7 +25,7 @@ data class ResolverStrategies(
 fun strategiesFromFlags() = ResolverStrategies(
     defaultExampleResolver = if(Flags.schemaExampleDefaultEnabled()) UseDefaultExample else DoNotUseDefaultExample,
     generation = if(Flags.generativeTestingEnabled()) GenerativeTestsEnabled() else NonGenerativeTests,
-    unexpectedKeyCheck = if(Flags.extendableSchemaEnabled()) IgnoreUnexpectedKeys else null
+    unexpectedKeyCheck = if(Flags.extensibleSchema()) IgnoreUnexpectedKeys else null
 )
 
 val DefaultStrategies = ResolverStrategies (

@@ -1,6 +1,5 @@
 package integration_tests
 
-import `in`.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.Flags
 import `in`.specmatic.core.HttpRequest
@@ -15,7 +14,7 @@ class ExtendableSchema {
     @Test
     fun `when extendable schema is enabled, a JSON request object with unexpected keys should be accepted when running tests`() {
         val feature = try {
-            System.setProperty(Flags.EXTENDABLE_SCHEMA, "true")
+            System.setProperty(Flags.EXTENSIBLE_SCHEMA, "true")
 
             OpenApiSpecification.fromYAML(
                 """
@@ -55,7 +54,7 @@ paths:
                 "",
             ).toFeature()
         } finally {
-            System.clearProperty(Flags.EXTENDABLE_SCHEMA)
+            System.clearProperty(Flags.EXTENSIBLE_SCHEMA)
         }
 
         val results = feature.executeTests(object : TestExecutor {
@@ -72,7 +71,7 @@ paths:
     @Test
     fun `when extendable schema is enabled, a JSON response object with unexpected keys should be accepted when running tests`() {
         val feature = try {
-            System.setProperty(Flags.EXTENDABLE_SCHEMA, "true")
+            System.setProperty(Flags.EXTENSIBLE_SCHEMA, "true")
 
             OpenApiSpecification.fromYAML(
                 """
@@ -116,7 +115,7 @@ paths:
                 "",
             ).toFeature()
         } finally {
-            System.clearProperty(Flags.EXTENDABLE_SCHEMA)
+            System.clearProperty(Flags.EXTENSIBLE_SCHEMA)
         }
 
         val results = feature.executeTests(object : TestExecutor {

@@ -138,7 +138,8 @@ class OpenApiSpecification(
             sourceRepositoryBranch = sourceRepositoryBranch,
             specification = specificationPath,
             serviceType = SERVICE_TYPE_HTTP,
-            stubsFromExamples = stubsFromExamples
+            stubsFromExamples = stubsFromExamples,
+            environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration
         )
     }
 
@@ -421,7 +422,7 @@ class OpenApiSpecification(
 
         when {
             requestExamples.isNotEmpty() -> {
-                val responseExampleValueForRow = if (environmentAndPropertiesConfiguration.getCachedSetting(Flags.VALIDATE_RESPONSE)?.lowercase() == "true")
+                val responseExampleValueForRow = if (environmentAndPropertiesConfiguration.validateResponse())
                     responseExample
                 else
                     null

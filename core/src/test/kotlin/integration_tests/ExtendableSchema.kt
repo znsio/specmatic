@@ -1,5 +1,6 @@
 package integration_tests
 
+import `in`.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.Flags
 import `in`.specmatic.core.HttpRequest
@@ -13,9 +14,7 @@ import org.junit.jupiter.api.Test
 class ExtendableSchema {
     @Test
     fun `when extendable schema is enabled, a JSON request object with unexpected keys should be accepted when running tests`() {
-        val feature = try {
-            System.setProperty(Flags.EXTENSIBLE_SCHEMA, "true")
-
+        val feature =
             OpenApiSpecification.fromYAML(
                 """
 openapi: 3.0.0
@@ -52,10 +51,8 @@ paths:
                                   value: success
             """.trimIndent(),
                 "",
+                environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(), mapOf(Flags.EXTENSIBLE_SCHEMA to "true"))
             ).toFeature()
-        } finally {
-            System.clearProperty(Flags.EXTENSIBLE_SCHEMA)
-        }
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -70,9 +67,7 @@ paths:
 
     @Test
     fun `when extendable schema is enabled, a JSON response object with unexpected keys should be accepted when running tests`() {
-        val feature = try {
-            System.setProperty(Flags.EXTENSIBLE_SCHEMA, "true")
-
+        val feature =
             OpenApiSpecification.fromYAML(
                 """
 openapi: 3.0.0
@@ -113,10 +108,8 @@ paths:
                                       name: John
             """.trimIndent(),
                 "",
+                environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(), mapOf(Flags.EXTENSIBLE_SCHEMA to "true"))
             ).toFeature()
-        } finally {
-            System.clearProperty(Flags.EXTENSIBLE_SCHEMA)
-        }
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {

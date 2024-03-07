@@ -2,7 +2,7 @@ package `in`.specmatic.conversions
 
 import org.apache.commons.lang3.BooleanUtils
 
-class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<String, String>, val systemProperties: Map<Any?, Any?>) {
+data class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<String, String>, val systemProperties: Map<Any?, Any?>) {
     constructor() : this(System.getenv(), System.getProperties().toMap())
 
     val VALIDATE_RESPONSE = "VALIDATE_RESPONSE"
@@ -15,8 +15,18 @@ class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<String
 
     val EXTENSIBLE_SCHEMA = "EXTENSIBLE_SCHEMA"
 
+    companion object {
+        fun setProperty(name: String, value: String): EnvironmentAndPropertiesConfiguration {
+            return EnvironmentAndPropertiesConfiguration(mapOf(), mapOf(name to value))
+        }
+
+        fun setProperties(properties: Map<String, String>): EnvironmentAndPropertiesConfiguration {
+            return EnvironmentAndPropertiesConfiguration(mapOf(), properties.mapValues { it.value })
+        }
+    }
+
     private fun flagValue(flagName: String): String? {
-        return System.getenv(flagName) ?: System.getProperty(flagName)
+        return environmentVariables[flagName] ?: systemProperties[flagName]?.toString() ?: System.getenv(flagName) ?: System.getProperty(flagName)
     }
 
     fun customResponse(): Boolean {

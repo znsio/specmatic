@@ -81,7 +81,8 @@ data class Feature(
     val specification:String? = null,
     val serviceType:String? = null,
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
-    val resolverStrategies: ResolverStrategies = strategiesFromFlags()
+    val environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(),
+    val resolverStrategies: ResolverStrategies = strategiesFromFlags(environmentAndPropertiesConfiguration)
 ) {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         return this.copy(resolverStrategies = this.resolverStrategies.copy(generation = GenerativeTestsEnabled(onlyPositive)))

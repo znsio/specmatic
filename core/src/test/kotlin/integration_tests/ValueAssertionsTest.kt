@@ -62,10 +62,7 @@ paths:
                   value: "Product added successfully"
             """.trimIndent(),
             "",
-            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
-                emptyMap(),
-                mapOf(Flags.VALIDATE_RESPONSE to "true")
-            )
+            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration.setProperty(Flags.VALIDATE_RESPONSE, "true")
         ).toFeature()
         feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {

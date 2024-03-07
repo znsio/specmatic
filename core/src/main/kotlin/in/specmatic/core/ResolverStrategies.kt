@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import `in`.specmatic.core.pattern.IgnoreUnexpectedKeys
 
 data class ResolverStrategies(
@@ -22,10 +23,10 @@ data class ResolverStrategies(
     }
 }
 
-fun strategiesFromFlags() = ResolverStrategies(
-    defaultExampleResolver = if(Flags.schemaExampleDefaultEnabled()) UseDefaultExample else DoNotUseDefaultExample,
-    generation = if(Flags.generativeTestingEnabled()) GenerativeTestsEnabled() else NonGenerativeTests,
-    unexpectedKeyCheck = if(Flags.extensibleSchema()) IgnoreUnexpectedKeys else null
+fun strategiesFromFlags(flags: EnvironmentAndPropertiesConfiguration) = ResolverStrategies(
+    defaultExampleResolver = if(flags.schemaExampleDefaultEnabled()) UseDefaultExample else DoNotUseDefaultExample,
+    generation = if(flags.generativeTestingEnabled()) GenerativeTestsEnabled() else NonGenerativeTests,
+    unexpectedKeyCheck = if(flags.extensibleSchema()) IgnoreUnexpectedKeys else null
 )
 
 val DefaultStrategies = ResolverStrategies (

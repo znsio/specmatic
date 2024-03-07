@@ -173,7 +173,6 @@ open class SpecmaticJUnitSupport {
 
     private fun loadExceptionAsTestError(e: Throwable): Stream<DynamicTest> {
         return sequenceOf(DynamicTest.dynamicTest("Load Error") {
-            logger.log(e)
             ResultAssert.assertThat(Result.Failure(exceptionCauseMessage(e))).isSuccess()
         }).asStream()
     }
@@ -251,8 +250,6 @@ open class SpecmaticJUnitSupport {
             return loadExceptionAsTestError(e)
         }
 
-        var checkedAPIs = false
-
         val testBaseURL = try {
             constructTestBaseURL()
         } catch (e: Throwable) {
@@ -261,16 +258,30 @@ open class SpecmaticJUnitSupport {
             throw(e)
         }
 
+        return try {
+            dynamicTestStream(testScenarios, testBaseURL, timeout)
+        } catch(e: Throwable) {
+            logger.logError(e)
+            loadExceptionAsTestError(e)
+        }
+    }
+
+    private fun dynamicTestStream(
+        testScenarios: Sequence<ContractTest>,
+        testBaseURL: String,
+        timeout: Int
+    ): Stream<DynamicTest> {
+        var checkedAPIs = false
         return testScenarios.map { testScenario ->
             DynamicTest.dynamicTest(testScenario.testDescription()) {
                 threads.add(Thread.currentThread().name)
 
-                if(!checkedAPIs) {
+                if (!checkedAPIs) {
                     checkedAPIs = true
 
                     try {
                         queryActuator()
-                    } catch(exception: Throwable) {
+                    } catch (exception: Throwable) {
                         logger.log(exception, "Failed to query actuator with error")
                     }
                 }
@@ -297,11 +308,10 @@ open class SpecmaticJUnitSupport {
                         else -> ResultAssert.assertThat(result).isSuccess()
                     }
 
-                } catch(e: Throwable) {
+                } catch (e: Throwable) {
                     throw e
-                }
-                finally {
-                    if(testResult != null) {
+                } finally {
+                    if (testResult != null) {
                         val (result, response) = testResult
                         openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result, response))
                     }
@@ -406,7 +416,7 @@ open class SpecmaticJUnitSupport {
                 securityConfiguration
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
-
+        feature.validateExampleRows()
 
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)

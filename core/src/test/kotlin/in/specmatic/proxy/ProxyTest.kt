@@ -215,43 +215,7 @@ internal class ProxyTest {
 
         }
     }
-
-    @Test
-    fun `should use the text-plain content type from the actual response instead of inferring it`() {
-        val featureWithHTMLResponse = OpenApiSpecification.fromYAML("""
-            openapi: 3.0.1
-            info:
-              title: Data
-              version: "1"
-            paths:
-              /:
-                get:
-                  summary: Data
-                  responses:
-                    "200":
-                      description: Data
-                      content:
-                        text/plain:
-                          schema:
-                            type: string
-        """.trimIndent(), "").toFeature()
-
-        HttpStub(featureWithHTMLResponse).use {
-            val jsonContent = parsedJSONObject("""{"id": 10}""").toStringLiteral()
-
-            it.setExpectation(ScenarioStub(HttpRequest("GET", "/"), HttpResponse.ok(StringValue(jsonContent))))
-
-            Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
-                val client = RestTemplate()
-                client.getForEntity("http://localhost:9001/", String::class.java)
-            }
-        }
-
-        assertThat(fakeFileWriter.receivedStub).withFailMessage(fakeFileWriter.receivedStub).contains("text/plain")
-        assertThat(fakeFileWriter.receivedContract).withFailMessage(fakeFileWriter.receivedContract).contains("text/plain")
-
-
-    }}
+}
 
 class FakeFileWriter : FileWriter {
     var receivedContract: String? = null

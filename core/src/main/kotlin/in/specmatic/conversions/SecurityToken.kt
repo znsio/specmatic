@@ -15,9 +15,9 @@ fun getSecurityTokenForBasicAuthScheme(
     environmentVariable: String,
     environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration
 ): String? {
-    return environmentAndPropertiesConfiguration.getEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
+    return environmentAndPropertiesConfiguration.getCachedEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
         (securitySchemeConfiguration as BasicAuthSecuritySchemeConfiguration).token
-    } ?: environmentAndPropertiesConfiguration.getEnvironmentVariable(SPECMATIC_BASIC_AUTH_TOKEN)
+    } ?: environmentAndPropertiesConfiguration.getCachedEnvironmentVariable(SPECMATIC_BASIC_AUTH_TOKEN)
 }
 
 fun getSecurityTokenForBearerScheme(
@@ -25,9 +25,9 @@ fun getSecurityTokenForBearerScheme(
     environmentVariable: String,
     environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration
 ): String? {
-    return environmentAndPropertiesConfiguration.getEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
+    return environmentAndPropertiesConfiguration.getCachedEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
         (it as SecuritySchemeWithOAuthToken).token
-    } ?: environmentAndPropertiesConfiguration.getEnvironmentVariable(SPECMATIC_OAUTH2_TOKEN)
+    } ?: environmentAndPropertiesConfiguration.getCachedEnvironmentVariable(SPECMATIC_OAUTH2_TOKEN)
 }
 
 fun getSecurityTokenForApiKeyScheme(
@@ -35,7 +35,7 @@ fun getSecurityTokenForApiKeyScheme(
     environmentVariable: String,
     environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration
 ): String? {
-    return environmentAndPropertiesConfiguration.getEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
+    return environmentAndPropertiesConfiguration.getCachedEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
         (it as APIKeySecuritySchemeConfiguration).value
     }
 }

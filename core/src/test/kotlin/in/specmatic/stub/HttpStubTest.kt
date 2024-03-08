@@ -1349,11 +1349,22 @@ paths:
             val request = HttpRequest("GET", "/data", body = NoBodyValue)
 
             val htmlContent = "<html><body>hi</body></html>"
-            val expectation = ScenarioStub(request, HttpResponse(200, headers = mapOf("Content-Type" to "text/plain"), body = htmlContent))
 
-            val expectationResponse = stub.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectation.toJSON()))
+            val incorrectContentType = "text/plain"
+            val expectationWithIncorrectContentType =
+                ScenarioStub(request, HttpResponse(200, headers = mapOf("Content-Type" to incorrectContentType), body = htmlContent))
 
-            assertThat(expectationResponse.status).isEqualTo(400)
+            stub.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectationWithIncorrectContentType.toJSON())).let { response ->
+                assertThat(response.status).isEqualTo(400)
+            }
+
+            val correctContentType = "text/html"
+            val expectationWithValidContentType =
+                ScenarioStub(request, HttpResponse(200, headers = mapOf("Content-Type" to correctContentType), body = htmlContent))
+
+            stub.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectationWithValidContentType.toJSON())).let { response ->
+                assertThat(response.status).isEqualTo(200)
+            }
         }
     }
 

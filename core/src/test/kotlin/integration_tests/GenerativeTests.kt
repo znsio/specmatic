@@ -1,6 +1,7 @@
 package integration_tests
 
 import `in`.specmatic.GENERATION
+import `in`.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
@@ -1131,87 +1132,82 @@ class GenerativeTests {
 
     @Test
     fun `the flag SPECMATIC_GENERATIVE_TESTS should be used`() {
-        try {
-            System.setProperty(Flags.SPECMATIC_GENERATIVE_TESTS, "true")
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.0
+            info:
+              version: 1.0.0
+              title: Product API
+              description: API for creating a product
+            paths:
+              /products:
+                post:
+                  summary: Create a product
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/Product'
+                  responses:
+                    '200':
+                      description: Product created successfully
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    '400':
+                      description: Bad request
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+            components:
+              schemas:
+                Product:
+                  type: object
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                      description: The name of the product
+                      example: 'Soap'
+                """, "",
+            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(), mapOf(Flags.SPECMATIC_GENERATIVE_TESTS to "true"))
+        ).toFeature()
 
-            val feature = OpenApiSpecification.fromYAML(
-                """
-                openapi: 3.0.0
-                info:
-                  version: 1.0.0
-                  title: Product API
-                  description: API for creating a product
-                paths:
-                  /products:
-                    post:
-                      summary: Create a product
-                      requestBody:
-                        required: true
-                        content:
-                          application/json:
-                            schema:
-                              ${"$"}ref: '#/components/schemas/Product'
-                      responses:
-                        '200':
-                          description: Product created successfully
-                          content:
-                            text/plain:
-                              schema:
-                                type: string
-                        '400':
-                          description: Bad request
-                          content:
-                            text/plain:
-                              schema:
-                                type: string
-                components:
-                  schemas:
-                    Product:
-                      type: object
-                      required:
-                        - name
-                      properties:
-                        name:
-                          type: string
-                          description: The name of the product
-                          example: 'Soap'
-                    """, ""
-            ).toFeature()
+        val testType = mutableListOf<String>()
 
-            val testType = mutableListOf<String>()
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = request.body as JSONObjectValue
 
-            val results = feature.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    val body = request.body as JSONObjectValue
-
-                    if (body.jsonObject["name"] !is StringValue) {
-                        testType.add("name mutated to " + body.jsonObject["name"]!!.displayableType())
-                        return HttpResponse.ERROR_400
-                    }
-
-                    testType.add("name not mutated")
-
-                    return HttpResponse.OK
+                if (body.jsonObject["name"] !is StringValue) {
+                    testType.add("name mutated to " + body.jsonObject["name"]!!.displayableType())
+                    return HttpResponse.ERROR_400
                 }
 
-                override fun setServerState(serverState: Map<String, Value>) {
+                testType.add("name not mutated")
 
-                }
-            })
+                return HttpResponse.OK
+            }
 
-            assertThat(testType).containsExactlyInAnyOrder(
-                "name not mutated",
-                "name mutated to null",
-                "name mutated to boolean",
-                "name mutated to number"
-            )
+            override fun setServerState(serverState: Map<String, Value>) {
 
-            assertThat(results.failureCount).isEqualTo(0)
+            }
+        })
 
-            assertThat(results.results).hasSize(testType.size)
-        } finally {
-            System.clearProperty(Flags.SPECMATIC_GENERATIVE_TESTS)
-        }
+        assertThat(testType).containsExactlyInAnyOrder(
+            "name not mutated",
+            "name mutated to null",
+            "name mutated to boolean",
+            "name mutated to number"
+        )
+
+        assertThat(results.failureCount).isEqualTo(0)
+
+        assertThat(results.results).hasSize(testType.size)
     }
 
     @Test
@@ -1265,7 +1261,8 @@ class GenerativeTests {
                         price:
                           type: number
                           description: The price of the product
-                    """, ""
+                    """, "",
+                environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration.setProperties(mapOf(Flags.SPECMATIC_GENERATIVE_TESTS to "true", Flags.ONLY_POSITIVE to "true"))
             ).toFeature()
 
             val testType = mutableListOf<String>()

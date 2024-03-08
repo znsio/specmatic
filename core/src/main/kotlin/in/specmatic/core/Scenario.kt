@@ -572,7 +572,7 @@ fun executeTestAndReturnResultAndResponse(
 
         val response = testExecutor.execute(request)
 
-        val result = testResult(response, testScenario)
+        val result = testResult(response, testScenario, resolverStrategies)
 
         Pair(result.withBindings(testScenario.bindings, response), response)
     } catch (exception: Throwable) {
@@ -583,14 +583,15 @@ fun executeTestAndReturnResultAndResponse(
 
 private fun testResult(
     response: HttpResponse,
-    testScenario: Scenario
+    testScenario: Scenario,
+    resolverStrategies: ResolverStrategies? = null
 ): Result {
 
     val result = when {
         response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral())
             .updateScenario(testScenario)
         response.body is JSONObjectValue && ignorable(response.body) -> Result.Success()
-        else -> testScenario.matches(response, ContractAndResponseMismatch, ValidateUnexpectedKeys)
+        else -> testScenario.matches(response, ContractAndResponseMismatch, resolverStrategies?.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
     }.also { result ->
         if (result is Result.Success && result.isPartialSuccess()) {
             logger.log("    PARTIAL SUCCESS: ${result.partialSuccessMessage}")

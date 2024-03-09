@@ -98,9 +98,12 @@ class ContractExecutionListener : TestExecutionListener {
         org.fusesource.jansi.AnsiConsole.systemInstall()
 
         println()
+
         exceptionsThrown.map { exceptionThrown ->
             logger.log(exceptionThrown)
         }
+
+        println()
 
         if(SpecmaticJUnitSupport.partialSuccesses.isNotEmpty()) {
             println()

@@ -6,6 +6,7 @@ import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.test.SpecmaticJUnitSupport
+import org.junit.platform.engine.TestDescriptor
 import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestIdentifier
@@ -45,9 +46,8 @@ class ContractExecutionListener : TestExecutionListener {
 
     override fun executionFinished(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
         if (testIdentifier != null &&
-            listOf("SpecmaticJUnitSupport", "backwardCompatibilityTest()", "contractTest()", "JUnit Jupiter", "JUnitBackwardCompatibilityTestRunner").any {
-                    testIdentifier.displayName.contains(it)
-                }) {
+            testIdentifier.type == TestDescriptor.Type.CONTAINER
+            ) {
 
             testExecutionResult?.let {
                 it.throwable?.ifPresent { throwable -> exceptionsThrown.add(throwable) }

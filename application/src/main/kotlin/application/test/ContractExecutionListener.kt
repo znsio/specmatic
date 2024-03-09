@@ -1,12 +1,15 @@
 package application.test
 
+import `in`.specmatic.core.log.LogMessage
 import `in`.specmatic.core.log.logger
+import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.value.JSONObjectValue
+import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.test.SpecmaticJUnitSupport
 import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestIdentifier
 import org.junit.platform.launcher.TestPlan
-import java.util.*
 import kotlin.system.exitProcess
 
 fun getContractExecutionPrinter(): ContractExecutionPrinter {
@@ -22,6 +25,7 @@ private fun colorIsRequested() = System.getenv("SPECMATIC_COLOR") == "1"
 private fun stdOutIsRedirected() = System.console() == null
 
 class ContractExecutionListener : TestExecutionListener {
+
     private var totalRun: Int = 0
 
     private var success: Int = 0
@@ -31,6 +35,7 @@ class ContractExecutionListener : TestExecutionListener {
     private val failedLog: MutableList<String> = mutableListOf()
 
     private var couldNotStart = false
+    private val exceptionsThrown = mutableListOf<Throwable>()
 
     private val printer: ContractExecutionPrinter = getContractExecutionPrinter()
 
@@ -39,13 +44,17 @@ class ContractExecutionListener : TestExecutionListener {
     }
 
     override fun executionFinished(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
-        if (listOf("SpecmaticJUnitSupport", "backwardCompatibilityTest()", "contractTest()", "JUnit Jupiter", "JUnitBackwardCompatibilityTestRunner").any {
-                    testIdentifier!!.displayName.contains(it)
+        if (testIdentifier != null &&
+            listOf("SpecmaticJUnitSupport", "backwardCompatibilityTest()", "contractTest()", "JUnit Jupiter", "JUnitBackwardCompatibilityTestRunner").any {
+                    testIdentifier.displayName.contains(it)
                 }) {
-                    if(testExecutionResult?.status != TestExecutionResult.Status.SUCCESSFUL)
-                        couldNotStart = true
 
-                    return
+            testExecutionResult?.let {
+                it.throwable?.ifPresent { throwable -> exceptionsThrown.add(throwable) }
+                couldNotStart = it.status != TestExecutionResult.Status.SUCCESSFUL
+            }
+
+            return
         }
 
         printer.printTestSummary(testIdentifier, testExecutionResult)
@@ -87,6 +96,14 @@ class ContractExecutionListener : TestExecutionListener {
 
     override fun testPlanExecutionFinished(testPlan: TestPlan?) {
         org.fusesource.jansi.AnsiConsole.systemInstall()
+
+        println()
+
+        exceptionsThrown.map { exceptionThrown ->
+            logger.log(exceptionThrown)
+        }
+
+        println()
 
         if(SpecmaticJUnitSupport.partialSuccesses.isNotEmpty()) {
             println()

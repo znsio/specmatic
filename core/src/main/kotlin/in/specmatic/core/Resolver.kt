@@ -107,9 +107,11 @@ data class Resolver(
         val newCyclePreventionStack = cyclePreventionStack.plus(pattern)
 
         return try {
-            if (count > 1)
-            // Terminate what would otherwise be an infinite cycle.
-                throw ContractException("Invalid pattern cycle: $newCyclePreventionStack", isCycle = true)
+            if (count > 1) {
+                // Terminate what would otherwise be an infinite cycle.
+                val stackAsString = newCyclePreventionStack.mapNotNull { it.typeAlias }.filter { it.isNotBlank() }.joinToString(", ") { withoutPatternDelimiters(it) }
+                throw ContractException("Invalid pattern cycle: $stackAsString", isCycle = true)
+            }
 
             toResult(copy(cyclePreventionStack = newCyclePreventionStack))
         } catch (e: ContractException) {

@@ -465,10 +465,6 @@ data class HttpRequestPattern(
                     val new = httpQueryParamPattern.newBasedOn(row, resolver)
                     httpQueryParamPattern.addComplimentaryPatterns(new, row, resolver)
                 } else {
-                    if(status.toString().startsWith("4")) {
-                        httpQueryParamPattern.matches(row, resolver).throwOnFailure()
-                    }
-
                     httpQueryParamPattern.readFrom(row, resolver)
                 }.map {
                     HttpQueryParamPattern(it)
@@ -478,14 +474,8 @@ data class HttpRequestPattern(
                 val new = headersPattern.newBasedOn(row, resolver)
                 headersPattern.addComplimentaryPatterns(new, row, resolver)
             } else {
-                if(status.toString().startsWith("4")) {
-                    headersPattern.matches(row, resolver).throwOnFailure()
-                }
-
                 headersPattern.readFrom(row, resolver)
             }
-
-//            val newHeadersPattern = headersPattern.newBasedOn(row, resolver)
 
             val newBodies: Sequence<Pattern> = attempt(breadCrumb = "BODY") {
                 body.let {
@@ -654,7 +644,7 @@ data class HttpRequestPattern(
             sequence {
                 // If security schemes are present, for now we'll just take the first scheme and assign it to each negative request pattern.
                 // Ideally we should generate negative patterns from the security schemes and use them.
-                val positivePattern: HttpRequestPattern = newBasedOn(row, resolver).first().copy(securitySchemes = listOf(securitySchemes.first()))
+                val positivePattern: HttpRequestPattern = newBasedOn(row, resolver, 400).first().copy(securitySchemes = listOf(securitySchemes.first()))
 
                 newHttpPathPatterns.forEach { pathParamPattern ->
                     yield(positivePattern.copy(httpPathPattern = pathParamPattern))

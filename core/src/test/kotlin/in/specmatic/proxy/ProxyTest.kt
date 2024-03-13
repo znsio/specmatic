@@ -85,7 +85,7 @@ internal class ProxyTest {
             )
         }.doesNotThrowAnyException()
         assertThatCode { parsedJSON(fakeFileWriter.receivedStub ?: "") }.doesNotThrowAnyException()
-        assertThat(fakeFileWriter.receivedPaths.toList()).containsExactlyInAnyOrder("proxy_generated.yaml", "stub0.json")
+        assertThat(fakeFileWriter.receivedPaths.toList()).containsExactlyInAnyOrder("proxy_generated.yaml", "stub1.json")
     }
 
     @Test
@@ -108,7 +108,7 @@ internal class ProxyTest {
             )
         }.doesNotThrowAnyException()
         assertThatCode { parsedJSON(fakeFileWriter.receivedStub ?: "") }.doesNotThrowAnyException()
-        assertThat(fakeFileWriter.receivedPaths).containsExactlyInAnyOrder("proxy_generated.yaml", "stub0.json")
+        assertThat(fakeFileWriter.receivedPaths).containsExactlyInAnyOrder("proxy_generated.yaml", "stub1.json")
     }
 
     @Test

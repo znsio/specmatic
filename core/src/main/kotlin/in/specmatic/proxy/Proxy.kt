@@ -153,7 +153,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
             stubDataDirectory.createDirectory()
 
             stubs.mapIndexed { index, namedStub ->
-                val fileName = "stub$index.json"
+                val fileName = "stub${index + 1}.json"
                 println("Writing stub data to $fileName")
                 stubDataDirectory.writeText(fileName, namedStub.stub.toJSON().toStringLiteral())
             }

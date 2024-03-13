@@ -18,8 +18,6 @@ class ExamplesCommand : Callable<Unit> {
     lateinit var contractFile: File
 
     override fun call() {
-        logger = NonVerbose(CompositePrinter(listOf(JSONConsoleLogPrinter)))
-
         logException {
             if(!contractFile.exists())
                 throw Exception("Could not find file ${contractFile.path}")
@@ -27,15 +25,29 @@ class ExamplesCommand : Callable<Unit> {
             try {
                 val feature = parseContractFileToFeature(contractFile)
 
+                var ctr = 0
+
+                val examplesDir = contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}_data""")
+                examplesDir.mkdirs()
+
                 feature.executeTests(object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
-                        val response = feature.lookupResponse(request)
+                        ctr += 1
+
+                        val response = feature.lookupResponse(request).cleanup()
 
                         val stubJSON = ScenarioStub(request, response).toJSON()
 
                         val stubString = stubJSON.toStringLiteral()
 
-                        File("filename").writeText(stubString)
+                        val filename = "example-$ctr.json"
+
+                        val file = examplesDir.resolve(filename)
+                        val loggablePath = "Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}"
+
+                        println(loggablePath)
+
+                        file.writeText(stubString)
 
                         return response
                     }
@@ -48,5 +60,9 @@ class ExamplesCommand : Callable<Unit> {
             }
         }
     }
+}
+
+private fun HttpResponse.cleanup(): HttpResponse {
+    return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
 }
 

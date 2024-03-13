@@ -80,7 +80,7 @@ internal class HttpRequestPatternTest {
                 method = "GET"
         )
 
-        val newPatterns = pattern.newBasedOn(Row(), Resolver())
+        val newPatterns = pattern.newBasedOn(Row(), Resolver(), 200).toList()
         assertEquals("(string)", newPatterns[0].headersPattern.pattern["Test-Header"].toString())
     }
 
@@ -95,16 +95,16 @@ internal class HttpRequestPatternTest {
         val resolver = Resolver(newPatterns = mapOf("(Data)" to TabularPattern(mapOf("id" to NumberPattern()))))
         val data = """{"id": 10}"""
         val row = Row(columnNames = listOf("(Data)"), values = listOf(data))
-        val newPatterns = pattern.newBasedOn(row, resolver)
+        val newPatterns = pattern.newBasedOn(row, resolver).toList()
 
         assertThat((newPatterns.single().body as ExactValuePattern).pattern as JSONObjectValue).isEqualTo(parsedValue(data))
     }
 
     @Test
-    fun `a request with an optional header should result in 2 options for newBasedOn`() {
+    fun `a 200 request with an optional header should result in 2 options for newBasedOn`() {
         val requests = HttpRequestPattern(method = "GET",
                 httpPathPattern = buildHttpPathPattern(URI("/")),
-                headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))).newBasedOn(Row(), Resolver())
+                headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))).newBasedOn(Row(), Resolver(), 200).toList()
 
         assertThat(requests).hasSize(2)
 
@@ -116,6 +116,42 @@ internal class HttpRequestPatternTest {
         }
 
         flagsContain(flags, listOf("with", "without"))
+    }
+
+    @Test
+    fun `a 400 request with an optional header should result in 1 options for newBasedOn`() {
+        val requests = HttpRequestPattern(method = "GET",
+            httpPathPattern = buildHttpPathPattern(URI("/")),
+            headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))).newBasedOn(Row(), Resolver(), 400).toList()
+
+        assertThat(requests).hasSize(1)
+
+        val flags = requests.map {
+            when {
+                it.headersPattern.pattern.containsKey("X-Optional") -> "with"
+                else -> "without"
+            }
+        }
+
+        flagsContain(flags, listOf("without"))
+    }
+
+    @Test
+    fun `a 500 request with an optional header should result in 1 options for newBasedOn`() {
+        val requests = HttpRequestPattern(method = "GET",
+            httpPathPattern = buildHttpPathPattern(URI("/")),
+            headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))).newBasedOn(Row(), Resolver(), 500).toList()
+
+        assertThat(requests).hasSize(1)
+
+        val flags = requests.map {
+            when {
+                it.headersPattern.pattern.containsKey("X-Optional") -> "with"
+                else -> "without"
+            }
+        }
+
+        flagsContain(flags, listOf("without"))
     }
 
     @Test
@@ -157,7 +193,7 @@ internal class HttpRequestPatternTest {
             StringPattern(),
         ), MultiPartContentPattern("data2", StringPattern()))
         val requestPattern = HttpRequestPattern(method = "GET", httpPathPattern = buildHttpPathPattern("/"), multiPartFormDataPattern = parts)
-        val patterns = requestPattern.newBasedOn(Row(), Resolver())
+        val patterns = requestPattern.newBasedOn(Row(), Resolver()).toList()
 
         assertThat(patterns).hasSize(1)
 
@@ -169,7 +205,7 @@ internal class HttpRequestPatternTest {
         val part = MultiPartContentPattern("data?", StringPattern())
 
         val requestPattern = HttpRequestPattern(method = "GET", httpPathPattern = buildHttpPathPattern("/"), multiPartFormDataPattern = listOf(part))
-        val patterns = requestPattern.newBasedOn(Row(), Resolver())
+        val patterns = requestPattern.newBasedOn(Row(), Resolver()).toList()
 
         assertThat(patterns).hasSize(2)
 
@@ -183,7 +219,7 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("name"), listOf("John Doe"))
 
         val requestPattern = HttpRequestPattern(method = "GET", httpPathPattern = buildHttpPathPattern("/"), multiPartFormDataPattern = listOf(part))
-        val patterns = requestPattern.newBasedOn(example, Resolver())
+        val patterns = requestPattern.newBasedOn(example, Resolver()).toList()
 
         assertThat(patterns).hasSize(1)
 
@@ -200,7 +236,7 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("name"), listOf("John Doe"))
 
         val requestPattern = HttpRequestPattern(method = "GET", httpPathPattern = buildHttpPathPattern("/"), multiPartFormDataPattern = listOf(part))
-        val patterns = requestPattern.newBasedOn(example, Resolver())
+        val patterns = requestPattern.newBasedOn(example, Resolver()).toList()
 
         assertThat(patterns).hasSize(1)
 
@@ -217,7 +253,7 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("name"), listOf("John Doe"))
 
         val requestPattern = HttpRequestPattern(method = "GET", httpPathPattern = buildHttpPathPattern("/"), multiPartFormDataPattern = listOf(part))
-        val patterns = requestPattern.newBasedOn(example, Resolver())
+        val patterns = requestPattern.newBasedOn(example, Resolver()).toList()
 
         assertThat(patterns).hasSize(1)
 
@@ -244,7 +280,7 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("csv"), listOf("[1, 2, 3]"))
 
         val type = parsedPattern("""{"csv": "(number*)"}""")
-        val newTypes = type.newBasedOn(example, Resolver())
+        val newTypes = type.newBasedOn(example, Resolver()).toList()
 
         assertThat(newTypes).hasSize(1)
 
@@ -258,7 +294,7 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("data"), listOf("""{"one": 1}"""))
 
         val type = parsedPattern("""{"data": "(Data)"}""")
-        val newTypes = type.newBasedOn(example, Resolver(newPatterns = mapOf("(Data)" to toTabularPattern(mapOf("one" to NumberPattern())))))
+        val newTypes = type.newBasedOn(example, Resolver(newPatterns = mapOf("(Data)" to toTabularPattern(mapOf("one" to NumberPattern()))))).toList()
 
         assertThat(newTypes).hasSize(1)
 
@@ -272,7 +308,7 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("body"), listOf("[1, 2, 3]"))
 
         val requestType = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/"), body = parsedPattern("(body: RequestBody)"))
-        val newRequestTypes = requestType.newBasedOn(example, Resolver(newPatterns = mapOf("(RequestBody)" to parsedPattern("""(number*)"""))))
+        val newRequestTypes = requestType.newBasedOn(example, Resolver(newPatterns = mapOf("(RequestBody)" to parsedPattern("""(number*)""")))).toList()
 
         assertThat(newRequestTypes).hasSize(1)
 
@@ -287,7 +323,7 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("body"), listOf("""{"one": 1}"""))
 
         val requestType = HttpRequestPattern(httpPathPattern = buildHttpPathPattern("/"), body = parsedPattern("(body: RequestBody)"))
-        val newRequestTypes = requestType.newBasedOn(example, Resolver(newPatterns = mapOf("(RequestBody)" to toTabularPattern(mapOf("one" to NumberPattern())))))
+        val newRequestTypes = requestType.newBasedOn(example, Resolver(newPatterns = mapOf("(RequestBody)" to toTabularPattern(mapOf("one" to NumberPattern()))))).toList()
 
         assertThat(newRequestTypes).hasSize(1)
 
@@ -425,7 +461,7 @@ internal class HttpRequestPatternTest {
         val pattern = HttpRequestPattern(method = "POST", httpPathPattern = buildHttpPathPattern("http://helloworld.com/data"), body = JSONObjectPattern(mapOf("id" to NumberPattern())))
 
         val row = Row(listOf("(REQUEST-BODY)"), listOf("""{ "id": 10 }"""))
-        val patterns = pattern.newBasedOn(row, Resolver(generation = GenerativeTestsEnabled()))
+        val patterns = pattern.newBasedOn(row, Resolver(generation = GenerativeTestsEnabled())).toList()
 
         assertThat(patterns).hasSize(1)
     }

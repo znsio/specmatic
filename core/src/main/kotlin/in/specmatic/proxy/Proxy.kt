@@ -143,15 +143,11 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
         val gherkin = toGherkinFeature("New feature", stubs)
         val base = "proxy_generated"
         val featureFileName = "$base.yaml"
-        val openApi = parseGherkinStringToFeature(gherkin).toOpenApi()
 
         if(stubs.isEmpty()) {
             println("No stubs were recorded. No contract will be written.")
         } else {
             outputDirectory.createDirectory()
-
-            println("Writing contract to $featureFileName")
-            outputDirectory.writeText(featureFileName, Yaml.pretty(openApi))
 
             val stubDataDirectory = outputDirectory.subDirectory("${base}_data")
             stubDataDirectory.createDirectory()
@@ -161,6 +157,12 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                 println("Writing stub data to $fileName")
                 stubDataDirectory.writeText(fileName, namedStub.stub.toJSON().toStringLiteral())
             }
+
+            val openApi = parseGherkinStringToFeature(gherkin).toOpenApi()
+
+            println("Writing specification to $featureFileName")
+            outputDirectory.writeText(featureFileName, Yaml.pretty(openApi))
+
         }
     }
 }

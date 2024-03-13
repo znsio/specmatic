@@ -1,7 +1,6 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.conversions.*
-import `in`.specmatic.conversions.Environment
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
@@ -31,8 +30,8 @@ import io.swagger.v3.oas.models.responses.ApiResponses
 import java.io.File
 import java.net.URI
 
-fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null, environment: Environment = DefaultEnvironment()): Feature {
-    return parseContractFileToFeature(File(contractPath), hook, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration, environment)
+fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null, sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null, environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration()): Feature {
+    return parseContractFileToFeature(File(contractPath), hook, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration, environmentAndPropertiesConfiguration)
 }
 
 fun checkExists(file: File) = file.also {
@@ -40,11 +39,11 @@ fun checkExists(file: File) = file.also {
         throw ContractException("File ${file.path} does not exist (absolute path ${file.canonicalPath})")
 }
 
-fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null,  sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null, environment: Environment = DefaultEnvironment()): Feature {
+fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null, sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null, environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration()): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
 
     return when (file.extension) {
-        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath, securityConfiguration = securityConfiguration, environment = environment).toFeature()
+        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath, securityConfiguration = securityConfiguration, environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration).toFeature()
         WSDL -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
         else -> throw unsupportedFileExtensionContractException(file.path, file.extension)
@@ -82,7 +81,8 @@ data class Feature(
     val specification:String? = null,
     val serviceType:String? = null,
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
-    val resolverStrategies: ResolverStrategies = strategiesFromFlags()
+    val environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(),
+    val resolverStrategies: ResolverStrategies = strategiesFromFlags(environmentAndPropertiesConfiguration)
 ) {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         return this.copy(resolverStrategies = this.resolverStrategies.copy(generation = GenerativeTestsEnabled(onlyPositive)))
@@ -219,6 +219,22 @@ data class Feature(
         } != null
     }
 
+    fun matchResult(request: HttpRequest, response: HttpResponse): Result {
+        val matchResults = scenarios.map {
+            it.matches(
+                request,
+                serverState
+            ) to it.matches(response)
+        }
+
+        if (matchResults.any {
+            it.first is Result.Success && it.second is Result.Success
+        })
+            return Result.Success()
+
+        return Result.fromResults(matchResults.flatMap { it.toList() })
+    }
+
     fun matchingStub(
         request: HttpRequest,
         response: HttpResponse,
@@ -240,7 +256,7 @@ data class Feature(
         }
     }
 
-    fun stubMatchResult(
+    private fun stubMatchResult(
         request: HttpRequest,
         response: HttpResponse,
         mismatchMessages: MismatchMessages
@@ -249,7 +265,7 @@ data class Feature(
             try {
                 when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
                     is Result.Success -> Pair(
-                        scenario.resolverAndResponseFrom(response).let { (resolver, resolvedResponse) ->
+                        scenario.resolverAndResponseForExpectation(response).let { (resolver, resolvedResponse) ->
                             val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
                             val requestTypeWithAncestors =
                                 newRequestType.copy(
@@ -283,7 +299,7 @@ data class Feature(
     private fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
-    fun generateContractTests(suggestions: List<Scenario>): List<ContractTest> =
+    fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> =
         generateContractTestScenarios(suggestions).map {
             ScenarioTest(it, resolverStrategies,
                 it.sourceProvider, it.sourceRepository, it.sourceRepositoryBranch, it.specification, it.serviceType)
@@ -306,21 +322,37 @@ data class Feature(
         return BadRequestOrDefault(badRequestResponses, defaultResponse)
     }
 
-    fun generateContractTestScenarios(suggestions: List<Scenario>): List<Scenario> {
-        return resolverStrategies.generation.let {
-            it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
+    fun generateContractTestScenarios(suggestions: List<Scenario>): Sequence<Scenario> {
+        return try {
+            resolverStrategies.generation.let {
+                it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
+            }
+        }
+        catch(e: Throwable) {
+            logger.log(e)
+            throw e
         }
     }
 
+    fun validateExampleRows() {
+        scenarios.forEach { scenario ->
+            scenario.validateExamples(resolverStrategies)
+        }
+    }
+
+    fun generateContractTestScenariosL(suggestions: List<Scenario>): List<Scenario> {
+        return generateContractTestScenarios(suggestions).toList()
+    }
+
     fun positiveTestScenarios(suggestions: List<Scenario>) =
-        scenarios.filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
+        scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
         }.flatMap {
             it.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
         }
 
     fun negativeTestScenarios() =
-        scenarios.filter {
+        scenarios.asSequence().filter {
             it.isA2xxScenario()
         }.flatMap { scenario ->
             val negativeScenario = scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
@@ -665,6 +697,7 @@ data class Feature(
                 val type = scenario.patterns.getValue(oldTypeName)
                 val newTypes = scenario.patterns.minus(oldTypeName).plus(newTypeName to type)
 
+
                 scenario = scenario.copy(
                     patterns = newTypes,
                     httpResponsePattern = scenario.httpResponsePattern.copy(
@@ -672,6 +705,24 @@ data class Feature(
                     )
                 )
             }
+
+            val (contentTypePattern, rawResponseHeadersWithoutContentType) = scenario.httpResponsePattern.headersPattern.pattern.entries.find {
+                it.key.equals(CONTENT_TYPE, ignoreCase = true)
+            }?.let {
+                it.value to scenario.httpResponsePattern.headersPattern.pattern.minus(it.key)
+            } ?: (null to scenario.httpResponsePattern.headersPattern.pattern)
+
+            val responseContentType: String? = if(contentTypePattern is ExactValuePattern)
+                contentTypePattern.pattern.toStringLiteral()
+            else null
+
+            val updatedResponseHeaders = HttpHeadersPattern(rawResponseHeadersWithoutContentType, contentType = responseContentType)
+
+            scenario = scenario.copy(
+                httpResponsePattern = scenario.httpResponsePattern.copy(
+                    headersPattern = updatedResponseHeaders
+                )
+            )
 
             scenario
         }
@@ -736,6 +787,7 @@ data class Feature(
 
             if (requestBodySchema != null) {
                 operation.requestBody = RequestBody().apply {
+                    this.required = true
                     this.content = Content().apply {
                         this[requestBodySchema.first] = requestBodySchema.second
                     }
@@ -780,7 +832,10 @@ data class Feature(
                         else -> {
                             val mediaType = MediaType()
                             mediaType.schema = toOpenApiSchema(responseBodyType)
-                            Pair("text/plain", mediaType)
+
+                            val responseContentType = scenario.httpResponsePattern.headersPattern.contentType ?: "text/plain"
+
+                            Pair(responseContentType, mediaType)
                         }
                     }
 
@@ -1334,6 +1389,7 @@ data class Feature(
 
         val unusedExternalizedExamples = (externalizedExampleFilePaths - utilizedFileSources)
         if (unusedExternalizedExamples.isNotEmpty()) {
+            println()
             logger.log("The following externalized examples were not used:")
 
             unusedExternalizedExamples.sorted().forEach {

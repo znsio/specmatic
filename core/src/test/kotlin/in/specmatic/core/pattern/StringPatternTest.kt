@@ -133,7 +133,7 @@ internal class StringPatternTest {
     @Test
     @Tag(GENERATION)
     fun `negative values should be generated`() {
-        val result = StringPattern().negativeBasedOn(Row(), Resolver())
+        val result = StringPattern().negativeBasedOn(Row(), Resolver()).toList()
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null",
             "number",

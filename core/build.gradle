@@ -18,8 +18,8 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "2.3.8"
-def jgit_version = "6.8.0.202311291450-r"
+def ktor_version = "2.3.9"
+def jgit_version = "6.9.0.202403050737-r"
 def junit_version = "5.10.2"
 
 dependencies {
@@ -31,25 +31,27 @@ dependencies {
     implementation "io.ktor:ktor-server-cors:$ktor_version"
     implementation("io.ktor:ktor-server-double-receive:$ktor_version")
 
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.2"
-    implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.22"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.3"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.23"
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
+    implementation 'com.flipkart.zjsonpatch:zjsonpatch:0.4.16'
 
-    implementation 'io.swagger.parser.v3:swagger-parser:2.1.20'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.2'
+
+    implementation 'io.swagger.parser.v3:swagger-parser:2.1.21'
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
-    testImplementation 'org.wiremock:wiremock:3.3.1'
+    testImplementation 'org.wiremock:wiremock:3.4.2'
     testImplementation 'org.assertj:assertj-core:3.25.3'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
-    testImplementation 'org.json:json:20240205'
-    testImplementation 'org.springframework:spring-web:5.3.31'
-    testImplementation 'io.mockk:mockk:1.13.9'
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'org.springframework:spring-web:5.3.32'
+    testImplementation 'io.mockk:mockk:1.13.10'
     testImplementation 'org.assertj:assertj-core:3.25.3'
     testImplementation "io.ktor:ktor-client-mock-jvm:$ktor_version"
 }

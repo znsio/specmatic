@@ -11,7 +11,7 @@ class BinaryPatternTest {
     @Test
     @Tag(GENERATION)
     fun `negative patterns should be generated`() {
-        val result = BinaryPattern().negativeBasedOn(Row(), Resolver())
+        val result = BinaryPattern().negativeBasedOn(Row(), Resolver()).toList()
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null",
             "number",

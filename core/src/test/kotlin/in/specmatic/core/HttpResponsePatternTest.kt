@@ -7,22 +7,6 @@ import `in`.specmatic.core.value.StringValue
 
 internal class HttpResponsePatternTest {
     @Test
-    fun `it should result in 2 tests` () {
-        val list = HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))).newBasedOn(Row(), Resolver())
-
-        assertThat(list).hasSize(2)
-
-        val flags = list.map {
-            when {
-                it.headersPattern.pattern.containsKey("X-Optional") -> "with"
-                else -> "without"
-            }
-        }
-
-        flagsContain(flags, listOf("with", "without"))
-    }
-
-    @Test
     fun `it should encompass itself`() {
         val httpResponsePattern = HttpResponsePattern(status = 200, headersPattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern())))
         assertThat(httpResponsePattern.encompasses(httpResponsePattern, Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)

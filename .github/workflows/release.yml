@@ -8,7 +8,7 @@ on:
   push:
     tags:
       - '*.*.*'
-      - 'SNAPSHOT'
+      - 'SNAPSHOT'      
 
 jobs:
   build:
@@ -27,8 +27,30 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew build
     - name: Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: application/build/libs/specmatic.jar
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dispatch:
+    needs: build
+    strategy:
+      matrix:
+        repository: [znsio/specmatic-documentation]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extracting Latest Release Version From Github Ref
+        run: |
+          GITHUB_REF=${{ github.ref }}
+          echo "GITHUB_REF: ${GITHUB_REF}"
+          echo "SPECMATIC_LATEST_RELEASE_VERSION=${GITHUB_REF#refs/tags/}"
+          echo "SPECMATIC_LATEST_RELEASE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v3
+
+        with:
+          token: ${{ secrets.SPECMATIC_CORE_VERSION_UPDATE_TOKEN }}
+          repository: ${{ matrix.repository }}
+          event-type: specmatic-core-release
+          client-payload: '{"latest-release": "${{ env.SPECMATIC_LATEST_RELEASE_VERSION }}"}'

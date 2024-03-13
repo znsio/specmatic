@@ -1,5 +1,7 @@
-package `in`.specmatic.conversions
+package integration_tests
 
+import `in`.specmatic.conversions.EnvironmentAndPropertiesConfiguration
+import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.Flags
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
@@ -37,6 +39,7 @@ class DefaultValuesInOpenapiSpecification {
           /employees:
             post:
               requestBody:
+                required: true
                 content:
                   application/json:
                     schema:
@@ -200,6 +203,7 @@ class DefaultValuesInOpenapiSpecification {
           /employees:
             post:
               requestBody:
+                required: true
                 content:
                   application/json:
                     schema:
@@ -315,69 +319,65 @@ class DefaultValuesInOpenapiSpecification {
 
     @Test
     fun `SCHEMA_EXAMPLE_DEFAULT should switch on the schema example default feature`() {
-        try {
-            System.setProperty(Flags.SCHEMA_EXAMPLE_DEFAULT, "true")
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.0
+            info:
+              version: 1.0.0
+              title: Product API
+              description: API for creating a product
+            paths:
+              /products:
+                post:
+                  summary: Create a product
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/Product'
+                  responses:
+                    '200':
+                      description: Product created successfully
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+            components:
+              schemas:
+                Product:
+                  type: object
+                  required:
+                    - name
+                    - price
+                  properties:
+                    name:
+                      type: string
+                      description: The name of the product
+                      example: 'Soap'
+                    price:
+                      type: number
+                      format: float
+                      description: The price of the product
+                      example: 10
+                """, "",
+            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration.setProperty(Flags.SCHEMA_EXAMPLE_DEFAULT, "true")
+        ).toFeature()
 
-            val feature = OpenApiSpecification.fromYAML(
-                """
-                openapi: 3.0.0
-                info:
-                  version: 1.0.0
-                  title: Product API
-                  description: API for creating a product
-                paths:
-                  /products:
-                    post:
-                      summary: Create a product
-                      requestBody:
-                        required: true
-                        content:
-                          application/json:
-                            schema:
-                              ${"$"}ref: '#/components/schemas/Product'
-                      responses:
-                        '200':
-                          description: Product created successfully
-                          content:
-                            text/plain:
-                              schema:
-                                type: string
-                components:
-                  schemas:
-                    Product:
-                      type: object
-                      required:
-                        - name
-                        - price
-                      properties:
-                        name:
-                          type: string
-                          description: The name of the product
-                          example: 'Soap'
-                        price:
-                          type: number
-                          format: float
-                          description: The price of the product
-                          example: 10
-                    """, "").toFeature()
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val body = request.body as JSONObjectValue
+                assertThat(body.jsonObject["name"]).isEqualTo(StringValue("Soap"))
+                assertThat(body.jsonObject["price"]).isEqualTo(NumberValue(10))
+                return HttpResponse.OK
+            }
 
-            val results = feature.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    val body = request.body as JSONObjectValue
-                    assertThat(body.jsonObject["name"]).isEqualTo(StringValue("Soap"))
-                    assertThat(body.jsonObject["price"]).isEqualTo(NumberValue(10))
-                    return HttpResponse.OK
-                }
+            override fun setServerState(serverState: Map<String, Value>) {
 
-                override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
 
-                }
-            })
-
-            assertThat(results.successCount).isEqualTo(1)
-            assertThat(results.failureCount).isEqualTo(0)
-        } finally {
-            System.clearProperty(Flags.SCHEMA_EXAMPLE_DEFAULT)
-        }
+        assertThat(results.successCount).isEqualTo(1)
+        assertThat(results.failureCount).isEqualTo(0)
     }
 }

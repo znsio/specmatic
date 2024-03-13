@@ -13,17 +13,16 @@ class SecurityTokenTest {
     @Test
     fun `should extract security token for bearer security scheme from configuration`() {
         val token = "BEARER1234"
-        val securityToken = getSecurityTokenForBearerScheme(BearerSecuritySchemeConfiguration("bearer", token), "BearerAuth", DefaultEnvironment())
+        val securityToken = getSecurityTokenForBearerScheme(BearerSecuritySchemeConfiguration("bearer", token), "BearerAuth", EnvironmentAndPropertiesConfiguration())
         assertThat(securityToken).isEqualTo(token)
     }
 
     @Test
     fun `should extract security token for bearer security scheme from environment variable`() {
         val token = "BEARER1234"
-        val testEnvironment = mockk<Environment>()
         val schemeName = "BearerAuth"
-        every { testEnvironment.getEnvironmentVariable(schemeName) }.returns(token)
-        val securityToken = getSecurityTokenForBearerScheme( null, schemeName, testEnvironment)
+        val testEnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(schemeName to token), emptyMap())
+        val securityToken = getSecurityTokenForBearerScheme( null, schemeName, testEnvironmentAndPropertiesConfiguration)
         assertThat(securityToken).isEqualTo(token)
     }
 
@@ -31,29 +30,27 @@ class SecurityTokenTest {
     fun `should pick up the security token from environment variable over the one defined in the configuration for bearer security scheme `() {
         val envToken = "ENV1234"
         val configToken = "CONFIG1234"
-        val testEnvironment = mockk<Environment>()
         val schemeName = "BearerAuth"
-        every { testEnvironment.getEnvironmentVariable(schemeName) }.returns(envToken)
+        val testEnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(schemeName to envToken), emptyMap())
         val securityToken = getSecurityTokenForBearerScheme(BearerSecuritySchemeConfiguration("bearer", configToken),
-            schemeName, testEnvironment)
+            schemeName, testEnvironmentAndPropertiesConfiguration)
         assertThat(securityToken).isEqualTo(envToken)
     }
 
     @Test
     fun `should extract security token for oauth2 security scheme from configuration`() {
         val token = "OAUTH1234"
-        val securityToken = getSecurityTokenForBearerScheme(OAuth2SecuritySchemeConfiguration("oauth2", token), "oAuth2AuthCode", DefaultEnvironment())
+        val securityToken = getSecurityTokenForBearerScheme(OAuth2SecuritySchemeConfiguration("oauth2", token), "oAuth2AuthCode", EnvironmentAndPropertiesConfiguration())
         assertThat(securityToken).isEqualTo(token)
     }
 
     @Test
     fun `should extract security token for oauth2 security scheme from environment variable`() {
         val token = "OAUTH1234"
-        val testEnvironment = mockk<Environment>()
         val schemeName = "oAuth2AuthCode"
-        every { testEnvironment.getEnvironmentVariable(schemeName) }.returns(token)
+        val testEnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(schemeName to token), emptyMap())
         val securityToken = getSecurityTokenForBearerScheme(null,
-            schemeName, testEnvironment)
+            schemeName, testEnvironmentAndPropertiesConfiguration)
         assertThat(securityToken).isEqualTo(token)
     }
 
@@ -61,40 +58,36 @@ class SecurityTokenTest {
     fun `should pick up the security token from environment variable over the one defined in the configuration for oauth2 security scheme `() {
         val envToken = "ENV1234"
         val configToken = "CONFIG1234"
-        val testEnvironment = mockk<Environment>()
         val schemeName = "oAuth2AuthCode"
-        every { testEnvironment.getEnvironmentVariable(schemeName) }.returns(envToken)
+        val testEnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(schemeName to envToken), emptyMap())
         val securityToken = getSecurityTokenForBearerScheme(OAuth2SecuritySchemeConfiguration("oauth2", configToken),
-            schemeName, testEnvironment)
+            schemeName, testEnvironmentAndPropertiesConfiguration)
         assertThat(securityToken).isEqualTo(envToken)
     }
 
     @Test
     fun `should pick up the security token from the SPECMATIC_OAUTH2_TOKEN environment variable as a fallback for bearer security scheme`() {
         val envToken = "ENV1234"
-        val testEnvironment = mockk<Environment>()
         val schemeName = "oAuth2AuthCode"
-        every { testEnvironment.getEnvironmentVariable(schemeName) }.returns(null)
-        every { testEnvironment.getEnvironmentVariable(SPECMATIC_OAUTH2_TOKEN) }.returns(envToken)
+        val testEnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(SPECMATIC_OAUTH2_TOKEN to envToken), emptyMap())
         val securityToken = getSecurityTokenForBearerScheme(null,
-            schemeName, testEnvironment)
+            schemeName, testEnvironmentAndPropertiesConfiguration)
         assertThat(securityToken).isEqualTo(envToken)
     }
 
     @Test
     fun `should extract security token for apikey security scheme from configuration`() {
         val token = "APIKEY1234"
-        val securityToken = getSecurityTokenForApiKeyScheme(APIKeySecuritySchemeConfiguration("apiKey", token), "ApiKeyAuthHeader", DefaultEnvironment())
+        val securityToken = getSecurityTokenForApiKeyScheme(APIKeySecuritySchemeConfiguration("apiKey", token), "ApiKeyAuthHeader", EnvironmentAndPropertiesConfiguration())
         assertThat(securityToken).isEqualTo(token)
     }
 
     @Test
     fun `should extract security token for apikey security scheme from environment variable`() {
         val token = "APIKEY1234"
-        val testEnvironment = mockk<Environment>()
         val schemeName = "ApiKeyAuthHeader"
-        every { testEnvironment.getEnvironmentVariable(schemeName) }.returns(token)
-        val securityToken = getSecurityTokenForApiKeyScheme(null, schemeName, testEnvironment)
+        val testEnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(schemeName to token), emptyMap())
+        val securityToken = getSecurityTokenForApiKeyScheme(null, schemeName, testEnvironmentAndPropertiesConfiguration)
         assertThat(securityToken).isEqualTo(token)
     }
 
@@ -102,11 +95,10 @@ class SecurityTokenTest {
     fun `should pick up the security token from environment variable over the one defined in the configuration for apikey security scheme `() {
         val envToken = "ENV1234"
         val configToken = "CONFIG1234"
-        val testEnvironment = mockk<Environment>()
         val schemeName = "ApiKeyAuthHeader"
-        every { testEnvironment.getEnvironmentVariable(schemeName) }.returns(envToken)
+        val testEnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(schemeName to envToken), emptyMap())
         val securityToken = getSecurityTokenForApiKeyScheme(APIKeySecuritySchemeConfiguration("apikey", configToken),
-            schemeName, testEnvironment)
+            schemeName, testEnvironmentAndPropertiesConfiguration)
         assertThat(securityToken).isEqualTo(envToken)
     }
 }

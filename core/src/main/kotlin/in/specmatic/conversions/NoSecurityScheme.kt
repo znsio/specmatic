@@ -2,7 +2,9 @@ package `in`.specmatic.conversions
 
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpRequestPattern
+import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
+import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.Row
 
 class NoSecurityScheme : OpenAPISecurityScheme {

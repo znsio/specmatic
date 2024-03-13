@@ -7,7 +7,7 @@ class AllNegativePatterns : NegativePatternsTemplate() {
         key: String,
         negativePattern: Pattern,
         resolver: Resolver,
-    ): List<Pattern> {
+    ): Sequence<Pattern> {
         return newBasedOn(Row(), key, negativePattern, resolver)
     }
 
@@ -15,7 +15,7 @@ class AllNegativePatterns : NegativePatternsTemplate() {
         patternMap: Map<String, Pattern>,
         resolver: Resolver,
         row: Row
-    ): Map<String, List<Pattern>> {
+    ): Map<String, Sequence<Pattern>> {
         return patternMap.mapValues { (key, pattern) ->
             val resolvedPattern = resolvedHop(pattern, resolver)
             resolvedPattern.negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)

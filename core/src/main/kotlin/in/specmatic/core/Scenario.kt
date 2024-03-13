@@ -268,7 +268,7 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOn(row: Row, resolverStrategies: ResolverStrategies): List<Scenario> {
+    private fun newBasedOn(row: Row, resolverStrategies: ResolverStrategies): Sequence<Scenario> {
         val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
         val resolver =
             Resolver(expectedFacts, false, patterns)
@@ -280,12 +280,15 @@ data class Scenario(
 
         return scenarioBreadCrumb(this) {
             attempt {
+                val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withExactResponseValue(row, resolver)
+
                 when (isNegative) {
                     false -> httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status)
                     else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true))
                 }.map { newHttpRequestPattern ->
                     this.copy(
                         httpRequestPattern = newHttpRequestPattern,
+                        httpResponsePattern = newResponsePattern,
                         expectedFacts = newExpectedServerState,
                         ignoreFailure = ignoreFailure,
                         exampleName = row.name
@@ -295,7 +298,7 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOnBackwardCompatibility(row: Row): List<Scenario> {
+    private fun newBasedOnBackwardCompatibility(row: Row): Sequence<Scenario> {
         val resolver = Resolver(expectedFacts, false, patterns)
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
@@ -308,19 +311,29 @@ data class Scenario(
         }
     }
 
+    fun validateExamples(
+        resolverStrategies: ResolverStrategies,
+    ) {
+        val rowsToValidate = examples.flatMap { it.rows }
+
+        rowsToValidate.forEach { row ->
+            newBasedOn(row, resolverStrategies).first()
+        }
+    }
+
     fun generateTestScenarios(
         resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-    ): List<Scenario> {
+    ): Sequence<Scenario> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
         }
 
         return scenarioBreadCrumb(this) {
             when (examples.size) {
-                0 -> listOf(Row())
-                else -> examples.flatMap {
+                0 -> sequenceOf(Row())
+                else -> examples.asSequence().flatMap {
                     it.rows.map { row ->
                         row.copy(variables = variables, references = referencesWithBaseURLs)
                     }
@@ -337,15 +350,15 @@ data class Scenario(
         resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-    ): List<ContractTest> {
+    ): Sequence<ContractTest> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
         }
 
         return scenarioBreadCrumb(this) {
             when (examples.size) {
-                0 -> listOf(Row())
-                else -> examples.flatMap {
+                0 -> sequenceOf(Row())
+                else -> examples.asSequence().flatMap {
                     it.rows.map { row ->
                         row.copy(variables = variables, references = referencesWithBaseURLs)
                     }
@@ -354,7 +367,7 @@ data class Scenario(
                 try {
                     newBasedOn(row, resolverStrategies).map { ScenarioTest(it, resolverStrategies) }
                 } catch (e: Throwable) {
-                    listOf(ScenarioTestGenerationFailure(this, e))
+                    sequenceOf(ScenarioTestGenerationFailure(this, e))
                 }
             }
         }
@@ -427,11 +440,11 @@ data class Scenario(
         }
     }
 
-    fun resolverAndResponseFrom(response: HttpResponse): Pair<Resolver, HttpResponse> =
+    fun resolverAndResponseForExpectation(response: HttpResponse): Pair<Resolver, HttpResponse> =
         scenarioBreadCrumb(this) {
             attempt(breadCrumb = "RESPONSE") {
                 val resolver = Resolver(expectedFacts, false, patterns)
-                Pair(resolver, HttpResponsePattern(response).generateResponse(resolver))
+                Pair(resolver, HttpResponsePattern.fromResponseExpectation(response).generateResponse(resolver))
             }
         }
 
@@ -555,9 +568,11 @@ fun executeTestAndReturnResultAndResponse(
     return try {
         testExecutor.setServerState(testScenario.serverState)
 
+        testExecutor.preExecuteScenario(testScenario, request)
+
         val response = testExecutor.execute(request)
 
-        val result = testResult(response, testScenario)
+        val result = testResult(response, testScenario, resolverStrategies)
 
         Pair(result.withBindings(testScenario.bindings, response), response)
     } catch (exception: Throwable) {
@@ -568,14 +583,15 @@ fun executeTestAndReturnResultAndResponse(
 
 private fun testResult(
     response: HttpResponse,
-    testScenario: Scenario
+    testScenario: Scenario,
+    resolverStrategies: ResolverStrategies? = null
 ): Result {
 
     val result = when {
         response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral())
             .updateScenario(testScenario)
         response.body is JSONObjectValue && ignorable(response.body) -> Result.Success()
-        else -> testScenario.matches(response, ContractAndResponseMismatch, ValidateUnexpectedKeys)
+        else -> testScenario.matches(response, ContractAndResponseMismatch, resolverStrategies?.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
     }.also { result ->
         if (result is Result.Success && result.isPartialSuccess()) {
             logger.log("    PARTIAL SUCCESS: ${result.partialSuccessMessage}")

@@ -74,7 +74,7 @@ class EnumPatternTest {
         fun `it should generate new patterns for all enum values when the row is empty`() {
             val enum = EnumPattern(listOf(StringValue("01"), StringValue("02")))
 
-            val newPatterns = enum.newBasedOn(Row(), Resolver())
+            val newPatterns = enum.newBasedOn(Row(), Resolver()).toList()
 
             assertThat(newPatterns).containsExactlyInAnyOrder(
                 ExactValuePattern(StringValue("01")),
@@ -88,7 +88,7 @@ class EnumPatternTest {
 
             val newPatterns = jsonPattern.newBasedOn(Row(listOf("type"), values = listOf("01")), Resolver())
 
-            val values = newPatterns.map { it.generate(Resolver()) }
+            val values = newPatterns.map { it.generate(Resolver()) }.toList()
 
             val strings = values.map { it.jsonObject.getValue("type") as StringValue }
 
@@ -100,7 +100,7 @@ class EnumPatternTest {
         @Test
         fun `it should use the inline example if present`() {
             val enum = EnumPattern(listOf(StringValue("01"), StringValue("02")), example = "01")
-            val patterns = enum.newBasedOn(Row(), Resolver(defaultExampleResolver = UseDefaultExample))
+            val patterns = enum.newBasedOn(Row(), Resolver(defaultExampleResolver = UseDefaultExample)).toList()
 
             assertThat(patterns).containsExactly(
                 ExactValuePattern(StringValue("01"))
@@ -112,7 +112,7 @@ class EnumPatternTest {
         fun `it should generate negative values for what is in the row`() {
             val jsonPattern = EnumPattern(listOf(StringValue("01"), StringValue("02")))
 
-            val newPatterns = jsonPattern.negativeBasedOn(Row(), Resolver())
+            val newPatterns = jsonPattern.negativeBasedOn(Row(), Resolver()).toList()
 
             val negativeTypes = newPatterns.map { it.typeName }
             println(negativeTypes)

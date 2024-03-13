@@ -172,7 +172,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate new header objects given an empty row`() {
         val headers = HttpHeadersPattern(mapOf("Content-Type" to stringToPattern("(string)", "Content-Type")))
-        val newHeaders = headers.newBasedOn(Row(), Resolver())
+        val newHeaders = headers.newBasedOn(Row(), Resolver()).toList()
         assertEquals("(string)", newHeaders[0].pattern.getValue("Content-Type").toString())
     }
 
@@ -180,7 +180,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate new header object with the value of the example in the given row`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern()))
-        val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver())
+        val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver()).toList()
         assertThat(newHeaders[0].pattern.getValue("X-TraceID")).isEqualTo(ExactValuePattern(StringValue("123")))
     }
 
@@ -188,7 +188,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate two header object given one optional header and an empty row`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern(), "X-Identifier?" to StringPattern()))
-        val newHeaders = headers.newBasedOn(Row(), Resolver())
+        val newHeaders = headers.newBasedOn(Row(), Resolver()).toList()
 
         assertThat(newHeaders).containsExactlyInAnyOrder(
             HttpHeadersPattern(mapOf("X-TraceID" to StringPattern())),
@@ -198,13 +198,12 @@ internal class HttpHeadersPatternTest {
 
     @Tag(GENERATION)
     @Test
-    fun `should generate two header object given one optional header an example of the mandatory header`() {
+    fun `should generate only one header object given one optional header an example of only the mandatory header`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern(), "X-Identifier?" to StringPattern()))
-        val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver())
+        val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver()).toList()
 
-        assertThat(newHeaders).containsExactlyInAnyOrder(
+        assertThat(newHeaders).containsExactly(
             HttpHeadersPattern(mapOf("X-TraceID" to ExactValuePattern(StringValue("123")))),
-            HttpHeadersPattern(mapOf("X-TraceID" to ExactValuePattern(StringValue("123")), "X-Identifier" to StringPattern()))
         )
     }
 
@@ -212,7 +211,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate one header object given one optional header an example of the optional header`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern()))
-        val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver())
+        val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver()).toList()
         assertThat(newHeaders[0].pattern.getValue("X-TraceID")).isEqualTo(ExactValuePattern(StringValue("123")))
     }
 
@@ -220,7 +219,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate negative values for a string`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern()))
-        val newHeaders = headers.negativeBasedOn(Row(), Resolver())
+        val newHeaders = headers.negativeBasedOn(Row(), Resolver()).toList()
 
         assertThat(newHeaders).isEmpty()
     }
@@ -229,7 +228,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate negative values for a number`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to NumberPattern()))
-        val newHeaders = headers.negativeBasedOn(Row(), Resolver())
+        val newHeaders = headers.negativeBasedOn(Row(), Resolver()).toList()
 
         assertThat(newHeaders).containsExactlyInAnyOrder(
             HttpHeadersPattern(mapOf("X-TraceID" to StringPattern())),
@@ -265,7 +264,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `an optional header should result in 2 new header patterns for newBasedOn`() {
         val pattern = HttpHeadersPattern(mapOf("X-Optional?" to StringPattern()))
-        val list = pattern.newBasedOn(Row(), Resolver())
+        val list = pattern.newBasedOn(Row(), Resolver()).toList()
 
         assertThat(list).hasSize(2)
 
@@ -398,5 +397,23 @@ internal class HttpHeadersPatternTest {
 
         assertThat(resultText).contains("HEADER.X-Data")
         assertThat(resultText).contains("HEADER.Y-Data")
+    }
+
+    @Test
+    fun `should match content type without charset`() {
+        val headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern()), contentType = "application/json")
+        assertThat(headersPattern.matches(mapOf("X-Data" to "10", "Content-Type" to "application/json"), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should match content type with charset`() {
+        val headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern()), contentType = "application/json")
+        assertThat(headersPattern.matches(mapOf("X-Data" to "10", "Content-Type" to "application/json; charset=UTF-8"), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should not match a different content type`() {
+        val headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern()), contentType = "application/json")
+        assertThat(headersPattern.matches(mapOf("X-Data" to "10", "Content-Type" to "text/plain"), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
 }

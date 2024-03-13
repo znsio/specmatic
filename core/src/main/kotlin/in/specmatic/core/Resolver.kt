@@ -107,9 +107,11 @@ data class Resolver(
         val newCyclePreventionStack = cyclePreventionStack.plus(pattern)
 
         return try {
-            if (count > 1)
-            // Terminate what would otherwise be an infinite cycle.
-                throw ContractException("Invalid pattern cycle: $newCyclePreventionStack", isCycle = true)
+            if (count > 1) {
+                // Terminate what would otherwise be an infinite cycle.
+                val stackAsString = newCyclePreventionStack.mapNotNull { it.typeAlias }.filter { it.isNotBlank() }.joinToString(", ") { withoutPatternDelimiters(it) }
+                throw ContractException("Invalid pattern cycle: $stackAsString", isCycle = true)
+            }
 
             toResult(copy(cyclePreventionStack = newCyclePreventionStack))
         } catch (e: ContractException) {
@@ -158,7 +160,7 @@ data class Resolver(
         return this.copy(patternMatchStrategy = matchAnything, parseStrategy = alwaysReturnStringValue)
     }
 
-    fun generatedPatternsForGenerativeTests(pattern: Pattern, key: String): List<Pattern> {
+    fun generatedPatternsForGenerativeTests(pattern: Pattern, key: String): Sequence<Pattern> {
         return generation.generatedPatternsForGenerativeTests(this, pattern, key)
     }
 
@@ -174,11 +176,11 @@ data class Resolver(
         return defaultExampleResolver.resolveExample(example, pattern, this)
     }
 
-    fun generateHttpRequests(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): List<Pattern> {
+    fun generateHttpRequestbodies(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<Pattern> {
         return generation.generateHttpRequests(this, body, row, requestBodyAsIs, value)
     }
 
-    fun generateHttpRequests(body: Pattern, row: Row): List<Pattern> {
+    fun generateHttpRequestbodies(body: Pattern, row: Row): Sequence<Pattern> {
         return generation.generateHttpRequests(this, body, row)
     }
 
@@ -186,7 +188,7 @@ data class Resolver(
         return generation.resolveRow(row)
     }
 
-    fun generateKeySubLists(key: String, subList: List<String>): List<List<String>> {
+    fun generateKeySubLists(key: String, subList: List<String>): Sequence<List<String>> {
         return generation.generateKeySubLists(key, subList)
     }
 }

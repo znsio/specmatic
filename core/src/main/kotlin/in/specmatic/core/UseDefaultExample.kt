@@ -59,6 +59,10 @@ object UseDefaultExample : DefaultExampleResolver {
         return true
     }
 
+    override fun hasExample(pattern: Pattern): Boolean {
+        return pattern is HasDefaultExample && pattern.example != null
+    }
+
     override fun resolveExample(example: List<String?>?, pattern: Pattern, resolver: Resolver): JSONArrayValue? {
         if(example == null)
             return null

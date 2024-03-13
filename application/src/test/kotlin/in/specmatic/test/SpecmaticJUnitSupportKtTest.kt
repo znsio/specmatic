@@ -6,6 +6,15 @@ import `in`.specmatic.test.reports.coverage.Endpoint
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
+fun <T> selectTestsToRunWrapper(
+    testScenarios: Sequence<T>,
+    filterName: String? = null,
+    filterNotName: String? = null,
+    getTestDescription: (T) -> String
+): List<T> {
+    return selectTestsToRun(testScenarios.asSequence(), filterName, filterNotName, getTestDescription).toList()
+}
+
 class SpecmaticJUnitSupportKtTest {
     val contract = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
@@ -57,14 +66,14 @@ paths:
 
     @Test
     fun `should select tests containing the value of filterName in testDescription`() {
-        val selected = selectTestsToRun(contractTests, "TEST1") { it.testDescription() }
+        val selected = selectTestsToRunWrapper(contractTests, "TEST1") { it.testDescription() }
         assertThat(selected).hasSize(1)
         assertThat(selected.first().testDescription()).contains("TEST1")
     }
 
     @Test
     fun `should select tests whose testDescriptions contain any of the multiple comma separate values in filterName`() {
-        val selected = selectTestsToRun(contractTests, "TEST1, TEST2") { it.testDescription() }
+        val selected = selectTestsToRunWrapper(contractTests, "TEST1, TEST2") { it.testDescription() }
         assertThat(selected).hasSize(2)
         assertThat(selected.map { it.testDescription() }).allMatch {
             it.contains("TEST1") || it.contains("TEST2")
@@ -73,7 +82,7 @@ paths:
 
     @Test
     fun `should omit tests containing the value of filterNotName in testDescription`() {
-        val selected = selectTestsToRun(contractTests, filterNotName = "TEST1") { it.testDescription() }
+        val selected = selectTestsToRunWrapper(contractTests, filterNotName = "TEST1") { it.testDescription() }
         assertThat(selected).hasSize(2)
         assertThat(selected.map { it.testDescription() }).allMatch {
             it.contains("TEST2") || it.contains("TEST3")
@@ -82,14 +91,14 @@ paths:
 
     @Test
     fun `should omit tests whose testDescriptions contain any of the multiple comma separate values in filterNotName`() {
-        val selected = selectTestsToRun(contractTests, filterNotName = "TEST1, TEST2") { it.testDescription() }
+        val selected = selectTestsToRunWrapper(contractTests, filterNotName = "TEST1, TEST2") { it.testDescription() }
         assertThat(selected).hasSize(1)
         assertThat(selected.first().testDescription()).contains("TEST3")
     }
 
     @Test
     fun `should not filter the tests if filterName is empty`() {
-        val selected = selectTestsToRun(contractTests, filterName = "") { it.testDescription() }
+        val selected = selectTestsToRunWrapper(contractTests, filterName = "") { it.testDescription() }
 
         assertThat(selected).hasSize(3)
 
@@ -102,7 +111,7 @@ paths:
 
     @Test
     fun `should not filter the tests if filterName is blank`() {
-        val selected = selectTestsToRun(contractTests, filterName = " ") { it.testDescription() }
+        val selected = selectTestsToRunWrapper(contractTests, filterName = " ") { it.testDescription() }
 
         assertThat(selected).hasSize(3)
 
@@ -115,7 +124,7 @@ paths:
 
     @Test
     fun `should not filter the tests if filterName is null`() {
-        val selected = selectTestsToRun(contractTests, filterName = null) { it.testDescription() }
+        val selected = selectTestsToRunWrapper(contractTests, filterName = null) { it.testDescription() }
 
         assertThat(selected).hasSize(3)
 
@@ -128,7 +137,7 @@ paths:
 
     @Test
     fun `should not filter the tests if filterNotName is not found in any of the test names`() {
-        val selected = selectTestsToRun(contractTests, filterNotName = "UNKNOWN_TEST_NAME_1, UNKNOWN_TEST_NAME_2") { it.testDescription() }
+        val selected = selectTestsToRunWrapper(contractTests, filterNotName = "UNKNOWN_TEST_NAME_1, UNKNOWN_TEST_NAME_2") { it.testDescription() }
 
         assertThat(selected).hasSize(3)
 
@@ -141,7 +150,7 @@ paths:
 
     @Test
     fun `should not filter the tests if filterNotName is null`() {
-        val selected = selectTestsToRun(contractTests, filterNotName = null) { it.testDescription() }
+        val selected = selectTestsToRunWrapper(contractTests, filterNotName = null) { it.testDescription() }
 
         assertThat(selected).hasSize(3)
 
@@ -154,7 +163,7 @@ paths:
 
     @Test
     fun `should not filter the tests if filterNotName is empty`() {
-        val selected = selectTestsToRun(contractTests, filterNotName = "") { it.testDescription() }
+        val selected = selectTestsToRunWrapper(contractTests, filterNotName = "") { it.testDescription() }
 
         assertThat(selected).hasSize(3)
 
@@ -167,7 +176,7 @@ paths:
 
     @Test
     fun `should not filter the tests if filterNotName is blank`() {
-        val selected = selectTestsToRun(contractTests, filterNotName = " ") { it.testDescription() }
+        val selected = selectTestsToRunWrapper(contractTests, filterNotName = " ") { it.testDescription() }
 
         assertThat(selected).hasSize(3)
 

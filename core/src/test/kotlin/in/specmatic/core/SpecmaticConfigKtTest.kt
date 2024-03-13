@@ -40,6 +40,8 @@ internal class SpecmaticConfigKtTest {
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("BearerAuth") as BearerSecuritySchemeConfiguration).token).isEqualTo("BEARER1234")
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("ApiKeyAuthHeader") as APIKeySecuritySchemeConfiguration).value).isEqualTo("API-HEADER-USER")
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("ApiKeyAuthQuery") as APIKeySecuritySchemeConfiguration).value).isEqualTo("API-QUERY-PARAM-USER")
+
+        assertThat((config.security?.OpenAPI?.securitySchemes?.get("BasicAuth") as BasicAuthSecuritySchemeConfiguration).token).isEqualTo("Abc123")
     }
 
     @Test
@@ -48,7 +50,7 @@ internal class SpecmaticConfigKtTest {
             {
                 "sources": [
                     {
-                        "provider": "git"
+                        "provider": "git",
                         "test": [
                             "path/to/contract.spec"
                         ]

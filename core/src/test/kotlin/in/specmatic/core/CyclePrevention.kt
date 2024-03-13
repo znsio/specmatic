@@ -23,6 +23,7 @@ class CyclePrevention {
                 post:
                   description: Get data
                   requestBody:
+                    required: true
                     content:
                       application/json:
                         schema:
@@ -69,6 +70,7 @@ class CyclePrevention {
                 post:
                   description: Get data
                   requestBody:
+                    required: true
                     content:
                       application/json:
                         schema:
@@ -421,8 +423,7 @@ class CyclePrevention {
                   type: object
                   properties:
                     key2:
-                      type:
-                        ${'$'}ref: '#/components/schemas/TopLevel'
+                      ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), "").toFeature()
 
         val response = HttpStub(feature).use {
@@ -512,12 +513,11 @@ class CyclePrevention {
                   type: object
                   properties:
                     key2:
-                      type:
-                        oneOf:
-                          - type: object
-                            properties: {}
-                            nullable: true
-                          - ${'$'}ref: '#/components/schemas/TopLevel'
+                      oneOf:
+                        - type: object
+                          properties: {}
+                          nullable: true
+                        - ${'$'}ref: '#/components/schemas/TopLevel'
         """.trimIndent(), "").toFeature()
 
         val response = HttpStub(feature).use {

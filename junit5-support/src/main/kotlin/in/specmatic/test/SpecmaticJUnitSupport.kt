@@ -10,8 +10,8 @@ import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
-import `in`.specmatic.stub.isOpenAPI
 import `in`.specmatic.stub.hasOpenApiFileExtension
+import `in`.specmatic.stub.isOpenAPI
 import `in`.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.*
 import `in`.specmatic.test.reports.OpenApiCoverageReportProcessor
 import `in`.specmatic.test.reports.coverage.Endpoint
@@ -24,11 +24,24 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.opentest4j.TestAbortedException
 import java.io.File
+import java.lang.management.ManagementFactory
 import java.net.MalformedURLException
 import java.net.URI
 import java.net.URISyntaxException
 import java.net.URL
 import java.util.*
+import java.util.stream.Stream
+import javax.management.ObjectName
+import kotlin.streams.asStream
+
+
+interface ContractTestStatisticsMBean {
+    fun testsExecuted(): Int
+}
+
+class ContractTestStatistics : ContractTestStatisticsMBean {
+    override fun testsExecuted(): Int = SpecmaticJUnitSupport.openApiCoverageReportInput.testResultRecords.size
+}
 
 @Serializable
 data class API(val method: String, val path: String)
@@ -49,18 +62,17 @@ open class SpecmaticJUnitSupport {
         const val TEST_BASE_URL = "testBaseURL"
         const val ENV_NAME = "environment"
         const val VARIABLES_FILE_NAME = "variablesFileName"
-        const val FILTER_NAME = "filterName"
-        const val FILTER_NOT_NAME = "filterNotName"
+        const val FILTER_NAME_PROPERTY = "filterName"
+        const val FILTER_NOT_NAME_PROPERTY = "filterNotName"
+        const val FILTER_NAME_ENVIRONMENT_VARIABLE = "FILTER_NAME"
+        const val FILTER_NOT_NAME_ENVIRONMENT_VARIABLE = "FILTER_NOT_NAME"
         private const val ENDPOINTS_API = "endpointsAPI"
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfigJson: SpecmaticConfigJson? = null
-        private val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
+        val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
 
         private val threads: Vector<String> = Vector<String>()
-
-        var totalTestCount: Int = 0
-
 
         @AfterAll
         @JvmStatic
@@ -159,19 +171,25 @@ open class SpecmaticJUnitSupport {
         return envConfig
     }
 
-    private fun loadExceptionAsTestError(e: Throwable): Collection<DynamicTest> {
-        return listOf(DynamicTest.dynamicTest("Load Error") {
-            logger.log(e)
+    private fun loadExceptionAsTestError(e: Throwable): Stream<DynamicTest> {
+        return sequenceOf(DynamicTest.dynamicTest("Load Error") {
             ResultAssert.assertThat(Result.Failure(exceptionCauseMessage(e))).isSuccess()
-        })
+        }).asStream()
     }
 
     @TestFactory
-    fun contractTest(): Collection<DynamicTest> {
+    fun contractTest(): Stream<DynamicTest> {
+        val statistics = ContractTestStatistics()
+        var name = ObjectName("in.specmatic:type=ContractTestStatistics")
+
+        var mbs = ManagementFactory.getPlatformMBeanServer()
+        mbs.registerMBean(statistics, name)
+
+
         val contractPaths = System.getProperty(CONTRACT_PATHS)
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
-        val filterName: String? = System.getProperty(FILTER_NAME)
-        val filterNotName: String? = System.getProperty(FILTER_NOT_NAME)
+        val filterName: String? = System.getProperty(FILTER_NAME_PROPERTY) ?: System.getenv(FILTER_NAME_ENVIRONMENT_VARIABLE)
+        val filterNotName: String? = System.getProperty(FILTER_NOT_NAME_PROPERTY) ?: System.getenv(FILTER_NOT_NAME_ENVIRONMENT_VARIABLE)
 
         val timeout = System.getProperty(TIMEOUT, DEFAULT_TIMEOUT).toInt()
 
@@ -200,7 +218,7 @@ open class SpecmaticJUnitSupport {
                             filterNotName = filterNotName
                         )
                     }
-                    val tests: List<ContractTest> = testScenariosAndEndpointsPairList.flatMap { it.first }
+                    val tests: Sequence<ContractTest> = testScenariosAndEndpointsPairList.asSequence().flatMap { it.first }
                     val endpoints: List<Endpoint> = testScenariosAndEndpointsPairList.flatMap { it.second }
                     Pair(tests, endpoints)
                 }
@@ -217,7 +235,7 @@ open class SpecmaticJUnitSupport {
 
                     val testScenariosAndEndpointsPairList = contractFilePaths.map { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security, filterName, filterNotName) }
 
-                    val tests: List<ContractTest> = testScenariosAndEndpointsPairList.flatMap { it.first }
+                    val tests: Sequence<ContractTest> = testScenariosAndEndpointsPairList.asSequence().flatMap { it.first }
 
                     val endpoints: List<Endpoint> = testScenariosAndEndpointsPairList.flatMap { it.second }
 
@@ -232,9 +250,6 @@ open class SpecmaticJUnitSupport {
             return loadExceptionAsTestError(e)
         }
 
-        var checkedAPIs = false
-        totalTestCount = testScenarios.size
-
         val testBaseURL = try {
             constructTestBaseURL()
         } catch (e: Throwable) {
@@ -243,18 +258,30 @@ open class SpecmaticJUnitSupport {
             throw(e)
         }
 
-        logger.log("Executing $totalTestCount tests")
+        return try {
+            dynamicTestStream(testScenarios, testBaseURL, timeout)
+        } catch(e: Throwable) {
+            logger.logError(e)
+            loadExceptionAsTestError(e)
+        }
+    }
 
+    private fun dynamicTestStream(
+        testScenarios: Sequence<ContractTest>,
+        testBaseURL: String,
+        timeout: Int
+    ): Stream<DynamicTest> {
+        var checkedAPIs = false
         return testScenarios.map { testScenario ->
             DynamicTest.dynamicTest(testScenario.testDescription()) {
                 threads.add(Thread.currentThread().name)
 
-                if(!checkedAPIs) {
+                if (!checkedAPIs) {
                     checkedAPIs = true
 
                     try {
                         queryActuator()
-                    } catch(exception: Throwable) {
+                    } catch (exception: Throwable) {
                         logger.log(exception, "Failed to query actuator with error")
                     }
                 }
@@ -281,17 +308,16 @@ open class SpecmaticJUnitSupport {
                         else -> ResultAssert.assertThat(result).isSuccess()
                     }
 
-                } catch(e: Throwable) {
+                } catch (e: Throwable) {
                     throw e
-                }
-                finally {
-                    if(testResult != null) {
+                } finally {
+                    if (testResult != null) {
                         val (result, response) = testResult
                         openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result, response))
                     }
                 }
             }
-        }.toList()
+        }.asStream()
     }
 
     fun constructTestBaseURL(): String {
@@ -374,9 +400,9 @@ open class SpecmaticJUnitSupport {
         securityConfiguration: SecurityConfiguration? = null,
         filterName: String?,
         filterNotName: String?
-    ): Pair<List<ContractTest>, List<Endpoint>> {
+    ): Pair<Sequence<ContractTest>, List<Endpoint>> {
         if(hasOpenApiFileExtension(path) && !isOpenAPI(path))
-            return Pair(emptyList(), emptyList())
+            return Pair(emptySequence(), emptyList())
 
         val contractFile = File(path)
         val feature =
@@ -390,7 +416,7 @@ open class SpecmaticJUnitSupport {
                 securityConfiguration
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
-
+        feature.validateExampleRows()
 
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)
@@ -411,8 +437,8 @@ open class SpecmaticJUnitSupport {
             )
         }
 
-        val tests: List<ContractTest> = feature
-            .copy(scenarios = selectTestsToRun(feature.scenarios, filterName, filterNotName) { it.testDescription() })
+        val tests: Sequence<ContractTest> = feature
+            .copy(scenarios = selectTestsToRun(feature.scenarios.asSequence(), filterName, filterNotName) { it.testDescription() }.toList())
             .also {
                 if (it.scenarios.isEmpty())
                     logger.log("All scenarios were filtered out.")
@@ -495,11 +521,11 @@ private fun asJSONObjectValue(value: Value): Map<String, Value> {
 }
 
 fun <T> selectTestsToRun(
-    testScenarios: List<T>,
+    testScenarios: Sequence<T>,
     filterName: String? = null,
     filterNotName: String? = null,
     getTestDescription: (T) -> String
-): List<T> {
+): Sequence<T> {
     val filteredByName = if (!filterName.isNullOrBlank()) {
         val filterNames = filterName.split(",").map { it.trim() }
 
@@ -509,7 +535,7 @@ fun <T> selectTestsToRun(
     } else
         testScenarios
 
-    val filteredByNotName: List<T> = if(!filterNotName.isNullOrBlank()) {
+    val filteredByNotName: Sequence<T> = if(!filterNotName.isNullOrBlank()) {
         val filterNotNames = filterNotName.split(",").map { it.trim() }
 
         filteredByName.filterNot { test ->

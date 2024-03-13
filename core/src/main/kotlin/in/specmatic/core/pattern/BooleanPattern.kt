@@ -18,10 +18,10 @@ data class BooleanPattern(override val example: String? = null) : Pattern, Scala
     override fun generate(resolver: Resolver): Value =
         resolver.resolveExample(example, this) ?: randomBoolean()
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
-    override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
-        return listOf(NullPattern)
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        return sequenceOf(NullPattern)
     }
 
     override fun parse(value: String, resolver: Resolver): Value = when (value.lowercase()) {

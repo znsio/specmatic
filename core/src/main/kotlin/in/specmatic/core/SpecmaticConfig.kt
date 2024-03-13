@@ -65,7 +65,7 @@ data class Environment(
     val variables: Map<String, String>? = null
 )
 
-enum class SourceProvider { git, filesystem }
+enum class SourceProvider { git, filesystem, web }
 
 @Serializable
 data class Source(
@@ -166,6 +166,10 @@ interface SecuritySchemeWithOAuthToken {
 @Serializable
 @SerialName("oauth2")
 data class OAuth2SecuritySchemeConfiguration(override val type: String, override val token: String) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
+
+@Serializable
+@SerialName("basicAuth")
+data class BasicAuthSecuritySchemeConfiguration(override val type: String, val token: String) : SecuritySchemeConfiguration()
 
 @Serializable
 @SerialName("bearer")

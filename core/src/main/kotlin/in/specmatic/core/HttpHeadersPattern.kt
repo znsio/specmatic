@@ -6,6 +6,8 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import io.ktor.http.*
 
+const val HEADERS_BREADCRUMB = "HEADERS"
+
 data class HttpHeadersPattern(
     val pattern: Map<String, Pattern> = emptyMap(),
     val ancestorHeaders: Map<String, Pattern>? = null,
@@ -33,9 +35,26 @@ data class HttpHeadersPattern(
     private fun matchEach(parameters: Pair<Map<String, String>, Resolver>): MatchingResult<Pair<Map<String, String>, Resolver>> {
         val (headers, resolver) = parameters
 
+        val contentTypeHeaderValue = headers["Content-Type"]
+
+        if(contentType != null && contentTypeHeaderValue != null) {
+            val parsedContentType = simplifiedContentType(contentType.lowercase())
+            val parsedContentTypeHeaderValue  = simplifiedContentType(contentTypeHeaderValue.lowercase())
+
+            if(parsedContentType != parsedContentTypeHeaderValue)
+                return MatchFailure(
+                    Result.Failure(
+                        "Content-Type header mismatch, expected \"$contentType\", found \"$contentTypeHeaderValue\"",
+                        breadCrumb = "Content-Type",
+                        failureReason = FailureReason.ContentTypeMismatch
+                    )
+                )
+        }
+
+
         val headersWithRelevantKeys = when {
             ancestorHeaders != null -> withoutIgnorableHeaders(headers, ancestorHeaders)
-            else -> withoutContentTypeGeneratedByQontract(headers, pattern)
+            else -> withoutContentTypeGeneratedBySpecmatic(headers, pattern)
         }
 
         val keyErrors: List<KeyError> =
@@ -97,6 +116,16 @@ data class HttpHeadersPattern(
             MatchSuccess(parameters)
     }
 
+    private fun simplifiedContentType(contentType: String): String {
+        return try {
+            ContentType.parse(contentType).let {
+                "${it.contentType}/${it.contentSubtype}"
+            }
+        } catch (e: Throwable) {
+            contentType
+        }
+    }
+
     private fun highlightIfSOAPActionMismatch(missingKey: String): FailureReason? =
         when (withoutOptionality(missingKey)) {
             "SOAPAction" -> FailureReason.SOAPActionMismatch
@@ -115,7 +144,7 @@ data class HttpHeadersPattern(
         }
     }
 
-    private fun withoutContentTypeGeneratedByQontract(
+    private fun withoutContentTypeGeneratedBySpecmatic(
         headers: Map<String, String>,
         pattern: Map<String, Pattern>
     ): Map<String, String> {
@@ -154,14 +183,24 @@ data class HttpHeadersPattern(
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): List<HttpHeadersPattern> {
-        return forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
+    fun newBasedOn(row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
+        val basedOnExamples = forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
             newBasedOn(pattern, row, resolver)
-        }.map { map -> HttpHeadersPattern(map.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
+        }
+
+        val generatedWithoutExamples: Sequence<Map<String, Pattern>> = resolver.generation.fillInTheMissingMapPatterns(
+            basedOnExamples,
+            pattern,
+            null,
+            row,
+            resolver
+        )
+
+        return (basedOnExamples + generatedWithoutExamples).map { map -> HttpHeadersPattern(map.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
     }
 
     fun negativeBasedOn(row: Row, resolver: Resolver) =
-        forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
+        forEachKeyCombinationIn(pattern, row, resolver) { pattern ->
             NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
         }.map { patternMap ->
             HttpHeadersPattern(
@@ -170,7 +209,7 @@ data class HttpHeadersPattern(
             )
         }
 
-    fun newBasedOn(resolver: Resolver): List<HttpHeadersPattern> =
+    fun newBasedOn(resolver: Resolver): Sequence<HttpHeadersPattern> =
         allOrNothingCombinationIn(pattern) { pattern ->
             newBasedOn(pattern, resolver)
         }.map { patternMap ->
@@ -215,6 +254,31 @@ data class HttpHeadersPattern(
         }
 
         return Result.fromFailures(failures)
+    }
+
+    fun addComplimentaryPatterns(basePatterns: Sequence<HttpHeadersPattern>, row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
+        return `in`.specmatic.core.addComplimentaryPatterns(
+            basePatterns.map {it.pattern},
+            pattern,
+            null,
+            row,
+            resolver,
+        ).map {
+            HttpHeadersPattern(it, contentType = contentType)
+        }
+    }
+
+    fun matches(row: Row, resolver: Resolver): Result {
+        return matches(this.pattern, row, resolver, "header")
+    }
+
+    fun readFrom(row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
+        return attempt(breadCrumb = HEADERS_BREADCRUMB) {
+            readFrom(this.pattern, row, resolver)
+        }.map {
+            HttpHeadersPattern(it, contentType = contentType)
+
+        }
     }
 }
 

@@ -95,7 +95,7 @@ data class HttpPathPattern(
     fun newBasedOn(
         row: Row,
         resolver: Resolver
-    ): List<List<URLPathSegmentPattern>> {
+    ): Sequence<List<URLPathSegmentPattern>> {
         val generatedPatterns = newBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathParamPattern ->
             val key = urlPathParamPattern.key
             if (key === null || !row.containsField(key)) return@mapIndexed urlPathParamPattern
@@ -131,7 +131,7 @@ data class HttpPathPattern(
         return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }
     }
 
-    fun newBasedOn(resolver: Resolver): List<List<URLPathSegmentPattern>> {
+    fun newBasedOn(resolver: Resolver): Sequence<List<URLPathSegmentPattern>> {
         val generatedPatterns = newBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathPattern ->
             attempt(breadCrumb = "[$index]") {
                 urlPathPattern
@@ -156,11 +156,8 @@ data class HttpPathPattern(
         return pathSegmentPatterns.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
     }
 
-    private fun negatively(patterns: List<URLPathSegmentPattern>, row: Row, resolver: Resolver): List<List<URLPathSegmentPattern>> {
-        if(patterns.isEmpty())
-            return emptyList()
-
-        val current = patterns.first()
+    private fun negatively(patterns: List<URLPathSegmentPattern>, row: Row, resolver: Resolver): Sequence<List<URLPathSegmentPattern>> {
+        val current = patterns.firstOrNull() ?: return emptySequence()
 
         val negativesOfCurrent = current.negativeBasedOn(row, resolver).map { negative ->
             listOf(negative) + positively(patterns.drop(1), row, resolver)
@@ -174,7 +171,7 @@ data class HttpPathPattern(
         val negativesFromSubsequent =
             negatively(patterns.drop(1), row, resolver)
 
-        val negativesFromSubsequent1: List<List<URLPathSegmentPattern>> = negativesFromSubsequent
+        val negativesFromSubsequent1: Sequence<List<URLPathSegmentPattern>> = negativesFromSubsequent
             .filterNot { it.isEmpty() }
             .flatMap { subsequentNegatives: List<URLPathSegmentPattern> ->
                 val subsequents = current.newBasedOn(row, resolver).map { positive ->
@@ -190,9 +187,9 @@ data class HttpPathPattern(
         patterns: List<URLPathSegmentPattern>,
         row: Row,
         resolver: Resolver
-    ): List<URLPathSegmentPattern> {
+    ): Sequence<URLPathSegmentPattern> {
         if(patterns.isEmpty())
-            return emptyList()
+            return emptySequence()
 
         val patternToPositively = patterns.first()
 
@@ -206,7 +203,7 @@ data class HttpPathPattern(
     fun negativeBasedOn(
         row: Row,
         resolver: Resolver
-    ): List<List<URLPathSegmentPattern>> {
+    ): Sequence<List<URLPathSegmentPattern>> {
         return negatively(pathSegmentPatterns, row, resolver)
     }
 
@@ -215,14 +212,14 @@ data class HttpPathPattern(
         row: Row,
         urlPathPattern: URLPathSegmentPattern,
         resolver: Resolver
-    ) = when {
+    ): Sequence<Pattern> = when {
         key !== null && row.containsField(key) -> {
             val rowValue = row.getField(key)
             when {
                 isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathPattern.key}\"") {
                     val rowPattern = resolver.getPattern(rowValue)
                     when (val result = urlPathPattern.encompasses(rowPattern, resolver, resolver)) {
-                        is Success -> listOf(urlPathPattern.copy(pattern = rowPattern))
+                        is Success -> sequenceOf(urlPathPattern.copy(pattern = rowPattern))
                         is Failure -> throw ContractException(result.toFailureReport())
                     }
                 }
@@ -234,7 +231,7 @@ data class HttpPathPattern(
                     if (matchResult is Failure)
                         throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
 
-                    listOf(
+                    sequenceOf(
                         URLPathSegmentPattern(
                             ExactValuePattern(
                                 value

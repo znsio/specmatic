@@ -25,21 +25,21 @@ data class DeferredPattern(override val pattern: String, val key: String? = null
         }
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         val resolvedPattern = resolvePattern(resolver)
         return resolver.withCyclePrevention(resolvedPattern) { cyclePreventedResolver ->
             resolvedPattern.newBasedOn(row, cyclePreventedResolver)
         }
     }
 
-    override fun newBasedOn(resolver: Resolver): List<Pattern> {
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         val resolvedPattern = resolvePattern(resolver)
         return resolver.withCyclePrevention(resolvedPattern) { cyclePreventedResolver ->
             resolvedPattern.newBasedOn(cyclePreventedResolver)
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         return resolver.getPattern(pattern).negativeBasedOn(row, resolver)
     }
 

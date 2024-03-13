@@ -1,15 +1,14 @@
-package `in`.specmatic.conversions
+package integration_tests
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.HttpRequest
-import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.pattern.parsedJSONArray
 import `in`.specmatic.core.pattern.parsedJSONObject
-import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
-import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.captureStandardOutput
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.util.*
 
 class ExamplesAsStubTest {
     private val featureWithQueryParamExamples = OpenApiSpecification.fromYAML(
@@ -176,7 +175,8 @@ paths:
 
     @Test
     fun `any value should match the given security scheme`() {
-        val feature = OpenApiSpecification.fromYAML("""
+        val feature = OpenApiSpecification.fromYAML(
+            """
 openapi: 3.0.0
 info:
   title: Sample API
@@ -225,13 +225,16 @@ components:
 
 security:
   - BearerAuth: []
-         """.trimIndent(), "").toFeature()
+         """.trimIndent(), ""
+        ).toFeature()
+
+        val credentials = "Basic " + Base64.getEncoder().encodeToString("user:password".toByteArray())
 
         HttpStub(feature).use {
             val response = it.client.execute(HttpRequest(
                 "POST",
                 "/hello",
-                mapOf("Authorization" to "Bearer 1234"),
+                mapOf("Authorization" to "Bearer $credentials"),
                 parsedJSONObject("""{"message": "Hello World!"}""")
             ))
 
@@ -241,7 +244,8 @@ security:
 
     @Test
     fun `examples as stub should work for request with body when there are no security schemes`() {
-        val feature = OpenApiSpecification.fromYAML("""
+        val feature = OpenApiSpecification.fromYAML(
+            """
 openapi: 3.0.0
 info:
   title: Sample API
@@ -282,7 +286,8 @@ paths:
                 SUCCESS:
                   value:
                     Hello to you!
-         """.trimIndent(), "").toFeature()
+         """.trimIndent(), ""
+        ).toFeature()
 
         HttpStub(feature).use {
             val response = it.client.execute(HttpRequest(
@@ -297,7 +302,8 @@ paths:
 
     @Test
     fun `any value should match the given security scheme when request body does not exist`() {
-        val feature = OpenApiSpecification.fromYAML("""
+        val feature = OpenApiSpecification.fromYAML(
+            """
 openapi: 3.0.0
 info:
   title: Sample API
@@ -340,13 +346,16 @@ components:
 
 security:
   - BearerAuth: []
-         """.trimIndent(), "").toFeature()
+         """.trimIndent(), ""
+        ).toFeature()
+
+        val credentials = "Basic " + Base64.getEncoder().encodeToString("user:password".toByteArray())
 
         HttpStub(feature).use {
             val response = it.client.execute(HttpRequest(
                 "GET",
                 "/hello",
-                mapOf("Authorization" to "Bearer 1234"),
+                mapOf("Authorization" to "Bearer $credentials"),
                 queryParametersMap = mapOf("greeting" to "Hello")
             ))
 

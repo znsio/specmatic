@@ -1,6 +1,7 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.Result.Failure
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.Value
@@ -70,6 +71,7 @@ sealed class Result {
 
     abstract fun testResult(): TestResult
     abstract fun withFailureReason(urlPathMisMatch: FailureReason): Result
+    abstract fun throwOnFailure(): Success
 
     data class FailureCause(val message: String="", var cause: Failure? = null)
 
@@ -114,6 +116,10 @@ sealed class Result {
 
         override fun withFailureReason(failureReason: FailureReason): Result {
             return copy(failureReason = failureReason)
+        }
+
+        override fun throwOnFailure(): Success {
+            throw ContractException(this.toFailureReport())
         }
 
         fun reason(errorMessage: String) = Failure(errorMessage, this)
@@ -187,6 +193,10 @@ sealed class Result {
         override fun withFailureReason(urlPathMisMatch: FailureReason): Result {
             return this
         }
+
+        override fun throwOnFailure(): Success {
+            return this
+        }
     }
 }
 
@@ -203,6 +213,7 @@ enum class FailureReason(val fluffLevel: Int) {
     PartNameMisMatch(0),
     StatusMismatch(1),
     MethodMismatch(1),
+    ContentTypeMismatch(0),
     RequestMismatchButStatusAlsoWrong(1),
     URLPathMisMatch(2),
     SOAPActionMismatch(2)
@@ -235,7 +246,7 @@ object DefaultMismatchMessages: MismatchMessages {
 
 fun mismatchResult(expected: String, actual: String, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Failure = Failure(mismatchMessages.mismatchMessage(expected, actual))
 fun mismatchResult(expected: String, actual: Value?, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Failure = mismatchMessages.valueMismatchFailure(expected, actual, mismatchMessages)
-fun mismatchResult(expected: Value, actual: Value?, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Result = mismatchResult(valueError(expected) ?: "null", valueError(actual) ?: "nothing", mismatchMessages)
+fun mismatchResult(expected: Value, actual: Value?, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Failure = mismatchResult(valueError(expected) ?: "null", valueError(actual) ?: "nothing", mismatchMessages)
 fun mismatchResult(expected: Pattern, actual: String, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Failure = mismatchResult(expected.typeName, actual, mismatchMessages)
 fun mismatchResult(pattern: Pattern, sampleData: Value?, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Failure = mismatchResult(pattern, sampleData?.toStringLiteral() ?: "null", mismatchMessages)
 fun mismatchResult(thisPattern: Pattern, otherPattern: Pattern, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Failure {

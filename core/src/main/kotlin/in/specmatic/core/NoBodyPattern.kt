@@ -13,9 +13,6 @@ object NoBodyPattern : Pattern {
         if(sampleData == null)
             return Result.Success()
 
-//        if(sampleData is StringValue && sampleData.string.isEmpty())
-//            return Result.Success()
-
         if(sampleData is NoBodyValue)
             return Result.Success()
 
@@ -24,11 +21,11 @@ object NoBodyPattern : Pattern {
 
     override fun generate(resolver: Resolver): Value = NoBodyValue
 
-    override fun newBasedOn(row: Row, resolver: Resolver): List<Pattern> = listOf(this)
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
-    override fun newBasedOn(resolver: Resolver): List<Pattern> = listOf(this)
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): List<Pattern> = emptyList()
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = emptySequence()
 
     override fun parse(value: String, resolver: Resolver): Value {
         return if(value.isBlank())

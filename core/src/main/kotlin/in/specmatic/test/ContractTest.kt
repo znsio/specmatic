@@ -21,7 +21,6 @@ data class TestResultRecord(
 
 interface ContractTest {
     fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord
-    fun generateTestScenarios(testVariables: Map<String, String>, testBaseURLs: Map<String, String>): List<ContractTest>
     fun testDescription(): String
     fun runTest(testBaseURL: String, timeOut: Int): Pair<Result, HttpResponse?>
 }

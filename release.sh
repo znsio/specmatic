@@ -64,6 +64,14 @@ fi
 
 set -e
 
+if [[ "$1" == *-* ]]
+then
+	echo
+	echo Error: The version number must be of the form major.minor.patch. It must contain no hyphens.
+	echo
+	exit 1
+fi
+
 ACTUAL_VERSION=`cat version.properties | sed s/version=//g`
 
 if [ "$1" != $ACTUAL_VERSION ]
@@ -77,33 +85,6 @@ then
 	exit 1
 else
 	echo √ Specified version matches ./version.properties
-fi
-
-if [ ! -d ../specmatic-documentation ]
-then
-	echo
-	echo Error: cannot find the specmatic-documentation checkout. Make sure that git@github.com:znsio/specmatic-documentation.git is checked out at ../specmatic-documentation
-	exit 1
-fi
-
-if [ ! -f ../specmatic-documentation/_config.yml ]
-then
-	echo
-	echo Error: cannot find specmatic-documentation/_config.yml, need to check this file to ensure that it is in sync with the latest version of Specmatic.
-	exit 1
-fi
-
-DOCUMENTATION_VERSION=$(cat ../specmatic-documentation/_config.yml | grep latest_release | cut -d ' ' -f 2)
-
-if [ "$DOCUMENTATION_VERSION" != $ACTUAL_VERSION ]
-then
-  echo
-  echo Error: The version in specmatic-documentation/_config.yml is $DOCUMENTATION_VERSION, but the version in version.properties is $ACTUAL_VERSION.
-  echo
-  echo To fix this, update the version in specmatic-documentation/_config.yml to $ACTUAL_VERSION, commit and push the change, and try again.
-  exit 1
-else
-  echo √ Version in specmatic-documentation/_config.yml matches version in version.properties
 fi
 
 echo

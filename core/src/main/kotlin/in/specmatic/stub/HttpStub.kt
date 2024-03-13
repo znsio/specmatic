@@ -692,17 +692,17 @@ fun getHttpResponse(
     httpClientFactory: HttpClientFactory? = null
 ): StubbedResponseResult {
     return try {
-        val (matchResults, stubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
+        val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
 
-        stubResponse?.let { FoundStubbedResponse(stubResponse) }
-            ?: if (httpClientFactory != null && passThroughTargetBase.isNotBlank()) {
-                NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
-            } else {
-                if (strictMode)
-                    NotStubbed(HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults)))
-                else
-                    fakeHttpResponse(features, httpRequest)
-            }
+        if(matchingStubResponse != null)
+            FoundStubbedResponse(matchingStubResponse)
+        else if (httpClientFactory != null && passThroughTargetBase.isNotBlank())
+            NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
+        else if (strictMode) {
+            NotStubbed(HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults)))
+        } else {
+            fakeHttpResponse(features, httpRequest)
+        }
     } finally {
         features.forEach { feature ->
             feature.clearServerState()

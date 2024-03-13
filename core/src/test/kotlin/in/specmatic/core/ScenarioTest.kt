@@ -27,7 +27,7 @@ internal class ScenarioTest {
             HashMap(),
         )
         scenario.generateTestScenarios(DefaultStrategies).let {
-            assertThat(it.size).isEqualTo(1)
+            assertThat(it.toList().size).isEqualTo(1)
         }
     }
 
@@ -44,7 +44,7 @@ internal class ScenarioTest {
             HashMap(),
         )
         scenario.generateTestScenarios(DefaultStrategies).let {
-            assertThat(it.size).isEqualTo(2)
+            assertThat(it.toList().size).isEqualTo(2)
         }
     }
 
@@ -436,7 +436,7 @@ And response-body (number)
                 it.value.copy(contractCache = mockCache)
             }
 
-            scenario.copy(references = updatedReferences).generateTestScenarios(DefaultStrategies, variables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.spec" to "http://baseurl"))
+            scenario.copy(references = updatedReferences).generateTestScenarios(DefaultStrategies, variables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.spec" to "http://baseurl")).toList()
         }.flatten()
 
         assertThat(testScenarios).allSatisfy(Consumer {

@@ -10,6 +10,7 @@ import `in`.specmatic.mock.DELAY_IN_SECONDS
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.test.HttpClient
+import `in`.specmatic.test.TestExecutor
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
@@ -965,7 +966,7 @@ paths:
         '200':
           description: Successful response
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
 """.trimIndent()
@@ -1249,5 +1250,153 @@ paths:
                 assertThat(it.jsonObject["id"]).isInstanceOf(NumberValue::class.java)
             }
         }
+    }
+
+
+    @Test
+    fun `should return randomized response with Content-Type as per the specification`() {
+        val specification = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /data:
+                get:
+                  summary: Random
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        text/html:
+                          schema:
+                            type: string
+        """.trimIndent(), ""
+        ).toFeature()
+
+        HttpStub(specification).use { stub ->
+            val request = HttpRequest("GET", "/data", body = NoBodyValue)
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.headers["Content-Type"]).isEqualTo("text/html")
+        }
+    }
+
+    @Test
+    fun `should return stubbed response with Content-Type as per the specification`() {
+        val specification = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /data:
+                get:
+                  summary: Random
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        text/html:
+                          schema:
+                            type: string
+        """.trimIndent(), ""
+        ).toFeature()
+
+        HttpStub(specification).use { stub ->
+            val request = HttpRequest("GET", "/data", body = NoBodyValue)
+
+            val htmlContent = "<html><body>hi</body></html>"
+            val expectation = ScenarioStub(request, HttpResponse(200, headers = mapOf("Content-Type" to "text/html"), body = htmlContent))
+
+            val expectationResponse = stub.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectation.toJSON()))
+
+            assertThat(expectationResponse.status).isEqualTo(200)
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.headers["Content-Type"]).isEqualTo("text/html")
+            assertThat(response.body.toStringLiteral()).isEqualTo(htmlContent)
+        }
+    }
+
+    @Test
+    fun `should reject expectation with Content-Type which is not as per the specification`() {
+        val specification = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /data:
+                get:
+                  summary: Random
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        text/html:
+                          schema:
+                            type: string
+        """.trimIndent(), ""
+        ).toFeature()
+
+        HttpStub(specification).use { stub ->
+            val request = HttpRequest("GET", "/data", body = NoBodyValue)
+
+            val htmlContent = "<html><body>hi</body></html>"
+
+            val incorrectContentType = "text/plain"
+            val expectationWithIncorrectContentType =
+                ScenarioStub(request, HttpResponse(200, headers = mapOf("Content-Type" to incorrectContentType), body = htmlContent))
+
+            stub.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectationWithIncorrectContentType.toJSON())).let { response ->
+                assertThat(response.status).isEqualTo(400)
+            }
+
+            val correctContentType = "text/html"
+            val expectationWithValidContentType =
+                ScenarioStub(request, HttpResponse(200, headers = mapOf("Content-Type" to correctContentType), body = htmlContent))
+
+            stub.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectationWithValidContentType.toJSON())).let { response ->
+                assertThat(response.status).isEqualTo(200)
+            }
+        }
+    }
+
+    @Test
+    fun `should fail contract test with incorrect response Content-Type`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.1
+            info:
+              title: Random
+              version: "1"
+            paths:
+              /data:
+                get:
+                  summary: Random
+                  responses:
+                    "200":
+                      description: Random
+                      content:
+                        text/html:
+                          schema:
+                            type: string
+        """.trimIndent(), ""
+        ).toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse(200, headers = mapOf("Content-Type" to "text/plain"), body = "hi")
+            }
+        })
+
+        assertThat(results.success()).isFalse()
+        assertThat(results.report()).contains("Content-Type")
     }
 }

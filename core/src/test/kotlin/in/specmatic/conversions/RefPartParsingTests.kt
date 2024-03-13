@@ -30,7 +30,7 @@ paths:
         '200':
           description: Says hello
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
               examples:
@@ -83,7 +83,7 @@ paths:
         '200':
           description: Says hello
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
               examples:
@@ -139,7 +139,7 @@ paths:
         '200':
           description: Says hello
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
               examples:
@@ -195,7 +195,7 @@ paths:
         '200':
           description: Says hello
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
               examples:
@@ -343,7 +343,7 @@ paths:
         '200':
           description: Says hello
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
               examples:
@@ -396,7 +396,7 @@ paths:
         '200':
           description: Says hello
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
               examples:

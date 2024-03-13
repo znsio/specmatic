@@ -14,6 +14,7 @@ paths:
       summary: hello world
       description: Optional extended description in CommonMark or HTML.
       requestBody:
+        required: true
         content:
           application/json:
             schema:

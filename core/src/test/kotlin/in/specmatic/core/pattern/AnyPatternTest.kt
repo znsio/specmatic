@@ -66,7 +66,7 @@ internal class AnyPatternTest {
                 NumberPattern(),
                 EnumPattern(listOf(StringValue("one"), StringValue("two")))
             )
-        ).newBasedOn(Row(), Resolver()).let { patterns ->
+        ).newBasedOn(Row(), Resolver()).toList().let { patterns ->
             patterns.map { it.typeName } shouldContainInAnyOrder listOf("number", "\"one\"", "\"two\"")
         }
     }
@@ -219,7 +219,7 @@ internal class AnyPatternTest {
     @Test
     @Tag(GENERATION)
     fun `values for negative tests`() {
-        val negativeTypes = AnyPattern(listOf(NullPattern, StringPattern())).negativeBasedOn(Row(), Resolver())
+        val negativeTypes = AnyPattern(listOf(NullPattern, StringPattern())).negativeBasedOn(Row(), Resolver()).toList()
 
         assertThat(negativeTypes).containsExactlyInAnyOrder(
             NumberPattern(),

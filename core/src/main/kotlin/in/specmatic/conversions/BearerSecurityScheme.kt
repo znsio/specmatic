@@ -1,11 +1,12 @@
 package `in`.specmatic.conversions
 
 import `in`.specmatic.core.*
+import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.Row
 import `in`.specmatic.core.pattern.StringPattern
 import org.apache.http.HttpHeaders.AUTHORIZATION
 
-class BearerSecurityScheme(private val token: String? = null) : OpenAPISecurityScheme {
+data class BearerSecurityScheme(private val configuredToken: String? = null) : OpenAPISecurityScheme {
     override fun matches(httpRequest: HttpRequest): Result {
         val authHeaderValue: String? = httpRequest.headers.entries.find {
             it.key.equals(AUTHORIZATION.lowercase(), ignoreCase = true)
@@ -46,6 +47,6 @@ class BearerSecurityScheme(private val token: String? = null) : OpenAPISecurityS
     }
 
     private fun getAuthorizationHeaderValue(): String {
-        return "Bearer " + (token ?: StringPattern().generate(Resolver()).toStringLiteral())
+        return "Bearer " + (configuredToken ?: StringPattern().generate(Resolver()).toStringLiteral())
     }
 }

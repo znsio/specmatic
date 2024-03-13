@@ -31,6 +31,6 @@ Learn more at [specmatic.in](https://specmatic.in/#features)
 
 [Get started now](https://specmatic.in/getting_started.html)
 
-[![Specmatic - Contract Driven Development - YouTube playlist](https://img.youtube.com/vi/3HPgpvd8MGg/0.jpg)](https://www.youtube.com/watch?v=3HPgpvd8MGg&list=PL9Z-JgiTsOYRERcsy9o3y6nsi5yK3IB_w)
+[![Specmatic - Contract Driven Development - YouTube playlist](https://img.youtube.com/vi/KWCnTi-ifME/0.jpg)](https://www.youtube.com/watch?v=KWCnTi-ifME&list=PL9Z-JgiTsOYRERcsy9o3y6nsi5yK3IB_w&index=2)
 
 [Youtube playlist](https://www.youtube.com/watch?v=3HPgpvd8MGg&list=PL9Z-JgiTsOYRERcsy9o3y6nsi5yK3IB_w)

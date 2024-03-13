@@ -11,7 +11,7 @@ import java.util.concurrent.Callable
         mixinStandardHelpOptions = true,
         description = ["Generate samples of the API requests and responses for all scenarios"])
 class SamplesCommand : Callable<Unit> {
-    @Parameters(index = "0", description = ["Contract file path"])
+    @Parameters(index = "0", description = ["API specification file path"])
     lateinit var contractFile: File
 
     override fun call() {
@@ -29,7 +29,7 @@ class SamplesCommand : Callable<Unit> {
                     Contract(feature).samples(stub)
                 }
             } catch(e: StackOverflowError) {
-                logger.log("Got a stack overflow error. You probably have a recursive data structure definition in the contract.")
+                logger.log("Got a stack overflow error. You probably have a recursive data structure definition in your API specification.")
             }
         }
     }

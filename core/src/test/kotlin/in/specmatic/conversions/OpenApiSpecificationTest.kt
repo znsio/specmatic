@@ -7303,42 +7303,6 @@ paths:
     }
 
     @Test
-    fun `show an error when a type is not provided`() {
-        assertThatThrownBy {
-            OpenApiSpecification.fromYAML(
-                """
-openapi: 3.0.3
-info:
-  title: My service
-  description: My service
-  version: 1.0.0
-servers:
-  - url: 'https://localhost:8080'
-paths:
-  /api/nocontent:
-    post:
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  description: The name of the entity
-      responses:
-        204:
-          description: No content
-            """.trimIndent(), ""
-            ).toFeature()
-        }.satisfies(
-            {
-                println(exceptionCauseMessage(it))
-                assertThat(exceptionCauseMessage(it)).contains(""""type" attribute was not provided""")
-            }
-        )
-    }
-
-    @Test
     fun `show an error when parameter name is not provided`() {
         assertThatThrownBy {
             OpenApiSpecification.fromYAML(
@@ -7656,6 +7620,142 @@ paths:
 
         feature.matchResult(
             HttpRequest("POST", "/person", body = NoBodyValue),
+            HttpResponse.OK
+        ).let { matchResult ->
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
+    @Test
+    fun `a JSON key with no type can hold a value of any valid JSON type`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /person:
+                    post:
+                      summary: "Get person by id"
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - id
+                              properties:
+                                id:
+                                  description: id of the person
+                      responses:
+                        200:
+                          description: "Get person by id"
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                """.trimIndent(), "").toFeature()
+
+        feature.matchResult(
+            HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
+            HttpResponse.OK
+        ).let { matchResult ->
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+        }
+
+        feature.matchResult(
+            HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": 10}""")),
+            HttpResponse.OK
+        ).let { matchResult ->
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+        }
+
+        HttpStub(feature).use { stub ->
+            val expectedRequest = HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": true}"""))
+            val expectedResponse = HttpResponse.ok("succeeded!")
+
+            val expectation = ScenarioStub(expectedRequest, expectedResponse)
+            stub.setExpectation(expectation)
+
+            val response = stub.client.execute(expectedRequest)
+            assertThat(response.body).isEqualTo(expectedResponse.body)
+        }
+    }
+
+    @Test
+    fun `a JSON key with no type cannot hold a null`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /person:
+                    post:
+                      summary: "Get person by id"
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - id
+                              properties:
+                                id:
+                                  description: id of the person
+                      responses:
+                        200:
+                          description: "Get person by id"
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                """.trimIndent(), "").toFeature()
+
+        feature.matchResult(
+            HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": null}""")),
+            HttpResponse.OK
+        ).let { matchResult ->
+            assertThat(matchResult).isInstanceOf(Result.Failure::class.java)
+        }
+    }
+
+    @Test
+    fun `a JSON key with a nullable value of any type can hold a null`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /person:
+                    post:
+                      summary: "Get person by id"
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - id
+                              properties:
+                                id:
+                                  description: id of the person
+                                  nullable: true
+                      responses:
+                        200:
+                          description: "Get person by id"
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                """.trimIndent(), "").toFeature()
+
+        feature.matchResult(
+            HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": null}""")),
             HttpResponse.OK
         ).let { matchResult ->
             assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)

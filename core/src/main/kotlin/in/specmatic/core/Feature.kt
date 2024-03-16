@@ -339,7 +339,7 @@ data class Feature(
 
     fun validateExampleRows() {
         scenarios.forEach { scenario ->
-            scenario.validateExamples(resolverStrategies)
+            scenario.validateExamples(resolverStrategies.copy(generation = NonGenerativeTests))
         }
     }
 

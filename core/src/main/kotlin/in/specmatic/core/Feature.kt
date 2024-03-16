@@ -220,6 +220,9 @@ data class Feature(
     }
 
     fun matchResult(request: HttpRequest, response: HttpResponse): Result {
+        if(scenarios.isEmpty())
+            return Result.Failure("No operations found")
+
         val matchResults = scenarios.map {
             it.matches(
                 request,

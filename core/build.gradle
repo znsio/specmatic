@@ -50,7 +50,7 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
     testImplementation 'org.json:json:20240303'
-    testImplementation 'org.springframework:spring-web:5.3.32'
+    testImplementation 'org.springframework:spring-web:5.3.33'
     testImplementation 'io.mockk:mockk:1.13.10'
     testImplementation 'org.assertj:assertj-core:3.25.3'
     testImplementation "io.ktor:ktor-client-mock-jvm:$ktor_version"

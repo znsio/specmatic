@@ -61,18 +61,6 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
             if(!matchFound)
                 yield(requestBodyAsIs)
         }
-
-//        requestsFromFlattenedRow.map { requestsFromFlattenedRow ->
-//            if(requestsFromFlattenedRow.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Success)
-//                matchFound = true
-//
-//
-//        }
-//        return if(requestsFromFlattenedRow.none { p -> p.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Success }) {
-//            requestsFromFlattenedRow.plus(listOf(requestBodyAsIs))
-//        } else {
-//            requestsFromFlattenedRow
-//        }
     }
 
     override fun generateHttpRequests(resolver: Resolver, body: Pattern, row: Row): Sequence<Pattern> {

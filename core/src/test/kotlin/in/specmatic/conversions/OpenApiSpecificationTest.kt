@@ -6,10 +6,7 @@ import `in`.specmatic.core.log.LogMessage
 import `in`.specmatic.core.log.LogStrategy
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.exceptionCauseMessage
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.NumberValue
-import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.core.value.Value
+import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
@@ -7757,6 +7754,43 @@ paths:
         feature.matchResult(
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": null}""")),
             HttpResponse.OK
+        ).let { matchResult ->
+            assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
+    @Test
+    fun `a response body with empty content should be considered an empty response`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /person:
+                    post:
+                      summary: "Get person by id"
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - id
+                              properties:
+                                id:
+                                  description: id of the person
+                                  type: string
+                      responses:
+                        204:
+                          description: "Get person by id"
+                          content: {}
+                """.trimIndent(), "").toFeature()
+
+        feature.matchResult(
+            HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
+            HttpResponse(204, EmptyString)
         ).let { matchResult ->
             assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
         }

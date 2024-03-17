@@ -556,7 +556,7 @@ class OpenApiSpecification(
         status: String,
         headersMap: Map<String, Pattern>
     ): List<ResponsePatternData> {
-        if (response.content == null) {
+        if (response.content == null || response.content.isEmpty()) {
             val responsePattern = HttpResponsePattern(
                 headersPattern = HttpHeadersPattern(headersMap),
                 status = status.toIntOrNull() ?: DEFAULT_RESPONSE_CODE

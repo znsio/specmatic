@@ -220,6 +220,9 @@ data class Feature(
     }
 
     fun matchResult(request: HttpRequest, response: HttpResponse): Result {
+        if(scenarios.isEmpty())
+            return Result.Failure("No operations found")
+
         val matchResults = scenarios.map {
             it.matches(
                 request,
@@ -336,7 +339,7 @@ data class Feature(
 
     fun validateExampleRows() {
         scenarios.forEach { scenario ->
-            scenario.validateExamples(resolverStrategies)
+            scenario.validateExamples(resolverStrategies.copy(generation = NonGenerativeTests))
         }
     }
 

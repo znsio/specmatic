@@ -3,6 +3,7 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
+import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.ListValue
 import `in`.specmatic.core.value.Value
 
@@ -51,9 +52,18 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
         return attempt(breadCrumb = "[]") {
-            resolverWithEmptyType.withCyclePrevention(pattern) { cyclePreventedResolver ->
-                pattern.newBasedOn(row.dropDownIntoList(), cyclePreventedResolver).map { ListPattern(it) }
-            }
+            resolverWithEmptyType.withCyclePrevention(pattern, true) { cyclePreventedResolver ->
+                val patterns = pattern.newBasedOn(row.dropDownIntoList(), cyclePreventedResolver)
+                try {
+                    patterns.firstOrNull()
+                    patterns.map { ListPattern(it) }
+                } catch(e: ContractException) {
+                    if(e.isCycle)
+                        null
+                    else
+                        throw e
+                }
+            } ?: sequenceOf(ExactValuePattern(JSONArrayValue(emptyList())))
         }
     }
 

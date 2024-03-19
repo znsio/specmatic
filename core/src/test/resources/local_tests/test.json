@@ -1,0 +1,15 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/person",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "name": "Jack"
+    }
+  },
+  "http-response": {
+    "status": 201
+  }
+}

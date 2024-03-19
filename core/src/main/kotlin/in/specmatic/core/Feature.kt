@@ -1366,15 +1366,20 @@ data class Feature(
 
     fun loadExternalisedExamples(): Feature {
         val testsDirectory = getTestsDirectory(File(this.path))
-        val externalisedJSONExamples = loadExternalisedJSONExamples(testsDirectory)
+        val externalisedExamplesFromDefaultDirectory = loadExternalisedJSONExamples(testsDirectory)
+        val externalisedExamplesFromLocalDirectory = environmentAndPropertiesConfiguration.localTestsDirectory()?.let {
+            loadExternalisedJSONExamples(File(it))
+        } ?: emptyMap()
 
-        if(externalisedJSONExamples.isEmpty())
+        val allExternalisedJSONExamples = externalisedExamplesFromDefaultDirectory + externalisedExamplesFromLocalDirectory
+
+        if(allExternalisedJSONExamples.isEmpty())
             return this
 
-        val featureWithExternalisedExamples = useExamples(externalisedJSONExamples)
+        val featureWithExternalisedExamples = useExamples(allExternalisedJSONExamples)
 
         val externalizedExampleFilePaths =
-            externalisedJSONExamples.entries.flatMap { (_, rows) ->
+            allExternalisedJSONExamples.entries.flatMap { (_, rows) ->
                 rows.map {
                     it.fileSource
                 }

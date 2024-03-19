@@ -12,6 +12,7 @@ data class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<S
     val SCHEMA_EXAMPLE_DEFAULT = "SCHEMA_EXAMPLE_DEFAULT"
     val ONLY_POSITIVE = "ONLY_POSITIVE"
     val SPECMATIC_TEST_PARALLELISM = "SPECMATIC_TEST_PARALLELISM"
+    val LOCAL_TESTS_DIRECTORY = "LOCAL_TESTS_DIRECTORY"
 
     val EXTENSIBLE_SCHEMA = "EXTENSIBLE_SCHEMA"
 
@@ -73,5 +74,9 @@ data class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<S
 
     fun getCachedSetting(variableName: String): String? {
         return getCachedEnvironmentVariable(variableName) ?: getCachedSystemProperty(variableName)
+    }
+
+    fun localTestsDirectory(): String? {
+        return getCachedSetting(LOCAL_TESTS_DIRECTORY)
     }
 }

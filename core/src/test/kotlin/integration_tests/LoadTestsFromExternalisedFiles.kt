@@ -1,12 +1,15 @@
 package integration_tests
 
+import `in`.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import `in`.specmatic.conversions.OpenApiSpecification
+import `in`.specmatic.core.Flags
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.log.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSONArray
 import `in`.specmatic.core.pattern.parsedJSONObject
+import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
@@ -157,5 +160,62 @@ class LoadTestsFromExternalisedFiles {
         val titleIndex = logBuffer.buffer.lastIndexOf(messageTitle)
         val elementContainingIrrelevantFile = logBuffer.buffer.findLast { it.contains("irrelevant_test.json") }
         assertThat(logBuffer.buffer.lastIndexOf(elementContainingIrrelevantFile)).isGreaterThan(titleIndex)
+    }
+
+    @Test
+    fun `should load tests from local test directory`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Add Person API
+              version: 1.0.0
+
+            # Path for adding a person
+            paths:
+              /person:
+                post:
+                  summary: Add a new person
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/Person'
+                  responses:
+                    '201':
+                      description: Person created successfully
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+
+            components:
+              schemas:
+                Person:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the person
+        """.trimIndent()
+
+        val feature = OpenApiSpecification
+            .fromYAML(spec, "", environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(Flags.LOCAL_TESTS_DIRECTORY to "src/test/resources/local_tests"), emptyMap()))
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val requestBody = request.body as JSONObjectValue
+                assertThat(requestBody.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo("Jack")
+                return HttpResponse(201, "success")
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        assertThat(results.successCount).isEqualTo(1)
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 }

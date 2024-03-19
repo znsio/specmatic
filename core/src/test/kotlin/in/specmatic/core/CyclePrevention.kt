@@ -3,6 +3,9 @@ package `in`.specmatic.core
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.value.JSONArrayValue
+import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
@@ -13,7 +16,8 @@ import org.junit.jupiter.api.Test
 class CyclePrevention {
     @Test
     fun `one level test`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
             openapi: "3.0.0"
             info:
               version: 1.0.0
@@ -39,11 +43,12 @@ class CyclePrevention {
                   properties:
                     key:
                       ${'$'}ref: '#/components/schemas/TopLevel'
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         var testCount = 0
 
-        contract.executeTests(object: TestExecutor {
+        contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 testCount += 1
                 println(request.toLogString())
@@ -60,7 +65,8 @@ class CyclePrevention {
 
     @Test
     fun `two level test`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
             openapi: "3.0.0"
             info:
               version: 1.0.0
@@ -92,11 +98,12 @@ class CyclePrevention {
                   properties:
                     subkey:
                       ${'$'}ref: '#/components/schemas/TopLevel'
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         var testCount = 0
 
-        contract.executeTests(object: TestExecutor {
+        contract.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 testCount += 1
                 println(request.toLogString())
@@ -113,7 +120,8 @@ class CyclePrevention {
 
     @RepeatedTest(5)
     fun `test cycle in optional key to circular ref`() {
-        val stubContract = OpenApiSpecification.fromYAML("""
+        val stubContract = OpenApiSpecification.fromYAML(
+            """
             openapi: "3.0.0"
             info:
               version: 1.0.0
@@ -136,7 +144,8 @@ class CyclePrevention {
                   properties:
                     key:
                       ${'$'}ref: '#/components/schemas/TopLevel'
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         HttpStub(stubContract).use { stub ->
             val randomResponse = stub.client.execute(HttpRequest("GET", "/data"))
@@ -183,7 +192,8 @@ class CyclePrevention {
 
     @RepeatedTest(5)
     fun `test cycle in required key to nullable ref`() {
-        val feature = OpenApiSpecification.fromYAML("""
+        val feature = OpenApiSpecification.fromYAML(
+            """
             openapi: "3.0.0"
             info:
               version: 1.0.0
@@ -212,7 +222,8 @@ class CyclePrevention {
                           properties: {}
                           nullable: true
                         - ${'$'}ref: '#/components/schemas/TopLevel'
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         HttpStub(feature).use { stub ->
             val response = stub.client.execute(HttpRequest("GET", "/data"))
@@ -247,13 +258,15 @@ class CyclePrevention {
                             }
                         }
                     """.trimIndent(), stub
-                ).status).isEqualTo(200)
+                ).status
+            ).isEqualTo(200)
         }
     }
 
     @RepeatedTest(5)
     fun `test cycle in optional key to nullable ref`() {
-        val feature = OpenApiSpecification.fromYAML("""
+        val feature = OpenApiSpecification.fromYAML(
+            """
             openapi: "3.0.0"
             info:
               version: 1.0.0
@@ -277,13 +290,21 @@ class CyclePrevention {
                   properties:
                     key:
                       ${'$'}ref: '#/components/schemas/TopLevel'
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         HttpStub(feature).use { stub ->
             val response = stub.client.execute(HttpRequest("GET", "/data"))
 
-            assertThat(feature.scenarios.first().let { scenario -> scenario.httpResponsePattern.matches(response, scenario.resolver) }).isInstanceOf(
-                Success::class.java)
+            assertThat(
+                feature.scenarios.first().let { scenario ->
+                    scenario.httpResponsePattern.matches(
+                        response,
+                        scenario.resolver
+                    )
+                }).isInstanceOf(
+                Success::class.java
+            )
 
             assertThat(
                 setExpectation(
@@ -305,7 +326,8 @@ class CyclePrevention {
                             }
                         }
                     """.trimIndent(), stub
-                ).status).isEqualTo(200)
+                ).status
+            ).isEqualTo(200)
 
             assertThat(
                 setExpectation(
@@ -327,7 +349,8 @@ class CyclePrevention {
                             }
                         }
                     """.trimIndent(), stub
-                ).status).isEqualTo(200)
+                ).status
+            ).isEqualTo(200)
         }
     }
 
@@ -388,13 +411,15 @@ class CyclePrevention {
                             }
                         }
                     """.trimIndent(), it
-                ).status).isEqualTo(400)
+                ).status
+            ).isEqualTo(400)
         }
     }
 
     @RepeatedTest(5)
     fun `test cycle in required key to optional key to circular ref`() {
-        val feature = OpenApiSpecification.fromYAML("""
+        val feature = OpenApiSpecification.fromYAML(
+            """
             openapi: "3.0.0"
             info:
               version: 1.0.0
@@ -424,19 +449,23 @@ class CyclePrevention {
                   properties:
                     key2:
                       ${'$'}ref: '#/components/schemas/TopLevel'
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         val response = HttpStub(feature).use {
             it.client.execute(HttpRequest("GET", "/data"))
         }
 
-        assertThat(feature.scenarios.first().let { it.httpResponsePattern.matches(response, it.resolver) }).isInstanceOf(
-            Success::class.java)
+        assertThat(
+            feature.scenarios.first().let { it.httpResponsePattern.matches(response, it.resolver) }).isInstanceOf(
+            Success::class.java
+        )
     }
 
     @RepeatedTest(5)
     fun `test cycle in required key to required key to nullable circular ref`() {
-        val feature = OpenApiSpecification.fromYAML("""
+        val feature = OpenApiSpecification.fromYAML(
+            """
             openapi: "3.0.0"
             info:
               version: 1.0.0
@@ -472,19 +501,23 @@ class CyclePrevention {
                           properties: {}
                           nullable: true
                         - ${'$'}ref: '#/components/schemas/TopLevel'
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         val response = HttpStub(feature).use {
             it.client.execute(HttpRequest("GET", "/data"))
         }
 
-        assertThat(feature.scenarios.first().let { it.httpResponsePattern.matches(response, it.resolver) }).isInstanceOf(
-            Success::class.java)
+        assertThat(
+            feature.scenarios.first().let { it.httpResponsePattern.matches(response, it.resolver) }).isInstanceOf(
+            Success::class.java
+        )
     }
 
     @RepeatedTest(5)
     fun `test cycle in required key to optional key to nullable circular ref`() {
-        val feature = OpenApiSpecification.fromYAML("""
+        val feature = OpenApiSpecification.fromYAML(
+            """
             openapi: "3.0.0"
             info:
               version: 1.0.0
@@ -518,21 +551,25 @@ class CyclePrevention {
                           properties: {}
                           nullable: true
                         - ${'$'}ref: '#/components/schemas/TopLevel'
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         val response = HttpStub(feature).use {
             it.client.execute(HttpRequest("GET", "/data"))
         }
 
-        assertThat(feature.scenarios.first().let { it.httpResponsePattern.matches(response, it.resolver) }).isInstanceOf(
-            Success::class.java)
+        assertThat(
+            feature.scenarios.first().let { it.httpResponsePattern.matches(response, it.resolver) }).isInstanceOf(
+            Success::class.java
+        )
     }
 
     @Test
     fun `test cycle in required key to required key to circular ref`() {
 //        key1 -> { key2 -> circular-ref-value }
 
-        val feature = OpenApiSpecification.fromYAML("""
+        val feature = OpenApiSpecification.fromYAML(
+            """
             openapi: "3.0.0"
             info:
               version: 1.0.0
@@ -564,12 +601,181 @@ class CyclePrevention {
                   properties:
                     key2:
                       ${'$'}ref: '#/components/schemas/TopLevel'
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         val response = HttpStub(feature).use {
             it.client.execute(HttpRequest("GET", "/data"))
         }
 
         assertThat(response.status).isEqualTo(400)
+    }
+
+    @Test
+    fun `cycle prevention across arrays`() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Add Person API
+  version: 1.0.0
+
+# Path for adding a person
+paths:
+  /person:
+    post:
+      summary: Add a new person
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              ${"$"}ref: '#/components/schemas/Person'
+      responses:
+        '200':
+          description: Person created successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    Person:
+      type: object
+      required:
+        - name
+        - relatives
+      properties:
+        name:
+          type: string
+          description: Name of the person
+        relatives:
+          type: array
+          items:
+            ${"$"}ref: '#/components/schemas/Person'
+          description: Array of relative Person objects (optional)
+
+        """.trimIndent()
+
+        try {
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+            val results = feature.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+
+                    val relatives = (request.body as JSONObjectValue).getJSONArray("relatives")
+                    relatives.forEach {
+                        assertThat((it as JSONObjectValue).jsonObject).containsKeys("relatives")
+                    }
+
+                    return HttpResponse.Companion.OK
+                }
+            })
+
+            assertThat(results.successCount).withFailMessage(results.report()).isPositive()
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        } catch (e: Throwable) {
+            println(exceptionCauseMessage(e))
+            throw e
+        }
+
+    }
+
+    @Test
+    fun `cycle prevention across array of array of objects pointing to parent via a mandatory key`() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Add Person API
+  version: 1.0.0
+
+# Path for adding a person
+paths:
+  /person:
+    post:
+      summary: Add a new person
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              ${"$"}ref: '#/components/schemas/Person'
+      responses:
+        '200':
+          description: Person created successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    Person:
+      type: object
+      required:
+        - name
+        - relatives
+      properties:
+        name:
+          type: string
+          description: Name of the person
+        relatives:
+          type: array
+          items:
+            ${"$"}ref: '#/components/schemas/Relative'
+    Relative:
+      type: object
+      required:
+        - id
+        - acquaintances
+      properties:
+        id:
+          type: number
+        acquaintances:
+          type: array
+          items:
+            ${"$"}ref: '#/components/schemas/Acquaintance'
+    Acquaintance:
+      type: object
+      required:
+        - id
+        - relative
+      properties:
+        id:
+          type: number
+        relative:
+          ${"$"}ref: '#/components/schemas/Person'
+
+        """.trimIndent()
+
+        var distantRelativesSeen = mutableListOf<JSONArrayValue>()
+
+        try {
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+            val results = feature.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+
+                    val requestBody = request.body as JSONObjectValue
+
+                    val distantRelatives = requestBody.findFirstChildByPath("relatives.[0].acquaintances.[0].relative.relatives.[0].acquaintances")
+
+                    if(distantRelatives != null && distantRelatives is JSONArrayValue)
+                        distantRelativesSeen.add(distantRelatives)
+
+                    return HttpResponse.Companion.OK
+                }
+            })
+
+            assertThat(results.successCount).withFailMessage(results.report()).isPositive()
+
+            assertThat(distantRelativesSeen).allSatisfy {
+                assertThat(it.list).isEmpty()
+            }
+
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        } catch (e: Throwable) {
+            println(exceptionCauseMessage(e))
+            throw e
+        }
+
     }
 }

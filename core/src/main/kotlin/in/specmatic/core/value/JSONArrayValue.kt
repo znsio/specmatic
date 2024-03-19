@@ -60,4 +60,22 @@ data class JSONArrayValue(override val list: List<Value>) : Value, ListValue, JS
             typeDeclaration(exampleKey, types, exampleDeclarations) { value, innerKey, innerTypes, newExamples -> value.typeDeclarationWithoutKey(innerKey, innerTypes, newExamples) }
 
     override fun toString() = valueArrayToJsonString(list)
+    fun getElementAtIndex(first: String, rest: List<String>): Value? {
+        val trimmed = first.trim()
+
+        if(trimmed.first() != '[' || trimmed.last() != ']')
+            return null
+
+        val index = trimmed.trim().removeSurrounding("[", "]").toIntOrNull() ?: return null
+
+        val value = list[index]
+
+        return when {
+            rest.isEmpty() -> value
+            value is JSONObjectValue -> value.findFirstChildByPath(rest)
+            value is JSONArrayValue -> value.getElementAtIndex(rest.first(), rest.drop(1))
+            else -> null
+        }
+
+    }
 }

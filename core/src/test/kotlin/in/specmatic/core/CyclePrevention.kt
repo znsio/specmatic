@@ -4,6 +4,7 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.Result.Success
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStub
@@ -680,79 +681,6 @@ components:
     }
 
     @Test
-    fun `cycle prevention across array of objects pointing to parent via a mandatory key`() {
-        val spec = """
-openapi: 3.0.0
-info:
-  title: Add Person API
-  version: 1.0.0
-
-# Path for adding a person
-paths:
-  /person:
-    post:
-      summary: Add a new person
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              ${"$"}ref: '#/components/schemas/Person'
-      responses:
-        '200':
-          description: Person created successfully
-          content:
-            text/plain:
-              schema:
-                type: string
-components:
-  schemas:
-    Person:
-      type: object
-      required:
-        - name
-        - relatives
-      properties:
-        name:
-          type: string
-          description: Name of the person
-        relatives:
-          type: array
-          items:
-            ${"$"}ref: '#/components/schemas/Relative'
-    Relative:
-      type: object
-      required:
-        - id
-        - person
-      properties:
-        id:
-          type: number
-        person:
-          ${"$"}ref: '#/components/schemas/Person'
-
-        """.trimIndent()
-
-        try {
-            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-            val results = feature.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    println(request.toLogString())
-
-                    return HttpResponse.Companion.OK
-                }
-            })
-
-            assertThat(results.successCount).withFailMessage(results.report()).isPositive()
-            assertThat(results.success()).withFailMessage(results.report()).isTrue()
-        } catch (e: Throwable) {
-            println(exceptionCauseMessage(e))
-            throw e
-        }
-
-    }
-
-    @Test
     fun `cycle prevention across array of array of objects pointing to parent via a mandatory key`() {
         val spec = """
 openapi: 3.0.0
@@ -818,17 +746,31 @@ components:
 
         """.trimIndent()
 
+        var distantRelativesSeen = mutableListOf<JSONArrayValue>()
+
         try {
             val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
             val results = feature.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     println(request.toLogString())
 
+                    val requestBody = request.body as JSONObjectValue
+
+                    val distantRelatives = requestBody.findFirstChildByPath("relatives.[0].acquaintances.[0].relative.relatives.[0].acquaintances")
+
+                    if(distantRelatives != null && distantRelatives is JSONArrayValue)
+                        distantRelativesSeen.add(distantRelatives)
+
                     return HttpResponse.Companion.OK
                 }
             })
 
             assertThat(results.successCount).withFailMessage(results.report()).isPositive()
+
+            assertThat(distantRelativesSeen).allSatisfy {
+                assertThat(it.list).isEmpty()
+            }
+
             assertThat(results.success()).withFailMessage(results.report()).isTrue()
         } catch (e: Throwable) {
             println(exceptionCauseMessage(e))

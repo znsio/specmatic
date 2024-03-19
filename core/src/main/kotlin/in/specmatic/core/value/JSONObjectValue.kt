@@ -68,7 +68,7 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
     fun findFirstChildByPath(path: String): Value? =
         findFirstChildByPath(path.split("."))
 
-    private fun findFirstChildByPath(path: List<String>): Value? =
+    fun findFirstChildByPath(path: List<String>): Value? =
         findFirstChildByPath(path.first(), path.drop(1))
 
     private fun findFirstChildByPath(first: String, rest: List<String>): Value? {
@@ -76,6 +76,7 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
             when {
                 rest.isEmpty() -> it
                 it is JSONObjectValue -> it.findFirstChildByPath(rest)
+                it is JSONArrayValue -> it.getElementAtIndex(rest.first(), rest.drop(1))
                 else -> null
             }
         }

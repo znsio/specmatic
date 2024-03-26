@@ -332,14 +332,14 @@ data class Scenario(
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
     ): Sequence<Scenario> {
-        return generateTestScenariosR(resolverStrategies, variables, testBaseURLs).map { it.value }
+        return generateTestScenariosR(resolverStrategies, variables, testBaseURLs).map { it.second.value }
     }
 
     fun generateTestScenariosR(
         resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-    ): Sequence<ReturnValue<Scenario>> {
+    ): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
         }
@@ -358,7 +358,7 @@ data class Scenario(
                 returnValue.ifValue {
                     it.copy(generativePrefix = resolverStrategies.generation.positivePrefix)
                 }
-            }
+            }.map { Pair(this, it) }
         }
     }
 

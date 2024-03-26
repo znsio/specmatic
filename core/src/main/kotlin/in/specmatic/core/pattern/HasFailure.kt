@@ -30,4 +30,7 @@ class HasFailure<T>(val failure: Result.Failure) : ReturnValue<T>, ReturnFailure
     override val value: T
         get() = throw ContractException(failure.toFailureReport())
 
+    override fun <U> reify(hasValue: (T) -> U, orElse: () -> U): U {
+        return orElse()
+    }
 }

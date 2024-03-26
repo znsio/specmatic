@@ -13,6 +13,7 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.test.ContractTest
 import `in`.specmatic.test.ScenarioTest
+import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
 import io.cucumber.gherkin.GherkinDocumentBuilder
 import io.cucumber.gherkin.Parser
@@ -302,11 +303,26 @@ data class Feature(
     private fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
-    fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> =
-        generateContractTestScenarios(suggestions).map {
-            ScenarioTest(it, resolverStrategies,
-                it.sourceProvider, it.sourceRepository, it.sourceRepositoryBranch, it.specification, it.serviceType)
+    fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> {
+        return generateContractTestScenariosR(suggestions).map { (originalScenario, returnValue) ->
+            returnValue.reify(
+                hasValue = {
+                    ScenarioTest(
+                        it,
+                        resolverStrategies,
+                        it.sourceProvider,
+                        it.sourceRepository,
+                        it.sourceRepositoryBranch,
+                        it.specification,
+                        it.serviceType
+                    )
+                },
+                orElse = {
+                    ScenarioTestGenerationFailure(originalScenario, ContractException())
+                }
+            )
         }
+    }
 
     private fun getBadRequestsOrDefault(scenario: Scenario): BadRequestOrDefault? {
         val badRequestResponses = scenarios.filter {
@@ -325,10 +341,16 @@ data class Feature(
         return BadRequestOrDefault(badRequestResponses, defaultResponse)
     }
 
+    fun generateContractTestScenariosR(suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
+        return resolverStrategies.generation.let {
+            it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this).map { Pair(it, HasValue(it)) }
+        }
+    }
+
     fun generateContractTestScenarios(suggestions: List<Scenario>): Sequence<Scenario> {
         return try {
             resolverStrategies.generation.let {
-                it.positiveTestScenarios(this, suggestions).map { it.value } + it.negativeTestScenarios(this)
+                it.positiveTestScenarios(this, suggestions).map { it.second.value } + it.negativeTestScenarios(this)
             }
         }
         catch(e: Throwable) {
@@ -347,7 +369,7 @@ data class Feature(
         return generateContractTestScenarios(suggestions).toList()
     }
 
-    fun positiveTestScenarios(suggestions: List<Scenario>): Sequence<ReturnValue<Scenario>> =
+    fun positiveTestScenarios(suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =
         scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
         }.flatMap {

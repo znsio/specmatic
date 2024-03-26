@@ -14,7 +14,7 @@ interface GenerationStrategies {
     fun generateHttpRequests(resolver: Resolver, body: Pattern, row: Row): Sequence<Pattern>
     fun resolveRow(row: Row): Row
     fun generateKeySubLists(key: String, subList: List<String>): Sequence<List<String>>
-    fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): Sequence<ReturnValue<Scenario>>
+    fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>>
     fun negativeTestScenarios(feature: Feature): Sequence<Scenario>
     fun fillInTheMissingMapPatterns(
         newQueryParamsList: Sequence<Map<String, Pattern>>,
@@ -95,7 +95,7 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
             sequenceOf(subList + key)
     }
 
-    override fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): Sequence<ReturnValue<Scenario>> {
+    override fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
         return feature.positiveTestScenarios(suggestions)
     }
 
@@ -160,7 +160,7 @@ object NonGenerativeTests : GenerationStrategies {
         return sequenceOf(subList + key)
     }
 
-    override fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): Sequence<ReturnValue<Scenario>> {
+    override fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
         return feature.positiveTestScenarios(suggestions)
     }
 

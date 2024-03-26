@@ -39,4 +39,8 @@ class HasValue<T>(override val value: T): ReturnValue<T> {
             HasException(t)
         }
     }
+
+    override fun <U> reify(hasValue: (T) -> U, orElse: () -> U): U {
+        return hasValue(value)
+    }
 }

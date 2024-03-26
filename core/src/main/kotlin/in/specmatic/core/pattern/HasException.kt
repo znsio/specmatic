@@ -4,7 +4,7 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 
 class HasException<T>(val t: Throwable) : ReturnValue<T>, ReturnFailure {
-    override fun <U> withValue(default: U, fn: (T) -> U): U {
+    override fun <U> withDefault(default: U, fn: (T) -> U): U {
         return default
     }
 

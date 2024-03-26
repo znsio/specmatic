@@ -1,12 +1,9 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.core.Scenario
-import `in`.specmatic.test.ScenarioTestGenerationFailure
-
 sealed interface ReturnValue<T> {
     val value: T
 
-    abstract fun <U> withValue(default: U, fn: (T) -> U): U
+    abstract fun <U> withDefault(default: U, fn: (T) -> U): U
     abstract fun <U> ifValue(fn: (T) -> U): ReturnValue<U>
     fun <U> sequenceOf(fn: (T) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>>
     fun update(fn: (T) -> T): ReturnValue<T>

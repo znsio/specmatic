@@ -1,7 +1,7 @@
 package `in`.specmatic.core.pattern
 
 class HasValue<T>(override val value: T): ReturnValue<T> {
-    override fun <U> withValue(default: U, fn: (T) -> U): U {
+    override fun <U> withDefault(default: U, fn: (T) -> U): U {
         return fn(value)
     }
 

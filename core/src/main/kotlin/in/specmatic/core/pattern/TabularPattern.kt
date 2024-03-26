@@ -188,7 +188,7 @@ fun newBasedOnR(row: Row, key: String, pattern: Pattern, resolver: Resolver): Se
 
                 val generativeTests: Sequence<Pattern> = resolver.generatedPatternsForGenerativeTests(pattern, key)
 
-                sequenceOf(exactValuePattern) + exactValuePattern.withValue(generativeTests) { value ->
+                sequenceOf(exactValuePattern) + exactValuePattern.withDefault(generativeTests) { value ->
                     generativeTests.filterNot {
                         it.encompasses(value, resolver, resolver) is Result.Success
                     }

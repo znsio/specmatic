@@ -269,6 +269,10 @@ data class Scenario(
     }
 
     private fun newBasedOn(row: Row, resolverStrategies: ResolverStrategies): Sequence<Scenario> {
+        return newBasedOnR(row, resolverStrategies).map { it.value }
+    }
+
+    private fun newBasedOnR(row: Row, resolverStrategies: ResolverStrategies): Sequence<ReturnValue<Scenario>> {
         val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
         val resolver =
             Resolver(expectedFacts, false, patterns)
@@ -283,16 +287,18 @@ data class Scenario(
                 val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withExactResponseValue(row, resolver)
 
                 when (isNegative) {
-                    false -> httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status)
-                    else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true))
+                    false -> httpRequestPattern.newBasedOnR(row, resolver, httpResponsePattern.status)
+                    else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true)).map { HasValue(it) }
                 }.map { newHttpRequestPattern ->
-                    this.copy(
-                        httpRequestPattern = newHttpRequestPattern,
-                        httpResponsePattern = newResponsePattern,
-                        expectedFacts = newExpectedServerState,
-                        ignoreFailure = ignoreFailure,
-                        exampleName = row.name
-                    )
+                    newHttpRequestPattern.ifValue {
+                        this.copy(
+                            httpRequestPattern = it,
+                            httpResponsePattern = newResponsePattern,
+                            expectedFacts = newExpectedServerState,
+                            ignoreFailure = ignoreFailure,
+                            exampleName = row.name
+                        )
+                    }
                 }
             }
         }
@@ -326,31 +332,14 @@ data class Scenario(
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
     ): Sequence<Scenario> {
-        val referencesWithBaseURLs = references.mapValues { (_, reference) ->
-            reference.copy(variables = variables, baseURLs = testBaseURLs)
-        }
-
-        return scenarioBreadCrumb(this) {
-            when (examples.size) {
-                0 -> sequenceOf(Row())
-                else -> examples.asSequence().flatMap {
-                    it.rows.map { row ->
-                        row.copy(variables = variables, references = referencesWithBaseURLs)
-                    }
-                }
-            }.flatMap { row ->
-                newBasedOn(row, resolverStrategies)
-            }.map {
-                it.copy(generativePrefix = resolverStrategies.generation.positivePrefix)
-            }
-        }
+        return generateTestScenariosR(resolverStrategies, variables, testBaseURLs).map { it.value }
     }
 
-    fun generateContractTests(
+    fun generateTestScenariosR(
         resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-    ): Sequence<ContractTest> {
+    ): Sequence<ReturnValue<Scenario>> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
         }
@@ -364,10 +353,10 @@ data class Scenario(
                     }
                 }
             }.flatMap { row ->
-                try {
-                    newBasedOn(row, resolverStrategies).map { ScenarioTest(it, resolverStrategies) }
-                } catch (e: Throwable) {
-                    sequenceOf(ScenarioTestGenerationFailure(this, e))
+                newBasedOnR(row, resolverStrategies)
+            }.map { returnValue ->
+                returnValue.ifValue {
+                    it.copy(generativePrefix = resolverStrategies.generation.positivePrefix)
                 }
             }
         }

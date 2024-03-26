@@ -328,7 +328,7 @@ data class Feature(
     fun generateContractTestScenarios(suggestions: List<Scenario>): Sequence<Scenario> {
         return try {
             resolverStrategies.generation.let {
-                it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
+                it.positiveTestScenarios(this, suggestions).map { it.value } + it.negativeTestScenarios(this)
             }
         }
         catch(e: Throwable) {
@@ -347,11 +347,11 @@ data class Feature(
         return generateContractTestScenarios(suggestions).toList()
     }
 
-    fun positiveTestScenarios(suggestions: List<Scenario>) =
+    fun positiveTestScenarios(suggestions: List<Scenario>): Sequence<ReturnValue<Scenario>> =
         scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
         }.flatMap {
-            it.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
+            it.generateTestScenariosR(resolverStrategies, testVariables, testBaseURLs)
         }
 
     fun negativeTestScenarios() =

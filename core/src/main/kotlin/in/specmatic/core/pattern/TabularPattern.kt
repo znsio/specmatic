@@ -129,14 +129,18 @@ data class TabularPattern(
     override val typeName: String = "json object"
 }
 
-fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
-    val patternCollection: Map<String, Sequence<Pattern>> = patternMap.mapValues { (key, pattern) ->
+fun newBasedOnR(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
+    val patternCollection: Map<String, Sequence<ReturnValue<Pattern>>> = patternMap.mapValues { (key, pattern) ->
         attempt(breadCrumb = key) {
-            newBasedOn(row, key, pattern, resolver)
+            newBasedOnR(row, key, pattern, resolver)
         }
     }
 
-    return patternList(patternCollection)
+    return patternListR(patternCollection)
+}
+
+fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
+    return newBasedOnR(patternMap, row, resolver).map { it.value }
 }
 
 fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): Sequence<Map<String, Pattern>> {
@@ -147,6 +151,56 @@ fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): Sequence<M
     }
 
     return patternValues(patternCollection)
+}
+
+fun newBasedOnR(row: Row, key: String, pattern: Pattern, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    val keyWithoutOptionality = key(pattern, key)
+
+    return when {
+        row.containsField(keyWithoutOptionality) -> {
+            val rowValue = row.getField(keyWithoutOptionality)
+
+            if (isPatternToken(rowValue)) {
+                val rowPattern = resolver.getPattern(rowValue)
+
+                attempt(breadCrumb = keyWithoutOptionality) {
+                    when (val result = pattern.encompasses(rowPattern, resolver, resolver)) {
+                        is Result.Success -> {
+                            resolver.withCyclePrevention(rowPattern, isOptional(key)) { cyclePreventedResolver ->
+                                rowPattern.newBasedOn(row, cyclePreventedResolver)
+                            }?.map { HasValue(it) } ?:
+                            // Handle cycle (represented by null value) by using empty sequence for optional properties
+                            emptySequence()
+                        }
+                        is Result.Failure -> sequenceOf(HasFailure(result))
+                    }
+                }
+            } else {
+                val parsedRowValue = attempt("Format error in example of \"$keyWithoutOptionality\"") {
+                    resolver.parse(pattern, rowValue)
+                }
+
+                val exactValuePattern: ReturnValue<Pattern> =
+                    when (val matchResult = resolver.matchesPattern(null, pattern, parsedRowValue)) {
+                        is Result.Failure -> HasFailure(matchResult)
+                        else -> HasValue(ExactValuePattern(parsedRowValue))
+                    }
+
+                val generativeTests: Sequence<Pattern> = resolver.generatedPatternsForGenerativeTests(pattern, key)
+
+                sequenceOf(exactValuePattern) + exactValuePattern.withValue(generativeTests) { value ->
+                    generativeTests.filterNot {
+                        it.encompasses(value, resolver, resolver) is Result.Success
+                    }
+                }.map { HasValue(it) }
+            }
+        }
+        else -> resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
+            pattern.newBasedOn(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver).map { HasValue(it) }
+        }?:
+        // Handle cycle (represented by null value) by using empty list for optional properties
+        emptySequence()
+    }
 }
 
 fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Sequence<Pattern> {
@@ -212,6 +266,32 @@ fun key(pattern: Pattern, key: String): String {
             else -> key
         }
     )
+}
+
+fun <ValueType> patternListR(patternCollection: Map<String, Sequence<ReturnValue<ValueType>>>): Sequence<ReturnValue<Map<String, ValueType>>> {
+    return try {
+        val possiblePatternCollection: ReturnValue<Map<String, Sequence<ValueType>>> =
+            patternCollection.entries.fold(HasValue(emptyMap<String, Sequence<ValueType>>())) { acc: ReturnValue<Map<String, Sequence<ValueType>>>, (key, valueResultSequence) ->
+                val values =
+                    valueResultSequence.fold(HasValue(emptySequence<ValueType>())) { sequenceValue: ReturnValue<Sequence<ValueType>>, valueResult: ReturnValue<ValueType> ->
+                        sequenceValue.combineWith(valueResult) { sequence, value ->
+                            sequence.plus(
+                                value
+                            )
+                        }
+                    }
+
+                acc.combineWith(values) { acc, valueSeq ->
+                    acc.plus(key to valueSeq)
+                }
+            }
+
+        possiblePatternCollection.sequenceOf { reifiedPatternCollection ->
+            patternList(reifiedPatternCollection).map { HasValue(it) }
+        }
+    } catch (t: Throwable) {
+        sequenceOf(HasException(t))
+    }
 }
 
 fun <ValueType> patternList(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {

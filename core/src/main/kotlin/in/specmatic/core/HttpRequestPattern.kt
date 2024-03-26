@@ -448,19 +448,19 @@ data class HttpRequestPattern(
         }
     }
 
-    fun newBasedOn(row: Row, initialResolver: Resolver, status: Int = 0): Sequence<HttpRequestPattern> {
+    fun newBasedOnR(row: Row, initialResolver: Resolver, status: Int = 0): Sequence<ReturnValue<HttpRequestPattern>> {
         val resolver = when (status) {
             in invalidRequestStatuses -> initialResolver.invalidRequestResolver()
             else -> initialResolver
         }
 
         return attempt(breadCrumb = "REQUEST") {
-            val newHttpPathPatterns = httpPathPattern?.let { httpPathPattern ->
+            val newHttpPathPatterns: Sequence<ReturnValue<HttpPathPattern?>> = (httpPathPattern?.let { httpPathPattern ->
                 val newURLPathSegmentPatternsList = httpPathPattern.newBasedOn(row, resolver)
                 newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }
-            } ?: sequenceOf<HttpPathPattern?>(null)
+            } ?: sequenceOf<HttpPathPattern?>(null)).map { HasValue(it) }
 
-            val newQueryParamsPatterns =
+            val newQueryParamsPatterns: Sequence<ReturnValue<HttpQueryParamPattern>> =
                 if(status.toString().startsWith("2")) {
                     val new = httpQueryParamPattern.newBasedOn(row, resolver)
                     httpQueryParamPattern.addComplimentaryPatterns(new, row, resolver)
@@ -468,16 +468,16 @@ data class HttpRequestPattern(
                     httpQueryParamPattern.readFrom(row, resolver)
                 }.map {
                     HttpQueryParamPattern(it)
-                }
+                }.map { HasValue(it) }
 
-            val newHeadersPattern = if(status.toString().startsWith("2")) {
+            val newHeadersPattern: Sequence<ReturnValue<HttpHeadersPattern>> = if(status.toString().startsWith("2")) {
                 val new = headersPattern.newBasedOn(row, resolver)
                 headersPattern.addComplimentaryPatterns(new, row, resolver)
             } else {
                 headersPattern.readFrom(row, resolver)
-            }
+            }.map { HasValue(it) }
 
-            val newBodies: Sequence<Pattern> = attempt(breadCrumb = "BODY") {
+            val newBodies: Sequence<ReturnValue<Pattern>> = attempt(breadCrumb = "BODY") {
                 body.let {
                     if (it is DeferredPattern && row.containsField(it.pattern)) {
                         val example = row.getField(it.pattern)
@@ -509,10 +509,10 @@ data class HttpRequestPattern(
                         resolver.generateHttpRequestbodies(body, row)
                     }
                 }
-            }
+            }.map { HasValue(it) }
 
-            val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
-            val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
+            val newFormFieldsPatterns: Sequence<ReturnValue<Map<String, Pattern>>> = newBasedOn(formFieldsPattern, row, resolver).map { HasValue(it) }
+            val newFormDataPartLists: Sequence<ReturnValue<List<MultiPartFormDataPattern>>> = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver).map { HasValue(it) }
 
             newHttpPathPatterns.flatMap { newPathParamPattern ->
                 newQueryParamsPatterns.flatMap { newQueryParamPattern ->
@@ -533,12 +533,12 @@ data class HttpRequestPattern(
                                     val schemeInRow = securitySchemes.find { it.isInRow(row) }
 
                                     if (schemeInRow != null) {
-                                        listOf(schemeInRow.addTo(newRequestPattern, row))
+                                        listOf(schemeInRow.addTo(newRequestPattern, row)).asSequence()
                                     } else {
-                                        securitySchemes.map {
+                                        securitySchemes.asSequence().map {
                                             newRequestPattern.copy(securitySchemes = listOf(it))
                                         }
-                                    }
+                                    }.map { HasValue(it) }
                                 }
                             }
                         }
@@ -546,6 +546,10 @@ data class HttpRequestPattern(
                 }
             }
         }
+    }
+
+    fun newBasedOn(row: Row, initialResolver: Resolver, status: Int = 0): Sequence<HttpRequestPattern> {
+        return newBasedOnR(row, initialResolver, status).map { it.value }
     }
 
     private fun isInvalidRequestResponse(status: Int): Boolean {
@@ -644,7 +648,8 @@ data class HttpRequestPattern(
             sequence {
                 // If security schemes are present, for now we'll just take the first scheme and assign it to each negative request pattern.
                 // Ideally we should generate negative patterns from the security schemes and use them.
-                val positivePattern: HttpRequestPattern = newBasedOn(row, resolver, 400).first().copy(securitySchemes = listOf(securitySchemes.first()))
+                val positivePattern: HttpRequestPattern = newBasedOnR(row, resolver, 400).first().value.copy(securitySchemes = listOf(securitySchemes.first()))
+                // TODO: Cleanup use of newBasedOnR
 
                 newHttpPathPatterns.forEach { pathParamPattern ->
                     yield(positivePattern.copy(httpPathPattern = pathParamPattern))

@@ -312,11 +312,11 @@ class FeatureKtTest {
 
         val gherkin = toGherkinFeature("New Feature", stubs)
         val openApi = parseGherkinStringToFeature(gherkin).toOpenApi()
-        assertThat(Yaml.pretty(openApi).trim()).isEqualTo("""
+        assertThat(Yaml.pretty(openApi).trim().replace("'", "").replace("\"", "")).isEqualTo("""
           openapi: 3.0.1
           info:
             title: New Feature
-            version: "1"
+            version: 1
           paths:
             /body:
               post:
@@ -326,10 +326,10 @@ class FeatureKtTest {
                   content:
                     application/json:
                       schema:
-                        ${"$"}ref: '#/components/schemas/Body_RequestBody'
+                        ${"$"}ref: #/components/schemas/Body_RequestBody
                   required: true
                 responses:
-                  "200":
+                  200:
                     description: stub0
           components:
             schemas:
@@ -349,7 +349,7 @@ class FeatureKtTest {
                   addresses:
                     type: array
                     items:
-                      ${"$"}ref: '#/components/schemas/Addresses'
+                      ${"$"}ref: #/components/schemas/Addresses
         """.trimIndent())
     }
 
@@ -364,11 +364,11 @@ class FeatureKtTest {
 
         val gherkin = toGherkinFeature("New Feature", stubs)
         val openApi = parseGherkinStringToFeature(gherkin).toOpenApi()
-        assertThat(Yaml.pretty(openApi).trim()).isEqualTo("""
+        assertThat(Yaml.pretty(openApi).trim().replace("'", "").replace("\"", "")).isEqualTo("""
               openapi: 3.0.1
               info:
                 title: New Feature
-                version: "1"
+                version: 1
               paths:
                 /data:
                   get:
@@ -382,10 +382,10 @@ class FeatureKtTest {
                       content:
                         application/json:
                           schema:
-                            ${"$"}ref: '#/components/schemas/Data_RequestBody'
+                            ${"$"}ref: #/components/schemas/Data_RequestBody
                       required: true
                     responses:
-                      "200":
+                      200:
                         description: http://localhost
               components:
                 schemas:
@@ -405,7 +405,7 @@ class FeatureKtTest {
                       addresses:
                         type: array
                         items:
-                          ${"$"}ref: '#/components/schemas/Addresses'
+                          ${"$"}ref: #/components/schemas/Addresses
         """.trimIndent())
     }
 

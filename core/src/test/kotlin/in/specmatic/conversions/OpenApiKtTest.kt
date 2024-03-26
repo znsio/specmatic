@@ -451,7 +451,9 @@ Background:
                             HttpResponse(201, "hello world", headers)
                     }
 
-                    override fun setServerState(serverState: Map<String, Value>) {
+                    override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                        println("Scenario: ${scenario.testDescription()} + ${scenario.httpResponsePattern.status}")
+                        println(request.toLogString())
                     }
                 }
             )

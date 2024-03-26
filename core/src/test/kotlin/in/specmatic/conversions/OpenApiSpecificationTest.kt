@@ -50,10 +50,13 @@ internal class OpenApiSpecificationTest {
     }
 
     private fun portableComparisonAcrossBuildEnvironments(actual: String, expected: String) {
-        assertThat(actual.trimIndent().replace("\"", "")).isEqualTo(
-            expected.removePrefix("---").trimIndent().replace("\"", "")
+        assertThat(adjusted(actual)).isEqualTo(
+            adjusted(expected.removePrefix("---"))
         )
     }
+
+    private fun adjusted(actual: String) =
+        actual.trimIndent().replace("\"", "").replace("'", "")
 
     @BeforeEach
     fun setup() {

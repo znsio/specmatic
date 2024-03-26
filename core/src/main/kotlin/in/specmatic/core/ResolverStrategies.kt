@@ -21,6 +21,10 @@ data class ResolverStrategies(
                 it
         }
     }
+
+    fun withoutGenerativeTests(): ResolverStrategies {
+        return this.copy(generation = NonGenerativeTests)
+    }
 }
 
 fun strategiesFromFlags(flags: EnvironmentAndPropertiesConfiguration) = ResolverStrategies(

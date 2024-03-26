@@ -1382,7 +1382,6 @@ class GenerativeTests {
         val results = feature.enableGenerativeTesting().executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val body = request.body as JSONObjectValue
-                println(body.toStringLiteral())
 
                 body.findFirstChildByPath("name")?.let {
                     if (it !is StringValue) {
@@ -1450,7 +1449,9 @@ class GenerativeTests {
                 return HttpResponse.OK
             }
 
-            override fun setServerState(serverState: Map<String, Value>) {
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                println("Scenario: ${scenario.testDescription()} + ${scenario.httpResponsePattern.status}")
+                println(request.toLogString())
             }
         })
 
@@ -2137,7 +2138,11 @@ class GenerativeTests {
         })
 
         assertThat(results.testCount).isEqualTo(6)
+
         assertThat(testsSeen).doesNotContain("-ve" to "BAD_REQUEST")
         assertThat(testsSeen).doesNotContain("-ve" to "SERVER_ERROR")
+
+        assertThat(testsSeen).containsOnlyOnce("+ve" to "BAD_REQUEST")
+        assertThat(testsSeen).containsOnlyOnce("+ve" to "SERVER_ERROR")
     }
 }

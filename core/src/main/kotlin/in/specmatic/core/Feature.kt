@@ -351,6 +351,11 @@ data class Feature(
         scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
         }.flatMap {
+            val resolverStrategies = if(it.isA2xxScenario())
+                resolverStrategies
+            else
+                resolverStrategies.withoutGenerativeTests()
+
             it.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
         }
 

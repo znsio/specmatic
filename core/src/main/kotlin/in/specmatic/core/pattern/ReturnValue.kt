@@ -23,7 +23,37 @@ fun <T, U> Sequence<ReturnValue<T>>.flatMap(fn: (T) -> Sequence<ReturnValue<U>>)
 
                 yieldAll(output)
             }
+
+            if(next is ReturnFailure)
+                yield(next.cast())
+        }
+    }
+}
+
+fun <T, U> List<ReturnValue<T>>.list(fn: (List<T>) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>> {
+    val initial: ReturnValue<List<T>> = HasValue(emptyList<T>())
+
+    val patterns: ReturnValue<List<T>> = this.fold(initial) { _acc, _pattern ->
+        _acc.combineWith(_pattern) { acc, pattern ->
+            acc.plus(pattern)
         }
     }
 
+    return patterns.sequenceOf {
+        fn(it)
+    }
+}
+
+fun <T, U> Sequence<ReturnValue<T>>.seq(fn: (Sequence<T>) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>> {
+    val initial: ReturnValue<Sequence<T>> = HasValue(emptySequence<T>())
+
+    val patterns: ReturnValue<Sequence<T>> = this.fold(initial) { _acc, _pattern ->
+        _acc.combineWith(_pattern) { acc, pattern ->
+            acc.plus(pattern)
+        }
+    }
+
+    return patterns.sequenceOf {
+        fn(it)
+    }
 }

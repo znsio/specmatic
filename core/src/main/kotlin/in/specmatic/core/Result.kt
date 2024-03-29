@@ -1,8 +1,7 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.Result.Failure
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.Pattern
+import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.value.Value
 
@@ -72,6 +71,7 @@ sealed class Result {
     abstract fun testResult(): TestResult
     abstract fun withFailureReason(urlPathMisMatch: FailureReason): Result
     abstract fun throwOnFailure(): Success
+    abstract fun <T> toReturnValue(returnValue: T, errorMessage: String): ReturnValue<T>
 
     data class FailureCause(val message: String="", var cause: Failure? = null)
 
@@ -120,6 +120,10 @@ sealed class Result {
 
         override fun throwOnFailure(): Success {
             throw ContractException(this.toFailureReport())
+        }
+
+        override fun <T> toReturnValue(returnValue: T, errorMessage: String): ReturnValue<T> {
+            return HasFailure(this)
         }
 
         fun reason(errorMessage: String) = Failure(errorMessage, this)
@@ -196,6 +200,10 @@ sealed class Result {
 
         override fun throwOnFailure(): Success {
             return this
+        }
+
+        override fun <T> toReturnValue(returnValue: T, errorMessage: String): ReturnValue<T> {
+            return HasValue(returnValue)
         }
     }
 }

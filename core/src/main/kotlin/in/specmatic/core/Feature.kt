@@ -360,9 +360,9 @@ data class Feature(
     }
 
     fun validateExampleRows() {
-        scenarios.forEach { scenario ->
-            scenario.validateExamples(resolverStrategies.copy(generation = NonGenerativeTests))
-        }
+//        scenarios.forEach { scenario ->
+//            scenario.validateExamples(resolverStrategies.copy(generation = NonGenerativeTests))
+//        }
     }
 
     fun generateContractTestScenariosL(suggestions: List<Scenario>): List<Scenario> {

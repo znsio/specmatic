@@ -456,9 +456,9 @@ data class HttpRequestPattern(
 
         return attempt(breadCrumb = "REQUEST") {
             val newHttpPathPatterns: Sequence<ReturnValue<HttpPathPattern?>> = (httpPathPattern?.let { httpPathPattern ->
-                val newURLPathSegmentPatternsList = httpPathPattern.newBasedOn(row, resolver)
-                newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }
-            } ?: sequenceOf<HttpPathPattern?>(null)).map { HasValue(it) }
+                val newURLPathSegmentPatternsList = httpPathPattern.newBasedOnR(row, resolver)
+                newURLPathSegmentPatternsList.map { it.ifValue { pathSegments -> HttpPathPattern(pathSegments, httpPathPattern.path) } }
+            } ?: sequenceOf(HasValue(null)))
 
             val newQueryParamsPatterns: Sequence<ReturnValue<HttpQueryParamPattern>> =
                 if(status.toString().startsWith("2")) {
@@ -481,35 +481,41 @@ data class HttpRequestPattern(
                 body.let {
                     if (it is DeferredPattern && row.containsField(it.pattern)) {
                         val example = row.getField(it.pattern)
-                        sequenceOf(ExactValuePattern(it.parse(example, resolver)))
+                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
                     } else if (it.typeAlias?.let { p -> isPatternToken(p) } == true && row.containsField(it.typeAlias!!)) {
                         val example = row.getField(it.typeAlias!!)
-                        sequenceOf(ExactValuePattern(it.parse(example, resolver)))
+                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
                     } else if (it is XMLPattern && it.referredType?.let { referredType -> row.containsField("($referredType)") } == true) {
                         val referredType = "(${it.referredType})"
                         val example = row.getField(referredType)
-                        sequenceOf(ExactValuePattern(it.parse(example, resolver)))
+                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
                     } else if (row.containsField("(REQUEST-BODY)")) {
                         val example = row.getField("(REQUEST-BODY)")
                         val value = it.parse(example, resolver)
 
-                        if (!isInvalidRequestResponse(status)) {
+                        val requestBodyAsIs = if (!isInvalidRequestResponse(status)) {
                             val result = body.matches(value, resolver)
+
                             if (result is Failure)
-                                throw ContractException(result.toFailureReport())
+                                HasFailure(result)
+                            else
+                                HasValue(ExactValuePattern(value))
+                        } else
+                            HasValue(ExactValuePattern(value))
+
+//                        val requestBodyAsIs = ExactValuePattern(value)
+
+                        requestBodyAsIs.sequenceOf { _requestBodyAsIs ->
+                            if(status.toString().startsWith("2"))
+                                resolver.generateHttpRequestbodies(body, row, _requestBodyAsIs, value)
+                            else
+                                sequenceOf(HasValue(_requestBodyAsIs))
                         }
-
-                        val requestBodyAsIs = ExactValuePattern(value)
-
-                        if(status.toString().startsWith("2"))
-                            resolver.generateHttpRequestbodies(body, row, requestBodyAsIs, value)
-                        else
-                            sequenceOf(requestBodyAsIs)
                     } else {
                         resolver.generateHttpRequestbodies(body, row)
                     }
                 }
-            }.map { HasValue(it) }
+            }
 
             val newFormFieldsPatterns: Sequence<ReturnValue<Map<String, Pattern>>> = newBasedOn(formFieldsPattern, row, resolver).map { HasValue(it) }
             val newFormDataPartLists: Sequence<ReturnValue<List<MultiPartFormDataPattern>>> = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver).map { HasValue(it) }

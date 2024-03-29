@@ -176,12 +176,12 @@ data class Resolver(
         return defaultExampleResolver.resolveExample(example, pattern, this)
     }
 
-    fun generateHttpRequestbodies(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<Pattern> {
-        return generation.generateHttpRequests(this, body, row, requestBodyAsIs, value)
+    fun generateHttpRequestbodies(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<ReturnValue<Pattern>> {
+        return generation.generateHttpRequestBodies(this, body, row, requestBodyAsIs, value)
     }
 
-    fun generateHttpRequestbodies(body: Pattern, row: Row): Sequence<Pattern> {
-        return generation.generateHttpRequests(this, body, row)
+    fun generateHttpRequestbodies(body: Pattern, row: Row): Sequence<ReturnValue<Pattern>> {
+        return generation.generateHttpRequestBodies(this, body, row)
     }
 
     fun resolveRow(row: Row): Row {

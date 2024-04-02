@@ -16,11 +16,11 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
         } ?: emptySequence()
     }
 
-    override fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<ReturnValue<Pattern>> {
+    override fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<Pattern> {
         // TODO generate value outside
-        val requestsFromFlattenedRow: Sequence<ReturnValue<Pattern>> =
+        val requestsFromFlattenedRow: Sequence<Pattern> =
             resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                body.newBasedOnR(row.noteRequestBody(), cyclePreventedResolver)
+                body.newBasedOn(row.noteRequestBody(), cyclePreventedResolver)
             }
 
         var matchFound = false
@@ -32,38 +32,32 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
             while(iterator.hasNext()) {
                 val next = iterator.next()
 
-                next.ifValue { _next ->
-                    if(_next.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Result.Success)
-                        matchFound = true
-                }
+                if(next.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Result.Success)
+                    matchFound = true
 
                 yield(next)
             }
 
             if(!matchFound)
-                yield(HasValue(requestBodyAsIs))
+                yield(requestBodyAsIs)
         }
     }
 
-    override fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row): Sequence<ReturnValue<Pattern>> {
+    override fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row): Sequence<Pattern> {
         // TODO generate value outside
         val vanilla = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-            body.newBasedOnR(Row(), cyclePreventedResolver)
+            body.newBasedOn(Row(), cyclePreventedResolver)
         }
         val fromExamples = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-            body.newBasedOnR(row, cyclePreventedResolver)
+            body.newBasedOn(row, cyclePreventedResolver)
         }
         val remainingVanilla = vanilla.filterNot { vanillaType ->
-            vanillaType.withDefault(false) { _vanillaType ->
-                fromExamples.any { typeFromExamples ->
-                    typeFromExamples.withDefault(false) { _typeFromExaxmples ->
-                        _vanillaType.encompasses(
-                            _typeFromExaxmples,
-                            resolver,
-                            resolver
-                        ).isSuccess()
-                    }
-                }
+            fromExamples.any { typeFromExamples ->
+                vanillaType.encompasses(
+                    typeFromExamples,
+                    resolver,
+                    resolver
+                ).isSuccess()
             }
         }
 

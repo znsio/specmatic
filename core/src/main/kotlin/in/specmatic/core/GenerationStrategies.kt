@@ -52,7 +52,8 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
             while(iterator.hasNext()) {
                 val next = iterator.next()
 
-                if(next.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Success)
+                val strictResolver = resolver.copy(findKeyErrorCheck = DefaultKeyCheck)
+                if(next.encompasses(requestBodyAsIs, strictResolver, strictResolver, emptySet()) is Success)
                     matchFound = true
 
                 yield(next)

@@ -345,14 +345,10 @@ open class SpecmaticJUnitSupport {
 
         val urlConstructedFromProtocolHostAndPort = "$protocol://$host:$port"
 
-        if (urlConstructedFromProtocolHostAndPort != null) {
-            when (validateURI(urlConstructedFromProtocolHostAndPort)) {
-                Success -> return urlConstructedFromProtocolHostAndPort
-                else -> throw TestAbortedException("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
-            }
+        return when (validateURI(urlConstructedFromProtocolHostAndPort)) {
+            Success -> urlConstructedFromProtocolHostAndPort
+            else -> throw TestAbortedException("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
         }
-
-        return urlConstructedFromProtocolHostAndPort
     }
 
     private fun isNumeric(port: String?): Boolean {

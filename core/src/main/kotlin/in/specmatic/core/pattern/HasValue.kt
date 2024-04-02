@@ -40,7 +40,7 @@ class HasValue<T>(override val value: T): ReturnValue<T> {
         }
     }
 
-    override fun <U> reify(hasValue: (T) -> U, orElse: () -> U): U {
+    override fun <U> reify(hasValue: (T) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U {
         return hasValue(value)
     }
 }

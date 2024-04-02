@@ -11,10 +11,7 @@ import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
-import `in`.specmatic.test.ContractTest
-import `in`.specmatic.test.ScenarioTest
-import `in`.specmatic.test.ScenarioTestGenerationFailure
-import `in`.specmatic.test.TestExecutor
+import `in`.specmatic.test.*
 import io.cucumber.gherkin.GherkinDocumentBuilder
 import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
@@ -317,8 +314,11 @@ data class Feature(
                         it.serviceType
                     )
                 },
-                orElse = {
-                    ScenarioTestGenerationFailure(originalScenario, ContractException())
+                orFailure = {
+                    ScenarioTestGenerationFailure(originalScenario, it.failure)
+                },
+                orException = {
+                    ScenarioTestGenerationException(originalScenario, it.t)
                 }
             )
         }
@@ -357,12 +357,6 @@ data class Feature(
             logger.log(e)
             throw e
         }
-    }
-
-    fun validateExampleRows() {
-//        scenarios.forEach { scenario ->
-//            scenario.validateExamples(resolverStrategies.copy(generation = NonGenerativeTests))
-//        }
     }
 
     fun generateContractTestScenariosL(suggestions: List<Scenario>): List<Scenario> {

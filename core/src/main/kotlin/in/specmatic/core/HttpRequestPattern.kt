@@ -513,8 +513,8 @@ data class HttpRequestPattern(
                 }
             }
 
-            val newFormFieldsPatterns: Sequence<ReturnValue<Map<String, Pattern>>> = newBasedOn(formFieldsPattern, row, resolver).map { HasValue(it) }
-            val newFormDataPartLists: Sequence<ReturnValue<List<MultiPartFormDataPattern>>> = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver).map { HasValue(it) }
+            val newFormFieldsPatterns: Sequence<Map<String, Pattern>> = newBasedOn(formFieldsPattern, row, resolver)
+            val newFormDataPartLists: Sequence<List<MultiPartFormDataPattern>> = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
 
             newHttpPathPatterns.flatMap { newPathParamPattern ->
                 newQueryParamsPatterns.flatMap { newQueryParamPattern ->
@@ -546,6 +546,23 @@ data class HttpRequestPattern(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    fun <T, U> Sequence<T>.flatMap(fn: (T) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>> {
+        val iterator = this.iterator()
+
+        return sequence {
+            try {
+                while(iterator.hasNext()) {
+                    val next = iterator.next()
+
+                    val result = fn(next)
+                    yieldAll(result)
+                }
+            } catch(t: Throwable) {
+                yield(HasException(t))
             }
         }
     }
@@ -594,13 +611,13 @@ data class HttpRequestPattern(
 
                                     securitySchemes.map {
                                         newRequestPattern.copy(securitySchemes = listOf(it))
-                                    }
+                                    }.asSequence().map { HasValue(it) }
                                 }
                             }
                         }
                     }
                 }
-            }
+            }.map { it.value }
         }
     }
 

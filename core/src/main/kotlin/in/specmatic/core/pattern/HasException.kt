@@ -32,7 +32,7 @@ class HasException<T>(val t: Throwable) : ReturnValue<T>, ReturnFailure {
     override val value: T
         get() = throw t
 
-    override fun <U> reify(hasValue: (T) -> U, orElse: () -> U): U {
-        return orElse()
+    override fun <U> reify(hasValue: (T) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U {
+        return orException(this)
     }
 }

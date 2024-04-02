@@ -7,9 +7,6 @@ import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.mapZip
 import `in`.specmatic.core.value.*
-import `in`.specmatic.test.ContractTest
-import `in`.specmatic.test.ScenarioTest
-import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
 
 object ContractAndStubMismatchMessages : MismatchMessages {

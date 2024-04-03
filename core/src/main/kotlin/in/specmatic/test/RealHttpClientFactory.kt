@@ -7,6 +7,8 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier
 import org.apache.http.conn.ssl.TrustAllStrategy
 import org.apache.http.ssl.SSLContextBuilder
 
+const val BREATHING_ROOM_FOR_REQUEST_TIMEOUT_TO_KICK_IN_FIRST = 1
+
 object RealHttpClientFactory: HttpClientFactory {
     override fun create(timeout: Int): HttpClient = HttpClient(Apache) {
         expectSuccess = false
@@ -25,7 +27,10 @@ object RealHttpClientFactory: HttpClientFactory {
         }
 
         install(HttpTimeout) {
-            requestTimeoutMillis = (timeout * 1000).toLong()
+            socketTimeoutMillis = secondsToMillis(timeout + BREATHING_ROOM_FOR_REQUEST_TIMEOUT_TO_KICK_IN_FIRST)
+            requestTimeoutMillis = secondsToMillis(timeout)
         }
     }
 }
+
+private fun secondsToMillis(seconds: Int): Long = seconds * 1000L

@@ -302,7 +302,7 @@ data class Feature(
 
     fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> {
         return generateContractTestScenariosR(suggestions).map { (originalScenario, returnValue) ->
-            returnValue.reify(
+            returnValue.realise(
                 hasValue = {
                     ScenarioTest(
                         it,
@@ -318,7 +318,7 @@ data class Feature(
                     ScenarioTestGenerationFailure(originalScenario, it.failure)
                 },
                 orException = {
-                    ScenarioTestGenerationException(originalScenario, it.t)
+                    ScenarioTestGenerationException(originalScenario, it.t, it.message, it.breadCrumb)
                 }
             )
         }

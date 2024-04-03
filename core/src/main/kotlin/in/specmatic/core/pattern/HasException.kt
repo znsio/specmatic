@@ -3,7 +3,7 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 
-class HasException<T>(val t: Throwable) : ReturnValue<T>, ReturnFailure {
+class HasException<T>(val t: Throwable, val message: String = "", val breadCrumb: String? = null) : ReturnValue<T>, ReturnFailure {
     override fun <U> withDefault(default: U, fn: (T) -> U): U {
         return default
     }
@@ -32,7 +32,7 @@ class HasException<T>(val t: Throwable) : ReturnValue<T>, ReturnFailure {
     override val value: T
         get() = throw t
 
-    override fun <U> reify(hasValue: (T) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U {
+    override fun <U> realise(hasValue: (T) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U {
         return orException(this)
     }
 }

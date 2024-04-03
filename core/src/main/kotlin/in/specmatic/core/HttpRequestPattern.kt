@@ -454,7 +454,7 @@ data class HttpRequestPattern(
             else -> initialResolver
         }
 
-        return attempt(breadCrumb = "REQUEST") {
+        return returnValue(breadCrumb = "REQUEST") {
             val newHttpPathPatterns: Sequence<HttpPathPattern?> = httpPathPattern?.let { httpPathPattern ->
                 val newURLPathSegmentPatternsList = httpPathPattern.newBasedOn(row, resolver)
                 newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }
@@ -630,7 +630,7 @@ data class HttpRequestPattern(
     }
 
     fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpRequestPattern>> {
-        return attempt(breadCrumb = "REQUEST") {
+        return returnValue(breadCrumb = "REQUEST") {
             val newHttpPathPatterns = httpPathPattern?.let { httpPathPattern ->
                 val newURLPathSegmentPatternsList = httpPathPattern.negativeBasedOn(row, resolver)
                 newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }

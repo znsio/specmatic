@@ -29,6 +29,20 @@ data class ContractException(
     fun report(): String = failure().toReport().toText()
 }
 
+fun <ReturnType> returnValue(errorMessage: String = "", breadCrumb: String = "", f: ()->Sequence<ReturnValue<ReturnType>>): Sequence<ReturnValue<ReturnType>> {
+    return try {
+        f()
+    }
+    catch(contractException: ContractException) {
+        val failure =
+            Result.Failure(message = errorMessage, breadCrumb = breadCrumb, cause = contractException.failure())
+        sequenceOf(HasFailure(failure))
+    }
+    catch(throwable: Throwable) {
+        sequenceOf(HasException(throwable, errorMessage, breadCrumb))
+    }
+}
+
 fun <ReturnType> attempt(errorMessage: String = "", breadCrumb: String = "", f: ()->ReturnType): ReturnType {
     try {
         return f()

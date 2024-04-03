@@ -20,7 +20,7 @@ data class TestResultRecord(
 }
 
 interface ContractTest {
-    fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord
+    fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord?
     fun testDescription(): String
     fun runTest(testBaseURL: String, timeOut: Int): Pair<Result, HttpResponse?>
 }

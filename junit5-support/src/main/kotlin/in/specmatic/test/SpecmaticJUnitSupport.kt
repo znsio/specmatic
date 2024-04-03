@@ -313,7 +313,7 @@ open class SpecmaticJUnitSupport {
                 } finally {
                     if (testResult != null) {
                         val (result, response) = testResult
-                        openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result, response))
+                        testScenario.testResultRecord(result, response)?.let { testREsultRecord -> openApiCoverageReportInput.addTestReportRecords(testREsultRecord) }
                     }
                 }
             }

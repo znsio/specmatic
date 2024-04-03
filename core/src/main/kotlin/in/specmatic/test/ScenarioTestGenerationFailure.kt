@@ -6,13 +6,8 @@ import `in`.specmatic.core.Result
 import `in`.specmatic.core.Scenario
 
 class ScenarioTestGenerationFailure(val scenario: Scenario, val failure: Result.Failure): ContractTest {
-    override fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord {
-        return TestResultRecord(
-            convertPathParameterStyle(scenario.path),
-            scenario.method,
-            scenario.httpResponsePattern.status,
-            failure.testResult()
-        )
+    override fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord? {
+        return null
     }
 
     override fun testDescription(): String {

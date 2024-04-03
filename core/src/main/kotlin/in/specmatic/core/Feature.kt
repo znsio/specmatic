@@ -301,6 +301,8 @@ data class Feature(
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
     fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> {
+//        validateExampleRows()
+
         return generateContractTestScenariosR(suggestions).map { (originalScenario, returnValue) ->
             returnValue.realise(
                 hasValue = {
@@ -1459,6 +1461,13 @@ data class Feature(
             }
         }
     }
+
+    fun validateExampleRows() {
+        scenarios.forEach { scenario ->
+            scenario.validateExamples(resolverStrategies.copy(generation = NonGenerativeTests))
+        }
+    }
+
 }
 
 class EmptyContract : Throwable()

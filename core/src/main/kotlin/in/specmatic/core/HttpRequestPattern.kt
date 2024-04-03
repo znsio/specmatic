@@ -626,6 +626,10 @@ data class HttpRequestPattern(
     }
 
     fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<HttpRequestPattern> {
+        return negativeBasedOnR(row, resolver).map { it.value }
+    }
+
+    fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpRequestPattern>> {
         return attempt(breadCrumb = "REQUEST") {
             val newHttpPathPatterns = httpPathPattern?.let { httpPathPattern ->
                 val newURLPathSegmentPatternsList = httpPathPattern.negativeBasedOn(row, resolver)
@@ -665,38 +669,43 @@ data class HttpRequestPattern(
             val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
 
             sequence {
-                // If security schemes are present, for now we'll just take the first scheme and assign it to each negative request pattern.
-                // Ideally we should generate negative patterns from the security schemes and use them.
-                val positivePattern: HttpRequestPattern = newBasedOnR(row, resolver, 400).first().value.copy(securitySchemes = listOf(securitySchemes.first()))
-                // TODO: Cleanup use of newBasedOnR
+                try {
+                    // If security schemes are present, for now we'll just take the first scheme and assign it to each negative request pattern.
+                    // Ideally we should generate negative patterns from the security schemes and use them.
+                    val positivePattern: HttpRequestPattern =
+                        newBasedOn(row, resolver, 400).first().copy(securitySchemes = listOf(securitySchemes.first()))
+                    // TODO: Cleanup use of newBasedOnR
 
-                newHttpPathPatterns.forEach { pathParamPattern ->
-                    yield(positivePattern.copy(httpPathPattern = pathParamPattern))
-                }
-                newQueryParamsPatterns.forEach { queryParamPattern ->
-                    yield(
-                        positivePattern.copy(httpQueryParamPattern = queryParamPattern)
-                    )
-                }
-                newBodies.forEach { newBodyPattern ->
-                    yield(
-                        positivePattern.copy(body = newBodyPattern)
-                    )
-                }
-                newHeadersPattern.forEach { newHeaderPattern ->
-                    yield(
-                        positivePattern.copy(headersPattern = newHeaderPattern)
-                    )
-                }
-                newFormFieldsPatterns.forEach { newFormFieldPattern ->
-                    yield(
-                        positivePattern.copy(formFieldsPattern = newFormFieldPattern)
-                    )
-                }
-                newFormDataPartLists.forEach { newFormDataPartListPattern ->
-                    yield(
-                        positivePattern.copy(multiPartFormDataPattern = newFormDataPartListPattern)
-                    )
+                    newHttpPathPatterns.forEach { pathParamPattern ->
+                        yield(HasValue(positivePattern.copy(httpPathPattern = pathParamPattern)))
+                    }
+                    newQueryParamsPatterns.forEach { queryParamPattern ->
+                        yield(
+                            HasValue(positivePattern.copy(httpQueryParamPattern = queryParamPattern))
+                        )
+                    }
+                    newBodies.forEach { newBodyPattern ->
+                        yield(
+                            HasValue(positivePattern.copy(body = newBodyPattern))
+                        )
+                    }
+                    newHeadersPattern.forEach { newHeaderPattern ->
+                        yield(
+                            HasValue(positivePattern.copy(headersPattern = newHeaderPattern))
+                        )
+                    }
+                    newFormFieldsPatterns.forEach { newFormFieldPattern ->
+                        yield(
+                            HasValue(positivePattern.copy(formFieldsPattern = newFormFieldPattern))
+                        )
+                    }
+                    newFormDataPartLists.forEach { newFormDataPartListPattern ->
+                        yield(
+                            HasValue(positivePattern.copy(multiPartFormDataPattern = newFormDataPartListPattern))
+                        )
+                    }
+                } catch(t: Throwable) {
+                    yield(HasException(t))
                 }
             }
         }

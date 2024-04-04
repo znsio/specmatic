@@ -349,12 +349,12 @@ data class Feature(
 
     fun positiveTestScenarios(suggestions: List<Scenario>) =
         scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
-            it.newBasedOn(suggestions)
-        }.flatMap {
-            val (scenario, resolverStrategies) = if(it.isA2xxScenario())
-                Pair(it, resolverStrategies)
+            it.newBasedOn(suggestions, resolverStrategies)
+        }.flatMap { scenario ->
+            val resolverStrategies = if(scenario.isA2xxScenario())
+                resolverStrategies
             else
-                Pair(it.copy(generativePrefix = resolverStrategies.generation.positivePrefix), resolverStrategies.withoutGenerativeTests())
+                resolverStrategies.withoutGenerativeTests()
 
             scenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
         }

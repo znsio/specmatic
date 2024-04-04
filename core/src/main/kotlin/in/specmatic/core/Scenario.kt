@@ -340,8 +340,6 @@ data class Scenario(
                 }
             }.flatMap { row ->
                 newBasedOn(row, resolverStrategies)
-            }.map {
-                it.copy(generativePrefix = resolverStrategies.generation.positivePrefix)
             }
         }
     }
@@ -458,22 +456,24 @@ data class Scenario(
         return "$generativePrefix Scenario: $method $path ${disambiguate()}-> $statusInDescription$exampleIdentifier"
     }
 
-    fun newBasedOn(scenario: Scenario): Scenario {
+    fun newBasedOn(scenario: Scenario, resolverStrategies: ResolverStrategies): Scenario {
         return this.copy(
             examples = scenario.examples,
-            references = scenario.references
+            references = scenario.references,
+            generativePrefix = resolverStrategies.generation.positivePrefix
         )
     }
 
-    fun newBasedOn(suggestions: List<Scenario>) =
-        this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
+    fun newBasedOn(suggestions: List<Scenario>, resolverStrategies: ResolverStrategies) =
+        this.newBasedOn(suggestions.find { it.name == this.name } ?: this, resolverStrategies)
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
     fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?): Scenario {
         return this.copy(
             isNegative = true,
             badRequestOrDefault = badRequestOrDefault,
-            statusInDescription = "4xx"
+            statusInDescription = "4xx",
+            generativePrefix = "-ve"
         )
     }
 

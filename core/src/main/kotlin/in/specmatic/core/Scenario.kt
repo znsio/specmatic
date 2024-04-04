@@ -265,11 +265,7 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOn(row: Row, resolverStrategies: ResolverStrategies): Sequence<Scenario> {
-        return newBasedOnR(row, resolverStrategies).map { it.value }
-    }
-
-    private fun newBasedOnR(row: Row, resolverStrategies: ResolverStrategies): Sequence<ReturnValue<Scenario>> {
+    private fun newBasedOn(row: Row, resolverStrategies: ResolverStrategies): Sequence<ReturnValue<Scenario>> {
         val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
         val resolver =
             Resolver(expectedFacts, false, patterns)
@@ -320,7 +316,7 @@ data class Scenario(
         val rowsToValidate = examples.flatMap { it.rows }
 
         rowsToValidate.forEach { row ->
-            newBasedOn(row, resolverStrategies).first()
+            newBasedOn(row, resolverStrategies).first().value
         }
     }
 
@@ -342,7 +338,7 @@ data class Scenario(
                     }
                 }
             }.flatMap { row ->
-                newBasedOnR(row, resolverStrategies)
+                newBasedOn(row, resolverStrategies)
             }.map { returnValue ->
                 returnValue.ifValue {
                     it.copy(generativePrefix = resolverStrategies.generation.positivePrefix)

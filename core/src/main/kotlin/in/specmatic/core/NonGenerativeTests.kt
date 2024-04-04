@@ -33,7 +33,7 @@ object NonGenerativeTests : GenerationStrategies {
         return feature.positiveTestScenarios(suggestions)
     }
 
-    override fun negativeTestScenarios(feature: Feature): Sequence<Scenario> {
+    override fun negativeTestScenarios(feature: Feature): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
         return sequenceOf()
     }
 

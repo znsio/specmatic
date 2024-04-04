@@ -8,7 +8,8 @@ import org.junit.jupiter.api.Test
 class OneOfSupport {
     @Test
     fun `oneOf two objects within a schema used in the request should be handled correctly`() {
-        val specification = OpenApiSpecification.fromYAML("""
+        val specification = OpenApiSpecification.fromYAML(
+            """
             openapi: 3.0.0
             info:
               title: Test
@@ -61,9 +62,10 @@ class OneOfSupport {
                               type: string
                             city:
                               type: string
-            """.trimIndent(), "").toFeature()
+            """.trimIndent(), ""
+        ).toFeature()
 
-        val tests = specification.generateContractTestScenariosL(emptyList())
+        val tests = specification.generateContractTestScenarios(emptyList()).toList().map { it.second.value }
 
         val requestBodies = listOf(
             parsedJSONObject("""{"name": "John", "address": "1st Street"}"""),

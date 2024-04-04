@@ -186,7 +186,7 @@ data class Feature(
     }
 
     fun executeTests(testExecutorFn: TestExecutor, suggestions: List<Scenario> = emptyList()): Results {
-        val testScenarios = generateContractTestScenarios(suggestions)
+        val testScenarios = generateContractTestScenarios(suggestions).map { it.second.value }
 
         return testScenarios.fold(Results()) { results, scenario ->
             Results(results = results.results.plus(executeTest(scenario, testExecutorFn, resolverStrategies)).toMutableList())
@@ -199,6 +199,7 @@ data class Feature(
         scenarioNames: List<String>
     ): Results =
         generateContractTestScenarios(suggestions)
+            .map { it.second.value }
             .filter { scenarioNames.contains(it.name) }
             .fold(Results()) { results, scenario ->
                 Results(results = results.results.plus(executeTest(scenario, testExecutorFn, resolverStrategies)).toMutableList())
@@ -303,7 +304,7 @@ data class Feature(
     fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> {
 //        validateExampleRows()
 
-        return generateContractTestScenariosR(suggestions).map { (originalScenario, returnValue) ->
+        return generateContractTestScenarios(suggestions).map { (originalScenario, returnValue) ->
             returnValue.realise(
                 hasValue = {
                     ScenarioTest(
@@ -343,58 +344,48 @@ data class Feature(
         return BadRequestOrDefault(badRequestResponses, defaultResponse)
     }
 
-    fun generateContractTestScenariosR(suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
+    fun generateContractTestScenarios(suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
         return resolverStrategies.generation.let {
-            it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this).map { Pair(it, HasValue(it)) }
+            it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
         }
-    }
-
-    fun generateContractTestScenarios(suggestions: List<Scenario>): Sequence<Scenario> {
-        return try {
-            resolverStrategies.generation.let {
-                it.positiveTestScenarios(this, suggestions).map { it.second.value } + it.negativeTestScenarios(this)
-            }
-        }
-        catch(e: Throwable) {
-            logger.log(e)
-            throw e
-        }
-    }
-
-    fun generateContractTestScenariosL(suggestions: List<Scenario>): List<Scenario> {
-        return generateContractTestScenarios(suggestions).toList()
     }
 
     fun positiveTestScenarios(suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =
         scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
-        }.flatMap {
-            val resolverStrategies = if(it.isA2xxScenario())
+        }.flatMap { originalScenario ->
+            val resolverStrategies = if(originalScenario.isA2xxScenario())
                 resolverStrategies
             else
                 resolverStrategies.withoutGenerativeTests()
 
-            it.generateTestScenariosR(resolverStrategies, testVariables, testBaseURLs)
+            originalScenario.generateTestScenariosR(resolverStrategies, testVariables, testBaseURLs).map { Pair(originalScenario, it) }
         }
 
-    fun negativeTestScenarios() =
-        scenarios.asSequence().filter {
+    fun negativeTestScenarios(): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
+        return scenarios.asSequence().filter {
             it.isA2xxScenario()
-        }.flatMap { scenario ->
-            val negativeScenario = scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
+        }.flatMap { originalScenario ->
+            val negativeScenario = originalScenario.negativeBasedOn(getBadRequestsOrDefault(originalScenario))
 
-            val negativeTestScenarios = negativeScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
+            val negativeTestScenarios =
+                negativeScenario.generateTestScenariosR(resolverStrategies, testVariables, testBaseURLs)
 
-            negativeTestScenarios.filterNot { negativeTestScenario ->
-                val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
-                scenario.httpRequestPattern.matches(sampleRequest, scenario.resolver).isSuccess()
-            }.mapIndexed { index, negativeScenario ->
-                negativeScenario.copy(
-                    generativePrefix = resolverStrategies.generation.negativePrefix,
-                    disambiguate = { "[${(index + 1)}] " }
-                )
+            negativeTestScenarios.filterNot { negativeTestScenarioR ->
+                negativeTestScenarioR.withDefault(false) { negativeTestScenario ->
+                    val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
+                    originalScenario.httpRequestPattern.matches(sampleRequest, originalScenario.resolver).isSuccess()
+                }
+            }.mapIndexed { index, negativeTestScenarioR ->
+                Pair(originalScenario, negativeTestScenarioR.ifValue { negativeTestScenario ->
+                    negativeTestScenario.copy(
+                        generativePrefix = resolverStrategies.generation.negativePrefix,
+                        disambiguate = { "[${(index + 1)}] " }
+                    )
+                })
             }
         }
+    }
 
     fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =
         scenarios.flatMap { scenario ->

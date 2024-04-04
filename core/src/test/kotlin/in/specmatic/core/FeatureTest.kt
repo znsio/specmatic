@@ -20,7 +20,8 @@ import java.util.stream.Stream
 class FeatureTest {
     @Test
     fun `test descriptions with no tags should contain no tag separators`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
 openapi: 3.0.0
 info:
   title: Sample Product API
@@ -59,9 +60,11 @@ paths:
                 properties:
                   id:
                     type: integer
-""".trimIndent(), "").toFeature()
+""".trimIndent(), ""
+        ).toFeature()
 
-        val scenarios: List<Scenario> = contract.generateContractTestScenariosL(emptyList())
+        val scenarios: List<Scenario> =
+            contract.generateContractTestScenarios(emptyList()).toList().map { it.second.value }
 
         assertThat(scenarios.map { it.testDescription() }).allSatisfy {
             assertThat(it).doesNotContain("|")
@@ -70,7 +73,8 @@ paths:
 
     @Test
     fun `test descriptions with generative tests on should contain the type`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
 openapi: 3.0.0
 info:
   title: Sample Product API
@@ -118,9 +122,12 @@ paths:
                 properties:
                   id:
                     type: integer
-""".trimIndent(), "").toFeature()
+""".trimIndent(), ""
+        ).toFeature()
 
-        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenariosL(emptyList())
+        val scenarios: List<Scenario> =
+            contract.enableGenerativeTesting().generateContractTestScenarios(emptyList()).toList()
+                .map { it.second.value }
 
         assertThat(scenarios.map { it.testDescription() }).allSatisfy {
             assertThat(it).containsAnyOf("+ve", "-ve")
@@ -129,7 +136,8 @@ paths:
 
     @Test
     fun `test output should contain example name`() {
-val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
 openapi: 3.0.0
 info:
   title: Sample Product API
@@ -177,15 +185,18 @@ paths:
                 properties:
                   id:
                     type: integer
-""".trimIndent(), "").toFeature()
+""".trimIndent(), ""
+        ).toFeature()
 
-        val scenario: Scenario = contract.generateContractTestScenariosL(emptyList()).first()
+        val scenario: Scenario =
+            contract.generateContractTestScenarios(emptyList()).toList().map { it.second.value }.first()
         assertThat(scenario.testDescription()).contains("SUCCESS")
     }
 
     @Test
     fun `test output should contain example name and preserve WIP tag`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
 openapi: 3.0.0
 info:
   title: Sample Product API
@@ -233,9 +244,11 @@ paths:
                 properties:
                   id:
                     type: integer
-""".trimIndent(), "").toFeature()
+""".trimIndent(), ""
+        ).toFeature()
 
-        val scenario: Scenario = contract.generateContractTestScenariosL(emptyList()).first()
+        val scenario: Scenario =
+            contract.generateContractTestScenarios(emptyList()).toList().map { it.second.value }.first()
         assertThat(scenario.testDescription()).contains("[WIP] SUCCESS")
     }
     @DisplayName("Single Feature Contract")
@@ -1128,7 +1141,8 @@ Then status 200
 
     @Test
     fun `only one test is generated when all fields exist in the example and the generative flag is off`() {
-        val contract = parseGherkinStringToFeature("""
+        val contract = parseGherkinStringToFeature(
+            """
             Feature: Test
                 Background:
                     Given openapi openapi/three_keys_one_mandatory.yaml
@@ -1140,15 +1154,18 @@ Then status 200
                     Examples:
                     | id | name   |
                     | 10 | Justin |
-        """.trimIndent(), "src/test/resources/test.spec")
+        """.trimIndent(), "src/test/resources/test.spec"
+        )
 
-        val testScenarios: List<Scenario> = contract.generateContractTestScenariosL(emptyList())
+        val testScenarios: List<Scenario> =
+            contract.generateContractTestScenarios(emptyList()).toList().map { it.second.value }
         assertThat(testScenarios).hasSize(1)
     }
 
     @Test
     fun `test generates no negative tests for a string header parameter`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
 openapi: 3.0.0
 info:
   title: Sample Product API
@@ -1191,15 +1208,19 @@ paths:
                     type: integer
                   name:
                     type: string
-""".trimIndent(), "").toFeature()
+""".trimIndent(), ""
+        ).toFeature()
 
-        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenariosL(emptyList())
+        val scenarios: List<Scenario> =
+            contract.enableGenerativeTesting().generateContractTestScenarios(emptyList()).toList()
+                .map { it.second.value }
         assertThat(scenarios.count { it.testDescription().contains("-ve") }).isEqualTo(0)
     }
 
     @Test
     fun `test generates 1 negative test with string pattern for an integer header parameter`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
 openapi: 3.0.0
 info:
   title: Sample Product API
@@ -1242,10 +1263,13 @@ paths:
                     type: integer
                   name:
                     type: string
-""".trimIndent(), "").toFeature()
+""".trimIndent(), ""
+        ).toFeature()
 
-        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenariosL(emptyList())
-        val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
+        val scenarios: List<Scenario> =
+            contract.enableGenerativeTesting().generateContractTestScenarios(emptyList()).toList()
+                .map { it.second.value }
+        val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve") }
         assertThat(negativeTestScenarios.count()).isEqualTo(2)
         val headerPattern = negativeTestScenarios.first().httpRequestPattern.headersPattern.pattern
         assertThat(headerPattern.values.first() is StringPattern)
@@ -1253,7 +1277,8 @@ paths:
 
     @Test
     fun `test generates no negative tests for a boolean header parameter`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
 openapi: 3.0.0
 info:
   title: Sample Product API
@@ -1296,16 +1321,20 @@ paths:
                     type: integer
                   name:
                     type: string
-""".trimIndent(), "").toFeature()
+""".trimIndent(), ""
+        ).toFeature()
 
-        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenariosL(emptyList())
-        val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
+        val scenarios: List<Scenario> =
+            contract.enableGenerativeTesting().generateContractTestScenarios(emptyList()).toList()
+                .map { it.second.value }
+        val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve") }
         assertThat(negativeTestScenarios.count()).isEqualTo(0)
     }
 
     @Test
     fun `test generates 8 negative tests for 2 integer header parameters and 2 body parameters`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
 openapi: 3.0.0
 info:
   title: Sample Product API
@@ -1376,16 +1405,20 @@ paths:
                     type: integer
                   name:
                     type: string
-""".trimIndent(), "").toFeature()
+""".trimIndent(), ""
+        ).toFeature()
 
-        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenariosL(emptyList())
-        val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
+        val scenarios: List<Scenario> =
+            contract.enableGenerativeTesting().generateContractTestScenarios(emptyList()).toList()
+                .map { it.second.value }
+        val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve") }
         assertThat(negativeTestScenarios.count()).isEqualTo(10)
     }
 
     @Test
     fun `negative tests should say that 4xx status is expected in response and show the index of the test`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
 openapi: 3.0.0
 info:
   title: Sample Product API
@@ -1429,10 +1462,13 @@ paths:
                 properties:
                   id:
                     type: integer
-""".trimIndent(), "").toFeature()
+""".trimIndent(), ""
+        ).toFeature()
 
-        val scenarios: List<Scenario> = contract.enableGenerativeTesting().generateContractTestScenariosL(emptyList())
-        val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve")}
+        val scenarios: List<Scenario> =
+            contract.enableGenerativeTesting().generateContractTestScenarios(emptyList()).toList()
+                .map { it.second.value }
+        val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve") }
         assertThat(negativeTestScenarios.map { it.testDescription() }).allSatisfy {
             assertThat(it).contains("-> 4xx")
         }

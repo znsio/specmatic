@@ -509,9 +509,9 @@ paths:
 """.trimIndent(), ""
         ).toFeature()
 
-        val contractTestScenarios = contract.generateContractTestScenarios(emptyList())
+        val contractTestScenarios = contract.generateContractTestScenarios(emptyList()).map { it.second.value }
 
-        val result: Result = executeTest(contractTestScenarios.first(), object: TestExecutor {
+        val result: Result = executeTest(contractTestScenarios.first(), object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 return HttpResponse.ok("abc")
             }

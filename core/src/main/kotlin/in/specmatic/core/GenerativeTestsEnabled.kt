@@ -79,7 +79,7 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
         return feature.positiveTestScenarios(suggestions)
     }
 
-    override fun negativeTestScenarios(feature: Feature): Sequence<Scenario> {
+    override fun negativeTestScenarios(feature: Feature): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
         return if(positiveOnly)
             emptySequence()
         else

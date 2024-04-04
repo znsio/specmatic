@@ -10,14 +10,6 @@ data class Contract(val contract: Feature) {
             return Contract(parseGherkinStringToFeature(contractGherkin))
         }
     }
-    fun test(endPoint: String) {
-        val contractBehaviour = contract
-        val results = contractBehaviour.executeTests(HttpClient(endPoint))
-        if (results.hasFailures())
-            throw ContractException(results.report(PATH_NOT_RECOGNIZED_ERROR))
-    }
-
-    fun test(fake: HttpStub) = test(fake.endPoint)
 
     fun samples(fake: HttpStub) = samples(fake.endPoint)
 

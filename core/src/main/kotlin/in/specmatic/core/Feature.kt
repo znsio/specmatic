@@ -185,24 +185,16 @@ data class Feature(
         })
     }
 
-    fun executeTests(testExecutorFn: TestExecutor, suggestions: List<Scenario> = emptyList()): Results {
-        val testScenarios = generateContractTestScenarios(suggestions).map { it.second.value }
-
-        return testScenarios.fold(Results()) { results, scenario ->
-            Results(results = results.results.plus(executeTest(scenario, testExecutorFn, resolverStrategies)).toMutableList())
-        }
-    }
-
     fun executeTests(
         testExecutorFn: TestExecutor,
         suggestions: List<Scenario> = emptyList(),
-        scenarioNames: List<String>
+        scenarioNames: List<String> = emptyList()
     ): Results =
         generateContractTestScenarios(suggestions)
             .map { it.second.value }
-            .filter { scenarioNames.contains(it.name) }
+            .filter { scenarioNames.isEmpty() || scenarioNames.contains(it.name) }
             .fold(Results()) { results, scenario ->
-                Results(results = results.results.plus(executeTest(scenario, testExecutorFn, resolverStrategies)).toMutableList())
+                Results(results = results.results.plus(executeTest(scenario, testExecutorFn, resolverStrategies)))
             }
 
     fun setServerState(serverState: Map<String, Value>) {

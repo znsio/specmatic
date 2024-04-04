@@ -705,8 +705,7 @@ Background:
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse = HttpResponse(200)
                 override fun setServerState(serverState: Map<String, Value>) {}
-            },
-            scenarioNames = emptyList()
+            }
         )
         assertThat(results.hasResults()).isFalse
     }

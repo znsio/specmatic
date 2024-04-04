@@ -9,17 +9,16 @@ data class ResolverStrategies(
     val unexpectedKeyCheck: UnexpectedKeyCheck?
 ) {
     fun update(resolver: Resolver): Resolver {
+        val findKeyErrorCheck = if(unexpectedKeyCheck != null) {
+            resolver.findKeyErrorCheck.copy(unexpectedKeyCheck = unexpectedKeyCheck)
+        } else
+            resolver.findKeyErrorCheck
+
         return resolver.copy(
             defaultExampleResolver = defaultExampleResolver,
-            generation = generation
-        ).let {
-            if(unexpectedKeyCheck != null) {
-                val keyCheck = resolver.findKeyErrorCheck
-                val updatedKeyCheck = keyCheck.copy(unexpectedKeyCheck = unexpectedKeyCheck)
-                resolver.copy(findKeyErrorCheck = updatedKeyCheck)
-            } else
-                it
-        }
+            generation = generation,
+            findKeyErrorCheck = findKeyErrorCheck
+        )
     }
 
     fun withoutGenerativeTests(): ResolverStrategies {

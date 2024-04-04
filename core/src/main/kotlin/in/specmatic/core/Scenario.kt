@@ -219,8 +219,8 @@ data class Scenario(
         }
     }
 
-    fun generateHttpRequest(resolverStrategies: ResolverStrategies = DefaultStrategies): HttpRequest =
-        scenarioBreadCrumb(this) { httpRequestPattern.generate(resolverStrategies.update(Resolver(expectedFacts, false, patterns))) }
+    fun generateHttpRequest(flagsBased: FlagsBased = DefaultStrategies): HttpRequest =
+        scenarioBreadCrumb(this) { httpRequestPattern.generate(flagsBased.update(Resolver(expectedFacts, false, patterns))) }
 
     fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
         val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = mismatchMessages).let {
@@ -268,13 +268,13 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOn(row: Row, resolverStrategies: ResolverStrategies): Sequence<Scenario> {
+    private fun newBasedOn(row: Row, flagsBased: FlagsBased): Sequence<Scenario> {
         val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
         val resolver =
             Resolver(expectedFacts, false, patterns)
             .copy(
                 mismatchMessages = ContractAndRowValueMismatch
-            ).let { resolverStrategies.update(it) }
+            ).let { flagsBased.update(it) }
 
         val newExpectedServerState = newExpectedServerStateBasedOn(row, expectedFacts, fixtures, resolver)
 
@@ -283,8 +283,8 @@ data class Scenario(
                 val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withExactResponseValue(row, resolver)
 
                 val (newRequestPatterns: Sequence<HttpRequestPattern>, generativePrefix: String) = when (isNegative) {
-                    false -> Pair(httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status), resolverStrategies.positivePrefix)
-                    else -> Pair(httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true)), resolverStrategies.negativePrefix)
+                    false -> Pair(httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status), flagsBased.positivePrefix)
+                    else -> Pair(httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true)), flagsBased.negativePrefix)
                 }
 
                 newRequestPatterns.map { newHttpRequestPattern ->
@@ -315,17 +315,17 @@ data class Scenario(
     }
 
     fun validateExamples(
-        resolverStrategies: ResolverStrategies,
+        flagsBased: FlagsBased,
     ) {
         val rowsToValidate = examples.flatMap { it.rows }
 
         rowsToValidate.forEach { row ->
-            newBasedOn(row, resolverStrategies).first()
+            newBasedOn(row, flagsBased).first()
         }
     }
 
     fun generateTestScenarios(
-        resolverStrategies: ResolverStrategies,
+        flagsBased: FlagsBased,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
     ): Sequence<Scenario> {
@@ -342,13 +342,13 @@ data class Scenario(
                     }
                 }
             }.flatMap { row ->
-                newBasedOn(row, resolverStrategies)
+                newBasedOn(row, flagsBased)
             }
         }
     }
 
     fun generateContractTests(
-        resolverStrategies: ResolverStrategies,
+        flagsBased: FlagsBased,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
     ): Sequence<ContractTest> {
@@ -366,7 +366,7 @@ data class Scenario(
                 }
             }.flatMap { row ->
                 try {
-                    newBasedOn(row, resolverStrategies).map { ScenarioTest(it, resolverStrategies) }
+                    newBasedOn(row, flagsBased).map { ScenarioTest(it, flagsBased) }
                 } catch (e: Throwable) {
                     sequenceOf(ScenarioTestGenerationFailure(this, e))
                 }
@@ -556,16 +556,16 @@ object ContractAndResponseMismatch : MismatchMessages {
     }
 }
 
-fun executeTest(testScenario: Scenario, testExecutor: TestExecutor, resolverStrategies: ResolverStrategies = DefaultStrategies): Result {
-    return executeTestAndReturnResultAndResponse(testScenario, testExecutor, resolverStrategies).first
+fun executeTest(testScenario: Scenario, testExecutor: TestExecutor, flagsBased: FlagsBased = DefaultStrategies): Result {
+    return executeTestAndReturnResultAndResponse(testScenario, testExecutor, flagsBased).first
 }
 
 fun executeTestAndReturnResultAndResponse(
     testScenario: Scenario,
     testExecutor: TestExecutor,
-    resolverStrategies: ResolverStrategies
+    flagsBased: FlagsBased
 ): Pair<Result, HttpResponse?> {
-    val request = testScenario.generateHttpRequest(resolverStrategies)
+    val request = testScenario.generateHttpRequest(flagsBased)
 
     return try {
         testExecutor.setServerState(testScenario.serverState)
@@ -574,7 +574,7 @@ fun executeTestAndReturnResultAndResponse(
 
         val response = testExecutor.execute(request)
 
-        val result = testResult(response, testScenario, resolverStrategies)
+        val result = testResult(response, testScenario, flagsBased)
 
         Pair(result.withBindings(testScenario.bindings, response), response)
     } catch (exception: Throwable) {
@@ -586,14 +586,14 @@ fun executeTestAndReturnResultAndResponse(
 private fun testResult(
     response: HttpResponse,
     testScenario: Scenario,
-    resolverStrategies: ResolverStrategies? = null
+    flagsBased: FlagsBased? = null
 ): Result {
 
     val result = when {
         response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral())
             .updateScenario(testScenario)
         response.body is JSONObjectValue && ignorable(response.body) -> Result.Success()
-        else -> testScenario.matches(response, ContractAndResponseMismatch, resolverStrategies?.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
+        else -> testScenario.matches(response, ContractAndResponseMismatch, flagsBased?.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
     }.also { result ->
         if (result is Result.Success && result.isPartialSuccess()) {
             logger.log("    PARTIAL SUCCESS: ${result.partialSuccessMessage}")

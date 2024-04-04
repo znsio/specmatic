@@ -2,9 +2,8 @@ package `in`.specmatic.core
 
 import `in`.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import `in`.specmatic.core.pattern.IgnoreUnexpectedKeys
-import net.bytebuddy.implementation.ToStringMethod.PrefixResolver
 
-data class ResolverStrategies(
+data class FlagsBased(
     val defaultExampleResolver: DefaultExampleResolver,
     val generation: GenerationStrategies,
     val unexpectedKeyCheck: UnexpectedKeyCheck?,
@@ -24,19 +23,19 @@ data class ResolverStrategies(
         )
     }
 
-    fun withoutGenerativeTests(): ResolverStrategies {
+    fun withoutGenerativeTests(): FlagsBased {
         return this.copy(generation = NonGenerativeTests)
     }
 }
 
-fun strategiesFromFlags(flags: EnvironmentAndPropertiesConfiguration): ResolverStrategies {
+fun strategiesFromFlags(flags: EnvironmentAndPropertiesConfiguration): FlagsBased {
     val (positivePrefix, negativePrefix) =
         if (flags.generativeTestingEnabled())
             Pair(POSITIVE_TEST_DESCRIPTION_PREFIX, NEGATIVE_TEST_DESCRIPTION_PREFIX)
         else
             Pair("", "")
 
-    return ResolverStrategies(
+    return FlagsBased(
         defaultExampleResolver = if (flags.schemaExampleDefaultEnabled()) UseDefaultExample else DoNotUseDefaultExample,
         generation = if (flags.generativeTestingEnabled()) GenerativeTestsEnabled() else NonGenerativeTests,
         unexpectedKeyCheck = if (flags.extensibleSchema()) IgnoreUnexpectedKeys else null,
@@ -45,7 +44,7 @@ fun strategiesFromFlags(flags: EnvironmentAndPropertiesConfiguration): ResolverS
     )
 }
 
-val DefaultStrategies = ResolverStrategies (
+val DefaultStrategies = FlagsBased (
     DoNotUseDefaultExample,
     NonGenerativeTests,
     null,

@@ -85,10 +85,10 @@ data class Feature(
     val serviceType:String? = null,
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(),
-    val resolverStrategies: ResolverStrategies = strategiesFromFlags(environmentAndPropertiesConfiguration)
+    val flagsBased: FlagsBased = strategiesFromFlags(environmentAndPropertiesConfiguration)
 ) {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
-        return this.copy(resolverStrategies = this.resolverStrategies.copy(
+        return this.copy(flagsBased = this.flagsBased.copy(
             generation = GenerativeTestsEnabled(onlyPositive),
             positivePrefix = POSITIVE_TEST_DESCRIPTION_PREFIX,
             negativePrefix = NEGATIVE_TEST_DESCRIPTION_PREFIX
@@ -96,7 +96,7 @@ data class Feature(
     }
 
     fun enableSchemaExampleDefault(): Feature {
-        return this.copy(resolverStrategies = this.resolverStrategies.copy(defaultExampleResolver = UseDefaultExample))
+        return this.copy(flagsBased = this.flagsBased.copy(defaultExampleResolver = UseDefaultExample))
     }
 
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
@@ -198,7 +198,7 @@ data class Feature(
         val testScenarios = generateContractTestScenarios(suggestions)
 
         return testScenarios.fold(Results()) { results, scenario ->
-            Results(results = results.results.plus(executeTest(scenario, testExecutorFn, resolverStrategies)).toMutableList())
+            Results(results = results.results.plus(executeTest(scenario, testExecutorFn, flagsBased)).toMutableList())
         }
     }
 
@@ -210,7 +210,7 @@ data class Feature(
         generateContractTestScenarios(suggestions)
             .filter { scenarioNames.contains(it.name) }
             .fold(Results()) { results, scenario ->
-                Results(results = results.results.plus(executeTest(scenario, testExecutorFn, resolverStrategies)).toMutableList())
+                Results(results = results.results.plus(executeTest(scenario, testExecutorFn, flagsBased)).toMutableList())
             }
 
     fun setServerState(serverState: Map<String, Value>) {
@@ -311,7 +311,7 @@ data class Feature(
 
     fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> =
         generateContractTestScenarios(suggestions).map {
-            ScenarioTest(it, resolverStrategies,
+            ScenarioTest(it, flagsBased,
                 it.sourceProvider, it.sourceRepository, it.sourceRepositoryBranch, it.specification, it.serviceType)
         }
 
@@ -334,7 +334,7 @@ data class Feature(
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): Sequence<Scenario> {
         return try {
-            resolverStrategies.generation.let {
+            flagsBased.generation.let {
                 it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
             }
         }
@@ -346,7 +346,7 @@ data class Feature(
 
     fun validateExampleRows() {
         scenarios.forEach { scenario ->
-            scenario.validateExamples(resolverStrategies.copy(generation = NonGenerativeTests))
+            scenario.validateExamples(flagsBased.copy(generation = NonGenerativeTests))
         }
     }
 
@@ -359,9 +359,9 @@ data class Feature(
             it.newBasedOn(suggestions)
         }.flatMap { scenario ->
             val resolverStrategies = if(scenario.isA2xxScenario())
-                resolverStrategies
+                flagsBased
             else
-                resolverStrategies.withoutGenerativeTests()
+                flagsBased.withoutGenerativeTests()
 
             scenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
         }
@@ -372,14 +372,14 @@ data class Feature(
         }.flatMap { scenario ->
             val negativeScenario = scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
 
-            val negativeTestScenarios = negativeScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
+            val negativeTestScenarios = negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs)
 
             negativeTestScenarios.filterNot { negativeTestScenario ->
                 val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
                 scenario.httpRequestPattern.matches(sampleRequest, scenario.resolver).isSuccess()
             }.mapIndexed { index, negativeScenario ->
                 negativeScenario.copy(
-                    generativePrefix = resolverStrategies.negativePrefix,
+                    generativePrefix = flagsBased.negativePrefix,
                     disambiguate = { "[${(index + 1)}] " }
                 )
             }

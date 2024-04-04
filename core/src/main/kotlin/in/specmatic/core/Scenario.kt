@@ -284,8 +284,8 @@ data class Scenario(
                 val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withExactResponseValue(row, resolver)
 
                 when (isNegative) {
-                    false -> httpRequestPattern.newBasedOnR(row, resolver, httpResponsePattern.status)
-                    else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true)).map { HasValue(it) }
+                    false -> httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status)
+                    else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true))
                 }.map { newHttpRequestPattern ->
                     newHttpRequestPattern.ifValue {
                         this.copy(

@@ -448,7 +448,7 @@ data class HttpRequestPattern(
         }
     }
 
-    fun newBasedOnR(row: Row, initialResolver: Resolver, status: Int = 0): Sequence<ReturnValue<HttpRequestPattern>> {
+    fun newBasedOn(row: Row, initialResolver: Resolver, status: Int = 0): Sequence<ReturnValue<HttpRequestPattern>> {
         val resolver = when (status) {
             in invalidRequestStatuses -> initialResolver.invalidRequestResolver()
             else -> initialResolver
@@ -567,10 +567,6 @@ data class HttpRequestPattern(
         }
     }
 
-    fun newBasedOn(row: Row, initialResolver: Resolver, status: Int = 0): Sequence<HttpRequestPattern> {
-        return newBasedOnR(row, initialResolver, status).map { it.value }
-    }
-
     private fun isInvalidRequestResponse(status: Int): Boolean {
         return status in invalidRequestStatuses
     }
@@ -625,11 +621,7 @@ data class HttpRequestPattern(
         return "$method ${httpPathPattern.toString()}"
     }
 
-    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<HttpRequestPattern> {
-        return negativeBasedOnR(row, resolver).map { it.value }
-    }
-
-    fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpRequestPattern>> {
+    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpRequestPattern>> {
         return returnValue(breadCrumb = "REQUEST") {
             val newHttpPathPatterns = httpPathPattern?.let { httpPathPattern ->
                 val newURLPathSegmentPatternsList = httpPathPattern.negativeBasedOn(row, resolver)
@@ -673,8 +665,7 @@ data class HttpRequestPattern(
                     // If security schemes are present, for now we'll just take the first scheme and assign it to each negative request pattern.
                     // Ideally we should generate negative patterns from the security schemes and use them.
                     val positivePattern: HttpRequestPattern =
-                        newBasedOn(row, resolver, 400).first().copy(securitySchemes = listOf(securitySchemes.first()))
-                    // TODO: Cleanup use of newBasedOnR
+                        newBasedOn(row, resolver, 400).first().value.copy(securitySchemes = listOf(securitySchemes.first()))
 
                     newHttpPathPatterns.forEach { pathParamPattern ->
                         yield(HasValue(positivePattern.copy(httpPathPattern = pathParamPattern)))

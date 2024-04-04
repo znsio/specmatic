@@ -23,6 +23,9 @@ def jgit_version = "6.9.0.202403050737-r"
 def junit_version = "5.10.2"
 
 dependencies {
+    // TODO Fix to eliminate vulnerabilities, remove when the enclosing library supports it
+    implementation 'io.netty:netty-codec-http:4.1.108.Final' // used by ktor-server-netty-jvm 2.3.9 in core
+
     implementation 'io.cucumber:gherkin:22.0.0'
     implementation "io.ktor:ktor-server-netty:$ktor_version"
     implementation "io.ktor:ktor-server-core:$ktor_version"

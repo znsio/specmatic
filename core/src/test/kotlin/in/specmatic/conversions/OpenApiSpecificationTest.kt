@@ -9,7 +9,6 @@ import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.newBasedOnResolved
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.createStubFromContracts
@@ -3284,7 +3283,7 @@ Scenario: Get product by id
         val row = Row(columnNames = listOf("(Data)"), values = listOf(data))
         val resolver = feature.scenarios.single().resolver
 
-        val newPatterns = feature.scenarios.single().httpRequestPattern.newBasedOnResolved(row, resolver)
+        val newPatterns = feature.scenarios.single().httpRequestPattern.newBasedOn(row, resolver).map { it.value }
 
         assertThat((newPatterns.single().body as ExactValuePattern).pattern as JSONObjectValue).isEqualTo(
             parsedValue(

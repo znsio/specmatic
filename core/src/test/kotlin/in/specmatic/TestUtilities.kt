@@ -135,6 +135,3 @@ val DefaultStrategies = ResolverStrategies (
     null
 )
 
-fun HttpRequestPattern.newBasedOnResolved(row: Row, initialResolver: Resolver, status: Int = 0): Sequence<HttpRequestPattern> {
-    return newBasedOn(row, initialResolver, status).map { it.value }
-}

@@ -135,5 +135,7 @@ infix fun <E> List<E>.shouldContainInAnyOrder(elementList: List<E>) {
 val DefaultStrategies = ResolverStrategies (
     DoNotUseDefaultExample,
     NonGenerativeTests,
-    null
+    null,
+    "",
+    ""
 )

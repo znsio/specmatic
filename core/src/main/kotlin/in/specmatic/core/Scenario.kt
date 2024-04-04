@@ -282,16 +282,19 @@ data class Scenario(
             attempt {
                 val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withExactResponseValue(row, resolver)
 
-                when (isNegative) {
-                    false -> httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status)
-                    else -> httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true))
-                }.map { newHttpRequestPattern ->
+                val (newRequestPatterns: Sequence<HttpRequestPattern>, generativePrefix: String) = when (isNegative) {
+                    false -> Pair(httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status), resolverStrategies.positivePrefix)
+                    else -> Pair(httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true)), resolverStrategies.negativePrefix)
+                }
+
+                newRequestPatterns.map { newHttpRequestPattern ->
                     this.copy(
                         httpRequestPattern = newHttpRequestPattern,
                         httpResponsePattern = newResponsePattern,
                         expectedFacts = newExpectedServerState,
                         ignoreFailure = ignoreFailure,
-                        exampleName = row.name
+                        exampleName = row.name,
+                        generativePrefix = generativePrefix
                     )
                 }
             }
@@ -456,16 +459,15 @@ data class Scenario(
         return "$generativePrefix Scenario: $method $path ${disambiguate()}-> $statusInDescription$exampleIdentifier"
     }
 
-    fun newBasedOn(scenario: Scenario, resolverStrategies: ResolverStrategies): Scenario {
+    fun newBasedOn(scenario: Scenario): Scenario {
         return this.copy(
             examples = scenario.examples,
-            references = scenario.references,
-            generativePrefix = resolverStrategies.generation.positivePrefix
+            references = scenario.references
         )
     }
 
-    fun newBasedOn(suggestions: List<Scenario>, resolverStrategies: ResolverStrategies) =
-        this.newBasedOn(suggestions.find { it.name == this.name } ?: this, resolverStrategies)
+    fun newBasedOn(suggestions: List<Scenario>) =
+        this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
     fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?): Scenario {

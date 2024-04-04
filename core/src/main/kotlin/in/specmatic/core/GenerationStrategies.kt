@@ -6,9 +6,6 @@ import `in`.specmatic.core.pattern.isOptional
 import `in`.specmatic.core.value.Value
 
 interface GenerationStrategies {
-    val negativePrefix: String
-    val positivePrefix: String
-
     fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): Sequence<Pattern>
     fun generateHttpRequests(resolver: Resolver, body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<Pattern>
     fun generateHttpRequests(resolver: Resolver, body: Pattern, row: Row): Sequence<Pattern>
@@ -26,9 +23,6 @@ interface GenerationStrategies {
 }
 
 data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.onlyPositive()) : GenerationStrategies {
-    override val negativePrefix: String = "-ve "
-    override val positivePrefix: String = "+ve "
-
     override fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): Sequence<Pattern> {
         // TODO generate value outside
         return resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
@@ -136,9 +130,6 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
 }
 
 object NonGenerativeTests : GenerationStrategies {
-    override val negativePrefix: String = ""
-    override val positivePrefix: String = ""
-
     override fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): Sequence<Pattern> {
         return sequenceOf()
     }

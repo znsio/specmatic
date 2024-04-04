@@ -68,6 +68,9 @@ fun parseGherkinStringToFeature(gherkinData: String, sourceFilePath: String = ""
     return Feature(scenarios = scenarios, name = name, path = sourceFilePath)
 }
 
+const val POSITIVE_TEST_DESCRIPTION_PREFIX = "+ve "
+const val NEGATIVE_TEST_DESCRIPTION_PREFIX = "-ve "
+
 data class Feature(
     val scenarios: List<Scenario> = emptyList(),
     private var serverState: Map<String, Value> = emptyMap(),
@@ -85,7 +88,11 @@ data class Feature(
     val resolverStrategies: ResolverStrategies = strategiesFromFlags(environmentAndPropertiesConfiguration)
 ) {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
-        return this.copy(resolverStrategies = this.resolverStrategies.copy(generation = GenerativeTestsEnabled(onlyPositive)))
+        return this.copy(resolverStrategies = this.resolverStrategies.copy(
+            generation = GenerativeTestsEnabled(onlyPositive),
+            positivePrefix = POSITIVE_TEST_DESCRIPTION_PREFIX,
+            negativePrefix = NEGATIVE_TEST_DESCRIPTION_PREFIX
+        ))
     }
 
     fun enableSchemaExampleDefault(): Feature {
@@ -349,7 +356,7 @@ data class Feature(
 
     fun positiveTestScenarios(suggestions: List<Scenario>) =
         scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
-            it.newBasedOn(suggestions, resolverStrategies)
+            it.newBasedOn(suggestions)
         }.flatMap { scenario ->
             val resolverStrategies = if(scenario.isA2xxScenario())
                 resolverStrategies
@@ -372,7 +379,7 @@ data class Feature(
                 scenario.httpRequestPattern.matches(sampleRequest, scenario.resolver).isSuccess()
             }.mapIndexed { index, negativeScenario ->
                 negativeScenario.copy(
-                    generativePrefix = resolverStrategies.generation.negativePrefix,
+                    generativePrefix = resolverStrategies.negativePrefix,
                     disambiguate = { "[${(index + 1)}] " }
                 )
             }

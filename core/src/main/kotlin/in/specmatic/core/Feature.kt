@@ -359,7 +359,7 @@ data class Feature(
             else
                 resolverStrategies.withoutGenerativeTests()
 
-            originalScenario.generateTestScenariosR(resolverStrategies, testVariables, testBaseURLs).map { Pair(originalScenario, it) }
+            originalScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs).map { Pair(originalScenario, it) }
         }
 
     fun negativeTestScenarios(): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
@@ -369,7 +369,7 @@ data class Feature(
             val negativeScenario = originalScenario.negativeBasedOn(getBadRequestsOrDefault(originalScenario))
 
             val negativeTestScenarios =
-                negativeScenario.generateTestScenariosR(resolverStrategies, testVariables, testBaseURLs)
+                negativeScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
 
             negativeTestScenarios.filterNot { negativeTestScenarioR ->
                 negativeTestScenarioR.withDefault(false) { negativeTestScenario ->

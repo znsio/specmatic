@@ -26,7 +26,7 @@ internal class ScenarioTest {
             HashMap(),
             HashMap(),
         )
-        scenario.generateTestScenarios(DefaultStrategies).let {
+        scenario.generateTestScenarios(DefaultStrategies).map { it.value }.let {
             assertThat(it.toList().size).isEqualTo(1)
         }
     }
@@ -43,7 +43,7 @@ internal class ScenarioTest {
             HashMap(),
             HashMap(),
         )
-        scenario.generateTestScenarios(DefaultStrategies).let {
+        scenario.generateTestScenarios(DefaultStrategies).map { it.value }.let {
             assertThat(it.toList().size).isEqualTo(2)
         }
     }
@@ -85,15 +85,15 @@ internal class ScenarioTest {
         val state = HashMap(mapOf<String, Value>("id" to True))
         val scenario = Scenario(
             "Test",
-            HttpRequestPattern(httpPathPattern = HttpPathPattern(emptyList(), path="/")),
-            HttpResponsePattern(status=200),
+            HttpRequestPattern(httpPathPattern = HttpPathPattern(emptyList(), path = "/")),
+            HttpResponsePattern(status = 200),
             state,
             listOf(example),
             HashMap(),
             HashMap(),
         )
 
-        val testScenarios = scenario.generateTestScenarios(DefaultStrategies)
+        val testScenarios = scenario.generateTestScenarios(DefaultStrategies).map { it.value }
         val newState = testScenarios.first().expectedFacts
 
         assertThat(newState.getValue("id").toStringLiteral()).isNotEqualTo("(string)")
@@ -436,7 +436,11 @@ And response-body (number)
                 it.value.copy(contractCache = mockCache)
             }
 
-            scenario.copy(references = updatedReferences).generateTestScenarios(DefaultStrategies, variables = mapOf("data" to "10"), testBaseURLs = mapOf("auth.spec" to "http://baseurl")).toList()
+            scenario.copy(references = updatedReferences).generateTestScenarios(
+                DefaultStrategies,
+                variables = mapOf("data" to "10"),
+                testBaseURLs = mapOf("auth.spec" to "http://baseurl")
+            ).map { it.value }.toList()
         }.flatten()
 
         assertThat(testScenarios).allSatisfy(Consumer {

@@ -328,14 +328,6 @@ data class Scenario(
         resolverStrategies: ResolverStrategies,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-    ): Sequence<Scenario> {
-        return generateTestScenariosR(resolverStrategies, variables, testBaseURLs).map { it.value }
-    }
-
-    fun generateTestScenariosR(
-        resolverStrategies: ResolverStrategies,
-        variables: Map<String, String> = emptyMap(),
-        testBaseURLs: Map<String, String> = emptyMap(),
     ): Sequence<ReturnValue<Scenario>> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)

@@ -4,6 +4,8 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.value.*
+import `in`.specmatic.test.ContractTest
+import `in`.specmatic.test.ScenarioTestGenerationException
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
@@ -1561,6 +1563,60 @@ paths:
         assertThat(results.failureCount).isZero()
     }
 
+    @Test
+    fun `errors during test generation should bubble up via results`() {
+        val feature = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Pet API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /pet:
+    post:
+      summary: Add Pet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              ${"$"}ref: '#/components/schemas/NewPet'
+      responses:
+        '200':
+          description: Returns Id
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                SUCCESS:
+                  value: 10
+components:
+  schemas:
+    NewPet:
+      type: object
+      required:
+        - name
+        - related
+      properties:
+        name:
+          type: string
+        related:
+          ${"$"}ref: '#/components/schemas/NewPet'
+""".trimIndent(), "").toFeature()
+
+        val contractTests = feature.generateContractTests(emptyList()).toList()
+        assertThat(contractTests).hasSize(1)
+
+        val contractTest = contractTests.single()
+        assertThat(contractTest).isInstanceOf(ScenarioTestGenerationException::class.java)
+
+        val (result, httpResponse) = contractTest.runTest("", 0)
+        assertThat(httpResponse).isNull()
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+    }
 
     companion object {
         @JvmStatic

@@ -16,7 +16,7 @@ data class ContractException(
     val scenario: ScenarioDetailsForResult? = null,
     val isCycle: Boolean = isCycle(exceptionCause)
 ) : Exception(errorMessage, exceptionCause) {
-    constructor(failureReport: FailureReport): this(failureReport.toText())
+    constructor(failureReport: FailureReport): this(failureReport.errorMessage(), failureReport.breadCrumbs())
 
     fun failure(): Result.Failure =
         Result.Failure(errorMessage,

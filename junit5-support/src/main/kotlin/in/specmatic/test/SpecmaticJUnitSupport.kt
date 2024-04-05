@@ -271,20 +271,17 @@ open class SpecmaticJUnitSupport {
         testBaseURL: String,
         timeout: Int
     ): Stream<DynamicTest> {
-        var checkedAPIs = false
+        try {
+            queryActuator()
+        } catch (exception: Throwable) {
+            logger.log(exception, "Failed to query actuator with error")
+        }
+
+        logger.newLine()
+
         return testScenarios.map { contractTest ->
             DynamicTest.dynamicTest(contractTest.testDescription()) {
                 threads.add(Thread.currentThread().name)
-
-                if (!checkedAPIs) {
-                    checkedAPIs = true
-
-                    try {
-                        queryActuator()
-                    } catch (exception: Throwable) {
-                        logger.log(exception, "Failed to query actuator with error")
-                    }
-                }
 
                 var testResult: Pair<Result, HttpResponse?>? = null
 

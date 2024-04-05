@@ -1,6 +1,20 @@
 package `in`.specmatic.core
 
 class FailureReport(val contractPath: String?, private val scenarioMessage: String?, val scenario: ScenarioDetailsForResult?, private val matchFailureDetailList: List<MatchFailureDetails>): Report {
+    fun errorMessage(): String {
+        if(matchFailureDetailList.size != 1)
+            toText()
+
+        return errorMessagesToString(matchFailureDetailList.first().errorMessages)
+    }
+
+    fun breadCrumbs(): String {
+        if(matchFailureDetailList.size != 1)
+            return ""
+
+        return breadCrumbString(matchFailureDetailList.first().breadCrumbs)
+    }
+
     override fun toText(): String {
         val contractLine = contractPathDetails()
         val scenarioDetails = scenarioDetails(scenario) ?: ""
@@ -29,13 +43,16 @@ class FailureReport(val contractPath: String?, private val scenarioMessage: Stri
 
     private fun matchFailureDetails(matchFailureDetails: MatchFailureDetails): String {
         return matchFailureDetails.let { (breadCrumbs, errorMessages) ->
-            val breadCrumbString = breadCrumbString(breadCrumbs)
+            val breadCrumbString = startOfBreadCrumbPrefix(breadCrumbString(breadCrumbs))
 
-            val errorMessagesString = errorMessages.map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
+            val errorMessagesString = errorMessagesToString(errorMessages)
 
             "$breadCrumbString${System.lineSeparator()}${System.lineSeparator()}${errorMessagesString.prependIndent("   ")}".trim()
         }
     }
+
+    private fun errorMessagesToString(errorMessages: List<String>) =
+        errorMessages.map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
 
     private fun breadCrumbString(breadCrumbs: List<String>): String {
         return breadCrumbs
@@ -43,12 +60,12 @@ class FailureReport(val contractPath: String?, private val scenarioMessage: Stri
             .joinToString(".") { it.trim() }
             .replace(".(~~~", " (when ")
             .replace(Regex("^\\(~~~"), "(when ")
-            .let {
-                when {
-                    it.isNotBlank() -> ">> $it"
-                    else -> ""
-                }
-            }.replace(".[", "[")
+            .replace(".[", "[")
+    }
+
+    private fun startOfBreadCrumbPrefix(it: String) = when {
+        it.isNotBlank() -> ">> $it"
+        else -> ""
     }
 
     private fun contractPathDetails(): String? {

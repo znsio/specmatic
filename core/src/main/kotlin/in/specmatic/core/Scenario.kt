@@ -318,8 +318,21 @@ data class Scenario(
     ) {
         val rowsToValidate = examples.flatMap { it.rows }
 
+        val updatedResolver = flagsBased.update(resolver)
+
         rowsToValidate.forEach { row ->
-            newBasedOn(row, flagsBased).first()
+            val requestBodyIndex = row.columnNames.indexOf("(REQUEST-BODY)")
+
+            if(requestBodyIndex >= 0) {
+                attempt(breadCrumb = "REQUEST.BODY") {
+                    val rowValue: String = row.values[requestBodyIndex]
+
+                    val parsedValue = httpRequestPattern.body.parse(rowValue, updatedResolver)
+                    val result = httpRequestPattern.body.matches(parsedValue, updatedResolver)
+                    if(result is Result.Failure)
+                        throw ContractException(result.toFailureReport().errorMessage(), result.toFailureReport().breadCrumbs(), scenario = this)
+                }
+            }
         }
     }
 

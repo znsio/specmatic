@@ -1446,12 +1446,6 @@ data class Feature(
         }
     }
 
-    fun validateExampleRows() {
-        scenarios.forEach { scenario ->
-            scenario.validateExamples(flagsBased.copy(generation = NonGenerativeTests))
-        }
-    }
-
 }
 
 class EmptyContract : Throwable()

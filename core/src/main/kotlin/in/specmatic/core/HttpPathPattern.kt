@@ -92,46 +92,6 @@ data class HttpPathPattern(
         }
     }
 
-    fun newBasedOnR(
-        row: Row,
-        resolver: Resolver
-    ): Sequence<ReturnValue<List<URLPathSegmentPattern>>> {
-        val pathPatterns: List<ReturnValue<Pattern>> = pathSegmentPatterns.mapIndexed { index, urlPathParamPattern ->
-            val key = urlPathParamPattern.key
-            if (key === null || !row.containsField(key)) return@mapIndexed HasValue(urlPathParamPattern)
-
-            attempt(breadCrumb = "[$index]") {
-                val rowValue = row.getField(key)
-                when {
-                    isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathParamPattern.key}\"") {
-                        val rowPattern = resolver.getPattern(rowValue)
-                        when (val result = urlPathParamPattern.encompasses(rowPattern, resolver, resolver)) {
-                            is Success -> HasValue(urlPathParamPattern.copy(pattern = rowPattern))
-                            is Failure -> HasFailure(result)
-                        }
-                    }
-
-                    else -> attempt("Format error in example of path parameter \"$key\"") {
-                        try {
-                            val value = urlPathParamPattern.parse(rowValue, resolver)
-
-                            val matchResult = urlPathParamPattern.matches(value, resolver)
-                            matchResult.toReturnValue(
-                                URLPathSegmentPattern(ExactValuePattern(value)),
-                                """Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract."""
-                            )
-                        } catch (e: Throwable) {
-                            HasException(e)
-                        }
-                    }
-                }
-            }
-        }
-        val generatedPatterns = newBasedOnR(pathPatterns, row, resolver)
-
-        //TODO: replace this with Generics
-        return generatedPatterns.map { listR: ReturnValue<List<Pattern>> -> listR.ifValue { it.map { it as URLPathSegmentPattern } } }
-    }
     fun newBasedOn(
         row: Row,
         resolver: Resolver

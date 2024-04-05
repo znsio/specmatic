@@ -31,31 +31,6 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         }
     }
 
-    fun newBasedOnR(
-        row: Row,
-        resolver: Resolver
-    ): Sequence<ReturnValue<Map<String, Pattern>>> {
-        val createdBasedOnExamples = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
-            val queryParams = queryPatterns.let {
-                if(additionalProperties != null)
-                    it.plus(randomString(5) to additionalProperties)
-                else
-                    it
-            }
-
-            val combinations = forEachKeyCombinationInR(row.withoutOmittedKeys(queryParams, resolver.defaultExampleResolver), row) { entry ->
-                newBasedOnR(entry, row, resolver)
-            }
-
-            combinations.map {
-                it.ifValue {
-                    it.mapKeys { withoutOptionality(it.key) }
-                }
-            }
-        }
-
-        return createdBasedOnExamples
-    }
     fun newBasedOn(
         row: Row,
         resolver: Resolver

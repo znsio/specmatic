@@ -127,22 +127,6 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
     override val typeName: String = "json array"
 }
 
-fun newBasedOnR(patterns: List<ReturnValue<Pattern>>, row: Row, resolver: Resolver): Sequence<ReturnValue<List<Pattern>>> {
-    return patterns.list { list ->
-        val values: List<Sequence<ReturnValue<Pattern?>>> = list.mapIndexed { index, pattern ->
-            attempt(breadCrumb = "[$index]") {
-                resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
-                    pattern.newBasedOnR(row, cyclePreventedResolver).map {
-                        it.ifValue { it }
-                    }
-                }
-            }
-        }
-
-        listCombinationsR(values)
-    }
-}
-
 fun newBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): Sequence<List<Pattern>> {
     val values = patterns.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
@@ -165,29 +149,6 @@ fun newBasedOn(patterns: List<Pattern>, resolver: Resolver): Sequence<List<Patte
     }
 
     return listCombinations(values)
-}
-
-fun listCombinationsR(values: List<Sequence<ReturnValue<Pattern?>>>): Sequence<ReturnValue<List<Pattern>>> {
-    if (values.isEmpty())
-        return sequenceOf(HasValue(emptyList()))
-
-    val _lastValueTypes: Sequence<ReturnValue<Pattern?>> = values.last()
-    val subLists = listCombinationsR(values.dropLast(1))
-
-    return subLists.flatMap { subList: List<Pattern> ->
-        val data: Sequence<ReturnValue<List<Pattern>>> = _lastValueTypes.seq { lastValueTypes: Sequence<Pattern?> ->
-            val data: Sequence<List<Pattern>> = lastValueTypes.map { lastValueType: Pattern? ->
-                if (lastValueType != null)
-                    subList.plus(lastValueType)
-                else
-                    subList
-            }
-
-            data.map { HasValue(it) }
-        }
-
-        data
-    }
 }
 
 fun listCombinations(values: List<Sequence<Pattern?>>): Sequence<List<Pattern>> {

@@ -9,12 +9,12 @@ class HasException<T>(val t: Throwable, val message: String = "", val breadCrumb
     }
 
     override fun <U> ifValue(fn: (T) -> U): ReturnValue<U> {
-        return HasException<U>(t)
+        return cast()
 
     }
 
     override fun <U> sequenceOf(fn: (T) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>> {
-        return sequenceOf(HasException<U>(t))
+        return sequenceOf(cast())
     }
 
     override fun update(fn: (T) -> T): ReturnValue<T> {
@@ -26,11 +26,34 @@ class HasException<T>(val t: Throwable, val message: String = "", val breadCrumb
     }
 
     override fun <V> cast(): ReturnValue<V> {
-        return HasException<V>(t)
+        return HasException<V>(t, message, breadCrumb)
     }
 
     override val value: T
         get() = throw t
+
+    override fun addDetails(errorMessage: String, breadCrumb: String): ReturnValue<T> {
+        val newE = toException(errorMessage, breadCrumb, toException())
+
+        return HasException<T>(newE)
+    }
+
+    private fun toException(): Throwable {
+        return toException(message, breadCrumb ?: "", t)
+    }
+
+    private fun toException(
+        errorMessage: String,
+        breadCrumb: String,
+        t: Throwable
+    ): Throwable {
+        val newE = when (t) {
+            is ContractException -> ContractException(errorMessage, breadCrumb, t, t.scenario, t.isCycle)
+            else -> ContractException(errorMessage, breadCrumb, t)
+        }
+
+        return newE
+    }
 
     override fun <U> realise(hasValue: (T) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U {
         return orException(this)

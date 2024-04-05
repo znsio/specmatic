@@ -516,12 +516,12 @@ data class HttpRequestPattern(
             val newFormFieldsPatterns: Sequence<Map<String, Pattern>> = newBasedOn(formFieldsPattern, row, resolver)
             val newFormDataPartLists: Sequence<List<MultiPartFormDataPattern>> = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
 
-            newHttpPathPatterns.flatMap { newPathParamPattern ->
-                newQueryParamsPatterns.flatMap { newQueryParamPattern ->
-                    newBodies.flatMap { newBody ->
-                        newHeadersPattern.flatMap { newHeadersPattern ->
-                            newFormFieldsPatterns.flatMap { newFormFieldsPattern ->
-                                newFormDataPartLists.flatMap { newFormDataPartList ->
+            newHttpPathPatterns.flatMap("PATH") { newPathParamPattern ->
+                newQueryParamsPatterns.flatMap("QUERY") { newQueryParamPattern ->
+                    newBodies.flatMap("BODY") { newBody ->
+                        newHeadersPattern.flatMap("HEADERS") { newHeadersPattern ->
+                            newFormFieldsPatterns.flatMap("FORM-FIELDS") { newFormFieldsPattern ->
+                                newFormDataPartLists.flatMap("FORM-DATA") { newFormDataPartList ->
                                     val newRequestPattern = HttpRequestPattern(
                                         headersPattern = newHeadersPattern,
                                         httpPathPattern = newPathParamPattern,
@@ -550,7 +550,7 @@ data class HttpRequestPattern(
         }
     }
 
-    fun <T, U> Sequence<T>.flatMap(fn: (T) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>> {
+    fun <T, U> Sequence<T>.flatMap(breadCrumb: String = "", fn: (T) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>> {
         val iterator = this.iterator()
 
         return sequence {
@@ -562,7 +562,7 @@ data class HttpRequestPattern(
                     yieldAll(result)
                 }
             } catch(t: Throwable) {
-                yield(HasException(t))
+                yield(HasException(t, breadCrumb = breadCrumb))
             }
         }
     }

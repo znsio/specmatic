@@ -43,4 +43,8 @@ class HasValue<T>(override val value: T): ReturnValue<T> {
     override fun <U> realise(hasValue: (T) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U {
         return hasValue(value)
     }
+
+    override fun addDetails(errorMessage: String, breadCrumb: String): ReturnValue<T> {
+        return this
+    }
 }

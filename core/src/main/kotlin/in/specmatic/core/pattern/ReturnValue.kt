@@ -11,11 +11,12 @@ sealed interface ReturnValue<T> {
     fun update(fn: (T) -> T): ReturnValue<T>
     fun <U> combineWith(valueResult: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T>
     fun <U> realise(hasValue: (T) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U
+    fun addDetails(errorMessage: String, breadCrumb: String): ReturnValue<T>
 }
 
 fun <ReturnType> returnValue(errorMessage: String = "", breadCrumb: String = "", f: ()->Sequence<ReturnValue<ReturnType>>): Sequence<ReturnValue<ReturnType>> {
     return try {
-        f()
+        f().map { it.addDetails(errorMessage, breadCrumb) }
     }
     catch(contractException: ContractException) {
         val failure =

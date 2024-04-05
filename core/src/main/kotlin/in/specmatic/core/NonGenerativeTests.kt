@@ -4,9 +4,6 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.Value
 
 object NonGenerativeTests : GenerationStrategies {
-    override val negativePrefix: String = ""
-    override val positivePrefix: String = ""
-
     override fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): Sequence<Pattern> {
         return sequenceOf()
     }

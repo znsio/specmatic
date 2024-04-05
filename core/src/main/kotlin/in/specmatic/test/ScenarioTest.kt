@@ -5,7 +5,7 @@ import `in`.specmatic.core.*
 
 class ScenarioTest(
     val scenario: Scenario,
-    private val resolverStrategies: ResolverStrategies,
+    private val flagsBased: FlagsBased,
     private val sourceProvider: String? = null,
     private val sourceRepository: String? = null,
     private val sourceRepositoryBranch: String? = null,
@@ -26,7 +26,7 @@ class ScenarioTest(
 
     override fun runTest(testBaseURL: String, timeOut: Int): Pair<Result, HttpResponse?> {
         val httpClient = HttpClient(testBaseURL, timeout = timeOut)
-        val (result, response) = executeTestAndReturnResultAndResponse(scenario, httpClient, resolverStrategies)
+        val (result, response) = executeTestAndReturnResultAndResponse(scenario, httpClient, flagsBased)
         return Pair(result.updateScenario(scenario), response)
     }
 

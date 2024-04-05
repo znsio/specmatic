@@ -6,9 +6,6 @@ import `in`.specmatic.core.pattern.withoutOptionality
 import `in`.specmatic.core.value.Value
 
 data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.onlyPositive()) : GenerationStrategies {
-    override val negativePrefix: String = "-ve "
-    override val positivePrefix: String = "+ve "
-
     override fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): Sequence<Pattern> {
         // TODO generate value outside
         return resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->

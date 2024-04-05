@@ -80,14 +80,17 @@ data class Feature(
     val serviceType:String? = null,
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(),
-    val resolverStrategies: ResolverStrategies = strategiesFromFlags(environmentAndPropertiesConfiguration)
+    val flagsBased: FlagsBased = strategiesFromFlags(environmentAndPropertiesConfiguration)
 ) {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
-        return this.copy(resolverStrategies = this.resolverStrategies.copy(generation = GenerativeTestsEnabled(onlyPositive)))
+        return this.copy(flagsBased = this.flagsBased.copy(
+            generation = GenerativeTestsEnabled(onlyPositive),
+            positivePrefix = POSITIVE_TEST_DESCRIPTION_PREFIX,
+            negativePrefix = NEGATIVE_TEST_DESCRIPTION_PREFIX))
     }
 
     fun enableSchemaExampleDefault(): Feature {
-        return this.copy(resolverStrategies = this.resolverStrategies.copy(defaultExampleResolver = UseDefaultExample))
+        return this.copy(flagsBased = this.flagsBased.copy(defaultExampleResolver = UseDefaultExample))
     }
 
     fun lookupResponse(httpRequest: HttpRequest): HttpResponse {
@@ -194,7 +197,7 @@ data class Feature(
             .map { it.second.value }
             .filter { scenarioNames.isEmpty() || scenarioNames.contains(it.name) }
             .fold(Results()) { results, scenario ->
-                Results(results = results.results.plus(executeTest(scenario, testExecutorFn, resolverStrategies)))
+                Results(results = results.results.plus(executeTest(scenario, testExecutorFn, flagsBased)))
             }
 
     fun setServerState(serverState: Map<String, Value>) {
@@ -301,7 +304,7 @@ data class Feature(
                 hasValue = {
                     ScenarioTest(
                         it,
-                        resolverStrategies,
+                        flagsBased,
                         it.sourceProvider,
                         it.sourceRepository,
                         it.sourceRepositoryBranch,
@@ -337,7 +340,7 @@ data class Feature(
     }
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
-        return resolverStrategies.generation.let {
+        return flagsBased.generation.let {
             it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
         }
     }
@@ -347,9 +350,9 @@ data class Feature(
             it.newBasedOn(suggestions)
         }.flatMap { originalScenario ->
             val resolverStrategies = if(originalScenario.isA2xxScenario())
-                resolverStrategies
+                flagsBased
             else
-                resolverStrategies.withoutGenerativeTests()
+                flagsBased.withoutGenerativeTests()
 
             originalScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs).map { Pair(originalScenario, it) }
         }
@@ -361,7 +364,7 @@ data class Feature(
             val negativeScenario = originalScenario.negativeBasedOn(getBadRequestsOrDefault(originalScenario))
 
             val negativeTestScenarios =
-                negativeScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
+                negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs)
 
             negativeTestScenarios.filterNot { negativeTestScenarioR ->
                 negativeTestScenarioR.withDefault(false) { negativeTestScenario ->
@@ -371,7 +374,7 @@ data class Feature(
             }.mapIndexed { index, negativeTestScenarioR ->
                 Pair(originalScenario, negativeTestScenarioR.ifValue { negativeTestScenario ->
                     negativeTestScenario.copy(
-                        generativePrefix = resolverStrategies.generation.negativePrefix,
+                        generativePrefix = flagsBased.negativePrefix,
                         disambiguate = { "[${(index + 1)}] " }
                     )
                 })
@@ -1447,7 +1450,7 @@ data class Feature(
 
     fun validateExampleRows() {
         scenarios.forEach { scenario ->
-            scenario.validateExamples(resolverStrategies.copy(generation = NonGenerativeTests))
+            scenario.validateExamples(flagsBased.copy(generation = NonGenerativeTests))
         }
     }
 

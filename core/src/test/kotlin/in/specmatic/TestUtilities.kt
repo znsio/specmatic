@@ -129,9 +129,11 @@ infix fun <E> List<E>.shouldContainInAnyOrder(elementList: List<E>) {
     assertThat(this).containsExactlyInAnyOrderElementsOf(elementList)
 }
 
-val DefaultStrategies = ResolverStrategies (
+val DefaultStrategies = FlagsBased (
     DoNotUseDefaultExample,
     NonGenerativeTests,
-    null
+    null,
+    "",
+    ""
 )
 

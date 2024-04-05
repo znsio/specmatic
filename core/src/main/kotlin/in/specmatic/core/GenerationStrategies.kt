@@ -7,9 +7,6 @@ import `in`.specmatic.core.pattern.withoutOptionality
 import `in`.specmatic.core.value.Value
 
 interface GenerationStrategies {
-    val negativePrefix: String
-    val positivePrefix: String
-
     fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): Sequence<Pattern>
     fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<Pattern>
     fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row): Sequence<Pattern>

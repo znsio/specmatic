@@ -15,7 +15,7 @@ fun getSecurityTokenForBasicAuthScheme(
     environmentVariable: String,
     environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration
 ): String? {
-    return environmentAndPropertiesConfiguration.getCachedEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
+    return environmentAndPropertiesConfiguration.getCachedSetting(environmentVariable) ?: securitySchemeConfiguration?.let {
         (securitySchemeConfiguration as BasicAuthSecuritySchemeConfiguration).token
     } ?: environmentAndPropertiesConfiguration.getCachedEnvironmentVariable(SPECMATIC_BASIC_AUTH_TOKEN)
 }
@@ -25,7 +25,7 @@ fun getSecurityTokenForBearerScheme(
     environmentVariable: String,
     environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration
 ): String? {
-    return environmentAndPropertiesConfiguration.getCachedEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
+    return environmentAndPropertiesConfiguration.getCachedSetting(environmentVariable) ?: securitySchemeConfiguration?.let {
         (it as SecuritySchemeWithOAuthToken).token
     } ?: environmentAndPropertiesConfiguration.getCachedEnvironmentVariable(SPECMATIC_OAUTH2_TOKEN)
 }
@@ -35,7 +35,7 @@ fun getSecurityTokenForApiKeyScheme(
     environmentVariable: String,
     environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration
 ): String? {
-    return environmentAndPropertiesConfiguration.getCachedEnvironmentVariable(environmentVariable) ?: securitySchemeConfiguration?.let {
+    return environmentAndPropertiesConfiguration.getCachedSetting(environmentVariable) ?: securitySchemeConfiguration?.let {
         (it as APIKeySecuritySchemeConfiguration).value
     }
 }

@@ -313,6 +313,16 @@ data class Scenario(
         }
     }
 
+    fun validateExamples(
+        flagsBased: FlagsBased,
+    ) {
+        val rowsToValidate = examples.flatMap { it.rows }
+
+        rowsToValidate.forEach { row ->
+            newBasedOn(row, flagsBased).first()
+        }
+    }
+
     fun generateTestScenarios(
         flagsBased: FlagsBased,
         variables: Map<String, String> = emptyMap(),

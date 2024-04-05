@@ -1,5 +1,7 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.core.Result
+
 sealed interface ReturnValue<T> {
     val value: T
 
@@ -11,49 +13,17 @@ sealed interface ReturnValue<T> {
     fun <U> realise(hasValue: (T) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U
 }
 
-fun <T, U> Sequence<ReturnValue<T>>.flatMap(fn: (T) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>> {
-    val iterator = this.iterator()
-
-    return sequence {
-        while(iterator.hasNext()) {
-            val next = iterator.next()
-
-            if(next is HasValue<*>) {
-                val output = fn(next.value)
-
-                yieldAll(output)
-            }
-
-            if(next is ReturnFailure)
-                yield(next.cast())
-        }
+fun <ReturnType> returnValue(errorMessage: String = "", breadCrumb: String = "", f: ()->Sequence<ReturnValue<ReturnType>>): Sequence<ReturnValue<ReturnType>> {
+    return try {
+        f()
+    }
+    catch(contractException: ContractException) {
+        val failure =
+            Result.Failure(message = errorMessage, breadCrumb = breadCrumb, cause = contractException.failure())
+        sequenceOf(HasFailure(failure))
+    }
+    catch(throwable: Throwable) {
+        sequenceOf(HasException(throwable, errorMessage, breadCrumb))
     }
 }
 
-fun <T, U> List<ReturnValue<T>>.list(fn: (List<T>) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>> {
-    val initial: ReturnValue<List<T>> = HasValue(emptyList<T>())
-
-    val patterns: ReturnValue<List<T>> = this.fold(initial) { _acc, _pattern ->
-        _acc.combineWith(_pattern) { acc, pattern ->
-            acc.plus(pattern)
-        }
-    }
-
-    return patterns.sequenceOf {
-        fn(it)
-    }
-}
-
-fun <T, U> Sequence<ReturnValue<T>>.seq(fn: (Sequence<T>) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>> {
-    val initial: ReturnValue<Sequence<T>> = HasValue(emptySequence<T>())
-
-    val patterns: ReturnValue<Sequence<T>> = this.fold(initial) { _acc, _pattern ->
-        _acc.combineWith(_pattern) { acc, pattern ->
-            acc.plus(pattern)
-        }
-    }
-
-    return patterns.sequenceOf {
-        fn(it)
-    }
-}

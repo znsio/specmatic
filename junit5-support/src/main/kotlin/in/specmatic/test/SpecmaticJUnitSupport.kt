@@ -272,8 +272,8 @@ open class SpecmaticJUnitSupport {
         timeout: Int
     ): Stream<DynamicTest> {
         var checkedAPIs = false
-        return testScenarios.map { testScenario ->
-            DynamicTest.dynamicTest(testScenario.testDescription()) {
+        return testScenarios.map { contractTest ->
+            DynamicTest.dynamicTest(contractTest.testDescription()) {
                 threads.add(Thread.currentThread().name)
 
                 if (!checkedAPIs) {
@@ -289,7 +289,7 @@ open class SpecmaticJUnitSupport {
                 var testResult: Pair<Result, HttpResponse?>? = null
 
                 try {
-                    testResult = testScenario.runTest(testBaseURL, timeout)
+                    testResult = contractTest.runTest(testBaseURL, timeout)
                     val (result, response) = testResult
 
                     if (result is Result.Success && result.isPartialSuccess()) {
@@ -313,7 +313,7 @@ open class SpecmaticJUnitSupport {
                 } finally {
                     if (testResult != null) {
                         val (result, response) = testResult
-                        testScenario.testResultRecord(result, response)?.let { testREsultRecord -> openApiCoverageReportInput.addTestReportRecords(testREsultRecord) }
+                        contractTest.testResultRecord(result, response)?.let { testREsultRecord -> openApiCoverageReportInput.addTestReportRecords(testREsultRecord) }
                     }
                 }
             }

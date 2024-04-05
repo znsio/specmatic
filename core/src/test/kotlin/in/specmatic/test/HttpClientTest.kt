@@ -49,10 +49,12 @@ internal class HttpClientTest {
     @Test
     fun `Request should timeout after given timeout argument`() {
 
+        val responseDelayInMillieSeconds = (11 * 1000).toLong()
+
         val server = embeddedServer(Netty, port = 8080) {
             routing {
                 get("/data") {
-                    Thread.sleep(3000)
+                    Thread.sleep(responseDelayInMillieSeconds)
                     call.respondText("Hello, world!")
                 }
             }
@@ -62,10 +64,10 @@ internal class HttpClientTest {
 
         Assertions.assertThatThrownBy {
             val request = HttpRequest("GET", "/data")
-            HttpClient("http://localhost:8080", timeout = 1).execute(request)
+            HttpClient("http://localhost:8080", timeout = 10, httpClientFactory = RealHttpClientFactory)
+                .execute(request)
         }.isInstanceOf(HttpRequestTimeoutException::class.java)
 
-        Thread.sleep(2000)
         server.stop()
     }
 }

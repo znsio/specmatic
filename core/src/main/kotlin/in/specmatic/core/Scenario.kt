@@ -446,7 +446,8 @@ data class Scenario(
         return this.copy(
             isNegative = true,
             badRequestOrDefault = badRequestOrDefault,
-            statusInDescription = "4xx"
+            statusInDescription = "4xx",
+            generativePrefix = "-ve"
         )
     }
 

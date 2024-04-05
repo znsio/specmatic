@@ -352,7 +352,7 @@ data class Feature(
             else
                 flagsBased.withoutGenerativeTests()
 
-            originalScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs).map { Pair(originalScenario, it) }
+            originalScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs).map { Pair(originalScenario.copy(generativePrefix = flagsBased.positivePrefix), it) }
         }
 
     fun negativeTestScenarios(): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
@@ -370,7 +370,7 @@ data class Feature(
                     originalScenario.httpRequestPattern.matches(sampleRequest, originalScenario.resolver).isSuccess()
                 }
             }.mapIndexed { index, negativeTestScenarioR ->
-                Pair(originalScenario, negativeTestScenarioR.ifValue { negativeTestScenario ->
+                Pair(negativeScenario, negativeTestScenarioR.ifValue { negativeTestScenario ->
                     negativeTestScenario.copy(
                         generativePrefix = flagsBased.negativePrefix,
                         disambiguate = { "[${(index + 1)}] " }

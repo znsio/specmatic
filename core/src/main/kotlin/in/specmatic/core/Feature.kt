@@ -1446,9 +1446,9 @@ data class Feature(
         }
     }
 
-    fun validateExampleRows() {
+    fun validateExamplesOrException() {
         scenarios.forEach { scenario ->
-            scenario.validateExamples(flagsBased.copy(generation = NonGenerativeTests))
+            scenario.validExamplesOrException(flagsBased.copy(generation = NonGenerativeTests))
         }
     }
 

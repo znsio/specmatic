@@ -2325,4 +2325,58 @@ class GenerativeTests {
 
         assertThat(testDescriptionsWithNoPrefix).isEmpty()
     }
+
+    @Test
+    fun `tests with bad examples should have the appropriate prefix when generative tests is switched on`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  summary: Store a persons details
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          required:
+                          - name
+                          properties:
+                            name:
+                              type: string
+                        examples:
+                          CREATE_PERSON:
+                            value:
+                              name: 10
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                            properties:
+                              id:
+                                type: integer
+                          examples:
+                            CREATE_PERSON:
+                              value:
+                                id: 10
+            """.trimIndent(), ""
+        ).toFeature().enableGenerativeTesting()
+
+        val testDescriptions = feature.generateContractTests(emptyList()).map {
+            it.testDescription()
+        }.toList()
+
+        val testDescriptionsWithNoPrefix = testDescriptions.filterNot { it.startsWith("+ve") || it.startsWith("-ve") }
+
+        assertThat(testDescriptionsWithNoPrefix).withFailMessage(testDescriptionsWithNoPrefix.joinToString(System.lineSeparator())).isEmpty()
+    }
 }

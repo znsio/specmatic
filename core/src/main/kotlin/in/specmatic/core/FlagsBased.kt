@@ -3,6 +3,9 @@ package `in`.specmatic.core
 import `in`.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import `in`.specmatic.core.pattern.IgnoreUnexpectedKeys
 
+const val POSITIVE_TEST_DESCRIPTION_PREFIX = "+ve "
+const val NEGATIVE_TEST_DESCRIPTION_PREFIX = "-ve "
+
 data class FlagsBased(
     val defaultExampleResolver: DefaultExampleResolver,
     val generation: GenerationStrategies,

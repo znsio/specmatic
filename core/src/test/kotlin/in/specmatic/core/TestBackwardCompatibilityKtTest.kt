@@ -1,13 +1,39 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.conversions.OpenApiSpecification
+import `in`.specmatic.stub.HttpStub
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 
 internal class TestBackwardCompatibilityKtTest {
+    @Test
+    fun `when a contract is run as test against another contract fake, it should fail if the two contracts are incompatible`() {
+        val oldContract = """Feature: Contract
+Scenario: api call
+Given GET /
+Then status 200
+"""
+
+        val newContract = """Feature: Contract
+Scenario: api call
+Given GET /d
+Then status 200"""
+
+        val olderContract = parseGherkinStringToFeature(oldContract)
+        val newerContract = parseGherkinStringToFeature(newContract)
+
+        val result: Results = testBackwardCompatibility(olderContract, newerContract)
+
+        println(result.report())
+
+        assertEquals(1, result.failureCount)
+        assertEquals(0, result.successCount)
+    }
+
     @Test
     fun `contract backward compatibility should break when optional key is made mandatory in request`() {
         val gherkin1 = """

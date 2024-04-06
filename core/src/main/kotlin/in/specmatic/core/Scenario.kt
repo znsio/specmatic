@@ -7,9 +7,6 @@ import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.mapZip
 import `in`.specmatic.core.value.*
-import `in`.specmatic.test.ContractTest
-import `in`.specmatic.test.ScenarioTest
-import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
 
 object ContractAndStubMismatchMessages : MismatchMessages {
@@ -268,7 +265,7 @@ data class Scenario(
         }
     }
 
-    private fun newBasedOn(row: Row, flagsBased: FlagsBased): Sequence<Scenario> {
+    private fun newBasedOn(row: Row, flagsBased: FlagsBased): Sequence<ReturnValue<Scenario>> {
         val ignoreFailure = this.ignoreFailure || row.name.startsWith("[WIP]")
         val resolver =
             Resolver(expectedFacts, false, patterns)
@@ -282,20 +279,22 @@ data class Scenario(
             attempt {
                 val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withExactResponseValue(row, resolver)
 
-                val (newRequestPatterns: Sequence<HttpRequestPattern>, generativePrefix: String) = when (isNegative) {
+                val (newRequestPatterns: Sequence<ReturnValue<HttpRequestPattern>>, generativePrefix: String) = when (isNegative) {
                     false -> Pair(httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status), flagsBased.positivePrefix)
                     else -> Pair(httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true)), flagsBased.negativePrefix)
                 }
 
                 newRequestPatterns.map { newHttpRequestPattern ->
-                    this.copy(
-                        httpRequestPattern = newHttpRequestPattern,
-                        httpResponsePattern = newResponsePattern,
-                        expectedFacts = newExpectedServerState,
-                        ignoreFailure = ignoreFailure,
-                        exampleName = row.name,
-                        generativePrefix = generativePrefix
-                    )
+                    newHttpRequestPattern.ifValue {
+                        this.copy(
+                            httpRequestPattern = it,
+                            httpResponsePattern = newResponsePattern,
+                            expectedFacts = newExpectedServerState,
+                            ignoreFailure = ignoreFailure,
+                            exampleName = row.name,
+                            generativePrefix = generativePrefix
+                        )
+                    }
                 }
             }
         }
@@ -314,13 +313,15 @@ data class Scenario(
         }
     }
 
-    fun validateExamples(
+    fun validExamplesOrException(
         flagsBased: FlagsBased,
     ) {
         val rowsToValidate = examples.flatMap { it.rows }
 
+        val updatedResolver = flagsBased.update(resolver)
+
         rowsToValidate.forEach { row ->
-            newBasedOn(row, flagsBased).first()
+            httpRequestPattern.newBasedOn(row, updatedResolver).first().value
         }
     }
 
@@ -328,7 +329,7 @@ data class Scenario(
         flagsBased: FlagsBased,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
-    ): Sequence<Scenario> {
+    ): Sequence<ReturnValue<Scenario>> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
         }
@@ -343,33 +344,6 @@ data class Scenario(
                 }
             }.flatMap { row ->
                 newBasedOn(row, flagsBased)
-            }
-        }
-    }
-
-    fun generateContractTests(
-        flagsBased: FlagsBased,
-        variables: Map<String, String> = emptyMap(),
-        testBaseURLs: Map<String, String> = emptyMap(),
-    ): Sequence<ContractTest> {
-        val referencesWithBaseURLs = references.mapValues { (_, reference) ->
-            reference.copy(variables = variables, baseURLs = testBaseURLs)
-        }
-
-        return scenarioBreadCrumb(this) {
-            when (examples.size) {
-                0 -> sequenceOf(Row())
-                else -> examples.asSequence().flatMap {
-                    it.rows.map { row ->
-                        row.copy(variables = variables, references = referencesWithBaseURLs)
-                    }
-                }
-            }.flatMap { row ->
-                try {
-                    newBasedOn(row, flagsBased).map { ScenarioTest(it, flagsBased) }
-                } catch (e: Throwable) {
-                    sequenceOf(ScenarioTestGenerationFailure(this, e))
-                }
             }
         }
     }
@@ -556,8 +530,8 @@ object ContractAndResponseMismatch : MismatchMessages {
     }
 }
 
-fun executeTest(testScenario: Scenario, testExecutor: TestExecutor, flagsBased: FlagsBased = DefaultStrategies): Result {
-    return executeTestAndReturnResultAndResponse(testScenario, testExecutor, flagsBased).first
+fun executeTest(testScenario: Scenario, testExecutor: TestExecutor, resolverStrategies: FlagsBased = DefaultStrategies): Result {
+    return executeTestAndReturnResultAndResponse(testScenario, testExecutor, resolverStrategies).first
 }
 
 fun executeTestAndReturnResultAndResponse(

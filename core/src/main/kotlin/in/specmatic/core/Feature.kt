@@ -11,9 +11,7 @@ import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStubData
-import `in`.specmatic.test.ContractTest
-import `in`.specmatic.test.ScenarioTest
-import `in`.specmatic.test.TestExecutor
+import `in`.specmatic.test.*
 import io.cucumber.gherkin.GherkinDocumentBuilder
 import io.cucumber.gherkin.Parser
 import io.cucumber.messages.IdGenerator
@@ -68,9 +66,6 @@ fun parseGherkinStringToFeature(gherkinData: String, sourceFilePath: String = ""
     return Feature(scenarios = scenarios, name = name, path = sourceFilePath)
 }
 
-const val POSITIVE_TEST_DESCRIPTION_PREFIX = "+ve "
-const val NEGATIVE_TEST_DESCRIPTION_PREFIX = "-ve "
-
 data class Feature(
     val scenarios: List<Scenario> = emptyList(),
     private var serverState: Map<String, Value> = emptyMap(),
@@ -91,8 +86,7 @@ data class Feature(
         return this.copy(flagsBased = this.flagsBased.copy(
             generation = GenerativeTestsEnabled(onlyPositive),
             positivePrefix = POSITIVE_TEST_DESCRIPTION_PREFIX,
-            negativePrefix = NEGATIVE_TEST_DESCRIPTION_PREFIX
-        ))
+            negativePrefix = NEGATIVE_TEST_DESCRIPTION_PREFIX))
     }
 
     fun enableSchemaExampleDefault(): Feature {
@@ -194,23 +188,16 @@ data class Feature(
         })
     }
 
-    fun executeTests(testExecutorFn: TestExecutor, suggestions: List<Scenario> = emptyList()): Results {
-        val testScenarios = generateContractTestScenarios(suggestions)
-
-        return testScenarios.fold(Results()) { results, scenario ->
-            Results(results = results.results.plus(executeTest(scenario, testExecutorFn, flagsBased)).toMutableList())
-        }
-    }
-
     fun executeTests(
         testExecutorFn: TestExecutor,
         suggestions: List<Scenario> = emptyList(),
-        scenarioNames: List<String>
+        scenarioNames: List<String> = emptyList()
     ): Results =
         generateContractTestScenarios(suggestions)
-            .filter { scenarioNames.contains(it.name) }
+            .map { it.second.value }
+            .filter { scenarioNames.isEmpty() || scenarioNames.contains(it.name) }
             .fold(Results()) { results, scenario ->
-                Results(results = results.results.plus(executeTest(scenario, testExecutorFn, flagsBased)).toMutableList())
+                Results(results = results.results.plus(executeTest(scenario, testExecutorFn, flagsBased)))
             }
 
     fun setServerState(serverState: Map<String, Value>) {
@@ -309,11 +296,29 @@ data class Feature(
     private fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
-    fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> =
-        generateContractTestScenarios(suggestions).map {
-            ScenarioTest(it, flagsBased,
-                it.sourceProvider, it.sourceRepository, it.sourceRepositoryBranch, it.specification, it.serviceType)
+    fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> {
+        return generateContractTestScenarios(suggestions).map { (originalScenario, returnValue) ->
+            returnValue.realise(
+                hasValue = {
+                    ScenarioTest(
+                        it,
+                        flagsBased,
+                        it.sourceProvider,
+                        it.sourceRepository,
+                        it.sourceRepositoryBranch,
+                        it.specification,
+                        it.serviceType
+                    )
+                },
+                orFailure = {
+                    ScenarioTestGenerationFailure(originalScenario, it.failure)
+                },
+                orException = {
+                    ScenarioTestGenerationException(originalScenario, it.t, it.message, it.breadCrumb)
+                }
+            )
         }
+    }
 
     private fun getBadRequestsOrDefault(scenario: Scenario): BadRequestOrDefault? {
         val badRequestResponses = scenarios.filter {
@@ -332,58 +337,48 @@ data class Feature(
         return BadRequestOrDefault(badRequestResponses, defaultResponse)
     }
 
-    fun generateContractTestScenarios(suggestions: List<Scenario>): Sequence<Scenario> {
-        return try {
-            flagsBased.generation.let {
-                it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
-            }
-        }
-        catch(e: Throwable) {
-            logger.log(e)
-            throw e
+    fun generateContractTestScenarios(suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
+        return flagsBased.generation.let {
+            it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
         }
     }
 
-    fun validateExampleRows() {
-        scenarios.forEach { scenario ->
-            scenario.validateExamples(flagsBased.copy(generation = NonGenerativeTests))
-        }
-    }
-
-    fun generateContractTestScenariosL(suggestions: List<Scenario>): List<Scenario> {
-        return generateContractTestScenarios(suggestions).toList()
-    }
-
-    fun positiveTestScenarios(suggestions: List<Scenario>) =
+    fun positiveTestScenarios(suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =
         scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
-        }.flatMap { scenario ->
-            val resolverStrategies = if(scenario.isA2xxScenario())
+        }.flatMap { originalScenario ->
+            val resolverStrategies = if(originalScenario.isA2xxScenario())
                 flagsBased
             else
                 flagsBased.withoutGenerativeTests()
 
-            scenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
+            originalScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs).map { Pair(originalScenario.copy(generativePrefix = flagsBased.positivePrefix), it) }
         }
 
-    fun negativeTestScenarios() =
-        scenarios.asSequence().filter {
+    fun negativeTestScenarios(): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
+        return scenarios.asSequence().filter {
             it.isA2xxScenario()
-        }.flatMap { scenario ->
-            val negativeScenario = scenario.negativeBasedOn(getBadRequestsOrDefault(scenario))
+        }.flatMap { originalScenario ->
+            val negativeScenario = originalScenario.negativeBasedOn(getBadRequestsOrDefault(originalScenario))
 
-            val negativeTestScenarios = negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs)
+            val negativeTestScenarios =
+                negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs)
 
-            negativeTestScenarios.filterNot { negativeTestScenario ->
-                val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
-                scenario.httpRequestPattern.matches(sampleRequest, scenario.resolver).isSuccess()
-            }.mapIndexed { index, negativeScenario ->
-                negativeScenario.copy(
-                    generativePrefix = flagsBased.negativePrefix,
-                    disambiguate = { "[${(index + 1)}] " }
-                )
+            negativeTestScenarios.filterNot { negativeTestScenarioR ->
+                negativeTestScenarioR.withDefault(false) { negativeTestScenario ->
+                    val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
+                    originalScenario.httpRequestPattern.matches(sampleRequest, originalScenario.resolver).isSuccess()
+                }
+            }.mapIndexed { index, negativeTestScenarioR ->
+                Pair(negativeScenario, negativeTestScenarioR.ifValue { negativeTestScenario ->
+                    negativeTestScenario.copy(
+                        generativePrefix = flagsBased.negativePrefix,
+                        disambiguate = { "[${(index + 1)}] " }
+                    )
+                })
             }
         }
+    }
 
     fun generateBackwardCompatibilityTestScenarios(): List<Scenario> =
         scenarios.flatMap { scenario ->
@@ -1450,6 +1445,13 @@ data class Feature(
             }
         }
     }
+
+    fun validateExamplesOrException() {
+        scenarios.forEach { scenario ->
+            scenario.validExamplesOrException(flagsBased.copy(generation = NonGenerativeTests))
+        }
+    }
+
 }
 
 class EmptyContract : Throwable()

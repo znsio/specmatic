@@ -20,7 +20,6 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.jsonBody
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
-import net.bytebuddy.implementation.bytecode.Throw
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -706,8 +705,7 @@ Background:
             object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse = HttpResponse(200)
                 override fun setServerState(serverState: Map<String, Value>) {}
-            },
-            scenarioNames = emptyList()
+            }
         )
         assertThat(results.hasResults()).isFalse
     }
@@ -802,7 +800,7 @@ Feature: multipart file upload
         """.trimIndent(), sourceSpecPath
         )
 
-        val contractTests = contract.generateContractTestScenarios(emptyList())
+        val contractTests = contract.generateContractTestScenarios(emptyList()).map { it.second.value }
         val result = executeTest(contractTests.single(), object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val multipartFileValues = request.multiPartFormData.filterIsInstance<MultiPartFileValue>()
@@ -2214,7 +2212,7 @@ components:
 """.trimIndent(), ""
         ).toFeature()
 
-        assertThat(contract.generateContractTestScenarios(emptyList()).single().ignoreFailure).isTrue
+        assertThat(contract.generateContractTestScenarios(emptyList()).map { it.second.value }.single().ignoreFailure).isTrue
     }
 
     @Test

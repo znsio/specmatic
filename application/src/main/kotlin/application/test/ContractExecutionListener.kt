@@ -122,7 +122,7 @@ class ContractExecutionListener : TestExecutionListener {
         if (failedLog.isNotEmpty()) {
             println()
             printer.printFailureTitle("Unsuccessful Scenarios:")
-            println(failedLog.joinToString(System.lineSeparator()) { it.prependIndent("  ") })
+            println(failedLog.joinToString(System.lineSeparator() + System.lineSeparator()) { it.prependIndent("  ") })
             println()
         }
 

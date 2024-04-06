@@ -23,5 +23,6 @@ fun testStatusMessage(
 
     val displayStatus: String = statusToMessage[status] ?: status?.name ?: "is UNKNOWN"
 
-    return "${testIdentifier?.displayName} $displayStatus"
+    val prefix = if(status != TestExecutionResult.Status.SUCCESSFUL) "\n--------------------\n" else ""
+    return "$prefix${testIdentifier?.displayName} $displayStatus"
 }

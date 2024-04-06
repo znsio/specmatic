@@ -96,7 +96,10 @@ echo Building
 echo Pushing to remote
 git push
 
-echo Publishing
+echo Publishing locally first
+./gradlew publishToMavenLocal
+
+echo Publishing to maven
 ./gradlew publish
 
 echo

@@ -36,7 +36,7 @@ class HttpClient(
     val baseURL: String,
     private val timeout: Int = 60,
     private val log: (event: LogMessage) -> Unit = ::consoleLog,
-    private val httpClientFactory: HttpClientFactory = RealHttpClientFactory(timeout)
+    private val httpClientFactory: HttpClientFactory = ApacheHttpClientFactory(timeout)
 ) : TestExecutor {
     private val serverStateURL = "/_$APPLICATION_NAME_LOWER_CASE/state"
 

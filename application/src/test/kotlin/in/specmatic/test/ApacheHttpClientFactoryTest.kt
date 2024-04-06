@@ -1,6 +1,5 @@
 package `in`.specmatic.test
 
-import io.mockk.every
 import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.verify
@@ -9,12 +8,13 @@ import org.junit.jupiter.api.Test
 import kotlin.random.Random
 
 
-class RealHttpClientFactoryTest {
+class ApacheHttpClientFactoryTest {
     @Test
     fun `the client should set a timeout policy with socketTimeout giving breathing room for requestTimeout to kick in first`() {
         val randomTimeoutInSeconds = Random.nextInt(1, 6)
 
-        val timeoutPolicyFromHttpClientFactory = RealHttpClientFactory(randomTimeoutInSeconds).timeoutPolicy
+        val httpClientFactory: HttpClientFactory = ApacheHttpClientFactory(randomTimeoutInSeconds)
+        val timeoutPolicyFromHttpClientFactory = httpClientFactory.timeoutPolicy
 
         val expectedRequestTimeout = secondsToMillis(randomTimeoutInSeconds)
         val expectedSocketTimeout =
@@ -30,7 +30,7 @@ class RealHttpClientFactoryTest {
 
         justRun { timeoutPolicy.configure(any()) }
 
-        RealHttpClientFactory(timeoutPolicy).create().close()
+        ApacheHttpClientFactory(timeoutPolicy).create().close()
 
         verify(exactly = 1) { timeoutPolicy.configure(any()) }
     }

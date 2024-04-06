@@ -43,7 +43,7 @@ dependencies {
 
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
 
-    implementation 'io.swagger.parser.v3:swagger-parser:2.1.21'
+    implementation 'io.swagger.parser.v3:swagger-parser:2.1.22'
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
@@ -57,12 +57,6 @@ dependencies {
     testImplementation 'io.mockk:mockk:1.13.10'
     testImplementation 'org.assertj:assertj-core:3.25.3'
     testImplementation "io.ktor:ktor-client-mock-jvm:$ktor_version"
-}
-
-tasks.withType(KotlinCompile).configureEach {
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 }
 
 test {
@@ -137,13 +131,6 @@ tasks.withType(Sign).configureEach {
 javadoc {
     if(JavaVersion.current().isJava9Compatible()) {
         options.addBooleanOption('html5', true)
-    }
-}
-
-compileKotlin {
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
     }
 }
 

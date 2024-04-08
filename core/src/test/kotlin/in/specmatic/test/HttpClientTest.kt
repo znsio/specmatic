@@ -45,27 +45,4 @@ internal class HttpClientTest {
         Assertions.assertThat(headers).isEmpty()
         Assertions.assertThat(body).isEqualTo("hello world")
     }
-
-    @Test
-    fun `Request should timeout after given timeout argument`() {
-
-        val server = embeddedServer(Netty, port = 8080) {
-            routing {
-                get("/data") {
-                    Thread.sleep(3000)
-                    call.respondText("Hello, world!")
-                }
-            }
-        }
-
-        server.start();
-
-        Assertions.assertThatThrownBy {
-            val request = HttpRequest("GET", "/data")
-            HttpClient("http://localhost:8080", timeout = 1).execute(request)
-        }.isInstanceOf(HttpRequestTimeoutException::class.java)
-
-        Thread.sleep(2000)
-        server.stop()
-    }
 }

@@ -36,7 +36,7 @@ class HttpClient(
     val baseURL: String,
     private val timeout: Int = 60,
     private val log: (event: LogMessage) -> Unit = ::consoleLog,
-    private val httpClientFactory: HttpClientFactory = RealHttpClientFactory
+    private val httpClientFactory: HttpClientFactory = ApacheHttpClientFactory(timeout)
 ) : TestExecutor {
     private val serverStateURL = "/_$APPLICATION_NAME_LOWER_CASE/state"
 
@@ -51,7 +51,7 @@ class HttpClient(
         logger.debug("Starting request ${request.method} ${request.path}")
 
         return runBlocking {
-            httpClientFactory.create(timeout).use { ktorClient ->
+            httpClientFactory.create().use { ktorClient ->
                 val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
                     requestWithFileContent.buildKTORRequest(this, url)
                 }
@@ -77,7 +77,7 @@ class HttpClient(
         val startTime = Date()
 
         runBlocking {
-            httpClientFactory.create(timeout).use { ktorClient ->
+            httpClientFactory.create().use { ktorClient ->
                 var endTime: Date? = null
                 var response: HttpResponse? = null
 

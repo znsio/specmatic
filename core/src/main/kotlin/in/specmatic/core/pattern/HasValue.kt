@@ -1,26 +1,41 @@
 package `in`.specmatic.core.pattern
 
-class HasValue<T>(override val value: T): ReturnValue<T> {
+import io.ktor.util.reflect.*
+
+class HasValue<T>(override val value: T, val valueDetails: List<ValueDetails> = emptyList()): ReturnValue<T> {
+    constructor(value: T, message: String): this(value, listOf(ValueDetails(listOf(message))))
+    constructor(value: T, message: String, key: String): this(value, listOf(ValueDetails(listOf(message), listOf(key))))
+
+    override fun hashCode(): Int {
+        return value.hashCode()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if(other !is HasValue<*>)
+            return false
+
+        val thisValue: T = this.value
+        val otherValue: Any? = other.value
+
+        return thisValue?.equals(otherValue) == true
+    }
+
     override fun <U> withDefault(default: U, fn: (T) -> U): U {
         return fn(value)
     }
 
     override fun <U> ifValue(fn: (T) -> U): ReturnValue<U> {
         return try {
-            HasValue(fn(value))
+            HasValue(fn(value), valueDetails)
         } catch(t: Throwable) {
             HasException(t)
         }
     }
 
-    override fun <U> sequenceOf(fn: (T) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>> {
-        return fn(value)
-    }
-
     override fun update(fn: (T) -> T): ReturnValue<T> {
         return try {
             val newValue = fn(value)
-            HasValue(newValue)
+            HasValue(newValue, valueDetails)
         } catch(t: Throwable) {
             HasException(t)
         }
@@ -34,17 +49,32 @@ class HasValue<T>(override val value: T): ReturnValue<T> {
 
         return try {
             val newValue = fn(value, valueResult.value)
-            HasValue(newValue)
+            HasValue(newValue, valueDetails.plus(valueResult.valueDetails))
         } catch(t: Throwable) {
             HasException(t)
         }
     }
 
-    override fun <U> realise(hasValue: (T) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U {
-        return hasValue(value)
+    fun comments(): String? {
+        if(valueDetails.isEmpty())
+            return null
+
+        val blankLineSeparator = System.lineSeparator() + System.lineSeparator()
+
+        val comments = """
+            ${valueDetails.mapNotNull { it.comments() }.joinToString(blankLineSeparator)}
+        """.trimIndent().trim()
+
+        return comments
     }
 
-    override fun addDetails(errorMessage: String, breadCrumb: String): ReturnValue<T> {
-        return this
+    override fun <U> realise(hasValue: (T, String?) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U {
+        return hasValue(value, comments())
+    }
+
+    override fun addDetails(message: String, breadCrumb: String): ReturnValue<T> {
+        return HasValue<T>(
+            value,
+            valueDetails.map { it.addDetails(message, breadCrumb) })
     }
 }

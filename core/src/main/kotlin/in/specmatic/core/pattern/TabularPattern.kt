@@ -214,11 +214,19 @@ fun key(pattern: Pattern, key: String): String {
     )
 }
 
+fun <ValueType> patternListR(patternCollection: Map<String, Sequence<ReturnValue<ValueType>>>): Sequence<ReturnValue<Map<String, ValueType>>> {
+    if (patternCollection.isEmpty())
+        return sequenceOf(HasValue(emptyMap()))
+
+    val spec = CombinationSpec(patternCollection, Flags.maxTestRequestCombinations())
+    return spec.selectedCombinationsR
+}
+
 fun <ValueType> patternList(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {
     if (patternCollection.isEmpty())
         return sequenceOf(emptyMap())
 
-    val spec = CombinationSpec(patternCollection, Flags.maxTestRequestCombinations())
+    val spec = CombinationSpec.from(patternCollection, Flags.maxTestRequestCombinations())
     return spec.selectedCombinations
 }
 
@@ -339,6 +347,56 @@ fun <ValueType> allOrNothingCombinationIn(
     }.asSequence()
 
     val keySetValues: Sequence<Sequence<Map<String, ValueType>>> = keySets.map { newPattern ->
+        creator(newPattern)
+    }
+
+    return keySetValues.flatten()
+}
+
+fun <ValueType> allOrNothingCombinationInR(
+    patternMap: Map<String, ValueType>,
+    row: Row = Row(),
+    minPropertiesOrNull: Int? = null,
+    maxPropertiesOrNull: Int? = null,
+    creator: (Map<String, ValueType>) -> Sequence<ReturnValue<Map<String, ValueType>>>
+): Sequence<ReturnValue<Map<String, ValueType>>> {
+    val keyLists = if (patternMap.keys.any { isOptional(it) }) {
+        val nothingList: Set<String> =
+            patternMap.keys.filter { k -> !isOptional(k) || row.containsField(withoutOptionality(k)) }.toSet()
+                .let { propertyNames ->
+                    minPropertiesOrNull?.let { minProperties ->
+                        if (propertyNames.size >= minProperties)
+                            propertyNames
+                        else {
+                            val remainingPropertyNames = patternMap.keys.minus(propertyNames)
+                            propertyNames + remainingPropertyNames.shuffled().toList()
+                                .take(minProperties - propertyNames.size).toSet()
+                        }
+                    } ?: propertyNames
+                }
+
+        val allList: Set<String> = patternMap.keys.let { propertyNames ->
+            maxPropertiesOrNull?.let { maxProperties ->
+                if (propertyNames.size <= maxProperties)
+                    propertyNames
+                else {
+                    val remainingPropertyNames = patternMap.keys.minus(nothingList)
+                    nothingList + remainingPropertyNames.shuffled().toList().take(maxProperties - nothingList.size)
+                        .toSet()
+                }
+            } ?: propertyNames
+        }
+
+        sequenceOf(allList, nothingList).distinct()
+    } else {
+        sequenceOf(patternMap.keys)
+    }
+
+    val keySets: Sequence<Map<String, ValueType>> = keyLists.map { keySet ->
+        patternMap.filterKeys { key -> key in keySet }
+    }.asSequence()
+
+    val keySetValues = keySets.map { newPattern ->
         creator(newPattern)
     }
 

@@ -20,8 +20,15 @@ data class BooleanPattern(override val example: String? = null) : Pattern, Scala
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+
+    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return sequenceOf(NullPattern).map {
+            HasValue(it, "Expected type in spec was $typeName, trying out a ${it.typeName}")
+        }
+    }
+
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
-        return sequenceOf(NullPattern)
+        return negativeBasedOnR(row, resolver).map { it.value }
     }
 
     override fun parse(value: String, resolver: Resolver): Value = when (value.lowercase()) {

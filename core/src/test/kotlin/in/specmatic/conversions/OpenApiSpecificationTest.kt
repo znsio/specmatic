@@ -7808,6 +7808,52 @@ paths:
         }
     }
 
+    @Test
+    fun `a test with string with pattern in a request should generate a string matching the pattern`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /person:
+                    post:
+                      summary: "Get person by id"
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - id
+                              properties:
+                                id:
+                                  type: string
+                                  pattern: 'id-[a-z]+-[0-9]+'
+                      responses:
+                        204:
+                          description: "Get person by id"
+                          content: {}
+                """.trimIndent(), "").toFeature()
+
+        val mockTestClient = object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
+
+                val requestBodyAsJSON = request.body as JSONObjectValue
+
+                assertThat(requestBodyAsJSON.getString("id")).matches("id-[a-z]+-[0-9]+")
+
+                return HttpResponse(204)
+            }
+        }
+
+        val results: Results = feature.executeTests(mockTestClient)
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

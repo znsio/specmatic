@@ -58,13 +58,11 @@ data class NumberPattern(
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
     override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return sequenceOf(NullPattern, BooleanPattern(), StringPattern()).map {
-            HasValue(it, "Expected type in spec was $typeName, trying out a ${it.typeName}")
-        }
+        return scalarAnnotation(this, negativeBasedOn(row, resolver))
     }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
-        return negativeBasedOnR(row, resolver).map { it.value }
+        return sequenceOf(NullPattern, BooleanPattern(), StringPattern())
     }
 
     override fun parse(value: String, resolver: Resolver): Value {

@@ -26,6 +26,10 @@ object UUIDPattern : Pattern, ScalarType {
         return sequenceOf(NullPattern)
     }
 
+    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return scalarAnnotation(this, negativeBasedOn(row, resolver))
+    }
+
     override fun parse(value: String, resolver: Resolver): StringValue =
         attempt {
             UUID.fromString(value)

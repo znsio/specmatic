@@ -24,6 +24,10 @@ object DatePattern : Pattern, ScalarType {
         return sequenceOf(NullPattern)
     }
 
+    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return scalarAnnotation(this, negativeBasedOn(row, resolver))
+    }
+
     override fun parse(value: String, resolver: Resolver): StringValue =
         attempt {
             RFC3339.dateFormatter.parse(value)

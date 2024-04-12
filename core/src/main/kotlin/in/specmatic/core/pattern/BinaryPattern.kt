@@ -46,6 +46,10 @@ data class BinaryPattern(
         return sequenceOf(NullPattern, NumberPattern(), BooleanPattern())
     }
 
+    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return scalarAnnotation(this, negativeBasedOn(row, resolver))
+    }
+
     override fun parse(value: String, resolver: Resolver): Value = StringValue(value)
     override val typeName: String = "string"
 

@@ -4,13 +4,16 @@ import `in`.specmatic.core.Resolver
 
 abstract class NegativePatternsTemplate {
     fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
-        val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
-        val negativePatternsMap = getNegativePatterns(patternMap, resolver, row)
+        val eachKeyMappedToPatternMap: Map<String, Map<String, Pattern>> = patternMap.mapValues { patternMap }
+        val negativePatternsForEachKey: Map<String, Sequence<ReturnValue<Pattern>>> = getNegativePatterns(patternMap, resolver, row)
 
-        val modifiedPatternMap: Map<String, Sequence<Map<String, Sequence<Pattern>>>> = eachKeyMappedToPatternMap.mapValues { (keyToNegate, patterns) ->
-            val negativePatterns = negativePatternsMap[keyToNegate]
-            negativePatterns!!.map { negativePattern ->
-                patterns.mapValues { (key, pattern) ->
+        val modifiedPatternMap: Map<String, Sequence<Map<String, Sequence<Pattern>>>> = eachKeyMappedToPatternMap.mapValues { (keyToNegate, negatablePatternMap) ->
+            val negativePatterns: Sequence<ReturnValue<Pattern>> = negativePatternsForEachKey.getValue(keyToNegate)
+
+            negativePatterns.map { negativePatternR ->
+                val negativePattern: Pattern = negativePatternR.value
+
+                negatablePatternMap.mapValues { (key, pattern) ->
                     attempt(breadCrumb = key) {
                         when (key == keyToNegate) {
                             true ->
@@ -36,33 +39,17 @@ abstract class NegativePatternsTemplate {
         row: Row,
         resolver: Resolver
     ): Sequence<ReturnValue<Map<String, Pattern>>> {
-        val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
-        val negativePatternsMap = getNegativePatterns(patternMap, resolver, row)
+        val eachKeyMappedToPatternMap: Map<String, Map<String, Pattern>> = patternMap.mapValues { patternMap }
+        val negativePatternsForEachKey: Map<String, Sequence<ReturnValue<Pattern>>> = getNegativePatterns(patternMap, resolver, row)
 
-        val modifiedPatternMap: Map<String, Sequence<Map<String, Sequence<ReturnValue<Pattern>>>>> =
+        val modifiedPatternMap: Map<String, Map<String, Sequence<ReturnValue<Pattern>>>> =
             eachKeyMappedToPatternMap.mapValues { (keyToNegate, patterns) ->
-                val negativePatterns = negativePatternsMap[keyToNegate]
-                negativePatterns!!.map { negativePattern ->
-                    patterns.mapValues { (key, pattern) ->
-                        attempt(breadCrumb = key) {
-                            when (key) {
-                                keyToNegate ->
-                                    attempt(breadCrumb = "Setting $key to $negativePattern for negative test scenario") {
-                                        negativePatternsForKey(key, negativePattern, resolver).map {
-                                            if (negativePattern is ScalarType) {
-                                                HasValue(
-                                                    it,
-                                                    "${pattern.typeName} in the spec, attempting with ${negativePattern.typeName}",
-                                                    key
-                                                )
-                                            } else
-                                                HasValue(it)
-                                        }
-                                    }
+                val negativePatterns: Sequence<ReturnValue<Pattern>> = negativePatternsForEachKey.getValue(keyToNegate)
 
-                                else -> newBasedOn(row, key, pattern, resolver).map { HasValue(it) }
-                            }
-                        }
+                patterns.mapValues { (key, pattern) ->
+                    when (key) {
+                        keyToNegate -> negativePatterns
+                        else -> newBasedOn(row, key, pattern, resolver).map { HasValue(it) }
                     }
                 }
             }
@@ -70,16 +57,17 @@ abstract class NegativePatternsTemplate {
         if (modifiedPatternMap.values.isEmpty())
             return sequenceOf(HasValue(emptyMap()))
 
-        return modifiedPatternMap.values.asSequence().flatMap { list ->
-            list.flatMap { patternListR(it) }
+        return modifiedPatternMap.values.asSequence().flatMap {
+            patternListR(it)
         }
+
     }
 
     abstract fun getNegativePatterns(
         patternMap: Map<String, Pattern>,
         resolver: Resolver,
         row: Row
-    ): Map<String, Sequence<Pattern>>
+    ): Map<String, Sequence<ReturnValue<Pattern>>>
 
     abstract fun negativePatternsForKey(
         key: String,

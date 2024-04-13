@@ -20,6 +20,49 @@ class RegexSupportTest {
     private val regex = "[0-9a-f]{24}"
 
     @Test
+    fun `invalid regex results in exception`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /person:
+                    post:
+                      summary: "Get person by id"
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              type: object
+                              required:
+                              - id
+                              properties:
+                                id:
+                                  type: string
+                                  pattern: '[0-9a-f]{24'
+                      responses:
+                        204:
+                          description: "Get person by id"
+                          content: {}
+                """.trimIndent(), "").toFeature()
+
+        val executor = object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse(204)
+            }
+        }
+
+        assertThatThrownBy {
+            feature.executeTests(executor)
+        }.satisfies(Consumer {
+            assertThat(it).isInstanceOf(ContractException::class.java)
+        })
+    }
+
+    @Test
     fun `a test having string with pattern in a request should generate a string matching the pattern`() {
         val feature = OpenApiSpecification.fromYAML(
             """

@@ -859,7 +859,8 @@ class OpenApiSpecification(
                 null -> StringPattern(
                     minLength = schema.minLength,
                     maxLength = schema.maxLength,
-                    example = schema.example?.toString()
+                    example = schema.example?.toString(),
+                    regex = schema.pattern
                 )
 
                 else -> toEnum(schema, patternName) { enumValue -> StringValue(enumValue.toString()) }.withExample(

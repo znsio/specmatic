@@ -69,10 +69,28 @@ data class StringPattern (
             else -> 5
         }
     
-//    override fun generate(resolver: Resolver): Value = resolver.resolveExample(example, this) ?: StringValue(randomString(randomStringLength))
     override fun generate(resolver: Resolver): Value {
-        if (regex != null)
-            return StringValue(Generex(regex.removePrefix("^").removeSuffix("$")).random(randomStringLength))
+        val defaultExample: Value? = resolver.resolveExample(example, this)
+
+        if (regex != null) {
+            if(defaultExample == null)
+                return StringValue(Generex(regex.removePrefix("^").removeSuffix("$")).random(randomStringLength))
+
+            val defaultExampleMatchResult = matches(defaultExample, resolver)
+
+            if(defaultExampleMatchResult.isSuccess())
+                return defaultExample
+
+            throw ContractException("Schema example ${defaultExample.toStringLiteral()} does not match pattern $regex")
+        }
+
+        if(defaultExample != null) {
+            if(defaultExample !is StringValue)
+                throw ContractException("Schema example ${defaultExample.toStringLiteral()} is not a string")
+
+            return defaultExample
+        }
+
         return StringValue(randomString(randomStringLength))
     }
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)

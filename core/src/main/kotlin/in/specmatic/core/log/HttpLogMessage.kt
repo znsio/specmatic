@@ -7,7 +7,7 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.HttpStubResponse
 
-class HttpLogMessage(private var requestTime: String = "", var request: HttpRequest = HttpRequest(), private var responseTime: String = "", var response: HttpResponse = HttpResponse.OK, var contractPath: String = "", val targetServer: String = ""):
+data class HttpLogMessage(private var requestTime: String = "", var request: HttpRequest = HttpRequest(), private var responseTime: String = "", var response: HttpResponse = HttpResponse.OK, var contractPath: String = "", val targetServer: String = "", val comment: String?  =null):
     LogMessage {
     fun addRequest(httpRequest: HttpRequest) {
         requestTime = CurrentDate().toLogString()
@@ -33,6 +33,17 @@ class HttpLogMessage(private var requestTime: String = "", var request: HttpRequ
             "--------------------",
         )
 
+        val commentLines = if(comment != null) {
+            listOf(
+                "${linePrefix}",
+                "${comment.prependIndent(linePrefix)}",
+                "${linePrefix}",
+                "${linePrefix}-----",
+                "${linePrefix}")
+        } else {
+            emptyList()
+        }
+
         val contractPathLines = if(contractPath.isNotBlank()) {
             listOf(
                 "${linePrefix}Contract matched: $contractPath",
@@ -52,7 +63,7 @@ class HttpLogMessage(private var requestTime: String = "", var request: HttpRequ
 
         val messageSuffix = listOf("")
 
-        return (messagePrefix + contractPathLines + mainMessage + messageSuffix).joinToString(System.lineSeparator())
+        return (messagePrefix + commentLines + contractPathLines + mainMessage + messageSuffix).joinToString(System.lineSeparator())
     }
 
     override fun toJSONObject(): JSONObjectValue {

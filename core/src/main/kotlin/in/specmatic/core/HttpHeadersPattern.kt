@@ -200,14 +200,21 @@ data class HttpHeadersPattern(
     }
 
     fun negativeBasedOn(row: Row, resolver: Resolver) =
-        forEachKeyCombinationIn(pattern, row, resolver) { pattern ->
-            NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
-        }.map { patternMap ->
-            HttpHeadersPattern(
-                patternMap.mapKeys { withoutOptionality(it.key) },
-                contentType = contentType
-            )
+        negativeBasedOnR(row, resolver).map { it.value }
+
+    fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
+        return allOrNothingCombinationInR(pattern, row, null, null) { pattern ->
+            NegativeNonStringlyPatterns().negativeBasedOnR(pattern, row, resolver)
+        }.map { patternMapR ->
+            patternMapR.ifValue { patternMap ->
+                HttpHeadersPattern(
+                    patternMap.mapKeys { withoutOptionality(it.key) },
+                    contentType = contentType
+                )
+
+            }
         }
+    }
 
     fun newBasedOn(resolver: Resolver): Sequence<HttpHeadersPattern> =
         allOrNothingCombinationIn(pattern) { pattern ->

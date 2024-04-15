@@ -36,3 +36,18 @@ fun <K, ValueType> Map<K, ReturnValue<ValueType>>.mapFold(): ReturnValue<Map<K, 
         }
     }
 }
+
+fun <T> Sequence<List<ReturnValue<out T>>>.sequenceListFold(): Sequence<ReturnValue<List<T>>> {
+    val data: Sequence<List<ReturnValue<out T>>> = this
+
+    return data.map { listOfReturnValues ->
+        val error: ReturnValue<out T>? = listOfReturnValues.firstOrNull { it !is HasValue }
+
+        if (error != null)
+            listOf(error)
+
+        val valueDetails: List<ValueDetails> = listOfReturnValues.map { (it as HasValue).valueDetails }.flatten()
+        HasValue(listOfReturnValues.map { it.value }, valueDetails)
+    }
+}
+

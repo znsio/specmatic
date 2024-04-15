@@ -299,6 +299,17 @@ fun <ValueType> forEachKeyCombinationIn(
         creator(newPattern)
     }.flatten()
 
+fun <ValueType> forEachKeyCombinationInR(
+    patternMap: Map<String, ValueType>,
+    row: Row,
+    creator: (Map<String, ValueType>) -> Sequence<ReturnValue<Map<String, ValueType>>>
+): Sequence<ReturnValue<Map<String, ValueType>>> =
+    keySets(patternMap.keys.toList(), row).map { keySet ->
+        patternMap.filterKeys { key -> key in keySet }
+    }.map { newPattern ->
+        creator(newPattern)
+    }.flatten()
+
 fun <ValueType> allOrNothingCombinationIn(
     patternMap: Map<String, ValueType>,
     row: Row = Row(),

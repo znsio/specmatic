@@ -624,12 +624,13 @@ data class HttpRequestPattern(
 
     fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpRequestPattern>> {
         return returnValue(breadCrumb = "REQUEST") {
-            val newHttpPathPatterns = httpPathPattern?.let { httpPathPattern ->
-                val newURLPathSegmentPatternsList = httpPathPattern.negativeBasedOn(row, resolver)
-                newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }
-            } ?: sequenceOf<HttpPathPattern?>(null)
+            val newHttpPathPatterns: Sequence<ReturnValue<HttpPathPattern>?> =
+                httpPathPattern?.let { httpPathPattern ->
+                    httpPathPattern.negativeBasedOnR(row, resolver)
+                        .map { it.ifValue { HttpPathPattern(it, httpPathPattern.path) } }
+                } ?: sequenceOf(null)
 
-            val newQueryParamsPatterns = httpQueryParamPattern.negativeBasedOn(row, resolver).map { HttpQueryParamPattern(it) }
+            val newQueryParamsPatterns = httpQueryParamPattern.negativeBasedOnR(row, resolver).map { it.ifValue { HttpQueryParamPattern(it) } }
 
             val newBodies: Sequence<ReturnValue<out Pattern>> = returnValue(breadCrumb = "BODY") {
                 body.let {
@@ -657,7 +658,7 @@ data class HttpRequestPattern(
                 }
             }
 
-            val newHeadersPattern = headersPattern.negativeBasedOn(row, resolver)
+            val newHeadersPattern = headersPattern.negativeBasedOnR(row, resolver)
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
             val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
 
@@ -668,12 +669,18 @@ data class HttpRequestPattern(
                     val positivePattern: HttpRequestPattern =
                         newBasedOn(row, resolver, 400).first().value.copy(securitySchemes = listOf(securitySchemes.first()))
 
-                    newHttpPathPatterns.forEach { pathParamPattern ->
-                        yield(HasValue(positivePattern.copy(httpPathPattern = pathParamPattern)))
+                    newHttpPathPatterns.forEach { pathParamPatternR ->
+                        if(pathParamPatternR != null) {
+                            yield(pathParamPatternR.ifValue { pathParamPattern ->
+                                positivePattern.copy(httpPathPattern = pathParamPattern)
+                            })
+                        }
                     }
-                    newQueryParamsPatterns.forEach { queryParamPattern ->
+                    newQueryParamsPatterns.forEach { queryParamPatternR ->
                         yield(
-                            HasValue(positivePattern.copy(httpQueryParamPattern = queryParamPattern))
+                            queryParamPatternR.ifValue { queryParamPattern ->
+                                positivePattern.copy(httpQueryParamPattern = queryParamPattern)
+                            }
                         )
                     }
                     newBodies.forEach { newBodyPatternR ->
@@ -681,9 +688,11 @@ data class HttpRequestPattern(
                             newBodyPatternR.ifValue { newBodyPattern -> positivePattern.copy(body = newBodyPattern) }
                         )
                     }
-                    newHeadersPattern.forEach { newHeaderPattern ->
+                    newHeadersPattern.forEach { newHeaderPatternR ->
                         yield(
-                            HasValue(positivePattern.copy(headersPattern = newHeaderPattern))
+                            newHeaderPatternR.ifValue { newHeaderPattern ->
+                                positivePattern.copy(headersPattern = newHeaderPattern)
+                            }
                         )
                     }
                     newFormFieldsPatterns.forEach { newFormFieldPattern ->

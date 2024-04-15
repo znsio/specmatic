@@ -14,13 +14,20 @@ class CombinationSpecTest {
 
   @Test
   fun `empty list when no candidate sets supplied`() {
-    assertThat(CombinationSpec<Long>(mapOf(), 50).selectedCombinations.toList()).isEmpty()
+    val combinationSpec = CombinationSpec<Long>(mapOf(), 50)
+    assertThat(
+      combinationSpec.toSelectedCombinations(combinationSpec.keyToCandidates, 50)
+        .map { it.value }.toList()
+ ).isEmpty()
   }
 
   @Test
   fun `combination omitted when candidate set empty`() {
     val spec = CombinationSpec.from(mapOf("k1" to emptySequence(), "k2" to sequenceOf(21, 22)), 50)
-    assertThat(spec.selectedCombinations.toList()).containsExactly(mapOf("k2" to 21), mapOf("k2" to 22))
+    assertThat(
+      spec.toSelectedCombinations(spec.keyToCandidates, 50)
+        .map { it.value }.toList()
+    ).containsExactly(mapOf("k2" to 21), mapOf("k2" to 22))
   }
 
   @Test
@@ -33,7 +40,10 @@ class CombinationSpecTest {
       ),
       50,
     )
-    assertThat(spec.selectedCombinations.toList()).containsExactly(
+    assertThat(
+      spec.toSelectedCombinations(spec.keyToCandidates, 50)
+        .map { it.value }.toList()
+    ).containsExactly(
       // Prioritized first
       mapOf("k1" to 12, "k2" to 25, "k3" to 39),
       mapOf("k1" to 14, "k2" to 22, "k3" to 33),
@@ -78,7 +88,10 @@ class CombinationSpecTest {
       ),
       23,
     )
-    assertThat(spec.selectedCombinations.toList()).containsExactly(
+    assertThat(
+      spec.toSelectedCombinations(spec.keyToCandidates, 23)
+        .map { it.value }.toList()
+    ).containsExactly(
       // Prioritized first
       mapOf("k1" to 12, "k2" to 25, "k3" to 39),
       mapOf("k1" to 14, "k2" to 22, "k3" to 33),
@@ -123,7 +136,13 @@ class CombinationSpecTest {
       ),
       3,
     )
-    assertThat(spec.selectedCombinations.toList()).withFailMessage(spec.selectedCombinations.toString()).containsExactly(
+    assertThat(
+      spec.toSelectedCombinations(spec.keyToCandidates, 3)
+        .map { it.value }.toList()
+    ).withFailMessage(
+      spec.toSelectedCombinations(spec.keyToCandidates, 3)
+        .map { it.value }.toString()
+    ).containsExactly(
       // Prioritized first
       mapOf("k1" to 12, "k2" to 25, "k3" to 39),
       mapOf("k1" to 14, "k2" to 22, "k3" to 33),

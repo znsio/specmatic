@@ -34,76 +34,9 @@ class CombinationSpec<ValueType>(
         if (maxCombinations < 1) throw IllegalArgumentException("maxCombinations must be > 0 and <= ${Int.MAX_VALUE}")
     }
 
-    val selectedCombinations: Sequence<Map<String, ValueType>> = toSelectedCombinations(keyToCandidates.mapValues { it.value.map { it.value } }, maxCombinations)
-    val selectedCombinationsR: Sequence<ReturnValue<Map<String, ValueType>>> = toSelectedCombinationsR(keyToCandidates, maxCombinations)
+    val selectedCombinations: Sequence<ReturnValue<Map<String, ValueType>>> = toSelectedCombinations(keyToCandidates, maxCombinations)
 
-    fun <ValueType> toSelectedCombinations(rawPatternCollection: Map<String, Sequence<ValueType>>, maxCombinations: Int): Sequence<Map<String, ValueType>> {
-        val patternCollection = rawPatternCollection.filterValues { it.any() }
-
-        if (patternCollection.isEmpty())
-            return emptySequence()
-
-        val cachedValues = patternCollection.mapValues { mutableListOf<ValueType>() }
-        val prioritisedGenerations = mutableSetOf<Map<String, ValueType>>()
-
-        val ranOut = cachedValues.mapValues { false }.toMutableMap()
-
-        val iterators = patternCollection.mapValues {
-            it.value.iterator()
-        }.filter {
-            it.value.hasNext()
-        }
-
-        return sequence {
-            var ctr = 0
-
-            while (true) {
-                val nextValue = iterators.mapValues { (key, iterator) ->
-                    val nextValueFromIterator = if (iterator.hasNext()) {
-                        val value = iterator.next()
-
-                        cachedValues.getValue(key).add(value)
-
-                        value
-                    } else {
-                        ranOut[key] = true
-
-                        val cachedValuesForKey = cachedValues.getValue(key)
-                        val value = cachedValuesForKey.get(ctr % cachedValuesForKey.size)
-
-                        value
-                    }
-
-                    nextValueFromIterator
-                }
-
-                if(ranOut.all { it.value })
-                    break
-
-                ctr ++
-
-                yield(nextValue)
-                prioritisedGenerations.add(nextValue)
-
-                if(prioritisedGenerations.size == maxCombinations)
-                    break
-            }
-
-            if(prioritisedGenerations.size == maxCombinations)
-                return@sequence
-
-            val otherPatterns = allCombinations(patternCollection)
-
-            val maxCountOfUnPrioritisedGenerations = maxCombinations - prioritisedGenerations.size
-
-            val filtered = otherPatterns.filter { it !in prioritisedGenerations }
-            val limited = filtered.take(maxCountOfUnPrioritisedGenerations)
-
-            yieldAll(limited)
-        }
-    }
-
-    fun <ValueType> toSelectedCombinationsR(rawPatternCollection: Map<String, Sequence<ReturnValue<ValueType>>>, maxCombinations: Int): Sequence<ReturnValue<Map<String, ValueType>>> {
+    fun <ValueType> toSelectedCombinations(rawPatternCollection: Map<String, Sequence<ReturnValue<ValueType>>>, maxCombinations: Int): Sequence<ReturnValue<Map<String, ValueType>>> {
         val patternCollection = rawPatternCollection.filterValues { it.any() }
 
         if (patternCollection.isEmpty())

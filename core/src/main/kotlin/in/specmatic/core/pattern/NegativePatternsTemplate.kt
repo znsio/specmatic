@@ -4,16 +4,13 @@ import `in`.specmatic.core.Resolver
 
 abstract class NegativePatternsTemplate {
     fun negativeBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
-        val eachKeyMappedToPatternMap: Map<String, Map<String, Pattern>> = patternMap.mapValues { patternMap }
-        val negativePatternsForEachKey: Map<String, Sequence<ReturnValue<Pattern>>> = getNegativePatterns(patternMap, resolver, row)
+        val eachKeyMappedToPatternMap = patternMap.mapValues { patternMap }
+        val negativePatternsMap = getNegativePatterns(patternMap, resolver, row).mapValues { it.value.map { it.value } }
 
-        val modifiedPatternMap: Map<String, Sequence<Map<String, Sequence<Pattern>>>> = eachKeyMappedToPatternMap.mapValues { (keyToNegate, negatablePatternMap) ->
-            val negativePatterns: Sequence<ReturnValue<Pattern>> = negativePatternsForEachKey.getValue(keyToNegate)
-
-            negativePatterns.map { negativePatternR ->
-                val negativePattern: Pattern = negativePatternR.value
-
-                negatablePatternMap.mapValues { (key, pattern) ->
+        val modifiedPatternMap: Map<String, Sequence<Map<String, Sequence<Pattern>>>> = eachKeyMappedToPatternMap.mapValues { (keyToNegate, patterns) ->
+            val negativePatterns = negativePatternsMap[keyToNegate]
+            negativePatterns!!.map { negativePattern ->
+                patterns.mapValues { (key, pattern) ->
                     attempt(breadCrumb = key) {
                         when (key == keyToNegate) {
                             true ->

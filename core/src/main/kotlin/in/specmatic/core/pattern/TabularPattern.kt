@@ -6,6 +6,7 @@ import `in`.specmatic.core.utilities.stringToPatternMap
 import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.value.*
 import io.cucumber.messages.types.TableRow
+import kotlin.math.min
 
 fun toTabularPattern(jsonContent: String, typeAlias: String? = null): TabularPattern =
     toTabularPattern(stringToPatternMap(jsonContent), typeAlias)
@@ -223,11 +224,7 @@ fun <ValueType> patternListR(patternCollection: Map<String, Sequence<ReturnValue
 }
 
 fun <ValueType> patternList(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {
-    if (patternCollection.isEmpty())
-        return sequenceOf(emptyMap())
-
-    val spec = CombinationSpec.from(patternCollection, Flags.maxTestRequestCombinations())
-    return spec.selectedCombinations
+    return patternListR(patternCollection.mapValues { it.value.map { HasValue(it) } }).map { it.value }
 }
 
 fun <ValueType> patternValues(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {
@@ -310,47 +307,11 @@ fun <ValueType> allOrNothingCombinationIn(
     maxPropertiesOrNull: Int? = null,
     creator: (Map<String, ValueType>) -> Sequence<Map<String, ValueType>>
 ): Sequence<Map<String, ValueType>> {
-    val keyLists = if (patternMap.keys.any { isOptional(it) }) {
-        val nothingList: Set<String> =
-            patternMap.keys.filter { k -> !isOptional(k) || row.containsField(withoutOptionality(k)) }.toSet()
-                .let { propertyNames ->
-                    minPropertiesOrNull?.let { minProperties ->
-                        if (propertyNames.size >= minProperties)
-                            propertyNames
-                        else {
-                            val remainingPropertyNames = patternMap.keys.minus(propertyNames)
-                            propertyNames + remainingPropertyNames.shuffled().toList()
-                                .take(minProperties - propertyNames.size).toSet()
-                        }
-                    } ?: propertyNames
-                }
-
-        val allList: Set<String> = patternMap.keys.let { propertyNames ->
-            maxPropertiesOrNull?.let { maxProperties ->
-                if (propertyNames.size <= maxProperties)
-                    propertyNames
-                else {
-                    val remainingPropertyNames = patternMap.keys.minus(nothingList)
-                    nothingList + remainingPropertyNames.shuffled().toList().take(maxProperties - nothingList.size)
-                        .toSet()
-                }
-            } ?: propertyNames
-        }
-
-        sequenceOf(allList, nothingList).distinct()
-    } else {
-        sequenceOf(patternMap.keys)
+    val wrappedCreator: (Map<String, ValueType>) -> Sequence<ReturnValue<Map<String, ValueType>>> = { map ->
+        creator(map).map { HasValue(it) }
     }
 
-    val keySets: Sequence<Map<String, ValueType>> = keyLists.map { keySet ->
-        patternMap.filterKeys { key -> key in keySet }
-    }.asSequence()
-
-    val keySetValues: Sequence<Sequence<Map<String, ValueType>>> = keySets.map { newPattern ->
-        creator(newPattern)
-    }
-
-    return keySetValues.flatten()
+    return allOrNothingCombinationInR(patternMap, row, minPropertiesOrNull, maxPropertiesOrNull, wrappedCreator).map { it.value }
 }
 
 fun <ValueType> allOrNothingCombinationInR(

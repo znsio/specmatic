@@ -50,6 +50,8 @@ abstract class NegativePatternsTemplate {
                     when (key) {
                         keyToNegate -> negativePatterns
                         else -> newBasedOn(row, key, pattern, resolver).map { HasValue(it) }
+                    }.map {
+                        it.addDetails("", key)
                     }
                 }
             }

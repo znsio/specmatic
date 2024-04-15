@@ -165,10 +165,6 @@ data class AnyPattern(
             negativeTypes
     }
 
-    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return scalarAnnotation(this, negativeBasedOn(row, resolver))
-    }
-
     override fun parse(value: String, resolver: Resolver): Value {
         val resolvedTypes = pattern.map { resolvedHop(it, resolver) }
         val nonNullTypesFirst = resolvedTypes.filterNot { it is NullPattern }.plus(resolvedTypes.filterIsInstance<NullPattern>())

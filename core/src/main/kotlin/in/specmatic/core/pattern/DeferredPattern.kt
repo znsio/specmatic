@@ -39,10 +39,6 @@ data class DeferredPattern(override val pattern: String, val key: String? = null
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
-        return resolver.getPattern(pattern).negativeBasedOn(row, resolver)
-    }
-
     override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return resolver.getPattern(pattern).negativeBasedOnR(row, resolver)
     }

@@ -36,8 +36,8 @@ class CsvPattern(override val pattern: Pattern) : Pattern {
         return sequenceOf(this)
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
-        return StringPattern().negativeBasedOn(row, resolver)
+    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return StringPattern().negativeBasedOnR(row, resolver)
     }
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {

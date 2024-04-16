@@ -22,8 +22,8 @@ data class RestPattern(override val pattern: Pattern, override val typeAlias: St
             pattern.newBasedOn(cyclePreventedResolver).map { RestPattern(it) }
         }
     }
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
-        return sequenceOf(this)
+    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return sequenceOf(HasValue(this))
     }
 
     override fun parse(value: String, resolver: Resolver): Value = listPattern.parse(value, resolver)

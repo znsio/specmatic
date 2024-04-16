@@ -19,7 +19,10 @@ interface Pattern {
     fun generateWithAll(resolver: Resolver) = resolver.withCyclePrevention(this, this::generate)
     fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern>
 
-    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern>
+    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        return negativeBasedOnR(row, resolver).map { it.value }
+    }
+
     fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return negativeBasedOn(row, resolver).map { HasValue(it) }
     }

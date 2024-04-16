@@ -41,8 +41,8 @@ data class LookupRowPattern(override val pattern: Pattern, override val key: Str
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
-        return sequenceOf(this)
+    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return sequenceOf(HasValue(this))
     }
 
     override fun parse(value: String, resolver: Resolver): Value = pattern.parse(value, resolver)

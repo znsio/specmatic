@@ -12,7 +12,7 @@ class EmailPatternTest {
     @Test
     @Tag(GENERATION)
     fun `negative values should be generated`() {
-        val result = EmailPattern().negativeBasedOn(Row(), Resolver()).toList()
+        val result = EmailPattern().negativeBasedOnR(Row(), Resolver()).toList().map { it.value }
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null",
             "number",

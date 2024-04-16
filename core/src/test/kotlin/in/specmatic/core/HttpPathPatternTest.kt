@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Tag
 import java.io.UnsupportedEncodingException
 import java.net.URI
 import java.net.URISyntaxException
-import java.util.*
 
 internal class HttpPathPatternTest {
     @Test
@@ -180,7 +179,7 @@ internal class HttpPathPatternTest {
     @Test
     fun `should generate negative values for a number`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to NumberPattern()))
-        val newHeaders = headers.negativeBasedOn(Row(), Resolver()).toList()
+        val newHeaders = headers.negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
 
         assertThat(newHeaders).containsExactlyInAnyOrder(
             HttpHeadersPattern(mapOf("X-TraceID" to StringPattern())),

@@ -626,11 +626,11 @@ data class HttpRequestPattern(
         return returnValue(breadCrumb = "REQUEST") {
             val newHttpPathPatterns: Sequence<ReturnValue<HttpPathPattern>?> =
                 httpPathPattern?.let { httpPathPattern ->
-                    httpPathPattern.negativeBasedOnR(row, resolver)
+                    httpPathPattern.negativeBasedOn(row, resolver)
                         .map { it.ifValue { HttpPathPattern(it, httpPathPattern.path) } }
                 } ?: sequenceOf(null)
 
-            val newQueryParamsPatterns = httpQueryParamPattern.negativeBasedOnR(row, resolver).map { it.ifValue { HttpQueryParamPattern(it) } }
+            val newQueryParamsPatterns = httpQueryParamPattern.negativeBasedOn(row, resolver).map { it.ifValue { HttpQueryParamPattern(it) } }
 
             val newBodies: Sequence<ReturnValue<out Pattern>> = returnValue(breadCrumb = "BODY") {
                 body.let {
@@ -658,7 +658,7 @@ data class HttpRequestPattern(
                 }
             }
 
-            val newHeadersPattern = headersPattern.negativeBasedOnR(row, resolver)
+            val newHeadersPattern = headersPattern.negativeBasedOn(row, resolver)
             val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
             val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
 

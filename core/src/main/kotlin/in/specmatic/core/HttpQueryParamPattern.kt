@@ -143,26 +143,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         } else ""
     }
 
-    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
-        return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
-            val queryParams = queryPatterns.let {
-                if (additionalProperties != null)
-                    it.plus(randomString(5) to additionalProperties)
-                else
-                    it
-            }
-
-            forEachKeyCombinationIn(queryParams, row) { entry ->
-                NegativeNonStringlyPatterns().negativeBasedOn(
-                    entry.mapKeys { withoutOptionality(it.key) },
-                    row,
-                    resolver
-                )
-            }
-        }
-    }
-
-    fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
+    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
         return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams: Map<String, Pattern> = queryPatterns.let {
                 if (additionalProperties != null)

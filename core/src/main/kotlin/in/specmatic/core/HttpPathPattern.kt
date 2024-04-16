@@ -156,7 +156,7 @@ data class HttpPathPattern(
         return pathSegmentPatterns.filter { !it.pattern.instanceOf(ExactValuePattern::class) }
     }
 
-    private fun negativelyR(patterns: List<URLPathSegmentPattern>, row: Row, resolver: Resolver): Sequence<ReturnValue<List<URLPathSegmentPattern>>> {
+    private fun negatively(patterns: List<URLPathSegmentPattern>, row: Row, resolver: Resolver): Sequence<ReturnValue<List<URLPathSegmentPattern>>> {
         val current = patterns.firstOrNull() ?: return emptySequence()
 
         val negativesOfCurrent: Sequence<ReturnValue<List<URLPathSegmentPattern>>> = current.negativeBasedOnR(row, resolver).map { negative ->
@@ -167,7 +167,7 @@ data class HttpPathPattern(
             return negativesOfCurrent
 
         val negativesFromSubsequent: Sequence<ReturnValue<List<URLPathSegmentPattern>>> = //Sequence<ReturnValue<Sequence<List<Any>>>> =
-            negativelyR(patterns.drop(1), row, resolver)
+            negatively(patterns.drop(1), row, resolver)
             .filterNot { it.withDefault(false) { it.isEmpty() } }
             .map { subsequentNegativesR: ReturnValue<List<URLPathSegmentPattern>> ->
             subsequentNegativesR.ifValue { subsequentNegatives: List<URLPathSegmentPattern> ->
@@ -181,33 +181,6 @@ data class HttpPathPattern(
         val negatives: Sequence<ReturnValue<List<URLPathSegmentPattern>>> = negativesOfCurrent + negativesFromSubsequent
 
         return negatives
-    }
-
-    private fun negatively(patterns: List<URLPathSegmentPattern>, row: Row, resolver: Resolver): Sequence<List<URLPathSegmentPattern>> {
-        val current = patterns.firstOrNull() ?: return emptySequence()
-
-        val negativesOfCurrent = current.negativeBasedOn(row, resolver).map { negative ->
-            listOf(negative) + positively(patterns.drop(1), row, resolver)
-        }.map { it.filterIsInstance<URLPathSegmentPattern>() }
-
-        if(patterns.size == 1)
-            return negativesOfCurrent
-
-
-
-        val negativesFromSubsequent =
-            negatively(patterns.drop(1), row, resolver)
-
-        val negativesFromSubsequent1: Sequence<List<URLPathSegmentPattern>> = negativesFromSubsequent
-            .filterNot { it.isEmpty() }
-            .flatMap { subsequentNegatives: List<URLPathSegmentPattern> ->
-                val subsequents = current.newBasedOn(row, resolver).map { positive ->
-                    listOf(positive) + subsequentNegatives
-                }
-                subsequents
-            }
-
-        return (negativesOfCurrent + negativesFromSubsequent1)
     }
 
     private fun positively(
@@ -230,15 +203,8 @@ data class HttpPathPattern(
     fun negativeBasedOn(
         row: Row,
         resolver: Resolver
-    ): Sequence<List<URLPathSegmentPattern>> {
-        return negativeBasedOnR(row, resolver).map { it.value }
-    }
-
-    fun negativeBasedOnR(
-        row: Row,
-        resolver: Resolver
     ): Sequence<ReturnValue<List<URLPathSegmentPattern>>> {
-        return negativelyR(pathSegmentPatterns, row, resolver)
+        return negatively(pathSegmentPatterns, row, resolver)
     }
 
     private fun patternFromExample(

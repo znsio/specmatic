@@ -242,7 +242,7 @@ data class HttpPathPattern(
             }
         }
 
-        else -> (urlPathPattern.newBasedOn(row, resolver) + urlPathPattern.negativeBasedOn(row, resolver)).distinct()
+        else -> (urlPathPattern.newBasedOn(row, resolver) + urlPathPattern.negativeBasedOnR(row, resolver).map { it.value }).distinct()
     }
 
     fun extractPathParams(requestPath: String, resolver: Resolver): Map<String, String> {

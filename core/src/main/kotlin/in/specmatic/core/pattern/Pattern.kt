@@ -23,9 +23,7 @@ interface Pattern {
         return negativeBasedOnR(row, resolver).map { it.value }
     }
 
-    fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return negativeBasedOn(row, resolver).map { HasValue(it) }
-    }
+    fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>>
 
     fun newBasedOn(resolver: Resolver): Sequence<Pattern>
     fun parse(value: String, resolver: Resolver): Value

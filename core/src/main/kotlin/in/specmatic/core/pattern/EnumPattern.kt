@@ -43,7 +43,7 @@ data class EnumPattern(
     }
 
     override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return scalarAnnotation(this, negativeBasedOn(row, resolver))
+        return scalarAnnotation(this, pattern.negativeBasedOnR(row, resolver).map { it.value })
     }
 
     override fun equals(other: Any?): Boolean = other is EnumPattern && other.pattern == this.pattern

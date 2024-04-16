@@ -40,7 +40,7 @@ class EmailPattern (private val stringPatternDelegate: StringPattern) :
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
     override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        val negativePatterns = stringPatternDelegate.negativeBasedOn(row, resolver).plus(StringPattern())
+        val negativePatterns = stringPatternDelegate.negativeBasedOnR(row, resolver).map { it.value }.plus(StringPattern())
         return scalarAnnotation(this, negativePatterns)
     }
 

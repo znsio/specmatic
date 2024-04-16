@@ -108,7 +108,7 @@ data class QueryParameterArrayPattern(override val pattern: List<Pattern>, val p
     }
 
     override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return pattern.first().negativeBasedOn(row, resolver).map { HasValue(QueryParameterArrayPattern(listOf(it), parameterName)) }
+        return pattern.first().negativeBasedOnR(row, resolver).map { it.ifValue { QueryParameterArrayPattern(listOf(it), parameterName) } }
     }
 
     override fun parse(value: String, resolver: Resolver): Value {

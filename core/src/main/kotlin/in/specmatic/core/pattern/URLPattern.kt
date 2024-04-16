@@ -27,7 +27,7 @@ data class URLPattern(val scheme: URLScheme = URLScheme.HTTPS, override val type
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
-    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return newBasedOn(row, resolver).map { HasValue(it) }
     }
 

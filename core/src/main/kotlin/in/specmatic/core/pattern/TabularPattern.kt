@@ -87,7 +87,7 @@ data class TabularPattern(
         return allOrNothingCombinationIn.map { toTabularPattern(it) }
     }
 
-    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return this.newBasedOn(row, resolver).map { HasValue(it) }
     }
 

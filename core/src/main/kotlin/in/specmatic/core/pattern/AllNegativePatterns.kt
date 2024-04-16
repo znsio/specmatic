@@ -18,7 +18,7 @@ class AllNegativePatterns : NegativePatternsTemplate() {
     ): Map<String, Sequence<ReturnValue<Pattern>>> {
         return patternMap.mapValues { (key, pattern) ->
             val resolvedPattern = resolvedHop(pattern, resolver)
-            resolvedPattern.negativeBasedOnR(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
+            resolvedPattern.negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
         }
     }
 }

@@ -651,9 +651,9 @@ data class HttpRequestPattern(
                         if (result is Failure)
                             throw ContractException(result.toFailureReport())
 
-                        body.negativeBasedOnR(row.noteRequestBody(), resolver)
+                        body.negativeBasedOn(row.noteRequestBody(), resolver)
                     } else {
-                        body.negativeBasedOnR(row, resolver)
+                        body.negativeBasedOn(row, resolver)
                     }
                 }
             }

@@ -112,7 +112,7 @@ class EnumPatternTest {
         fun `it should generate negative values for what is in the row`() {
             val jsonPattern = EnumPattern(listOf(StringValue("01"), StringValue("02")))
 
-            val newPatterns = jsonPattern.negativeBasedOn(Row(), Resolver()).toList()
+            val newPatterns = jsonPattern.negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
 
             val negativeTypes = newPatterns.map { it.typeName }
             println(negativeTypes)

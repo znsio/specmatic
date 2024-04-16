@@ -22,7 +22,7 @@ data class RestPattern(override val pattern: Pattern, override val typeAlias: St
             pattern.newBasedOn(cyclePreventedResolver).map { RestPattern(it) }
         }
     }
-    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return sequenceOf(HasValue(this))
     }
 

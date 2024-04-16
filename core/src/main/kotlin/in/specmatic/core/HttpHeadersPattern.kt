@@ -201,7 +201,7 @@ data class HttpHeadersPattern(
 
     fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
         return allOrNothingCombinationInR(pattern, row, null, null) { pattern ->
-            NegativeNonStringlyPatterns().negativeBasedOnR(pattern, row, resolver)
+            NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
         }.map { patternMapR ->
             patternMapR.ifValue { patternMap ->
                 HttpHeadersPattern(

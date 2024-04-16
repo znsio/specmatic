@@ -71,7 +71,7 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
         }
     }
 
-    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return sequenceOf(HasValue(this))
     }
 

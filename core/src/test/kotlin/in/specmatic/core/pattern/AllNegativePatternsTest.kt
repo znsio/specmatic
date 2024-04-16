@@ -11,7 +11,8 @@ class AllNegativePatternsTest {
         val resolver = Resolver()
         val row = Row()
 
-        val negativePatterns: List<Map<String, Pattern>> = AllNegativePatterns().negativeBasedOn(patternMap, row, resolver).toList()
+        val negativePatterns: List<Map<String, Pattern>> =
+            AllNegativePatterns().negativeBasedOn(patternMap, row, resolver).map { it.value }.toList()
 
         assertThat(negativePatterns).containsExactlyInAnyOrder(
             mapOf("key" to NumberPattern()),
@@ -26,7 +27,8 @@ class AllNegativePatternsTest {
         val resolver = Resolver()
         val row = Row()
 
-        val negativePatterns: List<Map<String, Pattern>> = AllNegativePatterns().negativeBasedOn(patternMap, row, resolver).toList()
+        val negativePatterns: List<Map<String, Pattern>> =
+            AllNegativePatterns().negativeBasedOn(patternMap, row, resolver).map { it.value }.toList()
 
         assertThat(negativePatterns).containsExactlyInAnyOrder(
             mapOf("key1" to BooleanPattern(), "key2" to StringPattern()),

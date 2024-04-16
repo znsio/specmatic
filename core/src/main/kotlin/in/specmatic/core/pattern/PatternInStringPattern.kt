@@ -34,7 +34,7 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern(
             pattern.newBasedOn(cyclePreventedResolver).map { PatternInStringPattern(it) }
         }
 
-    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return sequenceOf(HasValue(NullPattern))
     }
 

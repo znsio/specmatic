@@ -21,7 +21,7 @@ object DatePattern : Pattern, ScalarType {
 
     override fun newBasedOn(resolver: Resolver): Sequence<DatePattern> = sequenceOf(this)
 
-    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return scalarAnnotation(this, sequenceOf(NullPattern))
     }
 

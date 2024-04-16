@@ -57,7 +57,7 @@ data class NumberPattern(
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
-    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return scalarAnnotation(this, sequenceOf(NullPattern, BooleanPattern(), StringPattern()))
     }
 

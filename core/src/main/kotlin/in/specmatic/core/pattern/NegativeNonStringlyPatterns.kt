@@ -32,7 +32,7 @@ class NegativeNonStringlyPatterns : NegativePatternsTemplate() {
             val resolvedPattern = resolvedHop(pattern, resolver)
 
             resolvedPattern
-                .negativeBasedOnR(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
+                .negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
                 .filterNot {
                     it.withDefault(false) {
                         isStringly(resolvedPattern, it, resolver)

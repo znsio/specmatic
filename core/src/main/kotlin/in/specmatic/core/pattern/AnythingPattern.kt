@@ -23,7 +23,7 @@ object AnythingPattern: Pattern {
         return sequenceOf(this)
     }
 
-    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return sequenceOf(HasValue(this))
     }
 

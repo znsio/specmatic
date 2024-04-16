@@ -26,7 +26,7 @@ object NoBodyPattern : Pattern {
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
-    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = emptySequence()
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = emptySequence()
 
     override fun parse(value: String, resolver: Resolver): Value {
         return if(value.isBlank())

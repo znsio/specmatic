@@ -411,7 +411,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         }
     }
 
-    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return newBasedOn(row, resolver).map { HasValue(it) }
     }
 

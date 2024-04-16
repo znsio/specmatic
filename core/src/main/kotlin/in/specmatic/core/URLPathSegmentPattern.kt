@@ -28,7 +28,7 @@ data class URLPathSegmentPattern(override val pattern: Pattern, override val key
             pattern.newBasedOn(cyclePreventedResolver).map { URLPathSegmentPattern(it, key) }
         }
 
-    override fun negativeBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         if(pattern is ExactValuePattern)
             return emptySequence()
 
@@ -36,7 +36,7 @@ data class URLPathSegmentPattern(override val pattern: Pattern, override val key
             return emptySequence()
 
         return resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
-            pattern.negativeBasedOnR(row, cyclePreventedResolver)
+            pattern.negativeBasedOn(row, cyclePreventedResolver)
                 .filterNot {
                     it.withDefault(false) { it is NullPattern }
                 }.map {

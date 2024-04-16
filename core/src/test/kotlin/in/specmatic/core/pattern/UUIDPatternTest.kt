@@ -60,7 +60,7 @@ internal class UUIDPatternTest {
     @Test
     @Tag(GENERATION)
     fun `negative values should be generated`() {
-        val result = UUIDPattern.negativeBasedOn(Row(), Resolver()).toList()
+        val result = UUIDPattern.negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null",
         )

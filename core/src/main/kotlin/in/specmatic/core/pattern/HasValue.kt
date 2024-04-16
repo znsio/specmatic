@@ -1,7 +1,5 @@
 package `in`.specmatic.core.pattern
 
-import io.ktor.util.reflect.*
-
 class HasValue<T>(override val value: T, val valueDetails: List<ValueDetails> = emptyList()): ReturnValue<T> {
     constructor(value: T, message: String): this(value, listOf(ValueDetails(listOf(message))))
     constructor(value: T, message: String, key: String): this(value, listOf(ValueDetails(listOf(message), listOf(key))))

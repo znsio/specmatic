@@ -219,7 +219,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate negative values for a string`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern()))
-        val newHeaders = headers.negativeBasedOn(Row(), Resolver()).toList()
+        val newHeaders = headers.negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
 
         assertThat(newHeaders).isEmpty()
     }
@@ -228,7 +228,7 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate negative values for a number`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to NumberPattern()))
-        val newHeaders = headers.negativeBasedOn(Row(), Resolver()).toList()
+        val newHeaders = headers.negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
 
         assertThat(newHeaders).containsExactlyInAnyOrder(
             HttpHeadersPattern(mapOf("X-TraceID" to StringPattern())),

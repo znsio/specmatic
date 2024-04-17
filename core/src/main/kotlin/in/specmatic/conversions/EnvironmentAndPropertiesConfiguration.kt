@@ -13,6 +13,7 @@ data class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<S
     val ONLY_POSITIVE = "ONLY_POSITIVE"
     val SPECMATIC_TEST_PARALLELISM = "SPECMATIC_TEST_PARALLELISM"
     val LOCAL_TESTS_DIRECTORY = "LOCAL_TESTS_DIRECTORY"
+    private val NEGATIVE_TEST_ANNOTATIONS = "ANNOTATIONS_ENABLED"
 
     val EXTENSIBLE_SCHEMA = "EXTENSIBLE_SCHEMA"
 
@@ -78,5 +79,9 @@ data class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<S
 
     fun localTestsDirectory(): String? {
         return getCachedSetting(LOCAL_TESTS_DIRECTORY)
+    }
+
+    fun annotationsEnabled(): Boolean {
+        return booleanFlag(NEGATIVE_TEST_ANNOTATIONS, "false")
     }
 }

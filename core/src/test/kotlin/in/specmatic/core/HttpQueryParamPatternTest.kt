@@ -178,7 +178,8 @@ class HttpQueryParamPatternTest {
     @Tag(GENERATION)
     @Test
     fun `should generate negative values for a string`() {
-        val urlMatchers = buildQueryPattern(URI("/pets?name=(string)")).negativeBasedOn(Row(), Resolver()).toList()
+        val urlMatchers =
+            buildQueryPattern(URI("/pets?name=(string)")).negativeBasedOn(Row(), Resolver()).toList().map { it.value }
         assertThat(urlMatchers).containsExactly(emptyMap())
     }
 

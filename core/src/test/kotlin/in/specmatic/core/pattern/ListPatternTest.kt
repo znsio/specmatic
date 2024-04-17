@@ -103,7 +103,8 @@ Feature: Recursive test
     @Tag(GENERATION)
     @Test
     fun `negative pattern generation`() {
-        val negativePatterns = ListPattern(StringPattern()).negativeBasedOn(Row(), Resolver()).toList()
+        val negativePatterns =
+            ListPattern(StringPattern()).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
         assertThat(negativePatterns.map { it.typeName }).containsExactlyInAnyOrder(
             "null"
         )

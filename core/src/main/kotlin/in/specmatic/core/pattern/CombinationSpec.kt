@@ -19,23 +19,31 @@ package `in`.specmatic.core.pattern
  * same way as before.
  */
 class CombinationSpec<ValueType>(
-    keyToCandidatesOrig: Map<String, Sequence<ValueType>>,
-    private val maxCombinations: Int,
+    keyToCandidatesOrig: Map<String, Sequence<ReturnValue<ValueType>>>,
+    private val maxCombinations: Int
 ) {
+    companion object {
+        fun <ValueType> from(keyToCandidates: Map<String, Sequence<ValueType>>, maxCombinations: Int): CombinationSpec<ValueType> {
+            return CombinationSpec(keyToCandidates.mapValues { it.value.map { HasValue(it) } }, maxCombinations)
+        }
+    }
+
+    val keyToCandidates: Map<String, Sequence<ReturnValue<ValueType>>> = keyToCandidatesOrig
+
     init {
         if (maxCombinations < 1) throw IllegalArgumentException("maxCombinations must be > 0 and <= ${Int.MAX_VALUE}")
     }
 
-    val selectedCombinations: Sequence<Map<String, ValueType>> = toSelectedCombinations(keyToCandidatesOrig, maxCombinations)
+    val selectedCombinations: Sequence<ReturnValue<Map<String, ValueType>>> = toSelectedCombinations(keyToCandidates, maxCombinations)
 
-    fun <ValueType> toSelectedCombinations(rawPatternCollection: Map<String, Sequence<ValueType>>, maxCombinations: Int): Sequence<Map<String, ValueType>> {
+    fun <ValueType> toSelectedCombinations(rawPatternCollection: Map<String, Sequence<ReturnValue<ValueType>>>, maxCombinations: Int): Sequence<ReturnValue<Map<String, ValueType>>> {
         val patternCollection = rawPatternCollection.filterValues { it.any() }
 
         if (patternCollection.isEmpty())
             return emptySequence()
 
-        val cachedValues = patternCollection.mapValues { mutableListOf<ValueType>() }
-        val prioritisedGenerations = mutableSetOf<Map<String, ValueType>>()
+        val cachedValues = patternCollection.mapValues { mutableListOf<ReturnValue<ValueType>>() }
+        val prioritisedGenerations = mutableSetOf<ReturnValue<Map<String, ValueType>>>()
 
         val ranOut = cachedValues.mapValues { false }.toMutableMap()
 
@@ -49,7 +57,7 @@ class CombinationSpec<ValueType>(
             var ctr = 0
 
             while (true) {
-                val nextValue = iterators.mapValues { (key, iterator) ->
+                val nextValue: Map<String, ReturnValue<ValueType>> = iterators.mapValues { (key, iterator) ->
                     val nextValueFromIterator = if (iterator.hasNext()) {
                         val value = iterator.next()
 
@@ -68,13 +76,15 @@ class CombinationSpec<ValueType>(
                     nextValueFromIterator
                 }
 
+                val _nextValue: ReturnValue<Map<String, ValueType>> = nextValue.mapFold()
+
                 if(ranOut.all { it.value })
                     break
 
                 ctr ++
 
-                yield(nextValue)
-                prioritisedGenerations.add(nextValue)
+                yield(_nextValue)
+                prioritisedGenerations.add(_nextValue)
 
                 if(prioritisedGenerations.size == maxCombinations)
                     break
@@ -83,16 +93,18 @@ class CombinationSpec<ValueType>(
             if(prioritisedGenerations.size == maxCombinations)
                 return@sequence
 
-            val otherPatterns = allCombinations(patternCollection)
+            val otherPatterns: Sequence<ReturnValue<Map<String, ValueType>>> = allCombinations(patternCollection).map { it.mapFold() }
 
             val maxCountOfUnPrioritisedGenerations = maxCombinations - prioritisedGenerations.size
 
+            // TODO Handle equality between return values to ignore the messages and breadcrumbs
             val filtered = otherPatterns.filter { it !in prioritisedGenerations }
             val limited = filtered.take(maxCountOfUnPrioritisedGenerations)
 
             yieldAll(limited)
         }
     }
+
     fun <ValueType> allCombinations(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {
         if(patternCollection.isEmpty())
             return sequenceOf(emptyMap())

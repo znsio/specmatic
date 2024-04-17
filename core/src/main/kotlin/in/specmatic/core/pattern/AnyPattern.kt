@@ -136,13 +136,13 @@ data class AnyPattern(
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val nullable = pattern.any { it is NullPattern }
 
         val negativeTypeResults = pattern.asSequence().map {
             try {
                 val patterns =
-                    it.negativeBasedOn(row, resolver)
+                    it.negativeBasedOn(row, resolver).map { it.value }
                 Pair(patterns, null)
             } catch(e: Throwable) {
                 Pair(null, e)
@@ -160,9 +160,9 @@ data class AnyPattern(
         }
 
         return if(negativeTypes.all { it is ScalarType })
-            negativeTypes.distinct()
+            negativeTypes.distinct().map { HasValue(it) }
         else
-            negativeTypes
+            negativeTypes.map { HasValue(it) }
     }
 
     override fun parse(value: String, resolver: Resolver): Value {

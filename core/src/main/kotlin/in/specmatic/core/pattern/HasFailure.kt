@@ -2,17 +2,13 @@ package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.Result
 
-class HasFailure<T>(val failure: Result.Failure, val message: String = "") : ReturnValue<T>, ReturnFailure {
+data class HasFailure<T>(val failure: Result.Failure, val message: String = "") : ReturnValue<T>, ReturnFailure {
     override fun <U> withDefault(default: U, fn: (T) -> U): U {
         return default
     }
 
     override fun <U> ifValue(fn: (T) -> U): ReturnValue<U> {
         return HasFailure<U>(failure)
-    }
-
-    override fun <U> sequenceOf(fn: (T) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>> {
-        return sequenceOf(cast())
     }
 
     override fun update(fn: (T) -> T): ReturnValue<T> {
@@ -34,11 +30,11 @@ class HasFailure<T>(val failure: Result.Failure, val message: String = "") : Ret
         return Result.Failure(message, failure)
     }
 
-    override fun addDetails(errorMessage: String, breadCrumb: String): ReturnValue<T> {
-        return HasFailure<T>(Result.Failure(errorMessage, this.toFailure(), breadCrumb))
+    override fun addDetails(message: String, breadCrumb: String): ReturnValue<T> {
+        return HasFailure<T>(Result.Failure(message, this.toFailure(), breadCrumb))
     }
 
-    override fun <U> realise(hasValue: (T) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U {
+    override fun <U> realise(hasValue: (T, String?) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U {
         return orFailure(this)
     }
 }

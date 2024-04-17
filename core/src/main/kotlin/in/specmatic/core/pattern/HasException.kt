@@ -1,9 +1,6 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.core.Result
-import `in`.specmatic.core.utilities.exceptionCauseMessage
-
-class HasException<T>(val t: Throwable, val message: String = "", val breadCrumb: String? = null) : ReturnValue<T>, ReturnFailure {
+data class HasException<T>(val t: Throwable, val message: String = "", val breadCrumb: String? = null) : ReturnValue<T>, ReturnFailure {
     override fun <U> withDefault(default: U, fn: (T) -> U): U {
         return default
     }
@@ -11,10 +8,6 @@ class HasException<T>(val t: Throwable, val message: String = "", val breadCrumb
     override fun <U> ifValue(fn: (T) -> U): ReturnValue<U> {
         return cast()
 
-    }
-
-    override fun <U> sequenceOf(fn: (T) -> Sequence<ReturnValue<U>>): Sequence<ReturnValue<U>> {
-        return sequenceOf(cast())
     }
 
     override fun update(fn: (T) -> T): ReturnValue<T> {
@@ -32,8 +25,8 @@ class HasException<T>(val t: Throwable, val message: String = "", val breadCrumb
     override val value: T
         get() = throw t
 
-    override fun addDetails(errorMessage: String, breadCrumb: String): ReturnValue<T> {
-        val newE = toException(errorMessage, breadCrumb, toException())
+    override fun addDetails(message: String, breadCrumb: String): ReturnValue<T> {
+        val newE = toException(message, breadCrumb, toException())
 
         return HasException<T>(newE)
     }
@@ -55,7 +48,7 @@ class HasException<T>(val t: Throwable, val message: String = "", val breadCrumb
         return newE
     }
 
-    override fun <U> realise(hasValue: (T) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U {
+    override fun <U> realise(hasValue: (T, String?) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U {
         return orException(this)
     }
 }

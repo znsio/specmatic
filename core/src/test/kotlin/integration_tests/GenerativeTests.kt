@@ -132,9 +132,33 @@ class GenerativeTests {
         val negativeGenerativeAll = 3 + 3
         val negativeGenerativeNothing = 3
 
+        var optionalKeyOccurrence: Int = 0
+
+        val OPTIONAL_KEY = "description"
 
         try {
-            val results = runGenerativeTests(feature)
+            val results = try {
+                feature.enableGenerativeTesting().executeTests(object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        val jsonRequestBody = request.body as JSONObjectValue
+
+                        if(OPTIONAL_KEY in jsonRequestBody.jsonObject)
+                            optionalKeyOccurrence += 1
+
+                        return HttpResponse.OK
+                    }
+
+                    override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                        println(scenario.testDescription())
+                        println(request.toLogString())
+                        println()
+                    }
+                })
+            } finally {
+                System.clearProperty(Flags.ONLY_POSITIVE)
+            }
+
+            assertThat(optionalKeyOccurrence).isEqualTo(7)
 
             val expectedCountOfTests =
                 fromExample + positiveGenerated + negativeGenerativeAll + negativeGenerativeNothing

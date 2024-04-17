@@ -299,15 +299,16 @@ data class Feature(
     fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> {
         return generateContractTestScenarios(suggestions).map { (originalScenario, returnValue) ->
             returnValue.realise(
-                hasValue = {
+                hasValue = { concreteTestScenario, comment ->
                     ScenarioTest(
-                        it,
+                        concreteTestScenario,
                         flagsBased,
-                        it.sourceProvider,
-                        it.sourceRepository,
-                        it.sourceRepositoryBranch,
-                        it.specification,
-                        it.serviceType
+                        concreteTestScenario.sourceProvider,
+                        concreteTestScenario.sourceRepository,
+                        concreteTestScenario.sourceRepositoryBranch,
+                        concreteTestScenario.specification,
+                        concreteTestScenario.serviceType,
+                        if(Flags.annotationsEnabled()) comment else null
                     )
                 },
                 orFailure = {

@@ -558,8 +558,9 @@ data class HttpRequestPattern(
                 while(iterator.hasNext()) {
                     val next = iterator.next()
 
-                    val result = fn(next)
-                    yieldAll(result)
+                    val results: Sequence<ReturnValue<U>> = fn(next)
+
+                    yieldAll(results)
                 }
             } catch(t: Throwable) {
                 yield(HasException(t, breadCrumb = breadCrumb))
@@ -623,25 +624,26 @@ data class HttpRequestPattern(
 
     fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpRequestPattern>> {
         return returnValue(breadCrumb = "REQUEST") {
-            val newHttpPathPatterns = httpPathPattern?.let { httpPathPattern ->
-                val newURLPathSegmentPatternsList = httpPathPattern.negativeBasedOn(row, resolver)
-                newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }
-            } ?: sequenceOf<HttpPathPattern?>(null)
+            val newHttpPathPatterns: Sequence<ReturnValue<HttpPathPattern>?> =
+                httpPathPattern?.let { httpPathPattern ->
+                    httpPathPattern.negativeBasedOn(row, resolver)
+                        .map { it.ifValue { HttpPathPattern(it, httpPathPattern.path) } }
+                } ?: sequenceOf(null)
 
-            val newQueryParamsPatterns = httpQueryParamPattern.negativeBasedOn(row, resolver).map { HttpQueryParamPattern(it) }
+            val newQueryParamsPatterns = httpQueryParamPattern.negativeBasedOn(row, resolver).map { it.ifValue { HttpQueryParamPattern(it) } }
 
-            val newBodies = attempt(breadCrumb = "BODY") {
+            val newBodies: Sequence<ReturnValue<out Pattern>> = returnValue(breadCrumb = "BODY") {
                 body.let {
                     if (it is DeferredPattern && row.containsField(it.pattern)) {
                         val example = row.getField(it.pattern)
-                        sequenceOf(ExactValuePattern(it.parse(example, resolver)))
+                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
                     } else if (it.typeAlias?.let { p -> isPatternToken(p) } == true && row.containsField(it.typeAlias!!)) {
                         val example = row.getField(it.typeAlias!!)
-                        sequenceOf(ExactValuePattern(it.parse(example, resolver)))
+                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
                     } else if (it is XMLPattern && it.referredType?.let { referredType -> row.containsField("($referredType)") } == true) {
                         val referredType = "(${it.referredType})"
                         val example = row.getField(referredType)
-                        sequenceOf(ExactValuePattern(it.parse(example, resolver)))
+                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
                     } else if (row.containsField("(REQUEST-BODY)")) {
                         val example = row.getField("(REQUEST-BODY)")
                         val value = it.parse(example, resolver)
@@ -667,22 +669,30 @@ data class HttpRequestPattern(
                     val positivePattern: HttpRequestPattern =
                         newBasedOn(row, resolver, 400).first().value.copy(securitySchemes = listOf(securitySchemes.first()))
 
-                    newHttpPathPatterns.forEach { pathParamPattern ->
-                        yield(HasValue(positivePattern.copy(httpPathPattern = pathParamPattern)))
+                    newHttpPathPatterns.forEach { pathParamPatternR ->
+                        if(pathParamPatternR != null) {
+                            yield(pathParamPatternR.ifValue { pathParamPattern ->
+                                positivePattern.copy(httpPathPattern = pathParamPattern)
+                            })
+                        }
                     }
-                    newQueryParamsPatterns.forEach { queryParamPattern ->
+                    newQueryParamsPatterns.forEach { queryParamPatternR ->
                         yield(
-                            HasValue(positivePattern.copy(httpQueryParamPattern = queryParamPattern))
+                            queryParamPatternR.ifValue { queryParamPattern ->
+                                positivePattern.copy(httpQueryParamPattern = queryParamPattern)
+                            }
                         )
                     }
-                    newBodies.forEach { newBodyPattern ->
+                    newBodies.forEach { newBodyPatternR ->
                         yield(
-                            HasValue(positivePattern.copy(body = newBodyPattern))
+                            newBodyPatternR.ifValue { newBodyPattern -> positivePattern.copy(body = newBodyPattern) }
                         )
                     }
-                    newHeadersPattern.forEach { newHeaderPattern ->
+                    newHeadersPattern.forEach { newHeaderPatternR ->
                         yield(
-                            HasValue(positivePattern.copy(headersPattern = newHeaderPattern))
+                            newHeaderPatternR.ifValue { newHeaderPattern ->
+                                positivePattern.copy(headersPattern = newHeaderPattern)
+                            }
                         )
                     }
                     newFormFieldsPatterns.forEach { newFormFieldPattern ->

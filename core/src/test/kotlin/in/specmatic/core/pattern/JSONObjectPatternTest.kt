@@ -632,7 +632,7 @@ internal class JSONObjectPatternTest {
                 )
             )
 
-            val negativePatterns: List<Pattern> = pattern.negativeBasedOn(Row(), Resolver()).toList()
+            val negativePatterns: List<Pattern> = pattern.negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
 
             val jsonInternalPatterns = negativePatterns.filterIsInstance<JSONObjectPattern>().map { it.pattern }
 

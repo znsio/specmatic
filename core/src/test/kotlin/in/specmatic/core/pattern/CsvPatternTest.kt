@@ -50,7 +50,7 @@ internal class CsvPatternTest {
 
     @Test
     fun `generates values for negative tests`() {
-        val negativeTypes = CsvPattern(NumberPattern()).negativeBasedOn(Row(), Resolver()).toList()
+        val negativeTypes = CsvPattern(NumberPattern()).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
         assertThat(negativeTypes).hasSize(3)
     }
 
@@ -228,7 +228,7 @@ paths:
     @Test
     @Tag(GENERATION)
     fun `negative patterns should be generated`() {
-        val result = StringPattern().negativeBasedOn(Row(), Resolver()).toList()
+        val result = StringPattern().negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null",
             "number",

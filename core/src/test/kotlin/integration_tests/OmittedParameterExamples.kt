@@ -753,11 +753,17 @@ components:
 
                 return HttpResponse(200, body = parsedJSONArray("""[{"id": 1, "name": "Product 1"}, {"id": 2, "name": "Product 2"}]"""))
             }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                println(scenario.testDescription())
+                println(request.toLogString())
+                println()
+            }
         })
 
         println(optionalQueryParamObserved)
         assertThat(results.successCount).isPositive()
-        assertThat(results.success()).isTrue()
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 
     @Test

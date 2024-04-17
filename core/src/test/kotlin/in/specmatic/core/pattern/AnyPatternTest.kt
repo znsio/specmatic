@@ -219,7 +219,9 @@ internal class AnyPatternTest {
     @Test
     @Tag(GENERATION)
     fun `values for negative tests`() {
-        val negativeTypes = AnyPattern(listOf(NullPattern, StringPattern())).negativeBasedOn(Row(), Resolver()).toList()
+        val negativeTypes =
+            AnyPattern(listOf(NullPattern, StringPattern())).negativeBasedOn(Row(), Resolver()).map { it.value }
+                .toList()
 
         assertThat(negativeTypes).containsExactlyInAnyOrder(
             NumberPattern(),

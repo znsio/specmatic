@@ -26,7 +26,7 @@ abstract class NegativePatternsTemplate {
                         }
                         else -> newBasedOn(row, key, pattern, resolver).map { HasValue(it) }
                     }.map {
-                        it.addDetails("", key)
+                        it.breadCrumb(key)
                     }
                 }
             }

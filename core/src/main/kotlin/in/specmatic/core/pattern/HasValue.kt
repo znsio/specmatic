@@ -71,6 +71,9 @@ class HasValue<T>(override val value: T, val valueDetails: List<ValueDetails> = 
     }
 
     override fun addDetails(message: String, breadCrumb: String): ReturnValue<T> {
+        if(message.isBlank() && breadCrumb.isBlank())
+            return this
+
         return HasValue<T>(
             value,
             valueDetails.map { it.addDetails(message, breadCrumb) })

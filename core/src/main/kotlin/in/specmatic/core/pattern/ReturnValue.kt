@@ -51,3 +51,9 @@ fun <T> Sequence<List<ReturnValue<out T>>>.sequenceListFold(): Sequence<ReturnVa
     }
 }
 
+fun <T> ReturnValue<T>.breadCrumb(breadCrumb: String?): ReturnValue<T> {
+    if(breadCrumb == null)
+        return this
+
+    return this.addDetails("", breadCrumb)
+}

@@ -157,7 +157,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
                     entry.mapKeys { withoutOptionality(it.key) },
                     row,
                     resolver
-                )
+                ).map { it.breadCrumb("QUERY-PARAM") }
             }
         }
     }

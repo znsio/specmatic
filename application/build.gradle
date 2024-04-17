@@ -35,8 +35,10 @@ def junit_version = "5.10.2"
 def jgit_version = "6.9.0.202403050737-r"
 
 dependencies {
-    // TODO Fix to eliminate vulnerabilities, remove when the enclosing library supports it
+    // TODO Put library reference overrides here to eliminate vulnerabilities, and remove the override when no longer needed
     implementation 'io.netty:netty-codec-http:4.1.109.Final' // used by ktor-server-netty-jvm 2.3.9 in core
+    implementation 'joda-time:joda-time:2.12.7' // used by swagger-parser 2.1.22
+
 
     implementation 'com.arakelian:java-jq:1.3.0'
     testImplementation 'com.arakelian:java-jq:1.3.0'

@@ -1369,7 +1369,7 @@ paths:
     }
 
     @Test
-    fun `should fail contract test with incorrect response Content-Type`() {
+    fun `should fail request with incorrect response Content-Type`() {
         val feature = OpenApiSpecification.fromYAML(
             """
             openapi: 3.0.1

@@ -1904,6 +1904,8 @@ components:
 """.trimIndent(), ""
         ).toFeature()
 
+        contract.validateExamplesOrException()
+
         var contractInvalidValueReceived = false
 
         contract.executeTests(object : TestExecutor {
@@ -1916,7 +1918,9 @@ components:
                 return HttpResponse(400, body = parsedJSONObject("""{"message": "invalid request"}"""))
             }
 
-            override fun setServerState(serverState: Map<String, Value>) {
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                println(scenario.testDescription())
+                println(request.toLogString())
             }
         })
 

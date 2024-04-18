@@ -321,7 +321,7 @@ data class Scenario(
         val updatedResolver = flagsBased.update(resolver)
 
         rowsToValidate.forEach { row ->
-            httpRequestPattern.newBasedOn(row, updatedResolver).first().value
+            httpRequestPattern.newBasedOn(row, updatedResolver, status).first().value
         }
     }
 

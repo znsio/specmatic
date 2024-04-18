@@ -147,8 +147,6 @@ data class HttpPathPattern(
     }
 
     fun toOpenApiPath(): String {
-        val pathParamsWithPattern =
-            this.path.split("/").filter { it.startsWith("(") }.map { it.replace("(", "").replace(")", "").split(":") }
         return this.path.replace("(", "{").replace(""":[a-z,A-Z]*?\)""".toRegex(), "}")
     }
 
@@ -187,17 +185,17 @@ data class HttpPathPattern(
         patterns: List<URLPathSegmentPattern>,
         row: Row,
         resolver: Resolver
-    ): Sequence<URLPathSegmentPattern> {
+    ): Sequence<ReturnValue<URLPathSegmentPattern>> {
         if(patterns.isEmpty())
             return emptySequence()
 
         val patternToPositively = patterns.first()
 
-        val positives = patternFromExample(null, row, patternToPositively, resolver)
+        val positively: Sequence<ReturnValue<Pattern>> = patternFromExample(null, row, patternToPositively, resolver)
 
-        return positives.map {
-            listOf(it) + positively(patterns.drop(1), row, resolver)
-        }.filterIsInstance<URLPathSegmentPattern>()
+        return positively.flatMap { positive: ReturnValue<Pattern> ->
+            sequenceOf(positive) + positively(patterns.drop(1), row, resolver)
+        }.map { it.ifValue { it as URLPathSegmentPattern } }
     }
 
     fun negativeBasedOn(
@@ -212,7 +210,7 @@ data class HttpPathPattern(
         row: Row,
         urlPathPattern: URLPathSegmentPattern,
         resolver: Resolver
-    ): Sequence<Pattern> = when {
+    ): Sequence<ReturnValue<Pattern>> = when {
         key !== null && row.containsField(key) -> {
             val rowValue = row.getField(key)
             when {
@@ -231,18 +229,17 @@ data class HttpPathPattern(
                     if (matchResult is Failure)
                         throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
 
-                    sequenceOf(
-                        URLPathSegmentPattern(
-                            ExactValuePattern(
-                                value
-                            )
-                        )
-                    )
+                    sequenceOf(URLPathSegmentPattern(ExactValuePattern(value)))
                 }
-            }
+            }.map { HasValue(it) }
         }
 
-        else -> (urlPathPattern.newBasedOn(row, resolver) + urlPathPattern.negativeBasedOn(row, resolver).map { it.value }).distinct()
+        else -> returnValueSequence {
+            val positives: Sequence<Pattern> = urlPathPattern.newBasedOn(row, resolver)
+            val negatives: Sequence<ReturnValue<Pattern>> = urlPathPattern.negativeBasedOn(row, resolver)
+
+            positives.map { HasValue(it) } + negatives
+        }
     }
 
     fun extractPathParams(requestPath: String, resolver: Resolver): Map<String, String> {

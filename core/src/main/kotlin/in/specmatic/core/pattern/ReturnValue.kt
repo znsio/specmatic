@@ -57,3 +57,11 @@ fun <T> ReturnValue<T>.breadCrumb(breadCrumb: String?): ReturnValue<T> {
 
     return this.addDetails("", breadCrumb)
 }
+
+fun returnValueSequence(fn: () -> Sequence<ReturnValue<Pattern>>): Sequence<ReturnValue<Pattern>> {
+    return try {
+        fn()
+    } catch(t: Throwable) {
+        return sequenceOf(HasException(t, ""))
+    }
+}

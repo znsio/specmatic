@@ -159,10 +159,18 @@ data class AnyPattern(
                 patterns
         }
 
-        return if(negativeTypes.all { it.withDefault(false) { it is ScalarType } })
-            negativeTypes.distinct()
-        else
-            negativeTypes
+        return negativeTypes.distinctBy {
+            it.withDefault(false) {
+                distinctableValueOnlyForScalars(it)
+            }
+        }
+    }
+
+    private fun distinctableValueOnlyForScalars(it: Pattern): Any {
+        if (it is ScalarType || it is ExactValuePattern)
+            return it
+
+        return randomString(10)
     }
 
     override fun parse(value: String, resolver: Resolver): Value {

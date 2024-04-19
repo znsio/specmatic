@@ -154,13 +154,13 @@ data class AnyPattern(
             "Could not get negative tests"
         ).let { patterns: Sequence<ReturnValue<Pattern>> ->
             if (nullable)
-                patterns.filterNot { it.withDefault(true) { it is NullPattern } }
+                patterns.filterValueIsNot { it is NullPattern }
             else
                 patterns
         }
 
         return negativeTypes.distinctBy {
-            it.withDefault(false) {
+            it.withDefault(randomString(10)) {
                 distinctableValueOnlyForScalars(it)
             }
         }

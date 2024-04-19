@@ -34,7 +34,7 @@ data class ExactValuePattern(override val pattern: Value, override val typeAlias
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val nullPattern: ReturnValue<Pattern> = HasValue(NullPattern)
-        return sequenceOf(nullPattern).plus(pattern.type().negativeBasedOn(Row(), resolver).filterNot { it.withDefault(false) { it == NullPattern } })
+        return sequenceOf(nullPattern).plus(pattern.type().negativeBasedOn(Row(), resolver).filterValueIsNot { it == NullPattern })
     }
 
     override fun parse(value: String, resolver: Resolver): Value = pattern.type().parse(value, resolver)

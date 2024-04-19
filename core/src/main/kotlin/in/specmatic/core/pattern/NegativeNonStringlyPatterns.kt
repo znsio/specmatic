@@ -33,14 +33,10 @@ class NegativeNonStringlyPatterns : NegativePatternsTemplate() {
 
             resolvedPattern
                 .negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
-                .filterNot {
-                    it.withDefault(false) {
-                        isStringly(resolvedPattern, it, resolver)
-                    }
-                }.filterNot {
-                    it.withDefault(false) {
-                        it is NullPattern
-                    }
+                .filterValueIsNot {
+                    isStringly(resolvedPattern, it, resolver)
+                }.filterValueIsNot {
+                    it is NullPattern
                 }
         }
     }

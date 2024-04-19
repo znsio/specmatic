@@ -65,3 +65,11 @@ fun returnValueSequence(fn: () -> Sequence<ReturnValue<Pattern>>): Sequence<Retu
         return sequenceOf(HasException(t, ""))
     }
 }
+
+fun <T> Sequence<ReturnValue<T>>.filterValueIsNot(fn: (T) -> Boolean): Sequence<ReturnValue<T>> {
+    return this.filterNot { returnValue ->
+        returnValue.withDefault(false) { value ->
+            fn(value)
+        }
+    }
+}

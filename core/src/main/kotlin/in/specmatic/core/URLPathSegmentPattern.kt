@@ -37,8 +37,8 @@ data class URLPathSegmentPattern(override val pattern: Pattern, override val key
 
         return resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
             pattern.negativeBasedOn(row, cyclePreventedResolver).map { it.breadCrumb(key).breadCrumb("PATH") }
-                .filterNot {
-                    it.withDefault(false) { it is NullPattern }
+                .filterValueIsNot {
+                    it is NullPattern
                 }.map {
                     it.ifValue {  URLPathSegmentPattern(it, key) }
                 }

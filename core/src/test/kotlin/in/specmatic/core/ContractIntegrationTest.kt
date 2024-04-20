@@ -1,16 +1,19 @@
 package `in`.specmatic.core
 
-import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock
+import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.test.HttpClient
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.BeforeAll
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class ContractIntegrationTest {
     @Test
-    @Throws(Throwable::class)
     fun shouldInvokeTargetUsingServerState() {
         val contractGherkin = "" +
                 "Feature: Contract for /balance API\n\n" +
@@ -20,26 +23,37 @@ class ContractIntegrationTest {
                 "    And request-body {name: \"jack\", address: \"Mumbai\"}\n" +
                 "    Then status 409\n" +
                 ""
-        wireMockServer.stubFor(WireMock.post("/_specmatic/state").withRequestBody(WireMock.equalToJson("{\"user\": \"jack\"}")).willReturn(WireMock.aResponse().withStatus(200)))
-        wireMockServer.stubFor(WireMock.post("/accounts").withRequestBody(WireMock.equalToJson("{\"name\": \"jack\", \"address\": \"Mumbai\"}")).willReturn(WireMock.aResponse().withStatus(409)))
-        val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
-        val results = contractBehaviour.executeTests(HttpClient(wireMockServer.baseUrl()))
-        Assertions.assertTrue(results.success(), results.report())
-    }
 
-    companion object {
-        private val wireMockServer = WireMockServer()
+        val server = embeddedServer(Netty, port = 8080) {
+            routing {
+                post("/_specmatic/state") {
+                    val requestBody: String = call.receive<String>()
+                    val requestJSON = parsedJSONObject(requestBody)
 
-        @JvmStatic
-        @BeforeAll
-        fun startWiremock() {
-            wireMockServer.start()
+                    assertThat(requestJSON.jsonObject["user"]?.toStringLiteral()).isEqualTo("jack")
+
+                    call.respond("")
+                }
+
+                post("/accounts") {
+                    val requestBody: String = call.receive<String>()
+                    val requestJSON = parsedJSONObject(requestBody)
+
+                    assertThat(requestJSON.jsonObject["name"]?.toStringLiteral()).isEqualTo("jack")
+                    assertThat(requestJSON.jsonObject["address"]?.toStringLiteral()).isEqualTo("Mumbai")
+                    call.respond(HttpStatusCode.Conflict, "")
+                }
+            }
         }
 
-        @JvmStatic
-        @AfterAll
-        fun stopWiremock() {
-            wireMockServer.stop()
+        try {
+            server.start(wait = false)
+
+            val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
+            val results = contractBehaviour.executeTests(HttpClient("http://localhost:8080"))
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        } finally {
+            server.stop()
         }
     }
 }

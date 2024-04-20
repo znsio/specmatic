@@ -1,38 +1,47 @@
 package `in`.specmatic.core
 
-import com.github.tomakehurst.wiremock.client.WireMock.*
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.HttpClient
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.value.StringValue
-import com.github.tomakehurst.wiremock.WireMockServer
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 
 class HttpClientTest {
 
     @Test
     fun clientShouldNotRedirect() {
-        val wireMockServer = WireMockServer()
-        wireMockServer.start()
-        stubFor(
-            get(urlEqualTo("/some/redirect")).willReturn(
-                aResponse().withStatus(302).withHeader("Location", "/newUrl")
-            )
-        )
-        stubFor(
-            get(urlEqualTo("/newUrl")).willReturn(aResponse().withStatus(200))
-        )
-        val request = HttpRequest().updateMethod("GET").updatePath("/some/redirect")
-        val response = HttpClient("http://localhost:8080").execute(request)
-        Assertions.assertEquals(302, response.status)
-        Assertions.assertEquals("/newUrl", response.headers["Location"])
+        val server = embeddedServer(Netty, port = 8080) {
+            routing {
+                get("/some/redirect") {
+                    call.respondRedirect("/newUrl")
+                }
 
-        wireMockServer.stop()
+                get("/newUrl") {
+                    call.respond("")
+                }
+            }
+        }
+
+        try {
+            server.start(wait = false)
+
+            val request = HttpRequest().updateMethod("GET").updatePath("/some/redirect")
+            val response = HttpClient("http://localhost:8080").execute(request)
+            Assertions.assertEquals(302, response.status)
+            Assertions.assertEquals("/newUrl", response.headers["Location"])
+        } finally {
+            server.stop()
+        }
     }
 
     @Test
-    @Throws(Throwable::class)
     fun clientShouldGenerateRequestAndParseResponse() {
         val request = HttpRequest().updateMethod("POST").updatePath("/balance").updateQueryParam("account-id", "10")
             .updateBody("{name: \"Sherlock\", address: \"221 Baker Street\"}")
@@ -57,7 +66,6 @@ class HttpClientTest {
     }
 
     @Test
-    @Throws(Throwable::class)
     fun clientShouldPerformServerSetup() {
         val request = HttpRequest().updateMethod("POST").updatePath("/balance").updateQueryParam("account-id", "10")
             .updateBody("{name: \"Sherlock\", address: \"221 Baker Street\"}")

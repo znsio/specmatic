@@ -352,8 +352,8 @@ data class Feature(
                 flagsBased
             else
                 flagsBased.withoutGenerativeTests()
-
-            originalScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs).map { Pair(originalScenario.copy(generativePrefix = flagsBased.positivePrefix), it) }
+            val testScenarios =  originalScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
+            addIndexes(originalScenario, testScenarios, flagsBased.positivePrefix)
         }
 
     fun negativeTestScenarios(): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
@@ -365,19 +365,13 @@ data class Feature(
             val negativeTestScenarios =
                 negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs)
 
-            negativeTestScenarios.filterNot { negativeTestScenarioR ->
+            val filtered = negativeTestScenarios.filterNot { negativeTestScenarioR ->
                 negativeTestScenarioR.withDefault(false) { negativeTestScenario ->
                     val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
                     originalScenario.httpRequestPattern.matches(sampleRequest, originalScenario.resolver).isSuccess()
                 }
-            }.mapIndexed { index, negativeTestScenarioR ->
-                Pair(negativeScenario, negativeTestScenarioR.ifValue { negativeTestScenario ->
-                    negativeTestScenario.copy(
-                        generativePrefix = flagsBased.negativePrefix,
-                        disambiguate = { "[${(index + 1)}] " }
-                    )
-                })
             }
+            addIndexes(originalScenario, filtered, flagsBased.negativePrefix)
         }
     }
 
@@ -398,6 +392,27 @@ data class Feature(
 
     fun clearServerState() {
         serverState = emptyMap()
+    }
+
+    private fun addIndexes(
+        originalScenario: Scenario,
+        testScenarios: Sequence<ReturnValue<Scenario>>,
+        prefix: String
+    ): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
+        val sequenceHasZeroOrOne = testScenarios.take(2).count() < 2
+
+        return testScenarios.mapIndexed { index, positiveTestScenarioR ->
+            val indexLabel: () -> String = if (sequenceHasZeroOrOne) {
+                { "" }
+            } else {
+                { "[${(index + 1)}]" }
+            }
+            Pair(
+                originalScenario.addIndexLabelAndPrefix(prefix, indexLabel),
+                positiveTestScenarioR.ifValue { scenario ->
+                    scenario.addIndexLabelAndPrefix( prefix, indexLabel)
+                })
+        }
     }
 
     private fun combine(baseScenario: Scenario, newScenario: Scenario): Scenario {

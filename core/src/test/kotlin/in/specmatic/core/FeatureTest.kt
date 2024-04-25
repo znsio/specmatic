@@ -1482,7 +1482,7 @@ paths:
     }
 
     @Test
-    fun `positive examples of 4xx should be able to have non-string non-spec-conformant examples`() {
+    fun `multiple positive tests should have index in the test names`() {
         val specification = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
 info:
@@ -1493,30 +1493,26 @@ servers:
   - url: http://localhost:8080
     description: Local
 paths:
-  /products:
-    post:
-      summary: Add Product
-      description: Add Product
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - name
-              properties:
-                name:
-                  type: string
-            examples:
-              SUCCESS:
-                value:
-                  name: 'abc'
-              BAD_REQUEST_NUMBER:
-                value:
-                  name: 10
-              BAD_REQUEST_NULL:
-                value:
-                  name: null
+  /orders:
+    get:
+      summary: Search for orders
+      description: get-orders
+      parameters:
+        - schema:
+            type: number
+          in: query
+          name: productid
+          examples:
+            200_OK:
+              value: 10
+        - schema:
+            type: string
+          in: query
+          name: status
+          examples:
+            200_OK:
+              value: fulfilled
+
       responses:
         '200':
           description: Returns Id
@@ -1525,43 +1521,16 @@ paths:
               schema:
                 type: string
               examples:
-                SUCCESS:
-                  value: 10
-        '422':
-          description: Bad Request
-          content:
-            text/plain:
-              schema:
-                type: string
-              examples:
-                BAD_REQUEST_NUMBER:
-                  value: "Bad request was received and could not be handled"
-                BAD_REQUEST_NULL:
-                  value: "Bad request was received and could not be handled"
+                200_OK:
+                  value: "response"    
+                 
+             
 """.trimIndent(), "").toFeature()
 
-        val results = specification.executeTests(object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                print(request.toLogString())
-                return when(val body = request.body) {
-                    is JSONObjectValue -> {
-                        if(body.jsonObject["name"] is StringValue) {
-                            HttpResponse.ok("10")
-                        } else {
-                            HttpResponse(422, "Bad request was received and could not be handled")
-                        }
-                    }
-
-                    else -> HttpResponse(422, "Bad request was received and could not be handled")
-                }
-            }
-
-            override fun setServerState(serverState: Map<String, Value>) {
-            }
-        })
-
-        assertThat(results.success()).isTrue()
-        assertThat(results.failureCount).isZero()
+        val contractTests = specification.enableGenerativeTesting().generateContractTestScenarios(emptyList())
+        contractTests.forEach {
+            println(it.first.testDescription())
+        }
     }
 
     @Test

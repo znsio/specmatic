@@ -56,7 +56,7 @@ data class Scenario(
     val serviceType:String? = null,
     val generativePrefix: String = "",
     val statusInDescription: String = httpResponsePattern.status.toString(),
-    val disambiguate: () -> String = { "" }
+    val indexLabel: () -> String = { "" }
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -430,7 +430,7 @@ data class Scenario(
 
         val generativePrefix = this.generativePrefix
 
-        return "$generativePrefix Scenario: $method $path ${disambiguate()}-> $statusInDescription$exampleIdentifier"
+        return "$generativePrefix Scenario: $method $path ${indexLabel()}-> $statusInDescription$exampleIdentifier"
     }
 
     fun newBasedOn(scenario: Scenario): Scenario {
@@ -485,6 +485,14 @@ data class Scenario(
                     && operationId.responseStatus == status
                     && httpRequestPattern.matchesPath(operationId.requestPath, resolver).isSuccess()
         }
+
+    fun addIndexLabelAndPrefix(
+        prefix: String,
+        indexLabel: () -> String
+    ) = this.copy(
+        generativePrefix = prefix,
+        indexLabel = indexLabel
+    )
 }
 
 fun newExpectedServerStateBasedOn(

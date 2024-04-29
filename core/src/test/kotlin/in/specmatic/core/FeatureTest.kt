@@ -1514,26 +1514,24 @@ paths:
           content:
             text/plain:
               schema:
-                type: string
-                 
-             
+                type: string                 
 """.trimIndent(), "").toFeature()
 
         val contractTests = specification.generateContractTestScenarios(emptyList())
         val testNames = contractTests.map { it.first.testDescription().trim() }.toList()
         assertThat(testNames).isEqualTo(
             listOf(
-                "Scenario: GET /products [1]-> 200",
-                "Scenario: GET /products [2]-> 200",
-                "Scenario: GET /products [3]-> 200",
-                "Scenario: GET /products [4]-> 200",
-                "Scenario: GET /products [5]-> 200",
+                "Scenario: GET /products [1] -> 200",
+                "Scenario: GET /products [2] -> 200",
+                "Scenario: GET /products [3] -> 200",
+                "Scenario: GET /products [4] -> 200",
+                "Scenario: GET /products [5] -> 200",
             )
         )
     }
 
     @Test
-    fun `positive tests with distinct name should not have an index suffix`() {
+    fun `positive tests with distinct names should not have an index suffix`() {
         val specification = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
 info:
@@ -1588,6 +1586,53 @@ paths:
             listOf(
                 "Scenario: GET /products -> 200",
                 "Scenario: GET /orders -> 200"
+            )
+        )
+    }
+
+    @Test
+    fun `multiple negative tests with same names should have an index suffix`() {
+        val specification = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    get:
+      summary: Search for products
+      description: get-products
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - gadget
+              - book
+          required: true
+      responses:
+        '200':
+          description: List of products in the response
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), "").toFeature()
+
+        val contractTests = specification.enableGenerativeTesting().generateContractTestScenarios(emptyList())
+        val testNames = contractTests.map { it.first.testDescription().trim() }.toList()
+
+        assertThat(testNames).isEqualTo(
+            listOf(
+                "+ve  Scenario: GET /products [1] -> 200",
+                "+ve  Scenario: GET /products [2] -> 200",
+                "-ve  Scenario: GET /products [1] -> 4xx",
+                "-ve  Scenario: GET /products [2] -> 4xx"
             )
         )
     }

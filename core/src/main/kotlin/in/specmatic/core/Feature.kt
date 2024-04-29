@@ -371,7 +371,7 @@ data class Feature(
                     originalScenario.httpRequestPattern.matches(sampleRequest, originalScenario.resolver).isSuccess()
                 }
             }
-            addIndexes(originalScenario, filtered, flagsBased.negativePrefix)
+            addIndexes(negativeScenario, filtered, flagsBased.negativePrefix)
         }
     }
 
@@ -405,7 +405,7 @@ data class Feature(
             val indexLabel: () -> String = if (sequenceHasZeroOrOne) {
                 { "" }
             } else {
-                { "[${(index + 1)}]" }
+                { "[${(index + 1)}] " }
             }
             Pair(
                 originalScenario.addIndexLabelAndPrefix(prefix, indexLabel),

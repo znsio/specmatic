@@ -28,7 +28,7 @@ object DateTimePattern : Pattern, ScalarType {
 
     override fun parse(value: String, resolver: Resolver): StringValue =
             attempt {
-                RFC3339.dateTimeFormatter.parse(value)
+                RFC3339.parse(value)
                 StringValue(value)
             }
 

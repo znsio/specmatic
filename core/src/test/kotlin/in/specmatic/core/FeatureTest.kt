@@ -1476,8 +1476,8 @@ paths:
             assertThat(it).contains("-> 4xx")
         }
 
-        negativeTestScenarios.zip((1..negativeTestScenarios.size).toList()).forEach { (scenario, index) ->
-            assertThat(scenario.testDescription()).contains("[$index] -> 4xx")
+        negativeTestScenarios.zip((1..negativeTestScenarios.size).toList()).forEach { (scenario,index) ->
+            assertThat(scenario.testDescription()).contains(" -> 4xx | EX:SUCCESS [$index]")
         }
     }
 
@@ -1521,11 +1521,11 @@ paths:
         val testNames = contractTests.map { it.first.testDescription().trim() }.toList()
         assertThat(testNames).isEqualTo(
             listOf(
-                "Scenario: GET /products [1] -> 200",
-                "Scenario: GET /products [2] -> 200",
-                "Scenario: GET /products [3] -> 200",
-                "Scenario: GET /products [4] -> 200",
-                "Scenario: GET /products [5] -> 200",
+                "Scenario: GET /products -> 200 [1]",
+                "Scenario: GET /products -> 200 [2]",
+                "Scenario: GET /products -> 200 [3]",
+                "Scenario: GET /products -> 200 [4]",
+                "Scenario: GET /products -> 200 [5]",
             )
         )
     }
@@ -1629,10 +1629,10 @@ paths:
 
         assertThat(testNames).isEqualTo(
             listOf(
-                "+ve  Scenario: GET /products [1] -> 200",
-                "+ve  Scenario: GET /products [2] -> 200",
-                "-ve  Scenario: GET /products [1] -> 4xx",
-                "-ve  Scenario: GET /products [2] -> 4xx"
+                "+ve  Scenario: GET /products -> 200 [1]",
+                "+ve  Scenario: GET /products -> 200 [2]",
+                "-ve  Scenario: GET /products -> 4xx [1]",
+                "-ve  Scenario: GET /products -> 4xx [2]"
             )
         )
     }

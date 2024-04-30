@@ -430,7 +430,7 @@ data class Scenario(
 
         val generativePrefix = this.generativePrefix
 
-        return "$generativePrefix Scenario: $method $path ${indexLabel()}-> $statusInDescription$exampleIdentifier"
+        return "$generativePrefix Scenario: $method $path -> $statusInDescription$exampleIdentifier ${indexLabel()}"
     }
 
     fun newBasedOn(scenario: Scenario): Scenario {

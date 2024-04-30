@@ -40,8 +40,8 @@ dependencies {
     implementation 'joda-time:joda-time:2.12.7' // used by swagger-parser 2.1.22
 
 
-    implementation 'com.arakelian:java-jq:1.3.0'
-    testImplementation 'com.arakelian:java-jq:1.3.0'
+    implementation 'com.arakelian:java-jq:2.0.0'
+    testImplementation 'com.arakelian:java-jq:2.0.0'
 
     implementation 'org.assertj:assertj-core:3.25.3'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'

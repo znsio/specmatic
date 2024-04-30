@@ -1,13 +1,10 @@
 package `in`.specmatic.core
-
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.value.*
-import `in`.specmatic.test.ContractTest
 import `in`.specmatic.test.ScenarioTestGenerationException
 import `in`.specmatic.test.ScenarioTestGenerationFailure
-import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.*

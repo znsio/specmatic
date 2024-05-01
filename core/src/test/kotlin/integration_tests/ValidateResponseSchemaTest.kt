@@ -71,4 +71,64 @@ class ValidateResponseSchemaTest {
         assertThat(results.success()).withFailMessage("The tests passed, but they should have failed.").isFalse()
         assertThat(results.report()).withFailMessage(results.report()).contains("RESPONSE.BODY.address")
     }
+
+    @Test
+    fun `response body schema validation should be skipped if the response example value is empty`() {
+        val personSpec = """
+            openapi: 3.0.3
+            info:
+              title: Person API
+              version: 1.0.0
+              description: API for creating new people
+        
+            servers:
+              - url: http://localhost:5000  # Replace with your server URL
+        
+            paths:
+              /person/{id}:
+                get:
+                  summary: Create a new person
+                  parameters:
+                    - in: path
+                      required: true
+                      name: id
+                      schema:
+                        type: number
+                      examples:
+                        GET_DETAILS:
+                          value: 10
+                  responses:
+                    '200':
+                      description: Person created successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: "#/components/schemas/PersonData"
+                          examples:
+                            GET_DETAILS:
+                              value:
+            components:
+              schemas:
+                PersonData:
+                  type: object
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                    address:
+                      type: string        
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(personSpec, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.ok(parsedJSONObject("""{"name": "Sherlock"}"""))
+            }
+        })
+
+        assertThat(results.success()).withFailMessage("The tests passed, but they should have failed.").isFalse()
+        assertThat(results.report()).withFailMessage(results.report()).contains("RESPONSE.BODY.address")
+    }
 }

@@ -19,8 +19,7 @@ data class Row(
     val name: String = "",
     val fileSource: String? = null,
     val requestBodyJSONExample: JSONExample? = null,
-    val responseExample: HttpResponse? = null,
-    val responseExampleForSchema: HttpResponse? = null
+    val responseExample: ResponseExample? = null
 ) {
     constructor(examples: Map<String, String>) :this(examples.keys.toList(), examples.values.toList())
 

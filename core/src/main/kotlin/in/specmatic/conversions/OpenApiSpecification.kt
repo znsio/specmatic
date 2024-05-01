@@ -422,11 +422,11 @@ class OpenApiSpecification(
 
         when {
             requestExamples.isNotEmpty() -> {
-                val (selectedResponseExample, selectedResponsExampleForSchema) =
+                val  resolvedResponseExample =
                     if (environmentAndPropertiesConfiguration.validateResponse())
-                        Pair(responseExample, null)
+                        ResponseValueExample(responseExample)
                     else
-                        Pair(null, responseExample)
+                        ResponseSchemaExample(responseExample)
 
                 Row(
                     requestExamples.keys.toList().map { keyName: String -> keyName },
@@ -438,8 +438,7 @@ class OpenApiSpecification(
                             } else valueString
                         },
                     name = exampleName,
-                    responseExample = selectedResponseExample,
-                    responseExampleForSchema = selectedResponsExampleForSchema
+                    responseExample = resolvedResponseExample
                 )
             }
 

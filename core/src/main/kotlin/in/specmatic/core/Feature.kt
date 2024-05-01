@@ -365,8 +365,8 @@ data class Feature(
             val negativeTestScenarios =
                 negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs)
 
-            val nonMatchingNegativeTestScenarios = negativeTestScenarios.filterNot { negativeTestScenarioR ->
-                negativeTestScenarioR.withDefault(false) { negativeTestScenario ->
+            val nonMatchingNegativeTestScenarios = negativeTestScenarios.filterNot { currentNegativeTestScenario ->
+                currentNegativeTestScenario.withDefault(false) { negativeTestScenario ->
                     val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
                     originalScenario.httpRequestPattern.matches(sampleRequest, originalScenario.resolver).isSuccess()
                 }

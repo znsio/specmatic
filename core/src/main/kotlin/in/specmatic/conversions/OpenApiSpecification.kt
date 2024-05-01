@@ -423,7 +423,7 @@ class OpenApiSpecification(
         when {
             requestExamples.isNotEmpty() -> {
                 val  resolvedResponseExample =
-                    if (environmentAndPropertiesConfiguration.validateResponse())
+                    if (environmentAndPropertiesConfiguration.validateResponseValue())
                         ResponseValueExample(responseExample)
                     else
                         ResponseSchemaExample(responseExample)

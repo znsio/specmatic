@@ -5,7 +5,7 @@ import org.apache.commons.lang3.BooleanUtils
 data class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<String, String>, val systemProperties: Map<Any?, Any?>) {
     constructor() : this(System.getenv(), System.getProperties().toMap())
 
-    val VALIDATE_RESPONSE = "VALIDATE_RESPONSE"
+    val VALIDATE_RESPONSE_VALUE = "VALIDATE_RESPONSE_VALUE"
     private val CUSTOM_RESPONSE_NAME = "CUSTOM_RESPONSE"
     val SPECMATIC_GENERATIVE_TESTS = "SPECMATIC_GENERATIVE_TESTS"
     private val MAX_TEST_REQUEST_COMBINATIONS = "MAX_TEST_REQUEST_COMBINATIONS"
@@ -61,8 +61,8 @@ data class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<S
         return flagValue(SPECMATIC_TEST_PARALLELISM)
     }
 
-    fun validateResponse(): Boolean {
-        return booleanFlag(VALIDATE_RESPONSE, "false")
+    fun validateResponseValue(): Boolean {
+        return booleanFlag(VALIDATE_RESPONSE_VALUE, "false")
     }
 
     fun getCachedEnvironmentVariable(variableName: String): String? {

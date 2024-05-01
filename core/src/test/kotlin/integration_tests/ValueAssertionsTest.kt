@@ -62,7 +62,7 @@ paths:
                   value: "Product added successfully"
             """.trimIndent(),
             "",
-            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration.setProperty(Flags.VALIDATE_RESPONSE, "true")
+            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration.setProperty(Flags.VALIDATE_RESPONSE_VALUE, "true")
         ).toFeature()
         feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -135,7 +135,7 @@ paths:
             "",
             environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
                 emptyMap(),
-                mapOf(Flags.VALIDATE_RESPONSE to "true")
+                mapOf(Flags.VALIDATE_RESPONSE_VALUE to "true")
             )
         ).toFeature()
         feature.executeTests(object : TestExecutor {
@@ -192,7 +192,7 @@ paths:
             "",
             environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
                 emptyMap(),
-                mapOf(Flags.VALIDATE_RESPONSE to "true")
+                mapOf(Flags.VALIDATE_RESPONSE_VALUE to "true")
             )
         ).toFeature()
             feature.executeTests(object : TestExecutor {
@@ -258,7 +258,7 @@ paths:
             "",
             environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
                 emptyMap(),
-                mapOf(Flags.VALIDATE_RESPONSE to "true")
+                mapOf(Flags.VALIDATE_RESPONSE_VALUE to "true")
             )
         ).toFeature()
         feature.executeTests(object : TestExecutor {
@@ -339,7 +339,7 @@ paths:
             "",
             environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
                 emptyMap(),
-                mapOf(Flags.VALIDATE_RESPONSE to "true")
+                mapOf(Flags.VALIDATE_RESPONSE_VALUE to "true")
             )
         ).toFeature()
         feature.executeTests(object : TestExecutor {

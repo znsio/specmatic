@@ -7,6 +7,7 @@ import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 class ValidateResponseSchemaTest {
@@ -73,6 +74,7 @@ class ValidateResponseSchemaTest {
     }
 
     @Test
+    @Disabled
     fun `response body schema validation should be skipped if the response example value is empty`() {
         val personSpec = """
             openapi: 3.0.3

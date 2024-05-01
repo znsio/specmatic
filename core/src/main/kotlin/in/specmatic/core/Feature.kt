@@ -297,6 +297,8 @@ data class Feature(
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
     fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> {
+        validateExamplesOrException()
+
         return generateContractTestScenarios(suggestions).map { (originalScenario, returnValue) ->
             returnValue.realise(
                 hasValue = { concreteTestScenario, comment ->

@@ -1452,10 +1452,6 @@ data class Feature(
             scenario.validExamplesOrException(flagsBased.copy(generation = NonGenerativeTests))
         }
     }
-
-    fun withResponseValueSchemaValidationEnabled(): Feature {
-        return this
-    }
 }
 
 class EmptyContract : Throwable()

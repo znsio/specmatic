@@ -277,7 +277,7 @@ data class Scenario(
 
         return scenarioBreadCrumb(this) {
             attempt {
-                val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withExactResponseValue(row, resolver)
+                val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withResponseExampleValue(row, resolver)
 
                 val (newRequestPatterns: Sequence<ReturnValue<HttpRequestPattern>>, generativePrefix: String) = when (isNegative) {
                     false -> Pair(httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status), flagsBased.positivePrefix)

@@ -1,10 +1,10 @@
 package integration_tests
 
+import `in`.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.pattern.parsedJSONObject
-import `in`.specmatic.test.HttpClient
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -60,7 +60,7 @@ class ValidateResponseSchemaTest {
                       type: string        
         """.trimIndent()
 
-        val feature = OpenApiSpecification.fromYAML(personSpec, "").toFeature().withResponseValueSchemaValidationEnabled()
+        val feature = OpenApiSpecification.fromYAML(personSpec, "").toFeature()
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {

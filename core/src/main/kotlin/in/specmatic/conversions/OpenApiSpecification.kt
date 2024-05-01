@@ -422,10 +422,11 @@ class OpenApiSpecification(
 
         when {
             requestExamples.isNotEmpty() -> {
-                val responseExampleValueForRow = if (environmentAndPropertiesConfiguration.validateResponse())
-                    responseExample
-                else
-                    null
+                val (selectedResponseExample, selectedResponsExampleForSchema) =
+                    if (environmentAndPropertiesConfiguration.validateResponse())
+                        Pair(responseExample, null)
+                    else
+                        Pair(null, responseExample)
 
                 Row(
                     requestExamples.keys.toList().map { keyName: String -> keyName },
@@ -437,7 +438,8 @@ class OpenApiSpecification(
                             } else valueString
                         },
                     name = exampleName,
-                    responseExample = responseExampleValueForRow
+                    responseExample = selectedResponseExample,
+                    responseExampleForSchema = selectedResponsExampleForSchema
                 )
             }
 

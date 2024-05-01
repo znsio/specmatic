@@ -11,7 +11,7 @@ data class HttpResponsePattern(
     val headersPattern: HttpHeadersPattern = HttpHeadersPattern(),
     val status: Int = 0,
     val body: Pattern = EmptyStringPattern,
-    val expectedResponseValue: ResponseValueAssertion = AnyResponse
+    val responseValueAssertion: ResponseValueAssertion = AnyResponse
 ) {
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body.exactMatchElseType())
 
@@ -61,19 +61,41 @@ data class HttpResponsePattern(
             ::returnResult
     }
 
-    fun withExactResponseValue(row: Row, resolver: Resolver): HttpResponsePattern =
+    fun withResponseExampleValue(row: Row, resolver: Resolver): HttpResponsePattern =
         attempt(breadCrumb = "RESPONSE") {
-            if(row.responseExample == null)
-                return@attempt this
+            if(row.responseExampleForSchema != null) {
+                val responseExampleMatchResult = matches(row.responseExampleForSchema, resolver)
 
-            val responseExampleMatchResult = matches(row.responseExample, resolver)
+                if(responseExampleMatchResult is Result.Failure)
+                    throw ContractException("""Error in response in example "${row.name}": ${responseExampleMatchResult.reportString()}""")
 
-            if(responseExampleMatchResult is Result.Failure)
-                throw ContractException("""Error in response in example "${row.name}": ${responseExampleMatchResult.reportString()}""")
+                val expectedResponseValue: HttpResponsePattern =
+                    HttpResponsePattern(
+                        HttpHeadersPattern(row.responseExampleForSchema.headers.mapValues { stringToPattern(it.value, it.key) }),
+                        row.responseExampleForSchema.status,
+                        row.responseExampleForSchema.body.deepPattern()
+                    )
 
-            val expectedExactResponsePattern = fromResponseExpectation(row.responseExample)
+                val responseValueAssertion: ResponseValueAssertion = ValueAssertion(expectedResponseValue)
 
-            this.copy(expectedResponseValue = SpecificResponse(expectedExactResponsePattern))
+                this.copy(responseValueAssertion = responseValueAssertion)
+            } else if(row.responseExample != null) {
+                val responseExampleMatchResult = matches(row.responseExample, resolver)
+
+                if (responseExampleMatchResult is Result.Failure)
+                    throw ContractException("""Error in response in example "${row.name}": ${responseExampleMatchResult.reportString()}""")
+
+                val expectedResponseValue: HttpResponsePattern = HttpResponsePattern(
+                    HttpHeadersPattern(row.responseExample.headers.mapValues { stringToPattern(it.value, it.key) }),
+                    row.responseExample.status,
+                    row.responseExample.body.exactMatchElseType()
+                )
+
+                val responseValueAssertion: ResponseValueAssertion = ValueAssertion(expectedResponseValue)
+
+                this.copy(responseValueAssertion = responseValueAssertion)
+            } else
+                this
         }
 
     fun matchesMock(response: HttpResponse, resolver: Resolver) = matches(response, resolver)
@@ -123,7 +145,7 @@ data class HttpResponsePattern(
     private fun matchExactResponseBodyValue(parameters: Triple<HttpResponse, Resolver, List<Result.Failure>>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
         val (response, resolver, failures) = parameters
 
-        val result = expectedResponseValue.matches(response, resolver.copy(mismatchMessages = valueMismatchMessages))
+        val result = responseValueAssertion.matches(response, resolver.copy(mismatchMessages = valueMismatchMessages))
 
         if(result is Result.Failure)
             return MatchSuccess(Triple(response, resolver, failures.plus(result)))

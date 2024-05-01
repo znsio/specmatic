@@ -18,6 +18,11 @@ interface Value {
     fun displayableType(): String
     fun exactMatchElseType(): Pattern
     fun type(): Pattern
+
+    fun deepPattern(): Pattern {
+        return type()
+    }
+
     fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations>
     fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations>
     fun listOf(valueList: List<Value>): Value

@@ -353,7 +353,7 @@ data class Feature(
             else
                 flagsBased.withoutGenerativeTests()
             val testScenarios =  originalScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs)
-            addIndexes(originalScenario, testScenarios, flagsBased.positivePrefix)
+            addIndexAndPrefixToDistinguishTests(originalScenario, testScenarios, flagsBased.positivePrefix)
         }
 
     fun negativeTestScenarios(): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
@@ -371,7 +371,7 @@ data class Feature(
                     originalScenario.httpRequestPattern.matches(sampleRequest, originalScenario.resolver).isSuccess()
                 }
             }
-            addIndexes(negativeScenario, nonMatchingNegativeTestScenarios, flagsBased.negativePrefix)
+            addIndexAndPrefixToDistinguishTests(negativeScenario, nonMatchingNegativeTestScenarios, flagsBased.negativePrefix)
         }
     }
 
@@ -394,22 +394,25 @@ data class Feature(
         serverState = emptyMap()
     }
 
-    private fun addIndexes(
+    private fun createIndexLabel(sequenceHasZeroOrOne: Boolean, index: Int): () -> String =
+        if (sequenceHasZeroOrOne) {
+            { "" }
+        } else {
+            { "[${(index + 1)}] " }
+        }
+
+    private fun addIndexAndPrefixToDistinguishTests(
         originalScenario: Scenario,
         testScenarios: Sequence<ReturnValue<Scenario>>,
         prefix: String
     ): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
         val sequenceHasZeroOrOne = testScenarios.take(2).count() < 2
 
-        return testScenarios.mapIndexed { index, positiveTestScenarioR ->
-            val indexLabel: () -> String = if (sequenceHasZeroOrOne) {
-                { "" }
-            } else {
-                { "[${(index + 1)}] " }
-            }
+        return testScenarios.mapIndexed { index, currentTestScenarioResult ->
+            val indexLabel = createIndexLabel(sequenceHasZeroOrOne, index)
             Pair(
                 originalScenario.addIndexLabelAndPrefix(prefix, indexLabel),
-                positiveTestScenarioR.ifValue { scenario ->
+                currentTestScenarioResult.ifValue { scenario ->
                     scenario.addIndexLabelAndPrefix( prefix, indexLabel)
                 })
         }

@@ -1453,6 +1453,9 @@ data class Feature(
         }
     }
 
+    fun withResponseValueSchemaValidationEnabled(): Feature {
+        return this
+    }
 }
 
 class EmptyContract : Throwable()

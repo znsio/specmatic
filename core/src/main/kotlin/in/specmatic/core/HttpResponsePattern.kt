@@ -54,8 +54,8 @@ data class HttpResponsePattern(
         return response to resolver to
             ::matchStatus then
             ::matchHeaders then
-            ::matchBody then
-            ::matchExactValue then
+            ::matchResponseBodySchema then
+            ::matchExactResponseBodyValue then
             ::summarize otherwise
             ::handleError toResult
             ::returnResult
@@ -105,7 +105,7 @@ data class HttpResponsePattern(
         }
     }
 
-    private fun matchBody(parameters: Triple<HttpResponse, Resolver, List<Result.Failure>>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
+    private fun matchResponseBodySchema(parameters: Triple<HttpResponse, Resolver, List<Result.Failure>>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
         val (response, resolver, failures) = parameters
 
         val parsedValue = when (response.body) {
@@ -120,7 +120,7 @@ data class HttpResponsePattern(
         return MatchSuccess(parameters)
     }
 
-    private fun matchExactValue(parameters: Triple<HttpResponse, Resolver, List<Result.Failure>>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
+    private fun matchExactResponseBodyValue(parameters: Triple<HttpResponse, Resolver, List<Result.Failure>>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
         val (response, resolver, failures) = parameters
 
         val result = expectedResponseValue.matches(response, resolver.copy(mismatchMessages = valueMismatchMessages))

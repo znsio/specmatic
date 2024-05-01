@@ -365,13 +365,13 @@ data class Feature(
             val negativeTestScenarios =
                 negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs)
 
-            val filtered = negativeTestScenarios.filterNot { negativeTestScenarioR ->
+            val nonMatchingNegativeTestScenarios = negativeTestScenarios.filterNot { negativeTestScenarioR ->
                 negativeTestScenarioR.withDefault(false) { negativeTestScenario ->
                     val sampleRequest = negativeTestScenario.httpRequestPattern.generate(negativeTestScenario.resolver)
                     originalScenario.httpRequestPattern.matches(sampleRequest, originalScenario.resolver).isSuccess()
                 }
             }
-            addIndexes(negativeScenario, filtered, flagsBased.negativePrefix)
+            addIndexes(negativeScenario, nonMatchingNegativeTestScenarios, flagsBased.negativePrefix)
         }
     }
 

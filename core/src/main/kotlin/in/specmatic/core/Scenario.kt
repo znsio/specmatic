@@ -330,7 +330,7 @@ data class Scenario(
                     }
 
                     override fun unexpectedKey(keyLabel: String, keyName: String): String {
-                        return "The $keyLabel $keyName was found the in the example ${row.name} but was not in the specification."
+                        return "The $keyLabel $keyName was found in the example ${row.name} but was not in the specification."
                     }
 
                     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {

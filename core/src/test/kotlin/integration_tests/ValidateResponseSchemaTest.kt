@@ -4,6 +4,7 @@ import `in`.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
+import `in`.specmatic.core.pattern.parsedJSONArray
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
@@ -126,6 +127,72 @@ class ValidateResponseSchemaTest {
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 return HttpResponse.ok(parsedJSONObject("""{"name": "Sherlock"}"""))
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `response body schema validation should not complain at all`() {
+        val personSpec = """
+            openapi: 3.0.3
+            info:
+              title: Person API
+              version: 1.0.0
+              description: API for creating new people
+        
+            servers:
+              - url: http://localhost:5000  # Replace with your server URL
+        
+            paths:
+              /person:
+                get:
+                  summary: Get person records
+                  parameters:
+                    - in: query
+                      name: department
+                      schema:
+                        type: string
+                      examples:
+                        GET_DETAILS:
+                          value: all
+                  responses:
+                    '200':
+                      description: Person created successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${"$"}ref: "#/components/schemas/PersonRecords"
+                          examples:
+                            GET_DETAILS:
+                              value:
+                                - name: "Jack"
+                                - name: "Jill"
+                                  address: "Street"
+            components:
+              schemas:
+                PersonRecords:
+                  type: array
+                  items:
+                    ${"$"}ref: "#/components/schemas/PersonData"
+                PersonData:
+                  type: object
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                    address:
+                      type: string        
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(personSpec, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
+                return HttpResponse.ok(parsedJSONArray("""[{"name": "Sherlock"}]"""))
             }
         })
 

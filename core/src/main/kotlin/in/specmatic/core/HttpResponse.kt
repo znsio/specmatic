@@ -155,6 +155,15 @@ data class HttpResponse(
     }
 
     fun withoutDynamicHeaders(): HttpResponse = copy(headers = headers.withoutDynamicHeaders())
+    fun isNotEmpty(): Boolean {
+        // TODO: This check should change to NoBodyValue once responses support having no body
+        val bodyIsEmpty = body == StringValue()
+        val headersIsEmpty = headers.isEmpty() ||  headersHasOnlyTextPlainContentTypeHeader()
+
+        return (!bodyIsEmpty) || (!headersIsEmpty)
+    }
+
+    private fun headersHasOnlyTextPlainContentTypeHeader() = headers.size == 1 && headers[CONTENT_TYPE] == "text/plain"
 }
 
 fun nativeInteger(json: Map<String, Value>, key: String): Int? {

@@ -74,7 +74,6 @@ class ValidateResponseSchemaTest {
     }
 
     @Test
-    @Disabled
     fun `response body schema validation should be skipped if the response example value is empty`() {
         val personSpec = """
             openapi: 3.0.3
@@ -130,7 +129,6 @@ class ValidateResponseSchemaTest {
             }
         })
 
-        assertThat(results.success()).withFailMessage("The tests passed, but they should have failed.").isFalse()
-        assertThat(results.report()).withFailMessage(results.report()).contains("RESPONSE.BODY.address")
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 }

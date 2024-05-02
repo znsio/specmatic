@@ -166,11 +166,11 @@ private val valueMismatchMessages = object : MismatchMessages {
     }
 
     override fun unexpectedKey(keyLabel: String, keyName: String): String {
-        return "Value mismatch: $keyLabel $$keyName in value was unexpected"
+        return "Value mismatch: $keyLabel $keyName in value was unexpected"
     }
 
     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
-        return "Value mismatch: $keyLabel $$keyName was missing"
+        return "Value mismatch: $keyLabel $keyName was missing"
     }
 
 }

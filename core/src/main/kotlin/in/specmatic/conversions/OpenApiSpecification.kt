@@ -438,7 +438,7 @@ class OpenApiSpecification(
                             } else valueString
                         },
                     name = exampleName,
-                    responseExample = resolvedResponseExample
+                    responseExample = resolvedResponseExample.takeIf { it.responseExample.isNotEmpty() }
                 )
             }
 

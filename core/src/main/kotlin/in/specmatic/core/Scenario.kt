@@ -322,6 +322,19 @@ data class Scenario(
 
         rowsToValidate.forEach { row ->
             httpRequestPattern.newBasedOn(row, updatedResolver, status).first().value
+            val responseExample: ResponseExample? = row.responseExample
+
+            if (responseExample != null) {
+                val responseMatchResult =
+                    httpResponsePattern.matches(responseExample.responseExample, updatedResolver)
+
+                if(responseMatchResult is Result.Failure) {
+                    println("Error in example for ${this.testDescription()}")
+                    logger.log(responseMatchResult.reportString())
+                }
+
+                responseMatchResult.throwOnFailure()
+            }
         }
     }
 

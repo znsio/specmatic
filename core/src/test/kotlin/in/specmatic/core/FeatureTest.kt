@@ -3,12 +3,14 @@ package `in`.specmatic.core
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.pattern.StringPattern
+import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.test.ContractTest
 import `in`.specmatic.test.ScenarioTestGenerationException
 import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.DisplayName
@@ -18,6 +20,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
+import java.util.function.Consumer
 import java.util.stream.Stream
 
 class FeatureTest {
@@ -1675,6 +1678,104 @@ components:
         assertThat(httpResponse).isNull()
         assertThat(result).isInstanceOf(Result.Failure::class.java)
     }
+
+
+    @Test
+    fun `invalid requests should be caught by the validator` () {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            examples:
+              200_OK:
+                value:
+                  data: "abc"
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              examples:
+                200_OK:
+                  value: 10
+              schema:
+                type: number
+""".trimIndent(), ""
+        ).toFeature()
+
+        assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.BODY.data")
+        })
+    }
+
+    @Test
+    fun `invalid responses should be caught by the validator` () {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: number
+            examples:
+              200_OK:
+                value:
+                  data: 10
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: number
+              examples:
+                200_OK:
+                  value:
+                    data: "abc"
+""".trimIndent(), ""
+        ).toFeature()
+
+        assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
+            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.BODY.data")
+        })
+    }
+
 
     companion object {
         @JvmStatic

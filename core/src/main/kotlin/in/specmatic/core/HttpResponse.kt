@@ -160,7 +160,9 @@ data class HttpResponse(
         val bodyIsEmpty = body == StringValue()
         val headersIsEmpty = headers.isEmpty() ||  headersHasOnlyTextPlainContentTypeHeader()
 
-        return (!bodyIsEmpty) || (!headersIsEmpty)
+        val responseIsEmpty = bodyIsEmpty && headersIsEmpty
+
+        return !responseIsEmpty
     }
 
     private fun headersHasOnlyTextPlainContentTypeHeader() = headers.size == 1 && headers[CONTENT_TYPE] == "text/plain"

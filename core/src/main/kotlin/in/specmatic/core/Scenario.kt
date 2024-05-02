@@ -320,16 +320,36 @@ data class Scenario(
 
         val updatedResolver = flagsBased.update(resolver)
 
+
+
         rowsToValidate.forEach { row ->
-            httpRequestPattern.newBasedOn(row, updatedResolver, status).first().value
+            val resolverForExample = updatedResolver.copy(
+                mismatchMessages = object : MismatchMessages {
+                    override fun mismatchMessage(expected: String, actual: String): String {
+                        return "Expected $expected as per the specification, but the example ${row.name} had $actual."
+                    }
+
+                    override fun unexpectedKey(keyLabel: String, keyName: String): String {
+                        return "The $keyLabel $keyName was found the in the example ${row.name} but was not in the specification."
+                    }
+
+                    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+                        return "The $keyLabel $keyName in the specification was missing in example ${row.name}"
+                    }
+
+                }
+            )
+
+            httpRequestPattern.newBasedOn(row, resolverForExample, status).first().value
             val responseExample: ResponseExample? = row.responseExample
 
             if (responseExample != null) {
                 val responseMatchResult =
-                    httpResponsePattern.matches(responseExample.responseExample, updatedResolver)
+                    httpResponsePattern.matches(responseExample.responseExample, resolverForExample)
 
                 if(responseMatchResult is Result.Failure) {
-                    println("Error in example for ${this.testDescription()}")
+                    println("Error in ${this.testDescription()}")
+
                     logger.log(responseMatchResult.reportString())
                 }
 

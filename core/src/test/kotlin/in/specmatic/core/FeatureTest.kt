@@ -1776,6 +1776,56 @@ paths:
         })
     }
 
+    @Test
+    fun `validation errors should contain the name of the test` () {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: number
+            examples:
+              200_OK:
+                value:
+                  data: 10
+      responses:
+        '200':
+          description: Says hello
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: number
+              examples:
+                200_OK:
+                  value:
+                    data: "abc"
+""".trimIndent(), ""
+        ).toFeature()
+
+        assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
+            assertThat(exceptionCauseMessage(exception)).contains("200_OK")
+        })
+    }
 
     companion object {
         @JvmStatic

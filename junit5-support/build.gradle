@@ -106,3 +106,9 @@ javadoc {
         options.addBooleanOption('html5', true)
     }
 }
+
+compileKotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xjvm-default=all")
+    }
+}

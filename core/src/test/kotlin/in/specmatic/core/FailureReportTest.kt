@@ -56,4 +56,43 @@ internal class FailureReportTest {
 
         assertThat(reportText).contains("addresses[0].street")
     }
+
+    @Test
+    fun `should return error message containing all the errors if there are multiple error causes`() {
+        val matchFailureDetailList = listOf(
+            MatchFailureDetails(errorMessages =  listOf("first error message")),
+            MatchFailureDetails(errorMessages = listOf("second error message"))
+        )
+        val failureReport = FailureReport(
+            contractPath = null,
+            scenarioMessage = null,
+            scenario = null,
+            matchFailureDetailList =  matchFailureDetailList
+        )
+
+        val expectedErrorMessage = """
+            first error message
+
+            second error message
+        """.trimIndent()
+        assertThat(failureReport.errorMessage()).isEqualTo(expectedErrorMessage)
+    }
+
+    @Test
+    fun `should return error message containing single error if there is single error cause`() {
+        val matchFailureDetailList = listOf(
+            MatchFailureDetails(errorMessages =  listOf("error message")),
+        )
+        val failureReport = FailureReport(
+            contractPath = null,
+            scenarioMessage = null,
+            scenario = null,
+            matchFailureDetailList =  matchFailureDetailList
+        )
+
+        val expectedErrorMessage = """
+            error message
+        """.trimIndent()
+        assertThat(failureReport.errorMessage()).isEqualTo(expectedErrorMessage)
+    }
 }

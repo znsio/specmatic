@@ -3,8 +3,7 @@ package `in`.specmatic.core
 data class FailureReport(val contractPath: String?, private val scenarioMessage: String?, val scenario: ScenarioDetailsForResult?, private val matchFailureDetailList: List<MatchFailureDetails>): Report {
     fun errorMessage(): String {
         if(matchFailureDetailList.size != 1)
-            toText()
-
+            return toText()
         return errorMessagesToString(matchFailureDetailList.first().errorMessages)
     }
 

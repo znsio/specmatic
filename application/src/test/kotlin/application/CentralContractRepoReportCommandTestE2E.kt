@@ -29,7 +29,7 @@ class CentralContractRepoReportCommandTestE2E {
             CentralContractRepoReportJson(
                 listOf(
                     SpecificationRow(
-                        "specifications/service1/service1.yaml",
+                        osAgnosticPath("specifications/service1/service1.yaml"),
                         "HTTP",
                         listOf(
                             SpecificationOperation(
@@ -55,7 +55,7 @@ class CentralContractRepoReportCommandTestE2E {
     }
 
     companion object {
-        private val reportFile = File("./build/reports/specmatic/central_contract_repo_report.json")
+        private val reportFile = File(osAgnosticPath("./build/reports/specmatic/central_contract_repo_report.json"))
 
         @JvmStatic
         @BeforeAll
@@ -66,7 +66,7 @@ class CentralContractRepoReportCommandTestE2E {
         @JvmStatic
         @AfterAll
         fun tearDownAfterAll() {
-            File("./specifications").deleteRecursively()
+            File(osAgnosticPath("./specifications")).deleteRecursively()
             reportFile.delete()
         }
 
@@ -114,9 +114,12 @@ paths:
               schema:
                 type: string
         """
-            val service1File = File("./specifications/service1/service1.yaml")
+            val service1File = File(osAgnosticPath("./specifications/service1/service1.yaml"))
             service1File.parentFile.mkdirs()
             service1File.writeText(service1spec)
+        }
+        fun osAgnosticPath(path: String): String {
+            return path.replace("/", File.separator)
         }
     }
 }

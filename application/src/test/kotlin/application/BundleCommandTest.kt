@@ -32,14 +32,14 @@ internal class BundleCommandTest {
     @Test
     fun `the command should compress all stub commands in the config into a zip file`() {
         val file = mockk<File>()
-        val contractPath = "/Users/jane_doe/.$APPLICATION_NAME_LOWER_CASE/repos/git-repo/com/example/api_1.$CONTRACT_EXTENSION"
+        val contractPath = osAgnosticPath("/Users/jane_doe/.$APPLICATION_NAME_LOWER_CASE/repos/git-repo/com/example/api_1.$CONTRACT_EXTENSION")
         val bytes = "123".encodeToByteArray()
 
-        every { specmaticConfig.contractStubPathData() }.returns(listOf(ContractPathData("/Users/jane_doe/.$APPLICATION_NAME_LOWER_CASE/repos/git-repo/", contractPath)))
+        every { specmaticConfig.contractStubPathData() }.returns(listOf(ContractPathData(osAgnosticPath("/Users/jane_doe/.$APPLICATION_NAME_LOWER_CASE/repos/git-repo/"), contractPath)))
         every { fileOperations.readBytes(contractPath) }.returns(bytes)
 
         val files = listOf(file)
-        val stubFilePath = "/Users/jane_doe/.$APPLICATION_NAME_LOWER_CASE/repos/git-repo/com/example/api_1_data/stub.json"
+        val stubFilePath = osAgnosticPath("/Users/jane_doe/.$APPLICATION_NAME_LOWER_CASE/repos/git-repo/com/example/api_1_data/stub.json")
 
         every { file.isFile } returns(true)
         every { file.name } returns("stub.json")
@@ -47,24 +47,24 @@ internal class BundleCommandTest {
         every { fileOperations.isJSONFile(file) } returns(true)
         every { fileOperations.readBytes(stubFilePath) }.returns(bytes)
 
-        every { fileOperations.files("/Users/jane_doe/.$APPLICATION_NAME_LOWER_CASE/repos/git-repo/com/example/api_1_data") }.returns(files)
-        justRun { zipper.compress("./bundle.zip", listOf(ZipperEntry("git-repo/com/example/api_1.$CONTRACT_EXTENSION", bytes), ZipperEntry("git-repo/com/example/api_1_data/stub.json", bytes))) }
+        every { fileOperations.files(osAgnosticPath("/Users/jane_doe/.$APPLICATION_NAME_LOWER_CASE/repos/git-repo/com/example/api_1_data")) }.returns(files)
+        justRun { zipper.compress(osAgnosticPath("./bundle.zip"), listOf(ZipperEntry("git-repo/com/example/api_1.$CONTRACT_EXTENSION", bytes), ZipperEntry("git-repo/com/example/api_1_data/stub.json", bytes))) }
 
         CommandLine(bundleCommand, factory).execute()
 
         verify(exactly = 1) { specmaticConfig.contractStubPathData() }
         verify(exactly = 1) { fileOperations.readBytes(contractPath) }
         verify(exactly = 1) { fileOperations.readBytes(stubFilePath) }
-        verify(exactly = 1) { zipper.compress("./bundle.zip", listOf(ZipperEntry("git-repo/com/example/api_1.$CONTRACT_EXTENSION", bytes), ZipperEntry("git-repo/com/example/api_1_data/stub.json", bytes))) }
+        verify(exactly = 1) { zipper.compress(osAgnosticPath("./bundle.zip"), listOf(ZipperEntry(osAgnosticPath("git-repo/com/example/api_1.$CONTRACT_EXTENSION"), bytes), ZipperEntry(osAgnosticPath("git-repo/com/example/api_1_data/stub.json"), bytes))) }
     }
 
     @Test
     fun `should list stub files in a given directory`() {
-        val jsonFilePath = "/namespace/contract_data/path.json"
+        val jsonFilePath = osAgnosticPath("/namespace/contract_data/path.json")
         val file = File(jsonFilePath)
         every { fileOperations.isJSONFile(file) }.returns(true)
 
-        val stubDataDir = "/namespace/contract_data"
+        val stubDataDir = osAgnosticPath("/namespace/contract_data")
         every { fileOperations.files(stubDataDir) }.returns(listOf(file))
 
         val files = stubFilesIn(stubDataDir, fileOperations)
@@ -76,7 +76,7 @@ internal class BundleCommandTest {
 
     @Test
     fun `should list stub files in subdirectories of the given directory`() {
-        val jsonFilePath = "/namespace/contract_data/path.json"
+        val jsonFilePath = osAgnosticPath("/namespace/contract_data/path.json")
         val file = mockk<File>()
         val subDir = mockk<File>()
 
@@ -89,15 +89,15 @@ internal class BundleCommandTest {
 
         val subDirFile = mockk<File>()
         every { fileOperations.isJSONFile(subDirFile) }.returns(true)
-        every { subDirFile.path }.returns("/namespace/contract_data/subdir/more.json")
-        every { fileOperations.files("/namespace/contract_data/subdir") }.returns(listOf(subDirFile))
+        every { subDirFile.path }.returns(osAgnosticPath("/namespace/contract_data/subdir/more.json"))
+        every { fileOperations.files(osAgnosticPath("/namespace/contract_data/subdir")) }.returns(listOf(subDirFile))
 
-        val stubDataDir = "/namespace/contract_data"
+        val stubDataDir = osAgnosticPath("/namespace/contract_data")
         every { fileOperations.files(stubDataDir) }.returns(listOf(file, subDir))
 
         val files = stubFilesIn(stubDataDir, fileOperations)
 
-        assertThat(files.toSet()).isEqualTo(setOf("/namespace/contract_data/path.json", "/namespace/contract_data/subdir/more.json"))
+        assertThat(files.toSet()).isEqualTo(setOf(osAgnosticPath("/namespace/contract_data/path.json"), osAgnosticPath("/namespace/contract_data/subdir/more.json")))
 
         verify(exactly = 1) { file.path }
         verify(exactly = 1) { subDir.isDirectory }
@@ -108,7 +108,7 @@ internal class BundleCommandTest {
 
         verify(exactly = 1) { fileOperations.isJSONFile(subDirFile) }
         verify(exactly = 1) { subDirFile.path }
-        verify(exactly = 1) { fileOperations.files("/namespace/contract_data/subdir") }
+        verify(exactly = 1) { fileOperations.files(osAgnosticPath("/namespace/contract_data/subdir")) }
 
         verify(exactly = 1) { fileOperations.files(stubDataDir) }
     }
@@ -120,7 +120,7 @@ internal class BundleCommandTest {
         every { fileOperations.isJSONFile(file) }.returns(false)
         every { file.isDirectory }.returns(false)
 
-        val stubDataDir = "/namespace/contract_data"
+        val stubDataDir = osAgnosticPath("/namespace/contract_data")
         every { fileOperations.files(stubDataDir) }.returns(listOf(file))
 
         val files = stubFilesIn(stubDataDir, fileOperations)
@@ -134,9 +134,9 @@ internal class BundleCommandTest {
     @Test
     fun `bundle command should pick git repo and mono repo sources path`() {
         val contractPaths = listOf(
-                ContractPathData("cloneDir", "cloneDir/a/1.$CONTRACT_EXTENSION"),
-                ContractPathData("cloneDir", "cloneDir/b/1.$CONTRACT_EXTENSION"),
-                ContractPathData(".", "./c/1.$CONTRACT_EXTENSION"),
+            ContractPathData("cloneDir", osAgnosticPath("cloneDir/a/1.$CONTRACT_EXTENSION")),
+            ContractPathData("cloneDir", osAgnosticPath("cloneDir/b/1.$CONTRACT_EXTENSION")),
+            ContractPathData(".", osAgnosticPath("./c/1.$CONTRACT_EXTENSION")),
         )
         every { specmaticConfig.contractStubPathData() }.returns(contractPaths)
 
@@ -145,8 +145,12 @@ internal class BundleCommandTest {
 
         CommandLine(bundleCommand, factory).execute()
 
-        verify(exactly = 1) {pathDataToZipperEntry(any(), ContractPathData("cloneDir", "cloneDir/a/1.$CONTRACT_EXTENSION"), fileOperations)}
-        verify(exactly = 1) {pathDataToZipperEntry(any(), ContractPathData("cloneDir", "cloneDir/b/1.$CONTRACT_EXTENSION"), fileOperations)}
-        verify(exactly = 1) {pathDataToZipperEntry(any(), ContractPathData(".", "./c/1.$CONTRACT_EXTENSION"), fileOperations)}
+        verify(exactly = 1) {pathDataToZipperEntry(any(), ContractPathData("cloneDir", osAgnosticPath("cloneDir/a/1.$CONTRACT_EXTENSION")), fileOperations)}
+        verify(exactly = 1) {pathDataToZipperEntry(any(), ContractPathData("cloneDir", osAgnosticPath("cloneDir/b/1.$CONTRACT_EXTENSION")), fileOperations)}
+        verify(exactly = 1) {pathDataToZipperEntry(any(), ContractPathData(".", osAgnosticPath("./c/1.$CONTRACT_EXTENSION")), fileOperations)}
+    }
+
+    fun osAgnosticPath(path: String): String {
+        return path.replace("/", File.separator)
     }
 }

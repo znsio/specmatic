@@ -15,8 +15,12 @@ import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import `in`.specmatic.trimmedLinesString
 import io.ktor.util.reflect.*
+import io.mockk.every
+import io.mockk.mockk
 import io.swagger.v3.core.util.Yaml
 import io.swagger.v3.oas.models.OpenAPI
+import io.swagger.v3.parser.OpenAPIV3Parser
+import io.swagger.v3.parser.core.models.ParseOptions
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -39,7 +43,7 @@ fun openAPIToString(openAPI: OpenAPI): String {
 internal class OpenApiSpecificationTest {
     companion object {
         const val OPENAPI_FILE_WITH_YAML_EXTENSION = "openApiTest.yaml"
-        const val OPENAPI_FILE_WITH_YML_EXTENSION = "openApiTest.yaml"
+        const val OPENAPI_FILE_WITH_YML_EXTENSION = "openApiTest.yml"
         const val OPENAPI_FILE_WITH_REFERENCE = "openApiWithRef.yaml"
         const val PET_OPENAPI_FILE = "Pet.yaml"
         const val SCHEMAS_DIRECTORY = "schemas"
@@ -323,6 +327,61 @@ Pet:
         for (scenarioInfo in scenarioInfos) {
             assertNotFoundInHeaders(scenarioInfo.httpRequestPattern.headersPattern)
             assertNotFoundInHeaders(scenarioInfo.httpResponsePattern.headersPattern)
+        }
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun `scenarios should have examples of type ResponseSchemaExample leading to response schema validation when VALIDATE_RESPONSE_VALUE flag is false and response is not empty`() {
+        val openApiFile = this::class.java.classLoader.getResource("openapi${File.separator}response_schema_validation_including_optional_spec.yaml")!!.path
+        val openApiSpecification = OpenApiSpecification.fromFile(openApiFile)
+
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
+
+        val examples = scenarioInfos.first().examples.flatMap {
+            it.rows.map { row -> row.responseExample }
+        }
+        examples.forEach {
+            assertThat(it).isInstanceOf(ResponseSchemaExample::class.java)
+        }
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun `scenarios should have examples of type ResponseValueExample leading to response value validation when VALIDATE_RESPONSE_VALUE flag is true and response is not empty`() {
+        val openApiFile = this::class.java.classLoader.getResource("openapi${File.separator}response_schema_validation_including_optional_spec.yaml")!!.path
+        val environmentAndPropertiesConfigurationMock = mockk<EnvironmentAndPropertiesConfiguration>() {
+            every { validateResponseValue() } returns true
+        }
+        val openApiSpecification = OpenApiSpecification(
+            openApiFilePath =  openApiFile,
+            parsedOpenApi = OpenApiSpecification.getParsedOpenApi(openApiFile),
+            environmentAndPropertiesConfiguration = environmentAndPropertiesConfigurationMock
+        )
+
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
+
+        val examples = scenarioInfos.first().examples.flatMap {
+            it.rows.map { row -> row.responseExample }
+        }
+        examples.forEach {
+            assertThat(it).isInstanceOf(ResponseValueExample::class.java)
+        }
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun `scenarios should have null examples leading to no response value validation when the example response is empty`() {
+        val openApiFile = this::class.java.classLoader.getResource("openapi${File.separator}response_schema_validation_for_empty_response_example.yaml")!!.path
+        val openApiSpecification = OpenApiSpecification.fromFile(openApiFile)
+
+        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
+
+        val examples = scenarioInfos.first().examples.flatMap {
+            it.rows.map { row -> row.responseExample }
+        }
+        examples.forEach {
+            assertThat(it).isNull()
         }
     }
 

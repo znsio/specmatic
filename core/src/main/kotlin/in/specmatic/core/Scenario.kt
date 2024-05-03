@@ -320,8 +320,6 @@ data class Scenario(
 
         val updatedResolver = flagsBased.update(resolver)
 
-
-
         rowsToValidate.forEach { row ->
             val resolverForExample = updatedResolver.copy(
                 mismatchMessages = object : MismatchMessages {

@@ -11,6 +11,7 @@ import `in`.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
 internal class HttpResponseTest {
@@ -149,6 +150,45 @@ internal class HttpResponseTest {
     fun `should exclude dynamic headers`() {
         HttpResponse.OK.copy(headers = mapOf("Content-Length" to "10").withoutDynamicHeaders()).let {
             assertThat(it.headers).isEmpty()
+        }
+    }
+
+    @Nested
+    inner class IsNotEmptyTests {
+
+        @Test
+        fun `should return false both body and headers are empty`() {
+            val httpResponse = HttpResponse()
+
+            assertThat(httpResponse.isNotEmpty()).isEqualTo(false)
+        }
+
+        @Test
+        fun `should return true both body and headers are not empty`() {
+            val httpResponse = HttpResponse(
+                body = "body",
+                headers = mapOf("X-traceId" to "traceId")
+            )
+
+            assertThat(httpResponse.isNotEmpty()).isEqualTo(true)
+        }
+
+        @Test
+        fun `should return true if body is empty but headers are not empty`() {
+            val httpResponse = HttpResponse(
+                headers = mapOf("X-traceId" to "traceId")
+            )
+
+            assertThat(httpResponse.isNotEmpty()).isEqualTo(true)
+        }
+
+        @Test
+        fun `should return true if headers are empty but body is not empty`() {
+            val httpResponse = HttpResponse(
+                body = "body",
+            )
+
+            assertThat(httpResponse.isNotEmpty()).isEqualTo(true)
         }
     }
 }

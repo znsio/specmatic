@@ -65,9 +65,10 @@ class OpenApiSpecification(
         }
 
         fun fromFile(openApiFilePath: String): OpenApiSpecification {
-            val parsedOpenApi = OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences())
-            return OpenApiSpecification(openApiFilePath, parsedOpenApi)
+            return OpenApiSpecification(openApiFilePath, getParsedOpenApi(openApiFilePath))
         }
+
+        fun getParsedOpenApi(openApiFilePath: String): OpenAPI = OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences())
 
         fun fromYAML(
             yamlContent: String,

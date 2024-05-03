@@ -1,0 +1,63 @@
+openapi: 3.0.0
+info:
+  title: Order API
+  version: 1.0.0
+paths:
+  /order:
+    get:
+      summary: Retrieve order details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+            examples:
+              OrderWithTrackingNumber:
+                value:
+                  productName: "WithTrackingNumber"
+                  quantity: 1
+              OrderWithoutTrackingNumber:
+                value:
+                  productName: "WithoutTrackingNumber"
+                  quantity: 2
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+              examples:
+                OrderWithTrackingNumber:
+                  value:
+                    orderId: 12345
+                    totalPrice: 55.99
+                    trackingNumber: ABC123
+                OrderWithoutTrackingNumber:
+                  value:
+                    orderId: 67890
+                    totalPrice: 78.50
+components:
+  schemas:
+    OrderRequest:
+      type: object
+      properties:
+        productName:
+          type: string
+        quantity:
+          type: integer
+      required:
+        - productName
+        - quantity
+    OrderResponse:
+      type: object
+      properties:
+        orderId:
+          type: integer
+          format: int64
+        totalPrice:
+          type: number
+          format: float
+        trackingNumber:
+          type: string

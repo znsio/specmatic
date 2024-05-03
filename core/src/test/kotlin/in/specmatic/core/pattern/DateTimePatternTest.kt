@@ -9,6 +9,8 @@ import `in`.specmatic.shouldNotMatch
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 
 internal class DateTimePatternTest {
     @Test
@@ -46,22 +48,55 @@ internal class DateTimePatternTest {
         assertThat(datePatterns.first()).isEqualTo(DateTimePattern)
     }
 
-    @Test
-    fun `should match RFC3339 date time format`() {
-        val date1 = StringValue("2020-04-12T00:00:00+05:30")
-        val date2 = StringValue("2014-12-03T10:05:59+08:00")
-
-        assertThat(DateTimePattern.matches(date1, Resolver())).isInstanceOf(Result.Success::class.java)
-        assertThat(DateTimePattern.matches(date2, Resolver())).isInstanceOf(Result.Success::class.java)
+    @ParameterizedTest
+    @MethodSource("getRFC3339CompliantDateTimeData")
+    fun `should match RFC3339 date time format`(dateTime: String) {
+        assertThat(DateTimePattern.matches(
+            StringValue(dateTime),
+            Resolver()
+        )).isInstanceOf(Result.Success::class.java)
     }
 
+    @ParameterizedTest
+    @MethodSource("getRFC3339NonCompliantDateTimeData")
+    fun `should fail if the dateTime is not RFC3339 compliant`(dateTime: String) {
+        assertThat(
+            DateTimePattern.matches(
+                StringValue(dateTime),
+                Resolver()
+            )
+        ).isInstanceOf(Result.Failure::class.java)
+    }
 
     @Test
     @Tag(GENERATION)
     fun `negative patterns should be generated`() {
-        val result = BooleanPattern().negativeBasedOn(Row(), Resolver()).toList()
+        val result = BooleanPattern().negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null"
         )
+    }
+
+    companion object {
+        @JvmStatic
+        fun getRFC3339CompliantDateTimeData(): List<String> {
+           return listOf(
+               "2020-04-12T00:00:00+05:30",
+               "2014-12-03T10:05:59+08:00",
+               "2024-04-25T09:06:26Z",
+               "2024-04-25T09:06:26.57Z",
+               "2024-04-25T09:06:26.5732Z",
+               "2024-04-25T09:06:26.572577123456Z"
+           )
+        }
+
+        @JvmStatic
+        fun getRFC3339NonCompliantDateTimeData(): List<String> {
+            return listOf(
+                "2024-04-25 09:06:26Z",
+                "2024/04/25T09:06:26Z",
+                "25-04-2024T09:06:26Z",
+            )
+        }
     }
 }

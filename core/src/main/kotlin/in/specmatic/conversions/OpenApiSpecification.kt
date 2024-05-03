@@ -422,10 +422,11 @@ class OpenApiSpecification(
 
         when {
             requestExamples.isNotEmpty() -> {
-                val responseExampleValueForRow = if (environmentAndPropertiesConfiguration.validateResponse())
-                    responseExample
-                else
-                    null
+                val  resolvedResponseExample =
+                    if (environmentAndPropertiesConfiguration.validateResponseValue())
+                        ResponseValueExample(responseExample)
+                    else
+                        ResponseSchemaExample(responseExample)
 
                 Row(
                     requestExamples.keys.toList().map { keyName: String -> keyName },
@@ -437,7 +438,7 @@ class OpenApiSpecification(
                             } else valueString
                         },
                     name = exampleName,
-                    responseExample = responseExampleValueForRow
+                    responseExample = resolvedResponseExample.takeIf { it.responseExample.isNotEmpty() }
                 )
             }
 
@@ -859,7 +860,8 @@ class OpenApiSpecification(
                 null -> StringPattern(
                     minLength = schema.minLength,
                     maxLength = schema.maxLength,
-                    example = schema.example?.toString()
+                    example = schema.example?.toString(),
+                    regex = schema.pattern
                 )
 
                 else -> toEnum(schema, patternName) { enumValue -> StringValue(enumValue.toString()) }.withExample(

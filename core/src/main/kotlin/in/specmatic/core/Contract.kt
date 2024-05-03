@@ -10,33 +10,14 @@ data class Contract(val contract: Feature) {
             return Contract(parseGherkinStringToFeature(contractGherkin))
         }
     }
-    fun test(endPoint: String) {
-        val contractBehaviour = contract
-        val results = contractBehaviour.executeTests(HttpClient(endPoint))
-        if (results.hasFailures())
-            throw ContractException(results.report(PATH_NOT_RECOGNIZED_ERROR))
-    }
-
-    fun test(fake: HttpStub) = test(fake.endPoint)
 
     fun samples(fake: HttpStub) = samples(fake.endPoint)
-
-    fun examples(fake: HttpStub) = examples(fake.endPoint)
 
     private fun samples(endPoint: String) {
         val contractBehaviour = contract
         val httpClient = HttpClient(endPoint)
 
-        contractBehaviour.generateContractTestScenarios(emptyList()).fold(Results()) { results, scenario ->
-            Results(results = results.results.plus(executeTest(scenario, httpClient)).toMutableList())
-        }
-    }
-
-    private fun examples(endPoint: String) {
-        val contractBehaviour = contract
-        val httpClient = HttpClient(endPoint)
-
-        val completeResults = contractBehaviour.generateContractTestScenarios(emptyList()).fold(Results()) { results, scenario ->
+        contractBehaviour.generateContractTestScenarios(emptyList()).map { it.second.value }.fold(Results()) { results, scenario ->
             Results(results = results.results.plus(executeTest(scenario, httpClient)).toMutableList())
         }
     }

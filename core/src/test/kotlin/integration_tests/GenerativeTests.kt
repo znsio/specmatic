@@ -132,9 +132,33 @@ class GenerativeTests {
         val negativeGenerativeAll = 3 + 3
         val negativeGenerativeNothing = 3
 
+        var optionalKeyOccurrence: Int = 0
+
+        val OPTIONAL_KEY = "description"
 
         try {
-            val results = runGenerativeTests(feature)
+            val results = try {
+                feature.enableGenerativeTesting().executeTests(object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        val jsonRequestBody = request.body as JSONObjectValue
+
+                        if(OPTIONAL_KEY in jsonRequestBody.jsonObject)
+                            optionalKeyOccurrence += 1
+
+                        return HttpResponse.OK
+                    }
+
+                    override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                        println(scenario.testDescription())
+                        println(request.toLogString())
+                        println()
+                    }
+                })
+            } finally {
+                System.clearProperty(Flags.ONLY_POSITIVE)
+            }
+
+            assertThat(optionalKeyOccurrence).isEqualTo(7)
 
             val expectedCountOfTests =
                 fromExample + positiveGenerated + negativeGenerativeAll + negativeGenerativeNothing
@@ -2144,5 +2168,239 @@ class GenerativeTests {
 
         assertThat(testsSeen).containsOnlyOnce("+ve" to "BAD_REQUEST")
         assertThat(testsSeen).containsOnlyOnce("+ve" to "SERVER_ERROR")
+    }
+
+    @Test
+    fun `tests for 2xx 4xx and 5xx should all have a prefix when generative tests are switched on`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  summary: Store a persons details
+                  requestBody:
+                    content:
+                      application/json:
+                        examples:
+                          CREATE_PERSON:
+                            value:
+                              status: "active"
+                          BAD_REQUEST:
+                            value:
+                              status: "invalid-status"
+                          SERVER_ERROR:
+                            value:
+                              status: "inactive"
+                        schema:
+                          required:
+                          - status
+                          properties:
+                            status:
+                              type: string
+                              enum:
+                                - active
+                                - inactive
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                            properties:
+                              id:
+                                type: integer
+                    400:
+                      description: Person's record
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            BAD_REQUEST:
+                              value: "Bad request"
+                    500:
+                      description: Person's record
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            SERVER_ERROR:
+                              value: "Server error"
+            """.trimIndent(), ""
+        ).toFeature().enableGenerativeTesting()
+
+        val testDescriptions: MutableList<String> = mutableListOf()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                println(scenario.testDescription())
+                println(request.toLogString())
+
+                testDescriptions.add(scenario.testDescription())
+            }
+        })
+
+        assertThat(results.testCount).isPositive()
+
+        val testDescriptionsWithNoPrefix = testDescriptions.filterNot { it.startsWith("+ve") || it.startsWith("-ve") }
+
+        assertThat(testDescriptionsWithNoPrefix).isEmpty()
+    }
+
+    @Test
+    fun `no tests should have any prefix when generative tests are NOT switched on`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  summary: Store a persons details
+                  requestBody:
+                    content:
+                      application/json:
+                        examples:
+                          CREATE_PERSON:
+                            value:
+                              status: "active"
+                          BAD_REQUEST:
+                            value:
+                              status: "invalid-status"
+                          SERVER_ERROR:
+                            value:
+                              status: "inactive"
+                        schema:
+                          required:
+                          - status
+                          properties:
+                            status:
+                              type: string
+                              enum:
+                                - active
+                                - inactive
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                            properties:
+                              id:
+                                type: integer
+                    400:
+                      description: Person's record
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            BAD_REQUEST:
+                              value: "Bad request"
+                    500:
+                      description: Person's record
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            SERVER_ERROR:
+                              value: "Server error"
+            """.trimIndent(), ""
+        ).toFeature()
+
+        val testDescriptions: MutableList<String> = mutableListOf()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                println(scenario.testDescription())
+                println(request.toLogString())
+
+                testDescriptions.add(scenario.testDescription())
+            }
+        })
+
+        assertThat(results.testCount).isPositive()
+
+        val testDescriptionsWithNoPrefix = testDescriptions.filter { it.startsWith("+ve") || it.startsWith("-ve") }
+
+        assertThat(testDescriptionsWithNoPrefix).isEmpty()
+    }
+
+    @Test
+    fun `tests with bad examples should have the appropriate prefix when generative tests is switched on`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            ---
+            openapi: "3.0.1"
+            info:
+              title: "Person API"
+              version: "1"
+            paths:
+              /person:
+                post:
+                  summary: Store a persons details
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          required:
+                          - name
+                          properties:
+                            name:
+                              type: string
+                        examples:
+                          CREATE_PERSON:
+                            value:
+                              name: 10
+                  responses:
+                    200:
+                      description: Person's record
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                            properties:
+                              id:
+                                type: integer
+                          examples:
+                            CREATE_PERSON:
+                              value:
+                                id: 10
+            """.trimIndent(), ""
+        ).toFeature().enableGenerativeTesting()
+
+        val testDescriptions = feature.generateContractTests(emptyList()).map {
+            it.testDescription()
+        }.toList()
+
+        val testDescriptionsWithNoPrefix = testDescriptions.filterNot { it.startsWith("+ve") || it.startsWith("-ve") }
+
+        assertThat(testDescriptionsWithNoPrefix).withFailMessage(testDescriptionsWithNoPrefix.joinToString(System.lineSeparator())).isEmpty()
     }
 }

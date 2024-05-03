@@ -19,7 +19,8 @@ internal class ExactValuePatternTest {
     @Test
     @Tag(GENERATION)
     fun `negative patterns should be generated`() {
-        val result = ExactValuePattern(StringValue("data")).negativeBasedOn(Row(), Resolver()).toList()
+        val result =
+            ExactValuePattern(StringValue("data")).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null",
             "number",

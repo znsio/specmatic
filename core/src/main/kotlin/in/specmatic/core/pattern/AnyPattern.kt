@@ -91,24 +91,24 @@ data class AnyPattern(
         }
 
         val isNullable = pattern.any { it is NullPattern }
-        val patternResults: Sequence<Pair<Sequence<Pattern>?, Throwable?>> =
+        val patternResults: Sequence<Pair<Sequence<ReturnValue<Pattern>>?, Throwable?>> =
             pattern.asSequence().sortedBy { it is NullPattern }.map { innerPattern ->
                 try {
                     val patterns =
                         resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
                             innerPattern.newBasedOn(row, cyclePreventedResolver)
                         } ?: sequenceOf()
-                    Pair(patterns, null)
+                    Pair(patterns.map { HasValue(it) }, null)
                 } catch (e: Throwable) {
                     Pair(null, e)
                 }
             }
 
-        return newTypesOrExceptionIfNone(patternResults, "Could not generate new tests")
+        return newTypesOrExceptionIfNone(patternResults, "Could not generate new tests").map { it.value }
     }
 
-    private fun newTypesOrExceptionIfNone(patternResults: Sequence<Pair<Sequence<Pattern>?, Throwable?>>, message: String): Sequence<Pattern> {
-        val newPatterns: Sequence<Pattern> = patternResults.mapNotNull { it.first }.flatten()
+    private fun newTypesOrExceptionIfNone(patternResults: Sequence<Pair<Sequence<ReturnValue<Pattern>>?, Throwable?>>, message: String): Sequence<ReturnValue<Pattern>> {
+        val newPatterns: Sequence<ReturnValue<Pattern>> = patternResults.mapNotNull { it.first }.flatten()
 
         if (!newPatterns.any() && pattern.isNotEmpty()) {
             val exceptions = patternResults.mapNotNull { it.second }.map {
@@ -136,12 +136,12 @@ data class AnyPattern(
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val nullable = pattern.any { it is NullPattern }
 
         val negativeTypeResults = pattern.asSequence().map {
             try {
-                val patterns =
+                val patterns: Sequence<ReturnValue<Pattern>> =
                     it.negativeBasedOn(row, resolver)
                 Pair(patterns, null)
             } catch(e: Throwable) {
@@ -152,17 +152,25 @@ data class AnyPattern(
         val negativeTypes = newTypesOrExceptionIfNone(
             negativeTypeResults,
             "Could not get negative tests"
-        ).let { patterns ->
+        ).let { patterns: Sequence<ReturnValue<Pattern>> ->
             if (nullable)
-                patterns.filterNot { it is NullPattern }
+                patterns.filterValueIsNot { it is NullPattern }
             else
                 patterns
         }
 
-        return if(negativeTypes.all { it is ScalarType })
-            negativeTypes.distinct()
-        else
-            negativeTypes
+        return negativeTypes.distinctBy {
+            it.withDefault(randomString(10)) {
+                distinctableValueOnlyForScalars(it)
+            }
+        }
+    }
+
+    private fun distinctableValueOnlyForScalars(it: Pattern): Any {
+        if (it is ScalarType || it is ExactValuePattern)
+            return it
+
+        return randomString(10)
     }
 
     override fun parse(value: String, resolver: Resolver): Value {

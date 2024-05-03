@@ -864,26 +864,6 @@ Scenario: GET and POST number
     }
 
     @Test
-    fun `when a contract is run as test against another contract fake, it should fail if the two contracts are incompatible`() {
-        val oldContract = """Feature: Contract
-Scenario: api call
-Given GET /
-Then status 200
-"""
-
-        val newContract = """Feature: Contract
-Scenario: api call
-Given GET /d
-Then status 200"""
-
-        assertThrows(Throwable::class.java) {
-            HttpStub(oldContract, emptyList()).use { fake ->
-                Contract.fromGherkin(newContract).test(fake)
-            }
-        }
-    }
-
-    @Test
     fun `should generate a dictionary in test mode`() {
         val gherkin = """Feature: Contract
 Scenario: api call

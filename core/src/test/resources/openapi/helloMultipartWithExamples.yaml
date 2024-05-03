@@ -46,4 +46,4 @@ paths:
                 type: string
               examples:
                 200_OKAY:
-                  value: {string}
+                  value: success

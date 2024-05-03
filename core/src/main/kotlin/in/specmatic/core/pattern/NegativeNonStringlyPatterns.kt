@@ -27,15 +27,15 @@ class NegativeNonStringlyPatterns : NegativePatternsTemplate() {
         patternMap: Map<String, Pattern>,
         resolver: Resolver,
         row: Row
-    ): Map<String, Sequence<Pattern>> {
+    ): Map<String, Sequence<ReturnValue<Pattern>>> {
         return patternMap.mapValues { (key, pattern) ->
             val resolvedPattern = resolvedHop(pattern, resolver)
 
             resolvedPattern
                 .negativeBasedOn(row.stepDownOneLevelInJSONHierarchy(withoutOptionality(key)), resolver)
-                .filterNot {
+                .filterValueIsNot {
                     isStringly(resolvedPattern, it, resolver)
-                }.filterNot {
+                }.filterValueIsNot {
                     it is NullPattern
                 }
         }

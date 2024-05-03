@@ -11,7 +11,7 @@ data class HttpResponsePattern(
     val headersPattern: HttpHeadersPattern = HttpHeadersPattern(),
     val status: Int = 0,
     val body: Pattern = EmptyStringPattern,
-    val expectedResponseValue: ResponseValueAssertion = AnyResponse
+    val responseValueAssertion: ResponseValueAssertion = AnyResponse
 ) {
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body.exactMatchElseType())
 
@@ -54,26 +54,32 @@ data class HttpResponsePattern(
         return response to resolver to
             ::matchStatus then
             ::matchHeaders then
-            ::matchBody then
-            ::matchExactValue then
+            ::matchResponseBodySchema then
+            ::matchExactResponseBodyValue then
             ::summarize otherwise
             ::handleError toResult
             ::returnResult
     }
 
-    fun withExactResponseValue(row: Row, resolver: Resolver): HttpResponsePattern =
+    fun withResponseExampleValue(row: Row, resolver: Resolver): HttpResponsePattern =
         attempt(breadCrumb = "RESPONSE") {
-            if(row.responseExample == null)
-                return@attempt this
+            val responseExample: ResponseExample = row.responseExample ?: return@attempt this
 
-            val responseExampleMatchResult = matches(row.responseExample, resolver)
+            val responseExampleMatchResult = matches(responseExample.responseExample, resolver)
 
             if(responseExampleMatchResult is Result.Failure)
                 throw ContractException("""Error in response in example "${row.name}": ${responseExampleMatchResult.reportString()}""")
 
-            val expectedExactResponsePattern = fromResponseExpectation(row.responseExample)
+            val expectedResponseValue: HttpResponsePattern =
+                HttpResponsePattern(
+                    HttpHeadersPattern(responseExample.responseExample.headers.mapValues { stringToPattern(it.value, it.key) }),
+                    responseExample.responseExample.status,
+                    responseExample.bodyPattern()
+                )
 
-            this.copy(expectedResponseValue = SpecificResponse(expectedExactResponsePattern))
+            val responseValueAssertion: ResponseValueAssertion = ValueAssertion(expectedResponseValue)
+
+            this.copy(responseValueAssertion = responseValueAssertion)
         }
 
     fun matchesMock(response: HttpResponse, resolver: Resolver) = matches(response, resolver)
@@ -105,7 +111,7 @@ data class HttpResponsePattern(
         }
     }
 
-    private fun matchBody(parameters: Triple<HttpResponse, Resolver, List<Result.Failure>>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
+    private fun matchResponseBodySchema(parameters: Triple<HttpResponse, Resolver, List<Result.Failure>>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
         val (response, resolver, failures) = parameters
 
         val parsedValue = when (response.body) {
@@ -120,10 +126,10 @@ data class HttpResponsePattern(
         return MatchSuccess(parameters)
     }
 
-    private fun matchExactValue(parameters: Triple<HttpResponse, Resolver, List<Result.Failure>>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
+    private fun matchExactResponseBodyValue(parameters: Triple<HttpResponse, Resolver, List<Result.Failure>>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
         val (response, resolver, failures) = parameters
 
-        val result = expectedResponseValue.matches(response, resolver.copy(mismatchMessages = valueMismatchMessages))
+        val result = responseValueAssertion.matches(response, resolver.copy(mismatchMessages = valueMismatchMessages))
 
         if(result is Result.Failure)
             return MatchSuccess(Triple(response, resolver, failures.plus(result)))
@@ -160,11 +166,11 @@ private val valueMismatchMessages = object : MismatchMessages {
     }
 
     override fun unexpectedKey(keyLabel: String, keyName: String): String {
-        return "Value mismatch: $keyLabel $$keyName in value was unexpected"
+        return "Value mismatch: $keyLabel $keyName in value was unexpected"
     }
 
     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
-        return "Value mismatch: $keyLabel $$keyName was missing"
+        return "Value mismatch: $keyLabel $keyName was missing"
     }
 
 }

@@ -92,7 +92,7 @@ class LoadTestsFromExternalisedFiles {
             it as ContractException
 
             assertThat(it.report())
-                .contains(">> description")
+                .contains(">> REQUEST.BODY.description")
                 .contains("10")
 
             println(it.report())

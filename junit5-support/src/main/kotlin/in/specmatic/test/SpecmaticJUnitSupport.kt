@@ -271,25 +271,22 @@ open class SpecmaticJUnitSupport {
         testBaseURL: String,
         timeout: Int
     ): Stream<DynamicTest> {
-        var checkedAPIs = false
-        return testScenarios.map { testScenario ->
-            DynamicTest.dynamicTest(testScenario.testDescription()) {
+        try {
+            queryActuator()
+        } catch (exception: Throwable) {
+            logger.log(exception, "Failed to query actuator with error")
+        }
+
+        logger.newLine()
+
+        return testScenarios.map { contractTest ->
+            DynamicTest.dynamicTest(contractTest.testDescription()) {
                 threads.add(Thread.currentThread().name)
-
-                if (!checkedAPIs) {
-                    checkedAPIs = true
-
-                    try {
-                        queryActuator()
-                    } catch (exception: Throwable) {
-                        logger.log(exception, "Failed to query actuator with error")
-                    }
-                }
 
                 var testResult: Pair<Result, HttpResponse?>? = null
 
                 try {
-                    testResult = testScenario.runTest(testBaseURL, timeout)
+                    testResult = contractTest.runTest(testBaseURL, timeout)
                     val (result, response) = testResult
 
                     if (result is Result.Success && result.isPartialSuccess()) {
@@ -313,7 +310,7 @@ open class SpecmaticJUnitSupport {
                 } finally {
                     if (testResult != null) {
                         val (result, response) = testResult
-                        openApiCoverageReportInput.addTestReportRecords(testScenario.testResultRecord(result, response))
+                        contractTest.testResultRecord(result, response)?.let { testREsultRecord -> openApiCoverageReportInput.addTestReportRecords(testREsultRecord) }
                     }
                 }
             }
@@ -345,14 +342,10 @@ open class SpecmaticJUnitSupport {
 
         val urlConstructedFromProtocolHostAndPort = "$protocol://$host:$port"
 
-        if (urlConstructedFromProtocolHostAndPort != null) {
-            when (validateURI(urlConstructedFromProtocolHostAndPort)) {
-                Success -> return urlConstructedFromProtocolHostAndPort
-                else -> throw TestAbortedException("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
-            }
+        return when (validateURI(urlConstructedFromProtocolHostAndPort)) {
+            Success -> urlConstructedFromProtocolHostAndPort
+            else -> throw TestAbortedException("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
         }
-
-        return urlConstructedFromProtocolHostAndPort
     }
 
     private fun isNumeric(port: String?): Boolean {
@@ -416,7 +409,7 @@ open class SpecmaticJUnitSupport {
                 securityConfiguration
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
-        feature.validateExampleRows()
+        feature.validateExamplesOrException()
 
         val suggestions = when {
             suggestionsPath.isNotEmpty() -> suggestionsFromFile(suggestionsPath)

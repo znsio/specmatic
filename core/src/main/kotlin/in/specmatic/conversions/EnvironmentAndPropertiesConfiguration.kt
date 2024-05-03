@@ -5,7 +5,7 @@ import org.apache.commons.lang3.BooleanUtils
 data class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<String, String>, val systemProperties: Map<Any?, Any?>) {
     constructor() : this(System.getenv(), System.getProperties().toMap())
 
-    val VALIDATE_RESPONSE = "VALIDATE_RESPONSE"
+    val VALIDATE_RESPONSE_VALUE = "VALIDATE_RESPONSE_VALUE"
     private val CUSTOM_RESPONSE_NAME = "CUSTOM_RESPONSE"
     val SPECMATIC_GENERATIVE_TESTS = "SPECMATIC_GENERATIVE_TESTS"
     private val MAX_TEST_REQUEST_COMBINATIONS = "MAX_TEST_REQUEST_COMBINATIONS"
@@ -13,6 +13,7 @@ data class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<S
     val ONLY_POSITIVE = "ONLY_POSITIVE"
     val SPECMATIC_TEST_PARALLELISM = "SPECMATIC_TEST_PARALLELISM"
     val LOCAL_TESTS_DIRECTORY = "LOCAL_TESTS_DIRECTORY"
+    private val NEGATIVE_TEST_ANNOTATIONS = "TEST_ANNOTATIONS"
 
     val EXTENSIBLE_SCHEMA = "EXTENSIBLE_SCHEMA"
 
@@ -60,8 +61,8 @@ data class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<S
         return flagValue(SPECMATIC_TEST_PARALLELISM)
     }
 
-    fun validateResponse(): Boolean {
-        return booleanFlag(VALIDATE_RESPONSE, "false")
+    fun validateResponseValue(): Boolean {
+        return booleanFlag(VALIDATE_RESPONSE_VALUE, "false")
     }
 
     fun getCachedEnvironmentVariable(variableName: String): String? {
@@ -78,5 +79,9 @@ data class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<S
 
     fun localTestsDirectory(): String? {
         return getCachedSetting(LOCAL_TESTS_DIRECTORY)
+    }
+
+    fun testAnnotationsEnabled(): Boolean {
+        return booleanFlag(NEGATIVE_TEST_ANNOTATIONS, "false")
     }
 }

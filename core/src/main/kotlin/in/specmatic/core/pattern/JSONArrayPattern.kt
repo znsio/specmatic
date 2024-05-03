@@ -77,12 +77,12 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         return newBasedOn(pattern, resolverWithNullType).map { JSONArrayPattern(it) }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(NullPattern).let {
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(NullPattern).let {
         if(pattern.size == 1)
             it.plus(pattern[0])
         else
             it
-    }
+    }.map { HasValue(it) }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONArray(value, resolver.mismatchMessages)
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {

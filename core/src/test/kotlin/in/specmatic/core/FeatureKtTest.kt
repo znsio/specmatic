@@ -687,7 +687,8 @@ paths:
 
     @Test
     fun `should generate all required negative tests`() {
-        val contract = OpenApiSpecification.fromYAML("""
+        val contract = OpenApiSpecification.fromYAML(
+            """
 openapi: 3.0.0
 info:
   title: Sample API
@@ -718,11 +719,13 @@ paths:
             text/plain:
               schema:
                 type: number
-        """.trimIndent(), "").toFeature()
+        """.trimIndent(), ""
+        ).toFeature()
 
         val withGenerativeTestsEnabled = contract.enableGenerativeTesting()
 
-        val tests: List<Scenario> = withGenerativeTestsEnabled.generateContractTestScenariosL(emptyList())
+        val tests: List<Scenario> =
+            withGenerativeTestsEnabled.generateContractTestScenarios(emptyList()).toList().map { it.second.value }
 
         val expectedRequestTypes: List<Pair<String, String>> = listOf(
             Pair("(string)", "(string)"),
@@ -736,7 +739,7 @@ paths:
 
         val actualRequestTypes: List<Pair<String, String>> = tests.map {
             val bodyType = it.httpRequestPattern.body as JSONObjectPattern
-            bodyType.pattern["data2"].toString()to bodyType.pattern["data1"].toString()
+            bodyType.pattern["data2"].toString() to bodyType.pattern["data1"].toString()
         }
 
         actualRequestTypes.forEach { keyTypesInRequest ->

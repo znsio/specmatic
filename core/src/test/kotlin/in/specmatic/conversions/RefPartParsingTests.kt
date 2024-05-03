@@ -625,7 +625,7 @@ components:
           examples:
             200_OK:
               value:
-                name: 123
+                id: 123
         """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(specification, "").toFeature()
@@ -674,7 +674,7 @@ paths:
               examples:
                 200_OK:
                   value:
-                    name: 123
+                    id: 123
 components:
   requestBodies:
     Request_Body:
@@ -753,13 +753,12 @@ paths:
                     type: integer
               examples:
                 200_OK:
-                  value:
-                    ${"$"}ref: '#/components/examples/200_OK_Response_Example'
+                  ${"$"}ref: '#/components/examples/200_OK_Response_Example'
 components:
   examples:
     200_OK_Response_Example:
       value:
-        name: "123"
+        id: 123
 
         """.trimIndent()
 

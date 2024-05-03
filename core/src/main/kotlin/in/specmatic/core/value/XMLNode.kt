@@ -225,6 +225,10 @@ data class XMLNode(val name: String, val realName: String, val attributes: Map<S
         return XMLPattern()
     }
 
+    override fun deepPattern(): Pattern {
+        return XMLPattern(this)
+    }
+
     override fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> {
         return typeDeclarationWithKey(exampleKey, types, exampleDeclarations)
     }

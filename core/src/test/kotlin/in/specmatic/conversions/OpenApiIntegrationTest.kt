@@ -10,8 +10,6 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
-import io.mockk.every
-import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -48,7 +46,7 @@ Examples:
     """.trimIndent(), sourceSpecPath
                 )
 
-                val contractTests = contract.generateContractTestScenarios(emptyList())
+                val contractTests = contract.generateContractTestScenarios(emptyList()).map { it.second.value }
                 val result = executeTest(contractTests.single(), object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsEntry(HttpHeaders.AUTHORIZATION, "Bearer abc123")
@@ -66,8 +64,9 @@ Examples:
 
             @Test
             fun `should generate test with oauth2 authorization code security scheme with random token in authorization header when no example exists`() {
-                val feature = parseContractFileToFeature("./src/test/resources/openapi/hello_with_oauth2_authorization_code_flow.yaml")
-                val contractTests = feature.generateContractTestScenarios(emptyList())
+                val feature =
+                    parseContractFileToFeature("./src/test/resources/openapi/hello_with_oauth2_authorization_code_flow.yaml")
+                val contractTests = feature.generateContractTestScenarios(emptyList()).map { it.second.value }
                 val result = executeTest(contractTests.single(), object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsKey(HttpHeaders.AUTHORIZATION)
@@ -90,7 +89,7 @@ Examples:
                     "./src/test/resources/openapi/hello_with_oauth2_authorization_code_flow.yaml",
                     securityConfiguration = newSecurityConfiguration(token)
                 )
-                val contractTests = feature.generateContractTestScenarios(emptyList())
+                val contractTests = feature.generateContractTestScenarios(emptyList()).map { it.second.value }
                 val result = executeTest(contractTests.single(), object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsKey(HttpHeaders.AUTHORIZATION)
@@ -109,12 +108,13 @@ Examples:
             @Test
             fun `should generate test with oauth2 authorization code security scheme with token in authorization header from environment variable`() {
                 val token = "ENV1234"
-                val environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf("oAuth2AuthCode" to token), emptyMap())
+                val environmentAndPropertiesConfiguration =
+                    EnvironmentAndPropertiesConfiguration(mapOf("oAuth2AuthCode" to token), emptyMap())
                 val feature = parseContractFileToFeature(
                     "./src/test/resources/openapi/hello_with_oauth2_authorization_code_flow.yaml",
                     environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration
                 )
-                val contractTests = feature.generateContractTestScenarios(emptyList())
+                val contractTests = feature.generateContractTestScenarios(emptyList()).map { it.second.value }
                 val result = executeTest(contractTests.single(), object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsKey(HttpHeaders.AUTHORIZATION)
@@ -219,7 +219,7 @@ Feature: Authenticated
     | Bearer abc123 | 10 |
         """.trimIndent(), sourceSpecPath
                 )
-                val contractTests = contract.generateContractTestScenarios(emptyList())
+                val contractTests = contract.generateContractTestScenarios(emptyList()).map { it.second.value }
                 val result = executeTest(contractTests.single(), object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsEntry(HttpHeaders.AUTHORIZATION, "Bearer abc123")
@@ -271,7 +271,7 @@ Feature: Authenticated
     | Bearer abc123 | 10 |
         """.trimIndent(), sourceSpecPath
                 )
-                val contractTests = contract.generateContractTestScenarios(emptyList())
+                val contractTests = contract.generateContractTestScenarios(emptyList()).map { it.second.value }
                 val result = executeTest(contractTests.single(), object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsEntry(HttpHeaders.AUTHORIZATION, "Bearer abc123")
@@ -323,7 +323,7 @@ Feature: Authenticated
     | Bearer abc123 | 10 |
         """.trimIndent(), sourceSpecPath
                 )
-                val contractTests = contract.generateContractTestScenarios(emptyList())
+                val contractTests = contract.generateContractTestScenarios(emptyList()).map { it.second.value }
                 val result = executeTest(contractTests.single(), object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.headers).containsEntry(HttpHeaders.AUTHORIZATION, "Bearer abc123")
@@ -376,7 +376,7 @@ Feature: Authenticated
         """.trimIndent(), sourceSpecPath
             )
 
-            val contractTests = contract.generateContractTestScenarios(emptyList())
+            val contractTests = contract.generateContractTestScenarios(emptyList()).map { it.second.value }
             val result = executeTest(contractTests.single(), object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     assertThat(request.headers).containsEntry("Authorization", "Bearer abc123")
@@ -395,7 +395,7 @@ Feature: Authenticated
         @Test
         fun `should generate test with bearer security scheme with random token in authorization header when no example exists`() {
             val feature = parseContractFileToFeature("./src/test/resources/openapi/authenticated.yaml")
-            val contractTests = feature.generateContractTestScenarios(emptyList())
+            val contractTests = feature.generateContractTestScenarios(emptyList()).map { it.second.value }
             var requestMadeWithRandomlyGeneratedBearerToken = false
             contractTests.forEach { scenario ->
                 val result = executeTest(scenario, object : TestExecutor {
@@ -424,7 +424,7 @@ Feature: Authenticated
                 "./src/test/resources/openapi/authenticated.yaml",
                 securityConfiguration = securityConfigurationForBearerScheme(token)
             )
-            val contractTests = feature.generateContractTestScenarios(emptyList())
+            val contractTests = feature.generateContractTestScenarios(emptyList()).map { it.second.value }
             var requestMadeWithTokenFromSpecmaticJson = false
             contractTests.forEach { scenario ->
                 val result = executeTest(scenario, object : TestExecutor {
@@ -449,12 +449,18 @@ Feature: Authenticated
         @Test
         fun `should generate test with bearer security scheme with token in authorization header from environment variable`() {
             val token = "ENV1234"
-            val environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf("BearerAuth" to token, "ApiKeyAuthQuery" to token, "ApiKeyAuthHeader" to token), emptyMap())
+            val environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
+                mapOf(
+                    "BearerAuth" to token,
+                    "ApiKeyAuthQuery" to token,
+                    "ApiKeyAuthHeader" to token
+                ), emptyMap()
+            )
             val feature = parseContractFileToFeature(
                 "./src/test/resources/openapi/authenticated.yaml",
                 environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration
             )
-            val contractTests = feature.generateContractTestScenarios(emptyList())
+            val contractTests = feature.generateContractTestScenarios(emptyList()).map { it.second.value }
             var requestMadeWithTokenFromSpecmaticJson = false
             contractTests.forEach { scenario ->
                 val result = executeTest(scenario, object : TestExecutor {
@@ -705,7 +711,7 @@ Feature: Authenticated
         """.trimIndent(), sourceSpecPath
             )
 
-            val contractTests = contract.generateContractTestScenarios(emptyList())
+            val contractTests = contract.generateContractTestScenarios(emptyList()).map { it.second.value }
             val result = executeTest(contractTests.single(), object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     assertThat(request.queryParams.containsEntry("apiKey", "abc123")).isTrue
@@ -768,7 +774,7 @@ Feature: Authenticated
         """.trimIndent(), sourceSpecPath
             )
 
-            val contractTests = contract.generateContractTestScenarios(emptyList())
+            val contractTests = contract.generateContractTestScenarios(emptyList()).map { it.second.value }
             val result = executeTest(contractTests.single(), object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     assertThat(request.headers).containsEntry("X-API-KEY", "abc123")
@@ -791,7 +797,7 @@ Feature: Authenticated
                 "./src/test/resources/openapi/authenticated.yaml",
                 securityConfiguration = securityConfigurationForApiKeyInHeaderScheme(token)
             )
-            val contractTests = feature.generateContractTestScenarios(emptyList())
+            val contractTests = feature.generateContractTestScenarios(emptyList()).map { it.second.value }
             var requestMadeWithApiKeyInHeaderFromSpecmaticJson = false
             contractTests.forEach { scenario ->
                 val result = executeTest(scenario, object : TestExecutor {
@@ -816,13 +822,19 @@ Feature: Authenticated
         @Test
         fun `should generate test with api key in header security scheme with token in header from environment variable`() {
             val token = "ENV1234"
-            val environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf("BearerAuth" to token, "ApiKeyAuthQuery" to token, "ApiKeyAuthHeader" to token), emptyMap())
+            val environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
+                mapOf(
+                    "BearerAuth" to token,
+                    "ApiKeyAuthQuery" to token,
+                    "ApiKeyAuthHeader" to token
+                ), emptyMap()
+            )
 
             val feature = parseContractFileToFeature(
                 "./src/test/resources/openapi/authenticated.yaml",
                 environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration
             )
-            val contractTests = feature.generateContractTestScenarios(emptyList())
+            val contractTests = feature.generateContractTestScenarios(emptyList()).map { it.second.value }
             var requestMadeWithApiKeyInHeaderFromSpecmaticJson = false
             contractTests.forEach { scenario ->
                 val result = executeTest(scenario, object : TestExecutor {
@@ -851,12 +863,12 @@ Feature: Authenticated
                 "./src/test/resources/openapi/authenticated.yaml",
                 securityConfiguration = securityConfigurationForApiKeyInQueryScheme(token)
             )
-            val contractTests = feature.generateContractTestScenarios(emptyList())
+            val contractTests = feature.generateContractTestScenarios(emptyList()).map { it.second.value }
             var requestMadeWithApiKeyInQueryFromSpecmaticJson = false
             contractTests.forEach { scenario ->
                 val result = executeTest(scenario, object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
-                        if(request.queryParams.containsKey("apiKey")) {
+                        if (request.queryParams.containsKey("apiKey")) {
                             request.queryParams.getValues("apiKey").first().takeIf {
                                 it == token
                             }?.let {

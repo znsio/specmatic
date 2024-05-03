@@ -87,8 +87,8 @@ data class TabularPattern(
         return allOrNothingCombinationIn.map { toTabularPattern(it) }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
-        return this.newBasedOn(row, resolver)
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return this.newBasedOn(row, resolver).map { HasValue(it) }
     }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)
@@ -214,12 +214,16 @@ fun key(pattern: Pattern, key: String): String {
     )
 }
 
-fun <ValueType> patternList(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {
+fun <ValueType> patternListR(patternCollection: Map<String, Sequence<ReturnValue<ValueType>>>): Sequence<ReturnValue<Map<String, ValueType>>> {
     if (patternCollection.isEmpty())
-        return sequenceOf(emptyMap())
+        return sequenceOf(HasValue(emptyMap()))
 
     val spec = CombinationSpec(patternCollection, Flags.maxTestRequestCombinations())
     return spec.selectedCombinations
+}
+
+fun <ValueType> patternList(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {
+    return patternListR(patternCollection.mapValues { it.value.map { HasValue(it) } }).map { it.value }
 }
 
 fun <ValueType> patternValues(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {
@@ -295,6 +299,17 @@ fun <ValueType> forEachKeyCombinationIn(
         creator(newPattern)
     }.flatten()
 
+fun <ValueType> forEachKeyCombinationInR(
+    patternMap: Map<String, ValueType>,
+    row: Row,
+    creator: (Map<String, ValueType>) -> Sequence<ReturnValue<Map<String, ValueType>>>
+): Sequence<ReturnValue<Map<String, ValueType>>> =
+    keySets(patternMap.keys.toList(), row).map { keySet ->
+        patternMap.filterKeys { key -> key in keySet }
+    }.map { newPattern ->
+        creator(newPattern)
+    }.flatten()
+
 fun <ValueType> allOrNothingCombinationIn(
     patternMap: Map<String, ValueType>,
     row: Row = Row(),
@@ -302,6 +317,20 @@ fun <ValueType> allOrNothingCombinationIn(
     maxPropertiesOrNull: Int? = null,
     creator: (Map<String, ValueType>) -> Sequence<Map<String, ValueType>>
 ): Sequence<Map<String, ValueType>> {
+    val wrappedCreator: (Map<String, ValueType>) -> Sequence<ReturnValue<Map<String, ValueType>>> = { map ->
+        creator(map).map { HasValue(it) }
+    }
+
+    return allOrNothingCombinationInR(patternMap, row, minPropertiesOrNull, maxPropertiesOrNull, wrappedCreator).map { it.value }
+}
+
+fun <ValueType> allOrNothingCombinationInR(
+    patternMap: Map<String, ValueType>,
+    row: Row = Row(),
+    minPropertiesOrNull: Int? = null,
+    maxPropertiesOrNull: Int? = null,
+    creator: (Map<String, ValueType>) -> Sequence<ReturnValue<Map<String, ValueType>>>
+): Sequence<ReturnValue<Map<String, ValueType>>> {
     val keyLists = if (patternMap.keys.any { isOptional(it) }) {
         val nothingList: Set<String> =
             patternMap.keys.filter { k -> !isOptional(k) || row.containsField(withoutOptionality(k)) }.toSet()
@@ -338,7 +367,7 @@ fun <ValueType> allOrNothingCombinationIn(
         patternMap.filterKeys { key -> key in keySet }
     }.asSequence()
 
-    val keySetValues: Sequence<Sequence<Map<String, ValueType>>> = keySets.map { newPattern ->
+    val keySetValues = keySets.map { newPattern ->
         creator(newPattern)
     }
 

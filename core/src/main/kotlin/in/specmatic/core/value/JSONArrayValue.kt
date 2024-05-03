@@ -1,9 +1,7 @@
 package `in`.specmatic.core.value
 
 import `in`.specmatic.core.ExampleDeclarations
-import `in`.specmatic.core.pattern.JSONArrayPattern
-import `in`.specmatic.core.pattern.Pattern
-import `in`.specmatic.core.pattern.withoutPatternDelimiters
+import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.valueArrayToJsonString
 
 typealias TypeDeclarationsCallType = (Value, String, Map<String, Pattern>, ExampleDeclarations) -> Pair<TypeDeclaration, ExampleDeclarations>
@@ -16,6 +14,7 @@ data class JSONArrayValue(override val list: List<Value>) : Value, ListValue, JS
     override fun displayableType(): String = "json array"
     override fun exactMatchElseType(): Pattern = JSONArrayPattern(list.map { it.exactMatchElseType() })
     override fun type(): Pattern = JSONArrayPattern()
+    override fun deepPattern(): Pattern = ListPattern(AnythingPattern)
 
     private fun typeDeclaration(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations, typeDeclarationsStoreCall: TypeDeclarationsCallType): Pair<TypeDeclaration, ExampleDeclarations> = when {
         list.isEmpty() -> Pair(TypeDeclaration("[]", types), exampleDeclarations)

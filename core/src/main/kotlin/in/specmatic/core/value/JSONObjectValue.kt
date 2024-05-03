@@ -18,6 +18,8 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
     override fun exactMatchElseType(): Pattern = toJSONObjectPattern(jsonObject.mapValues { it.value.exactMatchElseType() })
     override fun type(): Pattern = JSONObjectPattern()
 
+    override fun deepPattern(): Pattern = toJSONObjectPattern(jsonObject.mapValues { it.value.deepPattern() })
+
     override fun toString() = valueMapToPrettyJsonString(jsonObject)
 
     override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> {

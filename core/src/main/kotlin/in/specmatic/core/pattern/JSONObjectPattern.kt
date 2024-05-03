@@ -173,10 +173,10 @@ data class JSONObjectPattern(
             newBasedOn(pattern, withNullPattern(resolver))
         }.map { toJSONObjectPattern(it) }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> =
-        allOrNothingCombinationIn(pattern.minus("...")) { pattern ->
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> =
+        allOrNothingCombinationInR(pattern.minus("...")) { pattern ->
             AllNegativePatterns().negativeBasedOn(pattern, row, withNullPattern(resolver))
-        }.map { toJSONObjectPattern(it) }
+        }.map { it.ifValue { toJSONObjectPattern(it) } }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)
     override fun hashCode(): Int = pattern.hashCode()

@@ -1,10 +1,7 @@
 package `in`.specmatic
 
 import `in`.specmatic.core.*
-import `in`.specmatic.core.pattern.AnyPattern
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.DeferredPattern
-import `in`.specmatic.core.pattern.Pattern
+import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.mock.ScenarioStub
@@ -132,8 +129,11 @@ infix fun <E> List<E>.shouldContainInAnyOrder(elementList: List<E>) {
     assertThat(this).containsExactlyInAnyOrderElementsOf(elementList)
 }
 
-val DefaultStrategies = ResolverStrategies (
+val DefaultStrategies = FlagsBased (
     DoNotUseDefaultExample,
     NonGenerativeTests,
-    null
+    null,
+    "",
+    ""
 )
+

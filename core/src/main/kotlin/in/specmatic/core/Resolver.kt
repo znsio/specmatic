@@ -177,11 +177,11 @@ data class Resolver(
     }
 
     fun generateHttpRequestbodies(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<Pattern> {
-        return generation.generateHttpRequests(this, body, row, requestBodyAsIs, value)
+        return generation.generateHttpRequestBodies(this, body, row, requestBodyAsIs, value)
     }
 
     fun generateHttpRequestbodies(body: Pattern, row: Row): Sequence<Pattern> {
-        return generation.generateHttpRequests(this, body, row)
+        return generation.generateHttpRequestBodies(this, body, row)
     }
 
     fun resolveRow(row: Row): Row {

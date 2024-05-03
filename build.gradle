@@ -4,7 +4,7 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.serialization' version '1.9.23'
     id 'org.jetbrains.kotlin.jvm' version '1.9.23'
     id 'jacoco'
-    id "org.sonarqube" version "4.4.1.3373"
+    id "org.sonarqube" version "5.0.0.4638"
 }
 
 allprojects {
@@ -59,28 +59,10 @@ sonarqube {
     }
 }
 
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-}
-
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
 
 repositories {
     mavenCentral()
-}
-
-compileKotlin {
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
-    }
-}
-compileTestKotlin {
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 }

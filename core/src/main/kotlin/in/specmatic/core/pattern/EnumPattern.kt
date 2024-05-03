@@ -1,5 +1,6 @@
 package `in`.specmatic.core.pattern
 
+import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.Value
 
@@ -39,6 +40,10 @@ data class EnumPattern(
 
     fun withExample(example: String?): EnumPattern {
         return this.copy(pattern = pattern.copy(example = example))
+    }
+
+    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return scalarAnnotation(this, pattern.negativeBasedOn(row, resolver).map { it.value })
     }
 
     override fun equals(other: Any?): Boolean = other is EnumPattern && other.pattern == this.pattern

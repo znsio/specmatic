@@ -1,5 +1,12 @@
 package `in`.specmatic.test
 
+import `in`.specmatic.core.HttpRequest
+import io.ktor.client.plugins.*
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import io.ktor.utils.io.charsets.*
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test

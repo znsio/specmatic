@@ -24,7 +24,7 @@ interface Bundle {
 }
 
 class StubBundle(bundlePath: String?, private val config: SpecmaticConfig, private val fileOperations: FileOperations) : Bundle {
-    override val bundlePath = bundlePath ?: "./bundle.zip"
+    override val bundlePath = bundlePath ?: ".${File.separator}bundle.zip"
 
     override fun contractPathData(): List<ContractPathData> {
         return config.contractStubPathData()
@@ -56,7 +56,7 @@ class StubBundle(bundlePath: String?, private val config: SpecmaticConfig, priva
 
         return stubFiles.map {
             val relativeEntryPath = File(it).relativeTo(base)
-            ZipperEntry("${base.name}/${relativeEntryPath.path}", fileOperations.readBytes(it))
+            ZipperEntry("${base.name}${File.separator}${relativeEntryPath.path}", fileOperations.readBytes(it))
         }
     }
 
@@ -68,7 +68,7 @@ class StubBundle(bundlePath: String?, private val config: SpecmaticConfig, priva
         val contractRelativePath = File(pathData.path).relativeTo(base)
 
         val stubRelativePath = contractRelativePath.parent?.let {
-            "${contractRelativePath.parent}/${contractRelativePath.nameWithoutExtension}_data"
+            "${contractRelativePath.parent}${File.separator}${contractRelativePath.nameWithoutExtension}_data"
         } ?: "${contractRelativePath.nameWithoutExtension}_data"
 
         val stubFiles: List<Pair<String, String>> =
@@ -76,7 +76,7 @@ class StubBundle(bundlePath: String?, private val config: SpecmaticConfig, priva
 
         return stubFiles.map { (virtualPath, actualPath) ->
             val relativeEntryPath = File(virtualPath).relativeTo(base)
-            ZipperEntry("${base.name}/${relativeEntryPath.path}", fileOperations.readBytes(actualPath))
+            ZipperEntry("${base.name}${File.separator}${relativeEntryPath.path}", fileOperations.readBytes(actualPath))
         }
     }
 
@@ -84,7 +84,7 @@ class StubBundle(bundlePath: String?, private val config: SpecmaticConfig, priva
 }
 
 class TestBundle(bundlePath: String?, private val config: SpecmaticConfig, private val fileOperations: FileOperations) : Bundle {
-    override val bundlePath: String = bundlePath ?: "./test-bundle.zip"
+    override val bundlePath: String = bundlePath ?: ".${File.separator}test-bundle.zip"
 
     override fun contractPathData(): List<ContractPathData> {
         return config.contractTestPathData()
@@ -96,7 +96,7 @@ class TestBundle(bundlePath: String?, private val config: SpecmaticConfig, priva
         return if(yamlExists(pathData.path)) {
             val yamlFilePath = File(yamlFileName(pathData.path))
             val yamlRelativePath = yamlFilePath.relativeTo(base).path
-            val yamlEntryName = "${base.name}/$yamlRelativePath"
+            val yamlEntryName = "${base.name}${File.separator}$yamlRelativePath"
             val yamlEntry = ZipperEntry(yamlEntryName, fileOperations.readBytes(yamlFilePath.path))
 
             listOf(yamlEntry)
@@ -171,7 +171,7 @@ fun pathDataToZipperEntry(bundle: Bundle, pathData: ContractPathData, fileOperat
     val contractFile = File(pathData.path)
 
     val relativePath = contractFile.relativeTo(base).path
-    val zipEntryName = "${base.name}/$relativePath"
+    val zipEntryName = "${base.name}${File.separator}$relativePath"
 
     logger.debug("Reading contract ${pathData.path} (Canonical path: ${File(pathData.path).canonicalPath})")
     val contractEntry = ZipperEntry(zipEntryName, fileOperations.readBytes(pathData.path))
@@ -205,7 +205,7 @@ fun stubFilesIn(stubDataDir: String, fileOperations: FileOperations): List<Strin
         }
 
 fun stubDataDirRelative(path: File): String {
-    return "${path.parent}/${path.nameWithoutExtension}_data"
+    return "${path.parent}${File.separator}${path.nameWithoutExtension}_data"
 }
 
 @Component

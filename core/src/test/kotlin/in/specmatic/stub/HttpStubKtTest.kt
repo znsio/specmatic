@@ -12,6 +12,7 @@ import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stubResponse
 import `in`.specmatic.test.HttpClient
+import `in`.specmatic.trimmedLinesList
 import io.mockk.InternalPlatformDsl.toStr
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
@@ -322,7 +323,7 @@ Feature: Test
     private fun assertResponseFailure(stubResponse: HttpStubResponse, errorMessage: String) {
         assertThat(stubResponse.response.status).isEqualTo(400)
         assertThat(stubResponse.response.headers).containsEntry(SPECMATIC_RESULT_HEADER, "failure")
-        assertThat(stubResponse.response.body.toStringLiteral()).isEqualTo(errorMessage)
+        assertThat(stubResponse.response.body.toStringLiteral().trimmedLinesList()).isEqualTo(errorMessage.trimmedLinesList())
     }
 
     @Test

@@ -5,10 +5,10 @@ import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
-import `in`.specmatic.test.ContractTest
 import `in`.specmatic.test.ScenarioTestGenerationException
 import `in`.specmatic.test.ScenarioTestGenerationFailure
 import `in`.specmatic.test.TestExecutor
+import `in`.specmatic.trimmedLinesList
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.json.JSONObject
@@ -304,7 +304,7 @@ paths:
         val httpRequest = HttpRequest().updateMethod("GET").updatePath("/balance").updateHeader("y-loginId", "abc123")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringLiteral()).isEqualTo(
+        assertThat(httpResponse.body.toStringLiteral().trimmedLinesList()).isEqualTo(
             """
             In scenario "Get balance info"
             API: GET /balance -> 200
@@ -312,7 +312,7 @@ paths:
               >> REQUEST.HEADERS.x-loginId
               
                  Expected header named "x-loginId" was missing
-              """.trimIndent())
+              """.trimIndent().trimmedLinesList())
     }
 
     @Test
@@ -382,7 +382,7 @@ paths:
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10]}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringLiteral()).isEqualTo(
+        assertThat(httpResponse.body.toStringLiteral().trimmedLinesList()).isEqualTo(
             """
             In scenario "Update balance"
             API: POST /balance -> 200
@@ -390,7 +390,7 @@ paths:
               >> REQUEST.BODY.calls_made
               
                  Expected an array of length 3, actual length 2
-            """.trimIndent())
+            """.trimIndent().trimmedLinesList())
     }
 
     @Test
@@ -407,7 +407,7 @@ paths:
         val httpRequest = HttpRequest().updateMethod("POST").updatePath("/balance").updateBody("{calls_made: [3, 10, \"test\"]}")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringLiteral()).isEqualTo(
+        assertThat(httpResponse.body.toStringLiteral().trimmedLinesList()).isEqualTo(
             """
             In scenario "Update balance"
             API: POST /balance -> 200
@@ -415,7 +415,7 @@ paths:
               >> REQUEST.BODY.calls_made[2]
               
                  Expected number, actual was "test"
-            """.trimIndent())
+            """.trimIndent().trimmedLinesList())
     }
 
     @Test
@@ -450,7 +450,7 @@ paths:
         val httpRequest = HttpRequest().updatePath("/balance").updateQueryParam("account-id", "abc").updateMethod("GET")
         val httpResponse = contractBehaviour.lookupResponse(httpRequest)
         assertThat(httpResponse.status).isEqualTo(400)
-        assertThat(httpResponse.body.toStringLiteral()).isEqualTo(
+        assertThat(httpResponse.body.toStringLiteral().trimmedLinesList()).isEqualTo(
             """
             In scenario "Get account balance"
             API: GET /balance -> 200
@@ -458,7 +458,7 @@ paths:
               >> REQUEST.QUERY-PARAMS.account-id
               
                  Expected number, actual was "abc"
-            """.trimIndent())
+            """.trimIndent().trimmedLinesList())
     }
 
     @Test

@@ -20,6 +20,8 @@ import `in`.specmatic.core.value.Value
 import `in`.specmatic.jsonBody
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
+import `in`.specmatic.trimmedLinesList
+import `in`.specmatic.trimmedLinesString
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -1455,8 +1457,8 @@ Background:
             )
         }
             """.trimIndent()
-        assertThat(results.report()).contains(
-            reportText
+        assertThat(results.report().trimmedLinesString()).contains(
+            reportText.trimmedLinesString()
         )
 
         assertThat(countMatches(results.report(), reportText)).isEqualTo(3)
@@ -1519,8 +1521,8 @@ Background:
               
                  ${ContractAndResponseMismatch.mismatchMessage("(1 or 2)", "3 (number)")}
             """.trimIndent()
-        assertThat(results.report()).contains(
-            reportText
+        assertThat(results.report().trimmedLinesString()).contains(
+            reportText.trimmedLinesString()
         )
 
         assertThat(countMatches(results.report(), reportText)).isEqualTo(3)
@@ -1583,14 +1585,17 @@ Background:
               
                  ${ContractAndResponseMismatch.mismatchMessage("string with minLength 6", "\"small\"")}
             """.trimIndent()
-        assertThat(results.report()).contains(
-            expectedReport
+        assertThat(results.report().trimmedLinesString()).contains(
+            expectedReport.trimmedLinesString()
         )
 
         assertThat(countMatches(results.report(), expectedReport)).isEqualTo(3)
     }
 
-    private fun countMatches(string: String, pattern: String): Int {
+    private fun countMatches(_string: String, _pattern: String): Int {
+        val string = _string.trimmedLinesString()
+        val pattern = _pattern.trimmedLinesString()
+
         var index = 0
         var count = 0
 
@@ -2599,13 +2604,13 @@ components:
             }
         }
 
-        assertThat(exception.message).isEqualTo(
+        assertThat(exception.message?.trimmedLinesString()).isEqualTo(
             """400 Bad Request: "In scenario "POST /users.
             | Response: Details of the new user to register"<EOL>API: POST /users -> 201<EOL><EOL>
             |  >> REQUEST.BODY.email<EOL>  <EOL>
             |     Contract expected email string but request contained "this.is.not.an.email"""""
                 .trimMargin()
-                .replace(Regex("(\n*)\n"), "$1")
+                .replace(Regex("(\n*)\n"), "$1").trimmedLinesString()
         )
     }
 }

@@ -725,7 +725,7 @@ paths:
         """.trimIndent(), "").toFeature()
         val stub = HttpStubData(
             HttpRequest("POST", "/data", body = StringValue("Hello")).toPattern(),
-            HttpResponse.ok(parsedJSONObject("""{"id": 10}""")).copy(externalisedResponseCommand = """echo {"status": 200, "body": "abc123"}"""),
+            HttpResponse.ok(parsedJSONObject("""{"id": 10}""")).copy(externalisedResponseCommand = """echo {"status":200,"body":"abc123"}"""),
             Resolver(),
             responsePattern = contract.scenarios.single().httpResponsePattern
         )

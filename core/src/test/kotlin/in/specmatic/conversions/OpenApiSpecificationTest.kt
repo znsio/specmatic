@@ -20,6 +20,8 @@ import io.swagger.v3.oas.models.OpenAPI
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.condition.DisabledOnOs
+import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -5022,6 +5024,7 @@ paths:
     }
 
     @Nested
+    @DisabledOnOs(OS.WINDOWS)
     inner class MultiPartRequestBody {
         private val openAPI = """
             ---

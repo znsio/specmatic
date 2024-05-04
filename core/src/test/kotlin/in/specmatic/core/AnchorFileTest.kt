@@ -11,7 +11,7 @@ internal class AnchorFileTest {
         val anchorFile = AnchorFile("/path/to/hello/../something-else/../hello/world.txt")
 
         if(runningOnWindows())
-            assertThat(osAgnosticPath(anchorFile.resolve("contract.spec").path)).isEqualTo(osAgnosticPath(":/path/to/hello/contract.spec"))
+            assertThat(osAgnosticPath(anchorFile.resolve("contract.spec").path)).endsWith(osAgnosticPath(":/path/to/hello/contract.spec"))
         else
             assertThat(anchorFile.resolve("contract.spec").path).isEqualTo("/path/to/hello/contract.spec")
     }

@@ -100,7 +100,7 @@ internal class UtilitiesTest {
         contractPaths: List<ContractPathData>,
         expectedContractPaths: List<ContractPathData>
     ) {
-        assertThat(contractPaths == expectedContractPaths).isTrue
+        assertThat(contractPaths).isEqualTo(expectedContractPaths)
     }
 
     @Test
@@ -137,11 +137,15 @@ internal class UtilitiesTest {
     private fun osAgnosticPaths(contractPaths: List<ContractPathData>): List<ContractPathData> {
         return contractPaths.map {
             it.copy(
-                baseDir = osAgnosticPath(it.baseDir),
-                path = osAgnosticPath(it.path),
+                baseDir = removeDrive(osAgnosticPath(it.baseDir)),
+                path = removeDrive(osAgnosticPath(it.path)),
                 specificationPath = it.specificationPath?.let { osAgnosticPath(it) }
             )
         }
+    }
+
+    private fun removeDrive(path: String): String {
+        return path.replace(Regex("^.:"), "")
     }
 
 

@@ -10,6 +10,11 @@ internal class ContractFileWithExportsTest {
         val contractFileWithExports =
             ContractFileWithExports("contract.spec", AnchorFile("/path/to/hello/../hello/something/../world"))
 
-        assertThat(osAgnosticPath(contractFileWithExports.absolutePath)).isEqualTo(osAgnosticPath("/path/to/hello/contract.spec"))
+        val osName = System.getProperty("os.name").lowercase()
+
+        if(osName == "windows)")
+            assertThat(osAgnosticPath(contractFileWithExports.absolutePath)).endsWith(osAgnosticPath(":/path/to/hello/contract.spec"))
+        else
+            assertThat(contractFileWithExports.absolutePath).isEqualTo("/path/to/hello/contract.spec")
     }
 }

@@ -7,6 +7,7 @@ import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.pattern.parsedValue
+import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
@@ -725,6 +726,17 @@ paths:
             Resolver(),
             responsePattern = contract.scenarios.single().httpResponsePattern
         )
+
+        // TODO temp
+        val command = ExternalCommand("""echo {"status": 200, "body": "abc123"}""", ".", emptyMap())
+        try {
+            println("Executing \"\"\"echo {\"status\": 200, \"body\": \"abc123\"}\"\"\"")
+            val result = command.executeAsSeparateProcess()
+            println(result)
+        } catch (e: Throwable) {
+            println(exceptionCauseMessage(e))
+        }
+
 
         assertThatThrownBy {
             getHttpResponse(HttpRequest("POST", "/data", body = StringValue("Hello")), listOf(contract), ThreadSafeListOfStubs(mutableListOf(stub)), ThreadSafeListOfStubs(mutableListOf()), false)

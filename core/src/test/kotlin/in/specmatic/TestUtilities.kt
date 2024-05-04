@@ -149,3 +149,5 @@ fun String.trimmedLinesList(): List<String> {
 fun String.trimmedLinesString(): String {
     return this.lines().joinToString(System.lineSeparator()) { it.trim() }
 }
+
+fun runningOnWindows() = System.getProperty("os.name").lowercase() == "windows"

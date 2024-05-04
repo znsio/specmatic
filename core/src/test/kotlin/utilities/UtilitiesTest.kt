@@ -68,7 +68,7 @@ internal class UtilitiesTest {
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1",   specificationPath = "c/1.spec"),
         )
         verify(exactly = 0) { checkout(any(), any()) }
-        assertThat(contractPaths == expectedContractPaths).isTrue
+        contractPathsAreEqual(contractPaths, expectedContractPaths)
     }
 
     @Test
@@ -170,7 +170,7 @@ internal class UtilitiesTest {
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "b/1.spec"),
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "c/1.spec"),
         )
-        assertThat(contractPaths == expectedContractPaths).isTrue
+        contractPathsAreEqual(contractPaths, expectedContractPaths)
     }
 
     @Test
@@ -197,7 +197,7 @@ internal class UtilitiesTest {
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "b/1.spec"),
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "c/1.spec"),
         )
-        assertThat(contractPaths == expectedContractPaths).isTrue
+        contractPathsAreEqual(contractPaths, expectedContractPaths)
     }
 
     @Test
@@ -226,8 +226,8 @@ internal class UtilitiesTest {
             ContractPathData("/path/to/monorepo", "$currentPath/monorepo/c/1.$CONTRACT_EXTENSION", provider=SourceProvider.git.toString(), specificationPath = "../c/1.spec"),
         )
 
-        assertThat(stubPaths == expectedStubPaths).isTrue
-        assertThat(testPaths == expectedTestPaths).isTrue
+        contractPathsAreEqual(stubPaths, expectedStubPaths)
+        contractPathsAreEqual(testPaths, expectedTestPaths)
 
         File("monorepo").deleteRecursively()
     }

@@ -12,6 +12,7 @@ import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
+import `in`.specmatic.trimmedLinesString
 import org.junit.jupiter.api.assertDoesNotThrow
 import java.util.function.Consumer
 
@@ -245,7 +246,7 @@ internal class XMLPatternTest {
 
             assertThat(testTypes.size).isEqualTo(2)
 
-            assertThat(testTypes).contains("""
+            assertThat(testTypes.map { it.trimmedLinesString() }).contains("""
                 <person>
                   <name>(string)</name>
                   <address specmatic_type="Address">
@@ -253,14 +254,14 @@ internal class XMLPatternTest {
                     <street specmatic_occurs="optional">(string)</street>
                   </address>
                 </person>
-                """.trimIndent())
+                """.trimIndent().trimmedLinesString())
 
-            assertThat(testTypes).contains("""
+            assertThat(testTypes.map { it.trimmedLinesString() }).contains("""
                 <person>
                   <name>(string)</name>
                   <address specmatic_type="Address"/>
                 </person>
-                """.trimIndent())
+                """.trimIndent().trimmedLinesString())
         }
 
         @Test
@@ -289,7 +290,7 @@ internal class XMLPatternTest {
 
             assertThat(testTypes.size).isEqualTo(3)
 
-            assertThat(testTypes).contains("""
+            assertThat(testTypes.map { it.trimmedLinesString() }).contains("""
                 <person>
                   <name>(string)</name>
                   <address specmatic_occurs="optional" specmatic_type="Address">
@@ -297,20 +298,20 @@ internal class XMLPatternTest {
                     <street specmatic_occurs="optional">(string)</street>
                   </address>
                 </person>
-                """.trimIndent())
+                """.trimIndent().trimmedLinesString())
 
-            assertThat(testTypes).contains("""
+            assertThat(testTypes.map { it.trimmedLinesString() }).contains("""
                 <person>
                   <name>(string)</name>
                   <address specmatic_occurs="optional" specmatic_type="Address"/>
                 </person>
-                """.trimIndent())
+                """.trimIndent().trimmedLinesString())
 
-            assertThat(testTypes).contains("""
+            assertThat(testTypes.map { it.trimmedLinesString() }).contains("""
                 <person>
                   <name>(string)</name>
                 </person>
-                """.trimIndent())
+                """.trimIndent().trimmedLinesString())
         }
 
         @Test
@@ -984,13 +985,13 @@ internal class XMLPatternTest {
         val xml = XMLPattern("<account><id>(number)</id></account>")
         val gherkinStatement = xml.toGherkinStatement("TypeName")
 
-        assertThat(gherkinStatement).isEqualTo(
+        assertThat(gherkinStatement.trimmedLinesString()).isEqualTo(
                 """And type TypeName
 ""${'"'}
 <account>
   <id>(number)</id>
 </account>
-""${'"'}"""
+""${'"'}""".trimmedLinesString()
         )
     }
 

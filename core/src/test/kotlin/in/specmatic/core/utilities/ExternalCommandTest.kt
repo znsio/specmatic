@@ -15,8 +15,8 @@ internal class ExternalCommandTest {
         val exception = assertThrows(ContractException::class.java) {
             ExternalCommand(arrayOf("missing_command"), ".").executeAsSeparateProcess()
         }
-        assertThat(exception.report()).isEqualTo(
-            """Error running missing_command: Cannot run program "missing_command" (in directory "."): error=2, No such file or directory"""
+        assertThat(exception.report()).startsWith(
+            """Error running missing_command: Cannot run program "missing_command" (in directory ".")"""
         )
     }
 

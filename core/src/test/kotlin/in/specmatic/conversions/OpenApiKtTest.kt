@@ -2604,7 +2604,7 @@ components:
             }
         }
 
-        assertThat(exception.message?.trimmedLinesString()).isEqualTo(
+        assertThat(exception.message?.trimmedLinesString()?.replace("<EOL><EOL>", "<EOL>")).isEqualTo(
             """400 Bad Request: "In scenario "POST /users.
             | Response: Details of the new user to register"<EOL>API: POST /users -> 201<EOL><EOL>
             |  >> REQUEST.BODY.email<EOL>  <EOL>

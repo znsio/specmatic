@@ -18,6 +18,7 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.jsonBody
+import `in`.specmatic.runningOnWindows
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
 import `in`.specmatic.trimmedLinesList
@@ -2604,7 +2605,13 @@ components:
             }
         }
 
-        assertThat(exception.message?.trimmedLinesString()?.replace("<EOL><EOL>", "<EOL>")).isEqualTo(
+        val messageToCheck = exception.message?.trimmedLinesString()?.let {
+            if(runningOnWindows())
+                it.replace("<EOL><EOL>", "<EOL>")
+            else
+                it
+        }
+        assertThat(messageToCheck).isEqualTo(
             """400 Bad Request: "In scenario "POST /users.
             | Response: Details of the new user to register"<EOL>API: POST /users -> 201<EOL><EOL>
             |  >> REQUEST.BODY.email<EOL>  <EOL>

@@ -7,7 +7,7 @@ import java.io.File
 // and if the configuration file is invalid, an exception is thrown and eaten silently by JUnit's
 // test discovery functionality.
 // Moving it here so we can use a function to read it which is not inside Configuration
-private var innerGlobalConfigFileName: String = "./${Configuration.DEFAULT_CONFIG_FILE_NAME}"
+private var innerGlobalConfigFileName: String = ".${File.separator}${Configuration.DEFAULT_CONFIG_FILE_NAME}"
 fun getGlobalConfigFileName(): String = innerGlobalConfigFileName
 
 class Configuration {

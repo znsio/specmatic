@@ -16,7 +16,6 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.osAgnosticPath
 import `in`.specmatic.stub.createStub
-import io.ktor.network.sockets.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -93,14 +92,14 @@ internal class UtilitiesTest {
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1", "featureBranch", "c/1.spec"),
         )
         verify(exactly = 1) { checkout(repositoryDirectory, branchName) }
-        extracted(contractPaths, expectedContractPaths)
+        compare(contractPaths, expectedContractPaths)
     }
 
-    private fun extracted(
+    private fun compare(
         contractPaths: List<ContractPathData>,
         expectedContractPaths: List<ContractPathData>
     ) {
-        assertThat(contractPaths).isEqualTo(expectedContractPaths)
+        assertThat(osAgnosticPaths(contractPaths)).isEqualTo(osAgnosticPaths(expectedContractPaths))
     }
 
     @Test

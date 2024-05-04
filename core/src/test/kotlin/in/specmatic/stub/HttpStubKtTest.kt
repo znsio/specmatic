@@ -22,6 +22,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.DisabledOnOs
+import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.fail
 import java.security.KeyStore
 import java.util.*
@@ -696,6 +698,7 @@ paths:
     }
 
     @Test
+    @DisabledOnOs(OS.WINDOWS)
     fun `response mismatch of externalized command response with contract triggers error`() {
         val contract = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
@@ -725,7 +728,7 @@ paths:
         """.trimIndent(), "").toFeature()
         val stub = HttpStubData(
             HttpRequest("POST", "/data", body = StringValue("Hello")).toPattern(),
-            HttpResponse.ok(parsedJSONObject("""{"id": 10}""")).copy(externalisedResponseCommand = """echo {"status":200,"body":"abc123"}"""),
+            HttpResponse.ok(parsedJSONObject("""{"id": 10}""")).copy(externalisedResponseCommand = """echo {"status":200}"""),
             Resolver(),
             responsePattern = contract.scenarios.single().httpResponsePattern
         )

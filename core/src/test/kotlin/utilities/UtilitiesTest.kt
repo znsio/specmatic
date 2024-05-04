@@ -14,6 +14,7 @@ import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.toXMLNode
+import `in`.specmatic.osAgnosticPath
 import `in`.specmatic.stub.createStub
 import io.ktor.network.sockets.*
 import io.ktor.server.application.*
@@ -92,6 +93,13 @@ internal class UtilitiesTest {
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1", "featureBranch", "c/1.spec"),
         )
         verify(exactly = 1) { checkout(repositoryDirectory, branchName) }
+        extracted(contractPaths, expectedContractPaths)
+    }
+
+    private fun extracted(
+        contractPaths: List<ContractPathData>,
+        expectedContractPaths: List<ContractPathData>
+    ) {
         assertThat(contractPaths == expectedContractPaths).isTrue
     }
 
@@ -116,8 +124,27 @@ internal class UtilitiesTest {
                 ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "b/1.spec"),
                 ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "c/1.spec"),
         )
-        assertThat(contractPaths == expectedContractPaths).isTrue
+        contractPathsAreEqual(contractPaths, expectedContractPaths)
     }
+
+    private fun contractPathsAreEqual(
+        contractPaths: List<ContractPathData>,
+        expectedContractPaths: List<ContractPathData>
+    ) {
+
+        assertThat(osAgnosticPaths(contractPaths) == osAgnosticPaths(expectedContractPaths)).isTrue
+    }
+
+    private fun osAgnosticPaths(contractPaths: List<ContractPathData>): List<ContractPathData> {
+        return contractPaths.map {
+            it.copy(
+                baseDir = osAgnosticPath(it.baseDir),
+                path = osAgnosticPath(it.path),
+                specificationPath = it.specificationPath?.let { osAgnosticPath(it) }
+            )
+        }
+    }
+
 
     @Test
     fun `contractFilePathsFrom sources when contracts repo dir exists and is not clean`() {

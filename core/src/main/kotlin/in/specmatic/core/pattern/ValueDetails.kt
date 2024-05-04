@@ -16,9 +16,9 @@ class ValueDetails(val messages: List<String> = emptyList(), val breadCrumbs: Li
         val body = messages.joinToString(System.lineSeparator())
 
         return """
-            >> $breadCrumbs
-            
-               $body
+>> $breadCrumbs
+
+   $body
         """.trimIndent()
     }
 

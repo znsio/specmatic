@@ -137,3 +137,7 @@ val DefaultStrategies = FlagsBased (
     ""
 )
 
+
+fun osAgnosticPath(path: String): String {
+    return path.replace("/", File.separator)
+}

@@ -118,8 +118,9 @@ paths:
             service1File.parentFile.mkdirs()
             service1File.writeText(service1spec)
         }
-        fun osAgnosticPath(path: String): String {
-            return path.replace("/", File.separator)
-        }
     }
+}
+
+fun osAgnosticPath(path: String): String {
+    return path.replace("/", File.separator)
 }

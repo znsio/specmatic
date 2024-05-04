@@ -12,6 +12,7 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
+import `in`.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
 import org.junit.jupiter.api.*
@@ -411,7 +412,7 @@ Scenario: JSON API to get account details with fact check
                 mock.setExpectation(ScenarioStub(expectedRequest, expectedResponse))
                 throw AssertionError("Should not allow unexpected values in enums")
             } catch (e: Exception) {
-                assertThat(e.toString()).isEqualTo(
+                assertThat(e.toString().trimmedLinesString()).isEqualTo(
                     """
                     in.specmatic.mock.NoMatchingScenario: In scenario "api call"
                     API: GET /(organisation:Organisation)/employees/ -> 200
@@ -419,7 +420,7 @@ Scenario: JSON API to get account details with fact check
                       >> RESPONSE.BODY[0].rating
                       
                          ${ContractAndStubMismatchMessages.mismatchMessage("(1 or 2 or 3)", "4 (number)")}
-                """.trimIndent()
+                """.trimIndent().trimmedLinesString()
                 )
             }
         }

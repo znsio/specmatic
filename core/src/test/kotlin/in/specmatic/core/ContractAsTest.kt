@@ -8,6 +8,8 @@ import `in`.specmatic.core.utilities.parseXML
 import `in`.specmatic.core.value.*
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
+import `in`.specmatic.trimmedLinesList
+import `in`.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.*
@@ -83,7 +85,7 @@ class ContractAsTest {
 
             override fun setServerState(serverState: Map<String, Value>) {}
         })
-        assertThat(results.report()).isEqualTo(
+        assertThat(results.report().trimmedLinesString()).isEqualTo(
             """
             In scenario "Get balance"
             API: GET /balance -> 200
@@ -91,7 +93,7 @@ class ContractAsTest {
               >> RESPONSE.HEADERS.length
               
                  ${ContractAndResponseMismatch.mismatchMessage("number", "\"abc\"")}
-            """.trimIndent()
+            """.trimIndent().trimmedLinesString()
         )
     }
 

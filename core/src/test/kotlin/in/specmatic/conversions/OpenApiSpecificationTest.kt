@@ -13,6 +13,7 @@ import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
+import `in`.specmatic.trimmedLinesString
 import io.ktor.util.reflect.*
 import io.swagger.v3.core.util.Yaml
 import io.swagger.v3.oas.models.OpenAPI
@@ -6621,12 +6622,12 @@ paths:
                     ), HttpResponse.ok("success")
                 )
 
-            assertThat(result.reportString()).isEqualTo(
+            assertThat(result.reportString().trimmedLinesString()).isEqualTo(
                 """
                 >> REQUEST.BODY[1].name
 
                    Expected key named "name" was missing
-            """.trimIndent()
+            """.trimIndent().trimmedLinesString()
             )
         }
     }

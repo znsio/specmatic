@@ -249,7 +249,7 @@ class HttpQueryParamPatternTest {
         fun `fails when request contains a parameter whose type does not match the spec`() {
             val result = unStubbedArrayQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("brand_ids" to "abc", "brand_ids" to "def"))),  Resolver())
             assertThat(result is Failure).isTrue
-            assertThat(result.reportString()).isEqualTo("""
+            assertThat(result.reportString().trimmedLinesList()).isEqualTo("""
                 >> QUERY-PARAMS.brand_ids
 
                    Expected number, actual was "abc"
@@ -257,29 +257,29 @@ class HttpQueryParamPatternTest {
                 >> QUERY-PARAMS.brand_ids
                 
                    Expected number, actual was "def"
-            """.trimIndent())
+            """.trimIndent().trimmedLinesList())
         }
 
         @Test
         fun `fails when request does not contain a mandatory query parameter`() {
             val result = unStubbedArrayQueryParameterPattern.matches(HttpRequest("GET", "/", emptyMap()),  Resolver())
             assertThat(result is Failure).isTrue
-            assertThat(result.reportString()).isEqualTo("""
+            assertThat(result.reportString().trimmedLinesList()).isEqualTo("""
                 >> QUERY-PARAMS.brand_ids
 
                    Expected query param named "brand_ids" was missing
-            """.trimIndent())
+            """.trimIndent().trimmedLinesList())
         }
 
         @Test
         fun `fails when request contains a query parameter not present in the spec`() {
             val result = unStubbedArrayQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "product_id" to "1"))),  Resolver())
             assertThat(result is Failure).isTrue
-            assertThat(result.reportString()).isEqualTo("""
+            assertThat(result.reportString().trimmedLinesList()).isEqualTo("""
                 >> QUERY-PARAMS.product_id
 
                    Query param named "product_id" was unexpected
-            """.trimIndent())
+            """.trimIndent().trimmedLinesList())
         }
 
         @Test

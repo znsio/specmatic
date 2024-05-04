@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -9,11 +10,11 @@ internal class FailureReportTest {
         val personIdDetails = MatchFailureDetails(listOf("person", "id"), listOf("error"))
         val report = FailureReport(null, null, null, listOf(personIdDetails))
 
-        assertThat(report.toText()).isEqualTo("""
+        assertThat(report.toText().trimmedLinesString()).isEqualTo("""
             >> person.id
 
                error
-        """.trimIndent())
+        """.trimIndent().trimmedLinesString())
     }
 
     @Test
@@ -23,7 +24,7 @@ internal class FailureReportTest {
 
         val report = FailureReport(null, null, null, listOf(personIdDetails, personNameDetails))
 
-        assertThat(report.toText()).isEqualTo("""
+        assertThat(report.toText().trimmedLinesString()).isEqualTo("""
             >> person.id
 
                error
@@ -31,7 +32,7 @@ internal class FailureReportTest {
             >> person.name
 
                error
-        """.trimIndent())
+        """.trimIndent().trimmedLinesString())
     }
 
     @Test

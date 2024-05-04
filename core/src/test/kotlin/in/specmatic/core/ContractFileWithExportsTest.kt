@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.osAgnosticPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -9,6 +10,6 @@ internal class ContractFileWithExportsTest {
         val contractFileWithExports =
             ContractFileWithExports("contract.spec", AnchorFile("/path/to/hello/../hello/something/../world"))
 
-        assertThat(contractFileWithExports.absolutePath).isEqualTo("/path/to/hello/contract.spec")
+        assertThat(osAgnosticPath(contractFileWithExports.absolutePath)).isEqualTo(osAgnosticPath("/path/to/hello/contract.spec"))
     }
 }

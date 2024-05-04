@@ -1,13 +1,10 @@
 package `in`.specmatic.core.pattern
 
-import `in`.specmatic.GENERATION
+import `in`.specmatic.*
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.value.*
-import `in`.specmatic.emptyPattern
-import `in`.specmatic.shouldContainInAnyOrder
-import `in`.specmatic.shouldMatch
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.fail
@@ -241,7 +238,7 @@ internal class AnyPatternTest {
 
         val personMatchResult = personType.matches(personData, Resolver()).reportString()
 
-        assertThat(personMatchResult).contains("""
+        assertThat(personMatchResult.trimmedLinesString()).contains("""
             >> personInfo (when Customer object).salutation
             
                Key named "salutation" was unexpected
@@ -253,7 +250,7 @@ internal class AnyPatternTest {
             >> personInfo (when Employee object).salutation
             
                Key named "salutation" was unexpected
-       """.trimIndent())
+       """.trimIndent().trimmedLinesString())
     }
 
     @Test

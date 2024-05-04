@@ -8,6 +8,7 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.mock.mockFromJSON
+import `in`.specmatic.osAgnosticPath
 import io.mockk.every
 import io.mockk.mockk
 import io.swagger.v3.core.util.Yaml
@@ -125,7 +126,7 @@ class FeatureKtTest {
         val pattern = feature.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
         assertThat(pattern.name).isEqualTo("customer_info")
         val filename = (pattern.filename as ExactValuePattern).pattern.toStringLiteral()
-        assertThat(filename).endsWith("/customer_info.csv")
+        assertThat(filename).endsWith(osAgnosticPath("/customer_info.csv"))
         assertThat(pattern.contentType).isEqualTo("text/csv")
         assertThat(pattern.contentEncoding).isEqualTo("gzip")
     }
@@ -144,7 +145,7 @@ class FeatureKtTest {
         val pattern = behaviour.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
         assertThat(pattern.name).isEqualTo("customer_info")
         val filename = (pattern.filename as ExactValuePattern).pattern.toStringLiteral()
-        assertThat(filename).endsWith("/customer_info.csv")
+        assertThat(filename).endsWith(osAgnosticPath("/customer_info.csv"))
         assertThat(pattern.contentType).isEqualTo("text/csv")
         assertThat(pattern.contentEncoding).isEqualTo(null)
     }
@@ -163,7 +164,7 @@ class FeatureKtTest {
         val pattern = behaviour.scenarios.single().httpRequestPattern.multiPartFormDataPattern.single() as MultiPartFilePattern
         assertThat(pattern.name).isEqualTo("customer_info")
         val filename = (pattern.filename as ExactValuePattern).pattern.toStringLiteral()
-        assertThat(filename).endsWith("/customer_info.csv")
+        assertThat(filename).endsWith(osAgnosticPath("/customer_info.csv"))
         assertThat(pattern.contentType).isEqualTo(null)
         assertThat(pattern.contentEncoding).isEqualTo(null)
     }

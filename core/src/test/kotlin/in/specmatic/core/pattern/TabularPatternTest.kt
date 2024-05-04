@@ -9,6 +9,7 @@ import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
 import `in`.specmatic.stub.HttpStub
 import com.fasterxml.jackson.annotation.JsonProperty
+import `in`.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -319,13 +320,13 @@ Feature: test feature
         val resolver = feature.scenarios.single().resolver
         val result = feature.scenarios.single().httpRequestPattern.matches(request, resolver)
 
-        assertThat(result.toReport().toString()).isEqualTo(
+        assertThat(result.toReport().toString().trimmedLinesString()).isEqualTo(
             """>> REQUEST.BODY.name
 
    Expected string, actual was JSON object {
        "firstname": "Jane",
        "lastname": "Doe"
-   }"""
+   }""".trimmedLinesString()
         )
     }
 

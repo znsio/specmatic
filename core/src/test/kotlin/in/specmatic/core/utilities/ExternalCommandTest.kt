@@ -28,10 +28,10 @@ internal class ExternalCommandTest {
         }
         assertThat(exception.message?.trim() ?: "").satisfies(
             Consumer {
-                assertThat(it).startsWith("Error executing cat missing_file: ")
+                assertThat(it).contains("Error executing cat missing_file")
             },
             Consumer {
-                assertThat(it).endsWith("missing_file: No such file or directory")
+                assertThat(it).contains("missing_file: No such file or directory")
             }
         )
     }

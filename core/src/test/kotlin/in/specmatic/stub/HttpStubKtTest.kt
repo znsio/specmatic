@@ -696,7 +696,7 @@ paths:
     }
 
     @Test
-    fun `response mismatch with contract triggers triggers custom errors`() {
+    fun `response mismatch of externalized command response with contract triggers error`() {
         val contract = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
 info:
@@ -716,27 +716,19 @@ paths:
         '200':
           description: Says hello
           content:
-            text/plain:
+            application/json:
               schema:
-                type: number
+                type: object
+                properties:
+                  id:
+                    type: number
         """.trimIndent(), "").toFeature()
         val stub = HttpStubData(
             HttpRequest("POST", "/data", body = StringValue("Hello")).toPattern(),
-            HttpResponse.ok("abc123").copy(externalisedResponseCommand = """echo {"status": 200, "body": "abc123"}"""),
+            HttpResponse.ok(parsedJSONObject("""{"id": 10}""")).copy(externalisedResponseCommand = """echo {"status": 200, "body": "abc123"}"""),
             Resolver(),
             responsePattern = contract.scenarios.single().httpResponsePattern
         )
-
-        // TODO temp
-        val command = ExternalCommand("""echo {"status": 200, "body": "abc123"}""", ".", emptyMap())
-        try {
-            println("Executing \"\"\"echo {\"status\": 200, \"body\": \"abc123\"}\"\"\"")
-            val result = command.executeAsSeparateProcess()
-            println(result)
-        } catch (e: Throwable) {
-            println(exceptionCauseMessage(e))
-        }
-
 
         assertThatThrownBy {
             getHttpResponse(HttpRequest("POST", "/data", body = StringValue("Hello")), listOf(contract), ThreadSafeListOfStubs(mutableListOf(stub)), ThreadSafeListOfStubs(mutableListOf()), false)

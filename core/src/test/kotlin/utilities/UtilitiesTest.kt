@@ -131,8 +131,7 @@ internal class UtilitiesTest {
         contractPaths: List<ContractPathData>,
         expectedContractPaths: List<ContractPathData>
     ) {
-
-        assertThat(osAgnosticPaths(contractPaths) == osAgnosticPaths(expectedContractPaths)).isTrue
+        assertThat(osAgnosticPaths(contractPaths)).isEqualTo(osAgnosticPaths(expectedContractPaths))
     }
 
     private fun osAgnosticPaths(contractPaths: List<ContractPathData>): List<ContractPathData> {

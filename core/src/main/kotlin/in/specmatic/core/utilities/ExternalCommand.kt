@@ -32,7 +32,7 @@ class ExternalCommand(
             val exitCode = proc.waitFor()
 
             if (exitCode != 0)
-                throw NonZeroExitError("""Error executing $commandWithParameters: ${err.ifEmpty { out }}""", exitCode)
+                throw NonZeroExitError("""Error executing $commandWithParameters${System.lineSeparator()}ERRORS: $err${System.lineSeparator()}${System.lineSeparator()}$out${System.lineSeparator()}${System.lineSeparator()}""", exitCode)
 
             out
         } catch (otherExceptions: Exception) {

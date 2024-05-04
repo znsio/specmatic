@@ -150,4 +150,10 @@ fun String.trimmedLinesString(): String {
     return this.lines().joinToString(System.lineSeparator()) { it.trim() }
 }
 
-fun runningOnWindows() = System.getProperty("os.name").lowercase() == "windows"
+fun runningOnWindows(): Boolean {
+    val osName = System.getProperty("os.name")
+
+    println("OS name: $osName")
+
+    return "windows" in osName.lowercase()
+}

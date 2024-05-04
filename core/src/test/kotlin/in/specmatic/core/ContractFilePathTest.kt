@@ -5,6 +5,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.osAgnosticPath
 
 internal class ContractFilePathTest {
     @Test
@@ -12,7 +13,7 @@ internal class ContractFilePathTest {
         val contractPath = "random.$CONTRACT_EXTENSION"
 
         val actualFeature = ContractFileWithExports(pathTo(contractPath)).readFeatureForValue("")
-        val expectedFeature = parseGherkinStringToFeature(readTextResource(contractPath), javaClass.classLoader.getResource(contractPath)?.file!!)
+        val expectedFeature = parseGherkinStringToFeature(readTextResource(contractPath), osAgnosticPath( javaClass.classLoader.getResource(contractPath)?.file!!))
 
         assertThat(actualFeature).isEqualTo(expectedFeature)
     }

@@ -861,7 +861,7 @@ private fun strictModeHttp400Response(
     return HttpResponse(
         400,
         headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"),
-        body = StringValue("STRICT MODE ON\n\n${results.strictModeReport(httpRequest)}")
+        body = StringValue("STRICT MODE ON${System.lineSeparator()}${System.lineSeparator()}${results.strictModeReport(httpRequest)}")
     )
 }
 

@@ -11,6 +11,7 @@ import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
+import `in`.specmatic.trimmedLinesList
 import java.util.function.Consumer
 
 internal class ScenarioStubKtTest {
@@ -855,14 +856,14 @@ paths:
         assertThatThrownBy {
             feature.matchingStub(request, response, ContractAndStubMismatchMessages)
         }.satisfies(Consumer {
-            assertThat((it as NoMatchingScenario).report(request).trim()).isEqualTo("""
+            assertThat((it as NoMatchingScenario).report(request).trim().trimmedLinesList()).isEqualTo("""
                 In scenario "hello world. Response: Says hello"
                 API: GET /hello/(id:number) -> 200
 
                   >> REQUEST.HEADERS.X-Value
                   
                      ${ContractAndStubMismatchMessages.mismatchMessage("number", """"data" """.trim())}
-                """.trimIndent())
+                """.trimIndent().trimmedLinesList())
         })
     }
 }

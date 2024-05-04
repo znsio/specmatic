@@ -7,6 +7,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.value.*
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
+import `in`.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled
@@ -173,7 +174,7 @@ internal class JSONObjectPatternTest {
             it as Result.Failure
             assertThat(it.causes).hasSize(2)
 
-            assertThat(it.toFailureReport().toString()).isEqualTo("""
+            assertThat(it.toFailureReport().toString().trimmedLinesString()).isEqualTo("""
                 >> id
 
                    Expected number, actual was "abc123"
@@ -181,7 +182,7 @@ internal class JSONObjectPatternTest {
                 >> address.flat
 
                    Expected number, actual was "10"
-            """.trimIndent().trim())
+            """.trimIndent().trim().trimmedLinesString())
         })
     }
 

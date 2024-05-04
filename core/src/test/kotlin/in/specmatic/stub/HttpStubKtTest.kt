@@ -7,11 +7,13 @@ import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.pattern.parsedValue
+import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stubResponse
 import `in`.specmatic.test.HttpClient
+import `in`.specmatic.trimmedLinesList
 import io.mockk.InternalPlatformDsl.toStr
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
@@ -20,6 +22,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.DisabledOnOs
+import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.fail
 import java.security.KeyStore
 import java.util.*
@@ -322,7 +326,7 @@ Feature: Test
     private fun assertResponseFailure(stubResponse: HttpStubResponse, errorMessage: String) {
         assertThat(stubResponse.response.status).isEqualTo(400)
         assertThat(stubResponse.response.headers).containsEntry(SPECMATIC_RESULT_HEADER, "failure")
-        assertThat(stubResponse.response.body.toStringLiteral()).isEqualTo(errorMessage)
+        assertThat(stubResponse.response.body.toStringLiteral().trimmedLinesList()).isEqualTo(errorMessage.trimmedLinesList())
     }
 
     @Test
@@ -694,7 +698,8 @@ paths:
     }
 
     @Test
-    fun `response mismatch with contract triggers triggers custom errors`() {
+    @DisabledOnOs(OS.WINDOWS)
+    fun `response mismatch of externalized command response with contract triggers error`() {
         val contract = OpenApiSpecification.fromYAML("""
 openapi: 3.0.0
 info:
@@ -714,13 +719,16 @@ paths:
         '200':
           description: Says hello
           content:
-            text/plain:
+            application/json:
               schema:
-                type: number
+                type: object
+                properties:
+                  id:
+                    type: number
         """.trimIndent(), "").toFeature()
         val stub = HttpStubData(
             HttpRequest("POST", "/data", body = StringValue("Hello")).toPattern(),
-            HttpResponse.ok("abc123").copy(externalisedResponseCommand = """echo {"status": 200, "body": "abc123"}"""),
+            HttpResponse.ok(parsedJSONObject("""{"id": 10}""")).copy(externalisedResponseCommand = """echo {"status":200}"""),
             Resolver(),
             responsePattern = contract.scenarios.single().httpResponsePattern
         )

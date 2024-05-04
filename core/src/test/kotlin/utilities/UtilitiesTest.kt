@@ -14,8 +14,8 @@ import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.toXMLNode
+import `in`.specmatic.osAgnosticPath
 import `in`.specmatic.stub.createStub
-import io.ktor.network.sockets.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -67,7 +67,7 @@ internal class UtilitiesTest {
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1",   specificationPath = "c/1.spec"),
         )
         verify(exactly = 0) { checkout(any(), any()) }
-        assertThat(contractPaths == expectedContractPaths).isTrue
+        contractPathsAreEqual(contractPaths, expectedContractPaths)
     }
 
     @Test
@@ -92,7 +92,14 @@ internal class UtilitiesTest {
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1", "featureBranch", "c/1.spec"),
         )
         verify(exactly = 1) { checkout(repositoryDirectory, branchName) }
-        assertThat(contractPaths == expectedContractPaths).isTrue
+        compare(contractPaths, expectedContractPaths)
+    }
+
+    private fun compare(
+        contractPaths: List<ContractPathData>,
+        expectedContractPaths: List<ContractPathData>
+    ) {
+        assertThat(osAgnosticPaths(contractPaths)).isEqualTo(osAgnosticPaths(expectedContractPaths))
     }
 
     @Test
@@ -116,8 +123,30 @@ internal class UtilitiesTest {
                 ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "b/1.spec"),
                 ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "c/1.spec"),
         )
-        assertThat(contractPaths == expectedContractPaths).isTrue
+        contractPathsAreEqual(contractPaths, expectedContractPaths)
     }
+
+    private fun contractPathsAreEqual(
+        contractPaths: List<ContractPathData>,
+        expectedContractPaths: List<ContractPathData>
+    ) {
+        assertThat(osAgnosticPaths(contractPaths)).isEqualTo(osAgnosticPaths(expectedContractPaths))
+    }
+
+    private fun osAgnosticPaths(contractPaths: List<ContractPathData>): List<ContractPathData> {
+        return contractPaths.map {
+            it.copy(
+                baseDir = removeDrive(osAgnosticPath(it.baseDir)),
+                path = removeDrive(osAgnosticPath(it.path)),
+                specificationPath = it.specificationPath?.let { osAgnosticPath(it) }
+            )
+        }
+    }
+
+    private fun removeDrive(path: String): String {
+        return path.replace(Regex("^.:"), "")
+    }
+
 
     @Test
     fun `contractFilePathsFrom sources when contracts repo dir exists and is not clean`() {
@@ -143,7 +172,7 @@ internal class UtilitiesTest {
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "b/1.spec"),
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "c/1.spec"),
         )
-        assertThat(contractPaths == expectedContractPaths).isTrue
+        contractPathsAreEqual(contractPaths, expectedContractPaths)
     }
 
     @Test
@@ -170,7 +199,7 @@ internal class UtilitiesTest {
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/b/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "b/1.spec"),
             ContractPathData(".spec/repos/repo1", ".spec/repos/repo1/c/1.$CONTRACT_EXTENSION", "git", "https://repo1",  specificationPath = "c/1.spec"),
         )
-        assertThat(contractPaths == expectedContractPaths).isTrue
+        contractPathsAreEqual(contractPaths, expectedContractPaths)
     }
 
     @Test
@@ -199,8 +228,8 @@ internal class UtilitiesTest {
             ContractPathData("/path/to/monorepo", "$currentPath/monorepo/c/1.$CONTRACT_EXTENSION", provider=SourceProvider.git.toString(), specificationPath = "../c/1.spec"),
         )
 
-        assertThat(stubPaths == expectedStubPaths).isTrue
-        assertThat(testPaths == expectedTestPaths).isTrue
+        contractPathsAreEqual(stubPaths, expectedStubPaths)
+        contractPathsAreEqual(testPaths, expectedTestPaths)
 
         File("monorepo").deleteRecursively()
     }

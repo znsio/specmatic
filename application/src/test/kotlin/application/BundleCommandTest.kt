@@ -149,8 +149,4 @@ internal class BundleCommandTest {
         verify(exactly = 1) {pathDataToZipperEntry(any(), ContractPathData("cloneDir", osAgnosticPath("cloneDir/b/1.$CONTRACT_EXTENSION")), fileOperations)}
         verify(exactly = 1) {pathDataToZipperEntry(any(), ContractPathData(".", osAgnosticPath("./c/1.$CONTRACT_EXTENSION")), fileOperations)}
     }
-
-    fun osAgnosticPath(path: String): String {
-        return path.replace("/", File.separator)
-    }
 }

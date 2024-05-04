@@ -3,6 +3,7 @@ package `in`.specmatic.stub
 import `in`.specmatic.core.*
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.attempt
 import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 
@@ -31,8 +32,12 @@ data class HttpStubData(
             response.externalisedResponseCommand,
             mapOf("SPECMATIC_REQUEST" to """'${httpRequest.toJSON().toUnformattedStringLiteral()}'"""),
         )
-        val responseMap = jsonStringToValueMap(result)
-        val externalCommandResponse = HttpResponse.fromJSON(responseMap)
+
+        val externalCommandResponse = attempt {
+            val responseMap = jsonStringToValueMap(result)
+            HttpResponse.fromJSON(responseMap)
+        }
+
         val responseMatches = responsePattern.matches(externalCommandResponse, resolver.copy(mismatchMessages = ContractExternalResponseMismatch))
         return when {
             !responseMatches.isSuccess() -> {

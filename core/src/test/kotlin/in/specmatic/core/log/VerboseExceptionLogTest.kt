@@ -13,7 +13,7 @@ internal class VerboseExceptionLogTest {
 
     @Test
     fun `verbose exception log text`() {
-        assertThat(log.toLogString().trim()).startsWith("msg: test\n")
+        assertThat(log.toLogString().trim().lines().first()).isEqualTo("msg: test")
         assertThat(log.toLogString().trim()).contains("ContractException")
     }
 

@@ -42,7 +42,7 @@ dependencies {
 
     implementation 'com.flipkart.zjsonpatch:zjsonpatch:0.4.16'
 
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.1'
 
     implementation 'io.swagger.parser.v3:swagger-parser:2.1.22'
 

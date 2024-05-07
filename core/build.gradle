@@ -36,7 +36,7 @@ dependencies {
     implementation("io.ktor:ktor-server-double-receive:$ktor_version")
 
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.3"
-    implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.23"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.24"
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 

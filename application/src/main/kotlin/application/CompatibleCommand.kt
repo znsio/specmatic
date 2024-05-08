@@ -23,6 +23,7 @@ import org.junit.platform.reporting.legacy.xml.LegacyXmlReportGeneratingListener
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.stereotype.Component
 import picocli.CommandLine
 import picocli.CommandLine.*
 import java.io.File
@@ -71,6 +72,7 @@ open class JUnitBackwardCompatibilityTestRunner {
     }
 }
 
+@Component
 @Command(name = "git",
         mixinStandardHelpOptions = true,
         description = ["Checks backward compatibility of a contract in a git repository"])

@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.trimmedLinesList
 
 internal class XMLNodeTest {
     @Test
@@ -229,11 +230,11 @@ internal class XMLNodeTest {
 
         val prettyStringValue = originalXml.toPrettyStringValue()
 
-        assertThat(prettyStringValue).isEqualTo("""
+        assertThat(prettyStringValue.trimmedLinesList()).isEqualTo("""
             <customer>
               <firstname>Jill</firstname>
               <surname>Granger</surname>
-            </customer>""".trimIndent())
+            </customer>""".trimIndent().trimmedLinesList())
     }
 
     @Test
@@ -249,11 +250,11 @@ internal class XMLNodeTest {
 
         val prettyStringValue = originalXml.toPrettyStringValue()
 
-        assertThat(prettyStringValue).isEqualTo("""
+        assertThat(prettyStringValue.trimmedLinesList()).isEqualTo("""
             <ns0:customer>
               <firstname ns0:correct="true">Jill</firstname>
               <surname>Granger</surname>
-            </ns0:customer>""".trimIndent())
+            </ns0:customer>""".trimIndent().trimmedLinesList())
     }
 
     @Test

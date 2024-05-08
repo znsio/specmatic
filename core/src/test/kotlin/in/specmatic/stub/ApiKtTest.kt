@@ -7,6 +7,7 @@ import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.trimmedLinesList
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 
@@ -498,12 +499,12 @@ sample.json didn't match math.$CONTRACT_EXTENSION
 
         val errorMessage = stubMatchErrorMessage(stubMatchResults, "stubfile.json")
 
-        assertThat(errorMessage).isEqualTo("""
+        assertThat(errorMessage.trimmedLinesList()).isEqualTo("""
             stubfile.json didn't match /path/to/contract
               No match was found.
               
               deep
-        """.trimIndent())
+        """.trimIndent().trimmedLinesList())
 
         println(errorMessage)
     }
@@ -515,12 +516,12 @@ sample.json didn't match math.$CONTRACT_EXTENSION
 
         val errorMessage = stubMatchErrorMessage(listOf(makeStubMatchResults(results1), makeStubMatchResults(results2)), "stubfile.json")
 
-        assertThat(errorMessage).isEqualTo("""
+        assertThat(errorMessage.trimmedLinesList()).isEqualTo("""
             stubfile.json didn't match /path/to/contract
               No match was found.
               
               failed
-        """.trimIndent())
+        """.trimIndent().trimmedLinesList())
 
         println(errorMessage)
     }

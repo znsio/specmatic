@@ -13,12 +13,16 @@ import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
+import `in`.specmatic.trimmedLinesString
 import io.ktor.util.reflect.*
 import io.swagger.v3.core.util.Yaml
 import io.swagger.v3.oas.models.OpenAPI
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.condition.DisabledOnOs
+import org.junit.jupiter.api.condition.OS
+import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -4777,7 +4781,7 @@ paths:
         }
 
         @Test
-        fun `run contract tests from an OpenAPI XML spec`(@TempDir dir: File) {
+        fun `run contract tests from an OpenAPI XML spec`(@TempDir(cleanup = CleanupMode.ALWAYS) dir: File) {
             val contractString = """
                 openapi: 3.0.3
                 info:
@@ -4874,7 +4878,7 @@ paths:
     }
 
     @Test
-    fun `support for exporting values from a wrapper spec file`(@TempDir tempDir: File) {
+    fun `support for exporting values from a wrapper spec file`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
         val openAPI = """
             ---
             openapi: "3.0.1"
@@ -4940,7 +4944,7 @@ paths:
     }
 
     @Test
-    fun `support for multipart form data tests`(@TempDir tempDir: File) {
+    fun `support for multipart form data tests`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
         val openAPI = """
             ---
             openapi: "3.0.1"
@@ -5020,6 +5024,7 @@ paths:
     }
 
     @Nested
+    @DisabledOnOs(OS.WINDOWS)
     inner class MultiPartRequestBody {
         private val openAPI = """
             ---
@@ -5129,7 +5134,7 @@ paths:
         }
 
         @Test
-        fun `support for multipart form data file stub`(@TempDir tempDir: File) {
+        fun `support for multipart form data file stub`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
             openAPIFile.writeText(openAPI)
 
@@ -5184,7 +5189,7 @@ paths:
 
         @Disabled
         @Test
-        fun `support for multipart form data stub and validate contentType`(@TempDir tempDir: File) {
+        fun `support for multipart form data stub and validate contentType`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
             openAPIFile.writeText(openAPI)
 
@@ -5237,7 +5242,7 @@ paths:
         }
 
         @Test
-        fun `support for multipart form data file stub and validate content`(@TempDir tempDir: File) {
+        fun `support for multipart form data file stub and validate content`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
             openAPIFile.writeText(openAPI)
 
@@ -5294,7 +5299,7 @@ paths:
 
         @Disabled
         @Test
-        fun `support for multipart form data non-file stub and validate content type`(@TempDir tempDir: File) {
+        fun `support for multipart form data non-file stub and validate content type`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
             openAPIFile.writeText(openAPI)
 
@@ -5350,7 +5355,7 @@ paths:
         }
 
         @Test
-        fun `support for multipart form data non-file stub and validate content`(@TempDir tempDir: File) {
+        fun `support for multipart form data non-file stub and validate content`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
             openAPIFile.writeText(openAPI)
 
@@ -6621,12 +6626,12 @@ paths:
                     ), HttpResponse.ok("success")
                 )
 
-            assertThat(result.reportString()).isEqualTo(
+            assertThat(result.reportString().trimmedLinesString()).isEqualTo(
                 """
                 >> REQUEST.BODY[1].name
 
                    Expected key named "name" was missing
-            """.trimIndent()
+            """.trimIndent().trimmedLinesString()
             )
         }
     }

@@ -1,5 +1,6 @@
 package reports
 
+import `in`.specmatic.osAgnosticPath
 import `in`.specmatic.reports.CentralContractRepoReport
 import `in`.specmatic.reports.CentralContractRepoReportJson
 import `in`.specmatic.reports.SpecificationOperation
@@ -15,43 +16,55 @@ class CentralContractRepoReportTest {
     @Test
     fun `test generates report based on all the open api specifications present in the specified dir`() {
         val report = CentralContractRepoReport().generate("./specifications")
-        assertThat(report).isEqualTo(
-            CentralContractRepoReportJson(
-                listOf(
-                    SpecificationRow(
-                        "service1/service1.yaml",
-                        "HTTP",
-                        listOf(
-                            SpecificationOperation(
-                                "/hello/{id}",
-                                "GET",
-                                200
-                            ),
-                            SpecificationOperation(
-                                "/hello/{id}",
-                                "GET",
-                                404
-                            ),
-                            SpecificationOperation(
-                                "/hello/{id}",
-                                "GET",
-                                400
+        assertThat(osAgnosticPaths(report)).isEqualTo(
+            osAgnosticPaths(
+                CentralContractRepoReportJson(
+                    listOf(
+                        SpecificationRow(
+                            "service1/service1.yaml",
+                            "HTTP",
+                            listOf(
+                                SpecificationOperation(
+                                    "/hello/{id}",
+                                    "GET",
+                                    200
+                                ),
+                                SpecificationOperation(
+                                    "/hello/{id}",
+                                    "GET",
+                                    404
+                                ),
+                                SpecificationOperation(
+                                    "/hello/{id}",
+                                    "GET",
+                                    400
+                                )
                             )
-                        )
-                    ),
-                    SpecificationRow(
-                        "service2/service2.yaml",
-                        "HTTP",
-                        listOf(
-                            SpecificationOperation(
-                                "/products/{id}",
-                                "GET",
-                                200
+                        ),
+                        SpecificationRow(
+                            "service2/service2.yaml",
+                            "HTTP",
+                            listOf(
+                                SpecificationOperation(
+                                    "/products/{id}",
+                                    "GET",
+                                    200
+                                )
                             )
-                        )
-                    ),
+                        ),
+                    )
                 )
             )
+        )
+    }
+
+    private fun osAgnosticPaths(report: CentralContractRepoReportJson): CentralContractRepoReportJson {
+        return report.copy(
+            specifications = report.specifications.map {
+                it.copy(
+                    specification = osAgnosticPath(it.specification)
+                )
+            }
         )
     }
 

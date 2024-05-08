@@ -41,7 +41,7 @@ class BundleTestData(tempDir: File) {
                   "sources": [
                     {
                       "provider": "git",
-                      "repository": "${gitDir.canonicalPath}",
+                      "repository": "${gitDir.canonicalPath.escapeBackSlashes()}",
                       "test": [
                         "test.yaml"
                       ],
@@ -56,6 +56,10 @@ class BundleTestData(tempDir: File) {
         configFilename = Configuration.globalConfigFileName
         Configuration.globalConfigFileName = specmaticJSONFile.canonicalPath
     }
+}
+
+private fun String.escapeBackSlashes(): String {
+    return this.replace("\\", "\\\\")
 }
 
 private fun createDir(gitDir: File, dirName: String): File {

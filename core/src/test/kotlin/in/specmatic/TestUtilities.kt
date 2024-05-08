@@ -137,3 +137,23 @@ val DefaultStrategies = FlagsBased (
     ""
 )
 
+
+fun osAgnosticPath(path: String): String {
+    return path.replace("/", File.separator)
+}
+
+fun String.trimmedLinesList(): List<String> {
+    return this.lines().map { it.trim() }
+}
+
+fun String.trimmedLinesString(): String {
+    return this.lines().joinToString(System.lineSeparator()) { it.trim() }
+}
+
+fun runningOnWindows(): Boolean {
+    val osName = System.getProperty("os.name")
+
+    println("OS name: $osName")
+
+    return "windows" in osName.lowercase()
+}

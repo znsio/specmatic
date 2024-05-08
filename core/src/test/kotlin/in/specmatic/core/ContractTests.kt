@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.*
+import `in`.specmatic.osAgnosticPath
 import `in`.specmatic.test.HttpClient
 import `in`.specmatic.test.TestExecutor
 import io.ktor.http.*
@@ -625,7 +626,7 @@ Then status 200
 
                 val part = request.multiPartFormData.single() as MultiPartFileValue
                 assertThat(part.name).isEqualTo("number")
-                assertThat(part.filename).endsWith("/number.txt")
+                assertThat(part.filename).endsWith(osAgnosticPath("/number.txt"))
                 assertThat(part.contentType).isEqualTo("text/plain")
 
                 return HttpResponse.OK
@@ -659,7 +660,7 @@ Then status 200
 
                 val part = request.multiPartFormData.single() as MultiPartFileValue
                 assertThat(part.name).isEqualTo("number")
-                assertThat(part.filename).endsWith("/number.txt")
+                assertThat(part.filename).endsWith(osAgnosticPath("/number.txt"))
 
                 return HttpResponse.OK
             }

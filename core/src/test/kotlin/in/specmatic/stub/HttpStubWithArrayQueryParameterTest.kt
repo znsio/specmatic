@@ -4,6 +4,7 @@ import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.QueryParameters
 import `in`.specmatic.mock.NoMatchingScenario
+import `in`.specmatic.trimmedLinesList
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -272,7 +273,7 @@ class HttpStubWithArrayQueryParameterTest {
             val queryParameters = QueryParameters(paramPairs = listOf("category_id" to "1"))
             val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters))
             assertThat(response.status).isEqualTo(400)
-            assertThat(response.body.toStringLiteral()).isEqualTo(
+            assertThat(response.body.toStringLiteral().trimmedLinesList()).isEqualTo(
                 """
             In scenario "get products. Response: OK"
             API: GET /products -> 200
@@ -284,7 +285,7 @@ class HttpStubWithArrayQueryParameterTest {
               >> REQUEST.QUERY-PARAMS.category_id
               
                  Query param named category_id in the request was not in the contract
-            """.trimIndent())
+            """.trimIndent().trimmedLinesList())
         }
     }
 

@@ -46,7 +46,7 @@ dependencies {
     implementation 'org.assertj:assertj-core:3.25.3'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
 
-    implementation('info.picocli:picocli-spring-boot-starter:4.7.5') {
+    implementation('info.picocli:picocli-spring-boot-starter:4.7.6') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude group: 'org.springframework.boot', module: 'spring-boot'
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter'
@@ -59,7 +59,7 @@ dependencies {
     }
     implementation('org.springframework.boot:spring-boot-autoconfigure:3.2.5')
     implementation('org.springframework:spring-core:6.1.6')
-    implementation 'info.picocli:picocli:4.7.5'
+    implementation 'info.picocli:picocli:4.7.6'
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
     implementation "io.ktor:ktor-network-tls:$ktor_version"
     implementation "io.ktor:ktor-network-tls-certificates:$ktor_version"

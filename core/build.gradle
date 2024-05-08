@@ -36,13 +36,13 @@ dependencies {
     implementation("io.ktor:ktor-server-double-receive:$ktor_version")
 
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.3"
-    implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.23"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.24"
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
     implementation 'com.flipkart.zjsonpatch:zjsonpatch:0.4.16'
 
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.1'
 
     implementation 'io.swagger.parser.v3:swagger-parser:2.1.22'
 

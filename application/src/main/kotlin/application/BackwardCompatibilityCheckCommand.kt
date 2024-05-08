@@ -1,9 +1,11 @@
 package application
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.CONTRACT_EXTENSIONS
 import `in`.specmatic.core.git.GitCommand
+import `in`.specmatic.core.testBackwardCompatibility
+import `in`.specmatic.core.utilities.exitWithMessage
 import org.junit.platform.launcher.Launcher
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
 import java.io.File
@@ -18,32 +20,76 @@ class BackwardCompatibilityCheckCommand(
     private val gitCompatibleCommand: GitCompatibleCommand,
     private val fileOperations: FileOperations,
     private val junitLauncher: Launcher,
-) : Callable<Int> {
+) : Callable<Unit> {
 
-    override fun call(): Int {
+    val SUCCESS = "success"
+    val FAILED = "failed"
+
+    override fun call(): Unit {
         val filesChangedInCurrentBranch: Set<String> = gitCommand.getFilesChangeInCurrentBranch().filter {
             File(it).extension in CONTRACT_EXTENSIONS
-        }.toSet()
-
-        val changedSchemaFiles: Set<String> = filesChangedInCurrentBranch.filter {
-            isSchemaFile(File(it))
-        }.toSet()
+        }.filter { File(it).exists() }.toSet()
 
         val filesToCheck: Set<String> =
-            filesChangedInCurrentBranch - changedSchemaFiles + filesReferringToChangedSchemaFiles(changedSchemaFiles)
+            filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles(filesChangedInCurrentBranch)
 
         logFilesToBeCheckedForBackwardCompatibility(filesToCheck)
-        runBackwardCompatibilityCheckFor(filesToCheck)
 
-        return 0
+        val result = runBackwardCompatibilityCheckFor(filesToCheck)
+
+        println()
+
+        if(result == FAILED) {
+            exitWithMessage("Verdict: FAIL, backward incompatible changes were found.")
+        } else {
+            println("Verdict: PASS, all changes were backward incompatible")
+        }
     }
 
-    private fun runBackwardCompatibilityCheckFor(files: Set<String>) {
-        files.forEachIndexed { index, it ->
-            println("[${index.inc()}] Running the check for $it:")
-            gitCompatibleCommand.file(it, "", false)
-            println("-".repeat(20))
-            println()
+    private fun runBackwardCompatibilityCheckFor(files: Set<String>): String {
+        val currentBranch = gitCommand.currentBranch()
+
+        val currentTreeish = if(currentBranch == "HEAD")
+            gitCommand.detachedHEAD()
+        else
+            currentBranch
+
+        val defaultBranch = gitCommand.defaultBranch()
+
+        try {
+            val failures = files.mapIndexed { index, specFilePath ->
+                println("${index.inc()}. Running the check for $specFilePath:")
+
+                val newer = OpenApiSpecification.fromFile(specFilePath).toFeature()
+
+                gitCommand.checkout(defaultBranch)
+
+                if (!File(specFilePath).exists()) {
+                    println("$specFilePath is a new file.")
+                    println()
+                    return@mapIndexed SUCCESS
+                }
+
+                val older = OpenApiSpecification.fromFile(specFilePath).toFeature()
+
+                gitCommand.checkout(currentTreeish)
+
+                val backwardCompatibilityResult = testBackwardCompatibility(older, newer)
+
+                if (backwardCompatibilityResult.success()) {
+                    println("The change to $specFilePath is backward compatible.")
+                    println()
+                    SUCCESS
+                } else {
+                    println("*** The change to $specFilePath is NOT backward compatible. ***")
+                    println()
+                    FAILED
+                }
+            }.filter { it == FAILED }
+
+            return if (failures.size > 0) FAILED else SUCCESS
+        } finally {
+            gitCommand.checkout(currentTreeish)
         }
     }
 

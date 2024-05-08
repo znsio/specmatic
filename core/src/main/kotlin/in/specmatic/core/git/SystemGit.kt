@@ -83,12 +83,7 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     }
 
     override fun getFilesChangeInCurrentBranch(): List<String> {
-        val symbolicRef = execute(Configuration.gitCommand, "symbolic-ref", "refs/remotes/origin/HEAD", "--short")
-
-        if("/" !in symbolicRef)
-            throw ContractException("Could not understand symbolic-ref value $symbolicRef, expected it to be of the format remote/branch name.")
-
-        val defaultBranch = symbolicRef.split("/")[1].trim()
+        val defaultBranch = defaultBranch()
 
         val result = execute(Configuration.gitCommand, "diff", defaultBranch, "HEAD", "--name-only")
 
@@ -145,6 +140,29 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     }
 
     override fun getRemoteUrl(name: String): String = execute(Configuration.gitCommand, "remote", "get-url", name)
+
+    override fun currentBranch(): String {
+        return execute(Configuration.gitCommand, "rev-parse", "--abbrev-ref", "HEAD").trim()
+    }
+
+    override fun defaultBranch(): String {
+        val defaultBranchName = System.getenv("GITHUB_BASE_REF") ?: defaultBranchFromGit()
+        return "origin/${defaultBranchName}"
+    }
+
+    fun defaultBranchFromGit(): String {
+        val symbolicRef = System.getenv("GITHUB_BASE_REF") ?: execute(Configuration.gitCommand, "symbolic-ref", "refs/remotes/origin/HEAD", "--short")
+
+        if ("/" !in symbolicRef)
+            throw ContractException("Could not understand symbolic-ref value $symbolicRef, expected it to be of the format remote/branch name.")
+
+        return symbolicRef.split("/")[1].trim()
+    }
+
+    override fun detachedHEAD(): String {
+        val result = execute(Configuration.gitCommand, "show", "-s", "--pretty=%D", "HEAD")
+        return result.trim().split(",")[1].trim()
+    }
 }
 
 fun exitErrorMessageContains(exception: NonZeroExitError, snippets: List<String>): Boolean {

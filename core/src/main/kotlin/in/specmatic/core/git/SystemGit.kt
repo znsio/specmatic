@@ -4,6 +4,7 @@ import `in`.specmatic.core.Configuration
 import `in`.specmatic.core.azure.AuthCredentials
 import `in`.specmatic.core.azure.NoGitAuthCredentials
 import `in`.specmatic.core.log.logger
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
@@ -79,6 +80,18 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         } catch (nonZeroExitError:NonZeroExitError) {
             ""
         }
+    }
+
+    override fun getFilesChangeInCurrentBranch(): List<String> {
+        val symbolicRef = execute(Configuration.gitCommand, "symbolic-ref", "refs/remotes/origin/HEAD", "--short")
+
+        if("/" !in symbolicRef)
+            throw ContractException("Could not understand symbolic-ref value $symbolicRef, expected it to be of the format remote/branch name.")
+
+        val defaultBranch = symbolicRef.split("/")[1]
+
+        val result = execute(Configuration.gitCommand, "diff", defaultBranch, "HEAD", "--name-only")
+        return result.split(System.lineSeparator()).filter { it.isNotBlank() }
     }
 
     override fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =

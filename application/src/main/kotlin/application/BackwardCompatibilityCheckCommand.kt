@@ -1,5 +1,6 @@
 package application
 
+import `in`.specmatic.core.CONTRACT_EXTENSIONS
 import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
 import org.junit.platform.launcher.Launcher
@@ -24,24 +25,28 @@ class BackwardCompatibilityCheckCommand : Callable<Int> {
     lateinit var junitLauncher: Launcher
 
     override fun call(): Int {
-        val filesChangedInCurrentBranch = gitCommand.getFilesChangeInCurrentBranch().toSet()
+        val filesChangedInCurrentBranch: Set<String> = gitCommand.getFilesChangeInCurrentBranch().filter { File(it).extension in CONTRACT_EXTENSIONS }.toSet()
 
-        val changedSchemaFiles = filesChangedInCurrentBranch.filterNot { File(it).readText().contains(Regex("^path:")) }.toSet()
+        val changedSchemaFiles: Set<String> = filesChangedInCurrentBranch.filterNot { File(it).readText().lines().any { it.matches(Regex("paths:")) } }.toSet()
         val schemaFileBaseNames = changedSchemaFiles.map { File(it).name }
 
-        val changedReferringFiles = filesChangedInCurrentBranch.filter {
-            File(it).readText().let { specContent ->
+        val allFiles = File(".").walk().toList().filterNot { ".git" in it.path }
+
+        val filesReferringToChangedSchemaFiles = allFiles.filter {
+            it.readText().let { specContent ->
                 schemaFileBaseNames.any { schemaFileBaseName -> schemaFileBaseName in specContent }
             }
-        }.toSet()
+        }.map { it.path }.toSet()
 
-        val filesToCheck: Set<String> = (filesChangedInCurrentBranch - changedSchemaFiles) + changedReferringFiles
+        val filesToCheck: Set<String> = (filesChangedInCurrentBranch - changedSchemaFiles) + filesReferringToChangedSchemaFiles
 
         println("Checking backward compatibility of the following files: ")
 
         filesToCheck.forEach {
             print(it)
         }
+
+        // Pull logic from CompatibleCommand to check each file in filesToCheck
 
         return 0
     }

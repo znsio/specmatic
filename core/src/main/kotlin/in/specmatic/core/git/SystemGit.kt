@@ -88,9 +88,10 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         if("/" !in symbolicRef)
             throw ContractException("Could not understand symbolic-ref value $symbolicRef, expected it to be of the format remote/branch name.")
 
-        val defaultBranch = symbolicRef.split("/")[1]
+        val defaultBranch = symbolicRef.split("/")[1].trim()
 
         val result = execute(Configuration.gitCommand, "diff", defaultBranch, "HEAD", "--name-only")
+
         return result.split(System.lineSeparator()).filter { it.isNotBlank() }
     }
 

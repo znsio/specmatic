@@ -27,10 +27,11 @@ class BackwardCompatibilityCheckCommand(
             File(it).extension in CONTRACT_EXTENSIONS
         }.filter { File(it).exists() && File(it).readText().contains(Regex("openapi")) }.toSet()
 
-        val filesToCheck: Set<String> =
-            filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles(filesChangedInCurrentBranch)
+        val filesReferringToChangedSchemaFiles = filesReferringToChangedSchemaFiles(filesChangedInCurrentBranch)
 
-        logFilesToBeCheckedForBackwardCompatibility(filesToCheck)
+        val filesToCheck: Set<String> = filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles
+
+        logFilesToBeCheckedForBackwardCompatibility(filesChangedInCurrentBranch, filesReferringToChangedSchemaFiles)
 
         val result = runBackwardCompatibilityCheckFor(filesToCheck)
 
@@ -39,7 +40,7 @@ class BackwardCompatibilityCheckCommand(
         if(result == FAILED) {
             exitWithMessage("Verdict: FAIL, backward incompatible changes were found.")
         } else {
-            println("Verdict: PASS, all changes were backward incompatible")
+            println("Verdict: PASS, all changes were backward compatible")
         }
     }
 
@@ -74,11 +75,11 @@ class BackwardCompatibilityCheckCommand(
                 val backwardCompatibilityResult = testBackwardCompatibility(older, newer)
 
                 if (backwardCompatibilityResult.success()) {
-                    println("The change to $specFilePath is backward compatible.")
+                    println("The file $specFilePath is backward compatible.")
                     println()
                     SUCCESS
                 } else {
-                    println("*** The change to $specFilePath is NOT backward compatible. ***")
+                    println("*** The file $specFilePath is NOT backward compatible. ***")
                     println()
                     FAILED
                 }
@@ -90,12 +91,19 @@ class BackwardCompatibilityCheckCommand(
         }
     }
 
-    private fun logFilesToBeCheckedForBackwardCompatibility(files : Set<String>) {
-        println("Checking backward compatibility of the following files: ")
-        files.forEach { println(it) }
+    private fun logFilesToBeCheckedForBackwardCompatibility(changedFiles : Set<String>, filesReferringToChangedFiles: Set<String>) {
+        println("Checking backward compatibility of the following files: \n")
+        println("Files that have changed - ")
+        changedFiles.forEach { println(it) }
+        println()
+        println("Files referring to the changed files - ")
+        filesReferringToChangedFiles.forEach { println(it) }
+        println()
+
         println("-".repeat(20))
         println()
     }
+
 
     private fun filesReferringToChangedSchemaFiles(schemaFiles : Set<String>): Set<String> {
         if(schemaFiles.isEmpty()) return emptySet()

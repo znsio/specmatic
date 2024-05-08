@@ -46,7 +46,7 @@ dependencies {
     implementation 'org.assertj:assertj-core:3.25.3'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
 
-    implementation('info.picocli:picocli-spring-boot-starter:4.7.5') {
+    implementation('info.picocli:picocli-spring-boot-starter:4.7.6') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude group: 'org.springframework.boot', module: 'spring-boot'
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter'

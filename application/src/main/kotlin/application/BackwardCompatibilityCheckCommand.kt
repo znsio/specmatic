@@ -5,7 +5,6 @@ import `in`.specmatic.core.CONTRACT_EXTENSIONS
 import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.testBackwardCompatibility
 import `in`.specmatic.core.utilities.exitWithMessage
-import org.junit.platform.launcher.Launcher
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
 import java.io.File
@@ -17,18 +16,16 @@ import java.util.concurrent.Callable
         description = ["Checks backward compatibility of a directory across the current HEAD and the main branch"])
 class BackwardCompatibilityCheckCommand(
     private val gitCommand: GitCommand,
-    private val gitCompatibleCommand: GitCompatibleCommand,
-    private val fileOperations: FileOperations,
-    private val junitLauncher: Launcher,
 ) : Callable<Unit> {
 
     val SUCCESS = "success"
     val FAILED = "failed"
 
     override fun call(): Unit {
+        // TODO - openapi parsing for figuring out the correct files
         val filesChangedInCurrentBranch: Set<String> = gitCommand.getFilesChangeInCurrentBranch().filter {
             File(it).extension in CONTRACT_EXTENSIONS
-        }.filter { File(it).exists() }.toSet()
+        }.filter { File(it).exists() && File(it).readText().contains(Regex("openapi")) }.toSet()
 
         val filesToCheck: Set<String> =
             filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles(filesChangedInCurrentBranch)

@@ -18,80 +18,66 @@ class BackwardCompatibilityCheckCommand(
     private val gitCommand: GitCommand,
 ) : Callable<Unit> {
 
-    val SUCCESS = "success"
-    val FAILED = "failed"
+    companion object {
+        private const val SUCCESS = "success"
+        private const val FAILED = "failed"
+        private const val HEAD = "HEAD"
+        private const val MARGIN_SPACE = "  "
+    }
 
-    override fun call(): Unit {
-        // TODO - openapi parsing for figuring out the correct files
-        val filesChangedInCurrentBranch: Set<String> = gitCommand.getFilesChangeInCurrentBranch().filter {
-            File(it).extension in CONTRACT_EXTENSIONS
-        }.filter { File(it).exists() && File(it).readText().contains(Regex("openapi")) }.toSet()
+    override fun call() {
+        val filesChangedInCurrentBranch: Set<String> = getOpenAPISpecFilesChangedInCurrentBranch()
+        if(filesChangedInCurrentBranch.isEmpty()) exitWithMessage("\nNo OpenAPI spec files were changed, skipping the check.\n")
 
         val filesReferringToChangedSchemaFiles = filesReferringToChangedSchemaFiles(filesChangedInCurrentBranch)
 
         val filesToCheck: Set<String> = filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles
 
-        logFilesToBeCheckedForBackwardCompatibility(filesChangedInCurrentBranch, filesReferringToChangedSchemaFiles)
+        logFilesToBeCheckedForBackwardCompatibility(
+            filesChangedInCurrentBranch,
+            filesReferringToChangedSchemaFiles
+        )
 
         val result = runBackwardCompatibilityCheckFor(filesToCheck)
 
-        println()
-
         if(result == FAILED) {
-            exitWithMessage("Verdict: FAIL, backward incompatible changes were found.")
-        } else {
-            println("Verdict: PASS, all changes were backward compatible")
+            exitWithMessage("\nVerdict: FAIL, backward incompatible changes were found.")
         }
+        println("\nVerdict: PASS, all changes were backward compatible")
     }
 
     private fun runBackwardCompatibilityCheckFor(files: Set<String>): String {
         val currentBranch = gitCommand.currentBranch()
-
-        val currentTreeish = if(currentBranch == "HEAD")
-            gitCommand.detachedHEAD()
-        else
-            currentBranch
-
-        val defaultBranch = gitCommand.defaultBranch()
-
-        val marginSpace = "  "
+        val currentTreeish = if(currentBranch == HEAD) gitCommand.detachedHEAD() else currentBranch
 
         try {
             val failures = files.mapIndexed { index, specFilePath ->
                 println("${index.inc()}. Running the check for $specFilePath:")
 
+                // newer => the file with changes on the branch
                 val newer = OpenApiSpecification.fromFile(specFilePath).toFeature()
 
-                gitCommand.checkout(defaultBranch)
-
-                if (!File(specFilePath).exists()) {
-                    println("$specFilePath is a new file.")
-                    println()
+                val olderFile = gitCommand.getFileInTheDefaultBranch(specFilePath, currentTreeish)
+                if (olderFile == null) {
+                    println("$specFilePath is a new file.\n")
                     return@mapIndexed SUCCESS
                 }
-
-                val older = OpenApiSpecification.fromFile(specFilePath).toFeature()
-
-                gitCommand.checkout(currentTreeish)
+                // older => the same file on the default (e.g. main) branch
+                val older = OpenApiSpecification.fromFile(olderFile.path).toFeature()
 
                 val backwardCompatibilityResult = testBackwardCompatibility(older, newer)
 
                 if (backwardCompatibilityResult.success()) {
-                    println()
-                    println("The file $specFilePath is backward compatible.".prependIndent(marginSpace))
-                    println()
+                    println("\nThe file $specFilePath is backward compatible.\n".prependIndent(MARGIN_SPACE))
                     SUCCESS
                 } else {
-                    println()
-                    println(backwardCompatibilityResult.report().prependIndent(marginSpace))
-                    println()
-                    println("*** The file $specFilePath is NOT backward compatible. ***".prependIndent(marginSpace))
-                    println()
+                    println("\n${backwardCompatibilityResult.report().prependIndent(MARGIN_SPACE)}")
+                    println("\n*** The file $specFilePath is NOT backward compatible. ***\n".prependIndent(MARGIN_SPACE))
                     FAILED
                 }
             }.filter { it == FAILED }
 
-            return if (failures.size > 0) FAILED else SUCCESS
+            return if (failures.isNotEmpty()) FAILED else SUCCESS
         } finally {
             gitCommand.checkout(currentTreeish)
         }
@@ -110,25 +96,32 @@ class BackwardCompatibilityCheckCommand(
         println()
     }
 
-
     private fun filesReferringToChangedSchemaFiles(schemaFiles : Set<String>): Set<String> {
         if(schemaFiles.isEmpty()) return emptySet()
 
         val schemaFileBaseNames = schemaFiles.map { File(it).name }
-        return allFiles().filter {
+        return allOpenApiSpecFiles().filter {
             it.readText().let { specContent ->
                 schemaFileBaseNames.any { schemaFileBaseName -> schemaFileBaseName in specContent }
             }
         }.map { it.path }.toSet()
     }
 
-    private fun isSchemaFile(file: File): Boolean {
-        return file.readText().lines().any { it.matches(Regex("paths:")) }.not()
-    }
-
-    private fun allFiles(): List<File> {
+    private fun allOpenApiSpecFiles(): List<File> {
         return File(".").walk().toList().filterNot {
             ".git" in it.path
-        }.filter { it.isFile }
+        }.filter { it.isFile && it.isOpenApiSpec() }
+    }
+
+    private fun getOpenAPISpecFilesChangedInCurrentBranch(): Set<String> {
+        return gitCommand.getFilesChangeInCurrentBranch().filter {
+           File(it).exists() && File(it).isOpenApiSpec()
+        }.toSet()
+    }
+
+    private fun File.isOpenApiSpec(): Boolean {
+        if(this.extension !in CONTRACT_EXTENSIONS) return false
+        return OpenApiSpecification.isParsable(this.path)
     }
 }
+

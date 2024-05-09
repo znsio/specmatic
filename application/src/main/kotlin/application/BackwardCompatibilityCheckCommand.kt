@@ -54,6 +54,8 @@ class BackwardCompatibilityCheckCommand(
 
         val defaultBranch = gitCommand.defaultBranch()
 
+        val marginSpace = "  "
+
         try {
             val failures = files.mapIndexed { index, specFilePath ->
                 println("${index.inc()}. Running the check for $specFilePath:")
@@ -75,11 +77,15 @@ class BackwardCompatibilityCheckCommand(
                 val backwardCompatibilityResult = testBackwardCompatibility(older, newer)
 
                 if (backwardCompatibilityResult.success()) {
-                    println("The file $specFilePath is backward compatible.")
+                    println()
+                    println("The file $specFilePath is backward compatible.".prependIndent(marginSpace))
                     println()
                     SUCCESS
                 } else {
-                    println("*** The file $specFilePath is NOT backward compatible. ***")
+                    println()
+                    println(backwardCompatibilityResult.report().prependIndent(marginSpace))
+                    println()
+                    println("*** The file $specFilePath is NOT backward compatible. ***".prependIndent(marginSpace))
                     println()
                     FAILED
                 }

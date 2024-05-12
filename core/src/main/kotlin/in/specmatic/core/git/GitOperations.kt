@@ -114,7 +114,6 @@ private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File) {
 }
 
 fun evaluateEnvVariablesInGitRepoURI(gitRepositoryURI: String, environmentVariables: Map<String, String>): String {
-    logger.log("Evaluating any environment variables in $gitRepositoryURI")
     var evaluatedGitRepoUrl = gitRepositoryURI
     val envVariableRegex = Regex("\\$\\{([^}]+)}")
     val envVariableMatches = envVariableRegex.findAll(gitRepositoryURI)

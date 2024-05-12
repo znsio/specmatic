@@ -119,13 +119,11 @@ fun evaluateEnvVariablesInGitRepoURI(gitRepositoryURI: String, environmentVariab
     val envVariableMatches = envVariableRegex.findAll(gitRepositoryURI)
     envVariableMatches.forEach { matchResult ->
         val envVariable = matchResult.groupValues[1]
-        if (environmentVariables.containsKey(envVariable)) {
-            val envVariableValue = environmentVariables.getValue(envVariable)
+        environmentVariables[envVariable]?.let { envVariableValue ->
             logger.log("Evaluating $envVariable in $gitRepositoryURI")
             evaluatedGitRepoUrl = evaluatedGitRepoUrl.replace("\${$envVariable}", envVariableValue)
-        } else {
-            logger.log("$envVariable in $gitRepositoryURI resembles an environment variable, but it is not available in the environment variables. Skipping evaluation.")
         }
+            ?: logger.log("$envVariable in $gitRepositoryURI resembles an environment variable, but skipping evaluation since value for the same is not set.")
     }
     return evaluatedGitRepoUrl
 }

@@ -124,7 +124,7 @@ data class GitRepo(
                 addSpecmaticFolderToGitIgnoreFile(gitIgnoreFile)
             }
             else{
-                logger.log("Creating a gitignore file file as it is missing for the current project.")
+                logger.log("Creating a gitignore file as it is missing for the current project.")
                 addSpecmaticFolderToGitIgnoreFile(gitIgnoreFile, false)
             }
         }

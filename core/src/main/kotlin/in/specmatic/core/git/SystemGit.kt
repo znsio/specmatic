@@ -48,7 +48,7 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     override fun checkout(branchName: String): SystemGit = this.also { execute(Configuration.gitCommand, "checkout", branchName) }
     override fun merge(branchName: String): SystemGit = this.also { execute(Configuration.gitCommand, "merge", branchName) }
     override fun clone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =
-        this.also { executeWithAuth("clone", gitRepositoryURI, cloneDirectory.absolutePath) }
+        this.also { executeWithAuth("clone", evaluateEnvVariablesInGitRepoURI(gitRepositoryURI, System.getenv()), cloneDirectory.absolutePath) }
     override fun exists(treeish: String, relativePath: String): Boolean {
         return try {
             show(treeish, relativePath)

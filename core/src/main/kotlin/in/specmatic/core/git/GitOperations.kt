@@ -84,9 +84,11 @@ private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File) {
     try {
         HttpTransport.setConnectionFactory(InsecureHttpConnectionFactory())
 
+        var evaluatedGitRepoURI = evaluateEnvVariablesInGitRepoURI(gitRepositoryURI, System.getenv())
+
         val cloneCommand = Git.cloneRepository().apply {
             setTransportConfigCallback(getTransportCallingCallback())
-            setURI(gitRepositoryURI)
+            setURI(evaluatedGitRepoURI)
             setDirectory(cloneDirectory)
         }
 
@@ -104,10 +106,25 @@ private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File) {
         }
 
         logger.log("Cloning: $gitRepositoryURI -> ${cloneDirectory.canonicalPath}")
+
         cloneCommand.call()
     } finally {
         HttpTransport.setConnectionFactory(preservedConnectionFactory)
     }
+}
+
+fun evaluateEnvVariablesInGitRepoURI(gitRepositoryURI: String, environmentVariables: Map<String, String>): String {
+    logger.log("Evaluating any environment variables in $gitRepositoryURI")
+    var evaluatedGitRepoUrl = gitRepositoryURI
+    val envVariableRegex = Regex("\\$\\{([^}]+)}")
+    val envVariableMatches = envVariableRegex.findAll(gitRepositoryURI)
+    envVariableMatches.forEach { matchResult ->
+        val envVariable = matchResult.groupValues[1]
+        val envVariableValue = environmentVariables.getValue(envVariable)
+        logger.log("Evaluating $envVariable in $gitRepositoryURI")
+        evaluatedGitRepoUrl = evaluatedGitRepoUrl.replace("\${$envVariable}", envVariableValue)
+    }
+    return evaluatedGitRepoUrl
 }
 
 fun loadFromPath(json: Value?, path: List<String>): Value? {

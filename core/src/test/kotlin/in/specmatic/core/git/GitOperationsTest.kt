@@ -30,4 +30,15 @@ class GitOperationsTest {
             )
         assertThat(evaluatedGitRepositoryURI).isEqualTo("https://john:password@gitlab.com/group/project.git")
     }
+
+    @Test
+    fun shouldNotEvaluatePatternsThatResembleEnvVarsWhenTheValueIsNotAvailable() {
+        val gitRepositoryURI = "https://gitlab-ci-token:${'$'}{CI_JOB_TOKEN}@gitlab.com/group/${'$'}{do-not-eval}/project.git"
+        val evaluatedGitRepositoryURI =
+            evaluateEnvVariablesInGitRepoURI(
+                gitRepositoryURI = gitRepositoryURI,
+                mapOf("CI_JOB_TOKEN" to "token")
+            )
+        assertThat(evaluatedGitRepositoryURI).isEqualTo("https://gitlab-ci-token:token@gitlab.com/group/${'$'}{do-not-eval}/project.git")
+    }
 }

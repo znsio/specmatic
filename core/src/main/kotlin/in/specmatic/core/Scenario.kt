@@ -56,7 +56,8 @@ data class Scenario(
     val serviceType:String? = null,
     val generativePrefix: String = "",
     val statusInDescription: String = httpResponsePattern.status.toString(),
-    val disambiguate: () -> String = { "" }
+    val disambiguate: () -> String = { "" },
+    val descriptionFromPlugin: String? = null
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -463,7 +464,8 @@ data class Scenario(
 
         val generativePrefix = this.generativePrefix
 
-        return "$generativePrefix Scenario: $method $path ${disambiguate()}-> $statusInDescription$exampleIdentifier"
+        val apiDescription = descriptionFromPlugin ?: "$method $path ${disambiguate()}-> $statusInDescription"
+        return "$generativePrefix Scenario: $apiDescription$exampleIdentifier"
     }
 
     fun newBasedOn(scenario: Scenario): Scenario {

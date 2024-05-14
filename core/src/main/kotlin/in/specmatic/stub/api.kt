@@ -45,8 +45,8 @@ fun createStub(host: String = "localhost", port: Int = 9000): ContractStub {
 
 // Used by stub client code
 fun createStub(dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
-    val contractPaths = contractStubPaths().map { it.path }
-    val contractInfo = loadContractStubsFromFiles(contractPaths.map { ContractPathData("", it) }, dataDirPaths)
+    val contractPathData = contractStubPaths()
+    val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
 

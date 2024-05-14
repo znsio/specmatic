@@ -74,7 +74,7 @@ fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathDa
                 else try {
                     val feature = parseContractFileToFeature(contractPath, CommandHook(HookName.stub_load_contract), contractSource.provider, contractSource.repository, contractSource.branch, contractSource.specificationPath)
 
-                    val implicitDataDirs = listOf(implicitContractDataDir(contractPath.path)).plus(if(customImplicitStubBase() != null) listOf(implicitContractDataDir(contractPath.path, customImplicitStubBase())) else emptyList()).sorted()
+                    val implicitDataDirs = implicitDirsForSpecifications(contractPath)
 
                     val stubData = when {
                         implicitDataDirs.any { it.isDirectory } -> {
@@ -113,6 +113,13 @@ fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathDa
     }
 }
 
+fun implicitDirsForSpecifications(contractPath: File) =
+    listOf(implicitContractDataDir(contractPath.path)).plus(
+        if (customImplicitStubBase() != null) listOf(
+            implicitContractDataDir(contractPath.path, customImplicitStubBase())
+        ) else emptyList()
+    ).sorted()
+
 fun hasOpenApiFileExtension(contractPath: String): Boolean =
     OPENAPI_FILE_EXTENSIONS.any { contractPath.trim().endsWith(".$it") }
 
@@ -131,11 +138,18 @@ fun loadContractStubsFromFiles(contractPathDataList: List<ContractPathData>, dat
     consoleLog(StringLog("Loading the following contracts:${System.lineSeparator()}$contactPathsString"))
     consoleLog(StringLog(""))
 
-    val dataDirFileList = allDirsInTree(dataDirPaths).sorted()
-
     val features = contractPathDataList.mapNotNull { contractPathData ->
         loadIfOpenAPISpecification(contractPathData)
     }
+
+    return loadExpectationsForFeatures(features, dataDirPaths)
+}
+
+fun loadExpectationsForFeatures(
+    features: List<Pair<String, Feature>>,
+    dataDirPaths: List<String>
+): List<Pair<Feature, List<ScenarioStub>>> {
+    val dataDirFileList = allDirsInTree(dataDirPaths).sorted()
 
     val dataFiles = dataDirFileList.flatMap {
         consoleLog(StringLog("Loading stub expectations from ${it.path}".prependIndent("  ")))

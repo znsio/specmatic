@@ -332,15 +332,15 @@ fun implicitContractDataDir(contractPath: String, customBase: String? = null): F
 }
 
 fun loadIfOpenAPISpecification(contractPathData: ContractPathData): Pair<String, Feature>? {
-    if (!hasOpenApiFileExtension(contractPathData.path))
+    if (recognizedExtensionButNotOpenAPI(contractPathData) || isOpenAPI(contractPathData.path))
         return Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath))
 
-    if (isOpenAPI(contractPathData.path))
-        return Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath))
-
-    logger.log("Ignoring ${contractPathData.path} as it is not an OpenAPI specification")
+    logger.log("Ignoring ${contractPathData.path} as it does not have a recognized specification extension")
     return null
 }
+
+private fun recognizedExtensionButNotOpenAPI(contractPathData: ContractPathData) =
+    !hasOpenApiFileExtension(contractPathData.path) && File(contractPathData.path).extension in CONTRACT_EXTENSIONS
 
 fun isOpenAPI(path: String): Boolean =
     try {

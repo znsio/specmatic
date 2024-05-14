@@ -1342,26 +1342,11 @@ data class Feature(
         return files.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
             try {
                 with(exampleFromFile) {
-                    logger.log("Loading test file ${exampleFromFile.expectationFilePath}")
-
-                    val examples: Map<String, String> =
-                        headers
-                            .plus(queryParams)
-                            .plus(requestBody?.let { mapOf("(REQUEST-BODY)" to it.toStringLiteral()) } ?: emptyMap())
-
-                    val (
-                        columnNames,
-                        values
-                    ) = examples.entries.let { entry ->
-                        entry.map { it.key } to entry.map { it.value }
-                    }
-
-                    OpenApiSpecification.OperationIdentifier(requestMethod, requestPath, responseStatus) to Row(
-                        columnNames,
-                        values,
-                        name = testName,
-                        fileSource = exampleFromFile.file.canonicalPath
-                    )
+                    OpenApiSpecification.OperationIdentifier(
+                        requestMethod,
+                        requestPath,
+                        responseStatus
+                    ) to exampleFromFile.toRow()
                 }
             } catch (e: Throwable) {
                 logger.log(e, "Error reading file ${exampleFromFile.expectationFilePath}")

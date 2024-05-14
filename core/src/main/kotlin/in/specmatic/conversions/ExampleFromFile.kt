@@ -1,6 +1,8 @@
 package `in`.specmatic.conversions
 
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.Row
 import `in`.specmatic.core.pattern.attempt
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.JSONObjectValue
@@ -8,6 +10,29 @@ import `in`.specmatic.core.value.Value
 import java.io.File
 
 class ExampleFromFile(val json: JSONObjectValue, val file: File) {
+    fun toRow(): Row {
+        logger.log("Loading test file ${this.expectationFilePath}")
+
+        val examples: Map<String, String> =
+            headers
+                .plus(queryParams)
+                .plus(requestBody?.let { mapOf("(REQUEST-BODY)" to it.toStringLiteral()) } ?: emptyMap())
+
+        val (
+            columnNames,
+            values
+        ) = examples.entries.let { entry ->
+            entry.map { it.key } to entry.map { it.value }
+        }
+
+        return Row(
+            columnNames,
+            values,
+            name = testName,
+            fileSource = this.file.canonicalPath
+        )
+    }
+
     constructor(file: File) : this(parsedJSONObject(file.readText()), file)
 
     val expectationFilePath: String = file.canonicalPath

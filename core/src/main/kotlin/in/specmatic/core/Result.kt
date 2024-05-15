@@ -220,6 +220,7 @@ enum class TestResult {
 enum class FailureReason(val fluffLevel: Int) {
     PartNameMisMatch(0),
     StatusMismatch(1),
+    IdentifierMismatch(1),
     MethodMismatch(1),
     ContentTypeMismatch(0),
     RequestMismatchButStatusAlsoWrong(1),

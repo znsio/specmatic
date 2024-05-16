@@ -321,8 +321,6 @@ data class Scenario(
 
         val updatedResolver = flagsBased.update(resolver)
 
-
-
         rowsToValidate.forEach { row ->
             val resolverForExample = updatedResolver.copy(
                 mismatchMessages = object : MismatchMessages {
@@ -341,20 +339,29 @@ data class Scenario(
                 }
             )
 
-            httpRequestPattern.newBasedOn(row, resolverForExample, status).first().value
-            val responseExample: ResponseExample? = row.responseExample
+            try {
+                httpRequestPattern.newBasedOn(row, resolverForExample, status).first().value
+                val responseExample: ResponseExample? = row.responseExample
 
-            if (responseExample != null) {
-                val responseMatchResult =
-                    httpResponsePattern.matches(responseExample.responseExample, resolverForExample)
+                if (responseExample != null) {
+                    val responseMatchResult =
+                        httpResponsePattern.matches(responseExample.responseExample, resolverForExample)
 
-                if(responseMatchResult is Result.Failure) {
-                    println("Error in ${this.testDescription()}")
-
-                    logger.log(responseMatchResult.reportString())
+                    responseMatchResult.throwOnFailure()
                 }
+            } catch(t: Throwable) {
+                val title = "Error loading test data for ${this.testDescription().trim()}".plus(
+                    if(row.fileSource != null)
+                        " from ${row.fileSource}"
+                    else
+                        ""
+                )
 
-                responseMatchResult.throwOnFailure()
+                logger.log(title)
+                logger.newLine()
+                logger.log(t)
+
+                throw Exception(title + System.lineSeparator() + System.lineSeparator() + exceptionCauseMessage(t))
             }
         }
     }

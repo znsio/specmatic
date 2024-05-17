@@ -18,6 +18,8 @@ class BackwardCompatibilityCheckCommand(
     private val gitCommand: GitCommand,
 ) : Callable<Unit> {
 
+    private val newLine = System.lineSeparator()
+
     companion object {
         private const val SUCCESS = "success"
         private const val FAILED = "failed"
@@ -27,7 +29,7 @@ class BackwardCompatibilityCheckCommand(
 
     override fun call() {
         val filesChangedInCurrentBranch: Set<String> = getOpenAPISpecFilesChangedInCurrentBranch()
-        if(filesChangedInCurrentBranch.isEmpty()) exitWithMessage("\nNo OpenAPI spec files were changed, skipping the check.\n")
+        if(filesChangedInCurrentBranch.isEmpty()) exitWithMessage("$newLine OpenAPI spec files were changed, skipping the check.$newLine")
 
         val filesReferringToChangedSchemaFiles = filesReferringToChangedSchemaFiles(filesChangedInCurrentBranch)
 
@@ -41,9 +43,9 @@ class BackwardCompatibilityCheckCommand(
         val result = runBackwardCompatibilityCheckFor(filesToCheck)
 
         if(result == FAILED) {
-            exitWithMessage("\nVerdict: FAIL, backward incompatible changes were found.")
+            exitWithMessage("$newLine Verdict: FAIL, backward incompatible changes were found.")
         }
-        println("\nVerdict: PASS, all changes were backward compatible")
+        println("$newLine Verdict: PASS, all changes were backward compatible")
     }
 
     private fun runBackwardCompatibilityCheckFor(files: Set<String>): String {
@@ -59,7 +61,7 @@ class BackwardCompatibilityCheckCommand(
 
                 val olderFile = gitCommand.getFileInTheDefaultBranch(specFilePath, currentTreeish)
                 if (olderFile == null) {
-                    println("$specFilePath is a new file.\n")
+                    println("$specFilePath is a new file.$newLine")
                     return@mapIndexed SUCCESS
                 }
                 // older => the same file on the default (e.g. main) branch
@@ -68,11 +70,11 @@ class BackwardCompatibilityCheckCommand(
                 val backwardCompatibilityResult = testBackwardCompatibility(older, newer)
 
                 if (backwardCompatibilityResult.success()) {
-                    println("\nThe file $specFilePath is backward compatible.\n".prependIndent(MARGIN_SPACE))
+                    println("$newLine The file $specFilePath is backward compatible.$newLine".prependIndent(MARGIN_SPACE))
                     SUCCESS
                 } else {
-                    println("\n${backwardCompatibilityResult.report().prependIndent(MARGIN_SPACE)}")
-                    println("\n*** The file $specFilePath is NOT backward compatible. ***\n".prependIndent(MARGIN_SPACE))
+                    println("$newLine ${backwardCompatibilityResult.report().prependIndent(MARGIN_SPACE)}")
+                    println("$newLine *** The file $specFilePath is NOT backward compatible. ***$newLine".prependIndent(MARGIN_SPACE))
                     FAILED
                 }
             }.filter { it == FAILED }
@@ -84,7 +86,7 @@ class BackwardCompatibilityCheckCommand(
     }
 
     private fun logFilesToBeCheckedForBackwardCompatibility(changedFiles : Set<String>, filesReferringToChangedFiles: Set<String>) {
-        println("Checking backward compatibility of the following files: \n")
+        println("Checking backward compatibility of the following files: $newLine")
         println("Files that have changed - ")
         changedFiles.forEach { println(it) }
         println()

@@ -6,14 +6,11 @@ import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.utilities.parseXML
 import `in`.specmatic.core.value.*
-import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
-import `in`.specmatic.trimmedLinesList
 import `in`.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import org.xml.sax.SAXException
@@ -1062,76 +1059,6 @@ Feature: Contract
         assertThat(flags.toList()).isEqualTo(listOf("ran"))
     }
 
-    @Test
-    @Disabled
-    fun `should match a response with extra keys given the existence of the ellipsis key`() {
-        val gherkin = """
-Feature: Contract
-    Scenario: api call
-        Given GET /
-        Then status 200
-        And response-body
-        | data | (string) |
-        | ...  |          |
-"""
-
-        val flags = mutableListOf<String>()
-
-        val results = parseGherkinStringToFeature(gherkin).executeTests(object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                flags.add("ran")
-                return HttpResponse.ok(StringValue("""{"data": "value", "unexpected": "value"}"""))
-            }
-
-            override fun setServerState(serverState: Map<String, Value>) {
-
-            }
-        })
-
-        println(results.report())
-
-        assertThat(results.failureCount).isZero()
-        assertThat(results.successCount).isOne()
-
-        assertThat(flags.toList()).isEqualTo(listOf("ran"))
-    }
-
-    @Test
-    fun `should not generate a test request with an ellipsis in it`() {
-        val gherkin = """
-Feature: Contract
-    Scenario: api call
-        Given POST /
-        And request-body
-        | data | (string) |
-        | ...  |          |
-        Then status 200
-"""
-
-        val flags = mutableListOf<String>()
-
-        val results = parseGherkinStringToFeature(gherkin).executeTests(object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                flags.add("ran")
-
-                val body = request.body as JSONObjectValue
-                assertThat(body.jsonObject).hasSize(1)
-                assertThat(body.jsonObject.getValue("data")).isInstanceOf(StringValue::class.java)
-                return HttpResponse.OK
-            }
-
-            override fun setServerState(serverState: Map<String, Value>) {
-
-            }
-        })
-
-        println(results.report())
-
-        assertThat(results.failureCount).isZero()
-        assertThat(results.successCount).isOne()
-
-        assertThat(flags.toList()).isEqualTo(listOf("ran"))
-    }
 }
 
 internal fun jsonObject(value: Value?): Map<String, Value> {

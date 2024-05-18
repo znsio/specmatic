@@ -5,12 +5,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.*
 import `in`.specmatic.core.value.*
-import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
 import `in`.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.params.ParameterizedTest
@@ -41,15 +39,6 @@ internal class JSONObjectPatternTest {
             }
             else -> Exception("Expected JSONObjectValue, got ${value.javaClass}")
         }
-    }
-
-    @Test
-    @Disabled
-    fun `should ignore extra keys given the ellipsis key`() {
-        val value = parsedValue("""{"expected": 10, "unexpected": 20}""")
-        val pattern = parsedPattern("""{"expected": "(number)", "...": ""}""")
-
-        value shouldMatch pattern
     }
 
     @Test

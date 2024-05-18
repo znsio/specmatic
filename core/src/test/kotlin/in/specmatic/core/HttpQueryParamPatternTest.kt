@@ -386,7 +386,6 @@ class HttpQueryParamPatternTest {
         }
 
         @Test
-        @Disabled
         fun `fails when request contains multiple values for the parameter`() {
             val result = unStubbedScalarQueryParameterPattern.matches(HttpRequest("GET", "/", queryParams = QueryParameters(paramPairs = listOf("product_id" to "1", "product_id" to "2"))),  Resolver())
             assertThat(result is Failure).isTrue

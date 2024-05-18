@@ -90,6 +90,17 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         return result.split(System.lineSeparator()).filter { it.isNotBlank() }
     }
 
+    override fun getFileInTheDefaultBranch(fileName: String, currentBranch: String): File? {
+        try {
+            checkout(defaultBranch())
+
+            if (!File(fileName).exists()) return null
+            return File(fileName)
+        } finally {
+            checkout(currentBranch)
+        }
+    }
+
     override fun shallowClone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =
         this.also {
             executeWithAuth("clone", "--depth", "1", gitRepositoryURI, cloneDirectory.absolutePath)
@@ -150,7 +161,7 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         return "origin/${defaultBranchName}"
     }
 
-    fun defaultBranchFromGit(): String {
+    private fun defaultBranchFromGit(): String {
         val symbolicRef = System.getenv("GITHUB_BASE_REF") ?: execute(Configuration.gitCommand, "symbolic-ref", "refs/remotes/origin/HEAD", "--short")
 
         if ("/" !in symbolicRef)

@@ -69,6 +69,10 @@ class OpenApiSpecification(
             return OpenApiSpecification(openApiFilePath, parsedOpenApi)
         }
 
+        fun isParsable(openApiFilePath: String): Boolean {
+            return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences()) != null
+        }
+
         fun fromYAML(
             yamlContent: String,
             openApiFilePath: String,

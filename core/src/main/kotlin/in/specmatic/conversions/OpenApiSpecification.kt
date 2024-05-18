@@ -568,7 +568,8 @@ class OpenApiSpecification(
 
         val headerExamples =
             response.headers.orEmpty().entries.fold(emptyMap<String, Map<String, String>>()) { acc, (headerName, header) ->
-                extractParameterExamples(header.examples, headerName, acc)
+                val resolvedHeader = resolveResponseHeader(header) ?: throw ContractException("Header ref ${header.`$ref`} does not exist")
+                extractParameterExamples(resolvedHeader.examples, headerName, acc)
             }
 
         return response.content.map { (contentType, mediaType) ->

@@ -5187,60 +5187,6 @@ paths:
             assertThat(testStatus).isEqualTo("test ran")
         }
 
-        @Disabled
-        @Test
-        fun `support for multipart form data stub and validate contentType`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
-            val openAPIFile = tempDir.resolve("data.yaml")
-            openAPIFile.writeText(openAPI)
-
-            val csvFile = tempDir.resolve("data.csv")
-            val csvFileContent = "1,2,3"
-            csvFile.writeText(csvFileContent)
-
-            val stubContent = """
-            {
-              "http-request": {
-                "method": "POST",
-                "path": "/data_csv",
-                "multipart-formdata": [{
-                  "name": "csv",
-                  "content": "(string)",
-                  "contentType": "text/csv"
-                }]
-              },
-              "http-response": {
-                "status": 200,
-                "body": "success"
-              }
-            }
-        """.trimIndent()
-
-            val stubDir = tempDir.resolve("data_data")
-            stubDir.mkdirs()
-            val stubFile = stubDir.resolve("stub.json")
-            stubFile.writeText(stubContent)
-
-            var testStatus: String
-
-            createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
-                testStatus = "test ran"
-
-                val request = HttpRequest(
-                    method = "POST",
-                    path = "/data_csv",
-                    multiPartFormData = listOf(
-                        MultiPartFileValue("csv", csvFile.canonicalPath, "text/plain")
-                    )
-                )
-
-                val response = it.client.execute(request)
-
-                assertThat(response.status).isEqualTo(400)
-            }
-
-            assertThat(testStatus).isEqualTo("test ran")
-        }
-
         @Test
         fun `support for multipart form data file stub and validate content`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
             val openAPIFile = tempDir.resolve("data.yaml")
@@ -5291,63 +5237,6 @@ paths:
                 val response = it.client.execute(request)
 
                 assertThat(response.status).isEqualTo(200)
-                println(response.body.toStringLiteral())
-            }
-
-            assertThat(testStatus).isEqualTo("test ran")
-        }
-
-        @Disabled
-        @Test
-        fun `support for multipart form data non-file stub and validate content type`(@TempDir(cleanup = CleanupMode.ALWAYS) tempDir: File) {
-            val openAPIFile = tempDir.resolve("data.yaml")
-            openAPIFile.writeText(openAPI)
-
-            val csvFile = tempDir.resolve("data.csv")
-            val csvFileContent = "1,2,3"
-            csvFile.writeText(csvFileContent)
-
-            val stubContent = """
-            {
-              "http-request": {
-                "method": "POST",
-                "path": "/data_csv",
-                "multipart-formdata": [
-                  {
-                    "name": "csv",
-                    "content": "1,2,3",
-                    "contentType": "text/csv"
-                  }
-                ]
-              },
-              "http-response": {
-                "status": 200,
-                "body": "success"
-              }
-            }
-        """.trimIndent()
-
-            val stubDir = tempDir.resolve("data_data")
-            stubDir.mkdirs()
-            val stubFile = stubDir.resolve("stub.json")
-            stubFile.writeText(stubContent)
-
-            var testStatus: String
-
-            createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
-                testStatus = "test ran"
-
-                val request = HttpRequest(
-                    method = "POST",
-                    path = "/data_csv",
-                    multiPartFormData = listOf(
-                        MultiPartContentValue("csv", StringValue("1,2,3"), specifiedContentType = "text/plain")
-                    )
-                )
-
-                val response = it.client.execute(request)
-
-                assertThat(response.status).isEqualTo(400)
                 println(response.body.toStringLiteral())
             }
 
@@ -6961,72 +6850,6 @@ paths:
         })
 
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
-    }
-
-    @Test
-    @Disabled
-    fun `byte string request backward compatibility check`() {
-        // TODO: backward compatibility check for byte arrays to string and vice versa is not working
-        val byteString = OpenApiSpecification.fromYAML(
-            """
-            ---
-            openapi: "3.0.1"
-            info:
-              title: "Data API"
-              version: "1"
-            paths:
-              /data:
-                post:
-                  summary: "Add data"
-                  requestBody:
-                    content:
-                      application/octet-stream:
-                        schema:
-                          type: string
-                          format: byte
-                  responses:
-                    200:
-                      description: "Result"
-                      content:
-                        text/plain:
-                          schema:
-                            type: string
-        """.trimIndent(), ""
-        ).toFeature()
-
-        val normalString = OpenApiSpecification.fromYAML(
-            """
-            ---
-            openapi: "3.0.1"
-            info:
-              title: "Data API"
-              version: "1"
-            paths:
-              /data:
-                post:
-                  summary: "Add data"
-                  requestBody:
-                    content:
-                      application/octet-stream:
-                        schema:
-                          type: string
-                  responses:
-                    200:
-                      description: "Result"
-                      content:
-                        text/plain:
-                          schema:
-                            type: string
-        """.trimIndent(), ""
-        ).toFeature()
-
-        testBackwardCompatibility(normalString, byteString).also { result ->
-            assertThat(result.hasFailures()).isTrue()
-        }
-
-        testBackwardCompatibility(normalString, byteString).also { result ->
-            assertThat(result.hasFailures()).isTrue()
-        }
     }
 
     @Test

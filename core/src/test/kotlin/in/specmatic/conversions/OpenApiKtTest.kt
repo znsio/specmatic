@@ -21,7 +21,6 @@ import `in`.specmatic.jsonBody
 import `in`.specmatic.runningOnWindows
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.TestExecutor
-import `in`.specmatic.trimmedLinesList
 import `in`.specmatic.trimmedLinesString
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
@@ -357,61 +356,6 @@ Background:
         )
 
         assertThat(results.failureCount).isEqualTo(3)
-    }
-
-    @Disabled
-    @Test
-    fun `should report error when the application accepts null or other data types for a non-nullable parameter`() {
-        val flags = mutableMapOf<String, Boolean>()
-
-        val feature = parseGherkinStringToFeature(
-            """
-Feature: Hello world
-
-Background:
-  Given openapi openapi/petstore-non-nullable-parameter.yaml
-  
-  Scenario: create pet
-    When POST /pets
-    Then status 201
-    Examples:
-      | tag     | name | optional |
-      | testing | test | 99999999 |
-
-        """.trimIndent(), sourceSpecPath
-        )
-
-        val results = feature.enableGenerativeTesting().executeTests(
-            object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    flags["${request.path} executed"] = true
-                    val headers: HashMap<String, String> = object : HashMap<String, String>() {
-                        init {
-                            put("Content-Type", "application/json")
-                        }
-                    }
-                    val petParameters = ObjectMapper().readValue(request.bodyString, Map::class.java)
-                    if (petParameters["name"] == null) return HttpResponse(422, "name cannot be null", headers)
-                    if (petParameters["optional"] != null) {
-                        try {
-                            Integer.parseInt(petParameters["optional"].toString())
-                        } catch (numberFormatException: java.lang.NumberFormatException) {
-                            flags["Non-numeric value sent for a number"] = true
-                            throw numberFormatException
-                        }
-                    }
-                    return HttpResponse(201, "hello world", headers)
-                }
-
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            }
-        )
-
-        assertThat(results.results.size).isEqualTo(12)
-        assertThat(results.results.filterIsInstance<Result.Success>().size).isEqualTo(4)
-        assertThat(results.results.filterIsInstance<Result.Failure>().size).isEqualTo(8)
-        assertThat(flags["Non-numeric value sent for a number"]).isTrue
     }
 
     @Test

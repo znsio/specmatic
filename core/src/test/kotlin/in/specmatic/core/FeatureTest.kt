@@ -1,5 +1,4 @@
 package `in`.specmatic.core
-
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.pattern.StringPattern
@@ -1479,8 +1478,8 @@ paths:
             assertThat(it).contains("-> 4xx")
         }
 
-        negativeTestScenarios.zip((1..negativeTestScenarios.size).toList()).forEach { (scenario, index) ->
-            assertThat(scenario.testDescription()).contains("[$index] -> 4xx")
+        negativeTestScenarios.zip((1..negativeTestScenarios.size).toList()).forEach { (scenario,index) ->
+            assertThat(scenario.testDescription()).contains(" -> 4xx | EX:SUCCESS [$index]")
         }
     }
 
@@ -1559,12 +1558,168 @@ paths:
                 }
             }
 
-            override fun setServerState(serverState: Map<String, Value>) {
+           override fun setServerState(serverState: Map<String, Value>) {
             }
         })
 
         assertThat(results.success()).isTrue()
         assertThat(results.failureCount).isZero()
+    }
+
+    @Test
+    fun `multiple positive tests with same names should have an index suffix`() {
+        val specification = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    get:
+      summary: Search for products
+      description: get-products
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - gadget
+              - book
+              - food
+              - other
+
+      responses:
+        '200':
+          description: List of products in the response
+          content:
+            text/plain:
+              schema:
+                type: string                 
+""".trimIndent(), "").toFeature()
+
+        val contractTests = specification.generateContractTestScenarios(emptyList())
+        val testNames = contractTests.map { it.first.testDescription().trim() }.toList()
+        assertThat(testNames).isEqualTo(
+            listOf(
+                "Scenario: GET /products -> 200 [1]",
+                "Scenario: GET /products -> 200 [2]",
+                "Scenario: GET /products -> 200 [3]",
+                "Scenario: GET /products -> 200 [4]",
+                "Scenario: GET /products -> 200 [5]",
+            )
+        )
+    }
+
+    @Test
+    fun `positive tests with distinct names should not have an index suffix`() {
+        val specification = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    get:
+      summary: Search for products
+      description: get-products
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+          required: true
+      responses:
+       '200':
+         description: List of products in the response
+         content:
+           text/plain:
+             schema:
+               type: string 
+  /orders:
+    get:
+      summary: Search for orders
+      description: get-orders
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+          required: true
+
+      responses:
+        '200':
+          description: List of orders in the response
+          content:
+            text/plain:
+              schema:
+                type: string 
+        """.trimIndent(), ""
+        ).toFeature()
+
+        val contractTests = specification.generateContractTestScenarios(emptyList())
+        val testNames = contractTests.map { it.first.testDescription().trim() }.toList()
+        assertThat(testNames).isEqualTo(
+            listOf(
+                "Scenario: GET /products -> 200",
+                "Scenario: GET /orders -> 200"
+            )
+        )
+    }
+
+    @Test
+    fun `multiple negative tests with same names should have an index suffix`() {
+        val specification = OpenApiSpecification.fromYAML("""
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    get:
+      summary: Search for products
+      description: get-products
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - gadget
+              - book
+          required: true
+      responses:
+        '200':
+          description: List of products in the response
+          content:
+            text/plain:
+              schema:
+                type: string
+""".trimIndent(), "").toFeature()
+
+        val contractTests = specification.enableGenerativeTesting().generateContractTestScenarios(emptyList())
+        val testNames = contractTests.map { it.first.testDescription().trim() }.toList()
+
+        assertThat(testNames).isEqualTo(
+            listOf(
+                "+ve  Scenario: GET /products -> 200 [1]",
+                "+ve  Scenario: GET /products -> 200 [2]",
+                "-ve  Scenario: GET /products -> 4xx [1]",
+                "-ve  Scenario: GET /products -> 4xx [2]"
+            )
+        )
     }
 
     @Test

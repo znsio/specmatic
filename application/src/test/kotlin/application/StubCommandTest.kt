@@ -7,6 +7,7 @@ import `in`.specmatic.core.CONTRACT_EXTENSIONS
 import `in`.specmatic.core.LEGACY_CONTRACT_EXTENSION
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.utilities.ContractPathData
+import `in`.specmatic.core.utilities.StubServerWatcher
 import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpClientFactory
 import io.mockk.every
@@ -40,7 +41,7 @@ internal class StubCommandTest {
     lateinit var watchMaker: WatchMaker
 
     @MockkBean(relaxUnitFun = true)
-    lateinit var watcher: Watcher
+    lateinit var watcher: StubServerWatcher
 
     @MockkBean
     lateinit var httpStubEngine: HTTPStubEngine

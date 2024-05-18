@@ -207,7 +207,9 @@ open class SpecmaticJUnitSupport {
         val testScenarios = try {
             val (testScenarios, allEndpoints) = when {
                 contractPaths != null -> {
-                    val testScenariosAndEndpointsPairList = contractPaths.split(",").map {
+                    val testScenariosAndEndpointsPairList = contractPaths.split(",").filter {
+                        File(it).extension in CONTRACT_EXTENSIONS
+                    }.map {
                         loadTestScenarios(
                             it,
                             suggestionsPath,
@@ -233,7 +235,9 @@ open class SpecmaticJUnitSupport {
 
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
 
-                    val testScenariosAndEndpointsPairList = contractFilePaths.map { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security, filterName, filterNotName) }
+                    val testScenariosAndEndpointsPairList = contractFilePaths.filter {
+                        File(it.path).extension in CONTRACT_EXTENSIONS
+                    }.map { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security, filterName, filterNotName) }
 
                     val tests: Sequence<ContractTest> = testScenariosAndEndpointsPairList.asSequence().flatMap { it.first }
 

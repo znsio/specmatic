@@ -1,4 +1,4 @@
-package application
+package `in`.specmatic.core.utilities
 
 import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.CONTRACT_EXTENSIONS
@@ -9,7 +9,7 @@ import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds
 import java.nio.file.WatchKey
 
-class Watcher(private val contractPaths: List<String>) {
+class StubServerWatcher(private val contractPaths: List<String>) {
     fun watchForChanges(restartServer: () -> Unit) {
         FileSystems.getDefault().newWatchService().use { watchService ->
             val paths: List<Path> = getPaths(contractPaths).toSet().toList().sorted().map { File(it).toPath() }

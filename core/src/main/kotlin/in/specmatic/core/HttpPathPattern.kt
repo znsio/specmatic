@@ -254,7 +254,7 @@ data class HttpPathPattern(
     }
 }
 
-internal fun buildHttpPathPattern(
+fun buildHttpPathPattern(
     url: String
 ): HttpPathPattern =
     buildHttpPathPattern(URI.create(url))

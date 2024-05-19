@@ -45,8 +45,8 @@ fun createStub(host: String = "localhost", port: Int = 9000): ContractStub {
 
 // Used by stub client code
 fun createStub(dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
-    val contractPaths = contractStubPaths().map { it.path }
-    val contractInfo = loadContractStubsFromFiles(contractPaths.map { ContractPathData("", it) }, dataDirPaths)
+    val contractPathData = contractStubPaths()
+    val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
 
@@ -74,7 +74,7 @@ fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathDa
                 else try {
                     val feature = parseContractFileToFeature(contractPath, CommandHook(HookName.stub_load_contract), contractSource.provider, contractSource.repository, contractSource.branch, contractSource.specificationPath)
 
-                    val implicitDataDirs = listOf(implicitContractDataDir(contractPath.path)).plus(if(customImplicitStubBase() != null) listOf(implicitContractDataDir(contractPath.path, customImplicitStubBase())) else emptyList()).sorted()
+                    val implicitDataDirs = implicitDirsForSpecifications(contractPath)
 
                     val stubData = when {
                         implicitDataDirs.any { it.isDirectory } -> {
@@ -113,6 +113,13 @@ fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathDa
     }
 }
 
+fun implicitDirsForSpecifications(contractPath: File) =
+    listOf(implicitContractDataDir(contractPath.path)).plus(
+        if (customImplicitStubBase() != null) listOf(
+            implicitContractDataDir(contractPath.path, customImplicitStubBase())
+        ) else emptyList()
+    ).sorted()
+
 fun hasOpenApiFileExtension(contractPath: String): Boolean =
     OPENAPI_FILE_EXTENSIONS.any { contractPath.trim().endsWith(".$it") }
 
@@ -131,11 +138,18 @@ fun loadContractStubsFromFiles(contractPathDataList: List<ContractPathData>, dat
     consoleLog(StringLog("Loading the following contracts:${System.lineSeparator()}$contactPathsString"))
     consoleLog(StringLog(""))
 
-    val dataDirFileList = allDirsInTree(dataDirPaths).sorted()
-
     val features = contractPathDataList.mapNotNull { contractPathData ->
         loadIfOpenAPISpecification(contractPathData)
     }
+
+    return loadExpectationsForFeatures(features, dataDirPaths)
+}
+
+fun loadExpectationsForFeatures(
+    features: List<Pair<String, Feature>>,
+    dataDirPaths: List<String>
+): List<Pair<Feature, List<ScenarioStub>>> {
+    val dataDirFileList = allDirsInTree(dataDirPaths).sorted()
 
     val dataFiles = dataDirFileList.flatMap {
         consoleLog(StringLog("Loading stub expectations from ${it.path}".prependIndent("  ")))
@@ -318,15 +332,15 @@ fun implicitContractDataDir(contractPath: String, customBase: String? = null): F
 }
 
 fun loadIfOpenAPISpecification(contractPathData: ContractPathData): Pair<String, Feature>? {
-    if (!hasOpenApiFileExtension(contractPathData.path))
+    if (recognizedExtensionButNotOpenAPI(contractPathData) || isOpenAPI(contractPathData.path))
         return Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath))
 
-    if (isOpenAPI(contractPathData.path))
-        return Pair(contractPathData.path, parseContractFileToFeature(contractPathData.path, CommandHook(HookName.stub_load_contract), contractPathData.provider, contractPathData.repository, contractPathData.branch, contractPathData.specificationPath))
-
-    logger.log("Ignoring ${contractPathData.path} as it is not an OpenAPI specification")
+    logger.log("Ignoring ${contractPathData.path} as it does not have a recognized specification extension")
     return null
 }
+
+private fun recognizedExtensionButNotOpenAPI(contractPathData: ContractPathData) =
+    !hasOpenApiFileExtension(contractPathData.path) && File(contractPathData.path).extension in CONTRACT_EXTENSIONS
 
 fun isOpenAPI(path: String): Boolean =
     try {

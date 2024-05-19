@@ -84,9 +84,11 @@ private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File) {
     try {
         HttpTransport.setConnectionFactory(InsecureHttpConnectionFactory())
 
+        var evaluatedGitRepoURI = evaluateEnvVariablesInGitRepoURI(gitRepositoryURI, System.getenv())
+
         val cloneCommand = Git.cloneRepository().apply {
             setTransportConfigCallback(getTransportCallingCallback())
-            setURI(gitRepositoryURI)
+            setURI(evaluatedGitRepoURI)
             setDirectory(cloneDirectory)
         }
 
@@ -104,10 +106,26 @@ private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File) {
         }
 
         logger.log("Cloning: $gitRepositoryURI -> ${cloneDirectory.canonicalPath}")
+
         cloneCommand.call()
     } finally {
         HttpTransport.setConnectionFactory(preservedConnectionFactory)
     }
+}
+
+fun evaluateEnvVariablesInGitRepoURI(gitRepositoryURI: String, environmentVariables: Map<String, String>): String {
+    var evaluatedGitRepoUrl = gitRepositoryURI
+    val envVariableRegex = Regex("\\$\\{([^}]+)}")
+    val envVariableMatches = envVariableRegex.findAll(gitRepositoryURI)
+    envVariableMatches.forEach { matchResult ->
+        val envVariable = matchResult.groupValues[1]
+        environmentVariables[envVariable]?.let { envVariableValue ->
+            logger.log("Evaluating $envVariable in $gitRepositoryURI")
+            evaluatedGitRepoUrl = evaluatedGitRepoUrl.replace("\${$envVariable}", envVariableValue)
+        }
+            ?: logger.log("$envVariable in $gitRepositoryURI resembles an environment variable, but skipping evaluation since value for the same is not set.")
+    }
+    return evaluatedGitRepoUrl
 }
 
 fun loadFromPath(json: Value?, path: List<String>): Value? {

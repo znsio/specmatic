@@ -4,6 +4,7 @@ import `in`.specmatic.core.Configuration
 import `in`.specmatic.core.azure.AuthCredentials
 import `in`.specmatic.core.azure.NoGitAuthCredentials
 import `in`.specmatic.core.log.logger
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.utilities.ExternalCommand
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
@@ -47,7 +48,7 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     override fun checkout(branchName: String): SystemGit = this.also { execute(Configuration.gitCommand, "checkout", branchName) }
     override fun merge(branchName: String): SystemGit = this.also { execute(Configuration.gitCommand, "merge", branchName) }
     override fun clone(gitRepositoryURI: String, cloneDirectory: File): SystemGit =
-        this.also { executeWithAuth("clone", gitRepositoryURI, cloneDirectory.absolutePath) }
+        this.also { executeWithAuth("clone", evaluateEnvVariablesInGitRepoURI(gitRepositoryURI, System.getenv()), cloneDirectory.absolutePath) }
     override fun exists(treeish: String, relativePath: String): Boolean {
         return try {
             show(treeish, relativePath)
@@ -78,6 +79,25 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
             execute(Configuration.gitCommand, "check-ignore", path)
         } catch (nonZeroExitError:NonZeroExitError) {
             ""
+        }
+    }
+
+    override fun getFilesChangeInCurrentBranch(): List<String> {
+        val defaultBranch = defaultBranch()
+
+        val result = execute(Configuration.gitCommand, "diff", defaultBranch, "HEAD", "--name-only")
+
+        return result.split(System.lineSeparator()).filter { it.isNotBlank() }
+    }
+
+    override fun getFileInTheDefaultBranch(fileName: String, currentBranch: String): File? {
+        try {
+            checkout(defaultBranch())
+
+            if (!File(fileName).exists()) return null
+            return File(fileName)
+        } finally {
+            checkout(currentBranch)
         }
     }
 
@@ -131,6 +151,29 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     }
 
     override fun getRemoteUrl(name: String): String = execute(Configuration.gitCommand, "remote", "get-url", name)
+
+    override fun currentBranch(): String {
+        return execute(Configuration.gitCommand, "rev-parse", "--abbrev-ref", "HEAD").trim()
+    }
+
+    override fun defaultBranch(): String {
+        val defaultBranchName = System.getenv("GITHUB_BASE_REF") ?: defaultBranchFromGit()
+        return "origin/${defaultBranchName}"
+    }
+
+    private fun defaultBranchFromGit(): String {
+        val symbolicRef = System.getenv("GITHUB_BASE_REF") ?: execute(Configuration.gitCommand, "symbolic-ref", "refs/remotes/origin/HEAD", "--short")
+
+        if ("/" !in symbolicRef)
+            throw ContractException("Could not understand symbolic-ref value $symbolicRef, expected it to be of the format remote/branch name.")
+
+        return symbolicRef.split("/")[1].trim()
+    }
+
+    override fun detachedHEAD(): String {
+        val result = execute(Configuration.gitCommand, "show", "-s", "--pretty=%D", "HEAD")
+        return result.trim().split(",")[1].trim()
+    }
 }
 
 fun exitErrorMessageContains(exception: NonZeroExitError, snippets: List<String>): Boolean {

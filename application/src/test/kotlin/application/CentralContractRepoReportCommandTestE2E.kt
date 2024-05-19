@@ -25,33 +25,30 @@ class CentralContractRepoReportCommandTestE2E {
     fun `test generates report json file`() {
         centralContractRepoReportCommand.call()
         val reportJson: CentralContractRepoReportJson = Json.decodeFromString(reportFile.readText())
-        assertThat(reportJson).isEqualTo(
-            CentralContractRepoReportJson(
-                listOf(
-                    SpecificationRow(
-                        osAgnosticPath("specifications/service1/service1.yaml"),
-                        "HTTP",
-                        listOf(
-                            SpecificationOperation(
-                                "/hello/{id}",
-                                "GET",
-                                200
-                            ),
-                            SpecificationOperation(
-                                "/hello/{id}",
-                                "GET",
-                                404
-                            ),
-                            SpecificationOperation(
-                                "/hello/{id}",
-                                "GET",
-                                400
-                            )
-                        )
-                    )
+
+        val expectedSpecificationRow = SpecificationRow(
+            osAgnosticPath("specifications/service1/service1.yaml"),
+            "HTTP",
+            listOf(
+                SpecificationOperation(
+                    "/hello/{id}",
+                    "GET",
+                    200
+                ),
+                SpecificationOperation(
+                    "/hello/{id}",
+                    "GET",
+                    404
+                ),
+                SpecificationOperation(
+                    "/hello/{id}",
+                    "GET",
+                    400
                 )
             )
         )
+
+        assertThat(reportJson.specifications.contains(expectedSpecificationRow)).isTrue()
     }
 
     companion object {

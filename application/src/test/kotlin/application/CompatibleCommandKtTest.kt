@@ -46,6 +46,9 @@ internal class CompatibleCommandKtTest {
             override val workingDirectory: String
                 get() = ""
 
+            override fun getFilesChangeInCurrentBranch() = emptyList<String>()
+            override fun getFileInTheDefaultBranch(fileName: String, currentBranch: String) = null
+
             override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
                 assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.$CONTRACT_EXTENSION")
                 return Pair(this, "newer.$CONTRACT_EXTENSION")
@@ -74,6 +77,9 @@ internal class CompatibleCommandKtTest {
             override fun fileIsInGitDir(newerContractPath: String): Boolean = true
             override val workingDirectory: String
                 get() = ""
+            override fun getFileInTheDefaultBranch(fileName: String, currentBranch: String) = null
+
+            override fun getFilesChangeInCurrentBranch() = emptyList<String>()
 
             override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
                 assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.$CONTRACT_EXTENSION")
@@ -108,8 +114,10 @@ internal class CompatibleCommandKtTest {
 
         val fakeGit = object : FakeGit() {
             override fun fileIsInGitDir(newerContractPath: String): Boolean = true
+            override fun getFilesChangeInCurrentBranch() = emptyList<String>()
             override val workingDirectory: String
                 get() = ""
+            override fun getFileInTheDefaultBranch(fileName: String, currentBranch: String) = null
 
             override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
                 assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.$CONTRACT_EXTENSION")
@@ -143,8 +151,10 @@ internal class CompatibleCommandKtTest {
 
         val fakeGit = object : FakeGit() {
             override fun fileIsInGitDir(newerContractPath: String): Boolean = true
+            override fun getFilesChangeInCurrentBranch() = emptyList<String>()
             override val workingDirectory: String
                 get() = ""
+            override fun getFileInTheDefaultBranch(fileName: String, currentBranch: String) = null
 
             override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
                 assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.$CONTRACT_EXTENSION")

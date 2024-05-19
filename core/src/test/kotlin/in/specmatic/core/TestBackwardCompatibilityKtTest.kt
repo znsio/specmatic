@@ -1,12 +1,9 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.conversions.OpenApiSpecification
-import `in`.specmatic.stub.HttpStub
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 
 internal class TestBackwardCompatibilityKtTest {
@@ -2201,60 +2198,6 @@ paths:
     post:
       summary: hello world
       description: test
-      responses:
-        '200':
-          description: Says hello
-          content:
-            text/plain:
-              schema:
-                type: string
-""".trimIndent(), ""
-        ).toFeature()
-
-        val result = testBackwardCompatibility(oldContract, newContract)
-        assertThat(result.success()).withFailMessage(result.report()).isFalse()
-    }
-
-    @Test
-    @Disabled
-    fun `backward compatibility check going from nothing to string in request`() {
-        val oldContract = OpenApiSpecification.fromYAML(
-            """
-openapi: 3.0.0
-info:
-  title: Sample API
-  version: 0.1.9
-paths:
-  /data:
-    post:
-      summary: hello world
-      description: test
-      responses:
-        '200':
-          description: Says hello
-          content:
-            text/plain:
-              schema:
-                type: string
-""".trimIndent(), ""
-        ).toFeature()
-
-        val newContract = OpenApiSpecification.fromYAML(
-            """
-openapi: 3.0.0
-info:
-  title: Sample API
-  version: 0.1.9
-paths:
-  /data:
-    post:
-      summary: hello world
-      description: test
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: string
       responses:
         '200':
           description: Says hello

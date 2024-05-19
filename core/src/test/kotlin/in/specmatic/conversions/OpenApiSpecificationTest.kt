@@ -331,7 +331,6 @@ Pet:
     }
 
     @Test
-    @DisabledOnOs(OS.WINDOWS)
     fun `scenarios should have examples of type ResponseSchemaExample leading to response schema validation when VALIDATE_RESPONSE_VALUE flag is false and response is not empty`() {
         val openApiFile = this::class.java.classLoader.getResource("openapi${File.separator}response_schema_validation_including_optional_spec.yaml")!!.path
         val openApiSpecification = OpenApiSpecification.fromFile(openApiFile)
@@ -347,7 +346,6 @@ Pet:
     }
 
     @Test
-    @DisabledOnOs(OS.WINDOWS)
     fun `scenarios should have examples of type ResponseValueExample leading to response value validation when VALIDATE_RESPONSE_VALUE flag is true and response is not empty`() {
         val openApiFile = this::class.java.classLoader.getResource("openapi${File.separator}response_schema_validation_including_optional_spec.yaml")!!.path
         val environmentAndPropertiesConfigurationMock = mockk<EnvironmentAndPropertiesConfiguration>() {
@@ -370,7 +368,6 @@ Pet:
     }
 
     @Test
-    @DisabledOnOs(OS.WINDOWS)
     fun `scenarios should have null examples leading to no response value validation when the example response is empty`() {
         val openApiFile = this::class.java.classLoader.getResource("openapi${File.separator}response_schema_validation_for_empty_response_example.yaml")!!.path
         val openApiSpecification = OpenApiSpecification.fromFile(openApiFile)

@@ -81,6 +81,8 @@ data class Resolver(
         }
     }
 
+    fun hasPattern(patternValue: String): Boolean = patternValue in patterns
+
     fun getPattern(patternValue: String): Pattern =
         when {
             isPatternToken(patternValue) -> {

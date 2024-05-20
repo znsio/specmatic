@@ -45,8 +45,7 @@ data class EnumPattern(
     override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return pattern.newBasedOnR(row, resolver).map {
             it.ifHasValue {
-                val typeAliasClause = typeAlias?.let { " ${this.typeAlias}" } ?: ""
-                HasValue(it.value, "selected ${it.value} from enum$typeAliasClause")
+                HasValue(it.value, "selected ${it.value} from enum")
             }
         }
     }

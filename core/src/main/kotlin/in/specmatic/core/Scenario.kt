@@ -293,7 +293,7 @@ data class Scenario(
                             expectedFacts = newExpectedServerState,
                             ignoreFailure = ignoreFailure,
                             exampleName = row.name,
-                            generativePrefix = generativePrefix
+                            generativePrefix = generativePrefix,
                         )
                     }
                 }
@@ -464,6 +464,8 @@ data class Scenario(
             }
         }
 
+    val apiDescription: String = "$method $path ${disambiguate()}-> $statusInDescription"
+
     override fun testDescription(): String {
         val method = this.httpRequestPattern.method
         val path = this.httpRequestPattern.httpPathPattern?.path ?: ""
@@ -471,7 +473,7 @@ data class Scenario(
 
         val generativePrefix = this.generativePrefix
 
-        val apiDescription = descriptionFromPlugin ?: "$method $path ${disambiguate()}-> $statusInDescription"
+        val apiDescription = descriptionFromPlugin ?: apiDescription
         return "$generativePrefix Scenario: $apiDescription$exampleIdentifier"
     }
 
@@ -491,7 +493,7 @@ data class Scenario(
             isNegative = true,
             badRequestOrDefault = badRequestOrDefault,
             statusInDescription = "4xx",
-            generativePrefix = "-ve"
+            generativePrefix = "-ve",
         )
     }
 

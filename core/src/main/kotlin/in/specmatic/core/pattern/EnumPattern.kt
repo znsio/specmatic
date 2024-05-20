@@ -42,6 +42,10 @@ data class EnumPattern(
         return this.copy(pattern = pattern.copy(example = example))
     }
 
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        return pattern.newBasedOn(row, resolver)
+    }
+
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return scalarAnnotation(this, pattern.negativeBasedOn(row, resolver).map { it.value })
     }

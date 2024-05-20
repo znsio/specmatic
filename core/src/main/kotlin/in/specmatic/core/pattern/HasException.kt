@@ -25,6 +25,10 @@ data class HasException<T>(val t: Throwable, val message: String = "", val bread
     override val value: T
         get() = throw t
 
+    override fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U> {
+        return cast()
+    }
+
     override fun addDetails(message: String, breadCrumb: String): ReturnValue<T> {
         val newE = toException(message, breadCrumb, toException())
 

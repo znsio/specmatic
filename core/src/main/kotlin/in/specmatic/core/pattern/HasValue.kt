@@ -70,6 +70,10 @@ class HasValue<T>(override val value: T, val valueDetails: List<ValueDetails> = 
         return hasValue(value, comments())
     }
 
+    override fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U> {
+        return fn(this)
+    }
+
     override fun addDetails(message: String, breadCrumb: String): ReturnValue<T> {
         if(message.isBlank() && breadCrumb.isBlank())
             return this

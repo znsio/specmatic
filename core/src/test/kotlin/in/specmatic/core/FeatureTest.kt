@@ -1422,7 +1422,7 @@ paths:
     }
 
     @Test
-    fun `negative tests should say that 4xx status is expected in response and show the index of the test`() {
+    fun `negative tests should show a descriptor in the title`() {
         val contract = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.0
@@ -1480,7 +1480,7 @@ paths:
         }
 
         negativeTestScenarios.zip((1..negativeTestScenarios.size).toList()).forEach { (scenario, index) ->
-            assertThat(scenario.testDescription()).contains("[$index] -> 4xx")
+            assertThat(scenario.testDescription()).contains("4xx [REQUEST.BODY.name string mutated to")
         }
     }
 

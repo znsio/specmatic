@@ -1,6 +1,5 @@
 package integration_tests
 
-import `in`.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
@@ -8,7 +7,6 @@ import `in`.specmatic.core.pattern.parsedJSONArray
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 class ValidateResponseSchemaTest {
@@ -134,7 +132,7 @@ class ValidateResponseSchemaTest {
     }
 
     @Test
-    fun `response body schema validation should not complain at all`() {
+    fun `response body schema validation should be skipped for arrays within a response`() {
         val personSpec = """
             openapi: 3.0.3
             info:

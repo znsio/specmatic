@@ -155,6 +155,7 @@ data class HttpResponse(
     }
 
     fun withoutDynamicHeaders(): HttpResponse = copy(headers = headers.withoutDynamicHeaders())
+
     fun isNotEmpty(): Boolean {
         // TODO: This check should change to NoBodyValue once responses support having no body
         val bodyIsEmpty = body == StringValue()

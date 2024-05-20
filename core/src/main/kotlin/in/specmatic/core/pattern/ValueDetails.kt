@@ -33,3 +33,9 @@ class ValueDetails(val messages: List<String> = emptyList(), private val breadCr
     else
         this
 }
+
+fun List<ValueDetails>.singleLineDescription(): String {
+    return this.joinToString(" ") {
+        "${it.breadCrumbs} ${it.messages.joinToString(" ")}"
+    }
+}

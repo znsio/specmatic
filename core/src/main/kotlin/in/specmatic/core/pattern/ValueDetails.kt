@@ -1,6 +1,6 @@
 package `in`.specmatic.core.pattern
 
-class ValueDetails(val messages: List<String> = emptyList(), private val breadCrumbData: List<String> = emptyList()) {
+data class ValueDetails(val messages: List<String> = emptyList(), private val breadCrumbData: List<String> = emptyList()) {
     fun addDetails(message: String, breadCrumb: String): ValueDetails {
         return ValueDetails(
             messages.addNonBlank(message),

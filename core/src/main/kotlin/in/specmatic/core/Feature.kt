@@ -365,8 +365,8 @@ data class Feature(
             val negativeTestScenarios =
                 negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs).map { negativeScenarioResult ->
                     negativeScenarioResult.ifHasValue { result: HasValue<Scenario> ->
-                        val description = result.valueDetails.joinToString(" ") {
-                            "${it.breadCrumbs} ${it.messages.joinToString(" ")}"
+                        val description = result.valueDetails.joinToString(", ") {
+                            "${it.breadCrumbs} ${it.messages.joinToString(" ").trim()}"
                         }
 
                         HasValue(result.value.copy(descriptionFromPlugin = "${result.value.apiDescription} [${description}]"))

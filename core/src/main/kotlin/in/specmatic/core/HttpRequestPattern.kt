@@ -504,11 +504,11 @@ data class HttpRequestPattern(
                             ExactValuePattern(value)
 
                         if(status.toString().startsWith("2"))
-                            resolver.generateHttpRequestbodiesR(body, row, requestBodyAsIs, value)
+                            resolver.generateHttpRequestbodies(body, row, requestBodyAsIs, value)
                         else
                             sequenceOf(HasValue(requestBodyAsIs))
                     } else {
-                        resolver.generateHttpRequestbodiesR(body, row)
+                        resolver.generateHttpRequestbodies(body, row)
                     }
                 }
             }

@@ -6,14 +6,8 @@ import `in`.specmatic.core.pattern.withoutOptionality
 import `in`.specmatic.core.value.Value
 
 data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.onlyPositive()) : GenerationStrategies {
-    override fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): Sequence<Pattern> {
-        // TODO generate value outside
-        return resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
-            pattern.newBasedOn(Row(), cyclePreventedResolver)
-        } ?: emptySequence()
-    }
 
-    override fun generatedPatternsForGenerativeTestsR(
+    override fun generatedPatternsForGenerativeTests(
         resolver: Resolver,
         pattern: Pattern,
         key: String
@@ -24,55 +18,7 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
         } ?: emptySequence()
     }
 
-    override fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<Pattern> {
-        // TODO generate value outside
-        val requestsFromFlattenedRow: Sequence<Pattern> =
-            resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                body.newBasedOn(row.noteRequestBody(), cyclePreventedResolver)
-            }
-
-        var matchFound = false
-
-        val iterator = requestsFromFlattenedRow.iterator()
-
-        return sequence {
-
-            while(iterator.hasNext()) {
-                val next = iterator.next()
-
-                if(next.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Result.Success)
-                    matchFound = true
-
-                yield(next)
-            }
-
-            if(!matchFound)
-                yield(requestBodyAsIs)
-        }
-    }
-
-    override fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row): Sequence<Pattern> {
-        // TODO generate value outside
-        val vanilla = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-            body.newBasedOn(Row(), cyclePreventedResolver)
-        }
-        val fromExamples = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-            body.newBasedOn(row, cyclePreventedResolver)
-        }
-        val remainingVanilla = vanilla.filterNot { vanillaType ->
-            fromExamples.any { typeFromExamples ->
-                vanillaType.encompasses(
-                    typeFromExamples,
-                    resolver,
-                    resolver
-                ).isSuccess()
-            }
-        }
-
-        return fromExamples.plus(remainingVanilla)
-    }
-
-    override fun generateHttpRequestBodiesR(
+    override fun generateHttpRequestBodies(
         resolver: Resolver,
         body: Pattern,
         row: Row,
@@ -107,7 +53,7 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
         }
     }
 
-    override fun generateHttpRequestBodiesR(
+    override fun generateHttpRequestBodies(
         resolver: Resolver,
         body: Pattern,
         row: Row

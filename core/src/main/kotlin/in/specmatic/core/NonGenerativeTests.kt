@@ -4,11 +4,8 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.Value
 
 object NonGenerativeTests : GenerationStrategies {
-    override fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): Sequence<Pattern> {
-        return sequenceOf()
-    }
 
-    override fun generatedPatternsForGenerativeTestsR(
+    override fun generatedPatternsForGenerativeTests(
         resolver: Resolver,
         pattern: Pattern,
         key: String
@@ -16,17 +13,7 @@ object NonGenerativeTests : GenerationStrategies {
         return sequenceOf()
     }
 
-    override fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<Pattern> {
-        return sequenceOf(ExactValuePattern(value))
-    }
-
-    override fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row): Sequence<Pattern> {
-        return resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-            body.newBasedOn(row, cyclePreventedResolver)
-        }
-    }
-
-    override fun generateHttpRequestBodiesR(
+    override fun generateHttpRequestBodies(
         resolver: Resolver,
         body: Pattern,
         row: Row,
@@ -36,7 +23,7 @@ object NonGenerativeTests : GenerationStrategies {
         return sequenceOf(HasValue(ExactValuePattern(value)))
     }
 
-    override fun generateHttpRequestBodiesR(
+    override fun generateHttpRequestBodies(
         resolver: Resolver,
         body: Pattern,
         row: Row

@@ -192,7 +192,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Seq
                         else -> ExactValuePattern(parsedRowValue)
                     }
 
-                val generativeTests: Sequence<Pattern> = resolver.generatedPatternsForGenerativeTests(pattern, key)
+                val generativeTests: Sequence<Pattern> = resolver.generatedPatternsForGenerativeTestsR(pattern, key).map { it.value }
 
                 sequenceOf(exactValuePattern) + generativeTests.filterNot {
                     it.encompasses(exactValuePattern, resolver, resolver) is Result.Success

@@ -160,12 +160,8 @@ data class Resolver(
         return this.copy(patternMatchStrategy = matchAnything, parseStrategy = alwaysReturnStringValue)
     }
 
-    fun generatedPatternsForGenerativeTests(pattern: Pattern, key: String): Sequence<Pattern> {
-        return generation.generatedPatternsForGenerativeTests(this, pattern, key)
-    }
-
     fun generatedPatternsForGenerativeTestsR(pattern: Pattern, key: String): Sequence<ReturnValue<Pattern>> {
-        return generation.generatedPatternsForGenerativeTestsR(this, pattern, key)
+        return generation.generatedPatternsForGenerativeTests(this, pattern, key)
     }
 
     fun resolveExample(example: String?, pattern: Pattern): Value? {
@@ -180,20 +176,12 @@ data class Resolver(
         return defaultExampleResolver.resolveExample(example, pattern, this)
     }
 
-    fun generateHttpRequestbodies(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<Pattern> {
+    fun generateHttpRequestbodies(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<ReturnValue<Pattern>> {
         return generation.generateHttpRequestBodies(this, body, row, requestBodyAsIs, value)
     }
 
-    fun generateHttpRequestbodiesR(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<ReturnValue<Pattern>> {
-        return generation.generateHttpRequestBodiesR(this, body, row, requestBodyAsIs, value)
-    }
-
-    fun generateHttpRequestbodies(body: Pattern, row: Row): Sequence<Pattern> {
+    fun generateHttpRequestbodies(body: Pattern, row: Row): Sequence<ReturnValue<Pattern>> {
         return generation.generateHttpRequestBodies(this, body, row)
-    }
-
-    fun generateHttpRequestbodiesR(body: Pattern, row: Row): Sequence<ReturnValue<Pattern>> {
-        return generation.generateHttpRequestBodiesR(this, body, row)
     }
 
     fun resolveRow(row: Row): Row {

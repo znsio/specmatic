@@ -308,7 +308,7 @@ data class Feature(
                         concreteTestScenario.sourceRepositoryBranch,
                         concreteTestScenario.specification,
                         concreteTestScenario.serviceType,
-                        if(Flags.testAnnotationsEnabled()) comment else null
+                        comment
                     )
                 },
                 orFailure = {

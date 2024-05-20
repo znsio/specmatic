@@ -8,6 +8,14 @@ object NonGenerativeTests : GenerationStrategies {
         return sequenceOf()
     }
 
+    override fun generatedPatternsForGenerativeTestsR(
+        resolver: Resolver,
+        pattern: Pattern,
+        key: String
+    ): Sequence<ReturnValue<Pattern>> {
+        return sequenceOf()
+    }
+
     override fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<Pattern> {
         return sequenceOf(ExactValuePattern(value))
     }
@@ -15,6 +23,26 @@ object NonGenerativeTests : GenerationStrategies {
     override fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row): Sequence<Pattern> {
         return resolver.withCyclePrevention(body) { cyclePreventedResolver ->
             body.newBasedOn(row, cyclePreventedResolver)
+        }
+    }
+
+    override fun generateHttpRequestBodiesR(
+        resolver: Resolver,
+        body: Pattern,
+        row: Row,
+        requestBodyAsIs: Pattern,
+        value: Value
+    ): Sequence<ReturnValue<Pattern>> {
+        return sequenceOf(HasValue(ExactValuePattern(value)))
+    }
+
+    override fun generateHttpRequestBodiesR(
+        resolver: Resolver,
+        body: Pattern,
+        row: Row
+    ): Sequence<ReturnValue<Pattern>> {
+        return resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+            body.newBasedOnR(row, cyclePreventedResolver)
         }
     }
 

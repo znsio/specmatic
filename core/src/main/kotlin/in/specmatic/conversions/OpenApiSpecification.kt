@@ -69,7 +69,10 @@ class OpenApiSpecification(
         }
 
 
-        fun getParsedOpenApi(openApiFilePath: String): OpenAPI = OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences())
+        fun getParsedOpenApi(openApiFilePath: String): OpenAPI {
+            println("openApiPath --> $openApiFilePath")
+            return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences())
+        }
 
         fun isParsable(openApiFilePath: String): Boolean {
             return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences()) != null

@@ -455,40 +455,40 @@ data class HttpRequestPattern(
         }
 
         return returnValue(breadCrumb = "REQUEST") {
-            val newHttpPathPatterns: Sequence<HttpPathPattern?> = httpPathPattern?.let { httpPathPattern ->
+            val newHttpPathPatterns: Sequence<ReturnValue<HttpPathPattern?>> = httpPathPattern?.let { httpPathPattern ->
                 val newURLPathSegmentPatternsList = httpPathPattern.newBasedOn(row, resolver)
-                newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }
-            } ?: sequenceOf(null)
+                newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }.map { HasValue(it) }
+            } ?: sequenceOf(HasValue(null))
 
-            val newQueryParamsPatterns: Sequence<HttpQueryParamPattern> =
+            val newQueryParamsPatterns: Sequence<ReturnValue<HttpQueryParamPattern>> =
                 if(status.toString().startsWith("2")) {
                     val new = httpQueryParamPattern.newBasedOn(row, resolver)
                     httpQueryParamPattern.addComplimentaryPatterns(new, row, resolver)
                 } else {
                     httpQueryParamPattern.readFrom(row, resolver)
                 }.map {
-                    HttpQueryParamPattern(it)
+                    HasValue(HttpQueryParamPattern(it))
                 }
 
-            val newHeadersPattern: Sequence<HttpHeadersPattern> = if(status.toString().startsWith("2")) {
+            val newHeadersPattern: Sequence<ReturnValue<HttpHeadersPattern>> = if(status.toString().startsWith("2")) {
                 val new = headersPattern.newBasedOn(row, resolver)
                 headersPattern.addComplimentaryPatterns(new, row, resolver)
             } else {
                 headersPattern.readFrom(row, resolver)
-            }
+            }.map { HasValue(it) }
 
-            val newBodies: Sequence<Pattern> = attempt(breadCrumb = "BODY") {
+            val newBodies: Sequence<ReturnValue<Pattern>> = attempt(breadCrumb = "BODY") {
                 body.let {
                     if (it is DeferredPattern && row.containsField(it.pattern)) {
                         val example = row.getField(it.pattern)
-                        sequenceOf(ExactValuePattern(it.parse(example, resolver)))
+                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
                     } else if (it.typeAlias?.let { p -> isPatternToken(p) } == true && row.containsField(it.typeAlias!!)) {
                         val example = row.getField(it.typeAlias!!)
-                        sequenceOf(ExactValuePattern(it.parse(example, resolver)))
+                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
                     } else if (it is XMLPattern && it.referredType?.let { referredType -> row.containsField("($referredType)") } == true) {
                         val referredType = "(${it.referredType})"
                         val example = row.getField(referredType)
-                        sequenceOf(ExactValuePattern(it.parse(example, resolver)))
+                        sequenceOf(HasValue(ExactValuePattern(it.parse(example, resolver))))
                     } else if (row.containsField("(REQUEST-BODY)")) {
                         val example = row.getField("(REQUEST-BODY)")
                         val value = it.parse(example, resolver)
@@ -504,17 +504,17 @@ data class HttpRequestPattern(
                             ExactValuePattern(value)
 
                         if(status.toString().startsWith("2"))
-                            resolver.generateHttpRequestbodies(body, row, requestBodyAsIs, value)
+                            resolver.generateHttpRequestbodiesR(body, row, requestBodyAsIs, value)
                         else
-                            sequenceOf(requestBodyAsIs)
+                            sequenceOf(HasValue(requestBodyAsIs))
                     } else {
-                        resolver.generateHttpRequestbodies(body, row)
+                        resolver.generateHttpRequestbodiesR(body, row)
                     }
                 }
             }
 
-            val newFormFieldsPatterns: Sequence<Map<String, Pattern>> = newBasedOn(formFieldsPattern, row, resolver)
-            val newFormDataPartLists: Sequence<List<MultiPartFormDataPattern>> = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
+            val newFormFieldsPatterns: Sequence<ReturnValue<Map<String, Pattern>>> = newBasedOn(formFieldsPattern, row, resolver).map { HasValue(it) }
+            val newFormDataPartLists: Sequence<ReturnValue<List<MultiPartFormDataPattern>>> = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver).map { HasValue(it) }
 
             newHttpPathPatterns.flatMap("PATH") { newPathParamPattern ->
                 newQueryParamsPatterns.flatMap("QUERY") { newQueryParamPattern ->
@@ -523,13 +523,13 @@ data class HttpRequestPattern(
                             newFormFieldsPatterns.flatMap("FORM-FIELDS") { newFormFieldsPattern ->
                                 newFormDataPartLists.flatMap("FORM-DATA") { newFormDataPartList ->
                                     val newRequestPattern = HttpRequestPattern(
-                                        headersPattern = newHeadersPattern,
-                                        httpPathPattern = newPathParamPattern,
-                                        httpQueryParamPattern = newQueryParamPattern,
+                                        headersPattern = newHeadersPattern.value,
+                                        httpPathPattern = newPathParamPattern.value,
+                                        httpQueryParamPattern = newQueryParamPattern.value,
                                         method = method,
-                                        body = newBody,
-                                        formFieldsPattern = newFormFieldsPattern,
-                                        multiPartFormDataPattern = newFormDataPartList
+                                        body = newBody.value,
+                                        formFieldsPattern = newFormFieldsPattern.value,
+                                        multiPartFormDataPattern = newFormDataPartList.value
                                     )
 
                                     val schemeInRow = securitySchemes.find { it.isInRow(row) }

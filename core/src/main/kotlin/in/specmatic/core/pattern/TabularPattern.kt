@@ -139,6 +139,16 @@ fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): 
     return patternList(patternCollection)
 }
 
+fun newBasedOnR(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
+    val patternCollection: Map<String, Sequence<ReturnValue<Pattern>>> = patternMap.mapValues { (key, pattern) ->
+        attempt(breadCrumb = key) {
+            newBasedOnR(row, key, pattern, resolver)
+        }
+    }
+
+    return patternListR(patternCollection)
+}
+
 fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): Sequence<Map<String, Pattern>> {
     val patternCollection = patternMap.mapValues { (key, pattern) ->
         attempt(breadCrumb = key) {
@@ -191,6 +201,61 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Seq
         }
         else -> resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
             pattern.newBasedOn(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver)
+        }?:
+        // Handle cycle (represented by null value) by using empty list for optional properties
+        emptySequence()
+    }
+}
+
+fun newBasedOnR(row: Row, key: String, pattern: Pattern, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    val keyWithoutOptionality = key(pattern, key)
+
+    return when {
+        row.containsField(keyWithoutOptionality) -> {
+            val rowValue = row.getField(keyWithoutOptionality)
+
+            if (isPatternToken(rowValue)) {
+                val rowPattern = resolver.getPattern(rowValue)
+
+                attempt(breadCrumb = keyWithoutOptionality) {
+                    when (val result = pattern.encompasses(rowPattern, resolver, resolver)) {
+                        is Result.Success -> {
+                            resolver.withCyclePrevention(rowPattern, isOptional(key)) { cyclePreventedResolver ->
+                                rowPattern.newBasedOnR(row, cyclePreventedResolver)
+                            }?:
+                            // Handle cycle (represented by null value) by using empty sequence for optional properties
+                            emptySequence()
+                        }
+                        is Result.Failure -> throw ContractException(result.toFailureReport())
+                    }
+                }
+            } else {
+                val parsedRowValue = attempt("Format error in example of \"$keyWithoutOptionality\"") {
+                    resolver.parse(pattern, rowValue)
+                }
+
+                val exactValuePattern =
+                    when (val matchResult = resolver.matchesPattern(null, pattern, parsedRowValue)) {
+                        is Result.Failure -> throw ContractException(matchResult.toFailureReport())
+                        else -> ExactValuePattern(parsedRowValue)
+                    }
+
+                val generativePatterns: Sequence<ReturnValue<Pattern>> = resolver.generatedPatternsForGenerativeTestsR(pattern, key)
+
+                val sequence: Sequence<ReturnValue<Pattern>> =
+                    sequenceOf(HasValue(exactValuePattern))
+
+                val filteredGenerativePatterns: Sequence<ReturnValue<Pattern>> = generativePatterns.filterNot { generativePatternR ->
+                        generativePatternR.withDefault(false) { generativePattern ->
+                            generativePattern.encompasses(exactValuePattern, resolver, resolver) is Result.Success
+                        }
+                    }
+
+                sequence + filteredGenerativePatterns
+            }
+        }
+        else -> resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
+            pattern.newBasedOnR(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver)
         }?:
         // Handle cycle (represented by null value) by using empty list for optional properties
         emptySequence()

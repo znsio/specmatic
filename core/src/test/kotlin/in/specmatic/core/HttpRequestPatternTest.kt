@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Result.Failure
@@ -9,8 +10,8 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.test.TestExecutor
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import java.net.URI
 
@@ -554,5 +555,53 @@ internal class HttpRequestPatternTest {
         )
         val httpRequest: HttpRequest = httpRequestPattern.generate(Resolver())
         assertThat(httpRequest.headers[CONTENT_TYPE]).isEqualTo("application/json")
+    }
+
+    @Test
+    fun `comment on enum pattern with generated values should bubble up`() {
+        val openApiSpecWithEnumInPOSTBodyAsYAML = """
+            openapi: 3.0.0
+            info:
+              title: Test API
+              version: 1.0.0
+            paths:
+              /:
+                post:
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - type
+                            - data
+                          properties:
+                            type:
+                              ${"$"}ref: "#/components/schemas/Item"
+                            data:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+            components:
+              schemas:
+                Item:
+                  type: string
+                  enum:
+                    - gadget
+                    - book
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openApiSpecWithEnumInPOSTBodyAsYAML, "").toFeature().enableGenerativeTesting()
+
+        val negativeTestScenarios = feature.negativeTestScenarios().toList()
+
+        negativeTestScenarios.map { it.second }.filterIsInstance<HasValue<*>>().forEach {
+            println(it.valueDetails.singleLineDescription())
+        }
+
+//        negativeTestScenarios.map { it.second }.filterIsInstance<HasValue<Scenario>>().map { it.valueDetails.singleLineDescription() }.count { it.contains("from enum") }.let {
+//            assertThat(it).isEqualTo(6)
+//        }
     }
 }

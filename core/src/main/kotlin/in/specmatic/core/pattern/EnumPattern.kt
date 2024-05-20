@@ -42,8 +42,13 @@ data class EnumPattern(
         return this.copy(pattern = pattern.copy(example = example))
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
-        return pattern.newBasedOn(row, resolver)
+    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return pattern.newBasedOnR(row, resolver).map {
+            it.ifHasValue {
+                val typeAliasClause = typeAlias?.let { " ${this.typeAlias}" } ?: ""
+                HasValue(it.value, "selected ${it.value} from enum$typeAliasClause")
+            }
+        }
     }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {

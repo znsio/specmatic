@@ -1,6 +1,6 @@
 package `in`.specmatic.core.pattern
 
-class ValueDetails(val messages: List<String> = emptyList(), private val breadCrumbData: List<String> = emptyList()) {
+data class ValueDetails(val messages: List<String> = emptyList(), private val breadCrumbData: List<String> = emptyList()) {
     fun addDetails(message: String, breadCrumb: String): ValueDetails {
         return ValueDetails(
             messages.addNonBlank(message),
@@ -35,7 +35,7 @@ class ValueDetails(val messages: List<String> = emptyList(), private val breadCr
 }
 
 fun List<ValueDetails>.singleLineDescription(): String {
-    return this.joinToString(" ") {
-        "${it.breadCrumbs} ${it.messages.joinToString(" ")}"
+    return this.joinToString(", ") {
+        "${it.breadCrumbs} ${it.messages.joinToString(" ").trim()}"
     }
 }

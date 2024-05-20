@@ -164,6 +164,10 @@ data class Resolver(
         return generation.generatedPatternsForGenerativeTests(this, pattern, key)
     }
 
+    fun generatedPatternsForGenerativeTestsR(pattern: Pattern, key: String): Sequence<ReturnValue<Pattern>> {
+        return generation.generatedPatternsForGenerativeTestsR(this, pattern, key)
+    }
+
     fun resolveExample(example: String?, pattern: Pattern): Value? {
         return defaultExampleResolver.resolveExample(example, pattern, this)
     }
@@ -180,8 +184,16 @@ data class Resolver(
         return generation.generateHttpRequestBodies(this, body, row, requestBodyAsIs, value)
     }
 
+    fun generateHttpRequestbodiesR(body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<ReturnValue<Pattern>> {
+        return generation.generateHttpRequestBodiesR(this, body, row, requestBodyAsIs, value)
+    }
+
     fun generateHttpRequestbodies(body: Pattern, row: Row): Sequence<Pattern> {
         return generation.generateHttpRequestBodies(this, body, row)
+    }
+
+    fun generateHttpRequestbodiesR(body: Pattern, row: Row): Sequence<ReturnValue<Pattern>> {
+        return generation.generateHttpRequestBodiesR(this, body, row)
     }
 
     fun resolveRow(row: Row): Row {

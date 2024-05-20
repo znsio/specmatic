@@ -1,6 +1,6 @@
 package `in`.specmatic.core.pattern
 
-class HasValue<T>(override val value: T, val valueDetails: List<ValueDetails> = emptyList()): ReturnValue<T> {
+data class HasValue<T>(override val value: T, val valueDetails: List<ValueDetails> = emptyList()): ReturnValue<T> {
     constructor(value: T, message: String): this(value, listOf(ValueDetails(listOf(message))))
     constructor(value: T, message: String, key: String): this(value, listOf(ValueDetails(listOf(message), listOf(key))))
 

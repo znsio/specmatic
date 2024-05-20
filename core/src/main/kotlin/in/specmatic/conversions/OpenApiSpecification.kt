@@ -70,7 +70,6 @@ class OpenApiSpecification(
 
 
         fun getParsedOpenApi(openApiFilePath: String): OpenAPI {
-            println("openApiPath --> $openApiFilePath")
             return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences())
         }
 

@@ -467,8 +467,6 @@ data class Scenario(
     val apiDescription: String = "$method $path ${disambiguate()}-> $statusInDescription"
 
     override fun testDescription(): String {
-        val method = this.httpRequestPattern.method
-        val path = this.httpRequestPattern.httpPathPattern?.path ?: ""
         val exampleIdentifier = if(exampleName.isNullOrBlank()) "" else { " | EX:${exampleName.trim()}" }
 
         val generativePrefix = this.generativePrefix

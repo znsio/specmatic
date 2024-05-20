@@ -11,6 +11,7 @@ import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.test.TestExecutor
+import org.assertj.core.api.Condition
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import java.net.URI
@@ -596,12 +597,13 @@ internal class HttpRequestPatternTest {
 
         val negativeTestScenarios = feature.negativeTestScenarios().toList()
 
-        negativeTestScenarios.map { it.second }.filterIsInstance<HasValue<*>>().forEach {
-            println(it.valueDetails.singleLineDescription())
+        negativeTestScenarios.map { it.second }.filterIsInstance<HasValue<*>>().map { it.value as Scenario }.forEach {
+            println(it.testDescription())
         }
 
-//        negativeTestScenarios.map { it.second }.filterIsInstance<HasValue<Scenario>>().map { it.valueDetails.singleLineDescription() }.count { it.contains("from enum") }.let {
-//            assertThat(it).isEqualTo(6)
-//        }
+
+        val testDescriptions = negativeTestScenarios.map { it.second }.filterIsInstance<HasValue<*>>().map { it.value as Scenario }.map { it.testDescription() }
+
+        assertThat(testDescriptions.count { it.contains("from enum") }).isEqualTo(6)
     }
 }

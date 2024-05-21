@@ -6,18 +6,29 @@ import `in`.specmatic.core.pattern.withoutOptionality
 import `in`.specmatic.core.value.Value
 
 data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.onlyPositive()) : GenerationStrategies {
-    override fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): Sequence<Pattern> {
+
+    override fun generatedPatternsForGenerativeTests(
+        resolver: Resolver,
+        pattern: Pattern,
+        key: String
+    ): Sequence<ReturnValue<Pattern>> {
         // TODO generate value outside
         return resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
-            pattern.newBasedOn(Row(), cyclePreventedResolver)
+            pattern.newBasedOnR(Row(), cyclePreventedResolver)
         } ?: emptySequence()
     }
 
-    override fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<Pattern> {
+    override fun generateHttpRequestBodies(
+        resolver: Resolver,
+        body: Pattern,
+        row: Row,
+        requestBodyAsIs: Pattern,
+        value: Value
+    ): Sequence<ReturnValue<Pattern>> {
         // TODO generate value outside
-        val requestsFromFlattenedRow: Sequence<Pattern> =
+        val requestsFromFlattenedRow: Sequence<ReturnValue<Pattern>> =
             resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                body.newBasedOn(row.noteRequestBody(), cyclePreventedResolver)
+                body.newBasedOnR(row.noteRequestBody(), cyclePreventedResolver)
             }
 
         var matchFound = false
@@ -29,32 +40,42 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
             while(iterator.hasNext()) {
                 val next = iterator.next()
 
-                if(next.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Result.Success)
-                    matchFound = true
+                next.withDefault(false) {
+                    if(it.encompasses(requestBodyAsIs, resolver, resolver, emptySet()) is Result.Success)
+                        matchFound = true
+                }
 
                 yield(next)
             }
 
             if(!matchFound)
-                yield(requestBodyAsIs)
+                yield(HasValue(requestBodyAsIs))
         }
     }
 
-    override fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row): Sequence<Pattern> {
+    override fun generateHttpRequestBodies(
+        resolver: Resolver,
+        body: Pattern,
+        row: Row
+    ): Sequence<ReturnValue<Pattern>> {
         // TODO generate value outside
-        val vanilla = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-            body.newBasedOn(Row(), cyclePreventedResolver)
+        val vanilla: Sequence<ReturnValue<Pattern>> = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+            body.newBasedOnR(Row(), cyclePreventedResolver)
         }
-        val fromExamples = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-            body.newBasedOn(row, cyclePreventedResolver)
+
+        val fromExamples: Sequence<ReturnValue<Pattern>> = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
+            body.newBasedOnR(row, cyclePreventedResolver)
         }
-        val remainingVanilla = vanilla.filterNot { vanillaType ->
-            fromExamples.any { typeFromExamples ->
-                vanillaType.encompasses(
-                    typeFromExamples,
-                    resolver,
-                    resolver
-                ).isSuccess()
+
+        val remainingVanilla: Sequence<ReturnValue<Pattern>> = vanilla.filterNot { vanillaTypeR ->
+            fromExamples.any { typeFromExamplesR ->
+                vanillaTypeR.withDefault(false, typeFromExamplesR) { vanillaType, typeFromExamples ->
+                    vanillaType.encompasses(
+                        typeFromExamples,
+                        resolver,
+                        resolver
+                    ).isSuccess()
+                }
             }
         }
 

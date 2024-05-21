@@ -24,7 +24,7 @@ abstract class NegativePatternsTemplate {
                             val result: Sequence<ReturnValue<Pattern>> = negativePatterns
                             result
                         }
-                        else -> newBasedOn(row, key, pattern, resolver).map { HasValue(it) }
+                        else -> newBasedOnR(row, key, pattern, resolver)
                     }.map {
                         it.breadCrumb(withoutOptionality(key))
                     }
@@ -46,9 +46,4 @@ abstract class NegativePatternsTemplate {
         row: Row
     ): Map<String, Sequence<ReturnValue<Pattern>>>
 
-    abstract fun negativePatternsForKey(
-        key: String,
-        negativePattern: Pattern,
-        resolver: Resolver,
-    ): Sequence<Pattern>
 }

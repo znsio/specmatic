@@ -168,6 +168,22 @@ data class JSONObjectPattern(
             })
         }
 
+    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> =
+        allOrNothingCombinationInR(
+            pattern.minus("..."),
+            resolver.resolveRow(row),
+            minProperties,
+            maxProperties
+        ) { pattern ->
+            newBasedOnR(pattern, row, withNullPattern(resolver))
+        }.map { it: ReturnValue<Map<String, Pattern>> ->
+            it.ifValue {
+                toJSONObjectPattern(it.mapKeys { (key, _) ->
+                    withoutOptionality(key)
+                })
+            }
+    }
+
     override fun newBasedOn(resolver: Resolver): Sequence<JSONObjectPattern> =
         allOrNothingCombinationIn(pattern.minus("...")) { pattern ->
             newBasedOn(pattern, withNullPattern(resolver))

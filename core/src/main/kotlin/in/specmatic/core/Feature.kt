@@ -363,7 +363,13 @@ data class Feature(
             val negativeScenario = originalScenario.negativeBasedOn(getBadRequestsOrDefault(originalScenario))
 
             val negativeTestScenarios =
-                negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs)
+                negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs).map { negativeScenarioResult ->
+                    negativeScenarioResult.ifHasValue { result: HasValue<Scenario> ->
+                        val description = result.valueDetails.singleLineDescription()
+
+                        HasValue(result.value.copy(descriptionFromPlugin = "${result.value.apiDescription} [${description}]"))
+                    }
+                }
 
             negativeTestScenarios.filterNot { negativeTestScenarioR ->
                 negativeTestScenarioR.withDefault(false) { negativeTestScenario ->

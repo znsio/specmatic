@@ -3,13 +3,6 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Resolver
 
 class AllNegativePatterns : NegativePatternsTemplate() {
-    override fun negativePatternsForKey(
-        key: String,
-        negativePattern: Pattern,
-        resolver: Resolver,
-    ): Sequence<Pattern> {
-        return newBasedOn(Row(), key, negativePattern, resolver)
-    }
 
     override fun getNegativePatterns(
         patternMap: Map<String, Pattern>,

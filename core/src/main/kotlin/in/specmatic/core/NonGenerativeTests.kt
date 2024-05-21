@@ -4,17 +4,32 @@ import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.value.Value
 
 object NonGenerativeTests : GenerationStrategies {
-    override fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): Sequence<Pattern> {
+
+    override fun generatedPatternsForGenerativeTests(
+        resolver: Resolver,
+        pattern: Pattern,
+        key: String
+    ): Sequence<ReturnValue<Pattern>> {
         return sequenceOf()
     }
 
-    override fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<Pattern> {
-        return sequenceOf(ExactValuePattern(value))
+    override fun generateHttpRequestBodies(
+        resolver: Resolver,
+        body: Pattern,
+        row: Row,
+        requestBodyAsIs: Pattern,
+        value: Value
+    ): Sequence<ReturnValue<Pattern>> {
+        return sequenceOf(HasValue(ExactValuePattern(value)))
     }
 
-    override fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row): Sequence<Pattern> {
+    override fun generateHttpRequestBodies(
+        resolver: Resolver,
+        body: Pattern,
+        row: Row
+    ): Sequence<ReturnValue<Pattern>> {
         return resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-            body.newBasedOn(row, cyclePreventedResolver)
+            body.newBasedOnR(row, cyclePreventedResolver)
         }
     }
 

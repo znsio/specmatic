@@ -1,6 +1,6 @@
 package `in`.specmatic.core.pattern
 
-class HasValue<T>(override val value: T, val valueDetails: List<ValueDetails> = emptyList()): ReturnValue<T> {
+data class HasValue<T>(override val value: T, val valueDetails: List<ValueDetails> = emptyList()): ReturnValue<T> {
     constructor(value: T, message: String): this(value, listOf(ValueDetails(listOf(message))))
     constructor(value: T, message: String, key: String): this(value, listOf(ValueDetails(listOf(message), listOf(key))))
 
@@ -68,6 +68,10 @@ class HasValue<T>(override val value: T, val valueDetails: List<ValueDetails> = 
 
     override fun <U> realise(hasValue: (T, String?) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U {
         return hasValue(value, comments())
+    }
+
+    override fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U> {
+        return fn(this)
     }
 
     override fun addDetails(message: String, breadCrumb: String): ReturnValue<T> {

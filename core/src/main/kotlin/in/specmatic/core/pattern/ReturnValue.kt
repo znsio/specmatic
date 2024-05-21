@@ -6,7 +6,16 @@ sealed interface ReturnValue<T> {
     val value: T
 
     abstract fun <U> withDefault(default: U, fn: (T) -> U): U
+
+    fun <U, V> withDefault(default: U, other: ReturnValue<V>, fn: (T, V) -> U): U {
+        if(this !is HasValue && other !is HasValue)
+            return default
+
+        return fn(this.value, other.value)
+    }
+
     abstract fun <U> ifValue(fn: (T) -> U): ReturnValue<U>
+    abstract fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U>
     fun update(fn: (T) -> T): ReturnValue<T>
     fun <U> combineWith(valueResult: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T>
     fun <U> realise(hasValue: (T, String?) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U

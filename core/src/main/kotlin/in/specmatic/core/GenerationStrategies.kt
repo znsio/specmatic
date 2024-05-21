@@ -7,9 +7,9 @@ import `in`.specmatic.core.pattern.withoutOptionality
 import `in`.specmatic.core.value.Value
 
 interface GenerationStrategies {
-    fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): Sequence<Pattern>
-    fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<Pattern>
-    fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row): Sequence<Pattern>
+    fun generatedPatternsForGenerativeTests(resolver: Resolver, pattern: Pattern, key: String): Sequence<ReturnValue<Pattern>>
+    fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row, requestBodyAsIs: Pattern, value: Value): Sequence<ReturnValue<Pattern>>
+    fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row): Sequence<ReturnValue<Pattern>>
     fun resolveRow(row: Row): Row
     fun generateKeySubLists(key: String, subList: List<String>): Sequence<List<String>>
     fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>>

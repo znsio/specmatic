@@ -1,5 +1,6 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Result.Failure
@@ -9,8 +10,9 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
+import `in`.specmatic.test.TestExecutor
+import org.assertj.core.api.Condition
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import java.net.URI
 
@@ -554,5 +556,138 @@ internal class HttpRequestPatternTest {
         )
         val httpRequest: HttpRequest = httpRequestPattern.generate(Resolver())
         assertThat(httpRequest.headers[CONTENT_TYPE]).isEqualTo("application/json")
+    }
+
+    @Test
+    fun `comment on enum pattern with generated values should bubble up`() {
+        val openApiSpecWithEnumInPOSTBodyAsYAML = """
+            openapi: 3.0.0
+            info:
+              title: Test API
+              version: 1.0.0
+            paths:
+              /:
+                post:
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - type
+                            - data
+                          properties:
+                            type:
+                              ${"$"}ref: "#/components/schemas/Item"
+                            data:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+            components:
+              schemas:
+                Item:
+                  type: string
+                  enum:
+                    - gadget
+                    - book
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openApiSpecWithEnumInPOSTBodyAsYAML, "").toFeature().enableGenerativeTesting()
+
+        val negativeTestScenarios = feature.negativeTestScenarios().toList()
+
+        negativeTestScenarios.map { it.second }.filterIsInstance<HasValue<*>>().map { it.value as Scenario }.forEach {
+            println(it.testDescription())
+        }
+
+        val testDescriptions = negativeTestScenarios.map { it.second }.filterIsInstance<HasValue<*>>().map { it.value as Scenario }.map { it.testDescription() }
+
+        assertThat(testDescriptions.count { it.matches(Regex("^.*REQUEST.BODY.*enum.*$")) }).isEqualTo(6)
+    }
+
+    @Test
+    fun `comment on enum pattern in query param generated values should bubble up`() {
+        val openApiYAMLSpecWithEnumInQueryParamAs = """
+            openapi: 3.0.0
+            info:
+              title: Test API
+              version: 1.0.0
+            paths:
+              /:
+                get:
+                  parameters:
+                    - name: type
+                      in: query
+                      required: true
+                      schema:
+                        type: string
+                        enum:
+                          - gadget
+                          - book
+                    - name: id
+                      in: query
+                      required: true
+                      schema:
+                        type: number
+                  responses:
+                    '200':
+                      description: OK
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openApiYAMLSpecWithEnumInQueryParamAs, "").toFeature().enableGenerativeTesting()
+
+        val negativeTestScenarios = feature.negativeTestScenarios().toList()
+
+        negativeTestScenarios.map { it.second }.filterIsInstance<HasValue<*>>().map { it.value as Scenario }.forEach {
+            println(it.testDescription())
+        }
+
+
+        val testDescriptions = negativeTestScenarios.map { it.second }.filterIsInstance<HasValue<*>>().map { it.value as Scenario }.map { it.testDescription() }
+
+        assertThat(testDescriptions.count { it.matches(Regex("^.*QUERY-PARAM.*enum.*$")) }).isEqualTo(4)
+    }
+
+    @Test
+    fun `comment on enum pattern in header generated values should bubble up`() {
+        val openApiYAMLSpecWithEnumInQueryParamAs = """
+            openapi: 3.0.0
+            info:
+              title: Test API
+              version: 1.0.0
+            paths:
+              /:
+                get:
+                  parameters:
+                    - name: type
+                      in: header
+                      required: true
+                      schema:
+                        type: string
+                        enum:
+                          - gadget
+                          - book
+                    - name: id
+                      in: header
+                      required: true
+                      schema:
+                        type: number
+                  responses:
+                    '200':
+                      description: OK
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openApiYAMLSpecWithEnumInQueryParamAs, "").toFeature().enableGenerativeTesting()
+
+        val negativeTestScenarios = feature.negativeTestScenarios().toList()
+
+        val testDescriptions = negativeTestScenarios.map { it.second }.filterIsInstance<HasValue<*>>().map { it.value as Scenario }.map { it.testDescription() }
+
+        testDescriptions.forEach {
+            println(it)
+        }
+
+        assertThat(testDescriptions.count { it.matches(Regex("^.*HEADER.*enum.*$")) }).isEqualTo(4)
     }
 }

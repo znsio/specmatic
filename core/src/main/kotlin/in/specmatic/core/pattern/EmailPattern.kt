@@ -37,7 +37,12 @@ class EmailPattern (private val stringPatternDelegate: StringPattern) :
         return StringValue("$localPart@$domain.com")
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> =
+        sequenceOf(this)
+
+    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return newBasedOn(row, resolver).map { HasValue(it) }
+    }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val negativePatterns = stringPatternDelegate.negativeBasedOn(row, resolver).map { it.value }.plus(StringPattern())

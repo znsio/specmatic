@@ -2,6 +2,8 @@ package application
 
 import picocli.CommandLine.*
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import `in`.specmatic.core.Configuration.Companion.DEFAULT_PROXY_HOST
+import `in`.specmatic.core.Configuration.Companion.DEFAULT_PROXY_PORT
 import `in`.specmatic.core.log.*
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.exitWithMessage
@@ -17,10 +19,10 @@ class ProxyCommand : Callable<Unit> {
     @Option(names = ["--target"], description = ["Base URL of the target to proxy"])
     var targetBaseURL: String = ""
 
-    @Option(names = ["--host"], description = ["Host for the proxy"], defaultValue = "localhost")
+    @Option(names = ["--host"], description = ["Host for the proxy"], defaultValue = DEFAULT_PROXY_HOST)
     lateinit var host: String
 
-    @Option(names = ["--port"], description = ["Port for the proxy"], defaultValue = "9000")
+    @Option(names = ["--port"], description = ["Port for the proxy"], defaultValue = DEFAULT_PROXY_PORT)
     var port: Int = 9000
 
     @Parameters(description = ["Store data from the proxy interactions into this dir"], index = "0")

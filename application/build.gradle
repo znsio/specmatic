@@ -52,7 +52,7 @@ dependencies {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter'
         exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
     }
-    implementation('org.springframework.boot:spring-boot-starter:3.2.5') {
+    implementation('org.springframework.boot:spring-boot-starter:3.3.0') {
         exclude group: 'org.springframework', module: 'spring-core'
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude group: 'ch.qos.logback', module: 'logback-core'
@@ -86,7 +86,7 @@ dependencies {
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
-    testImplementation('org.springframework.boot:spring-boot-starter-test:3.2.5') {
+    testImplementation('org.springframework.boot:spring-boot-starter-test:3.3.0') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude module: 'mockito-core'
     }

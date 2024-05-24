@@ -36,7 +36,7 @@ def jgit_version = "6.9.0.202403050737-r"
 
 dependencies {
     // TODO Put library reference overrides here to eliminate vulnerabilities, and remove the override when no longer needed
-    implementation 'io.netty:netty-codec-http:4.1.109.Final' // used by ktor-server-netty-jvm 2.3.9 in core
+    implementation 'io.netty:netty-codec-http:4.1.110.Final' // used by ktor-server-netty-jvm 2.3.9 in core
     implementation 'joda-time:joda-time:2.12.7' // used by swagger-parser 2.1.22
 
 

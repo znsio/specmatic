@@ -238,7 +238,6 @@ components:
     }
 
     @Test
-    @Disabled
     fun `response header ref`() {
         val specification = """
 openapi: 3.0.0

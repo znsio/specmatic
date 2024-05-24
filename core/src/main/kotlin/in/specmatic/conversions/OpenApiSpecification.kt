@@ -13,6 +13,7 @@ import `in`.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import `in`.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import io.cucumber.messages.internal.com.fasterxml.jackson.databind.ObjectMapper
 import io.cucumber.messages.types.Step
+import io.ktor.http.*
 import io.ktor.util.reflect.*
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
@@ -562,27 +563,35 @@ class OpenApiSpecification(
 
     private fun openAPIResponseToSpecmatic(
         response: ApiResponse,
-        status: String,
+        rawStatus: String,
         headersMap: Map<String, Pattern>
     ): List<ResponsePatternData> {
-        if (response.content == null || response.content.isEmpty()) {
-            val responsePattern = HttpResponsePattern(
-                headersPattern = HttpHeadersPattern(headersMap),
-                status = status.toIntOrNull() ?: DEFAULT_RESPONSE_CODE
-            )
-
-            return listOf(ResponsePatternData(response, MediaType(), responsePattern, emptyMap()))
-        }
-
         val headerExamples =
             response.headers.orEmpty().entries.fold(emptyMap<String, Map<String, String>>()) { acc, (headerName, header) ->
-                extractParameterExamples(header.examples, headerName, acc)
+                resolveResponseHeader(header)?.let { extractParameterExamples(it.examples, headerName, acc) } ?: acc
             }
+
+        if (response.content == null || response.content.isEmpty()) {
+            val status = rawStatus.toIntOrNull() ?: DEFAULT_RESPONSE_CODE
+            val responsePattern = HttpResponsePattern(
+                headersPattern = HttpHeadersPattern(headersMap),
+                status = status
+            )
+
+            val examplesResponses = headerExamples.mapValues { (exampleName, headerExamples) ->
+                HttpResponse(
+                    status = status,
+                    headers = headerExamples
+                )
+            }
+
+            return listOf(ResponsePatternData(response, MediaType(), responsePattern, examplesResponses))
+        }
 
         return response.content.map { (contentType, mediaType) ->
             val responsePattern = HttpResponsePattern(
                 headersPattern = HttpHeadersPattern(headersMap, contentType = contentType),
-                status = if (status == "default") 1000 else status.toInt(),
+                status = if (rawStatus == "default") 1000 else rawStatus.toInt(),
                 body = when (contentType) {
                     "application/xml" -> toXMLPattern(mediaType)
                     else -> toSpecmaticPattern(mediaType, "response")
@@ -594,11 +603,11 @@ class OpenApiSpecification(
             } ?: emptyMap()
 
             val examples: Map<String, HttpResponse> =
-                when (status.toIntOrNull()) {
+                when (rawStatus.toIntOrNull()) {
                     0, null -> emptyMap()
                     else -> exampleBodies.map {
                         it.key to HttpResponse(
-                            status.toInt(),
+                            rawStatus.toInt(),
                             body = it.value ?: "",
                             headers = headerExamples[it.key] ?: emptyMap()
                         )

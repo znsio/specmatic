@@ -130,7 +130,7 @@ paths:
                 type: integer
               examples:
                 NEW_PRODUCT:
-                  value: "Header 1 value"
+                  value: 10
             """.trimIndent(),
             "",
             environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
@@ -187,7 +187,7 @@ paths:
                 type: integer
               examples:
                 NEW_PRODUCT:
-                  value: "Header 1 value"
+                  value: 10
             """.trimIndent(),
             "",
             environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(

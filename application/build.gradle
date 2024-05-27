@@ -58,7 +58,7 @@ dependencies {
         exclude group: 'ch.qos.logback', module: 'logback-core'
     }
     implementation('org.springframework.boot:spring-boot-autoconfigure:3.3.0')
-    implementation('org.springframework:spring-core:6.1.7')
+    implementation('org.springframework:spring-core:6.1.8')
     implementation 'info.picocli:picocli:4.7.6'
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
     implementation "io.ktor:ktor-network-tls:$ktor_version"

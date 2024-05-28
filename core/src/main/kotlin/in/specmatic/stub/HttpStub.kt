@@ -55,7 +55,8 @@ class HttpStub(
     val passThroughTargetBase: String = "",
     val httpClientFactory: HttpClientFactory = HttpClientFactory(),
     val workingDirectory: WorkingDirectory? = null,
-    val specmaticConfigPath: String? = null
+    val specmaticConfigPath: String? = null,
+    private val timeoutMillis: Long = 0
 ) : ContractStub {
     constructor(
         feature: Feature,
@@ -489,7 +490,7 @@ class HttpStub(
     }
 
     override fun close() {
-        server.stop(0, 5000)
+        server.stop(gracePeriodMillis = timeoutMillis, timeoutMillis = timeoutMillis)
         printUsageReport()
     }
 

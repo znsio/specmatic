@@ -1032,7 +1032,7 @@ paths:
     fun `should load a stub with a space in the path and return the stubbed response`() {
         val pathWithSpace = "/da ta"
 
-        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_space_in_path.yaml")).use { stub ->
+        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_space_in_path.yaml"), timeoutMillis = 0).use { stub ->
             val request = HttpRequest("GET", pathWithSpace)
 
             val response = stub.client.execute(request)
@@ -1051,7 +1051,7 @@ paths:
     fun `should load a stub with query params and a space in the path and return the stubbed response`() {
         val pathWithSpace = "/da ta"
 
-        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_query_and_space_in_path.yaml")).use { stub ->
+        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_query_and_space_in_path.yaml"), timeoutMillis = 0).use { stub ->
             val request = HttpRequest("GET", pathWithSpace, queryParametersMap = mapOf("id" to "5"))
 
             val response = stub.client.execute(request)
@@ -1114,7 +1114,7 @@ paths:
 
     @Test
     fun `should stub out a request for boolean query param with capital T or F in the incoming request`() {
-        val specification = createStubFromContracts(listOf("src/test/resources/openapi/spec_with_boolean_query.yaml"))
+        val specification = createStubFromContracts(listOf("src/test/resources/openapi/spec_with_boolean_query.yaml"), timeoutMillis = 0)
 
         specification.use { stub ->
             val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("enabled" to "True"))

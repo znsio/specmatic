@@ -19,8 +19,6 @@ import io.mockk.every
 import io.mockk.mockk
 import io.swagger.v3.core.util.Yaml
 import io.swagger.v3.oas.models.OpenAPI
-import io.swagger.v3.parser.OpenAPIV3Parser
-import io.swagger.v3.parser.core.models.ParseOptions
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -5222,7 +5220,7 @@ paths:
 
             var testStatus: String
 
-            createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
+            createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000, timeoutMillis = 0).use {
                 testStatus = "test ran"
 
                 val request = HttpRequest(
@@ -5278,7 +5276,7 @@ paths:
 
             var testStatus: String
 
-            createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
+            createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000, timeoutMillis = 0).use {
                 testStatus = "test ran"
 
                 val request = HttpRequest(
@@ -5334,7 +5332,7 @@ paths:
 
             var testStatus: String
 
-            createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000).use {
+            createStubFromContracts(listOf(openAPIFile.canonicalPath), "localhost", 9000, timeoutMillis = 0).use {
                 testStatus = "test ran"
 
                 val request = HttpRequest(

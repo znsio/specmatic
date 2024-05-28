@@ -529,7 +529,7 @@ internal class UtilitiesTest {
                                 type: string
             """.trimIndent())
 
-            createStub("localhost", 9000).use { stub ->
+            createStub("localhost", 9000, timeoutMillis = 0).use { stub ->
                 val response = stub.client.execute(HttpRequest("POST", "/random", body = parsedJSONObject("""{"id": 1}""")))
                 assertThat(response.status).isEqualTo(200)
             }
@@ -599,7 +599,7 @@ internal class UtilitiesTest {
 
             val stubPort = ServerSocket(0).use { it.localPort }
 
-            createStub("localhost", stubPort).use { stub ->
+            createStub("localhost", stubPort, timeoutMillis = 0).use { stub ->
                 val response = stub.client.execute(HttpRequest("POST", "/random", body = parsedJSONObject("""{"id": 1}""")))
                 assertThat(response.status).isEqualTo(200)
             }
@@ -666,7 +666,7 @@ internal class UtilitiesTest {
                                 type: string
             """.trimIndent())
 
-            val results = createStub("localhost", 9000).use { stub ->
+            val results = createStub("localhost", 9000, timeoutMillis = 0).use { stub ->
                 loadSources(specmaticJSON.path).flatMap { source ->
                     source.testContracts
                 }.map { specPath ->

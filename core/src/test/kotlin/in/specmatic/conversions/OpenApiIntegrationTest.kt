@@ -889,7 +889,10 @@ Feature: Authenticated
 
         @Test
         fun `should generate stub that authenticates with api key in header and query`() {
-            createStubFromContracts(listOf("src/test/resources/openapi/apiKeyAuth.yaml")).use {
+            createStubFromContracts(
+                listOf("src/test/resources/openapi/apiKeyAuth.yaml"),
+                timeoutMillis = 0L
+            ).use {
                 val requestWithHeader = HttpRequest(
                     method = "GET",
                     path = "/hello/10",

@@ -51,13 +51,45 @@ class CentralContractRepoReportCommandTestE2E {
         assertThat(reportJson.specifications.contains(expectedSpecificationRow)).isTrue()
     }
 
+    @Test
+    fun `report only contains specifications within baseDir`() {
+        createSpecFiles("./specifications/service2/service2.yaml")
+        centralContractRepoReportCommand.baseDir = "specifications/service2"
+        centralContractRepoReportCommand.call()
+        val reportJson: CentralContractRepoReportJson = Json.decodeFromString(reportFile.readText())
+
+        val expectedSpecificationRow = SpecificationRow(
+            osAgnosticPath("specifications/service2/service2.yaml"),
+            "HTTP",
+            listOf(
+                SpecificationOperation(
+                    "/hello/{id}",
+                    "GET",
+                    200
+                ),
+                SpecificationOperation(
+                    "/hello/{id}",
+                    "GET",
+                    404
+                ),
+                SpecificationOperation(
+                    "/hello/{id}",
+                    "GET",
+                    400
+                )
+            )
+        )
+
+        assertThat(reportJson.specifications).containsOnly(expectedSpecificationRow)
+    }
+
     companion object {
         private val reportFile = File(osAgnosticPath("./build/reports/specmatic/central_contract_repo_report.json"))
 
         @JvmStatic
         @BeforeAll
         fun setupBeforeAll() {
-            createSpecFiles()
+            createSpecFiles("./specifications/service1/service1.yaml")
         }
 
         @JvmStatic
@@ -67,7 +99,7 @@ class CentralContractRepoReportCommandTestE2E {
             reportFile.delete()
         }
 
-        private fun createSpecFiles() {
+        private fun createSpecFiles(specFilePath: String) {
             val service1spec = """
 openapi: 3.0.0
 info:
@@ -111,7 +143,7 @@ paths:
               schema:
                 type: string
         """
-            val service1File = File(osAgnosticPath("./specifications/service1/service1.yaml"))
+            val service1File = File(osAgnosticPath(specFilePath))
             service1File.parentFile.mkdirs()
             service1File.writeText(service1spec)
         }

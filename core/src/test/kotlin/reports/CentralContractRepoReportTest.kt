@@ -15,13 +15,13 @@ class CentralContractRepoReportTest {
 
     @Test
     fun `test generates report based on all the open api specifications present in the specified dir`() {
-        val report = CentralContractRepoReport().generate("./specifications")
+        val report = CentralContractRepoReport().generate("./specifications/service1")
         assertThat(osAgnosticPaths(report)).isEqualTo(
             osAgnosticPaths(
                 CentralContractRepoReportJson(
                     listOf(
                         SpecificationRow(
-                            "service1/service1.yaml",
+                            "specifications/service1/service1.yaml",
                             "HTTP",
                             listOf(
                                 SpecificationOperation(
@@ -40,18 +40,7 @@ class CentralContractRepoReportTest {
                                     400
                                 )
                             )
-                        ),
-                        SpecificationRow(
-                            "service2/service2.yaml",
-                            "HTTP",
-                            listOf(
-                                SpecificationOperation(
-                                    "/products/{id}",
-                                    "GET",
-                                    200
-                                )
-                            )
-                        ),
+                        )
                     )
                 )
             )

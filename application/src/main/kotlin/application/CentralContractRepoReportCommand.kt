@@ -20,8 +20,11 @@ class CentralContractRepoReportCommand : Callable<Unit> {
         const val REPORT_FILE_NAME = "central_contract_repo_report.json"
     }
 
+    @CommandLine.Option(names = ["--baseDir"], description = ["Directory to treated as the root for API specifications"], defaultValue = "")
+    lateinit var baseDir: String
+
     override fun call() {
-        val report = CentralContractRepoReport().generate()
+        val report = CentralContractRepoReport().generate(baseDir)
         if(report.specifications.isEmpty()) {
             logger.log("No specifications found, hence the Central Contract Repo Report has not been generated.")
         }

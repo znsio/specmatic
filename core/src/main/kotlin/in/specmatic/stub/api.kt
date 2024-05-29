@@ -263,10 +263,6 @@ fun loadExpectationsForFeatures(
     return loadContractStubs(features, mockData)
 }
 
-// TODO - correct place for this function?
-// TODO - move "manifestFile" to some constant
-fun getConfigFileName() = System.getProperty("manifestFile") ?: getGlobalConfigFileName()
-
 private fun printDataFiles(dataFiles: List<File>) {
     if (dataFiles.isNotEmpty()) {
         val dataFilesString = dataFiles.joinToString(System.lineSeparator()) { it.path.prependIndent("  ") }

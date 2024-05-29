@@ -2,6 +2,7 @@ package `in`.specmatic.test
 
 import `in`.specmatic.conversions.*
 import `in`.specmatic.core.*
+import `in`.specmatic.core.Configuration.Companion.CONFIG_FILE_NAME_SYSTEM_PROP
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.ignoreLog
 import `in`.specmatic.core.log.logger
@@ -51,7 +52,6 @@ open class SpecmaticJUnitSupport {
     companion object {
         const val CONTRACT_PATHS = "contractPaths"
         const val WORKING_DIRECTORY = "workingDirectory"
-        const val CONFIG_FILE_NAME = "manifestFile"
         const val TIMEOUT = "timeout"
         private const val DEFAULT_TIMEOUT = "60"
         const val INLINE_SUGGESTIONS = "suggestions"
@@ -149,7 +149,7 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: getGlobalConfigFileName()
+        val configFile get() = System.getProperty(CONFIG_FILE_NAME_SYSTEM_PROP) ?: getGlobalConfigFileName()
 
         private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
     }

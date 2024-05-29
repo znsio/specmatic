@@ -3,6 +3,7 @@ package application
 import application.test.ContractExecutionListener
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import `in`.specmatic.core.Configuration
+import `in`.specmatic.core.Configuration.Companion.CONFIG_FILE_NAME_SYSTEM_PROP
 import `in`.specmatic.core.Flags
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
@@ -11,7 +12,6 @@ import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.core.utilities.newXMLBuilder
 import `in`.specmatic.core.utilities.xmlToString
 import `in`.specmatic.test.SpecmaticJUnitSupport
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONFIG_FILE_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
 import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME_PROPERTY
@@ -109,7 +109,7 @@ class TestCommand : Callable<Unit> {
 
         configFileName?.let {
             Configuration.globalConfigFileName = it
-            System.setProperty(CONFIG_FILE_NAME, it)
+            System.setProperty(CONFIG_FILE_NAME_SYSTEM_PROP, it)
         }
 
         if(port == 0) {

@@ -80,7 +80,8 @@ internal fun createStub(
     port: Int = 9000,
     timeoutMillis: Long
 ): ContractStub {
-    val contractPathData = contractStubPaths()
+    val configFileName = getConfigFileName()
+    val contractPathData = contractStubPaths(configFileName)
     val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
@@ -98,7 +99,8 @@ internal fun createStub(
 
 internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMillis: Long): ContractStub {
     val workingDirectory = WorkingDirectory()
-    val stubs = loadContractStubsFromImplicitPaths(contractStubPaths())
+    val configFileName = getConfigFileName()
+    val stubs = loadContractStubsFromImplicitPaths(contractStubPaths(configFileName))
     val features = stubs.map { it.first }
     val expectations = contractInfoToHttpExpectations(stubs)
 
@@ -260,6 +262,10 @@ fun loadExpectationsForFeatures(
 
     return loadContractStubs(features, mockData)
 }
+
+// TODO - correct place for this function?
+// TODO - move "manifestFile" to some constant
+fun getConfigFileName() = System.getProperty("manifestFile") ?: getGlobalConfigFileName()
 
 private fun printDataFiles(dataFiles: List<File>) {
     if (dataFiles.isNotEmpty()) {

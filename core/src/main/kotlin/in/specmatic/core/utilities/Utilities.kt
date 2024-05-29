@@ -24,7 +24,6 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import org.eclipse.jgit.util.TemporaryBuffer.LocalFile
 import org.w3c.dom.Node.*
 import java.io.File
 import java.io.StringReader
@@ -256,8 +255,9 @@ fun exitIfDoesNotExist(label: String, filePath: String) {
 }
 
 // Used by SpecmaticJUnitSupport users for loading contracts to stub or mock
-fun contractStubPaths(): List<ContractPathData> =
-        contractFilePathsFrom(globalConfigFileName, DEFAULT_WORKING_DIRECTORY) { source -> source.stubContracts }
+fun contractStubPaths(configFileName: String): List<ContractPathData> {
+    return contractFilePathsFrom(configFileName, DEFAULT_WORKING_DIRECTORY) { source -> source.stubContracts }
+}
 
 fun interface ContractsSelectorPredicate {
     fun select(source: ContractSource): List<String>

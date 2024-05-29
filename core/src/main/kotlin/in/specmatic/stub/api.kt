@@ -14,6 +14,8 @@ import `in`.specmatic.mock.ScenarioStub
 import org.yaml.snakeyaml.Yaml
 import java.io.File
 
+private const val HTTP_STUB_SHUTDOWN_TIMEOUT = 2000L
+
 // Used by stub client code
 fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String, host: String = "localhost", port: Int = 9000): ContractStub {
     val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
@@ -35,30 +37,119 @@ fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
 fun createStub(host: String = "localhost", port: Int = 9000): ContractStub {
-    val workingDirectory = WorkingDirectory()
-    val stubs = loadContractStubsFromImplicitPaths(contractStubPaths())
-    val features = stubs.map { it.first }
-    val expectations = contractInfoToHttpExpectations(stubs)
-
-    return HttpStub(features, expectations, host, port, log = ::consoleLog, workingDirectory = workingDirectory, specmaticConfigPath  = File(getGlobalConfigFileName()).canonicalPath)
+    return createStub(host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT)
 }
 
 // Used by stub client code
-fun createStub(dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
+fun createStub(
+    dataDirPaths: List<String>,
+    host: String = "localhost",
+    port: Int = 9000
+): ContractStub {
+    return createStub(dataDirPaths, host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT)
+}
+
+fun createStubFromContracts(
+    contractPaths: List<String>,
+    dataDirPaths: List<String>,
+    host: String = "localhost",
+    port: Int = 9000
+): ContractStub {
+    return createStubFromContracts(
+        contractPaths,
+        dataDirPaths,
+        host,
+        port,
+        timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT
+    )
+}
+
+// Used by stub client code
+fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
+    return createStubFromContracts(
+        contractPaths,
+        host,
+        port,
+        timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT
+    )
+}
+
+internal fun createStub(
+    dataDirPaths: List<String>,
+    host: String = "localhost",
+    port: Int = 9000,
+    timeoutMillis: Long
+): ContractStub {
     val contractPathData = contractStubPaths()
     val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
 
-    return HttpStub(features, httpExpectations, host, port, ::consoleLog, specmaticConfigPath = File(getGlobalConfigFileName()).canonicalPath)
+    return HttpStub(
+        features,
+        httpExpectations,
+        host,
+        port,
+        ::consoleLog,
+        specmaticConfigPath = File(getGlobalConfigFileName()).canonicalPath,
+        timeoutMillis = timeoutMillis
+    )
 }
 
-fun createStubFromContracts(contractPaths: List<String>, dataDirPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
+internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMillis: Long): ContractStub {
+    val workingDirectory = WorkingDirectory()
+    val stubs = loadContractStubsFromImplicitPaths(contractStubPaths())
+    val features = stubs.map { it.first }
+    val expectations = contractInfoToHttpExpectations(stubs)
+
+    return HttpStub(
+        features,
+        expectations,
+        host,
+        port,
+        log = ::consoleLog,
+        workingDirectory = workingDirectory,
+        specmaticConfigPath = File(getGlobalConfigFileName()).canonicalPath,
+        timeoutMillis = timeoutMillis
+    )
+}
+
+internal fun createStubFromContracts(
+    contractPaths: List<String>,
+    dataDirPaths: List<String>,
+    host: String = "localhost",
+    port: Int = 9000,
+    timeoutMillis: Long
+): HttpStub {
     val contractInfo = loadContractStubsFromFiles(contractPaths.map { ContractPathData("", it) }, dataDirPaths)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
 
-    return HttpStub(features, httpExpectations, host, port, ::consoleLog, specmaticConfigPath  = File(getGlobalConfigFileName()).canonicalPath)
+    return HttpStub(
+        features,
+        httpExpectations,
+        host,
+        port,
+        ::consoleLog,
+        specmaticConfigPath = File(getGlobalConfigFileName()).canonicalPath,
+        timeoutMillis = timeoutMillis
+    )
+}
+
+internal fun createStubFromContracts(
+    contractPaths: List<String>,
+    host: String = "localhost",
+    port: Int = 9000,
+    timeoutMillis: Long
+): ContractStub {
+    val defaultImplicitDirs: List<String> = implicitContractDataDirs(contractPaths)
+
+    val completeList = if(customImplicitStubBase() != null) {
+        defaultImplicitDirs.plus(implicitContractDataDirs(contractPaths, customImplicitStubBase()))
+    } else
+        defaultImplicitDirs
+
+    return createStubFromContracts(contractPaths, completeList, host, port, timeoutMillis)
 }
 
 fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathData>): List<Pair<Feature, List<ScenarioStub>>> {
@@ -298,17 +389,6 @@ private fun filesInDir(implicitDataDir: File): List<File>? {
     return files?.flatten()
 }
 
-// Used by stub client code
-fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
-    val defaultImplicitDirs: List<String> = implicitContractDataDirs(contractPaths)
-
-    val completeList = if(customImplicitStubBase() != null) {
-        defaultImplicitDirs.plus(implicitContractDataDirs(contractPaths, customImplicitStubBase()))
-    } else
-        defaultImplicitDirs
-
-    return createStubFromContracts(contractPaths, completeList, host, port)
-}
 
 fun implicitContractDataDirs(contractPaths: List<String>, customBase: String? = null) =
         contractPaths.map { implicitContractDataDir(it, customBase).absolutePath }

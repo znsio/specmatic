@@ -41,7 +41,8 @@ class HTTPStubEngine {
             passThroughTargetBase = passThroughTargetBase,
             httpClientFactory = httpClientFactory,
             workingDirectory = workingDirectory,
-            specmaticConfigPath = specmaticConfigPath
+            specmaticConfigPath = specmaticConfigPath,
+            timeoutMillis = 2000
         ).also {
             consoleLog(NewLineLogMessage)
             val protocol = if (keyStoreData != null) "https" else "http"

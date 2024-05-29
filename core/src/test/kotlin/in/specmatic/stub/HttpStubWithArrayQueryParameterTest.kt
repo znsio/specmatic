@@ -56,7 +56,7 @@ class HttpStubWithArrayQueryParameterTest {
 
     @Test
     fun `should match stub for mandatory query parameter with externalized json expectation`() {
-        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml")).use { stub ->
+        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml"), timeoutMillis = 0).use { stub ->
             val queryParameters = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "brand_ids" to "3"))
             val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
 
@@ -109,7 +109,7 @@ class HttpStubWithArrayQueryParameterTest {
 
     @Test
     fun `should match stub for string query parameter with externalized json expectation`() {
-        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_string_array_query_parameter_with_stub.yaml")).use { stub ->
+        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_string_array_query_parameter_with_stub.yaml"), timeoutMillis = 0).use { stub ->
             val queryParameters = QueryParameters(paramPairs = listOf("category" to "Pen", "category" to "Pencil", "category" to "Marker"))
             val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
 

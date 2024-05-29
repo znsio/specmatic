@@ -1,5 +1,7 @@
 package `in`.specmatic.core
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.ContractException
 import kotlinx.serialization.SerialName
@@ -183,16 +185,35 @@ val SpecmaticJsonFormat = Json {
     prettyPrint = true
 }
 
+fun loadSpecmaticYamlConfig(configFileName: String? = null): SpecmaticConfigJson {
+    val configFile = File(configFileName ?: globalConfigFileName)
+    if (!configFile.exists()) {
+        // TODO - yaml specific message
+        throw ContractException("Could not find ${Configuration.DEFAULT_CONFIG_FILE_NAME} at path ${configFile.canonicalPath}")
+    }
+
+    val yamlReader = ObjectMapper(YAMLFactory())
+    val yamlContent = yamlReader.readValue(configFile.readText(), Any::class.java)
+
+    val jsonConfig = ObjectMapper().writeValueAsString(yamlContent)
+    return getSpecmaticConfigJson(jsonConfig)
+}
+
 fun loadSpecmaticJsonConfig(configFileName: String? = null): SpecmaticConfigJson {
     val configFile = File(configFileName ?: globalConfigFileName)
     if (!configFile.exists()) {
         throw ContractException("Could not find ${Configuration.DEFAULT_CONFIG_FILE_NAME} at path ${configFile.canonicalPath}")
     }
+    return getSpecmaticConfigJson(configFile.readText())
+}
+
+private fun getSpecmaticConfigJson(configContent: String) : SpecmaticConfigJson {
     try {
-        return SpecmaticJsonFormat.decodeFromString(configFile.readText())
+        return SpecmaticJsonFormat.decodeFromString(configContent)
     } catch(e: NoClassDefFoundError) {
         throw Exception("This usually means that there's a dependency version conflict. If you are using Spring in a maven project, the most common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.", e)
     } catch (e: Throwable) {
+        // TODO - the message should be different for specmatic.yaml
         throw Exception("Your specmatic.json file may have some missing configuration sections. Please ensure that the specmatic.json file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes", e)
     }
 }

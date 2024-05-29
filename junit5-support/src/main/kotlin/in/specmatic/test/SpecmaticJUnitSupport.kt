@@ -451,13 +451,14 @@ open class SpecmaticJUnitSupport {
 
     private fun getSpecmaticJson(): SpecmaticConfigJson? {
         return try {
-            loadSpecmaticJsonConfig(configFile)
-        }
-        catch (e: ContractException) {
+            if(configFile.endsWith(".$YAML")) {
+                return loadSpecmaticYamlConfig(configFile)
+            }
+            return loadSpecmaticJsonConfig(configFile)
+        } catch (e: ContractException) {
             logger.log(exceptionCauseMessage(e))
             null
-        }
-        catch (e: Throwable) {
+        } catch (e: Throwable) {
             exitWithMessage(exceptionCauseMessage(e))
         }
     }

@@ -139,7 +139,12 @@ fun strings(list: List<Value>): List<String> {
     }
 }
 
-fun loadSources(configFilePath: String): List<ContractSource> = loadSources(loadSpecmaticJsonConfig(configFilePath))
+fun loadSources(configFilePath: String): List<ContractSource> {
+    if(configFilePath.endsWith(".$YAML")) {
+        return loadSources(loadSpecmaticYamlConfig(configFilePath))
+    }
+    return loadSources(loadSpecmaticJsonConfig(configFilePath))
+}
 
 fun loadConfigJSON(configFile: File): JSONObjectValue {
     val configJson = try {

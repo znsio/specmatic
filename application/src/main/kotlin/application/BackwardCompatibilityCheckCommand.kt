@@ -32,11 +32,12 @@ open class BackwardCompatibilityCheckCommand(
 
     override fun call() {
         val filesChangedInCurrentBranch: Set<String> = getOpenAPISpecFilesChangedInCurrentBranch()
-        if (filesChangedInCurrentBranch.isEmpty()) exitWithMessage("$newLine OpenAPI spec files were changed, skipping the check.$newLine")
+        if (filesChangedInCurrentBranch.isEmpty()) exitWithMessage("${newLine}No OpenAPI spec files were changed, skipping the check.$newLine")
 
         val filesReferringToChangedSchemaFiles = filesReferringToChangedSchemaFiles(filesChangedInCurrentBranch)
 
         val filesToCheck: Set<String> = filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles
+
 
         logFilesToBeCheckedForBackwardCompatibility(
             filesChangedInCurrentBranch,
@@ -52,43 +53,54 @@ open class BackwardCompatibilityCheckCommand(
     }
 
     private fun runBackwardCompatibilityCheckFor(files: Set<String>): String {
-        val currentBranch = gitCommand.currentBranch()
-        val currentTreeish = if (currentBranch == HEAD) gitCommand.detachedHEAD() else currentBranch
+        val branchWithChanges = gitCommand.currentBranch()
+        val treeishWithChanges = if (branchWithChanges == HEAD) gitCommand.detachedHEAD() else branchWithChanges
 
         try {
             val failures = files.mapIndexed { index, specFilePath ->
-                println("${index.inc()}. Running the check for $specFilePath:")
+                try {
+                    println("${index.inc()}. Running the check for $specFilePath:")
 
-                // newer => the file with changes on the branch
-                val newer = OpenApiSpecification.fromFile(specFilePath).toFeature()
+                    // newer => the file with changes on the branch
+                    val newer = OpenApiSpecification.fromFile(specFilePath).toFeature()
 
-                val olderFile = gitCommand.getFileInTheDefaultBranch(specFilePath, currentTreeish)
-                if (olderFile == null) {
-                    println("$specFilePath is a new file.$newLine")
-                    return@mapIndexed SUCCESS
-                }
-                // older => the same file on the default (e.g. main) branch
-                val older = OpenApiSpecification.fromFile(olderFile.path).toFeature()
+                    val olderFile = gitCommand.getFileInTheDefaultBranch(specFilePath, treeishWithChanges)
+                    if (olderFile == null) {
+                        println("$specFilePath is a new file.$newLine")
+                        return@mapIndexed SUCCESS
+                    }
 
-                val backwardCompatibilityResult = testBackwardCompatibility(older, newer)
+                    gitCommand.checkout(gitCommand.defaultBranch())
 
-                if (backwardCompatibilityResult.success()) {
-                    println("$newLine The file $specFilePath is backward compatible.$newLine".prependIndent(MARGIN_SPACE))
-                    SUCCESS
-                } else {
-                    println("$newLine ${backwardCompatibilityResult.report().prependIndent(MARGIN_SPACE)}")
-                    println(
-                        "$newLine *** The file $specFilePath is NOT backward compatible. ***$newLine".prependIndent(
-                            MARGIN_SPACE
+                    // older => the same file on the default (e.g. main) branch
+                    val older = OpenApiSpecification.fromFile(olderFile.path).toFeature()
+
+                    val backwardCompatibilityResult = testBackwardCompatibility(older, newer)
+
+                    if (backwardCompatibilityResult.success()) {
+                        println(
+                            "$newLine The file $specFilePath is backward compatible.$newLine".prependIndent(
+                                MARGIN_SPACE
+                            )
                         )
-                    )
-                    FAILED
+                        SUCCESS
+                    } else {
+                        println("$newLine ${backwardCompatibilityResult.report().prependIndent(MARGIN_SPACE)}")
+                        println(
+                            "$newLine *** The file $specFilePath is NOT backward compatible. ***$newLine".prependIndent(
+                                MARGIN_SPACE
+                            )
+                        )
+                        FAILED
+                    }
+                } finally {
+                    gitCommand.checkout(treeishWithChanges)
                 }
             }.filter { it == FAILED }
 
             return if (failures.isNotEmpty()) FAILED else SUCCESS
         } finally {
-            gitCommand.checkout(currentTreeish)
+            gitCommand.checkout(treeishWithChanges)
         }
     }
 

@@ -23,6 +23,7 @@ class CentralContractRepoReportCommandTestE2E {
 
     @Test
     fun `test generates report json file`() {
+        centralContractRepoReportCommand.baseDir = ""
         centralContractRepoReportCommand.call()
         val reportJson: CentralContractRepoReportJson = Json.decodeFromString(reportFile.readText())
 

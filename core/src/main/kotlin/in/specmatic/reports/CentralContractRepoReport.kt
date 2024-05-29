@@ -10,7 +10,7 @@ import java.io.File
 
 class CentralContractRepoReport {
     fun generate(currentWorkingDir: String = ""): CentralContractRepoReportJson {
-        val searchPath = currentWorkingDir.takeIf { it.isNotEmpty() }.let { File(it).canonicalPath } ?: File("").canonicalPath
+        val searchPath = File(currentWorkingDir).canonicalPath
         logger.log("Searching for specification files at: $searchPath")
         val specifications = findSpecifications(searchPath)
         return CentralContractRepoReportJson(getSpecificationRows(specifications.sorted(), searchPath))

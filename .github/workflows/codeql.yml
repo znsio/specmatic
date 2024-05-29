@@ -37,7 +37,10 @@ jobs:
           languages: ${{ matrix.language }}
 
       - name: Build with Gradle
-        run: ./gradlew build
+        run: |
+          ./gradlew clean
+          git clean -fd
+          ./gradlew build
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3

@@ -35,6 +35,10 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
+          
+      - name: Set Gradle Properties
+        run: |
+          echo "kotlin.daemon.jvmargs=-Xmx2048m" >> gradle.properties
 
       - name: Build with Gradle
         run: |

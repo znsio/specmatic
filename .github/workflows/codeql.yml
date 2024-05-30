@@ -31,17 +31,9 @@ jobs:
           java-version: '17'
           distribution: 'adopt'
 
-#      - name: Initialize CodeQL
-#        uses: github/codeql-action/init@v3
-#        with:
-#          languages: ${{ matrix.language }}
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-
-#      - name: Set Gradle Properties
-#        run: |
-#          echo "kotlin.daemon.jvmargs=-Xmx2048m" >> gradle.properties
 
       - name: Build with Gradle
         run: |
@@ -49,7 +41,12 @@ jobs:
           git clean -fd
           ./gradlew build
 
-#      - name: Perform CodeQL Analysis
-#        uses: github/codeql-action/analyze@v3
-#        with:
-#          category: "/language:${{matrix.language}}"
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"

@@ -2,6 +2,8 @@ package `in`.specmatic.core
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME
+import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_YAML_FILE_NAME
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.ContractException
 import kotlinx.serialization.SerialName
@@ -188,7 +190,7 @@ val SpecmaticJsonFormat = Json {
 fun loadSpecmaticYamlConfig(configFileName: String? = null): SpecmaticConfigJson {
     val configFile = File(configFileName ?: globalConfigFileName)
     if (!configFile.exists()) {
-        throw ContractException("Could not find ${Configuration.DEFAULT_CONFIG_YAML_FILE_NAME} at path ${configFile.canonicalPath}")
+        throw ContractException("Could not find $DEFAULT_CONFIG_YAML_FILE_NAME at path ${configFile.canonicalPath}")
     }
 
     val yamlReader = ObjectMapper(YAMLFactory())
@@ -201,7 +203,7 @@ fun loadSpecmaticYamlConfig(configFileName: String? = null): SpecmaticConfigJson
 fun loadSpecmaticJsonConfig(configFileName: String? = null): SpecmaticConfigJson {
     val configFile = File(configFileName ?: globalConfigFileName)
     if (!configFile.exists()) {
-        throw ContractException("Could not find ${Configuration.DEFAULT_CONFIG_FILE_NAME} at path ${configFile.canonicalPath}")
+        throw ContractException("Could not find $DEFAULT_CONFIG_FILE_NAME at path ${configFile.canonicalPath}")
     }
     return getSpecmaticConfigJson(configFile.readText())
 }
@@ -212,7 +214,7 @@ private fun getSpecmaticConfigJson(configContent: String, isYamlParsedJsonConten
     } catch(e: NoClassDefFoundError) {
         throw Exception("This usually means that there's a dependency version conflict. If you are using Spring in a maven project, the most common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.", e)
     } catch (e: Throwable) {
-        val configFileName = if(isYamlParsedJsonContent) "$APPLICATION_NAME_LOWER_CASE.$YAML" else "$APPLICATION_NAME_LOWER_CASE.$JSON"
+        val configFileName = if(isYamlParsedJsonContent) DEFAULT_CONFIG_YAML_FILE_NAME else DEFAULT_CONFIG_FILE_NAME
         throw Exception("Your $configFileName file may have some missing configuration sections. Please ensure that the $configFileName file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes", e)
     }
 }

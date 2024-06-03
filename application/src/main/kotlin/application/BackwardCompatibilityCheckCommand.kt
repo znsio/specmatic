@@ -6,10 +6,12 @@ import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.testBackwardCompatibility
 import `in`.specmatic.core.utilities.exitWithMessage
+import kotlinx.serialization.json.Json
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
 import java.io.File
 import java.util.concurrent.Callable
+import java.util.regex.Pattern
 
 @Component
 @Command(
@@ -17,7 +19,7 @@ import java.util.concurrent.Callable
     mixinStandardHelpOptions = true,
     description = ["Checks backward compatibility of a directory across the current HEAD and the main branch"]
 )
-open class BackwardCompatibilityCheckCommand(
+class BackwardCompatibilityCheckCommand(
     private val gitCommand: GitCommand = SystemGit(),
 ) : Callable<Unit> {
 
@@ -120,13 +122,17 @@ open class BackwardCompatibilityCheckCommand(
         println()
     }
 
-    internal fun filesReferringToChangedSchemaFiles(schemaFiles: Set<String>): Set<String> {
-        if (schemaFiles.isEmpty()) return emptySet()
+    internal fun filesReferringToChangedSchemaFiles(inputFiles: Set<String>): Set<String> {
+        if (inputFiles.isEmpty()) return emptySet()
 
-        val schemaFileBaseNames = schemaFiles.map { File(it).name }
+        val inputFileNames = inputFiles.map { File(it).name }
         val result = allOpenApiSpecFiles().filter {
-            it.readText().let { specContent ->
-                schemaFileBaseNames.any { schemaFileBaseName -> schemaFileBaseName in specContent }
+            it.readText().trim().let { specContent ->
+                inputFileNames.any { inputFileName ->
+                    val pattern = Pattern.compile("\\b$inputFileName\\b")
+                    val matcher = pattern.matcher(specContent)
+                    matcher.find()
+                }
             }
         }.map { it.path }.toSet()
 

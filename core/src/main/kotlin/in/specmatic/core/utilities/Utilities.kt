@@ -250,6 +250,15 @@ fun exitIfDoesNotExist(label: String, filePath: String) {
         exitWithMessage("${label.capitalizeFirstChar()} $filePath does not exist")
 }
 
+fun exitIfAnyDoNotExist(label: String, filePaths: List<String>) {
+    filePaths.filterNot {contractPath ->
+        File(contractPath).exists()
+    }.also {
+        if(it.isNotEmpty())
+            throw ContractException("$label: ${it.joinToString(", ")}")
+    }
+}
+
 // Used by SpecmaticJUnitSupport users for loading contracts to stub or mock
 fun contractStubPaths(): List<ContractPathData> =
         contractFilePathsFrom(globalConfigFileName, DEFAULT_WORKING_DIRECTORY) { source -> source.stubContracts }

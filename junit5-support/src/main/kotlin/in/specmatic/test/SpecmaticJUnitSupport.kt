@@ -77,9 +77,6 @@ open class SpecmaticJUnitSupport {
         @AfterAll
         @JvmStatic
         fun report() {
-            if (openApiCoverageReportInput.areTestResultsEmpty()) {
-                return
-            }
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
             reportProcessors.forEach { it.process(getReportConfiguration()) }
 

@@ -84,9 +84,11 @@ class EnumPatternTest {
 
         @Test
         fun `it should only pick the value in the row when the row is NOT empty`() {
-            val jsonPattern = JSONObjectPattern(mapOf("type" to EnumPattern(listOf(StringValue("01"), StringValue("02")))))
+            val jsonPattern =
+                JSONObjectPattern(mapOf("type" to EnumPattern(listOf(StringValue("01"), StringValue("02")))))
 
-            val newPatterns = jsonPattern.newBasedOn(Row(listOf("type"), values = listOf("01")), Resolver())
+            val newPatterns = jsonPattern.newBasedOnR(Row(listOf("type"), values = listOf("01")), Resolver())
+                .map { it.value as JSONObjectPattern }
 
             val values = newPatterns.map { it.generate(Resolver()) }.toList()
 

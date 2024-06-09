@@ -67,11 +67,6 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         return JSONArrayValue(generate(pattern, resolverWithNullType))
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): Sequence<JSONArrayPattern> {
-        val resolverWithNullType = withNullPattern(resolver)
-        return newBasedOn(pattern, row, resolverWithNullType).map { JSONArrayPattern(it) }
-    }
-
     override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithNullType = withNullPattern(resolver)
         val returnValues = newBasedOnR(pattern, row, resolverWithNullType)

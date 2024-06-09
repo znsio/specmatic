@@ -18,7 +18,6 @@ object DateTimePattern : Pattern, ScalarType {
 
     override fun generate(resolver: Resolver): StringValue = StringValue(RFC3339.currentDateTime())
 
-    fun newBasedOn(row: Row, resolver: Resolver): Sequence<DateTimePattern> = sequenceOf(this)
     override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(this))
 
     override fun newBasedOn(resolver: Resolver): Sequence<DateTimePattern> = sequenceOf(this)

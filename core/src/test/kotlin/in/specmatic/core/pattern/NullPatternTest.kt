@@ -2,6 +2,7 @@ package `in`.specmatic.core.pattern
 
 import org.junit.jupiter.api.Test
 import `in`.specmatic.core.Resolver
+import `in`.specmatic.core.pattern.NullPattern.newBasedOnR
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
@@ -31,6 +32,6 @@ internal class NullPatternTest {
 
     @Test
     fun `should create a new array of patterns containing itself`() {
-        assertEquals(listOf(NullPattern), NullPattern.newBasedOn(Row(), Resolver()).toList())
+        assertEquals(listOf(NullPattern), newBasedOnR(Row(), Resolver()).map { it.value }.toList())
     }
 }

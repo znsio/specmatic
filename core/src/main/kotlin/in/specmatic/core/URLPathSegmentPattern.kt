@@ -18,10 +18,9 @@ data class URLPathSegmentPattern(override val pattern: Pattern, override val key
         }
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): Sequence<URLPathSegmentPattern> =
-        resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
-            pattern.newBasedOnR(row, cyclePreventedResolver).map { it.value }.map { URLPathSegmentPattern(it, key) }
-        }
+    fun _newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        return newBasedOnR(row, resolver).map { it.value }
+    }
 
     override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> =
         resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->

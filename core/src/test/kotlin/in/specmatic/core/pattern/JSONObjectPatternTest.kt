@@ -531,7 +531,7 @@ internal class JSONObjectPatternTest {
                 maxProperties = 3
             )
 
-            val newPatterns: List<JSONObjectPattern> = pattern.newBasedOn(Row(), Resolver()).toList()
+            val newPatterns: List<JSONObjectPattern> = pattern.newBasedOnR(Row(), Resolver()).toList().map { it.value as JSONObjectPattern }
 
             assertThat(newPatterns).allSatisfy {
                 assertThat(it.pattern.keys).hasSizeGreaterThanOrEqualTo(2)

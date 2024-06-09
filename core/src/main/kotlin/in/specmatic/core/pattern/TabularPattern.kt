@@ -68,9 +68,6 @@ data class TabularPattern(
             })
         }
     }
-    fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
-        return newBasedOnR(row, resolver).map { it.value }
-    }
 
     override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithNullType = withNullPattern(resolver)
@@ -92,7 +89,7 @@ data class TabularPattern(
     }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return this.newBasedOn(row, resolver).map { HasValue(it) }
+        return this.newBasedOnR(row, resolver).map { it.value }.map { HasValue(it) }
     }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)

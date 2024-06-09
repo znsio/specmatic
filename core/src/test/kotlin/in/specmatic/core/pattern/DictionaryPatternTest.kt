@@ -48,12 +48,26 @@ internal class DictionaryPatternTest {
         val jsonType = toTabularPattern(mapOf("data" to dictionaryType))
 
         val example = Row(listOf("data"), listOf("""{"1": "one"}"""))
-        val newJsonTypes = jsonType.newBasedOn(example, Resolver()).toList()
+        val newJsonTypes = jsonType.newBasedOnR(example, Resolver()).map { it.value }.toList()
 
         assertThat(newJsonTypes).hasSize(1)
 
         val exactJson = newJsonTypes.single() as TabularPattern
-        assertThat(exactJson).isEqualTo(toTabularPattern(mapOf("data" to ExactValuePattern(JSONObjectValue(mapOf("1" to StringValue("one")))))))
+        assertThat(exactJson).isEqualTo(
+            toTabularPattern(
+                mapOf(
+                    "data" to ExactValuePattern(
+                        JSONObjectValue(
+                            mapOf(
+                                "1" to StringValue(
+                                    "one"
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
     }
 
     @Test

@@ -85,28 +85,6 @@ data class AnyPattern(
         } ?: NullValue // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
-        resolver.resolveExample(example, pattern)?.let {
-            return sequenceOf(ExactValuePattern(it))
-        }
-
-        val isNullable = pattern.any { it is NullPattern }
-        val patternResults: Sequence<Pair<Sequence<ReturnValue<Pattern>>?, Throwable?>> =
-            pattern.asSequence().sortedBy { it is NullPattern }.map { innerPattern ->
-                try {
-                    val patterns =
-                        resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
-                            innerPattern.newBasedOnR(row, cyclePreventedResolver).map { it.value }
-                        } ?: sequenceOf()
-                    Pair(patterns.map { HasValue(it) }, null)
-                } catch (e: Throwable) {
-                    Pair(null, e)
-                }
-            }
-
-        return newTypesOrExceptionIfNone(patternResults, "Could not generate new tests").map { it.value }
-    }
-
 
     override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         resolver.resolveExample(example, pattern)?.let {

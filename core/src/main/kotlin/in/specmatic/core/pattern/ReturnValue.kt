@@ -93,3 +93,20 @@ fun <T> Sequence<ReturnValue<T>>.filterValueIsNot(fn: (T) -> Boolean): Sequence<
         }
     }
 }
+
+fun Sequence<ReturnValue<List<List<Pattern>>>>.foldToSequenceOfReturnValueList(): Sequence<ReturnValue<List<Pattern>>> {
+    val seq = this
+
+    return sequence {
+        seq.forEach { returnValue: ReturnValue<List<List<Pattern>>> ->
+            if (returnValue is HasValue) {
+                returnValue.value.forEach { list ->
+                    yield(HasValue(list, returnValue.valueDetails))
+                }
+            } else if (returnValue is ReturnFailure) {
+                yield(returnValue.cast())
+            }
+        }
+    }
+
+}

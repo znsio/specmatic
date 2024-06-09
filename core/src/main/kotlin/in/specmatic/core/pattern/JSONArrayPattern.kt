@@ -177,35 +177,7 @@ fun listCombinationsR(values: List<ReturnValue<Sequence<Pattern?>>>): Sequence<R
     val lastValueTypesR: ReturnValue<Sequence<Pattern?>> = values.last()
     val subLists = listCombinationsR(values.dropLast(1))
 
-//    val result = subLists.map { subListR ->
-//        lastValueTypesR.combine(subListR) { lastValueTypes, subList ->
-//            lastValueTypes.map { lastValueType ->
-//                if (lastValueType != null)
-//                    subList.plus(lastValueType)
-//                else
-//                    subList
-//            }.toList()
-//        }
-//    }
-
-    fun Sequence<ReturnValue<List<List<Pattern>>>>.foldToSequenceOfReturnValueList(): Sequence<ReturnValue<List<Pattern>>> {
-        val seq = this
-
-        return sequence {
-            seq.forEach { returnValue: ReturnValue<List<List<Pattern>>> ->
-                if(returnValue is HasValue) {
-                    returnValue.value.forEach { list ->
-                        yield(HasValue(list, returnValue.valueDetails))
-                    }
-                } else if(returnValue is ReturnFailure) {
-                    yield(returnValue.cast())
-                }
-            }
-        }
-
-    }
-
-    val result2 = subLists.map { subListR ->
+    return subLists.map { subListR ->
         subListR.combine(lastValueTypesR) { subList, lastValueTypes ->
             lastValueTypes.map { lastValueType ->
                 if (lastValueType != null)
@@ -214,38 +186,7 @@ fun listCombinationsR(values: List<ReturnValue<Sequence<Pattern?>>>): Sequence<R
                     subList
             }.toList()
         }
-    }
-
-
-    return result2.foldToSequenceOfReturnValueList()
-
-//    val s: Sequence<ReturnValue<List<Pattern>>> = sequence {
-//        data.forEach { valueR: ReturnValue<Sequence<List<Pattern>>> ->
-//            try {
-//                val value = valueR as HasValue
-//
-//
-//            } catch (e: Throwable) {
-//
-//            }
-//
-//        }
-//    }
-//
-//    return sequence {
-//        subListsR.forEach { subListR ->
-//            val result: ReturnValue<Sequence<List<Pattern?>>> = lastValueTypesR.combineWith(subListR) { lastValueTypes, subList  ->
-//                lastValueTypes.forEach { lastValueType ->
-//                    if (lastValueType != null)
-//                        subList.plus(lastValueType)
-//                    else
-//                        subList
-//                }
-//            }
-//
-//            yield(result.ifValue { it.filterNotNull().toList() })
-//        }
-//    }
+    }.foldToSequenceOfReturnValueList()
 }
 
 fun listCombinations(values: List<Sequence<Pattern?>>): Sequence<List<Pattern>> {

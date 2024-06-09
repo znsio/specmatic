@@ -19,7 +19,7 @@ object NullPattern : Pattern, ScalarType {
             }
 
     override fun generate(resolver: Resolver): Value = NullValue
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
     override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(this))
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {

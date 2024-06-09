@@ -10,8 +10,6 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.test.TestExecutor
-import org.assertj.core.api.Condition
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import java.net.URI
@@ -338,13 +336,23 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("csv"), listOf("[1, 2, 3]"))
 
         val type = parsedPattern("""{"csv": "(number*)"}""")
-        val newTypes = type.newBasedOn(example, Resolver()).toList()
+        val newTypes = type.newBasedOnR(example, Resolver()).map { it.value }.toList()
 
         assertThat(newTypes).hasSize(1)
 
         val newType = newTypes.single() as JSONObjectPattern
 
-        assertThat(newType.pattern.getValue("csv")).isEqualTo(ExactValuePattern(JSONArrayValue(listOf(NumberValue(1), NumberValue(2), NumberValue(3)))))
+        assertThat(newType.pattern.getValue("csv")).isEqualTo(
+            ExactValuePattern(
+                JSONArrayValue(
+                    listOf(
+                        NumberValue(1),
+                        NumberValue(2),
+                        NumberValue(3)
+                    )
+                )
+            )
+        )
     }
 
     @Test
@@ -352,13 +360,26 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("data"), listOf("""{"one": 1}"""))
 
         val type = parsedPattern("""{"data": "(Data)"}""")
-        val newTypes = type.newBasedOn(example, Resolver(newPatterns = mapOf("(Data)" to toTabularPattern(mapOf("one" to NumberPattern()))))).toList()
+        val newTypes = type.newBasedOnR(
+            example,
+            Resolver(newPatterns = mapOf("(Data)" to toTabularPattern(mapOf("one" to NumberPattern()))))
+        ).map { it.value }.toList()
 
         assertThat(newTypes).hasSize(1)
 
         val newType = newTypes.single() as JSONObjectPattern
 
-        assertThat(newType.pattern.getValue("data")).isEqualTo(ExactValuePattern(JSONObjectValue(mapOf("one" to NumberValue(1)))))
+        assertThat(newType.pattern.getValue("data")).isEqualTo(
+            ExactValuePattern(
+                JSONObjectValue(
+                    mapOf(
+                        "one" to NumberValue(
+                            1
+                        )
+                    )
+                )
+            )
+        )
     }
 
     @Test

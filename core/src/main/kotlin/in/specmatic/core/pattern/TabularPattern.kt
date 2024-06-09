@@ -68,7 +68,7 @@ data class TabularPattern(
             })
         }
     }
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+    fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         return newBasedOnR(row, resolver).map { it.value }
     }
 
@@ -177,7 +177,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Seq
                     when (val result = pattern.encompasses(rowPattern, resolver, resolver)) {
                         is Result.Success -> {
                             resolver.withCyclePrevention(rowPattern, isOptional(key)) { cyclePreventedResolver ->
-                                rowPattern.newBasedOn(row, cyclePreventedResolver)
+                                rowPattern.newBasedOnR(row, cyclePreventedResolver).map { it.value }
                             }?:
                             // Handle cycle (represented by null value) by using empty sequence for optional properties
                             emptySequence()
@@ -204,7 +204,8 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Seq
             }
         }
         else -> resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
-            pattern.newBasedOn(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver)
+            pattern.newBasedOnR(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver)
+                .map { it.value }
         }?:
         // Handle cycle (represented by null value) by using empty list for optional properties
         emptySequence()

@@ -17,7 +17,8 @@ sealed interface ReturnValue<T> {
     abstract fun <U> ifValue(fn: (T) -> U): ReturnValue<U>
     abstract fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U>
     fun update(fn: (T) -> T): ReturnValue<T>
-    fun <U> combineWith(valueResult: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T>
+    fun <U> assimilate(valueResult: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T>
+    fun <U, V> combine(valueResult: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V>
     fun <U> realise(hasValue: (T, String?) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U
     fun addDetails(message: String, breadCrumb: String): ReturnValue<T>
 }
@@ -40,7 +41,7 @@ fun <K, ValueType> Map<K, ReturnValue<ValueType>>.mapFold(): ReturnValue<Map<K, 
     val initial: ReturnValue<Map<K, ValueType>> = HasValue<Map<K, ValueType>>(emptyMap())
 
     return this.entries.fold(initial) { accR: ReturnValue<Map<K, ValueType>>, (key: K, valueR: ReturnValue<ValueType>) ->
-        accR.combineWith(valueR) { acc, value ->
+        accR.assimilate(valueR) { acc, value ->
             acc.plus(key to value)
         }
     }
@@ -64,7 +65,7 @@ fun <T> Sequence<ReturnValue<T>>.foldIntoReturnValueOfSequence(): ReturnValue<Se
     val init: ReturnValue<Sequence<T>> = HasValue(emptySequence<T>())
 
     return this.fold(init) { acc: ReturnValue<Sequence<T>>, item: ReturnValue<T> ->
-        acc.combineWith(item) { accValue, itemValue ->
+        acc.assimilate(item) { accValue, itemValue ->
             accValue.plus(itemValue)
         }
     }

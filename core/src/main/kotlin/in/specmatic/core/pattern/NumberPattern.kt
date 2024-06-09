@@ -54,7 +54,7 @@ data class NumberPattern(
 
     private fun randomPositiveDigit() = (Random().nextInt(9) + 1)
 
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
     override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(this))
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 

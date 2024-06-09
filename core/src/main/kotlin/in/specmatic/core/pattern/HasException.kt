@@ -14,8 +14,12 @@ data class HasException<T>(val t: Throwable, val message: String = "", val bread
         return this
     }
 
-    override fun <U> combineWith(valueResult: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T> {
+    override fun <U> assimilate(valueResult: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T> {
         return cast<T>()
+    }
+
+    override fun <U, V> combine(valueResult: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
+        return cast<V>()
     }
 
     override fun <V> cast(): ReturnValue<V> {

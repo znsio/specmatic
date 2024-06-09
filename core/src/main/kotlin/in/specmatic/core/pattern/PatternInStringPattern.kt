@@ -24,9 +24,9 @@ data class PatternInStringPattern(override val pattern: Pattern = StringPattern(
         return StringValue(resolver.withCyclePrevention(pattern, pattern::generate).toStringLiteral())
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> =
+    fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> =
         resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
-            pattern.newBasedOn(row, cyclePreventedResolver).map { PatternInStringPattern(it) }
+            pattern.newBasedOnR(row, cyclePreventedResolver).map { it.value }.map { PatternInStringPattern(it) }
         }
 
     override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> =

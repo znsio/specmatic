@@ -85,7 +85,7 @@ data class AnyPattern(
         } ?: NullValue // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+    fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         resolver.resolveExample(example, pattern)?.let {
             return sequenceOf(ExactValuePattern(it))
         }
@@ -96,7 +96,7 @@ data class AnyPattern(
                 try {
                     val patterns =
                         resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
-                            innerPattern.newBasedOn(row, cyclePreventedResolver)
+                            innerPattern.newBasedOnR(row, cyclePreventedResolver).map { it.value }
                         } ?: sequenceOf()
                     Pair(patterns.map { HasValue(it) }, null)
                 } catch (e: Throwable) {
@@ -119,7 +119,7 @@ data class AnyPattern(
                 try {
                     val patterns =
                         resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
-                            innerPattern.newBasedOn(row, cyclePreventedResolver)
+                            innerPattern.newBasedOnR(row, cyclePreventedResolver).map { it.value }
                         } ?: sequenceOf()
                     Pair(patterns.map { HasValue(it) }, null)
                 } catch (e: Throwable) {

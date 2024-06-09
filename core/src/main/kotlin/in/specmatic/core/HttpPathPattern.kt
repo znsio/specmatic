@@ -169,7 +169,7 @@ data class HttpPathPattern(
             .filterValueIsNot { it.isEmpty() }
             .map { subsequentNegativesR: ReturnValue<List<URLPathSegmentPattern>> ->
                 subsequentNegativesR.ifValue { subsequentNegatives: List<URLPathSegmentPattern> ->
-                    val subsequents: List<URLPathSegmentPattern> = current._newBasedOn(row, resolver).map { positive ->
+                    val subsequents: List<URLPathSegmentPattern> = current.newBasedOn_Wrapper(row, resolver).map { positive ->
                         sequenceOf(positive as URLPathSegmentPattern) + subsequentNegatives
                     }.flatten().toList()
 
@@ -236,7 +236,7 @@ data class HttpPathPattern(
         }
 
         else -> returnValueSequence {
-            val positives: Sequence<Pattern> = urlPathPattern._newBasedOn(row, resolver)
+            val positives: Sequence<Pattern> = urlPathPattern.newBasedOn_Wrapper(row, resolver)
             val negatives: Sequence<ReturnValue<Pattern>> = urlPathPattern.negativeBasedOn(row, resolver)
 
             positives.map { HasValue(it) } + negatives

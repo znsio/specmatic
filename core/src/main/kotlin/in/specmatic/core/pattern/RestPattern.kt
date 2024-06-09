@@ -17,6 +17,13 @@ data class RestPattern(override val pattern: Pattern, override val typeAlias: St
             pattern.newBasedOn(row, cyclePreventedResolver).map { RestPattern(it) }
         }
     }
+
+    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+            pattern.newBasedOnR(row, cyclePreventedResolver)
+        }
+    }
+
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         return resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
             pattern.newBasedOn(cyclePreventedResolver).map { RestPattern(it) }

@@ -369,6 +369,10 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         }
     }
 
+    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return newBasedOn(row, resolver).map { HasValue(it) }
+    }
+
     override fun newBasedOn(resolver: Resolver): Sequence<XMLPattern> {
         return allOrNothingCombinationIn(pattern.attributes) { attributePattern ->
             attempt(breadCrumb = this.pattern.name) {

@@ -69,6 +69,10 @@ data class TabularPattern(
         }
     }
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        return newBasedOnR(row, resolver).map { it.value }
+    }
+
+    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithNullType = withNullPattern(resolver)
         return allOrNothingCombinationIn(pattern, resolver.resolveRow(row)) { pattern ->
             newBasedOn(pattern, row, resolverWithNullType)
@@ -76,7 +80,7 @@ data class TabularPattern(
             toTabularPattern(it.mapKeys { (key, _) ->
                 withoutOptionality(key)
             })
-        }
+        }.map { HasValue(it) }
     }
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {

@@ -107,6 +107,30 @@ data class AnyPattern(
         return newTypesOrExceptionIfNone(patternResults, "Could not generate new tests").map { it.value }
     }
 
+
+    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        resolver.resolveExample(example, pattern)?.let {
+            return sequenceOf(HasValue(ExactValuePattern(it)))
+        }
+
+        val isNullable = pattern.any { it is NullPattern }
+        val patternResults: Sequence<Pair<Sequence<ReturnValue<Pattern>>?, Throwable?>> =
+            pattern.asSequence().sortedBy { it is NullPattern }.map { innerPattern ->
+                try {
+                    val patterns =
+                        resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
+                            innerPattern.newBasedOn(row, cyclePreventedResolver)
+                        } ?: sequenceOf()
+                    Pair(patterns.map { HasValue(it) }, null)
+                } catch (e: Throwable) {
+                    Pair(null, e)
+                }
+            }
+
+        return newTypesOrExceptionIfNone(patternResults, "Could not generate new tests")
+    }
+
+
     private fun newTypesOrExceptionIfNone(patternResults: Sequence<Pair<Sequence<ReturnValue<Pattern>>?, Throwable?>>, message: String): Sequence<ReturnValue<Pattern>> {
         val newPatterns: Sequence<ReturnValue<Pattern>> = patternResults.mapNotNull { it.first }.flatten()
 

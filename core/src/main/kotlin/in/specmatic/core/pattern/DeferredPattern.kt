@@ -44,7 +44,6 @@ data class DeferredPattern(override val pattern: String, val key: String? = null
         return resolver.withCyclePrevention(resolvedPattern) { cyclePreventedResolver ->
             resolvedPattern.newBasedOnR(row, cyclePreventedResolver)
         }
-
     }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {

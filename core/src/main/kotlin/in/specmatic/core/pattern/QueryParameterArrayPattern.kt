@@ -103,6 +103,10 @@ data class QueryParameterArrayPattern(override val pattern: List<Pattern>, val p
         return pattern.first().newBasedOn(row, resolver).map { QueryParameterArrayPattern(listOf(it), parameterName) }
     }
 
+    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return pattern.first().newBasedOnR(row, resolver).map { it.ifValue { QueryParameterArrayPattern(listOf(it), parameterName) } }
+    }
+
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         return pattern.first().newBasedOn(resolver).map { QueryParameterArrayPattern(listOf(it), parameterName) }
     }

@@ -31,6 +31,16 @@ data class LookupRowPattern(override val pattern: Pattern, override val key: Str
         }
     }
 
+    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return when(key) {
+            null -> resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.newBasedOnR(row, cyclePreventedResolver)
+            }
+            // Cycle prevention handled in helper method
+            else -> newBasedOnR(row, key, pattern, resolver)
+        }
+    }
+
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         return when(key) {
             null -> resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->

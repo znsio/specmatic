@@ -60,6 +60,16 @@ fun <T> Sequence<List<ReturnValue<out T>>>.sequenceListFold(): Sequence<ReturnVa
     }
 }
 
+fun <T> Sequence<ReturnValue<T>>.foldIntoReturnValueOfSequence(): ReturnValue<Sequence<T>> {
+    val init: ReturnValue<Sequence<T>> = HasValue(emptySequence<T>())
+
+    return this.fold(init) { acc: ReturnValue<Sequence<T>>, item: ReturnValue<T> ->
+        acc.combineWith(item) { accValue, itemValue ->
+            accValue.plus(itemValue)
+        }
+    }
+}
+
 fun <T> ReturnValue<T>.breadCrumb(breadCrumb: String?): ReturnValue<T> {
     if(breadCrumb == null)
         return this

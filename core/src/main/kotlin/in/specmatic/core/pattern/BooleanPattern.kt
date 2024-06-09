@@ -19,6 +19,7 @@ data class BooleanPattern(override val example: String? = null) : Pattern, Scala
         resolver.resolveExample(example, this) ?: randomBoolean()
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(this))
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {

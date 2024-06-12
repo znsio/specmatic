@@ -5,10 +5,7 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.ignoreLog
 import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.Examples
-import `in`.specmatic.core.pattern.Row
-import `in`.specmatic.core.pattern.parsedValue
+import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
@@ -20,6 +17,8 @@ import `in`.specmatic.test.reports.OpenApiCoverageReportProcessor
 import `in`.specmatic.test.reports.coverage.Endpoint
 import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -158,17 +157,19 @@ open class SpecmaticJUnitSupport {
         if(envName.isNullOrBlank())
             return JSONObjectValue()
 
-        val configFile = File(globalConfigFileName)
-        if(!configFile.exists())
-            throw ContractException("Environment name $envName was specified but config file (usually named specmatic.json) does not exist in the project root. Either avoid setting envName, or provide specmatic.json with the environment settings.")
+        val configFileName = getConfigFileName()
+        if(!File(configFileName).exists())
+            throw ContractException("Environment name $envName was specified but config file does not exist in the project root. Either avoid setting envName, or provide the configuration file with the environment settings.")
 
-        val config = loadConfigJSON(configFile)
-        val envConfig = config.findFirstChildByPath("environments.$envName") ?: return JSONObjectValue()
+        val config = loadSpecmaticJsonConfig(configFileName)
 
-        if(envConfig !is JSONObjectValue)
+        val envConfigFromFile = config.environments?.get(envName) ?: return JSONObjectValue()
+
+        try {
+            return parsedJSONObject(content = Json.encodeToString(envConfigFromFile))
+        } catch(e: Throwable) {
             throw ContractException("The environment config must be a JSON object.")
-
-        return envConfig
+        }
     }
 
     private fun loadExceptionAsTestError(e: Throwable): Stream<DynamicTest> {

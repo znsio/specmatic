@@ -241,6 +241,6 @@ private fun readConfig(configFile: File): Value {
         val config = loadSpecmaticJsonConfig(configFile.name)
         return parsedJSON(ObjectMapper().writeValueAsString(config))
     } catch(e: Throwable) {
-        throw ContractException("The Specmatic configuration must be a JSON object.")
+        throw ContractException("Error loading Specmatic configuration: ${e.message}")
     }
 }

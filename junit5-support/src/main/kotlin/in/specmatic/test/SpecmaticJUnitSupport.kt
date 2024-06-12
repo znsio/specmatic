@@ -168,7 +168,7 @@ open class SpecmaticJUnitSupport {
         try {
             return parsedJSONObject(content = ObjectMapper().writeValueAsString(envConfigFromFile))
         } catch(e: Throwable) {
-            throw ContractException("The environment config must be a JSON object.")
+            throw ContractException("Error loading Specmatic configuration: ${e.message}")
         }
     }
 

@@ -19,12 +19,10 @@ import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.NullPattern
 import `in`.specmatic.core.pattern.NumberPattern
-import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import org.eclipse.jgit.util.TemporaryBuffer.LocalFile
 import org.w3c.dom.Node.*
 import java.io.File
 import java.io.StringReader
@@ -139,10 +137,10 @@ fun strings(list: List<Value>): List<String> {
     }
 }
 
-fun loadSources(configFilePath: String): List<ContractSource> = loadSources(loadSpecmaticJsonConfig(configFilePath))
+fun loadSources(configFilePath: String): List<ContractSource> = loadSources(loadSpecmaticConfig(configFilePath))
 
-fun loadSources(specmaticConfigJson: SpecmaticConfigJson): List<ContractSource> {
-    return specmaticConfigJson.sources.map { source ->
+fun loadSources(specmaticConfig: SpecmaticConfig): List<ContractSource> {
+    return specmaticConfig.sources.map { source ->
         when(source.provider) {
             SourceProvider.git -> {
                 val stubPaths = source.stub ?: emptyList()

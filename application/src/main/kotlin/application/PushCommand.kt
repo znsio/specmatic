@@ -2,6 +2,7 @@ package application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import `in`.specmatic.core.*
+import `in`.specmatic.core.SpecmaticConfig
 import `in`.specmatic.core.git.NonZeroExitError
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.loadFromPath
@@ -25,7 +26,7 @@ class PushCommand: Callable<Unit> {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
         val manifestFile = getConfigFileName()
-        val manifestData = try { loadSpecmaticJsonConfig(manifestFile) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
+        val manifestData = try { loadSpecmaticConfig(manifestFile) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
         val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
 
         val unsupportedSources = sources.filter { it !is GitSource }.mapNotNull { it.type }.distinct()
@@ -110,7 +111,7 @@ fun hasAzureData(azureInfo: Map<String, Value>): Boolean {
     }
 }
 
-fun subscribeToContract(manifestData: SpecmaticConfigJson, contractPath: String, sourceGit: SystemGit) {
+fun subscribeToContract(manifestData: SpecmaticConfig, contractPath: String, sourceGit: SystemGit) {
     println("Checking to see if manifest has CI credentials")
 
     val manifestJsonObjectValue = try {

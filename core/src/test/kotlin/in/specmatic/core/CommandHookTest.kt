@@ -73,10 +73,10 @@ internal class CommandHookTest {
 
     @Test
     fun `command hook when hook exists`() {
-        Configuration.config = SpecmaticConfigJson(emptyList(), hooks = mapOf(HookName.stub_load_contract.name to "cat ${secondary.canonicalPath}"))
+        Configuration.config = SpecmaticConfig(emptyList(), hooks = mapOf(HookName.stub_load_contract.name to "cat ${secondary.canonicalPath}"))
 
         val contractInFile = CommandHook(HookName.stub_load_contract).readContract(primary.canonicalPath)
-        Configuration.config = SpecmaticConfigJson(emptyList())
+        Configuration.config = SpecmaticConfig(emptyList())
         assertThat(contractInFile.trimIndent()).isEqualTo(secondaryContractString)
     }
 

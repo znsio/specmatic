@@ -141,21 +141,6 @@ fun strings(list: List<Value>): List<String> {
 
 fun loadSources(configFilePath: String): List<ContractSource> = loadSources(loadSpecmaticJsonConfig(configFilePath))
 
-// TODO - should we delete this?
-fun loadConfigJSON(configFile: File): JSONObjectValue {
-    val configJson = try {
-        parsedJSON(configFile.readText())
-    } catch (e: Throwable) {
-        throw ContractException("Error reading the $globalConfigFileName: ${exceptionCauseMessage(e)}",
-            exceptionCause = e)
-    }
-
-    if (configJson !is JSONObjectValue)
-        throw ContractException("The contents of $globalConfigFileName must be a json object")
-
-    return configJson
-}
-
 fun loadSources(specmaticConfigJson: SpecmaticConfigJson): List<ContractSource> {
     return specmaticConfigJson.sources.map { source ->
         when(source.provider) {

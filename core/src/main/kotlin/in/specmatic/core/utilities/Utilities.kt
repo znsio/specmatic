@@ -260,8 +260,9 @@ fun exitIfAnyDoNotExist(label: String, filePaths: List<String>) {
 }
 
 // Used by SpecmaticJUnitSupport users for loading contracts to stub or mock
-fun contractStubPaths(): List<ContractPathData> =
-        contractFilePathsFrom(globalConfigFileName, DEFAULT_WORKING_DIRECTORY) { source -> source.stubContracts }
+fun contractStubPaths(configFileName: String): List<ContractPathData> {
+    return contractFilePathsFrom(configFileName, DEFAULT_WORKING_DIRECTORY) { source -> source.stubContracts }
+}
 
 fun interface ContractsSelectorPredicate {
     fun select(source: ContractSource): List<String>

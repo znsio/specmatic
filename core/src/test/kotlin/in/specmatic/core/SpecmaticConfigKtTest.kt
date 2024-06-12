@@ -1,12 +1,22 @@
 package `in`.specmatic.core
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 
 internal class SpecmaticConfigKtTest {
-    @Test
-    fun `parse specmatic config file with all values`() {
-        val config = loadSpecmaticJsonConfig("./src/test/resources/specmaticConfigFiles/specmatic.json")
+
+    @CsvSource(
+        "./src/test/resources/specmaticConfigFiles/specmatic.yaml",
+        "./src/test/resources/specmaticConfigFiles/specmatic.yml",
+        "./src/test/resources/specmaticConfigFiles/specmatic.json",
+    )
+    @ParameterizedTest
+    fun `parse specmatic config file with all values`(configFile: String) {
+        val config: SpecmaticConfigJson = loadSpecmaticJsonConfig(configFile)
 
         assertThat(config.sources).isNotEmpty
 
@@ -46,7 +56,7 @@ internal class SpecmaticConfigKtTest {
 
     @Test
     fun `parse specmatic config file with only required values`() {
-        val config = SpecmaticJsonFormat.decodeFromString<SpecmaticConfigJson>("""
+        val config = ObjectMapper(YAMLFactory()).readValue("""
             {
                 "sources": [
                     {
@@ -57,7 +67,7 @@ internal class SpecmaticConfigKtTest {
                     }
                 ]
             }
-        """.trimIndent())
+        """.trimIndent(), SpecmaticConfigJson::class.java)
 
         assertThat(config.sources).isNotEmpty
 

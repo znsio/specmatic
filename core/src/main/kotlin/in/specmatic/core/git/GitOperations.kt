@@ -148,7 +148,7 @@ fun getBearerToken(): String? {
                 readBearerFromEnvVariable(config) ?: readBearerFromFile(config)
             }
         else -> null.also {
-            logger.log("$globalConfigFileName not found")
+            logger.log("Returning bearer token as null since Specmatic configuration file $globalConfigFileName is not found.")
             logger.log("Current working directory is ${File(".").absolutePath}")
         }
     }
@@ -231,4 +231,5 @@ private fun getPersonalAccessTokenProperty(): String? {
     }
 }
 
+// TODO - support yaml config here as well. needs some work
 private fun readConfig(configFile: File) = parsedJSON(configFile.readText())

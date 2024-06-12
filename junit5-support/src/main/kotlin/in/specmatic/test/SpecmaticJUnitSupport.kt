@@ -1,11 +1,14 @@
 package `in`.specmatic.test
 
-import `in`.specmatic.conversions.*
+import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.ignoreLog
 import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.pattern.ContractException
+import `in`.specmatic.core.pattern.Examples
+import `in`.specmatic.core.pattern.Row
+import `in`.specmatic.core.pattern.parsedValue
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
@@ -146,7 +149,7 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: getGlobalConfigFileName()
+        val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: getConfigFileName()
 
         private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
     }

@@ -212,7 +212,15 @@ internal class UtilitiesTest {
             File(it).createNewFile()
         }
 
-        File(configFilePath).printWriter().use { it.println("{\"sources\":[{\"provider\":\"git\",\"stub\":[\"..\\/a\\/1.$CONTRACT_EXTENSION\",\"..\\/b\\/1.$CONTRACT_EXTENSION\"],\"test\":[\"..\\/c\\/1.$CONTRACT_EXTENSION\"]}]}") }
+        File(configFilePath).printWriter().use { it.println(
+            """
+            {"sources":[
+                {"provider":"git",
+                    "stub":["../a/1.$CONTRACT_EXTENSION","../b/1.$CONTRACT_EXTENSION"],
+                    "test":["../c/1.$CONTRACT_EXTENSION"]}]
+                }
+            """.trimIndent()
+        ) }
 
         mockkConstructor(SystemGit::class)
         every { anyConstructed<SystemGit>().gitRoot() }.returns("/path/to/monorepo")
@@ -631,7 +639,7 @@ internal class UtilitiesTest {
                     "sources": [
                         {
                             "provider": "filesystem",
-                            "directory": "${specDir.name}"
+                            "directory": "${specDir.name}",
                             "stub": ["random.yaml"]
                         }
                     ]

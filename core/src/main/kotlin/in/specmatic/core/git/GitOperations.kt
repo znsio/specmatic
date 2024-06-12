@@ -2,15 +2,20 @@
 
 package `in`.specmatic.core.git
 
-import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
+import com.fasterxml.jackson.databind.ObjectMapper
 import `in`.specmatic.core.azure.AzureAuthCredentials
+import `in`.specmatic.core.getConfigFileName
+import `in`.specmatic.core.loadSpecmaticJsonConfig
 import `in`.specmatic.core.log.logger
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.utilities.GitRepo
 import `in`.specmatic.core.utilities.getTransportCallingCallback
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import io.ktor.http.*
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.HttpTransport
@@ -140,7 +145,7 @@ fun loadFromPath(json: Value?, path: List<String>): Value? {
 }
 
 fun getBearerToken(): String? {
-    val specmaticConfigFile = File(globalConfigFileName)
+    val specmaticConfigFile = File(getConfigFileName())
 
     return when {
         specmaticConfigFile.exists() ->
@@ -148,7 +153,7 @@ fun getBearerToken(): String? {
                 readBearerFromEnvVariable(config) ?: readBearerFromFile(config)
             }
         else -> null.also {
-            logger.log("Returning bearer token as null since Specmatic configuration file $globalConfigFileName is not found.")
+            logger.log("Returning bearer token as null since Specmatic configuration file is not found.")
             logger.log("Current working directory is ${File(".").absolutePath}")
         }
     }
@@ -231,5 +236,11 @@ private fun getPersonalAccessTokenProperty(): String? {
     }
 }
 
-// TODO - support yaml config here as well. needs some work
-private fun readConfig(configFile: File) = parsedJSON(configFile.readText())
+private fun readConfig(configFile: File): Value {
+    try {
+        val config = loadSpecmaticJsonConfig(configFile.name)
+        return parsedJSON(ObjectMapper().writeValueAsString(config))
+    } catch(e: Throwable) {
+        throw ContractException("The Specmatic configuration must be a JSON object.")
+    }
+}

@@ -2,8 +2,6 @@ package `in`.specmatic.core
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_FILE_NAME
-import `in`.specmatic.core.Configuration.Companion.DEFAULT_CONFIG_YAML_FILE_NAME
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.ContractException
 import kotlinx.serialization.SerialName
@@ -188,34 +186,37 @@ val SpecmaticJsonFormat = Json {
     prettyPrint = true
 }
 
-fun loadSpecmaticYamlConfig(configFileName: String? = null): SpecmaticConfigJson {
-    val configFile = File(configFileName ?: globalConfigFileName)
-    if (!configFile.exists()) {
-        throw ContractException("Could not find $DEFAULT_CONFIG_YAML_FILE_NAME at path ${configFile.canonicalPath}")
-    }
-
-    val yamlReader = ObjectMapper(YAMLFactory())
-    val yamlContent = yamlReader.readValue(configFile.readText(), Any::class.java)
-
-    val jsonConfig = ObjectMapper().writeValueAsString(yamlContent)
-    return getSpecmaticConfigJson(jsonConfig, isYamlParsedJsonContent = true)
-}
-
 fun loadSpecmaticJsonConfig(configFileName: String? = null): SpecmaticConfigJson {
-    val configFile = File(configFileName ?: globalConfigFileName)
-    if (!configFile.exists()) {
-        throw ContractException("Could not find $DEFAULT_CONFIG_FILE_NAME at path ${configFile.canonicalPath}")
+    if(configFileName != null && configFileName.isWithInvalidExtension()) {
+        throw ContractException("The provided configuration file $configFileName is invalid. Please provide a valid configuration file. The supported extensions are - [json, yaml, yml]")
     }
-    return getSpecmaticConfigJson(configFile.readText())
-}
+    val configFile = File(configFileName ?: "$globalConfigFileName.$JSON")
+    if (!configFile.exists()) {
+        throw ContractException("Could not find the configuration file at path ${configFile.canonicalPath}. Please ensure that the configuration file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes")
+    }
 
-private fun getSpecmaticConfigJson(configContent: String, isYamlParsedJsonContent: Boolean = false) : SpecmaticConfigJson {
+    val configContent = getJsonConfigContent(configFile)
+
     try {
         return SpecmaticJsonFormat.decodeFromString(configContent)
     } catch(e: NoClassDefFoundError) {
         throw Exception("This usually means that there's a dependency version conflict. If you are using Spring in a maven project, the most common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.", e)
     } catch (e: Throwable) {
-        val configFileName = if(isYamlParsedJsonContent) DEFAULT_CONFIG_YAML_FILE_NAME else DEFAULT_CONFIG_FILE_NAME
-        throw Exception("Your $configFileName file may have some missing configuration sections. Please ensure that the $configFileName file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes", e)
+        throw Exception("Your configuration file may have some missing configuration sections. Please ensure that the configuration file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes", e)
     }
+}
+
+private fun getJsonConfigContent(configFile: File): String {
+    return when {
+        (configFile.extension == YAML || configFile.extension == YML) -> {
+            val yamlContent = ObjectMapper(YAMLFactory()).readValue(configFile.readText(), Any::class.java)
+            ObjectMapper().writeValueAsString(yamlContent)
+        }
+        else -> configFile.readText()
+    }
+}
+
+private fun String?.isWithInvalidExtension(): Boolean {
+    val supportedExtensions = listOf(JSON, YAML, YML)
+    return supportedExtensions.any { this.endsWith(".$it") }.not()
 }

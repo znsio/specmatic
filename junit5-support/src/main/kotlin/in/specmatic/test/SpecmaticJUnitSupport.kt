@@ -452,9 +452,6 @@ open class SpecmaticJUnitSupport {
 
     private fun getSpecmaticJson(): SpecmaticConfigJson? {
         return try {
-            if(configFile.endsWith(".$YAML")) {
-                return loadSpecmaticYamlConfig(configFile)
-            }
             return loadSpecmaticJsonConfig(configFile)
         } catch (e: ContractException) {
             logger.log(exceptionCauseMessage(e))
@@ -500,6 +497,10 @@ open class SpecmaticJUnitSupport {
                 emptyMap(),
             )
         }
+    }
+
+    private fun String.isYamlConfig(): Boolean {
+        return this.endsWith(".$YAML") || this.endsWith(".$YML")
     }
 }
 

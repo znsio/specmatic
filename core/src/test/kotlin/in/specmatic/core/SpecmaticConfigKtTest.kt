@@ -1,7 +1,9 @@
 package `in`.specmatic.core
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.io.File
 
 internal class SpecmaticConfigKtTest {
     @Test
@@ -69,7 +71,7 @@ internal class SpecmaticConfigKtTest {
 
     @Test
     fun `parse specmatic yaml config file with all values`() {
-        val config = loadSpecmaticYamlConfig("./src/test/resources/specmaticConfigFiles/specmatic.yaml")
+        val config = loadSpecmaticJsonConfig("./src/test/resources/specmaticConfigFiles/specmatic.yaml")
 
         assertThat(config.sources).isNotEmpty
 

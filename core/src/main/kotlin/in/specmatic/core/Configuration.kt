@@ -9,15 +9,26 @@ import java.io.File
 // test discovery functionality.
 // Moving it here so we can use a function to read it which is not inside Configuration
 private var innerGlobalConfigFileName: String = ".${File.separator}${Configuration.DEFAULT_CONFIG_FILE_NAME}"
-fun getGlobalConfigFileName(): String = innerGlobalConfigFileName
-fun getConfigFileName() = System.getProperty(CONFIG_FILE_NAME_SYSTEM_PROP) ?: getGlobalConfigFileName()
+fun getGlobalConfigFileName(): String = ".${File.separator}${Configuration.DEFAULT_CONFIG_FILE_NAME_WITHOUT_EXTENSION}"
+fun getGlobalConfigFileNameWithoutExtension(): String = ".${File.separator}${Configuration.DEFAULT_CONFIG_FILE_NAME_WITHOUT_EXTENSION}"
+fun getConfigFileName(): String {
+    val configFileName =
+        System.getProperty(CONFIG_FILE_NAME_SYSTEM_PROP) ?: getGlobalConfigFileNameWithoutExtension()
+    val supportedExtensions = listOf(JSON, YAML, YML)
+
+    val configFileExtension = supportedExtensions.firstOrNull { extension ->
+        File("$configFileName.$extension").exists()
+    } ?: JSON
+
+    return "$configFileName.$configFileExtension"
+}
 
 class Configuration {
     companion object {
         var gitCommand: String = System.getProperty("gitCommandPath") ?: System.getenv("SPECMATIC_GIT_COMMAND_PATH") ?: "git"
         const val TEST_BUNDLE_RELATIVE_PATH = ".${APPLICATION_NAME_LOWER_CASE}_test_bundle"
         const val DEFAULT_CONFIG_FILE_NAME = "$APPLICATION_NAME_LOWER_CASE.json"
-        const val DEFAULT_CONFIG_YAML_FILE_NAME = "$APPLICATION_NAME_LOWER_CASE.yaml"
+        const val DEFAULT_CONFIG_FILE_NAME_WITHOUT_EXTENSION = APPLICATION_NAME_LOWER_CASE
         const val CONFIG_FILE_NAME_SYSTEM_PROP = "manifestFile"
 
         var globalConfigFileName: String

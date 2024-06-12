@@ -92,7 +92,7 @@ internal fun createStub(
         host,
         port,
         ::consoleLog,
-        specmaticConfigPath = File(getGlobalConfigFileName()).canonicalPath,
+        specmaticConfigPath = File(configFileName).canonicalPath,
         timeoutMillis = timeoutMillis
     )
 }
@@ -111,7 +111,7 @@ internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMil
         port,
         log = ::consoleLog,
         workingDirectory = workingDirectory,
-        specmaticConfigPath = File(getGlobalConfigFileName()).canonicalPath,
+        specmaticConfigPath = File(configFileName).canonicalPath,
         timeoutMillis = timeoutMillis
     )
 }

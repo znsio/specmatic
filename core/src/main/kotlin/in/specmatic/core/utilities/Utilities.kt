@@ -139,9 +139,6 @@ fun strings(list: List<Value>): List<String> {
 }
 
 fun loadSources(configFilePath: String): List<ContractSource> {
-    if(configFilePath.endsWith(".$YAML")) {
-        return loadSources(loadSpecmaticYamlConfig(configFilePath))
-    }
     return loadSources(loadSpecmaticJsonConfig(configFilePath))
 }
 

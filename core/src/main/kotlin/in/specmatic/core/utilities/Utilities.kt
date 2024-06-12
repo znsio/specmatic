@@ -141,6 +141,7 @@ fun strings(list: List<Value>): List<String> {
 
 fun loadSources(configFilePath: String): List<ContractSource> = loadSources(loadSpecmaticJsonConfig(configFilePath))
 
+// TODO - should we delete this?
 fun loadConfigJSON(configFile: File): JSONObjectValue {
     val configJson = try {
         parsedJSON(configFile.readText())

@@ -19,6 +19,7 @@ import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.NullPattern
 import `in`.specmatic.core.pattern.NumberPattern
+import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
@@ -138,6 +139,20 @@ fun strings(list: List<Value>): List<String> {
 }
 
 fun loadSources(configFilePath: String): List<ContractSource> = loadSources(loadSpecmaticConfig(configFilePath))
+
+fun loadConfigJSON(configFile: File): JSONObjectValue {
+    val configJson = try {
+        parsedJSON(configFile.readText())
+    } catch (e: Throwable) {
+        throw ContractException("Error reading the $globalConfigFileName: ${exceptionCauseMessage(e)}",
+            exceptionCause = e)
+    }
+
+    if (configJson !is JSONObjectValue)
+        throw ContractException("The contents of $globalConfigFileName must be a json object")
+
+    return configJson
+}
 
 fun loadSources(specmaticConfig: SpecmaticConfig): List<ContractSource> {
     return specmaticConfig.sources.map { source ->

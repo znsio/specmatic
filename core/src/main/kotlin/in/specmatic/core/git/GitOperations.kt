@@ -5,7 +5,7 @@ package `in`.specmatic.core.git
 import com.fasterxml.jackson.databind.ObjectMapper
 import `in`.specmatic.core.azure.AzureAuthCredentials
 import `in`.specmatic.core.getConfigFileName
-import `in`.specmatic.core.loadSpecmaticJsonConfig
+import `in`.specmatic.core.loadSpecmaticConfig
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
@@ -14,8 +14,6 @@ import `in`.specmatic.core.utilities.getTransportCallingCallback
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import io.ktor.http.*
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.HttpTransport
@@ -238,7 +236,7 @@ private fun getPersonalAccessTokenProperty(): String? {
 
 private fun readConfig(configFile: File): Value {
     try {
-        val config = loadSpecmaticJsonConfig(configFile.name)
+        val config = loadSpecmaticConfig(configFile.name)
         return parsedJSON(ObjectMapper().writeValueAsString(config))
     } catch(e: Throwable) {
         throw ContractException("Error loading Specmatic configuration: ${e.message}")

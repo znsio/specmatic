@@ -17,8 +17,6 @@ import `in`.specmatic.test.reports.OpenApiCoverageReportProcessor
 import `in`.specmatic.test.reports.coverage.Endpoint
 import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -71,7 +69,7 @@ open class SpecmaticJUnitSupport {
         private const val ENDPOINTS_API = "endpointsAPI"
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
-        private var specmaticConfigJson: SpecmaticConfigJson? = null
+        private var specmaticConfig: SpecmaticConfig? = null
         val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
 
         private val threads: Vector<String> = Vector<String>()
@@ -93,7 +91,7 @@ open class SpecmaticJUnitSupport {
         private fun getReportConfiguration(): ReportConfiguration {
             val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
             val defaultReportTypes = ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
-            return when (val reportConfiguration = specmaticConfigJson?.report) {
+            return when (val reportConfiguration = specmaticConfig?.report) {
                 null -> {
                     logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
                     ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
@@ -161,7 +159,7 @@ open class SpecmaticJUnitSupport {
         if(!File(configFileName).exists())
             throw ContractException("Environment name $envName was specified but config file does not exist in the project root. Either avoid setting envName, or provide the configuration file with the environment settings.")
 
-        val config = loadSpecmaticJsonConfig(configFileName)
+        val config = loadSpecmaticConfig(configFileName)
 
         val envConfigFromFile = config.environments?.get(envName) ?: return JSONObjectValue()
 
@@ -232,7 +230,7 @@ open class SpecmaticJUnitSupport {
 
                     createIfDoesNotExist(workingDirectory.path)
 
-                    specmaticConfigJson = getSpecmaticJson()
+                    specmaticConfig = getSpecmaticJson()
 
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
 
@@ -240,7 +238,7 @@ open class SpecmaticJUnitSupport {
 
                     val testScenariosAndEndpointsPairList = contractFilePaths.filter {
                         File(it.path).extension in CONTRACT_EXTENSIONS
-                    }.map { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security, filterName, filterNotName) }
+                    }.map { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfig?.security, filterName, filterNotName) }
 
                     val tests: Sequence<ContractTest> = testScenariosAndEndpointsPairList.asSequence().flatMap { it.first }
 
@@ -452,9 +450,9 @@ open class SpecmaticJUnitSupport {
         return Pair(tests, allEndpoints)
     }
 
-    private fun getSpecmaticJson(): SpecmaticConfigJson? {
+    private fun getSpecmaticJson(): SpecmaticConfig? {
         return try {
-            loadSpecmaticJsonConfig(configFile)
+            loadSpecmaticConfig(configFile)
         }
         catch (e: ContractException) {
             logger.log(exceptionCauseMessage(e))

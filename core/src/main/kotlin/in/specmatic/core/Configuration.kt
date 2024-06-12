@@ -32,19 +32,19 @@ class Configuration {
             set(value) {
                 innerGlobalConfigFileName = value
                 _config = if(File(innerGlobalConfigFileName).exists())
-                    loadSpecmaticJsonConfig(innerGlobalConfigFileName)
+                    loadSpecmaticConfig(innerGlobalConfigFileName)
                 else
                     null
 
             }
 
-        private var _config: SpecmaticConfigJson? =
+        private var _config: SpecmaticConfig? =
             if(File(innerGlobalConfigFileName).exists())
-                loadSpecmaticJsonConfig(innerGlobalConfigFileName)
+                loadSpecmaticConfig(innerGlobalConfigFileName)
             else
                 null
 
-        var config: SpecmaticConfigJson?
+        var config: SpecmaticConfig?
             get() {
                 return _config
             }

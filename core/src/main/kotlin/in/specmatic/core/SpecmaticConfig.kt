@@ -80,7 +80,7 @@ data class Source(
     val directory: String? = null,
 )
 
-data class SpecmaticConfigJson(
+data class SpecmaticConfig(
     val sources: List<Source> = emptyList(),
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
@@ -185,13 +185,13 @@ data class APIKeySecuritySchemeConfiguration(
     val value: String = ""
 ) : SecuritySchemeConfiguration()
 
-fun loadSpecmaticJsonConfig(configFileName: String? = null): SpecmaticConfigJson {
+fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
     val configFile = File(configFileName ?: globalConfigFileName)
     if (!configFile.exists()) {
         throw ContractException("Could not find the Specmatic configuration at path ${configFile.canonicalPath}")
     }
     try {
-        return ObjectMapper(YAMLFactory()).readValue(configFile.readText(), SpecmaticConfigJson::class.java)
+        return ObjectMapper(YAMLFactory()).readValue(configFile.readText(), SpecmaticConfig::class.java)
     } catch(e: NoClassDefFoundError) {
         throw Exception("This usually means that there's a dependency version conflict. If you are using Spring in a maven project, the most common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.", e)
     } catch (e: Throwable) {

@@ -16,7 +16,7 @@ internal class SpecmaticConfigKtTest {
     )
     @ParameterizedTest
     fun `parse specmatic config file with all values`(configFile: String) {
-        val config: SpecmaticConfigJson = loadSpecmaticJsonConfig(configFile)
+        val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
 
         assertThat(config.sources).isNotEmpty
 
@@ -67,7 +67,7 @@ internal class SpecmaticConfigKtTest {
                     }
                 ]
             }
-        """.trimIndent(), SpecmaticConfigJson::class.java)
+        """.trimIndent(), SpecmaticConfig::class.java)
 
         assertThat(config.sources).isNotEmpty
 

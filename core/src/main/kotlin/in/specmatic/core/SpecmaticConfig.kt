@@ -1,10 +1,13 @@
 package `in`.specmatic.core
 
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonTypeName
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.pattern.ContractException
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import java.io.File
 
 const val APPLICATION_NAME = "Specmatic"
@@ -47,20 +50,20 @@ fun String.loadContract(): Feature {
     return parseContractFileToFeature(File(this))
 }
 
-@Serializable
-data class Auth(@SerialName("bearer-file") val bearerFile: String = "bearer.txt", @SerialName("bearer-environment-variable") val bearerEnvironmentVariable: String? = null)
+data class Auth(
+    @JsonProperty("bearer-file") val bearerFile: String = "bearer.txt",
+    @JsonProperty("bearer-environment-variable") val bearerEnvironmentVariable: String? = null
+)
 
 enum class PipelineProvider { azure }
 
-@Serializable
 data class Pipeline(
-    val provider: PipelineProvider,
-    val organization: String,
-    val project: String,
-    val definitionId: Int
+    val provider: PipelineProvider = PipelineProvider.azure,
+    val organization: String = "",
+    val project: String = "",
+    val definitionId: Int = 0
 )
 
-@Serializable
 data class Environment(
     val baseurls: Map<String, String>? = null,
     val variables: Map<String, String>? = null
@@ -68,9 +71,8 @@ data class Environment(
 
 enum class SourceProvider { git, filesystem, web }
 
-@Serializable
 data class Source(
-    val provider: SourceProvider,
+    val provider: SourceProvider = SourceProvider.filesystem,
     val repository: String? = null,
     val branch: String? = null,
     val test: List<String>? = null,
@@ -78,9 +80,8 @@ data class Source(
     val directory: String? = null,
 )
 
-@Serializable
 data class SpecmaticConfigJson(
-    val sources: List<Source>,
+    val sources: List<Source> = emptyList(),
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
     val environments: Map<String, Environment>? = null,
@@ -90,72 +91,68 @@ data class SpecmaticConfigJson(
     val security: SecurityConfiguration? = null
 )
 
-@Serializable
 data class RepositoryInfo(
     val provider: String,
     val collectionName: String
 )
 
-@Serializable
 data class ReportConfiguration(
     val formatters: List<ReportFormatter>? = null,
-    val types: ReportTypes
+    val types: ReportTypes = ReportTypes()
 )
 
-@Serializable
 data class ReportFormatter(
-    val type: ReportFormatterType,
-    val layout: ReportFormatterLayout
+    val type: ReportFormatterType = ReportFormatterType.TEXT,
+    val layout: ReportFormatterLayout = ReportFormatterLayout.TABLE
 )
 
-@Serializable
 enum class ReportFormatterType {
-    @SerialName("text")
+    @JsonProperty("text")
     TEXT
 }
 
-@Serializable
 enum class ReportFormatterLayout {
-    @SerialName("table")
+    @JsonProperty("table")
     TABLE
 }
 
-@Serializable
 data class ReportTypes (
-    @SerialName("APICoverage")
-    val apiCoverage: APICoverage
+    @JsonProperty("APICoverage")
+    val apiCoverage: APICoverage = APICoverage()
 )
 
-@Serializable
 data class APICoverage (
-    @SerialName("OpenAPI")
-    val openAPI: APICoverageConfiguration
+    @JsonProperty("OpenAPI")
+    val openAPI: APICoverageConfiguration = APICoverageConfiguration()
 )
 
-@Serializable
 data class APICoverageConfiguration(
-    val successCriteria: SuccessCriteria,
+    val successCriteria: SuccessCriteria = SuccessCriteria(),
     val excludedEndpoints: List<String> = emptyList()
 )
 
-@Serializable
 data class SuccessCriteria(
-    val minThresholdPercentage: Int,
-    val maxMissedEndpointsInSpec: Int,
+    val minThresholdPercentage: Int = 0,
+    val maxMissedEndpointsInSpec: Int = 0,
     val enforce: Boolean = false
 )
 
-@Serializable
 data class SecurityConfiguration(
+    @JsonProperty("OpenAPI")
     val OpenAPI:OpenAPISecurityConfiguration?
 )
 
-@Serializable
 data class OpenAPISecurityConfiguration(
-    val securitySchemes: Map<String, SecuritySchemeConfiguration>
+    val securitySchemes: Map<String, SecuritySchemeConfiguration> = emptyMap()
 )
 
-@Serializable
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = OAuth2SecuritySchemeConfiguration::class, name = "oauth2"),
+    JsonSubTypes.Type(value = BasicAuthSecuritySchemeConfiguration::class, name = "basicAuth"),
+    JsonSubTypes.Type(value = BearerSecuritySchemeConfiguration::class, name = "bearer"),
+    JsonSubTypes.Type(value = APIKeySecuritySchemeConfiguration::class, name = "apiKey")
+)
 sealed class SecuritySchemeConfiguration {
     abstract val type: String
 }
@@ -164,36 +161,40 @@ interface SecuritySchemeWithOAuthToken {
     val token: String
 }
 
-@Serializable
-@SerialName("oauth2")
-data class OAuth2SecuritySchemeConfiguration(override val type: String, override val token: String) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
+@JsonTypeName("oauth2")
+data class OAuth2SecuritySchemeConfiguration(
+    override val type: String = "oauth2",
+    override val token: String = ""
+) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
 
-@Serializable
-@SerialName("basicAuth")
-data class BasicAuthSecuritySchemeConfiguration(override val type: String, val token: String) : SecuritySchemeConfiguration()
+@JsonTypeName("basicAuth")
+data class BasicAuthSecuritySchemeConfiguration(
+    override val type: String = "basicAuth",
+    val token: String = ""
+) : SecuritySchemeConfiguration()
 
-@Serializable
-@SerialName("bearer")
-data class BearerSecuritySchemeConfiguration(override val type: String, override val token: String) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
+@JsonTypeName("bearer")
+data class BearerSecuritySchemeConfiguration(
+    override val type: String = "bearer",
+    override val token: String = ""
+) : SecuritySchemeConfiguration(), SecuritySchemeWithOAuthToken
 
-@Serializable
-@SerialName("apiKey")
-data class APIKeySecuritySchemeConfiguration(override val type:String, val value: String) : SecuritySchemeConfiguration()
-
-val SpecmaticJsonFormat = Json {
-    prettyPrint = true
-}
+@JsonTypeName("apiKey")
+data class APIKeySecuritySchemeConfiguration(
+    override val type: String = "apiKey",
+    val value: String = ""
+) : SecuritySchemeConfiguration()
 
 fun loadSpecmaticJsonConfig(configFileName: String? = null): SpecmaticConfigJson {
     val configFile = File(configFileName ?: globalConfigFileName)
     if (!configFile.exists()) {
-        throw ContractException("Could not find ${Configuration.DEFAULT_CONFIG_FILE_NAME} at path ${configFile.canonicalPath}")
+        throw ContractException("Could not find the Specmatic configuration at path ${configFile.canonicalPath}")
     }
     try {
-        return SpecmaticJsonFormat.decodeFromString(configFile.readText())
+        return ObjectMapper(YAMLFactory()).readValue(configFile.readText(), SpecmaticConfigJson::class.java)
     } catch(e: NoClassDefFoundError) {
         throw Exception("This usually means that there's a dependency version conflict. If you are using Spring in a maven project, the most common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.", e)
     } catch (e: Throwable) {
-        throw Exception("Your specmatic.json file may have some missing configuration sections. Please ensure that the specmatic.json file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes", e)
+        throw Exception("Your configuration file may have some missing configuration sections. Please ensure that the specmatic.json file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html#complete-sample-specmaticjson-with-all-attributes", e)
     }
 }

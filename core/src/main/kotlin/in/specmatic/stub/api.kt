@@ -80,7 +80,8 @@ internal fun createStub(
     port: Int = 9000,
     timeoutMillis: Long
 ): ContractStub {
-    val contractPathData = contractStubPaths()
+    val configFileName = getConfigFileName()
+    val contractPathData = contractStubPaths(configFileName)
     val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
@@ -91,14 +92,15 @@ internal fun createStub(
         host,
         port,
         ::consoleLog,
-        specmaticConfigPath = File(getGlobalConfigFileName()).canonicalPath,
+        specmaticConfigPath = File(configFileName).canonicalPath,
         timeoutMillis = timeoutMillis
     )
 }
 
 internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMillis: Long): ContractStub {
     val workingDirectory = WorkingDirectory()
-    val stubs = loadContractStubsFromImplicitPaths(contractStubPaths())
+    val configFileName = getConfigFileName()
+    val stubs = loadContractStubsFromImplicitPaths(contractStubPaths(configFileName))
     val features = stubs.map { it.first }
     val expectations = contractInfoToHttpExpectations(stubs)
 
@@ -109,7 +111,7 @@ internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMil
         port,
         log = ::consoleLog,
         workingDirectory = workingDirectory,
-        specmaticConfigPath = File(getGlobalConfigFileName()).canonicalPath,
+        specmaticConfigPath = File(configFileName).canonicalPath,
         timeoutMillis = timeoutMillis
     )
 }

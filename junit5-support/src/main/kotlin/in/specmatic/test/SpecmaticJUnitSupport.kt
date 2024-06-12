@@ -2,7 +2,6 @@ package `in`.specmatic.test
 
 import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.*
-import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.ignoreLog
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*

@@ -1,17 +1,19 @@
 package application
 
-import picocli.CommandLine
 import `in`.specmatic.core.*
-import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.git.NonZeroExitError
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.loadFromPath
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
@@ -23,8 +25,8 @@ class PushCommand: Callable<Unit> {
     override fun call() {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
-        val manifestFile = File(globalConfigFileName)
-        val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
+        val manifestFile = getConfigFileName()
+        val manifestData = try { loadSpecmaticJsonConfig(manifestFile) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
         val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
 
         val unsupportedSources = sources.filter { it !is GitSource }.mapNotNull { it.type }.distinct()
@@ -109,14 +111,17 @@ fun hasAzureData(azureInfo: Map<String, Value>): Boolean {
     }
 }
 
-fun subscribeToContract(manifestData: Value, contractPath: String, sourceGit: SystemGit) {
+fun subscribeToContract(manifestData: SpecmaticConfigJson, contractPath: String, sourceGit: SystemGit) {
     println("Checking to see if manifest has CI credentials")
 
-    if (manifestData !is JSONObjectValue)
+    val manifestJsonObjectValue = try {
+        parsedJSONObject(content = Json.encodeToString(manifestData))
+    } catch (e: Throwable) {
         exitWithMessage("Manifest must contain a json object")
+    }
 
-    if (manifestData.jsonObject.containsKey(pipelineKeyInSpecmaticConfig))
-        registerPipelineCredentials(manifestData, contractPath, sourceGit)
+    if (manifestJsonObjectValue.jsonObject.containsKey(pipelineKeyInSpecmaticConfig))
+        registerPipelineCredentials(manifestJsonObjectValue, contractPath, sourceGit)
 }
 
 fun registerPipelineCredentials(manifestData: JSONObjectValue, contractPath: String, sourceGit: SystemGit) {

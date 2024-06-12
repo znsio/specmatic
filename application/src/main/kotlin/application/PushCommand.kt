@@ -1,5 +1,6 @@
 package application
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import `in`.specmatic.core.*
 import `in`.specmatic.core.git.NonZeroExitError
 import `in`.specmatic.core.git.SystemGit
@@ -11,8 +12,6 @@ import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable
@@ -115,7 +114,7 @@ fun subscribeToContract(manifestData: SpecmaticConfigJson, contractPath: String,
     println("Checking to see if manifest has CI credentials")
 
     val manifestJsonObjectValue = try {
-        parsedJSONObject(content = Json.encodeToString(manifestData))
+        parsedJSONObject(content = ObjectMapper().writeValueAsString(manifestData))
     } catch (e: Throwable) {
         exitWithMessage("Manifest must contain a json object")
     }

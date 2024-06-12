@@ -1,5 +1,6 @@
 package `in`.specmatic.test
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.*
 import `in`.specmatic.core.log.ignoreLog
@@ -165,7 +166,7 @@ open class SpecmaticJUnitSupport {
         val envConfigFromFile = config.environments?.get(envName) ?: return JSONObjectValue()
 
         try {
-            return parsedJSONObject(content = Json.encodeToString(envConfigFromFile))
+            return parsedJSONObject(content = ObjectMapper().writeValueAsString(envConfigFromFile))
         } catch(e: Throwable) {
             throw ContractException("The environment config must be a JSON object.")
         }

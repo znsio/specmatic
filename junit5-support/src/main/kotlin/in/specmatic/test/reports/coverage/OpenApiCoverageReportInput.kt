@@ -24,10 +24,6 @@ class OpenApiCoverageReportInput(
         testResultRecords.add(testResultRecord)
     }
 
-    fun areTestResultsEmpty(): Boolean {
-        return testResultRecords.isEmpty()
-    }
-
     fun addAPIs(apis: List<API>) {
         applicationAPIs.addAll(apis)
     }

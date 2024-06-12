@@ -79,9 +79,6 @@ open class SpecmaticJUnitSupport {
         @AfterAll
         @JvmStatic
         fun report() {
-            if (openApiCoverageReportInput.areTestResultsEmpty()) {
-                return
-            }
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
             reportProcessors.forEach { it.process(getReportConfiguration()) }
 
@@ -236,6 +233,8 @@ open class SpecmaticJUnitSupport {
                     specmaticConfigJson = getSpecmaticJson()
 
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
+
+                    exitIfAnyDoNotExist("The following specifications do not exist", contractFilePaths.map { it.path })
 
                     val testScenariosAndEndpointsPairList = contractFilePaths.filter {
                         File(it.path).extension in CONTRACT_EXTENSIONS

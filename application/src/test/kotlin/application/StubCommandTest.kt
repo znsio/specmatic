@@ -77,8 +77,8 @@ internal class StubCommandTest {
     }
 
     @Test
-    fun `should attempt to start a HTTP stub`() {
-        val contractPath = "/path/to/contract.$CONTRACT_EXTENSION"
+    fun `should attempt to start a HTTP stub`(@TempDir tempDir: File) {
+        val contractPath = osAgnosticPath("${tempDir.path}/contract.$CONTRACT_EXTENSION")
         val contract = """
             Feature: Math API
               Scenario: Random API
@@ -86,46 +86,61 @@ internal class StubCommandTest {
                 Then status 200
                 And response-body (number)
         """.trimIndent()
-        val feature = parseGherkinStringToFeature(contract)
+        val file = File(contractPath).also { it.writeText(contract) }
 
-        every { watchMaker.make(listOf(contractPath)) }.returns(watcher)
+        try {
+            val feature = parseGherkinStringToFeature(contract)
 
-        val stubInfo = listOf(Pair(feature, emptyList<ScenarioStub>()))
-        every { stubLoaderEngine.loadStubs(listOf(contractPath).map { ContractPathData("", it) }, emptyList()) }.returns(stubInfo)
+            every { watchMaker.make(listOf(contractPath)) }.returns(watcher)
 
-        val host = "0.0.0.0"
-        val port = 9000
-        val certInfo = CertInfo()
-        val strictMode = false
+            val stubInfo = listOf(Pair(feature, emptyList<ScenarioStub>()))
+            every {
+                stubLoaderEngine.loadStubs(
+                    listOf(contractPath).map { ContractPathData("", it) },
+                    emptyList()
+                )
+            }.returns(stubInfo)
 
-        every { httpStubEngine.runHTTPStub(
-            stubInfo,
-            host,
-            port,
-            certInfo,
-            strictMode,
-            any(),
-            httpClientFactory = any(),
-            workingDirectory = any()
-        ) }.returns(null)
+            val host = "0.0.0.0"
+            val port = 9000
+            val certInfo = CertInfo()
+            val strictMode = false
 
-        every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
-        every { fileOperations.isFile(contractPath) }.returns(true)
-        every { fileOperations.extensionIsNot(contractPath, CONTRACT_EXTENSIONS) }.returns(false)
+            every {
+                httpStubEngine.runHTTPStub(
+                    stubInfo,
+                    host,
+                    port,
+                    certInfo,
+                    strictMode,
+                    any(),
+                    httpClientFactory = any(),
+                    workingDirectory = any()
+                )
+            }.returns(null)
 
-        val exitStatus = CommandLine(stubCommand, factory).execute(contractPath)
-        assertThat(exitStatus).isZero()
+            every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
+            every { fileOperations.isFile(contractPath) }.returns(true)
+            every { fileOperations.extensionIsNot(contractPath, CONTRACT_EXTENSIONS) }.returns(false)
 
-        verify(exactly = 1) { httpStubEngine.runHTTPStub(
-            stubInfo,
-            host,
-            any(),
-            certInfo,
-            strictMode,
-            any(),
-            httpClientFactory = any(),
-            workingDirectory = any(),
-        ) }
+            val exitStatus = CommandLine(stubCommand, factory).execute(contractPath)
+            assertThat(exitStatus).isZero()
+
+            verify(exactly = 1) {
+                httpStubEngine.runHTTPStub(
+                    any(),
+                    any(),
+                    any(),
+                    certInfo,
+                    strictMode,
+                    any(),
+                    httpClientFactory = any(),
+                    workingDirectory = any(),
+                )
+            }
+        } finally {
+            file.delete()
+        }
     }
 
     @ParameterizedTest
@@ -167,8 +182,8 @@ internal class StubCommandTest {
     }
 
     @Test
-    fun `should run the stub with the specified pass-through url target`() {
-        val contractPath = "/path/to/contract.$CONTRACT_EXTENSION"
+    fun `should run the stub with the specified pass-through url target`(@TempDir tempDir: File) {
+        val contractPath = osAgnosticPath("${tempDir.path}/contract.$CONTRACT_EXTENSION")
         val contract = """
             Feature: Simple API
               Scenario: GET request
@@ -176,46 +191,64 @@ internal class StubCommandTest {
                 Then status 200
         """.trimIndent()
 
-        val feature = parseGherkinStringToFeature(contract)
+        val file = File(contractPath).also { it.writeText(contract) }
 
-        every { watchMaker.make(listOf(contractPath)) }.returns(watcher)
+        try {
+            val feature = parseGherkinStringToFeature(contract)
 
-        val stubInfo = listOf(Pair(feature, emptyList<ScenarioStub>()))
-        every { stubLoaderEngine.loadStubs(listOf(contractPath).map { ContractPathData("", it) }, emptyList()) }.returns(stubInfo)
+            every { watchMaker.make(listOf(contractPath)) }.returns(watcher)
 
-        val host = "0.0.0.0"
-        val port = 9000
-        val certInfo = CertInfo()
-        val strictMode = false
-        val passThroughTargetBase = "http://passthroughTargetBase"
+            val stubInfo = listOf(Pair(feature, emptyList<ScenarioStub>()))
+            every {
+                stubLoaderEngine.loadStubs(
+                    listOf(contractPath).map { ContractPathData("", it) },
+                    emptyList()
+                )
+            }.returns(stubInfo)
 
-        every { httpStubEngine.runHTTPStub(
-            stubInfo,
-            host,
-            port,
-            certInfo,
-            strictMode,
-            passThroughTargetBase,
-            httpClientFactory = any(),
-            workingDirectory = any(),
-        ) }.returns(null)
+            val host = "0.0.0.0"
+            val port = 9000
+            val certInfo = CertInfo()
+            val strictMode = false
+            val passThroughTargetBase = "http://passthroughTargetBase"
 
-        every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
-        every { fileOperations.isFile(contractPath) }.returns(true)
-        every { fileOperations.extensionIsNot(contractPath, CONTRACT_EXTENSIONS) }.returns(false)
+            every {
+                httpStubEngine.runHTTPStub(
+                    stubInfo,
+                    host,
+                    port,
+                    certInfo,
+                    strictMode,
+                    passThroughTargetBase,
+                    httpClientFactory = any(),
+                    workingDirectory = any(),
+                )
+            }.returns(null)
 
-        val exitStatus = CommandLine(stubCommand, factory).execute("--passThroughTargetBase=$passThroughTargetBase", contractPath)
-        assertThat(exitStatus).isZero()
+            every { specmaticConfig.contractStubPaths() }.returns(arrayListOf(contractPath))
+            every { fileOperations.isFile(contractPath) }.returns(true)
+            every { fileOperations.extensionIsNot(contractPath, CONTRACT_EXTENSIONS) }.returns(false)
 
-        verify(exactly = 1) { httpStubEngine.runHTTPStub(
-            stubInfo,
-            host,
-            any(),
-            certInfo,
-            strictMode,
-            any(),
-            httpClientFactory = any(),
-            workingDirectory = any(),
-        ) }
+            val exitStatus = CommandLine(stubCommand, factory).execute(
+                "--passThroughTargetBase=$passThroughTargetBase",
+                contractPath
+            )
+            assertThat(exitStatus).isZero()
+
+            verify(exactly = 1) {
+                httpStubEngine.runHTTPStub(
+                    stubInfo,
+                    host,
+                    any(),
+                    certInfo,
+                    strictMode,
+                    any(),
+                    httpClientFactory = any(),
+                    workingDirectory = any(),
+                )
+            }
+        } finally {
+            file.delete()
+        }
     }
 }

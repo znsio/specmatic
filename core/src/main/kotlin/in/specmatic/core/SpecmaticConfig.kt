@@ -14,6 +14,7 @@ import java.io.File
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
 const val APPLICATION_NAME_LOWER_CASE_LEGACY = "qontract"
+const val DEFAULT_TIMEOUT_IN_SECONDS = "60"
 const val CONTRACT_EXTENSION = "spec"
 const val LEGACY_CONTRACT_EXTENSION = "qontract"
 const val YAML = "yaml"

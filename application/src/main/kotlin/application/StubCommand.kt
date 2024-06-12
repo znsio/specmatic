@@ -8,6 +8,7 @@ import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import `in`.specmatic.core.WorkingDirectory
 import `in`.specmatic.core.log.*
 import `in`.specmatic.core.utilities.ContractPathData
+import `in`.specmatic.core.utilities.exitIfAnyDoNotExist
 import `in`.specmatic.core.utilities.exitWithMessage
 import `in`.specmatic.stub.ContractStub
 import `in`.specmatic.stub.HttpClientFactory
@@ -123,6 +124,7 @@ class StubCommand : Callable<Unit> {
                 }
             }
             contractPaths = contractSources.map { it.path }
+            exitIfAnyDoNotExist("The following specifications do not exist", contractPaths)
             validateContractFileExtensions(contractPaths, fileOperations)
             startServer()
 

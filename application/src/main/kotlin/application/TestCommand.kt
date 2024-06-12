@@ -4,6 +4,7 @@ import application.test.ContractExecutionListener
 import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import `in`.specmatic.core.Configuration
 import `in`.specmatic.core.Configuration.Companion.CONFIG_FILE_NAME_SYSTEM_PROP
+import `in`.specmatic.core.DEFAULT_TIMEOUT_IN_SECONDS
 import `in`.specmatic.core.Flags
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
@@ -85,7 +86,7 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--https"], description = ["Use https instead of the default http"], required = false)
     var useHttps: Boolean = false
 
-    @Option(names = ["--timeout"], description = ["Specify a timeout for the test requests"], required = false, defaultValue = "60")
+    @Option(names = ["--timeout"], description = ["Specify a timeout in seconds for the test requests. Default value is $DEFAULT_TIMEOUT_IN_SECONDS"], required = false, defaultValue = DEFAULT_TIMEOUT_IN_SECONDS)
     var timeout: Int = 60
 
     @Option(names = ["--junitReportDir"], description = ["Create junit xml reports in this directory"])

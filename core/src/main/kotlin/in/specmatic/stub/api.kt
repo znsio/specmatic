@@ -8,6 +8,7 @@ import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.core.utilities.contractStubPaths
+import `in`.specmatic.core.utilities.exitIfDoesNotExist
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
@@ -80,7 +81,9 @@ internal fun createStub(
     port: Int = 9000,
     timeoutMillis: Long
 ): ContractStub {
+    // TODO - see if these two can be extracted out.
     val configFileName = getConfigFileName()
+    exitIfDoesNotExist("config file", configFileName)
     val contractPathData = contractStubPaths(configFileName)
     val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths)
     val features = contractInfo.map { it.first }
@@ -99,7 +102,10 @@ internal fun createStub(
 
 internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMillis: Long): ContractStub {
     val workingDirectory = WorkingDirectory()
+    // TODO - see if these two can be extracted out.
     val configFileName = getConfigFileName()
+    exitIfDoesNotExist("config file", configFileName)
+
     val stubs = loadContractStubsFromImplicitPaths(contractStubPaths(configFileName))
     val features = stubs.map { it.first }
     val expectations = contractInfoToHttpExpectations(stubs)

@@ -246,7 +246,7 @@ fun createIfDoesNotExist(workingDirectoryPath: String) {
 
 fun exitIfDoesNotExist(label: String, filePath: String) {
     if(!File(filePath).exists())
-        exitWithMessage("${label.capitalizeFirstChar()} $filePath does not exist")
+        exitWithMessage("${label.capitalizeFirstChar()} does not exist. (Could not find file ./specmatic.json OR ./specmatic.yaml OR ./specmatic.yml)")
 }
 
 fun exitIfAnyDoNotExist(label: String, filePaths: List<String>) {

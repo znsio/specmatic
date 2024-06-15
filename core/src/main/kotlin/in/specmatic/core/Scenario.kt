@@ -7,6 +7,7 @@ import `in`.specmatic.core.utilities.capitalizeFirstChar
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.mapZip
 import `in`.specmatic.core.value.*
+import `in`.specmatic.stub.RequestContext
 import `in`.specmatic.test.TestExecutor
 
 object ContractAndStubMismatchMessages : MismatchMessages {
@@ -158,13 +159,13 @@ data class Scenario(
         }
     }
 
-    fun generateHttpResponse(actualFacts: Map<String, Value>): HttpResponse =
+    fun generateHttpResponse(actualFacts: Map<String, Value>, requestContext: Context = NoContext): HttpResponse =
         scenarioBreadCrumb(this) {
             Resolver(emptyMap(), false, patterns)
             val resolver = Resolver(actualFacts, false, patterns)
             val facts = combineFacts(expectedFacts, actualFacts, resolver)
 
-            httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts)))
+            httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
         }
 
     private fun combineFacts(

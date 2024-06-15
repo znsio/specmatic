@@ -81,6 +81,12 @@ class HttpStub(
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(staticHttpStubData(rawHttpStubs))
 
+    private val requestHandlers: MutableList<RequestHandler> = mutableListOf()
+
+    fun registerHandler(requestHandler: RequestHandler) {
+        requestHandlers.add(requestHandler)
+    }
+
     private fun staticHttpStubData(rawHttpStubs: List<HttpStubData>): MutableList<HttpStubData> {
         val staticStubs = rawHttpStubs.filter { it.stubToken == null }.toMutableList()
         val stubsFromSpecificationExamples: List<HttpStubData> = features.map { feature ->
@@ -179,10 +185,13 @@ class HttpStub(
                     val httpRequest = ktorHttpRequestToHttpRequest(call)
                     httpLogMessage.addRequest(httpRequest)
 
+                    val responseFromRequestHandler = requestHandlers.map { it.handleRequest(httpRequest) }.firstOrNull()
+
                     val httpStubResponse: HttpStubResponse = when {
                         isFetchLogRequest(httpRequest) -> handleFetchLogRequest()
                         isFetchLoadLogRequest(httpRequest) -> handleFetchLoadLogRequest()
                         isFetchContractsRequest(httpRequest) -> handleFetchContractsRequest()
+                        responseFromRequestHandler != null -> responseFromRequestHandler
                         isExpectationCreation(httpRequest) -> handleExpectationCreationRequest(httpRequest)
                         isSseExpectationCreation(httpRequest) -> handleSseExpectationCreationRequest(httpRequest)
                         isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
@@ -818,6 +827,9 @@ object ContractAndRequestsMismatch : MismatchMessages {
     }
 }
 
+data class RequestContext(val httpRequest: HttpRequest) : Context
+
+
 private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest): StubbedResponseResult {
     data class ResponseDetails(val feature: Feature, val successResponse: ResponseBuilder?, val results: Results)
 
@@ -843,7 +855,7 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
 
         else -> FoundStubbedResponse(
             HttpStubResponse(
-                fakeResponse.successResponse?.build()?.withRandomResultHeader()!!,
+                fakeResponse.successResponse?.build(RequestContext(httpRequest))?.withRandomResultHeader()!!,
                 contractPath = fakeResponse.feature.path,
                 feature = fakeResponse.feature,
                 scenario = fakeResponse.successResponse.scenario

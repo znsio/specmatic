@@ -27,7 +27,7 @@ data class Resolver(
     val mockMode: Boolean = false,
     val newPatterns: Map<String, Pattern> = emptyMap(),
     val findKeyErrorCheck: KeyCheck = DefaultKeyCheck,
-    val context: Map<String, String> = emptyMap(),
+    val context: Context = NoContext,
     val mismatchMessages: MismatchMessages = DefaultMismatchMessages,
     val isNegative: Boolean = false,
     val patternMatchStrategy: (resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value) -> Result = actualMatch,
@@ -39,7 +39,10 @@ data class Resolver(
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
 
-    val patterns = builtInPatterns.plus(newPatterns)
+    val patterns: Map<String, Pattern>
+        get() {
+            return builtInPatterns.plus(newPatterns)
+        }
 
     fun withUnexpectedKeyCheck(unexpectedKeyCheck: UnexpectedKeyCheck): Resolver {
         return this.copy(findKeyErrorCheck = this.findKeyErrorCheck.withUnexpectedKeyCheck(unexpectedKeyCheck))

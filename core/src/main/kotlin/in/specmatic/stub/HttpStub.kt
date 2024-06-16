@@ -44,6 +44,10 @@ data class HttpStubResponse(
     val scenario: Scenario? = null
 )
 
+interface RequestInterceptor {
+    fun interceptRequest(httpRequest: HttpRequest): HttpRequest?
+}
+
 class HttpStub(
     private val features: List<Feature>,
     rawHttpStubs: List<HttpStubData> = emptyList(),
@@ -156,6 +160,12 @@ class HttpStub(
 
     private val broadcastChannels: Vector<BroadcastChannel<SseEvent>> = Vector(50, 10)
 
+    private val requestInterceptors: MutableList<RequestInterceptor> = mutableListOf()
+
+    fun registerRequestInterceptor(requestInterceptor: RequestInterceptor) {
+        requestInterceptors.add(requestInterceptor)
+    }
+
     private val environment = applicationEngineEnvironment {
         module {
             install(DoubleReceive)
@@ -182,8 +192,13 @@ class HttpStub(
                 val httpLogMessage = HttpLogMessage()
 
                 try {
-                    val httpRequest = ktorHttpRequestToHttpRequest(call)
-                    httpLogMessage.addRequest(httpRequest)
+                    val rawHttpRequest = ktorHttpRequestToHttpRequest(call)
+                    httpLogMessage.addRequest(rawHttpRequest)
+
+                    val httpRequest = requestInterceptors.fold(rawHttpRequest) { request, requestInterceptor ->
+                        requestInterceptor.interceptRequest(request) ?: request
+                    }
+
 
                     val responseFromRequestHandler = requestHandlers.map { it.handleRequest(httpRequest) }.firstOrNull()
 

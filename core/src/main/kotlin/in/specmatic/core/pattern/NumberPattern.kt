@@ -10,36 +10,30 @@ import java.util.*
 
 data class NumberPattern(
     override val typeAlias: String? = null,
-    val minLength: Int? = null,
-    val maxLength: Int? = null,
+    val minLength: Int = 1,
+    val maxLength: Int = Int.MAX_VALUE,
     override val example: String? = null
 ) : Pattern, ScalarType, HasDefaultExample {
     init {
-        require(minLength?.let { minLength > 0 } ?: true) {"minLength cannot be less than 1"}
-        require(minLength?.let { maxLength?.let { minLength <= maxLength } }
-            ?: true) { "maxLength cannot be less than minLength" }
+        require(minLength > 0) { "minLength cannot be less than 1" }
+        require(minLength <= maxLength) { "maxLength cannot be less than minLength" }
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        return when (sampleData is NumberValue) {
-            true -> {
-                if (minLength != null && sampleData.toStringLiteral().length < minLength) return mismatchResult(
-                    "number with minLength $minLength",
-                    sampleData, resolver.mismatchMessages
-                )
-                if (maxLength != null && sampleData.toStringLiteral().length > maxLength) return mismatchResult(
-                    "number with maxLength $maxLength",
-                    sampleData, resolver.mismatchMessages
-                )
-                return Result.Success()
-            }
-            false -> mismatchResult("number", sampleData, resolver.mismatchMessages)
-        }
+        if (sampleData !is NumberValue)
+            return mismatchResult("number", sampleData, resolver.mismatchMessages)
+
+        if (sampleData.toStringLiteral().length < minLength)
+            return mismatchResult("number with minLength $minLength", sampleData, resolver.mismatchMessages)
+
+        if (sampleData.toStringLiteral().length > maxLength)
+            return mismatchResult("number with maxLength $maxLength", sampleData, resolver.mismatchMessages)
+
+        return Result.Success()
     }
 
     override fun generate(resolver: Resolver): Value =
-        resolver.resolveExample(example, this) ?:
-            NumberValue(randomNumber(minLength ?: 3))
+        resolver.resolveExample(example, this) ?: NumberValue(randomNumber(minLength))
 
     private fun randomNumber(minLength: Int): Int {
         val first = randomPositiveDigit().toString()
@@ -99,19 +93,27 @@ fun encompasses(
             thisResolver,
             typeStack
         )
+
         otherPattern is AnyPattern -> {
             val failures: List<Result.Failure> = otherPattern.patternSet(otherResolver).map {
                 thisPattern.encompasses(it, thisResolver, otherResolver)
             }.filterIsInstance<Result.Failure>()
 
-            if(failures.isEmpty())
+            if (failures.isEmpty())
                 Result.Success()
             else
                 Result.Failure.fromFailures(failures)
         }
+
         otherPattern is EnumPattern -> {
             encompasses(thisPattern, otherPattern.pattern, thisResolver, otherResolver, typeStack)
         }
-        thisPattern is ScalarType && otherPattern is ScalarType && thisPattern.matches(otherPattern.generate(otherResolver), thisResolver) is Result.Success -> Result.Success()
+
+        thisPattern is ScalarType && otherPattern is ScalarType && thisPattern.matches(
+            otherPattern.generate(
+                otherResolver
+            ), thisResolver
+        ) is Result.Success -> Result.Success()
+
         else -> mismatchResult(thisPattern, otherPattern, thisResolver.mismatchMessages)
     }

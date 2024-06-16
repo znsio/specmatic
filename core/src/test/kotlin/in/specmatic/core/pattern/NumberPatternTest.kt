@@ -36,8 +36,8 @@ internal class NumberPatternTest {
     }
 
     @Test
-    fun `should generate 3 digit long random number when min and max length are not specified`() {
-        assertThat(NumberPattern().generate(Resolver()).toStringLiteral().length).isEqualTo(3)
+    fun `should generate 1 digit long random number when min and max length are not specified`() {
+        assertThat(NumberPattern().generate(Resolver()).toStringLiteral().length).isEqualTo(1)
     }
 
     @Test

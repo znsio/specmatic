@@ -21,8 +21,9 @@ data class NumberPattern(
     init {
         require(minLength > 0) { "minLength cannot be less than 1" }
         require(minLength <= maxLength) { "maxLength cannot be less than minLength" }
-        val countOfExclusivesSet = listOf(exclusiveMinimum, exclusiveMaximum).count { it }
-        require(maximum - minimum >= countOfExclusivesSet) { "Inappropriate minimum and maximum values set" }
+        if (exclusiveMinimum || exclusiveMaximum)
+            require(minimum < maximum) { "Inappropriate minimum and maximum values set" }
+        require(minimum <= maximum) { "Inappropriate minimum and maximum values set" }
     }
 
     private fun eval(a: Double, operator: String, b: Double): Boolean {
@@ -48,18 +49,27 @@ data class NumberPattern(
         val sampleNumber = sampleData.number.toDouble()
 
         val minOp = if (exclusiveMinimum) ">" else ">="
-        if (!eval(sampleNumber,  minOp, minimum))
+        if (!eval(sampleNumber, minOp, minimum))
             return mismatchResult("number $minOp $minimum", sampleData, resolver.mismatchMessages)
 
         val maxOp = if (exclusiveMaximum) "<" else "<="
-        if (!eval(sampleNumber,  maxOp, maximum))
+        if (!eval(sampleNumber, maxOp, maximum))
             return mismatchResult("number $maxOp $maximum", sampleData, resolver.mismatchMessages)
 
         return Result.Success()
     }
 
-    override fun generate(resolver: Resolver): Value =
-        resolver.resolveExample(example, this) ?: NumberValue(randomNumber(minLength))
+    override fun generate(resolver: Resolver): Value {
+        if (minimum == Double.NEGATIVE_INFINITY && maximum == Double.POSITIVE_INFINITY)
+            return resolver.resolveExample(example, this) ?: NumberValue(randomNumber(minLength))
+
+        val min = if (minimum == Double.NEGATIVE_INFINITY) {
+            if (maximum < Double.MIN_VALUE) maximum - 1 else Double.MIN_VALUE
+        } else minimum
+        val max = if (maximum == Double.POSITIVE_INFINITY) Double.MAX_VALUE else maximum
+        return NumberValue(Random().nextDouble(min, max))
+
+    }
 
     private fun randomNumber(minLength: Int): Int {
         val first = randomPositiveDigit().toString()

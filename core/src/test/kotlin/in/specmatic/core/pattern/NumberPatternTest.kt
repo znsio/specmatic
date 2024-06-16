@@ -90,7 +90,7 @@ internal class NumberPatternTest {
     @Test
     fun `should not allow maximum less than minimum`() {
         val exception = assertThrows<IllegalArgumentException> { NumberPattern(minimum = 6.0, maximum = 4.0) }
-        assertThat(exception.message).isEqualTo("inappropriate minimum and maximum values set")
+        assertThat(exception.message).isEqualTo("Inappropriate minimum and maximum values set")
     }
 
     @Test
@@ -102,22 +102,22 @@ internal class NumberPatternTest {
     @Test
     fun `should not allow maximum equal to minimum when both exclusive keywords are set to true`() {
         val exception = assertThrows<IllegalArgumentException> { NumberPattern(minimum = 6.0, exclusiveMinimum = true, maximum = 6.0, exclusiveMaximum = true) }
-        assertThat(exception.message).isEqualTo("inappropriate minimum and maximum values set")
+        assertThat(exception.message).isEqualTo("Inappropriate minimum and maximum values set")
     }
 
     @Test
     fun `should not allow maximum greater than minimum by 1 when both exclusive keywords are set to true`() {
         val exception = assertThrows<IllegalArgumentException> { NumberPattern(minimum = 6.0, exclusiveMinimum = true, maximum = 5.0, exclusiveMaximum = true) }
-        assertThat(exception.message).isEqualTo("inappropriate minimum and maximum values set")
+        assertThat(exception.message).isEqualTo("Inappropriate minimum and maximum values set")
     }
 
     @Test
     fun `should not allow maximum equal to minimum when any one exclusive keyword is set to true`() {
         val minException = assertThrows<IllegalArgumentException> { NumberPattern(minimum = 6.0, exclusiveMinimum = true, maximum = 6.0, exclusiveMaximum = false) }
-        assertThat(minException.message).isEqualTo("inappropriate minimum and maximum values set")
+        assertThat(minException.message).isEqualTo("Inappropriate minimum and maximum values set")
 
         val maxException = assertThrows<IllegalArgumentException> { NumberPattern(minimum = 6.0, exclusiveMinimum = false, maximum = 6.0, exclusiveMaximum = true) }
-        assertThat(maxException.message).isEqualTo("inappropriate minimum and maximum values set")
+        assertThat(maxException.message).isEqualTo("Inappropriate minimum and maximum values set")
     }
 
     @Test
@@ -136,6 +136,63 @@ internal class NumberPatternTest {
     fun `should match number of any length when min and max are not specified`() {
         val randomNumber = RandomStringUtils.randomNumeric((1..9).random()).toInt()
         assertThat(NumberPattern().matches(NumberValue(randomNumber), Resolver()).isSuccess()).isTrue
+    }
+
+    @Test
+    fun `should generate a number greater than or equal to minimum when exclusive keywords are false or not set`() {
+        val generatedValues = (0..5).map { NumberPattern(minimum = 5.0).generate(Resolver()) }
+        assertThat(generatedValues).allSatisfy {
+            it as NumberValue
+            assertThat(it.number.toDouble()).isGreaterThanOrEqualTo(5.0)
+        }
+    }
+
+    @Test
+    fun `should generate a number less than or equal to maximum when exclusive keywords are false or not set`() {
+        val generatedValues = (0..5).map { NumberPattern(maximum = 5.0).generate(Resolver()) }
+        assertThat(generatedValues).allSatisfy {
+            it as NumberValue
+            assertThat(it.number.toDouble()).isLessThanOrEqualTo(5.0)
+        }
+    }
+
+    @Test
+    fun `should generate a number greater than or equal to minimum and maximum when are set and exclusive keywords are both false`() {
+        val generatedValues = (0..5).map { NumberPattern(minimum = 5.0, maximum = 10.0).generate(Resolver()) }
+        assertThat(generatedValues).allSatisfy {
+            it as NumberValue
+            assertThat(it.number.toDouble()).isGreaterThanOrEqualTo(5.0)
+            assertThat(it.number.toDouble()).isLessThanOrEqualTo(10.0)
+        }
+    }
+
+    @Test
+    fun `should generate a number greater than minimum and maximum when are set and exclusive keywords are both true`() {
+        val generatedValues = (0..5).map { NumberPattern(minimum = 5.0, exclusiveMinimum = true, maximum = 10.0, exclusiveMaximum = true).generate(Resolver()) }
+        assertThat(generatedValues).allSatisfy {
+            it as NumberValue
+            assertThat(it.number.toDouble()).isGreaterThan(5.0)
+            assertThat(it.number.toDouble()).isLessThan(10.0)
+        }
+    }
+
+    @Test
+    fun `should generate a number greater than minimum even when max is negative`() {
+        val generatedValues = (0..5).map { NumberPattern(maximum = -10.0).generate(Resolver()) }
+        assertThat(generatedValues).allSatisfy {
+            it as NumberValue
+            assertThat(it.number.toDouble()).isLessThanOrEqualTo(-10.0)
+        }
+    }
+
+    @Test
+    fun `should generate a number between min and max even when they are negative`() {
+        val generatedValues = (0..5).map { NumberPattern(minimum = -100.0, maximum = 0.0).generate(Resolver()) }
+        assertThat(generatedValues).allSatisfy {
+            it as NumberValue
+            assertThat(it.number.toDouble()).isGreaterThanOrEqualTo(-100.0)
+            assertThat(it.number.toDouble()).isLessThanOrEqualTo(0.0)
+        }
     }
 
     @Test

@@ -21,6 +21,8 @@ data class NumberPattern(
     init {
         require(minLength > 0) { "minLength cannot be less than 1" }
         require(minLength <= maxLength) { "maxLength cannot be less than minLength" }
+        val countOfExclusivesSet = listOf(exclusiveMinimum, exclusiveMaximum).count { it }
+        require(maximum - minimum >= countOfExclusivesSet) { "Inappropriate minimum and maximum values set" }
     }
 
     private fun eval(a: Double, operator: String, b: Double): Boolean {

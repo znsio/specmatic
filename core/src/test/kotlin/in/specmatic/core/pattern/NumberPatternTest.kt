@@ -19,7 +19,7 @@ internal class NumberPatternTest {
     }
 
     @Test
-    fun `should not be allow maxLength less than minLength`() {
+    fun `should not allow maxLength less than minLength`() {
         val exception = assertThrows<IllegalArgumentException> { NumberPattern(minLength = 6, maxLength = 4) }
         assertThat(exception.message).isEqualTo("maxLength cannot be less than minLength")
     }
@@ -85,6 +85,39 @@ internal class NumberPatternTest {
         val result = NumberPattern(maximum = 99.0, exclusiveMaximum = true).matches(NumberValue(99.0), Resolver())
         assertThat(result.isSuccess()).isFalse()
         assertThat(result.reportString()).isEqualTo("""Expected number < 99.0, actual was 99.0 (number)""")
+    }
+
+    @Test
+    fun `should not allow maximum less than minimum`() {
+        val exception = assertThrows<IllegalArgumentException> { NumberPattern(minimum = 6.0, maximum = 4.0) }
+        assertThat(exception.message).isEqualTo("inappropriate minimum and maximum values set")
+    }
+
+    @Test
+    fun `should allow maximum equal to minimum when exclusive keywords are false or not used`() {
+        NumberPattern(minimum = 6.0, maximum = 6.0)
+        NumberPattern(minimum = 6.0, exclusiveMinimum = false, maximum = 6.0, exclusiveMaximum = false)
+    }
+
+    @Test
+    fun `should not allow maximum equal to minimum when both exclusive keywords are set to true`() {
+        val exception = assertThrows<IllegalArgumentException> { NumberPattern(minimum = 6.0, exclusiveMinimum = true, maximum = 6.0, exclusiveMaximum = true) }
+        assertThat(exception.message).isEqualTo("inappropriate minimum and maximum values set")
+    }
+
+    @Test
+    fun `should not allow maximum greater than minimum by 1 when both exclusive keywords are set to true`() {
+        val exception = assertThrows<IllegalArgumentException> { NumberPattern(minimum = 6.0, exclusiveMinimum = true, maximum = 5.0, exclusiveMaximum = true) }
+        assertThat(exception.message).isEqualTo("inappropriate minimum and maximum values set")
+    }
+
+    @Test
+    fun `should not allow maximum equal to minimum when any one exclusive keyword is set to true`() {
+        val minException = assertThrows<IllegalArgumentException> { NumberPattern(minimum = 6.0, exclusiveMinimum = true, maximum = 6.0, exclusiveMaximum = false) }
+        assertThat(minException.message).isEqualTo("inappropriate minimum and maximum values set")
+
+        val maxException = assertThrows<IllegalArgumentException> { NumberPattern(minimum = 6.0, exclusiveMinimum = false, maximum = 6.0, exclusiveMaximum = true) }
+        assertThat(maxException.message).isEqualTo("inappropriate minimum and maximum values set")
     }
 
     @Test

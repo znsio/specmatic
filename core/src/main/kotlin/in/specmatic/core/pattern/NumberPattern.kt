@@ -8,10 +8,15 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.Value
 import java.util.*
 
+private val lessThanEqualToComparator = { a: Double, b: Double -> a <= b }
+private val lessThanComparator = { a: Double, b: Double -> a < b }
+
 data class NumberPattern(
     override val typeAlias: String? = null,
     val minLength: Int = 1,
     val maxLength: Int = Int.MAX_VALUE,
+    val minimum: Double = Double.NEGATIVE_INFINITY,
+    val exclusiveMinimum: Boolean = false,
     override val example: String? = null
 ) : Pattern, ScalarType, HasDefaultExample {
     init {
@@ -28,6 +33,16 @@ data class NumberPattern(
 
         if (sampleData.toStringLiteral().length > maxLength)
             return mismatchResult("number with maxLength $maxLength", sampleData, resolver.mismatchMessages)
+
+        val (comparison: (Double, Double) -> Boolean, errorMessage) = if (exclusiveMinimum) {
+            Pair(lessThanEqualToComparator, "")
+        } else {
+            Pair(lessThanComparator, "or equal to ")
+        }
+
+        if (comparison(sampleData.number.toDouble(), minimum)) {
+            return mismatchResult("number greater than $errorMessage$minimum", sampleData, resolver.mismatchMessages)
+        }
 
         return Result.Success()
     }

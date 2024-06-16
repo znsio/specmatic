@@ -36,6 +36,32 @@ internal class NumberPatternTest {
     }
 
     @Test
+    fun `should allow example values as per minimum keyword`() {
+        val result = NumberPattern(minimum = 3.0).matches(NumberValue(4), Resolver())
+        assertThat(result.isSuccess()).isTrue()
+    }
+
+    @Test
+    fun `should reject example values when minimum keyword is not met`() {
+        val result = NumberPattern(minimum = 3.0).matches(NumberValue(2), Resolver())
+        assertThat(result.isSuccess()).isFalse()
+        assertThat(result.reportString()).isEqualTo("""Expected number greater than or equal to 3.0, actual was 2 (number)""")
+    }
+
+    @Test
+    fun `should allow example values as per exclusiveMinimum keyword`() {
+        val result = NumberPattern(minimum = 3.0, exclusiveMinimum = false).matches(NumberValue(3), Resolver())
+        assertThat(result.isSuccess()).isTrue()
+    }
+
+    @Test
+    fun `should reject example values when exclusiveMinimum keyword is not met`() {
+        val result = NumberPattern(minimum = 3.0, exclusiveMinimum = true).matches(NumberValue(3.0), Resolver())
+        assertThat(result.isSuccess()).isFalse()
+        assertThat(result.reportString()).isEqualTo("""Expected number greater than 3.0, actual was 3.0 (number)""")
+    }
+
+    @Test
     fun `should generate 1 digit long random number when min and max length are not specified`() {
         assertThat(NumberPattern().generate(Resolver()).toStringLiteral().length).isEqualTo(1)
     }

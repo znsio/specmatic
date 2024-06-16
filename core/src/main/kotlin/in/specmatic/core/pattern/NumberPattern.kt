@@ -8,20 +8,29 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.Value
 import java.util.*
 
-private val lessThanEqualToComparator = { a: Double, b: Double -> a <= b }
-private val lessThanComparator = { a: Double, b: Double -> a < b }
-
 data class NumberPattern(
     override val typeAlias: String? = null,
     val minLength: Int = 1,
     val maxLength: Int = Int.MAX_VALUE,
     val minimum: Double = Double.NEGATIVE_INFINITY,
     val exclusiveMinimum: Boolean = false,
+    val maximum: Double = Double.POSITIVE_INFINITY,
+    val exclusiveMaximum: Boolean = false,
     override val example: String? = null
 ) : Pattern, ScalarType, HasDefaultExample {
     init {
         require(minLength > 0) { "minLength cannot be less than 1" }
         require(minLength <= maxLength) { "maxLength cannot be less than minLength" }
+    }
+
+    private fun eval(a: Double, operator: String, b: Double): Boolean {
+        return when (operator) {
+            ">" -> a > b
+            ">=" -> a >= b
+            "<" -> a < b
+            "<=" -> a <= b
+            else -> throw IllegalArgumentException("Unsupported operator")
+        }
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
@@ -34,15 +43,15 @@ data class NumberPattern(
         if (sampleData.toStringLiteral().length > maxLength)
             return mismatchResult("number with maxLength $maxLength", sampleData, resolver.mismatchMessages)
 
-        val (comparison: (Double, Double) -> Boolean, errorMessage) = if (exclusiveMinimum) {
-            Pair(lessThanEqualToComparator, "")
-        } else {
-            Pair(lessThanComparator, "or equal to ")
-        }
+        val sampleNumber = sampleData.number.toDouble()
 
-        if (comparison(sampleData.number.toDouble(), minimum)) {
-            return mismatchResult("number greater than $errorMessage$minimum", sampleData, resolver.mismatchMessages)
-        }
+        val minOp = if (exclusiveMinimum) ">" else ">="
+        if (!eval(sampleNumber,  minOp, minimum))
+            return mismatchResult("number $minOp $minimum", sampleData, resolver.mismatchMessages)
+
+        val maxOp = if (exclusiveMaximum) "<" else "<="
+        if (!eval(sampleNumber,  maxOp, maximum))
+            return mismatchResult("number $maxOp $maximum", sampleData, resolver.mismatchMessages)
 
         return Result.Success()
     }

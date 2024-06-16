@@ -45,7 +45,7 @@ internal class NumberPatternTest {
     fun `should reject example values when minimum keyword is not met`() {
         val result = NumberPattern(minimum = 3.0).matches(NumberValue(2), Resolver())
         assertThat(result.isSuccess()).isFalse()
-        assertThat(result.reportString()).isEqualTo("""Expected number greater than or equal to 3.0, actual was 2 (number)""")
+        assertThat(result.reportString()).isEqualTo("""Expected number >= 3.0, actual was 2 (number)""")
     }
 
     @Test
@@ -58,7 +58,33 @@ internal class NumberPatternTest {
     fun `should reject example values when exclusiveMinimum keyword is not met`() {
         val result = NumberPattern(minimum = 3.0, exclusiveMinimum = true).matches(NumberValue(3.0), Resolver())
         assertThat(result.isSuccess()).isFalse()
-        assertThat(result.reportString()).isEqualTo("""Expected number greater than 3.0, actual was 3.0 (number)""")
+        assertThat(result.reportString()).isEqualTo("""Expected number > 3.0, actual was 3.0 (number)""")
+    }
+
+    @Test
+    fun `should allow example values as per maximum keyword`() {
+        val result = NumberPattern(maximum = 99.0).matches(NumberValue(98), Resolver())
+        assertThat(result.isSuccess()).isTrue()
+    }
+
+    @Test
+    fun `should reject example values when maximum keyword is not met`() {
+        val result = NumberPattern(maximum = 99.0).matches(NumberValue(100), Resolver())
+        assertThat(result.isSuccess()).isFalse()
+        assertThat(result.reportString()).isEqualTo("""Expected number <= 99.0, actual was 100 (number)""")
+    }
+
+    @Test
+    fun `should allow example values as per exclusiveMaximum keyword`() {
+        val result = NumberPattern(maximum = 99.0, exclusiveMaximum = false).matches(NumberValue(99.0), Resolver())
+        assertThat(result.isSuccess()).isTrue()
+    }
+
+    @Test
+    fun `should reject example values when exclusiveMaximum keyword is not met`() {
+        val result = NumberPattern(maximum = 99.0, exclusiveMaximum = true).matches(NumberValue(99.0), Resolver())
+        assertThat(result.isSuccess()).isFalse()
+        assertThat(result.reportString()).isEqualTo("""Expected number < 99.0, actual was 99.0 (number)""")
     }
 
     @Test

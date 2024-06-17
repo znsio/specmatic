@@ -64,19 +64,20 @@ data class NumberPattern(
             return resolver.resolveExample(example, this) ?: NumberValue(randomNumber(minLength))
 
         val min = if (minimum == Double.NEGATIVE_INFINITY) {
-            if (maximum < Double.MIN_VALUE) maximum - 1 else Double.MIN_VALUE
-        } else minimum
+            if (maximum < Double.MIN_VALUE)
+                maximum - 1
+            else
+                Double.MIN_VALUE
+        } else
+            minimum
         val max = if (maximum == Double.POSITIVE_INFINITY) Double.MAX_VALUE else maximum
         return NumberValue(Random().nextDouble(min, max))
-
     }
 
     private fun randomNumber(minLength: Int): Int {
         val first = randomPositiveDigit().toString()
         val rest = (1 until minLength).joinToString("") { randomDigit() }
-
         val stringNumber = "$first$rest"
-
         return stringNumber.toInt()
     }
 

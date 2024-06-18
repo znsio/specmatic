@@ -18,8 +18,9 @@ data class StringPattern (
     val regex: String? = null
 ) : Pattern, ScalarType, HasDefaultExample {
     init {
-        require(minLength?.let { maxLength?.let { minLength <= maxLength } }
-            ?: true) { """maxLength cannot be less than minLength""" }
+        if (minLength != null && maxLength != null && minLength > maxLength) {
+            throw IllegalArgumentException("maxLength cannot be less than minLength")
+        }
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {

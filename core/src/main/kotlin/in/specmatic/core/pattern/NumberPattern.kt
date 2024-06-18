@@ -18,12 +18,16 @@ data class NumberPattern(
     val exclusiveMaximum: Boolean = false,
     override val example: String? = null
 ) : Pattern, ScalarType, HasDefaultExample {
+
     init {
-        require(minLength > 0) { "minLength cannot be less than 1" }
-        require(minLength <= maxLength) { "maxLength cannot be less than minLength" }
-        if (exclusiveMinimum || exclusiveMaximum)
-            require(minimum < maximum) { "Inappropriate minimum and maximum values set" }
-        require(minimum <= maximum) { "Inappropriate minimum and maximum values set" }
+        if (minLength <= 0) throw IllegalArgumentException("minLength cannot be less than 1")
+        if (maxLength < minLength) throw IllegalArgumentException("maxLength cannot be less than minLength")
+        if ((exclusiveMinimum || exclusiveMaximum) && minimum >= maximum) {
+            throw IllegalArgumentException("Inappropriate minimum and maximum values set")
+        }
+        if (minimum > maximum) {
+            throw IllegalArgumentException("Inappropriate minimum and maximum values set")
+        }
     }
 
     private fun eval(a: Double, operator: String, b: Double): Boolean {

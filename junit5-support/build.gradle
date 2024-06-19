@@ -21,7 +21,7 @@ dependencies {
     api project(':core')
     implementation "org.junit.jupiter:junit-jupiter-engine:${junit_version}"
     implementation 'org.jetbrains.kotlin:kotlin-maven-serialization'
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0'
     implementation 'org.assertj:assertj-core:3.26.0'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.1'

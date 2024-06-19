@@ -882,7 +882,7 @@ class OpenApiSpecification(
             is PasswordSchema -> StringPattern(example = schema.example?.toString())
 
             is IntegerSchema -> when (schema.enum) {
-                null -> NumberPattern(example = schema.example?.toString())
+                null -> numberPattern(schema, false)
                 else -> toEnum(schema, patternName) { enumValue ->
                     NumberValue(
                         enumValue.toString().toInt()
@@ -891,7 +891,7 @@ class OpenApiSpecification(
             }
 
             is BinarySchema -> BinaryPattern()
-            is NumberSchema -> NumberPattern(example = schema.example?.toString())
+            is NumberSchema -> numberPattern(schema, true)
             is UUIDSchema -> UUIDPattern
             is DateTimeSchema -> DateTimePattern
             is DateSchema -> DatePattern
@@ -1031,6 +1031,15 @@ class OpenApiSpecification(
             true -> pattern.toNullable(schema.example?.toString())
         }
     }
+
+    private fun numberPattern(schema: Schema<*>, isDoubleFormat: Boolean) = NumberPattern(
+        minimum = schema.minimum ?: NumberPattern.MIN,
+        maximum = schema.maximum ?: NumberPattern.MAX,
+        exclusiveMinimum = schema.exclusiveMinimum ?: false,
+        exclusiveMaximum = schema.exclusiveMaximum ?: false,
+        isDoubleFormat = isDoubleFormat,
+        example = schema.example?.toString()
+    )
 
     private fun toListExample(example: Any?): List<String?>? {
         if (example == null)

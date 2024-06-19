@@ -6,18 +6,25 @@ import `in`.specmatic.core.mismatchResult
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.Value
+import java.math.BigDecimal
 import java.util.*
 
 data class NumberPattern(
     override val typeAlias: String? = null,
     val minLength: Int = 1,
     val maxLength: Int = Int.MAX_VALUE,
-    val minimum: Double = Double.NEGATIVE_INFINITY,
+    val minimum: BigDecimal = MIN,
     val exclusiveMinimum: Boolean = false,
-    val maximum: Double = Double.POSITIVE_INFINITY,
+    val maximum: BigDecimal = MAX,
     val exclusiveMaximum: Boolean = false,
-    override val example: String? = null
+    override val example: String? = null,
+    val isDoubleFormat: Boolean = true
 ) : Pattern, ScalarType, HasDefaultExample {
+    companion object {
+        val MIN = BigDecimal("-1E+1000")
+        val MAX = BigDecimal("1E+1000")
+    }
+
     init {
         require(minLength > 0) { "minLength cannot be less than 1" }
         require(minLength <= maxLength) { "maxLength cannot be less than minLength" }
@@ -26,7 +33,12 @@ data class NumberPattern(
         require(minimum <= maximum) { "Inappropriate minimum and maximum values set" }
     }
 
-    private fun eval(a: Double, operator: String, b: Double): Boolean {
+    private val smallestValue: BigDecimal
+        get() = if (isDoubleFormat) BigDecimal(Double.MIN_VALUE) else Int.MIN_VALUE.toBigDecimal()
+    private val largestValue: BigDecimal
+        get() = if (isDoubleFormat) BigDecimal(Double.MAX_VALUE) else Int.MAX_VALUE.toBigDecimal()
+
+    private fun eval(a: BigDecimal, operator: String, b: BigDecimal): Boolean {
         return when (operator) {
             ">" -> a > b
             ">=" -> a >= b
@@ -46,7 +58,7 @@ data class NumberPattern(
         if (sampleData.toStringLiteral().length > maxLength)
             return mismatchResult("number with maxLength $maxLength", sampleData, resolver.mismatchMessages)
 
-        val sampleNumber = sampleData.number.toDouble()
+        val sampleNumber = BigDecimal(sampleData.number.toDouble())
 
         val minOp = if (exclusiveMinimum) ">" else ">="
         if (!eval(sampleNumber, minOp, minimum))
@@ -60,18 +72,18 @@ data class NumberPattern(
     }
 
     override fun generate(resolver: Resolver): Value {
-        if (minimum == Double.NEGATIVE_INFINITY && maximum == Double.POSITIVE_INFINITY)
+        if (minAndMaxValuesNotSet())
             return resolver.resolveExample(example, this) ?: NumberValue(randomNumber(minLength))
 
-        val min = if (minimum == Double.NEGATIVE_INFINITY) {
-            if (maximum < Double.MIN_VALUE)
-                maximum - 1
+        val min = if (minimum == MIN) {
+            if (maximum < smallestValue)
+                maximum - BigDecimal(1)
             else
-                Double.MIN_VALUE
+                smallestValue
         } else
             minimum
-        val max = if (maximum == Double.POSITIVE_INFINITY) Double.MAX_VALUE else maximum
-        return NumberValue(Random().nextDouble(min, max))
+        val max = if (maximum == MAX) largestValue else maximum
+        return NumberValue(Random().nextDouble(min.toDouble(), max.toDouble()))
     }
 
     private fun randomNumber(minLength: Int): Int {
@@ -85,28 +97,46 @@ data class NumberPattern(
 
     private fun randomPositiveDigit() = (Random().nextInt(9) + 1)
 
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
-    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
-
-    fun ifNotInfiniteConstraint(value: Double, generateNegatives: () -> Sequence<ReturnValue<Pattern>>): Sequence<ReturnValue<Pattern>> {
-        if(value != Double.NEGATIVE_INFINITY && value != Double.POSITIVE_INFINITY)
-            return generateNegatives()
-
-        return emptySequence()
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        val values = mutableListOf<Pattern>()
+        values.add(this)
+        if (minValueIsNotSet()) {
+            if(exclusiveMinimum)
+                values.add(ExactValuePattern(NumberValue(minimum + smallestValue)))
+            else
+                values.add(ExactValuePattern(NumberValue(minimum)))
+        }
+        if (maxValueIsNotSet()) {
+            if(exclusiveMaximum)
+                values.add(ExactValuePattern(NumberValue(maximum - smallestValue)))
+            else
+                values.add(ExactValuePattern(NumberValue(maximum)))
+        }
+        return values.asSequence()
     }
+
+    private fun minValueIsNotSet() = minimum != MIN
+    private fun maxValueIsNotSet() = maximum != MAX
+    private fun minAndMaxValuesNotSet() = minimum == MIN && maximum == MAX
+
+    override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val dataTypeNegatives: Sequence<Pattern> = sequenceOf(NullPattern, BooleanPattern(), StringPattern())
+        val negativeForMinimumValue: Sequence<ReturnValue<Pattern>> =
+            negativeRangeValues(minValueIsNotSet(), minimum - smallestValue, "value less than minimum of $minimum")
 
-        val negativeForMinimumValue = ifNotInfiniteConstraint(minimum) {
-            sequenceOf(HasValue(ExactValuePattern(NumberValue(minimum - 1)), "value less than minimum of $minimum"))
-        }
-
-        val negativeForMaximumValue = ifNotInfiniteConstraint(maximum) {
-            sequenceOf(HasValue(ExactValuePattern(NumberValue(maximum + 1)), "value less than minimum of $minimum"))
-        }
+        val negativeForMaximumValue: Sequence<ReturnValue<Pattern>> =
+            negativeRangeValues(maxValueIsNotSet(), maximum + smallestValue, "value greater than maximum of $maximum")
 
         return scalarAnnotation(this, dataTypeNegatives) + negativeForMinimumValue + negativeForMaximumValue
+    }
+
+    private fun negativeRangeValues(condition: Boolean, number: BigDecimal, message: String): Sequence<ReturnValue<Pattern>> {
+        return if (condition) {
+            sequenceOf(HasValue(ExactValuePattern(NumberValue(number)), message))
+        } else
+            emptySequence()
     }
 
     override fun parse(value: String, resolver: Resolver): Value {

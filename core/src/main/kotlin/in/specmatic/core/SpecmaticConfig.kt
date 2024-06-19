@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import java.io.File
 
@@ -192,8 +193,9 @@ fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
     }
     try {
         return ObjectMapper(YAMLFactory()).readValue(configFile.readText(), SpecmaticConfig::class.java)
-    } catch(e: NoClassDefFoundError) {
-        throw Exception("This usually means that there's a dependency version conflict. If you are using Spring in a maven project, the most common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.", e)
+    } catch(e: LinkageError) {
+        logger.log(e, "A dependency version conflict has been detected. If you are using Spring in a maven project, a common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.")
+        throw e
     } catch (e: Throwable) {
         throw Exception("Your configuration file may have some missing configuration sections. Please ensure that the $configFileName file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html", e)
     }

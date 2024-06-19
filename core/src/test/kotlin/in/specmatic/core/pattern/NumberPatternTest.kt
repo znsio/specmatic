@@ -225,4 +225,17 @@ internal class NumberPatternTest {
             "boolean"
         )
     }
+
+    @Test
+    @Tag(GENERATION)
+    fun `negative values generated should include a value greater than minimum and maximum keyword values`() {
+        val result = NumberPattern(minimum = 10.0, maximum = 20.0).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
+        assertThat(result).containsExactlyInAnyOrder(
+            NullPattern,
+            StringPattern(),
+            BooleanPattern(),
+            ExactValuePattern(NumberValue(9.0)),
+            ExactValuePattern(NumberValue(21.0))
+        )
+    }
 }

@@ -88,8 +88,25 @@ data class NumberPattern(
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
+    fun ifNotInfiniteConstraint(value: Double, generateNegatives: () -> Sequence<ReturnValue<Pattern>>): Sequence<ReturnValue<Pattern>> {
+        if(value != Double.NEGATIVE_INFINITY && value != Double.POSITIVE_INFINITY)
+            return generateNegatives()
+
+        return emptySequence()
+    }
+
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return scalarAnnotation(this, sequenceOf(NullPattern, BooleanPattern(), StringPattern()))
+        val dataTypeNegatives: Sequence<Pattern> = sequenceOf(NullPattern, BooleanPattern(), StringPattern())
+
+        val negativeForMinimumValue = ifNotInfiniteConstraint(minimum) {
+            sequenceOf(HasValue(ExactValuePattern(NumberValue(minimum - 1)), "value less than minimum of $minimum"))
+        }
+
+        val negativeForMaximumValue = ifNotInfiniteConstraint(maximum) {
+            sequenceOf(HasValue(ExactValuePattern(NumberValue(maximum + 1)), "value less than minimum of $minimum"))
+        }
+
+        return scalarAnnotation(this, dataTypeNegatives) + negativeForMinimumValue + negativeForMaximumValue
     }
 
     override fun parse(value: String, resolver: Resolver): Value {

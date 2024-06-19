@@ -230,16 +230,16 @@ internal class NumberPatternTest {
     @Test
     @Tag(GENERATION)
     fun `negative values generated should include a value greater than minimum and maximum keyword values`() {
-        val result = NumberPattern(minimum = BigDecimal(10.0), maximum = BigDecimal(20.0)).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
-        assertThat(result).contains(
+        val result =
+            NumberPattern(minimum = BigDecimal(10.0), maximum = BigDecimal(20.0)).negativeBasedOn(Row(), Resolver())
+                .map { it.value }.toList()
+
+        assertThat(result).containsExactlyInAnyOrder(
             NullPattern,
             StringPattern(),
-            BooleanPattern())
-
-        assertThat(result.size).isEqualTo(5)
-        //TODO: fix this test
-//        result.filterIsInstance<ExactValuePattern>().map {
-//            (it as? ExactValuePattern)?.let { (it.pattern as NumberValue).number as BigDecimal } ?: false
-//        }
+            BooleanPattern(),
+            ExactValuePattern(NumberValue(BigDecimal(10) - NumberPattern.BIG_DECIMAL_INC)),
+            ExactValuePattern(NumberValue(BigDecimal(20) + NumberPattern.BIG_DECIMAL_INC))
+        )
     }
 }

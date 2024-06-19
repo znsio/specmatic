@@ -21,6 +21,7 @@ data class NumberPattern(
     val isDoubleFormat: Boolean = true
 ) : Pattern, ScalarType, HasDefaultExample {
     companion object {
+        val BIG_DECIMAL_INC: BigDecimal = BigDecimal(Double.MIN_VALUE)
         val MIN = BigDecimal("-1E+1000")
         val MAX = BigDecimal("1E+1000")
     }
@@ -34,7 +35,7 @@ data class NumberPattern(
     }
 
     private val smallestIncValue: BigDecimal
-        get() = if (isDoubleFormat) BigDecimal(Double.MIN_VALUE) else BigDecimal(1)
+        get() = if (isDoubleFormat) BIG_DECIMAL_INC else BigDecimal(1)
     private val largestValue: BigDecimal
         get() = if (isDoubleFormat) BigDecimal(Double.MAX_VALUE) else Int.MAX_VALUE.toBigDecimal()
 

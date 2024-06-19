@@ -5,6 +5,7 @@ import `in`.specmatic.core.log.CompositePrinter
 import `in`.specmatic.core.log.LogMessage
 import `in`.specmatic.core.log.LogStrategy
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.pattern.NumberPattern.Companion.BIG_DECIMAL_INC
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.NoMatchingScenario
@@ -7759,10 +7760,10 @@ paths:
             }
         })
         assertThat(actualAges).contains(
-            minAge + BigDecimal(Double.MIN_VALUE),
-            maxAge - BigDecimal(Double.MIN_VALUE),
-            minAge - BigDecimal(Double.MIN_VALUE),
-            maxAge + BigDecimal(Double.MIN_VALUE)
+            minAge + BIG_DECIMAL_INC,
+            maxAge - BIG_DECIMAL_INC,
+            minAge - BIG_DECIMAL_INC,
+            maxAge + BIG_DECIMAL_INC
         )
 
         println(actualAges)

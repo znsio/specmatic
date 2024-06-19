@@ -33,8 +33,8 @@ data class NumberPattern(
         require(minimum <= maximum) { "Inappropriate minimum and maximum values set" }
     }
 
-    private val smallestValue: BigDecimal
-        get() = if (isDoubleFormat) BigDecimal(Double.MIN_VALUE) else Int.MIN_VALUE.toBigDecimal()
+    private val smallestIncValue: BigDecimal
+        get() = if (isDoubleFormat) BigDecimal(Double.MIN_VALUE) else BigDecimal(1)
     private val largestValue: BigDecimal
         get() = if (isDoubleFormat) BigDecimal(Double.MAX_VALUE) else Int.MAX_VALUE.toBigDecimal()
 
@@ -76,10 +76,10 @@ data class NumberPattern(
             return resolver.resolveExample(example, this) ?: NumberValue(randomNumber(minLength))
 
         val min = if (minimum == MIN) {
-            if (maximum < smallestValue)
+            if (maximum < smallestIncValue)
                 maximum - BigDecimal(1)
             else
-                smallestValue
+                smallestIncValue
         } else
             minimum
         val max = if (maximum == MAX) largestValue else maximum
@@ -102,13 +102,13 @@ data class NumberPattern(
         values.add(this)
         if (minValueIsNotSet()) {
             if(exclusiveMinimum)
-                values.add(ExactValuePattern(NumberValue(minimum + smallestValue)))
+                values.add(ExactValuePattern(NumberValue(minimum + smallestIncValue)))
             else
                 values.add(ExactValuePattern(NumberValue(minimum)))
         }
         if (maxValueIsNotSet()) {
             if(exclusiveMaximum)
-                values.add(ExactValuePattern(NumberValue(maximum - smallestValue)))
+                values.add(ExactValuePattern(NumberValue(maximum - smallestIncValue)))
             else
                 values.add(ExactValuePattern(NumberValue(maximum)))
         }
@@ -124,10 +124,10 @@ data class NumberPattern(
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val dataTypeNegatives: Sequence<Pattern> = sequenceOf(NullPattern, BooleanPattern(), StringPattern())
         val negativeForMinimumValue: Sequence<ReturnValue<Pattern>> =
-            negativeRangeValues(minValueIsNotSet(), minimum - smallestValue, "value less than minimum of $minimum")
+            negativeRangeValues(minValueIsNotSet(), minimum - smallestIncValue, "value less than minimum of $minimum")
 
         val negativeForMaximumValue: Sequence<ReturnValue<Pattern>> =
-            negativeRangeValues(maxValueIsNotSet(), maximum + smallestValue, "value greater than maximum of $maximum")
+            negativeRangeValues(maxValueIsNotSet(), maximum + smallestIncValue, "value greater than maximum of $maximum")
 
         return scalarAnnotation(this, dataTypeNegatives) + negativeForMinimumValue + negativeForMaximumValue
     }

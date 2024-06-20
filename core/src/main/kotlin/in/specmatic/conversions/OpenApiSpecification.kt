@@ -1033,8 +1033,8 @@ class OpenApiSpecification(
     }
 
     private fun numberPattern(schema: Schema<*>, isDoubleFormat: Boolean) = NumberPattern(
-        minimum = schema.minimum ?: NumberPattern.MIN,
-        maximum = schema.maximum ?: NumberPattern.MAX,
+        minimum = schema.minimum ?: NumberPattern.LOWEST_DECIMAL,
+        maximum = schema.maximum ?: NumberPattern.HIGHEST_DECIMAL,
         exclusiveMinimum = schema.exclusiveMinimum ?: false,
         exclusiveMaximum = schema.exclusiveMaximum ?: false,
         isDoubleFormat = isDoubleFormat,

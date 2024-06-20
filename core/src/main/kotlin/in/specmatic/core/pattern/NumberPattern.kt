@@ -7,6 +7,7 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.Value
 import java.math.BigDecimal
+import java.security.SecureRandom
 import java.util.*
 
 data class NumberPattern(
@@ -84,7 +85,7 @@ data class NumberPattern(
         } else
             minimum
         val max = if (maximum == HIGHEST_DECIMAL) largestValue else maximum
-        return NumberValue(Random().nextDouble(min.toDouble(), max.toDouble()))
+        return NumberValue(SecureRandom().nextDouble(min.toDouble(), max.toDouble()))
     }
 
     private fun randomNumber(minLength: Int): Int {
@@ -94,9 +95,9 @@ data class NumberPattern(
         return stringNumber.toInt()
     }
 
-    private fun randomDigit() = Random().nextInt(10).toString()
+    private fun randomDigit() = SecureRandom().nextInt(10).toString()
 
-    private fun randomPositiveDigit() = (Random().nextInt(9) + 1)
+    private fun randomPositiveDigit() = (SecureRandom().nextInt(9) + 1)
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
         return newBasedOnR(row, resolver).map { it.value }

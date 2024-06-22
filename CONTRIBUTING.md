@@ -2,14 +2,15 @@
 
 Thanks for being willing to contribute!
 
+## Prerequisites
+
+* JDK 17 (Please use this version only for the moment)
+
 ## Project setup
 
-1.  Fork and clone the repo
-2.  Install JDK > 17
-3.  Install Kotlin > 1.9.0
-4.  We have a wrapped Gradle, so you will just need to run `gradlew`
-5.  Run `./gradlew clean build` project root folder to install dependencies
-6.  Create a branch for your PR with `git checkout -b your-branch-name`
+* Fork and clone the repo
+* Run `./gradlew clean build` project root folder to install dependencies
+* Create a branch for your PR with `git checkout -b your-branch-name`
 
 > Tip: Keep your `main` branch pointing at the original repository and make
 > pull requests from branches on your fork. To do this, run:

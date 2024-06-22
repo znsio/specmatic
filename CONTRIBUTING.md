@@ -5,8 +5,8 @@ Thanks for being willing to contribute!
 ## Project setup
 
 1.  Fork and clone the repo
-2.  Install JDK > 11
-3.  Install Kotlin > 1.4.0
+2.  Install JDK > 17
+3.  Install Kotlin > 1.9.0
 4.  We have a wrapped Gradle, so you will just need to run `gradlew`
 5.  Run `./gradlew clean build` project root folder to install dependencies
 6.  Create a branch for your PR with `git checkout -b your-branch-name`
@@ -25,13 +25,6 @@ Thanks for being willing to contribute!
 > branch to use the upstream main branch whenever you run `git pull`. Then you
 > can make all of your pull request branches based on this `main` branch.
 > Whenever you want to update your version of `main`, do a regular `git pull`.
-
-## Analaysing Performance Issues
-
-1.  Run specmacticJMS.sh. This file runs specmatic with Prometheus Java Agent and publishes metrics on localhost:8089/metrics
-2.  To monitor the above metrics in Grafana setup [Perfiz](https://github.com/znsio/perfiz#detailed-tutorial) (Steps 1 and 2)
-3.  Run ```$PERFIZ_HOME/perfiz.sh start``` and navigate to localhost:3000 to view Grafana Dashboard
-4.  Run ```$PERFIZ_HOME/perfiz.sh stop``` to stop Grafana and other Docker Containers
 
 ## Committing and Pushing changes
 
@@ -55,7 +48,10 @@ Create docker image with appropriate tag. Please keep version consistent with th
 
 ```docker build --no-cache -t znsio/specmatic:<version> .```
 
-Login to docker hub and push the image
+Docker push is handled by Github workflow `./github/workflows/docker.yml`.
+
+In order to push manually to Docker (should not be necessary, adding this for completeness of documentation), login to docker hub and push the image.
+You may need to be added to the znsio organization in Docker Hub in order to do this.
 
 ```docker login -u <username>```
 
@@ -67,3 +63,13 @@ Please checkout the [the open issues](https://github.com/znsio/specmatic/issues?
 
 Also, please watch the repo and respond to questions/bug reports/feature
 requests! Thanks!
+
+## Analaysing Performance Issues (This need to be revised)
+
+This is an optional section and required for advanced scenarios to debug memory and performance related issues.
+
+1.  Run specmacticJMS.sh. This file runs specmatic with Prometheus Java Agent and publishes metrics on localhost:8089/metrics
+2.  To monitor the above metrics in Grafana setup [Perfiz](https://github.com/znsio/perfiz#detailed-tutorial) (Steps 1 and 2)
+3.  Run ```$PERFIZ_HOME/perfiz.sh start``` and navigate to localhost:3000 to view Grafana Dashboard
+4.  Run ```$PERFIZ_HOME/perfiz.sh stop``` to stop Grafana and other Docker Containers
+

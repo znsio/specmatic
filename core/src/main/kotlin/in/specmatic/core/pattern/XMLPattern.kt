@@ -269,9 +269,9 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     override fun generate(resolver: Resolver): XMLNode {
         val name = pattern.name
 
-        val nonQontractAttributes = pattern.attributes.filterNot { it.key.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX) }
+        val nonSpecmaticAttributes = pattern.attributes.filterNot { it.key.startsWith(SPECMATIC_XML_ATTRIBUTE_PREFIX) }
 
-        val newAttributes = nonQontractAttributes.mapKeys { entry ->
+        val newAttributes = nonSpecmaticAttributes.mapKeys { entry ->
             withoutOptionality(entry.key)
         }.mapValues { (key, pattern) ->
             attempt(breadCrumb = "$name.$key") {
@@ -420,8 +420,8 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             return this
         }
 
-        val qontractType = pattern.attributes[TYPE_ATTRIBUTE_NAME]
-        val resolved = resolver.getPattern("($qontractType)") as XMLPattern
+        val specmaticType = pattern.attributes[TYPE_ATTRIBUTE_NAME]
+        val resolved = resolver.getPattern("($specmaticType)") as XMLPattern
         return resolved.copy(
                 pattern = resolved.pattern.copy(
                         name = this.pattern.name,

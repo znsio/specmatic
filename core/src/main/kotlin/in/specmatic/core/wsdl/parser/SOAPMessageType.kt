@@ -2,15 +2,15 @@ package `in`.specmatic.core.wsdl.parser
 
 enum class SOAPMessageType {
     Input {
-        override val qontractBodyType: String
+        override val specmaticBodyType: String
             get() = "request"
     },
 
     Output {
-        override val qontractBodyType: String
+        override val specmaticBodyType: String
             get() = "response"
     };
 
-    abstract val qontractBodyType: String
+    abstract val specmaticBodyType: String
     val messageTypeName: String = this.name.lowercase()
 }

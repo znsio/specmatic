@@ -40,8 +40,8 @@ data class GitRepo(
         configFilePath: String
     ): List<ContractPathData> {
         val userHome = File(System.getProperty("user.home"))
-        val defaultQontractWorkingDir = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
-        val defaultRepoDir = directoryRelativeTo(defaultQontractWorkingDir)
+        val defaultSpecmaticWorkingDir = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
+        val defaultRepoDir = directoryRelativeTo(defaultSpecmaticWorkingDir)
 
         val bundleDir = File(Configuration.TEST_BUNDLE_RELATIVE_PATH).resolve(repoName)
 

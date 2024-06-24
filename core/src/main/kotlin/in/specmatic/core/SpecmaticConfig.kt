@@ -13,19 +13,17 @@ import java.io.File
 
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
-const val APPLICATION_NAME_LOWER_CASE_LEGACY = "qontract"
 const val DEFAULT_TIMEOUT_IN_SECONDS = "60"
 const val CONTRACT_EXTENSION = "spec"
-const val LEGACY_CONTRACT_EXTENSION = "qontract"
 const val YAML = "yaml"
 const val WSDL = "wsdl"
 const val YML = "yml"
 const val JSON = "json"
 val OPENAPI_FILE_EXTENSIONS = listOf(YAML, YML, JSON)
-val CONTRACT_EXTENSIONS = listOf(CONTRACT_EXTENSION, LEGACY_CONTRACT_EXTENSION, WSDL) + OPENAPI_FILE_EXTENSIONS
+val CONTRACT_EXTENSIONS = listOf(CONTRACT_EXTENSION, WSDL) + OPENAPI_FILE_EXTENSIONS
 const val DATA_DIR_SUFFIX = "_data"
 const val SPECMATIC_GITHUB_ISSUES = "https://github.com/znsio/specmatic/issues"
-const val   DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
+const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
 
 class WorkingDirectory(private val filePath: File) {
     constructor(path: String = DEFAULT_WORKING_DIRECTORY): this(File(path))

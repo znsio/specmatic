@@ -624,7 +624,7 @@ Scenario: Square of a number
     }
 
     @Test
-    fun `a proxied response should contain the header X-Qontract-Source`() {
+    fun `a proxied response should contain the header X-Specmatic-Source`() {
         val feature = parseGherkinStringToFeature(
             """
 Feature: Math API

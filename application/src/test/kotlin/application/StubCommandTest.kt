@@ -4,7 +4,6 @@ import com.ginsberg.junit.exit.ExpectSystemExitWithStatus
 import com.ninjasquad.springmockk.MockkBean
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.CONTRACT_EXTENSIONS
-import `in`.specmatic.core.LEGACY_CONTRACT_EXTENSION
 import `in`.specmatic.core.parseGherkinStringToFeature
 import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.core.utilities.StubServerWatcher
@@ -144,7 +143,7 @@ internal class StubCommandTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = [CONTRACT_EXTENSION, LEGACY_CONTRACT_EXTENSION])
+    @ValueSource(strings = [CONTRACT_EXTENSION])
     fun `when a contract with the correct extension is given it should be loaded`(extension: String, @TempDir tempDir: Path) {
         val validSpec = tempDir.resolve("contract.$extension")
 

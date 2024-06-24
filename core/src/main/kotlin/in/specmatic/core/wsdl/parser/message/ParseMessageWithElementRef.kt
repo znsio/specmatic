@@ -84,7 +84,6 @@ val primitiveTypes = primitiveStringTypes.plus(primitiveNumberTypes).plus(primit
 internal const val primitiveNamespace = "http://www.w3.org/2001/XMLSchema"
 
 const val OCCURS_ATTRIBUTE_NAME = "specmatic_occurs"
-const val OCCURS_ATTRIBUTE_NAME_LEGACY = "qontract_occurs"
 const val NILLABLE_ATTRIBUTE_NAME = "specmatic_nillable"
 
 const val OPTIONAL_ATTRIBUTE_VALUE = "optional"

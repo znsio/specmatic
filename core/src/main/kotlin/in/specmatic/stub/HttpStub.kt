@@ -964,7 +964,7 @@ fun endPointFromHostAndPort(host: String, port: Int?, keyData: KeyData?): String
 }
 
 internal fun isPath(path: String?, lastPart: String): Boolean {
-    return path == "/_$APPLICATION_NAME_LOWER_CASE_LEGACY/$lastPart" || path == "/_$APPLICATION_NAME_LOWER_CASE/$lastPart"
+    return path == "/_$APPLICATION_NAME_LOWER_CASE/$lastPart"
 }
 
 internal fun isFetchLogRequest(httpRequest: HttpRequest): Boolean =

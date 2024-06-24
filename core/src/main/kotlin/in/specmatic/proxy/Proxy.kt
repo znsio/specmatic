@@ -18,7 +18,7 @@ import java.net.URI
 import java.net.URL
 
 class Proxy(host: String, port: Int, baseURL: String, private val outputDirectory: FileWriter, keyData: KeyData? = null): Closeable {
-    constructor(host: String, port: Int, baseURL: String, proxyQontractDataDir: String, keyData: KeyData? = null) : this(host, port, baseURL, RealFileWriter(proxyQontractDataDir), keyData)
+    constructor(host: String, port: Int, baseURL: String, proxySpecmaticDataDir: String, keyData: KeyData? = null) : this(host, port, baseURL, RealFileWriter(proxySpecmaticDataDir), keyData)
 
     private val stubs = mutableListOf<NamedStub>()
 

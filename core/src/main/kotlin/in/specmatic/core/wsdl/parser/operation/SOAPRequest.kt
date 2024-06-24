@@ -13,7 +13,7 @@ data class SOAPRequest(val path: String, val operationName: String, val soapActi
             else -> emptyList()
         }
 
-        val requestBodyStatement = requestPayload.qontractStatement()
+        val requestBodyStatement = requestPayload.specmaticStatement()
         return pathStatement.plus(soapActionHeaderStatement).plus(requestBodyStatement)
     }
 }

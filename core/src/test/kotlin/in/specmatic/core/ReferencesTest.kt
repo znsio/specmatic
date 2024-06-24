@@ -35,7 +35,7 @@ internal class ReferencesTest {
     private val baseURL = "http://service"
 
     @Test
-    fun `executes qontract as test to fetch values if the cache is empty`() {
+    fun `executes spec as test to fetch values if the cache is empty`() {
         val results = Results(listOf(Result.Success(mapOf("name" to "Jack")), Result.Success(mapOf("address" to "Baker Street"))))
 
         val feature = mockFeature(results)
@@ -76,7 +76,7 @@ internal class ReferencesTest {
     }
 
     @Test
-    fun `fails if the executed qontract return errors`() {
+    fun `fails if the executed spec return errors`() {
         val results = Results(listOf(Result.Success(mapOf("name" to "Jack")), Result.Failure("Failed")))
 
         val feature = mockFeature(results)
@@ -91,17 +91,17 @@ internal class ReferencesTest {
     }
 
     private fun mockContractFileWithExports(mockFeature: Feature): ContractFileWithExports {
-        val qontractFileMock = mockk<ContractFileWithExports>()
+        val specmaticFileMock = mockk<ContractFileWithExports>()
         every {
-            qontractFileMock.readFeatureForValue(any())
+            specmaticFileMock.readFeatureForValue(any())
         }.returns(mockFeature)
         every {
-            qontractFileMock.path
+            specmaticFileMock.path
         }.returns("person.$CONTRACT_EXTENSION")
         every {
-            qontractFileMock.absolutePath
+            specmaticFileMock.absolutePath
         }.returns("/path/to/file")
-        return qontractFileMock
+        return specmaticFileMock
     }
 
     private fun mockFeature(results: Results): Feature {

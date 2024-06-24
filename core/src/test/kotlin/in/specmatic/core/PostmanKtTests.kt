@@ -260,7 +260,7 @@ class PostmanKtTests {
     }
 
     @Test
-    fun `Postman to Qontract with raw format request body`() {
+    fun `Postman to spec with raw format request body`() {
         val postmanContent = """{
 	"info": {
 		"_postman_id": "8bd0c42a-983a-492e-99bd-a2f1936bc02e",
@@ -560,7 +560,7 @@ class PostmanKtTests {
     }
 
     @Test
-    fun `postman response conversion to qontract`() {
+    fun `postman response conversion to spec`() {
         val namedStubs = namedStubsFromPostmanResponses((parsedJSON("""[
 				{
 					"name": "Square Of A Number 2",

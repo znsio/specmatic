@@ -13,10 +13,10 @@ data class ComplexTypedSOAPPayload(
     val attributes: List<AttributeElement> = emptyList()
 ) :
     SOAPPayload {
-    override fun qontractStatement(): List<String> {
+    override fun specmaticStatement(): List<String> {
         val xml = buildXmlDataForComplexElement(nodeName, specmaticTypeName, attributes)
         val body = soapMessage(toXMLNode(xml), namespaces)
-        return listOf("And ${soapMessageType.qontractBodyType}-body\n\"\"\"\n${body.toPrettyStringValue()}\n\"\"\"")
+        return listOf("And ${soapMessageType.specmaticBodyType}-body\n\"\"\"\n${body.toPrettyStringValue()}\n\"\"\"")
     }
 }
 

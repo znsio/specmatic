@@ -196,7 +196,7 @@ internal class ScenarioStubKtTest {
         val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParametersMap = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
-        validateStubAndQontract(request, response, """Feature: New Feature
+        validateStubAndSpec(request, response, """Feature: New Feature
   Scenario: New scenario
     Given type Address
       | street | (string) |
@@ -221,7 +221,7 @@ internal class ScenarioStubKtTest {
         val request = HttpRequest(method = "POST", path="/customer", headers = mapOf("X-Header1" to "value 1", "X-Header2" to "value 2"), body = parsedValue("""{"name": "John Doe", "address": {"street": "High Street", "city": "Manchester"}}"""), queryParametersMap = emptyMap(), formFields = emptyMap(), multiPartFormData = emptyList())
         val response = HttpResponse(status = 200, headers = mapOf("X-Required" to "this is a must", "X-Extra" to "something more"), body = parsedValue("""{"id": 10}"""))
 
-        validateStubAndQontract(request, response, """Feature: New Feature
+        validateStubAndSpec(request, response, """Feature: New Feature
   Scenario: New scenario
     Given type Address
       | street | (string) |
@@ -250,7 +250,7 @@ internal class ScenarioStubKtTest {
         val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = mapOf("X-FormData1" to "some value"), multiPartFormData = emptyList())
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
-        validateStubAndQontract(request, response, """Feature: New Feature
+        validateStubAndSpec(request, response, """Feature: New Feature
   Scenario: New scenario
     Given type ResponseBody
       | id | (number) |
@@ -269,7 +269,7 @@ internal class ScenarioStubKtTest {
         val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = emptyMap(), multiPartFormData = listOf(MultiPartContentValue("name", StringValue("John Doe"))))
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
-        validateStubAndQontract(request, response, """Feature: New Feature
+        validateStubAndSpec(request, response, """Feature: New Feature
   Scenario: New scenario
     Given type ResponseBody
       | id | (number) |
@@ -288,7 +288,7 @@ internal class ScenarioStubKtTest {
         val request = HttpRequest(method = "POST", path = "/customer", headers = emptyMap(), formFields = emptyMap(), multiPartFormData = listOf(MultiPartFileValue("customer_csv", "customer.csv", "text/csv", "identity")))
         val response = HttpResponse(status = 200, body = parsedValue("""{"id": 10}"""))
 
-        validateStubAndQontract(request, response, """Feature: New Feature
+        validateStubAndSpec(request, response, """Feature: New Feature
   Scenario: New scenario
     Given type ResponseBody
       | id | (number) |
@@ -327,7 +327,7 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
-        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+        validateStubAndSpec(mock.request, mock.response, """Feature: New Feature
   Scenario: New scenario
     When POST /square
     And request-part employees @(string) text/csv gzip
@@ -358,7 +358,7 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
-        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+        validateStubAndSpec(mock.request, mock.response, """Feature: New Feature
   Scenario: New scenario
     When POST /square
     And request-body (string*)
@@ -391,7 +391,7 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
-        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+        validateStubAndSpec(mock.request, mock.response, """Feature: New Feature
   Scenario: New scenario
     Given type RequestBody
       | name | (string) |
@@ -431,7 +431,7 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
-        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+        validateStubAndSpec(mock.request, mock.response, """Feature: New Feature
   Scenario: New scenario
     Given type RequestBody
       | name | (string) |
@@ -472,7 +472,7 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
-        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+        validateStubAndSpec(mock.request, mock.response, """Feature: New Feature
   Scenario: New scenario
     Given type RequestBody
       | name | (string) |
@@ -513,7 +513,7 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
-        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+        validateStubAndSpec(mock.request, mock.response, """Feature: New Feature
   Scenario: New scenario
     Given type RequestBody
       | name | (string?) |
@@ -558,7 +558,7 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
-        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+        validateStubAndSpec(mock.request, mock.response, """Feature: New Feature
   Scenario: New scenario
     Given type RequestBody
       | name | (string?) |
@@ -603,7 +603,7 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
-        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+        validateStubAndSpec(mock.request, mock.response, """Feature: New Feature
   Scenario: New scenario
     Given type RequestBody
       | name | (string?) |
@@ -645,7 +645,7 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
-        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+        validateStubAndSpec(mock.request, mock.response, """Feature: New Feature
   Scenario: New scenario
     Given type RequestBody
       | name | (string?) |
@@ -685,7 +685,7 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap((mockText)))
-        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+        validateStubAndSpec(mock.request, mock.response, """Feature: New Feature
   Scenario: New scenario
     Given type RequestBody
       | name | (string?) |
@@ -718,7 +718,7 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val mock = mockFromJSON(jsonStringToValueMap(stubText))
-        validateStubAndQontract(mock.request, mock.response, """Feature: New Feature
+        validateStubAndSpec(mock.request, mock.response, """Feature: New Feature
   Scenario: New scenario
     When POST /square
     And request-body []
@@ -868,7 +868,7 @@ paths:
     }
 }
 
-fun validateStubAndQontract(request: HttpRequest, response: HttpResponse, expectedGherkin: String? = null) {
+fun validateStubAndSpec(request: HttpRequest, response: HttpResponse, expectedGherkin: String? = null) {
     try {
         val cleanedUpResponse = dropContentAndCORSResponseHeaders(response)
         val gherkin = toGherkinFeature(NamedStub("New scenario", ScenarioStub(request, cleanedUpResponse))).also { println(it) }

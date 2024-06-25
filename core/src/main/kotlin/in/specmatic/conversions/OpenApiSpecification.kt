@@ -417,7 +417,7 @@ class OpenApiSpecification(
         responseExamples: Map<String, HttpResponse>,
         operation: Operation,
         openApiRequest: Pair<String, MediaType>?
-    ): List<Row> = responseExamples.map { (exampleName, responseExample) ->
+    ): List<Row> = responseExamples.mapNotNull { (exampleName, responseExample) ->
         val parameterExamples: Map<String, Any> = parameterExamples(operation, exampleName)
 
         val requestBodyExample: Map<String, Any> =
@@ -450,7 +450,7 @@ class OpenApiSpecification(
                 )
             }
 
-            else -> Row()
+            else -> null
         }
     }
 

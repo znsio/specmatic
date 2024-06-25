@@ -15,6 +15,7 @@ import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import `in`.specmatic.trimmedLinesString
+import integration_tests.testCount
 import io.ktor.util.reflect.*
 import io.mockk.every
 import io.mockk.mockk
@@ -7770,6 +7771,48 @@ paths:
 
         assertThat(results.results.size).isEqualTo(8)
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `400 status named response examples with no corresponding named request example should be ignored`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Data API"
+                  version: "1"
+                paths:
+                  /data:
+                    get:
+                      summary: "Get data"
+                      responses:
+                        200:
+                          description: "The data"
+                          content:
+                            text/plain:
+                              schema:
+                                type: integer
+                        400:
+                          description: "Could not get the data"
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                              examples:
+                                FAILED:
+                                  value: "failed"
+                    """.trimIndent(), ""
+        ).toFeature().enableGenerativeTesting()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.ok(NumberValue(10))
+            }
+        })
+
+        assertThat(results.testCount).isEqualTo(1)
+        assertThat(results.success()).isTrue()
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

@@ -13,6 +13,7 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.createStubFromContracts
+import `in`.specmatic.stub.stringToMockScenario
 import `in`.specmatic.test.TestExecutor
 import `in`.specmatic.trimmedLinesString
 import io.ktor.util.reflect.*
@@ -7770,6 +7771,55 @@ paths:
 
         assertThat(results.results.size).isEqualTo(8)
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `path param mismatch in the stub should show up as a specific path param error`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /person/{id}:
+                    get:
+                      parameters:
+                        - name: id
+                          schema:
+                            type: integer
+                          in: path
+                          summary: Id of the person whose details are to be fetched
+                      responses:
+                        202:
+                          description: "Get person by id"
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                """.trimIndent(), ""
+        ).toFeature()
+
+        val expectation = stringToMockScenario(StringValue("""
+            {
+                "http-request": {
+                    "method": "GET",
+                    "path": "/person/abc123"
+                },
+                "http-response": {
+                    "status": 200,
+                    "body": "data"
+                }
+            }
+        """.trimIndent()))
+
+        assertThatThrownBy {
+            HttpStub(feature, listOf(expectation)).use { stub ->
+            }
+        }.satisfies(Consumer {
+            assertThat(it).hasMessageContaining("REQUEST.PATH-PARAM.id")
+        })
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

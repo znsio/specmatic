@@ -7789,6 +7789,8 @@ paths:
                         - name: id
                           schema:
                             type: integer
+                            minimum: 10
+                            maximum: 20
                           in: path
                           summary: Id of the person whose details are to be fetched
                       responses:
@@ -7805,7 +7807,7 @@ paths:
             {
                 "http-request": {
                     "method": "GET",
-                    "path": "/person/abc123"
+                    "path": "/person/1"
                 },
                 "http-response": {
                     "status": 200,

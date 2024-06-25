@@ -7774,7 +7774,7 @@ paths:
     }
 
     @Test
-    fun `referenecs in an XML structure which contains a ref should get dereferenced`() {
+    fun `references in an XML structure which contains a ref should get dereferenced`() {
         val xmlSpec = """
             openapi: 3.0.0
             info:

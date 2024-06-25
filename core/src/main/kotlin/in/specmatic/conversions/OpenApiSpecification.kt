@@ -1142,7 +1142,12 @@ class OpenApiSpecification(
                 }
 
                 val attributes: Map<String, Pattern> = attributeProperties.map { (name, schema) ->
-                    name to toSpecmaticPattern(schema, emptyList())
+                    val attributeName = if(name !in schema.required.orEmpty())
+                        "$name.opt"
+                    else
+                        name
+
+                    attributeName to toSpecmaticPattern(schema, emptyList())
                 }.toMap()
 
                 name ?: throw ContractException("Could not determine name for an xml node")

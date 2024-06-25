@@ -17,3 +17,4 @@ perfiz/*_data
 **/.classpath
 **/*.hprof
 .scannerwork
+.java-version

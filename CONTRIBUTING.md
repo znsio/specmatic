@@ -6,6 +6,8 @@ Thanks for being willing to contribute!
 
 * JDK 17 (Please use this version only for the moment)
 
+_Optional:_ Set up [jenv](https://www.jenv.be/) or the equivalent tools to quickly switch between Java versions. 
+
 ## Project setup
 
 * Fork and clone the repo

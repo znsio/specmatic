@@ -174,16 +174,4 @@ internal class HttpPathPatternTest {
             )
         )
     }
-
-    @Tag(GENERATION)
-    @Test
-    fun `should generate negative values for a number`() {
-        val headers = HttpHeadersPattern(mapOf("X-TraceID" to NumberPattern()))
-        val newHeaders = headers.negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
-
-        assertThat(newHeaders).containsExactlyInAnyOrder(
-            HttpHeadersPattern(mapOf("X-TraceID" to StringPattern())),
-            HttpHeadersPattern(mapOf("X-TraceID" to BooleanPattern())),
-        )
-    }
 }

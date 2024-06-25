@@ -428,30 +428,29 @@ class OpenApiSpecification(
             else key to value
         }.toMap()
 
-        when {
-            requestExamples.isNotEmpty() -> {
-                val  resolvedResponseExample =
-                    if (environmentAndPropertiesConfiguration.validateResponseValue())
-                        ResponseValueExample(responseExample)
-                    else
-                        ResponseSchemaExample(responseExample)
+        if(requestExamples.isEmpty())
+            return@mapNotNull null
 
-                Row(
-                    requestExamples.keys.toList().map { keyName: String -> keyName },
-                    requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" }
-                        .map { valueString: String ->
-                            if (valueString.contains("externalValue")) {
-                                ObjectMapper().readValue(valueString, Map::class.java).values.first()
-                                    .toString()
-                            } else valueString
-                        },
-                    name = exampleName,
-                    responseExample = resolvedResponseExample.takeIf { it.responseExample.isNotEmpty() }
-                )
+        val  resolvedResponseExample =
+            when {
+                environmentAndPropertiesConfiguration.validateResponseValue() ->
+                    ResponseValueExample(responseExample)
+                else ->
+                    ResponseSchemaExample(responseExample)
             }
 
-            else -> null
-        }
+        Row(
+            requestExamples.keys.toList().map { keyName: String -> keyName },
+            requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" }
+                .map { valueString: String ->
+                    if (valueString.contains("externalValue")) {
+                        ObjectMapper().readValue(valueString, Map::class.java).values.first()
+                            .toString()
+                    } else valueString
+                },
+            name = exampleName,
+            responseExample = resolvedResponseExample.takeIf { it.responseExample.isNotEmpty() }
+        )
     }
 
     data class OperationIdentifier(val requestMethod: String, val requestPath: String, val responseStatus: Int)

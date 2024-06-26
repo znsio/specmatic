@@ -7970,8 +7970,9 @@ paths:
 
         println(stdout)
 
+        val exampleName = "SUCCESSFUL_API_CALL"
         assertThat(stdout)
-            .contains("WARNING: No request example named SUCCESSFUL_API_CALL found")
+            .contains("Ignoring response example named $exampleName for test or stub data, because no associated request example named $exampleName was found.")
     }
 
     @Test
@@ -8015,8 +8016,10 @@ paths:
 
         println(stdout)
 
+        val exampleName = "SUCCESSFUL_API_CALL"
+
         assertThat(stdout)
-            .contains("WARNING: No response example named SUCCESSFUL_API_CALL found")
+            .contains("WARNING: Ignoring request example named $exampleName for test or stub data, because no associated response example named $exampleName was found.")
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

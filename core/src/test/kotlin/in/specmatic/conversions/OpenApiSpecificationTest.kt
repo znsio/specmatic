@@ -7962,7 +7962,8 @@ paths:
                                   schema:
                                     type: string
                                   examples:
-                                    SUCCESSFUL_API_CALL: added
+                                    SUCCESSFUL_API_CALL:
+                                      value: added
                     """.trimIndent(), ""
             ).toFeature()
         }
@@ -7971,6 +7972,51 @@ paths:
 
         assertThat(stdout)
             .contains("WARNING: No request example named SUCCESSFUL_API_CALL found")
+    }
+
+    @Test
+    fun `check that a console warning is printed when a named request example has no corresponding named responsee example`() {
+        val (stdout, _) = captureStandardOutput {
+            OpenApiSpecification.fromYAML(
+                """
+                    ---
+                    openapi: "3.0.1"
+                    info:
+                      title: "Person API"
+                      version: "1"
+                    paths:
+                      /person:
+                        post:
+                          summary: "Get person by id"
+                          requestBody:
+                            content:
+                              application/json:
+                                schema:
+                                  required:
+                                  - age
+                                  properties:
+                                    age:
+                                      description: age of the person
+                                      type: number
+                                examples:
+                                  SUCCESSFUL_API_CALL:
+                                    value:
+                                      age: 10
+                          responses:
+                            200:
+                              description: "Get person by id"
+                              content:
+                                text/plain:
+                                  schema:
+                                    type: string
+                    """.trimIndent(), ""
+            ).toFeature()
+        }
+
+        println(stdout)
+
+        assertThat(stdout)
+            .contains("WARNING: No response example named SUCCESSFUL_API_CALL found")
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

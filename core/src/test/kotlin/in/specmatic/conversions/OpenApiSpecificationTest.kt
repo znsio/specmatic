@@ -7970,7 +7970,7 @@ paths:
         println(stdout)
 
         assertThat(stdout)
-            .contains("WARNING: No request example named SUCCESSFUL_API_CALLj found")
+            .contains("WARNING: No request example named SUCCESSFUL_API_CALL found")
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

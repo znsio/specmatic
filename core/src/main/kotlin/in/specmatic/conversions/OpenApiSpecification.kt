@@ -37,11 +37,14 @@ const val testDirectoryProperty = "specmaticTestsDirectory"
 
 const val NO_SECURITY_SCHEMA_IN_SPECIFICATION = "NO-SECURITY-SCHEME-IN-SPECIFICATION"
 
+var missingRequestExampleErrorMessageForTest: String = "WARNING: Ignoring response example named %s for test or stub data, because no associated request example named %s was found."
+var missingResponseExampleErrorMessageForTest: String = "WARNING: Ignoring request example named %s for test or stub data, because no associated response example named %s was found."
+
 internal fun missingRequestExampleErrorMessageForTest(exampleName: String): String =
-    "WARNING: Ignoring response example named $exampleName for test or stub data, because no associated request example named $exampleName was found."
+    missingRequestExampleErrorMessageForTest.format(exampleName, exampleName)
 
 internal fun missingResponseExampleErrorMessageForTest(exampleName: String): String =
-    "WARNING: Ignoring request example named $exampleName for test or stub data, because no associated response example named $exampleName was found."
+    missingResponseExampleErrorMessageForTest.format(exampleName, exampleName)
 
 class OpenApiSpecification(
     private val openApiFilePath: String,

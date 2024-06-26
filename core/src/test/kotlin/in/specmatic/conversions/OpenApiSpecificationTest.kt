@@ -10,10 +10,8 @@ import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.stub.HttpStub
-import `in`.specmatic.stub.HttpStubData
+import `in`.specmatic.stub.*
 import `in`.specmatic.stub.createStubFromContracts
-import `in`.specmatic.stub.stringToMockScenario
 import `in`.specmatic.test.TestExecutor
 import `in`.specmatic.trimmedLinesString
 import integration_tests.testCount
@@ -7930,6 +7928,98 @@ paths:
             assertThat(response.status).isEqualTo(200)
             assertThat(response.body.toStringLiteral()).contains("msgId")
         }
+    }
+
+    @Test
+    fun `check that a console warning is printed when a named response example has no corresponding named request example`() {
+        val (stdout, _) = captureStandardOutput {
+            OpenApiSpecification.fromYAML(
+                """
+                    ---
+                    openapi: "3.0.1"
+                    info:
+                      title: "Person API"
+                      version: "1"
+                    paths:
+                      /person:
+                        post:
+                          summary: "Get person by id"
+                          requestBody:
+                            content:
+                              application/json:
+                                schema:
+                                  required:
+                                  - age
+                                  properties:
+                                    age:
+                                      description: age of the person
+                                      type: number
+                          responses:
+                            200:
+                              description: "Get person by id"
+                              content:
+                                text/plain:
+                                  schema:
+                                    type: string
+                                  examples:
+                                    SUCCESSFUL_API_CALL:
+                                      value: added
+                    """.trimIndent(), ""
+            ).toFeature()
+        }
+
+        println(stdout)
+
+        val exampleName = "SUCCESSFUL_API_CALL"
+        assertThat(stdout)
+            .contains("Ignoring response example named $exampleName for test or stub data, because no associated request example named $exampleName was found.")
+    }
+
+    @Test
+    fun `check that a console warning is printed when a named request example has no corresponding named responsee example`() {
+        val (stdout, _) = captureStandardOutput {
+            OpenApiSpecification.fromYAML(
+                """
+                    ---
+                    openapi: "3.0.1"
+                    info:
+                      title: "Person API"
+                      version: "1"
+                    paths:
+                      /person:
+                        post:
+                          summary: "Get person by id"
+                          requestBody:
+                            content:
+                              application/json:
+                                schema:
+                                  required:
+                                  - age
+                                  properties:
+                                    age:
+                                      description: age of the person
+                                      type: number
+                                examples:
+                                  SUCCESSFUL_API_CALL:
+                                    value:
+                                      age: 10
+                          responses:
+                            200:
+                              description: "Get person by id"
+                              content:
+                                text/plain:
+                                  schema:
+                                    type: string
+                    """.trimIndent(), ""
+            ).toFeature()
+        }
+
+        println(stdout)
+
+        val exampleName = "SUCCESSFUL_API_CALL"
+
+        assertThat(stdout)
+            .contains("WARNING: Ignoring request example named $exampleName for test or stub data, because no associated response example named $exampleName was found.")
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

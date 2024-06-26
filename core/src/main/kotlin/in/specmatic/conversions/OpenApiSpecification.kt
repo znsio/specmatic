@@ -37,6 +37,15 @@ const val testDirectoryProperty = "specmaticTestsDirectory"
 
 const val NO_SECURITY_SCHEMA_IN_SPECIFICATION = "NO-SECURITY-SCHEME-IN-SPECIFICATION"
 
+var missingRequestExampleErrorMessageForTest: String = "WARNING: Ignoring response example named %s for test or stub data, because no associated request example named %s was found."
+var missingResponseExampleErrorMessageForTest: String = "WARNING: Ignoring request example named %s for test or stub data, because no associated response example named %s was found."
+
+internal fun missingRequestExampleErrorMessageForTest(exampleName: String): String =
+    missingRequestExampleErrorMessageForTest.format(exampleName, exampleName)
+
+internal fun missingResponseExampleErrorMessageForTest(exampleName: String): String =
+    missingResponseExampleErrorMessageForTest.format(exampleName, exampleName)
+
 class OpenApiSpecification(
     private val openApiFilePath: String,
     private val parsedOpenApi: OpenAPI,
@@ -362,6 +371,8 @@ class OpenApiSpecification(
                 acc.plus(map)
             }
 
+        logger.newLine()
+
         return scenarioInfos to examples
     }
 
@@ -417,43 +428,77 @@ class OpenApiSpecification(
         responseExamples: Map<String, HttpResponse>,
         operation: Operation,
         openApiRequest: Pair<String, MediaType>?
-    ): List<Row> = responseExamples.mapNotNull { (exampleName, responseExample) ->
-        val parameterExamples: Map<String, Any> = parameterExamples(operation, exampleName)
+    ): List<Row> {
+        val parameterKeys = operation.parameters.orEmpty()
+            .flatMap { parameter ->
+                parameter.examples.orEmpty().keys
+            }.toSet()
 
-        val requestBodyExample: Map<String, Any> =
-            requestBodyExample(openApiRequest, exampleName, operation.summary)
+        val requestBodyExampleNames = requestBodyExampleNames(openApiRequest)
 
-        val requestExamples = parameterExamples.plus(requestBodyExample).map { (key, value) ->
-            if (value.toString().contains("externalValue")) "${key}_filename" to value
-            else key to value
-        }.toMap()
+        val requestKeys = parameterKeys + requestBodyExampleNames
 
-        if(requestExamples.isEmpty())
-            return@mapNotNull null
+        val missingExampleNamesInResponse = requestKeys.filter { it !in responseExamples }
 
-        val  resolvedResponseExample =
-            when {
-                environmentAndPropertiesConfiguration.validateResponseValue() ->
-                    ResponseValueExample(responseExample)
-                else ->
-                    ResponseSchemaExample(responseExample)
+        missingExampleNamesInResponse.forEach { exampleName ->
+            logger.log(missingResponseExampleErrorMessageForTest(exampleName))
+        }
+
+        return responseExamples.mapNotNull { (exampleName, responseExample) ->
+            val parameterExamples: Map<String, Any> = parameterExamples(operation, exampleName)
+
+            val requestBodyExample: Map<String, Any> =
+                requestBodyExample(openApiRequest, exampleName, operation.summary)
+
+            val requestExamples = parameterExamples.plus(requestBodyExample).map { (key, value) ->
+                if (value.toString().contains("externalValue")) "${key}_filename" to value
+                else key to value
+            }.toMap()
+
+            if (requestExamples.isEmpty()) {
+                logger.log(missingRequestExampleErrorMessageForTest(exampleName))
+                return@mapNotNull null
             }
 
-        Row(
-            requestExamples.keys.toList().map { keyName: String -> keyName },
-            requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" }
-                .map { valueString: String ->
-                    if (valueString.contains("externalValue")) {
-                        ObjectMapper().readValue(valueString, Map::class.java).values.first()
-                            .toString()
-                    } else valueString
-                },
-            name = exampleName,
-            responseExample = resolvedResponseExample.takeIf { it.responseExample.isNotEmpty() }
-        )
+            val resolvedResponseExample =
+                when {
+                    environmentAndPropertiesConfiguration.validateResponseValue() ->
+                        ResponseValueExample(responseExample)
+
+                    else ->
+                        ResponseSchemaExample(responseExample)
+                }
+
+            Row(
+                requestExamples.keys.toList().map { keyName: String -> keyName },
+                requestExamples.values.toList().map { value: Any? -> value?.toString() ?: "" }
+                    .map { valueString: String ->
+                        if (valueString.contains("externalValue")) {
+                            ObjectMapper().readValue(valueString, Map::class.java).values.first()
+                                .toString()
+                        } else valueString
+                    },
+                name = exampleName,
+                responseExample = resolvedResponseExample.takeIf { it.responseExample.isNotEmpty() }
+            )
+        }
     }
 
     data class OperationIdentifier(val requestMethod: String, val requestPath: String, val responseStatus: Int)
+
+    private fun requestBodyExampleNames(
+        openApiRequest: Pair<String, MediaType>?,
+    ): Set<String> {
+        if(openApiRequest == null)
+            return emptySet()
+
+        val (_, requestBodyMediaType) = openApiRequest
+
+        val requestExampleValue =
+            requestBodyMediaType.examples.orEmpty().keys
+
+        return requestExampleValue
+    }
 
     private fun requestBodyExample(
         openApiRequest: Pair<String, MediaType>?,

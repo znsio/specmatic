@@ -428,8 +428,10 @@ class OpenApiSpecification(
             else key to value
         }.toMap()
 
-        if(requestExamples.isEmpty())
+        if(requestExamples.isEmpty()) {
+            logger.log("WARNING: No request example named $exampleName found. Response example by the same name will be ignored. A contract test requires an example of the same name in both request and response.")
             return@mapNotNull null
+        }
 
         val  resolvedResponseExample =
             when {

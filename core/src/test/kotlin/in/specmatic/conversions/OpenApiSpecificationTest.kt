@@ -13,6 +13,7 @@ import `in`.specmatic.mock.ScenarioStub
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.stub.HttpStubData
 import `in`.specmatic.stub.createStubFromContracts
+import `in`.specmatic.stub.stringToMockScenario
 import `in`.specmatic.test.TestExecutor
 import `in`.specmatic.trimmedLinesString
 import integration_tests.testCount
@@ -7813,6 +7814,122 @@ paths:
 
         assertThat(results.testCount).isEqualTo(1)
         assertThat(results.success()).isTrue()
+    }
+
+    @Test
+    fun `references in an XML structure which contains a ref should get dereferenced`() {
+        val xmlSpec = """
+            openapi: 3.0.0
+            info:
+              title: Testing API
+              version: 1.0.0
+              description: |
+                Testing XML
+            paths:
+              /ReqListKeys:
+                post:
+                  summary: Request list of keys
+                  operationId: reqListKeys
+                  requestBody:
+                    required: true
+                    content:
+                      application/xml:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ReqListKeys'
+                  responses:
+                    '200':
+                      description: Successful response
+                      content:
+                        application/xml:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/RespListKeys'
+            components:
+              schemas:
+                ReqListKeys:
+                  type: object
+                  xml:
+                    name: "ReqListKeys"
+                    namespace: "http://xyz.org/upi/schema//"
+                    prefix: "upi"
+                  properties:
+                    Head:
+                      ${"$"}ref: '#/components/schemas/Head'
+                Head:
+                  type: object
+                  xml:
+                    name: "Head"
+                  properties:
+                    msgId:
+                      type: string
+                      xml:
+                        name: "msgId"
+                        attribute: true
+                    orgId:
+                      type: string
+                      xml:
+                        name: "orgId"
+                        attribute: true
+                    prodType:
+                      type: string
+                      xml:
+                        name: "prodType"
+                        attribute: true
+                    ts:
+                      type: string
+                      xml:
+                        name: "ts"
+                        attribute: true
+                    ver:
+                      type: string
+                      enum: [1.0, 2.0]
+                      xml:
+                        name: "ver"
+                        attribute: true
+                RespListKeys:
+                  type: object
+                  xml:
+                    name: "RespListKeys"
+                    namespace: "http://xyz.org/upi/schema/"
+                    prefix: "ns2"
+                  properties:
+                    Head:
+                      ${"$"}ref: '#/components/schemas/Head'
+
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(xmlSpec, "").toFeature()
+
+        val rawStub = """
+            {
+                "http-request": {
+                    "path": "/ReqListKeys",
+                    "method": "POST",
+                    "headers": {
+                        "Content-Type": "application/xml"
+                    },
+                    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<upi:ReqListKeys xmlns:upi=\"http://xyz.org/upi/schema/\">\n    <Head msgId=\"abcde\" orgId=\"157776\" prodType=\"UPI\" ts=\"1970-01-01T05:30:00+05:30\" ver=\"2.0\"/>\n</upi:ReqListKeys>"
+                },
+                "http-response": {
+                    "status": 200,
+                    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ns2:RespListKeys xmlns:ns2=\"http://xyz.org/upi/schema/\">\n    <Head msgId=\"syz\" orgId=\"org\" ts=\"2024-05-27T15:35:12+05:30\" ver=\"2.0\"/>\n</ns2:RespListKeys>\n",
+                    "status-text": "OK",
+                    "headers": {
+                        "Content-Type": "application/xml"
+                    }
+                }
+            }
+        """.trimIndent()
+
+        val expectation: ScenarioStub = stringToMockScenario(StringValue(rawStub))
+
+        HttpStub(feature, listOf(expectation)).use { stub ->
+            val request = expectation.request
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toStringLiteral()).contains("msgId")
+        }
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

@@ -221,13 +221,31 @@ data class Scenario(
     fun generateHttpRequest(flagsBased: FlagsBased = DefaultStrategies): HttpRequest =
         scenarioBreadCrumb(this) { httpRequestPattern.generate(flagsBased.update(Resolver(expectedFacts, false, patterns))) }
 
+    fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
+        val resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck).copy(context = RequestContext(httpRequest))
+
+        return matches(httpResponse, mismatchMessages, unexpectedKeyCheck, resolver)
+    }
+
     fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
-        val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = mismatchMessages).let {
-            if(unexpectedKeyCheck != null)
+        val resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck)
+
+        return matches(httpResponse, mismatchMessages, unexpectedKeyCheck, resolver)
+    }
+
+    private fun updatedResolver(
+        mismatchMessages: MismatchMessages,
+        unexpectedKeyCheck: UnexpectedKeyCheck?
+    ): Resolver {
+        return Resolver(expectedFacts, false, patterns).copy(mismatchMessages = mismatchMessages).let {
+            if (unexpectedKeyCheck != null)
                 it.copy(findKeyErrorCheck = it.findKeyErrorCheck.copy(unexpectedKeyCheck = unexpectedKeyCheck))
             else
                 it
         }
+    }
+
+    fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null, resolver: Resolver): Result {
 
         if (this.isNegative) {
             return if (is4xxResponse(httpResponse)) {
@@ -591,7 +609,7 @@ fun executeTestAndReturnResultAndResponse(
 
         val response = testExecutor.execute(request)
 
-        val result = testResult(response, testScenario, flagsBased)
+        val result = testResult(request, response, testScenario, flagsBased)
 
         Pair(result.withBindings(testScenario.bindings, response), response)
     } catch (exception: Throwable) {
@@ -601,6 +619,7 @@ fun executeTestAndReturnResultAndResponse(
 }
 
 private fun testResult(
+    request: HttpRequest,
     response: HttpResponse,
     testScenario: Scenario,
     flagsBased: FlagsBased? = null
@@ -610,12 +629,12 @@ private fun testResult(
         response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral())
             .updateScenario(testScenario)
         response.body is JSONObjectValue && ignorable(response.body) -> Result.Success()
-        else -> testScenario.matches(response, ContractAndResponseMismatch, flagsBased?.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
-    }.also { result ->
-        if (result is Result.Success && result.isPartialSuccess()) {
-            logger.log("    PARTIAL SUCCESS: ${result.partialSuccessMessage}")
-            logger.newLine()
-        }
+        else -> testScenario.matches(request, response, ContractAndResponseMismatch, flagsBased?.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
+    }
+
+    if (result is Result.Success && result.isPartialSuccess()) {
+        logger.log("    PARTIAL SUCCESS: ${result.partialSuccessMessage}")
+        logger.newLine()
     }
 
     return result

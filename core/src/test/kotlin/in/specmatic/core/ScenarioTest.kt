@@ -515,14 +515,15 @@ paths:
 
         val contractTestScenarios = contract.generateContractTestScenarios(emptyList()).map { it.second.value }
 
-        val result: Result = executeTest(contractTestScenarios.first(), object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                return HttpResponse.ok("abc")
-            }
+        val result: Result =
+            executeTestAndReturnResultAndResponse(contractTestScenarios.first(), object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    return HttpResponse.ok("abc")
+                }
 
-            override fun setServerState(serverState: Map<String, Value>) {
-            }
-        }) as Result.Failure
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            }, DefaultStrategies).first as Result.Failure
 
         assertThat(result.reportString()).contains("Contract expected")
         assertThat(result.reportString()).contains("response contained")

@@ -591,10 +591,6 @@ object ContractAndResponseMismatch : MismatchMessages {
     }
 }
 
-fun executeTest(testScenario: Scenario, testExecutor: TestExecutor, resolverStrategies: FlagsBased = DefaultStrategies): Result {
-    return executeTestAndReturnResultAndResponse(testScenario, testExecutor, resolverStrategies).first
-}
-
 fun executeTestAndReturnResultAndResponse(
     testScenario: Scenario,
     testExecutor: TestExecutor,

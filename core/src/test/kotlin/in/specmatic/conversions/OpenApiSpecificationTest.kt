@@ -5437,7 +5437,7 @@ paths:
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
         val results: List<Result> =
-            feature.generateContractTestScenarios(emptyList()).toList().map { it.second.value }.map {
+            feature.generateContractTests(emptyList()).toList().map {
                 executeTestAndReturnResultAndResponse(it, object : TestExecutor {
                                 override fun execute(request: HttpRequest): HttpResponse {
                                     assertThat(request.body).isInstanceOf(JSONObjectValue::class.java)
@@ -5504,7 +5504,7 @@ paths:
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
         val results: List<Result> =
-            feature.generateContractTestScenarios(emptyList()).toList().map { it.second.value }.map {
+            feature.generateContractTests(emptyList()).toList().map {
                 executeTestAndReturnResultAndResponse(it, object : TestExecutor {
                                 override fun execute(request: HttpRequest): HttpResponse {
                                     assertThat(request.formFields).containsKey("Data")
@@ -5574,7 +5574,7 @@ paths:
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
         val results: List<Result> =
-            feature.generateContractTestScenarios(emptyList()).toList().map { it.second.value }.map {
+            feature.generateContractTests(emptyList()).toList().map {
                 executeTestAndReturnResultAndResponse(it, object : TestExecutor {
                                 override fun execute(request: HttpRequest): HttpResponse {
                                     assertThat(request.formFields).containsKey("Data")
@@ -5634,7 +5634,7 @@ paths:
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
         val results: List<Result> =
-            feature.generateContractTestScenarios(emptyList()).toList().map { it.second.value }.map {
+            feature.generateContractTests(emptyList()).toList().map {
                 executeTestAndReturnResultAndResponse(it, object : TestExecutor {
                                 override fun execute(request: HttpRequest): HttpResponse {
                                     assertThat(request.multiPartFormData.first().name).isEqualTo("Data")

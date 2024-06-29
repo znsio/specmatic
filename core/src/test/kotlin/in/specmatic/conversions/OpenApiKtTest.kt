@@ -747,7 +747,7 @@ Feature: multipart file upload
         """.trimIndent(), sourceSpecPath
         )
 
-        val contractTests = contract.generateContractTestScenarios(emptyList()).map { it.second.value }
+        val contractTests = contract.generateContractTests(emptyList())
         val result = executeTestAndReturnResultAndResponse(contractTests.single(), object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     val multipartFileValues = request.multiPartFormData.filterIsInstance<MultiPartFileValue>()
@@ -1670,7 +1670,7 @@ Scenario: zero should return not found
 
         var executed = false
 
-        val result = executeTestAndReturnResultAndResponse(feature.scenarios.first(), object : TestExecutor {
+        val result = executeTestAndReturnResultAndResponse(`in`.specmatic.test.ScenarioTest(feature.scenarios.first(), DefaultStrategies), object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     executed = true
                     return if (request.queryParams.keys.containsAll(listOf("name", "message"))) HttpResponse.OK

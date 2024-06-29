@@ -8,6 +8,7 @@ import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.mapZip
 import `in`.specmatic.core.value.*
 import `in`.specmatic.stub.RequestContext
+import `in`.specmatic.test.ContractTest
 import `in`.specmatic.test.TestExecutor
 
 object ContractAndStubMismatchMessages : MismatchMessages {
@@ -589,6 +590,14 @@ object ContractAndResponseMismatch : MismatchMessages {
             keyLabel.lowercase().capitalizeFirstChar()
         } named $keyName in the specification was not found in the response"
     }
+}
+
+fun executeTestAndReturnResultAndResponse(
+    testScenario: ContractTest,
+    testExecutor: TestExecutor,
+    flagsBased: FlagsBased
+): Pair<Result, HttpResponse?> {
+    return testScenario.runTest(testExecutor)
 }
 
 fun executeTestAndReturnResultAndResponse(

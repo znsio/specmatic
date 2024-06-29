@@ -43,7 +43,13 @@ class ScenarioTest(
         }
 
         val httpClient = HttpClient(testBaseURL, log = log, timeout = timeOut)
-        val (result, response) = executeTestAndReturnResultAndResponse(scenario, httpClient, flagsBased)
+
+        return runTest(httpClient)
+    }
+
+    override fun runTest(testExecutor: TestExecutor): Pair<Result, HttpResponse?> {
+
+        val (result, response) = executeTestAndReturnResultAndResponse(scenario, testExecutor, flagsBased)
         return Pair(result.updateScenario(scenario), response)
     }
 

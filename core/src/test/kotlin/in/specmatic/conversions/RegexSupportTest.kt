@@ -212,12 +212,10 @@ class RegexSupportTest {
             }
         }
 
-        assertThatThrownBy { feature.executeTests(mockTestClient) }.satisfies(
-            Consumer {
-                assertThat(it).isInstanceOf(ContractException::class.java)
-                assertThat(exceptionCauseMessage(it)).contains(regex)
-            }
-        )
+        val results = feature.executeTests(mockTestClient)
+
+        assertThat(results.success()).isFalse()
+        assertThat(results.report()).contains(regex)
     }
 
     @Nested

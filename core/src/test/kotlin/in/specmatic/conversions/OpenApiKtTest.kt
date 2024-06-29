@@ -1385,7 +1385,7 @@ Background:
                 override fun setServerState(serverState: Map<String, Value>) {
                 }
             },
-            scenarioNames = listOf("create a pet. Response: pet response")
+            testDescriptionFilter = listOf("POST /pets -> 201")
         )
 
         assertFalse(results.success())
@@ -1454,7 +1454,7 @@ Background:
                 override fun setServerState(serverState: Map<String, Value>) {
                 }
             },
-            scenarioNames = listOf("create a pet. Response: pet response")
+            testDescriptionFilter = listOf("POST /pets -> 201")
         )
 
         assertFalse(results.success())
@@ -1518,7 +1518,7 @@ Background:
                 override fun setServerState(serverState: Map<String, Value>) {
                 }
             },
-            scenarioNames = listOf("create a pet. Response: pet response")
+            testDescriptionFilter = listOf("POST /pets -> 201")
         )
 
         assertFalse(results.success())

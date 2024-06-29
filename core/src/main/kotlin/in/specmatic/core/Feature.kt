@@ -189,16 +189,22 @@ data class Feature(
     }
 
     fun executeTests(
-        testExecutorFn: TestExecutor,
+        testExecutor: TestExecutor,
         suggestions: List<Scenario> = emptyList(),
-        scenarioNames: List<String> = emptyList()
-    ): Results =
-        generateContractTestScenarios(suggestions)
-            .map { it.second.value }
-            .filter { scenarioNames.isEmpty() || scenarioNames.contains(it.name) }
-            .fold(Results()) { results, scenario ->
-                Results(results = results.results.plus(executeTest(scenario, testExecutorFn, flagsBased)))
+        testDescriptionFilter: List<String> = emptyList()
+    ): Results {
+        return generateContractTests(suggestions)
+            .filter { contractTest ->
+                testDescriptionFilter.isEmpty() ||
+                        testDescriptionFilter.any { scenarioName ->
+                            contractTest.testDescription().contains(scenarioName)
+                        }
             }
+            .fold(Results()) { results, scenario ->
+                val (result, _) = scenario.runTest(testExecutor)
+                Results(results = results.results.plus(result))
+            }
+    }
 
     fun setServerState(serverState: Map<String, Value>) {
         this.serverState = this.serverState.plus(serverState)

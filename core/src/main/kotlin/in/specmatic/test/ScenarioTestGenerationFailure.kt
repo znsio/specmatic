@@ -18,4 +18,8 @@ class ScenarioTestGenerationFailure(val scenario: Scenario, val failure: Result.
         return Pair(failure.updateScenario(scenario), null)
     }
 
+    override fun runTest(testExecutor: TestExecutor): Pair<Result, HttpResponse?> {
+        return Pair(failure.updateScenario(scenario), null)
+    }
+
 }

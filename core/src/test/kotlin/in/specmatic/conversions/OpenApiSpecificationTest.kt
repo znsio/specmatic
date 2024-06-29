@@ -5438,19 +5438,19 @@ paths:
 
         val results: List<Result> =
             feature.generateContractTests(emptyList()).toList().map {
-                executeTestAndReturnResultAndResponse(it, object : TestExecutor {
-                                override fun execute(request: HttpRequest): HttpResponse {
-                                    assertThat(request.body).isInstanceOf(JSONObjectValue::class.java)
+                it.runTest(object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        assertThat(request.body).isInstanceOf(JSONObjectValue::class.java)
 
-                                    val body = request.body as JSONObjectValue
-                                    assertThat(body.jsonObject).hasSize(1)
-                                    assertThat(body.jsonObject).containsEntry("id", StringValue("abc123"))
-                                    return HttpResponse.OK
-                                }
+                        val body = request.body as JSONObjectValue
+                        assertThat(body.jsonObject).hasSize(1)
+                        assertThat(body.jsonObject).containsEntry("id", StringValue("abc123"))
+                        return HttpResponse.OK
+                    }
 
-                                override fun setServerState(serverState: Map<String, Value>) {
-                                }
-                            }, DefaultStrategies).first
+                    override fun setServerState(serverState: Map<String, Value>) {
+                    }
+                }).first
             }
 
         assertThat(results).hasSize(1)
@@ -5505,26 +5505,26 @@ paths:
 
         val results: List<Result> =
             feature.generateContractTests(emptyList()).toList().map {
-                executeTestAndReturnResultAndResponse(it, object : TestExecutor {
-                                override fun execute(request: HttpRequest): HttpResponse {
-                                    assertThat(request.formFields).containsKey("Data")
+                it.runTest(object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        assertThat(request.formFields).containsKey("Data")
 
-                                    var parsedValue: Value = JSONObjectValue()
-                                    assertThatCode {
-                                        parsedValue = parsedJSON(request.formFields["Data"]!!)
-                                    }.doesNotThrowAnyException()
+                        var parsedValue: Value = JSONObjectValue()
+                        assertThatCode {
+                            parsedValue = parsedJSON(request.formFields["Data"]!!)
+                        }.doesNotThrowAnyException()
 
-                                    assertThat((parsedValue as JSONObjectValue).jsonObject).containsEntry(
-                                        "id",
-                                        StringValue("abc123")
-                                    )
-                                    assertThat(request.formFields).hasSize(1)
-                                    return HttpResponse.OK
-                                }
+                        assertThat((parsedValue as JSONObjectValue).jsonObject).containsEntry(
+                            "id",
+                            StringValue("abc123")
+                        )
+                        assertThat(request.formFields).hasSize(1)
+                        return HttpResponse.OK
+                    }
 
-                                override fun setServerState(serverState: Map<String, Value>) {
-                                }
-                            }, DefaultStrategies).first
+                    override fun setServerState(serverState: Map<String, Value>) {
+                    }
+                }).first
             }
 
         assertThat(results).hasSize(1)
@@ -5575,18 +5575,18 @@ paths:
 
         val results: List<Result> =
             feature.generateContractTests(emptyList()).toList().map {
-                executeTestAndReturnResultAndResponse(it, object : TestExecutor {
-                                override fun execute(request: HttpRequest): HttpResponse {
-                                    assertThat(request.formFields).containsKey("Data")
-                                    assertThat(request.formFields["Data"]).isEqualTo("abc123")
-                                    assertThat(request.formFields).hasSize(1)
+                it.runTest(object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        assertThat(request.formFields).containsKey("Data")
+                        assertThat(request.formFields["Data"]).isEqualTo("abc123")
+                        assertThat(request.formFields).hasSize(1)
 
-                                    return HttpResponse.OK
-                                }
+                        return HttpResponse.OK
+                    }
 
-                                override fun setServerState(serverState: Map<String, Value>) {
-                                }
-                            }, DefaultStrategies).first
+                    override fun setServerState(serverState: Map<String, Value>) {
+                    }
+                }).first
             }
 
         assertThat(results).hasSize(1)
@@ -5635,20 +5635,20 @@ paths:
 
         val results: List<Result> =
             feature.generateContractTests(emptyList()).toList().map {
-                executeTestAndReturnResultAndResponse(it, object : TestExecutor {
-                                override fun execute(request: HttpRequest): HttpResponse {
-                                    assertThat(request.multiPartFormData.first().name).isEqualTo("Data")
+                it.runTest(object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        assertThat(request.multiPartFormData.first().name).isEqualTo("Data")
 
-                                    val content = request.multiPartFormData.first() as MultiPartContentValue
-                                    assertThat(content.content.toStringLiteral()).isEqualTo("abc123")
+                        val content = request.multiPartFormData.first() as MultiPartContentValue
+                        assertThat(content.content.toStringLiteral()).isEqualTo("abc123")
 
-                                    assertThat(request.multiPartFormData).hasSize(1)
-                                    return HttpResponse.OK
-                                }
+                        assertThat(request.multiPartFormData).hasSize(1)
+                        return HttpResponse.OK
+                    }
 
-                                override fun setServerState(serverState: Map<String, Value>) {
-                                }
-                            }, DefaultStrategies).first
+                    override fun setServerState(serverState: Map<String, Value>) {
+                    }
+                }).first
             }
 
         assertThat(results).hasSize(1)

@@ -748,20 +748,20 @@ Feature: multipart file upload
         )
 
         val contractTests = contract.generateContractTests(emptyList())
-        val result = executeTestAndReturnResultAndResponse(contractTests.single(), object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    val multipartFileValues = request.multiPartFormData.filterIsInstance<MultiPartFileValue>()
-                    assertThat(multipartFileValues.size).isEqualTo(1)
-                    assertThat(multipartFileValues.first().name).isEqualTo("fileName")
-                    assertThat(multipartFileValues.first().filename).matches(fileName)
-                    return HttpResponse.ok("success")
-                }
+        val result = contractTests.single().runTest(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val multipartFileValues = request.multiPartFormData.filterIsInstance<MultiPartFileValue>()
+                assertThat(multipartFileValues.size).isEqualTo(1)
+                assertThat(multipartFileValues.first().name).isEqualTo("fileName")
+                assertThat(multipartFileValues.first().filename).matches(fileName)
+                return HttpResponse.ok("success")
+            }
 
-                override fun setServerState(serverState: Map<String, Value>) {
+            override fun setServerState(serverState: Map<String, Value>) {
 
-                }
+            }
 
-            }, DefaultStrategies).first
+        }).first
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
     }
@@ -1670,17 +1670,18 @@ Scenario: zero should return not found
 
         var executed = false
 
-        val result = executeTestAndReturnResultAndResponse(`in`.specmatic.test.ScenarioTest(feature.scenarios.first(), DefaultStrategies), object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    executed = true
-                    return if (request.queryParams.keys.containsAll(listOf("name", "message"))) HttpResponse.OK
-                    else HttpResponse.ERROR_400
-                }
+        val result = `in`.specmatic.test.ScenarioAsTest(feature.scenarios.first(), DefaultStrategies)
+            .runTest(object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        executed = true
+                        return if (request.queryParams.keys.containsAll(listOf("name", "message"))) HttpResponse.OK
+                        else HttpResponse.ERROR_400
+                    }
 
-                override fun setServerState(serverState: Map<String, Value>) {
+                    override fun setServerState(serverState: Map<String, Value>) {
 
-                }
-            }, DefaultStrategies).first
+                    }
+                }).first
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
         assertThat(executed).isTrue

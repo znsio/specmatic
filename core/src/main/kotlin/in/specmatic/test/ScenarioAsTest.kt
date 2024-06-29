@@ -5,8 +5,10 @@ import `in`.specmatic.core.*
 import `in`.specmatic.core.log.HttpLogMessage
 import `in`.specmatic.core.log.LogMessage
 import `in`.specmatic.core.log.logger
+import `in`.specmatic.core.utilities.exceptionCauseMessage
+import `in`.specmatic.core.value.JSONObjectValue
 
-class ScenarioTest(
+class ScenarioAsTest(
     val scenario: Scenario,
     private val flagsBased: FlagsBased,
     private val sourceProvider: String? = null,
@@ -57,6 +59,58 @@ class ScenarioTest(
         if (annotations != null) {
             logger.log(annotations)
         }
+    }
+
+    private fun executeTestAndReturnResultAndResponse(
+        testScenario: Scenario,
+        testExecutor: TestExecutor,
+        flagsBased: FlagsBased
+    ): Pair<Result, HttpResponse?> {
+        val request = testScenario.generateHttpRequest(flagsBased)
+
+        return try {
+            testExecutor.setServerState(testScenario.serverState)
+
+            testExecutor.preExecuteScenario(testScenario, request)
+
+            val response = testExecutor.execute(request)
+
+            val result = testResult(request, response, testScenario, flagsBased)
+
+            Pair(result.withBindings(testScenario.bindings, response), response)
+        } catch (exception: Throwable) {
+            Pair(
+                Result.Failure(exceptionCauseMessage(exception))
+                .also { failure -> failure.updateScenario(testScenario) }, null)
+        }
+    }
+
+    private fun testResult(
+        request: HttpRequest,
+        response: HttpResponse,
+        testScenario: Scenario,
+        flagsBased: FlagsBased? = null
+    ): Result {
+
+        val result = when {
+            response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral())
+                .updateScenario(testScenario)
+            response.body is JSONObjectValue && ignorable(response.body) -> Result.Success()
+            else -> testScenario.matches(request, response, ContractAndResponseMismatch, flagsBased?.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
+        }
+
+        if (result is Result.Success && result.isPartialSuccess()) {
+            logger.log("    PARTIAL SUCCESS: ${result.partialSuccessMessage}")
+            logger.newLine()
+        }
+
+        return result
+    }
+
+    fun ignorable(body: JSONObjectValue): Boolean {
+        return Flags.customResponse() &&
+                (body.findFirstChildByPath("resultStatus.status")?.toStringLiteral() == "FAILED" &&
+                        (body.findFirstChildByPath("resultStatus.errorCode")?.toStringLiteral() == "INVALID_REQUEST"))
     }
 
 }

@@ -200,8 +200,8 @@ data class Feature(
                             contractTest.testDescription().contains(scenarioName)
                         }
             }
-            .fold(Results()) { results, scenario ->
-                val (result, _) = scenario.runTest(testExecutor)
+            .fold(Results()) { results, contractTest ->
+                val (result, _) = contractTest.runTest(testExecutor)
                 Results(results = results.results.plus(result))
             }
     }
@@ -306,7 +306,7 @@ data class Feature(
         return generateContractTestScenarios(suggestions).map { (originalScenario, returnValue) ->
             returnValue.realise(
                 hasValue = { concreteTestScenario, comment ->
-                    ScenarioTest(
+                    ScenarioAsTest(
                         concreteTestScenario,
                         flagsBased,
                         concreteTestScenario.sourceProvider,

@@ -24,6 +24,10 @@ class ScenarioTestGenerationException(val scenario: Scenario, val e: Throwable, 
         return error()
     }
 
+    override fun plusValidator(validator: ResponseValidator): ContractTest {
+        return this
+    }
+
     fun error(): Pair<Result, HttpResponse?> {
         val result: Result = when(e) {
             is ContractException -> Result.Failure(message, e.failure(), breadCrumb = breadCrumb ?: "").updateScenario(scenario)

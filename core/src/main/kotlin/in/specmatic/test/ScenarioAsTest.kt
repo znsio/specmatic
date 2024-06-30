@@ -8,7 +8,7 @@ import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.JSONObjectValue
 
-class ScenarioAsTest(
+data class ScenarioAsTest(
     val scenario: Scenario,
     private val flagsBased: FlagsBased,
     private val sourceProvider: String? = null,
@@ -16,7 +16,8 @@ class ScenarioAsTest(
     private val sourceRepositoryBranch: String? = null,
     private val specification: String? = null,
     private val serviceType: String? = null,
-    private val annotations: String? = null
+    private val annotations: String? = null,
+    private val validators: List<ResponseValidator> = emptyList()
 ) : ContractTest {
     override fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord {
         val resultStatus = result.testResult()
@@ -55,6 +56,12 @@ class ScenarioAsTest(
         return Pair(result.updateScenario(scenario), response)
     }
 
+    override fun plusValidator(validator: ResponseValidator): ScenarioAsTest {
+        return this.copy(
+            validators = this.validators.plus(validator)
+        )
+    }
+
     private fun logComment() {
         if (annotations != null) {
             logger.log(annotations)
@@ -75,7 +82,8 @@ class ScenarioAsTest(
 
             val response = testExecutor.execute(request)
 
-            val result = testResult(request, response, testScenario, flagsBased)
+            val validatorResult = validators.asSequence().map { it.validate(scenario, response) }.filterNotNull().firstOrNull()
+            val result = validatorResult ?: testResult(request, response, testScenario, flagsBased)
 
             Pair(result.withBindings(testScenario.bindings, response), response)
         } catch (exception: Throwable) {

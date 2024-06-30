@@ -22,4 +22,8 @@ class ScenarioTestGenerationFailure(val scenario: Scenario, val failure: Result.
         return Pair(failure.updateScenario(scenario), null)
     }
 
+    override fun plusValidator(validator: ResponseValidator): ContractTest {
+        return this
+    }
+
 }

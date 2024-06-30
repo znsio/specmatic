@@ -373,7 +373,11 @@ data class Feature(
                     negativeScenarioResult.ifHasValue { result: HasValue<Scenario> ->
                         val description = result.valueDetails.singleLineDescription()
 
-                        HasValue(result.value.copy(descriptionFromPlugin = "${result.value.apiDescription} [${description}]"))
+                        val tag = if(description.isNotBlank())
+                            " [${description}]"
+                        else
+                            ""
+                        HasValue(result.value.copy(descriptionFromPlugin = "${result.value.apiDescription}$tag"))
                     }
                 }
 

@@ -60,7 +60,7 @@ data class NumberPattern(
         if (sampleData.toStringLiteral().length > maxLength)
             return mismatchResult("number with maxLength $maxLength", sampleData, resolver.mismatchMessages)
 
-        val sampleNumber = BigDecimal(sampleData.number.toDouble())
+        val sampleNumber = BigDecimal(sampleData.number.toString())
 
         val minOp = if (exclusiveMinimum) ">" else ">="
         if (!eval(sampleNumber, minOp, minimum))

@@ -217,6 +217,14 @@ internal class NumberPatternTest {
     }
 
     @Test
+    fun `test`() {
+        val pointZeroOne = ".01"
+        val minimumPointZeroOne = NumberPattern(minimum = BigDecimal(pointZeroOne))
+        val result = minimumPointZeroOne.matches(NumberValue(convertToNumber(pointZeroOne)), Resolver())
+        assertThat(result.isSuccess()).withFailMessage(result.reportString()).isTrue()
+    }
+
+    @Test
     @Tag(GENERATION)
     fun `negative values should be generated`() {
         val result = NumberPattern().negativeBasedOn(Row(), Resolver()).map { it.value }.toList()

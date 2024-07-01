@@ -197,6 +197,34 @@ internal class NumberPatternTest {
     }
 
     @Test
+    fun `should generate an Int within min and max bounds if isDoubleFormat is false and the min and max constraints are set`() {
+        val generatedValues = (0..5).map {
+            NumberPattern(
+                minimum = BigDecimal(0),
+                maximum = BigDecimal(10),
+                isDoubleFormat = false
+            ).generate(Resolver())
+        }
+        assertThat(generatedValues).allSatisfy {
+            it as NumberValue
+            assertThat(it.number is Int).isTrue()
+            assertThat(it.number.toInt()).isGreaterThanOrEqualTo(0)
+            assertThat(it.number.toInt()).isLessThanOrEqualTo(10)
+        }
+    }
+
+    @Test
+    fun `should generate an Int if isDoubleFormat is false and the min and max constraints are set`() {
+        val generatedNumber = NumberPattern(
+            minimum = BigDecimal(0),
+            maximum = BigDecimal(10),
+            isDoubleFormat = false
+        ).generate(Resolver()) as NumberValue
+
+        assertThat(generatedNumber.number is Int).isTrue()
+    }
+
+    @Test
     fun `should not match when number is shorter than minLength`() {
         val result = NumberPattern(minLength = 4).matches(NumberValue(123), Resolver())
         assertThat(result.isSuccess()).isFalse
@@ -214,6 +242,14 @@ internal class NumberPatternTest {
     fun `it should use the example if provided when generating`() {
         val generated = NumberPattern(example = "10").generate(Resolver(defaultExampleResolver = UseDefaultExample))
         assertThat(generated).isEqualTo(NumberValue(10))
+    }
+
+    @Test
+    fun `test`() {
+        val pointZeroOne = ".01"
+        val minimumPointZeroOne = NumberPattern(minimum = BigDecimal(pointZeroOne))
+        val result = minimumPointZeroOne.matches(NumberValue(convertToNumber(pointZeroOne)), Resolver())
+        assertThat(result.isSuccess()).withFailMessage(result.reportString()).isTrue()
     }
 
     @Test

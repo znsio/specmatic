@@ -6,7 +6,6 @@ import `in`.specmatic.core.log.HttpLogMessage
 import `in`.specmatic.core.log.LogMessage
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.exceptionCauseMessage
-import `in`.specmatic.core.value.JSONObjectValue
 
 data class ScenarioAsTest(
     val scenario: Scenario,
@@ -103,7 +102,6 @@ data class ScenarioAsTest(
         val result = when {
             response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral())
                 .updateScenario(testScenario)
-            response.body is JSONObjectValue && ignorable(response.body) -> Result.Success()
             else -> testScenario.matches(request, response, ContractAndResponseMismatch, flagsBased?.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
         }
 
@@ -113,12 +111,6 @@ data class ScenarioAsTest(
         }
 
         return result
-    }
-
-    fun ignorable(body: JSONObjectValue): Boolean {
-        return Flags.customResponse() &&
-                (body.findFirstChildByPath("resultStatus.status")?.toStringLiteral() == "FAILED" &&
-                        (body.findFirstChildByPath("resultStatus.errorCode")?.toStringLiteral() == "INVALID_REQUEST"))
     }
 
 }

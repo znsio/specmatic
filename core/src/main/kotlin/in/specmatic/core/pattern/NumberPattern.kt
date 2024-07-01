@@ -85,7 +85,8 @@ data class NumberPattern(
         } else
             minimum
         val max = if (maximum == HIGHEST_DECIMAL) largestValue else maximum
-        return NumberValue(SecureRandom().nextDouble(min.toDouble(), max.toDouble()))
+        if (isDoubleFormat) return NumberValue(SecureRandom().nextDouble(min.toDouble(), max.toDouble()))
+        return NumberValue(SecureRandom().nextInt(min.toInt(), max.toInt()))
     }
 
     private fun randomNumber(minLength: Int): Int {

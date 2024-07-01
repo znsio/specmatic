@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
 import java.util.*
 import java.util.function.Consumer
 
-internal class ScenarioTest {
+internal class ScenarioAsTest {
     @Test
     fun `should generate one test scenario when there are no examples`() {
         val scenario = Scenario(
@@ -513,16 +513,17 @@ paths:
 """.trimIndent(), ""
         ).toFeature()
 
-        val contractTestScenarios = contract.generateContractTestScenarios(emptyList()).map { it.second.value }
+        val contractTestScenarios = contract.generateContractTests(emptyList())
 
-        val result: Result = executeTest(contractTestScenarios.first(), object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                return HttpResponse.ok("abc")
-            }
+        val result: Result =
+            contractTestScenarios.first().runTest(object : TestExecutor {
+                        override fun execute(request: HttpRequest): HttpResponse {
+                            return HttpResponse.ok("abc")
+                        }
 
-            override fun setServerState(serverState: Map<String, Value>) {
-            }
-        }) as Result.Failure
+                        override fun setServerState(serverState: Map<String, Value>) {
+                        }
+                    }).first as Result.Failure
 
         assertThat(result.reportString()).contains("Contract expected")
         assertThat(result.reportString()).contains("response contained")

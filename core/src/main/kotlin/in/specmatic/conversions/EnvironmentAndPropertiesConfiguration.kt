@@ -6,7 +6,6 @@ data class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<S
     constructor() : this(System.getenv(), System.getProperties().toMap())
 
     val VALIDATE_RESPONSE_VALUE = "VALIDATE_RESPONSE_VALUE"
-    private val CUSTOM_RESPONSE_NAME = "CUSTOM_RESPONSE"
     val SPECMATIC_GENERATIVE_TESTS = "SPECMATIC_GENERATIVE_TESTS"
     private val MAX_TEST_REQUEST_COMBINATIONS = "MAX_TEST_REQUEST_COMBINATIONS"
     val SCHEMA_EXAMPLE_DEFAULT = "SCHEMA_EXAMPLE_DEFAULT"
@@ -28,10 +27,6 @@ data class EnvironmentAndPropertiesConfiguration(val environmentVariables: Map<S
 
     private fun flagValue(flagName: String): String? {
         return environmentVariables[flagName] ?: systemProperties[flagName]?.toString() ?: System.getenv(flagName) ?: System.getProperty(flagName)
-    }
-
-    fun customResponse(): Boolean {
-        return flagValue(CUSTOM_RESPONSE_NAME) == "true"
     }
 
     private fun booleanFlag(flagName: String, default: String = "false") = BooleanUtils.toBoolean(flagValue(flagName) ?: default)

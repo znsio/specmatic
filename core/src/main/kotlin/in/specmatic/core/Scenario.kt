@@ -8,6 +8,7 @@ import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.mapZip
 import `in`.specmatic.core.value.*
 import `in`.specmatic.stub.RequestContext
+import `in`.specmatic.test.ContractTest
 import `in`.specmatic.test.TestExecutor
 
 object ContractAndStubMismatchMessages : MismatchMessages {
@@ -221,13 +222,31 @@ data class Scenario(
     fun generateHttpRequest(flagsBased: FlagsBased = DefaultStrategies): HttpRequest =
         scenarioBreadCrumb(this) { httpRequestPattern.generate(flagsBased.update(Resolver(expectedFacts, false, patterns))) }
 
+    fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
+        val resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck).copy(context = RequestContext(httpRequest))
+
+        return matches(httpResponse, mismatchMessages, unexpectedKeyCheck, resolver)
+    }
+
     fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
-        val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = mismatchMessages).let {
-            if(unexpectedKeyCheck != null)
+        val resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck)
+
+        return matches(httpResponse, mismatchMessages, unexpectedKeyCheck, resolver)
+    }
+
+    private fun updatedResolver(
+        mismatchMessages: MismatchMessages,
+        unexpectedKeyCheck: UnexpectedKeyCheck?
+    ): Resolver {
+        return Resolver(expectedFacts, false, patterns).copy(mismatchMessages = mismatchMessages).let {
+            if (unexpectedKeyCheck != null)
                 it.copy(findKeyErrorCheck = it.findKeyErrorCheck.copy(unexpectedKeyCheck = unexpectedKeyCheck))
             else
                 it
         }
+    }
+
+    fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null, resolver: Resolver): Result {
 
         if (this.isNegative) {
             return if (is4xxResponse(httpResponse)) {
@@ -571,58 +590,4 @@ object ContractAndResponseMismatch : MismatchMessages {
             keyLabel.lowercase().capitalizeFirstChar()
         } named $keyName in the specification was not found in the response"
     }
-}
-
-fun executeTest(testScenario: Scenario, testExecutor: TestExecutor, resolverStrategies: FlagsBased = DefaultStrategies): Result {
-    return executeTestAndReturnResultAndResponse(testScenario, testExecutor, resolverStrategies).first
-}
-
-fun executeTestAndReturnResultAndResponse(
-    testScenario: Scenario,
-    testExecutor: TestExecutor,
-    flagsBased: FlagsBased
-): Pair<Result, HttpResponse?> {
-    val request = testScenario.generateHttpRequest(flagsBased)
-
-    return try {
-        testExecutor.setServerState(testScenario.serverState)
-
-        testExecutor.preExecuteScenario(testScenario, request)
-
-        val response = testExecutor.execute(request)
-
-        val result = testResult(response, testScenario, flagsBased)
-
-        Pair(result.withBindings(testScenario.bindings, response), response)
-    } catch (exception: Throwable) {
-        Pair(Result.Failure(exceptionCauseMessage(exception))
-            .also { failure -> failure.updateScenario(testScenario) }, null)
-    }
-}
-
-private fun testResult(
-    response: HttpResponse,
-    testScenario: Scenario,
-    flagsBased: FlagsBased? = null
-): Result {
-
-    val result = when {
-        response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral())
-            .updateScenario(testScenario)
-        response.body is JSONObjectValue && ignorable(response.body) -> Result.Success()
-        else -> testScenario.matches(response, ContractAndResponseMismatch, flagsBased?.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
-    }.also { result ->
-        if (result is Result.Success && result.isPartialSuccess()) {
-            logger.log("    PARTIAL SUCCESS: ${result.partialSuccessMessage}")
-            logger.newLine()
-        }
-    }
-
-    return result
-}
-
-fun ignorable(body: JSONObjectValue): Boolean {
-    return Flags.customResponse() &&
-        (body.findFirstChildByPath("resultStatus.status")?.toStringLiteral() == "FAILED" &&
-            (body.findFirstChildByPath("resultStatus.errorCode")?.toStringLiteral() == "INVALID_REQUEST"))
 }

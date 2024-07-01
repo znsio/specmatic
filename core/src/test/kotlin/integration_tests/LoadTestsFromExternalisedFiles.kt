@@ -74,30 +74,26 @@ class LoadTestsFromExternalisedFiles {
     fun `externalized tests should be validated`() {
         val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_invalid_externalized_test.yaml").toFeature().loadExternalisedExamples()
 
-        assertThatThrownBy {
-            feature.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    assertThat(request.path).isEqualTo("/order_action_figure")
-                    assertThat(request.method).isEqualTo("POST")
-                    assertThat(request.body).isEqualTo(parsedJSONObject("""{"name": "Master Yoda", "description": "Head of the Jedi Council"}"""))
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.path).isEqualTo("/order_action_figure")
+                assertThat(request.method).isEqualTo("POST")
+                assertThat(request.body).isEqualTo(parsedJSONObject("""{"name": "Master Yoda", "description": "Head of the Jedi Council"}"""))
 
-                    return HttpResponse.ok(parsedJSONObject("""{"id": 1}"""))
-                }
+                return HttpResponse.ok(parsedJSONObject("""{"id": 1}"""))
+            }
 
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
-        }.satisfies(Consumer {
-            assertThat(it).isInstanceOf(ContractException::class.java)
-            it as ContractException
-
-            assertThat(it.report())
-                .contains(">> REQUEST.BODY.description")
-                .contains("10")
-
-            println(it.report())
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
         })
 
+        println(results.report())
+
+        assertThat(results.report())
+            .contains(">> REQUEST.BODY.description")
+            .contains("10")
+
+        assertThat(results.success()).isFalse()
     }
 
     @Test

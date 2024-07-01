@@ -93,12 +93,7 @@ data class HttpResponsePattern(
         val body = response.body
 
         return when (response.status) {
-            status -> {
-                if(Flags.customResponse() && response.status.toString().startsWith("2") && body is JSONObjectValue && body.findFirstChildByPath("resultStatus.status")?.toStringLiteral() == "FAILED")
-                    MatchFailure(mismatchResult("status $status and resultStatus.status == \"SUCCESS\"", "status ${response.status} and resultStatus.status == \"${body.findFirstChildByPath("resultStatus.status")?.toStringLiteral()}\"").copy(breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))
-                else
-                    MatchSuccess(parameters)
-            }
+            status -> MatchSuccess(parameters)
             else -> MatchFailure(mismatchResult("status $status", "status ${response.status}").copy(breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))
         }
     }

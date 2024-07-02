@@ -5,6 +5,7 @@ import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
 import `in`.specmatic.core.utilities.capitalizeFirstChar
+import `in`.specmatic.core.utilities.examplesDirFor
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.utilities.readEnvVarOrProperty
 import `in`.specmatic.core.value.*
@@ -1427,17 +1428,8 @@ data class Feature(
         if (openApiFilePath.isBlank())
             return null
 
-        val examplesDir = getExamplesDir(openApiFilePath, "_examples")
-        return if (examplesDir.isDirectory)
-            examplesDir
-        else
-            getExamplesDir(openApiFilePath, "_tests")
+        return examplesDirFor(openApiFilePath, TEST_DIR_SUFFIX)
     }
-
-    private fun getExamplesDir(openApiFilePath: String, suffix: String): File =
-        File(openApiFilePath).canonicalFile.let {
-            it.parentFile.resolve(it.nameWithoutExtension + suffix)
-        }
 
     private fun getTestsDirectory(contractFile: File): File? {
         val testDirectory = testDirectoryFileFromSpecificationPath(contractFile.path) ?: testDirectoryFileFromEnvironmentVariable()

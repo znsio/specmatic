@@ -55,8 +55,6 @@ class HttpStubWithArrayQueryParameterTest {
         }
     }
 
-    //TODO: remove disabled once stub side is fixed
-    @Disabled
     @Test
     fun `should match stub for mandatory query parameter with externalized json expectation`() {
         createStubFromContracts(listOf("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml"), timeoutMillis = 0).use { stub ->

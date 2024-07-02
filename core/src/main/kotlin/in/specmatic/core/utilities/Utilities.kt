@@ -334,3 +334,16 @@ fun saveJsonFile(jsonString: String, path: String, fileName: String) {
 fun readEnvVarOrProperty(envVarName: String, propertyName: String): String? {
     return System.getenv(envVarName) ?: System.getProperty(propertyName)
 }
+
+fun examplesDirFor(openApiFilePath: String, alternateSuffix: String): File {
+    val examplesDir = getExamplesDir(openApiFilePath, EXAMPLES_DIR_SUFFIX)
+    return if (examplesDir.isDirectory)
+        examplesDir
+    else
+        getExamplesDir(openApiFilePath, alternateSuffix)
+}
+
+private fun getExamplesDir(openApiFilePath: String, suffix: String): File =
+    File(openApiFilePath).canonicalFile.let {
+        it.parentFile.resolve("${it.parent}/${it.nameWithoutExtension}$suffix")
+    }

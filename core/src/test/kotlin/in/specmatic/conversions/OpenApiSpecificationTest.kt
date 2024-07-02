@@ -5437,8 +5437,8 @@ paths:
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
         val results: List<Result> =
-            feature.generateContractTestScenarios(emptyList()).toList().map { it.second.value }.map {
-                executeTest(it, object : TestExecutor {
+            feature.generateContractTests(emptyList()).toList().map {
+                it.runTest(object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.body).isInstanceOf(JSONObjectValue::class.java)
 
@@ -5450,7 +5450,7 @@ paths:
 
                     override fun setServerState(serverState: Map<String, Value>) {
                     }
-                })
+                }).first
             }
 
         assertThat(results).hasSize(1)
@@ -5504,8 +5504,8 @@ paths:
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
         val results: List<Result> =
-            feature.generateContractTestScenarios(emptyList()).toList().map { it.second.value }.map {
-                executeTest(it, object : TestExecutor {
+            feature.generateContractTests(emptyList()).toList().map {
+                it.runTest(object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.formFields).containsKey("Data")
 
@@ -5524,7 +5524,7 @@ paths:
 
                     override fun setServerState(serverState: Map<String, Value>) {
                     }
-                })
+                }).first
             }
 
         assertThat(results).hasSize(1)
@@ -5574,8 +5574,8 @@ paths:
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
         val results: List<Result> =
-            feature.generateContractTestScenarios(emptyList()).toList().map { it.second.value }.map {
-                executeTest(it, object : TestExecutor {
+            feature.generateContractTests(emptyList()).toList().map {
+                it.runTest(object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.formFields).containsKey("Data")
                         assertThat(request.formFields["Data"]).isEqualTo("abc123")
@@ -5586,7 +5586,7 @@ paths:
 
                     override fun setServerState(serverState: Map<String, Value>) {
                     }
-                })
+                }).first
             }
 
         assertThat(results).hasSize(1)
@@ -5634,8 +5634,8 @@ paths:
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
         val results: List<Result> =
-            feature.generateContractTestScenarios(emptyList()).toList().map { it.second.value }.map {
-                executeTest(it, object : TestExecutor {
+            feature.generateContractTests(emptyList()).toList().map {
+                it.runTest(object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.multiPartFormData.first().name).isEqualTo("Data")
 
@@ -5648,7 +5648,7 @@ paths:
 
                     override fun setServerState(serverState: Map<String, Value>) {
                     }
-                })
+                }).first
             }
 
         assertThat(results).hasSize(1)

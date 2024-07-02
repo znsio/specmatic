@@ -1427,11 +1427,17 @@ data class Feature(
         if (openApiFilePath.isBlank())
             return null
 
-        return File(openApiFilePath).canonicalFile.let {
-            it.parentFile.resolve(it.nameWithoutExtension + "_data")
-        }
+        val examplesDir = getExamplesDir(openApiFilePath, "_examples")
+        return if (examplesDir.isDirectory)
+            examplesDir
+        else
+            getExamplesDir(openApiFilePath, "_tests")
     }
 
+    private fun getExamplesDir(openApiFilePath: String, suffix: String): File =
+        File(openApiFilePath).canonicalFile.let {
+            it.parentFile.resolve(it.nameWithoutExtension + suffix)
+        }
 
     private fun getTestsDirectory(contractFile: File): File? {
         val testDirectory = testDirectoryFileFromSpecificationPath(contractFile.path) ?: testDirectoryFileFromEnvironmentVariable()

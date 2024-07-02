@@ -1418,7 +1418,7 @@ data class Feature(
             return null
 
         return File(openApiFilePath).canonicalFile.let {
-            it.parentFile.resolve(it.nameWithoutExtension + "_tests")
+            it.parentFile.resolve(it.nameWithoutExtension + "_data")
         }
     }
 

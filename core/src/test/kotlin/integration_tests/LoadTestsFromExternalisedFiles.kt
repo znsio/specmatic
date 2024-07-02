@@ -19,7 +19,7 @@ import java.util.function.Consumer
 
 class LoadTestsFromExternalisedFiles {
     @Test
-    fun `should load and execute externalized tests for header and request body from _tests directory`() {
+    fun `should load and execute externalized tests for header and request body from _data directory`() {
         val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test_and_no_example.yaml")
             .toFeature().loadExternalisedExamples()
 

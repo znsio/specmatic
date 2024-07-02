@@ -110,6 +110,10 @@ open class SpecmaticJUnitSupport {
 
                 val response = HttpClient(endpointsAPI, log = ignoreLog).execute(request)
 
+                if (response.status != 200) {
+                    throw RuntimeException("Incorrect actuator mapping URL provided: $endpointsAPI. Check if the URL is correct and the actuator mappings are available at the provided URL.")
+                }
+
                 logger.debug(response.toLogString())
 
                 openApiCoverageReportInput.setEndpointsAPIFlag(true)

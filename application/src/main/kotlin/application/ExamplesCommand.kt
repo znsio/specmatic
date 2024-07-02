@@ -27,7 +27,7 @@ class ExamplesCommand : Callable<Unit> {
 
                 var ctr = 0
 
-                val examplesDir = contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}_data""")
+                val examplesDir = contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
                 examplesDir.mkdirs()
 
                 feature.executeTests(object : TestExecutor {

@@ -22,6 +22,8 @@ const val JSON = "json"
 val OPENAPI_FILE_EXTENSIONS = listOf(YAML, YML, JSON)
 val CONTRACT_EXTENSIONS = listOf(CONTRACT_EXTENSION, WSDL) + OPENAPI_FILE_EXTENSIONS
 const val DATA_DIR_SUFFIX = "_data"
+const val TEST_DIR_SUFFIX = "_tests"
+const val EXAMPLES_DIR_SUFFIX = "_examples"
 const val SPECMATIC_GITHUB_ISSUES = "https://github.com/znsio/specmatic/issues"
 const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
 

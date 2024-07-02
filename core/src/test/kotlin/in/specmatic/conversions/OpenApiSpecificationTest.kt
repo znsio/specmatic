@@ -5215,7 +5215,7 @@ paths:
             }
         """.trimIndent()
 
-            val stubDir = tempDir.resolve("data_data")
+            val stubDir = tempDir.resolve("data_examples")
             stubDir.mkdirs()
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
@@ -5271,7 +5271,7 @@ paths:
             }
         """.trimIndent()
 
-            val stubDir = tempDir.resolve("data_data")
+            val stubDir = tempDir.resolve("data_examples")
             stubDir.mkdirs()
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
@@ -5327,7 +5327,7 @@ paths:
             }
         """.trimIndent()
 
-            val stubDir = tempDir.resolve("data_data")
+            val stubDir = tempDir.resolve("data_examples")
             stubDir.mkdirs()
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)

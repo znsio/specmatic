@@ -63,7 +63,7 @@ class OpenApiArrayQueryParameterTest {
 
             }
         })
-        assertThat(brandIds).isEqualTo(listOf("4", "5", "6"))
+        assertThat(brandIds).isEqualTo(listOf("1", "2", "3"))
     }
 
     @Test

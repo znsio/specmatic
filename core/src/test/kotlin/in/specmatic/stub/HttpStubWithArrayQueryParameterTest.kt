@@ -6,6 +6,7 @@ import `in`.specmatic.core.QueryParameters
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.trimmedLinesList
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 

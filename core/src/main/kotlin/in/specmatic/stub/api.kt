@@ -39,7 +39,11 @@ fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
 fun createStub(host: String = "localhost", port: Int = 9000): ContractStub {
-    return createStub(host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT)
+    return createStub(host, port, false)
+}
+
+fun createStub(host: String = "localhost", port: Int = 9000, strict: Boolean = false): ContractStub {
+    return createStub(host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT, strict)
 }
 
 // Used by stub client code
@@ -101,7 +105,7 @@ internal fun createStub(
     )
 }
 
-internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMillis: Long): ContractStub {
+internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMillis: Long, strict: Boolean = false): ContractStub {
     val workingDirectory = WorkingDirectory()
     // TODO - see if these two can be extracted out.
     val configFileName = getConfigFileName()

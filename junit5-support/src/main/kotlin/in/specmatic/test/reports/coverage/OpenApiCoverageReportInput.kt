@@ -75,20 +75,29 @@ class OpenApiCoverageReportInput(
         }
 
         val totalAPICount = apiTestsGrouped.keys.size
+        val groupedTests = allTests.groupBy { it.path }
 
-        val missedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.all { it.result == TestResult.Skipped  } }.size
+        val missedAPICount = groupedTests.count { (_, tests) ->
+            val failedNot404 = tests.any { it.result == TestResult.Failed && it.responseStatus != 404 }
+            val has404 = tests.any { it.responseStatus == 404 }
+            tests.all { it.result == TestResult.Skipped } || (failedNot404 && !has404)
+        }
 
-        val notImplementedAPICount = allTests.groupBy { it.path }.filter { pathMap -> pathMap.value.all { it.result in setOf(TestResult.NotImplemented,  TestResult.DidNotRun) } }.size
+        val notImplementedAPICount = groupedTests.count { (_, tests) ->
+            val failedNot404 = tests.any { it.result == TestResult.Failed && it.responseStatus != 404 }
+            val has404 = tests.any { it.responseStatus == 404 }
+            tests.all { it.result == TestResult.NotImplemented } || (failedNot404 && has404)
+        }
 
-        val partiallyMissedAPICount = allTests.groupBy { it.path }
-            .count { (_, tests) ->
-                tests.any { it.result == TestResult.Skipped } && tests.any {it.result != TestResult.Skipped }
+        val partiallyMissedAPICount = groupedTests.count { (_, tests) ->
+            tests.any { it.result == TestResult.Skipped } && tests.any { it.result != TestResult.Skipped }
+        }
+
+        val partiallyNotImplementedAPICount = groupedTests.count { (_, tests) ->
+            tests.any { it.result == TestResult.NotImplemented } && tests.any {
+                it.result in setOf(TestResult.Success, TestResult.Skipped, TestResult.Failed)
             }
-
-        val partiallyNotImplementedAPICount = allTests.groupBy { it.path }
-            .count { (_, tests) ->
-                tests.any { it.result == TestResult.NotImplemented } && tests.any {it.result in setOf(TestResult.Success , TestResult.Skipped, TestResult.Failed) }
-            }
+        }
 
         return OpenAPICoverageConsoleReport(apiCoverageRows, totalAPICount, missedAPICount, notImplementedAPICount, partiallyMissedAPICount, partiallyNotImplementedAPICount)
     }

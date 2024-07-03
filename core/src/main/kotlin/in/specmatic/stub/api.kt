@@ -52,7 +52,16 @@ fun createStub(
     host: String = "localhost",
     port: Int = 9000
 ): ContractStub {
-    return createStub(dataDirPaths, host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT)
+    return createStub(dataDirPaths, host, port, false)
+}
+
+fun createStub(
+    dataDirPaths: List<String>,
+    host: String = "localhost",
+    port: Int = 9000,
+    strict: Boolean = false
+): ContractStub {
+    return createStub(dataDirPaths, host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT, strict = strict)
 }
 
 fun createStubFromContracts(
@@ -84,7 +93,8 @@ internal fun createStub(
     dataDirPaths: List<String>,
     host: String = "localhost",
     port: Int = 9000,
-    timeoutMillis: Long
+    timeoutMillis: Long,
+    strict: Boolean = false
 ): ContractStub {
     // TODO - see if these two can be extracted out.
     val configFileName = getConfigFileName()
@@ -101,7 +111,8 @@ internal fun createStub(
         port,
         ::consoleLog,
         specmaticConfigPath = File(configFileName).canonicalPath,
-        timeoutMillis = timeoutMillis
+        timeoutMillis = timeoutMillis,
+        strictMode = strict
     )
 }
 
@@ -123,7 +134,8 @@ internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMil
         log = ::consoleLog,
         workingDirectory = workingDirectory,
         specmaticConfigPath = File(configFileName).canonicalPath,
-        timeoutMillis = timeoutMillis
+        timeoutMillis = timeoutMillis,
+        strictMode = strict
     )
 }
 

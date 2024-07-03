@@ -8,6 +8,7 @@ import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.core.utilities.contractStubPaths
+import `in`.specmatic.core.utilities.examplesDirFor
 import `in`.specmatic.core.utilities.exitIfDoesNotExist
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.NoMatchingScenario
@@ -407,14 +408,14 @@ fun implicitContractDataDir(contractPath: String, customBase: String? = null): F
     val contractFile = File(contractPath)
 
     return if(customBase == null)
-        File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}$DATA_DIR_SUFFIX")
+        examplesDirFor("${contractFile.absoluteFile.parent}/${contractFile.name}", DATA_DIR_SUFFIX)
     else {
         val gitRoot: String = File(SystemGit().inGitRootOf(contractPath).workingDirectory).canonicalPath
         val fullContractPath = File(contractPath).canonicalPath
 
         val relativeContractPath = File(fullContractPath).relativeTo(File(gitRoot))
         File(gitRoot).resolve(customBase).resolve(relativeContractPath).let {
-            File("${it.parent}/${it.nameWithoutExtension}$DATA_DIR_SUFFIX")
+            examplesDirFor("${it.parent}/${it.name}", DATA_DIR_SUFFIX)
         }
     }
 }

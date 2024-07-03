@@ -6,6 +6,7 @@ import `in`.specmatic.core.QueryParameters
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.trimmedLinesList
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -57,6 +58,17 @@ class HttpStubWithArrayQueryParameterTest {
     @Test
     fun `should match stub for mandatory query parameter with externalized json expectation`() {
         createStubFromContracts(listOf("src/test/resources/openapi/spec_with_mandatory_array_query_parameter.yaml"), timeoutMillis = 0).use { stub ->
+            val queryParameters = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "brand_ids" to "3"))
+            val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toString()).isEqualTo("product list from externalized json")
+        }
+    }
+
+    @Test
+    fun `should match stub for mandatory query parameter with externalized json expectation from _data dir`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/spec_without_stub_data_in_examples_dir.yaml"), timeoutMillis = 0).use { stub ->
             val queryParameters = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "brand_ids" to "3"))
             val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
 

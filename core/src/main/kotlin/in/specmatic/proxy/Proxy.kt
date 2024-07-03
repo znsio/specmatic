@@ -149,7 +149,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
         } else {
             outputDirectory.createDirectory()
 
-            val stubDataDirectory = outputDirectory.subDirectory("${base}_data")
+            val stubDataDirectory = outputDirectory.subDirectory("${base}$EXAMPLES_DIR_SUFFIX")
             stubDataDirectory.createDirectory()
 
             stubs.mapIndexed { index, namedStub ->

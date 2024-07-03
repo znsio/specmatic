@@ -43,6 +43,30 @@ class LoadTestsFromExternalisedFiles {
     }
 
     @Test
+    fun `should load and execute externalized tests for header and request body from _tests directory`() {
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test.yaml")
+            .toFeature().loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.path).isEqualTo("/order_action_figure")
+                assertThat(request.method).isEqualTo("POST")
+                assertThat(request.headers).containsEntry("X-Request-ID", "12345")
+                assertThat(request.body).isEqualTo(parsedJSONObject("""{"name": "Master Yoda", "description": "Head of the Jedi Council"}"""))
+
+                return HttpResponse.ok(parsedJSONObject("""{"id": 1}"""))
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        println(results.report())
+        assertThat(results.successCount).isEqualTo(1)
+        assertThat(results.failureCount).isEqualTo(0)
+    }
+
+    @Test
     fun `externalized tests should replace example tests`() {
         val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test_and_one_example.yaml")
             .toFeature().loadExternalisedExamples()

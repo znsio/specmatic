@@ -67,6 +67,17 @@ class HttpStubWithArrayQueryParameterTest {
     }
 
     @Test
+    fun `should match stub for mandatory query parameter with externalized json expectation from _data dir`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/spec_without_stub_data_in_examples_dir.yaml"), timeoutMillis = 0).use { stub ->
+            val queryParameters = QueryParameters(paramPairs = listOf("brand_ids" to "1", "brand_ids" to "2", "brand_ids" to "3"))
+            val response = stub.client.execute(HttpRequest("GET", "/products", queryParams = queryParameters) )
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toString()).isEqualTo("product list from externalized json")
+        }
+    }
+
+    @Test
     fun `should match stub for mandatory query parameter with expectation from examples in spec`() {
         val contract = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_mandatory_array_query_parameter_with_examples.yaml").toFeature()
         HttpStub(contract).use { stub ->

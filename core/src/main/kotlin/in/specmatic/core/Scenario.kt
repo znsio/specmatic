@@ -355,8 +355,8 @@ data class Scenario(
                     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
                         return "The $keyLabel $keyName in the specification was missing in example ${row.name}"
                     }
-
-                }
+                },
+                mockMode = true
             )
 
             try {

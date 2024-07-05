@@ -300,7 +300,7 @@ class OpenApiSpecification(
     private fun openApiToScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
         val data: List<Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>>> =
             openApiPaths().map { (openApiPath, pathItem) ->
-                openApiOperations(pathItem).map { (httpMethod, openApiOperation) ->
+                val scenariosAndExamples = openApiOperations(pathItem).map { (httpMethod, openApiOperation) ->
                     try {
                         openApiOperation.validateParameters()
                     } catch (e: ContractException) {
@@ -312,21 +312,24 @@ class OpenApiSpecification(
                     val specmaticPathParam = toSpecmaticPathParam(openApiPath, operation)
                     val specmaticQueryParam = toSpecmaticQueryParam(operation)
 
-                    val httpResponsePatterns: List<ResponsePatternData> = attempt(breadCrumb = "$httpMethod $openApiPath -> RESPONSE") {
-                        toHttpResponsePatterns(operation.responses)
-                    }
+                    val httpResponsePatterns: List<ResponsePatternData> =
+                        attempt(breadCrumb = "$httpMethod $openApiPath -> RESPONSE") {
+                            toHttpResponsePatterns(operation.responses)
+                        }
 
-                    val httpRequestPatterns: List<RequestPatternsData> = attempt("In $httpMethod $openApiPath request") {
-                        toHttpRequestPatterns(
-                            specmaticPathParam, specmaticQueryParam, httpMethod, operation
-                        )
-                    }
+                    val httpRequestPatterns: List<RequestPatternsData> =
+                        attempt("In $httpMethod $openApiPath request") {
+                            toHttpRequestPatterns(
+                                specmaticPathParam, specmaticQueryParam, httpMethod, operation
+                            )
+                        }
 
                     val scenarioInfos =
                         httpResponsePatterns.map { (response, responseMediaType: MediaType, httpResponsePattern, responseExamples: Map<String, HttpResponse>) ->
 
                             httpRequestPatterns.map { (httpRequestPattern, _: Map<String, List<HttpRequest>>, openApiRequest) ->
-                                val specmaticExampleRows: List<Row> = testRowsFromExamples(responseExamples, operation, openApiRequest)
+                                val specmaticExampleRows: List<Row> =
+                                    testRowsFromExamples(responseExamples, operation, openApiRequest)
                                 val scenarioName = scenarioName(operation, response, httpRequestPattern)
 
                                 val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
@@ -360,7 +363,23 @@ class OpenApiSpecification(
                     val examples =
                         collateExamplesForExpectations(requestExamples, responseExamplesList)
 
-                    scenarioInfos to examples
+                    val requestExampleNames = requestExamples.keys
+
+                    Triple(scenarioInfos, examples, requestExampleNames)
+                }
+
+                val requestExampleNames = scenariosAndExamples.flatMap { it.third }.toSet()
+
+                val usedExamples = scenariosAndExamples.flatMap { it.second.keys }.toSet()
+
+                val unusedRequestExampleNames = requestExampleNames - usedExamples
+
+                unusedRequestExampleNames.forEach { unusedRequestExampleName ->
+                    logger.log(missingResponseExampleErrorMessageForTest(unusedRequestExampleName))
+                }
+
+                scenariosAndExamples.map {
+                    it.first to it.second
                 }
             }.flatten()
 
@@ -437,12 +456,6 @@ class OpenApiSpecification(
         val requestBodyExampleNames = requestBodyExampleNames(openApiRequest)
 
         val requestKeys = parameterKeys + requestBodyExampleNames
-
-        val missingExampleNamesInResponse = requestKeys.filter { it !in responseExamples }
-
-        missingExampleNamesInResponse.forEach { exampleName ->
-            logger.log(missingResponseExampleErrorMessageForTest(exampleName))
-        }
 
         return responseExamples.mapNotNull { (exampleName, responseExample) ->
             val parameterExamples: Map<String, Any> = parameterExamples(operation, exampleName)

@@ -144,14 +144,19 @@ data class HttpResponsePattern(
         return Result.fromResults(listOf(headerResult, bodyResult)).breadCrumb("RESPONSE")
     }
 
-    companion object {
-        fun fromResponseExpectation(response: HttpResponse): HttpResponsePattern {
-            return HttpResponsePattern(
-                HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }),
-                response.status,
-                response.body.exactMatchElseType()
-            )
-        }
+    fun fromResponseExpectation(response: HttpResponse): HttpResponsePattern {
+        val responseHeaders = response.headers.mapValues { stringToPattern(it.value, it.key) }
+
+        val contentTypeHeader = if("content-type" !in responseHeaders.keys.map { it.lowercase() } && headersPattern.contentType != null)
+            mapOf("Content-Type" to ExactValuePattern(StringValue(headersPattern.contentType)))
+        else
+            emptyMap()
+
+        return HttpResponsePattern(
+            HttpHeadersPattern(responseHeaders + contentTypeHeader),
+            response.status,
+            response.body.exactMatchElseType()
+        )
     }
 }
 

@@ -493,7 +493,7 @@ data class Scenario(
         scenarioBreadCrumb(this) {
             attempt(breadCrumb = "RESPONSE") {
                 val resolver = Resolver(expectedFacts, false, patterns)
-                Pair(resolver, HttpResponsePattern.fromResponseExpectation(response).generateResponse(resolver))
+                Pair(resolver, httpResponsePattern.fromResponseExpectation(response).generateResponse(resolver))
             }
         }
 

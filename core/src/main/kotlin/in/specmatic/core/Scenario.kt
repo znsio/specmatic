@@ -342,33 +342,11 @@ data class Scenario(
         val updatedResolver = flagsBased.update(resolver)
 
         rowsToValidate.forEach { row ->
-            val resolverForExample = updatedResolver.copy(
-                mismatchMessages = object : MismatchMessages {
-                    override fun mismatchMessage(expected: String, actual: String): String {
-                        return "Expected $expected as per the specification, but the example ${row.name} had $actual."
-                    }
-
-                    override fun unexpectedKey(keyLabel: String, keyName: String): String {
-                        return "The $keyLabel $keyName was found in the example ${row.name} but was not in the specification."
-                    }
-
-                    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
-                        return "The $keyLabel $keyName in the specification was missing in example ${row.name}"
-                    }
-                },
-                mockMode = true
-            )
+            val resolverForExample = resolverForValidation(updatedResolver, row)
 
             try {
-                httpRequestPattern.newBasedOn(row, resolverForExample, status).first().value
-                val responseExample: ResponseExample? = row.responseExample
-
-                if (responseExample != null) {
-                    val responseMatchResult =
-                        httpResponsePattern.matches(responseExample.responseExample, resolverForExample)
-
-                    responseMatchResult.throwOnFailure()
-                }
+                validateRequestExample(row, resolverForExample)
+                validateResponseExample(row, resolverForExample)
             } catch(t: Throwable) {
                 val title = "Error loading test data for ${this.testDescription().trim()}".plus(
                     if(row.fileSource != null)
@@ -384,6 +362,41 @@ data class Scenario(
                 throw Exception(title + System.lineSeparator() + System.lineSeparator() + exceptionCauseMessage(t))
             }
         }
+    }
+
+    private fun resolverForValidation(
+        updatedResolver: Resolver,
+        row: Row
+    ) = updatedResolver.copy(
+        mismatchMessages = object : MismatchMessages {
+            override fun mismatchMessage(expected: String, actual: String): String {
+                return "Expected $expected as per the specification, but the example ${row.name} had $actual."
+            }
+
+            override fun unexpectedKey(keyLabel: String, keyName: String): String {
+                return "The $keyLabel $keyName was found in the example ${row.name} but was not in the specification."
+            }
+
+            override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+                return "The $keyLabel $keyName in the specification was missing in example ${row.name}"
+            }
+        },
+        mockMode = true
+    )
+
+    private fun validateResponseExample(row: Row, resolverForExample: Resolver) {
+        val responseExample: ResponseExample? = row.responseExample
+
+        if (responseExample != null) {
+            val responseMatchResult =
+                httpResponsePattern.matches(responseExample.responseExample, resolverForExample)
+
+            responseMatchResult.throwOnFailure()
+        }
+    }
+
+    private fun validateRequestExample(row: Row, resolverForExample: Resolver) {
+        httpRequestPattern.newBasedOn(row, resolverForExample, status).first().value
     }
 
     fun generateTestScenarios(

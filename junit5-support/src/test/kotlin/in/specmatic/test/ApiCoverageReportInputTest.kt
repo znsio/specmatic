@@ -16,6 +16,7 @@ class ApiCoverageReportInputTest {
     companion object {
         const val CONFIG_FILE_PATH = "./specmatic.json"
     }
+
     @Test
     fun `test generates api coverage report when all endpoints are covered`() {
         val testReportRecords = mutableListOf(
@@ -202,8 +203,8 @@ class ApiCoverageReportInputTest {
         val testReportRecords = mutableListOf(
             TestResultRecord("/route1", "GET", 200, TestResult.Success),
             TestResultRecord("/route1", "POST", 200, TestResult.Success),
-            TestResultRecord("/route2", "GET", 200, TestResult.Failed),
-            TestResultRecord("/route2", "POST", 200, TestResult.Failed)
+            TestResultRecord("/route2", "GET", 200, TestResult.Failed, actualResponseStatus = 404),
+            TestResultRecord("/route2", "POST", 200, TestResult.Failed, actualResponseStatus = 404)
         )
 
         val endpointsInSpec = mutableListOf(
@@ -218,12 +219,14 @@ class ApiCoverageReportInputTest {
         assertThat(apiCoverageReport).isEqualTo(
             OpenAPICoverageConsoleReport(
                 listOf(
-                    OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100,  Remarks.Covered),
-                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0,  Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 0,  Remarks.NotImplemented),
-                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0,  Remarks.NotImplemented)
+                    OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 0, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Missed),
+                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Missed)
                 ),
-                2, 0, 1, 0, 0
+                2, 0, 0, 1, 1
             )
         )
     }
@@ -242,7 +245,7 @@ class ApiCoverageReportInputTest {
             TestResultRecord("/route1", "GET", 200, TestResult.Success),
             TestResultRecord("/route1", "POST", 200, TestResult.Success),
             TestResultRecord("/route2", "GET", 200, TestResult.Success),
-            TestResultRecord("/route2", "POST", 200, TestResult.Failed)
+            TestResultRecord("/route2", "POST", 200, TestResult.Failed, actualResponseStatus = 404)
         )
 
         val endpointsInSpec = mutableListOf(
@@ -257,14 +260,15 @@ class ApiCoverageReportInputTest {
         assertThat(apiCoverageReport).isEqualTo(
             OpenAPICoverageConsoleReport(
                 listOf(
-                    OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100,  Remarks.Covered),
-                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0,  Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 50,  Remarks.Covered),
-                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0,  Remarks.NotImplemented),
-                    OpenApiCoverageConsoleRow("GET", "/route3/{route_id}", 0, 0, 0,  Remarks.Missed),
-                    OpenApiCoverageConsoleRow("POST", "", 0, 0, 0,  Remarks.Missed)
+                    OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 33, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Missed),
+                    OpenApiCoverageConsoleRow("GET", "/route3/{route_id}", 0, 0, 0, Remarks.Missed),
+                    OpenApiCoverageConsoleRow("POST", "", 0, 0, 0, Remarks.Missed)
                 ),
-                3, 1, 0, 0, 1
+                3, 1, 0, 1, 1
             )
         )
     }
@@ -283,7 +287,7 @@ class ApiCoverageReportInputTest {
             TestResultRecord("/route1", "GET", 200, TestResult.Success, "git", "https://github.com/znsio/specmatic-order-contracts.git", "main", "in/specmatic/examples/store/route1.yaml", "HTTP"),
             TestResultRecord("/route1", "POST", 200, TestResult.Success, "git", "https://github.com/znsio/specmatic-order-contracts.git", "main", "in/specmatic/examples/store/route1.yaml", "HTTP"),
             TestResultRecord("/route2", "GET", 200, TestResult.Success, "git", "https://github.com/znsio/specmatic-order-contracts.git", "main", "in/specmatic/examples/store/route2.yaml", "HTTP"),
-            TestResultRecord("/route2", "POST", 200, TestResult.Failed, "git", "https://github.com/znsio/specmatic-order-contracts.git", "main", "in/specmatic/examples/store/route2.yaml", "HTTP")
+            TestResultRecord("/route2", "POST", 200, TestResult.Failed, "git", "https://github.com/znsio/specmatic-order-contracts.git", "main", "in/specmatic/examples/store/route2.yaml", "HTTP", actualResponseStatus = 404)
         )
 
         val endpointsInSpec = mutableListOf(
@@ -298,7 +302,9 @@ class ApiCoverageReportInputTest {
             encodeDefaults = false
         }
         val reportJson = json.encodeToString(openApiCoverageJsonReport)
-        assertThat(reportJson.trimIndent()).isEqualTo("""{"specmaticConfigPath":"./specmatic.json","apiCoverage":[{"type":"git","repository":"https://github.com/znsio/specmatic-order-contracts.git","branch":"main","specification":"in/specmatic/examples/store/route1.yaml","serviceType":"HTTP","operations":[{"path":"/route1","method":"GET","responseCode":200,"count":1,"coverageStatus":"covered"},{"path":"/route1","method":"POST","responseCode":200,"count":1,"coverageStatus":"covered"}]},{"type":"git","repository":"https://github.com/znsio/specmatic-order-contracts.git","branch":"main","specification":"in/specmatic/examples/store/route2.yaml","serviceType":"HTTP","operations":[{"path":"/route2","method":"GET","responseCode":200,"count":1,"coverageStatus":"covered"},{"path":"/route2","method":"POST","responseCode":200,"count":1,"coverageStatus":"not implemented"}]},{"type":null,"repository":null,"branch":null,"specification":null,"serviceType":"HTTP","operations":[{"path":"/route3/{route_id}","method":"GET","coverageStatus":"missing in spec"},{"path":"/route3/{route_id}","method":"POST","coverageStatus":"missing in spec"}]}]}""")
+        assertThat(reportJson.trimIndent()).isEqualTo(
+            """{"specmaticConfigPath":"./specmatic.json","apiCoverage":[{"type":"git","repository":"https://github.com/znsio/specmatic-order-contracts.git","branch":"main","specification":"in/specmatic/examples/store/route1.yaml","serviceType":"HTTP","operations":[{"path":"/route1","method":"GET","responseCode":200,"count":1,"coverageStatus":"covered"},{"path":"/route1","method":"POST","responseCode":200,"count":1,"coverageStatus":"covered"}]},{"type":"git","repository":"https://github.com/znsio/specmatic-order-contracts.git","branch":"main","specification":"in/specmatic/examples/store/route2.yaml","serviceType":"HTTP","operations":[{"path":"/route2","method":"GET","responseCode":200,"count":1,"coverageStatus":"covered"},{"path":"/route2","method":"POST","responseCode":404,"count":1,"coverageStatus":"missing in spec"},{"path":"/route2","method":"POST","responseCode":200,"count":1,"coverageStatus":"not implemented"}]},{"type":null,"repository":null,"branch":null,"specification":null,"serviceType":"HTTP","operations":[{"path":"/route3/{route_id}","method":"GET","coverageStatus":"missing in spec"},{"path":"/route3/{route_id}","method":"POST","coverageStatus":"missing in spec"}]}]}"""
+        )
     }
 
     @Test
@@ -339,6 +345,410 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("POST", "", 500, 1, 0, Remarks.Covered)
                 ),
                 2, 0, 0, 0, 0
+            )
+        )
+    }
+
+    @Test
+    fun `test generate api coverage report with endpoints 2xx in spec not implemented with actuator`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/order/{id}", "GET", 200),
+            Endpoint("/order/{id}", "POST", 201),
+            Endpoint("/order/{id}", "POST", 400)
+        )
+
+        val applicationAPIs = mutableListOf<API>()
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404),
+            TestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
+            TestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
+        )
+
+        val apiCoverageReport = OpenApiCoverageReportInput(
+            CONFIG_FILE_PATH,
+            testResultRecords,
+            applicationAPIs,
+            allEndpoints = endpointsInSpec,
+            endpointsAPISet = true
+        ).generate()
+
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 0, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Missed),
+                    OpenApiCoverageConsoleRow("POST", "", 201, 1, 0, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 400, 1, 0, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 404, 2, 0, Remarks.Missed)
+                ),
+                1, 0, 0, 1, 1
+            )
+        )
+    }
+
+    @Test
+    fun `test generate api coverage report with endpoints 2xx in spec not implemented without actuator`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/order/{id}", "GET", 200),
+            Endpoint("/order/{id}", "POST", 201),
+            Endpoint("/order/{id}", "POST", 400)
+        )
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404),
+            TestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
+            TestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
+        )
+
+        val apiCoverageReport =
+            OpenApiCoverageReportInput(CONFIG_FILE_PATH, testResultRecords, allEndpoints = endpointsInSpec).generate()
+
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 0, Remarks.NotCovered),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Missed),
+                    OpenApiCoverageConsoleRow("POST", "", 201, 1, 0, Remarks.NotCovered),
+                    OpenApiCoverageConsoleRow("", "", 400, 1, 0, Remarks.NotCovered),
+                    OpenApiCoverageConsoleRow("", "", 404, 2, 0, Remarks.Missed)
+                ),
+                1, 0, 0, 1, 0
+            )
+        )
+    }
+
+    @Test
+    fun `test generate api coverage report with endpoints 2xx and 4xx in spec not implemented with actuator`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/order/{id}", "GET", 200),
+            Endpoint("/order/{id}", "GET", 404),
+            Endpoint("/order/{id}", "POST", 201),
+            Endpoint("/order/{id}", "POST", 400),
+            Endpoint("/order/{id}", "POST", 404)
+        )
+
+        val applicationAPIs = mutableListOf<API>()
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404),
+            TestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
+            TestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
+        )
+
+        val apiCoverageReport = OpenApiCoverageReportInput(
+            CONFIG_FILE_PATH,
+            testResultRecords,
+            applicationAPIs,
+            allEndpoints = endpointsInSpec,
+            endpointsAPISet = true
+        ).generate()
+
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 40, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("POST", "", 201, 1, 0, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 400, 1, 0, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 404, 2, 0, Remarks.Covered)
+                ),
+                1, 0, 0, 0, 1
+            )
+        )
+    }
+
+    @Test
+    fun `test generate api coverage report with endpoints 2xx and 4xx in spec not implemented without actuator`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/order/{id}", "GET", 200),
+            Endpoint("/order/{id}", "GET", 404),
+            Endpoint("/order/{id}", "POST", 201),
+            Endpoint("/order/{id}", "POST", 400),
+            Endpoint("/order/{id}", "POST", 404)
+        )
+
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404),
+            TestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
+            TestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
+        )
+
+        val apiCoverageReport =
+            OpenApiCoverageReportInput(CONFIG_FILE_PATH, testResultRecords, allEndpoints = endpointsInSpec).generate()
+
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 40, Remarks.NotCovered),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("POST", "", 201, 1, 0, Remarks.NotCovered),
+                    OpenApiCoverageConsoleRow("", "", 400, 1, 0, Remarks.NotCovered),
+                    OpenApiCoverageConsoleRow("", "", 404, 2, 0, Remarks.Covered)
+                ),
+                1, 0, 0, 0, 0
+            )
+        )
+    }
+
+    @Test
+    fun `test generate api coverage report with endpoints 2xx and 4xx in spec implemented with actuator`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/order/{id}", "GET", 200),
+            Endpoint("/order/{id}", "GET", 404),
+            Endpoint("/order/{id}", "POST", 201),
+            Endpoint("/order/{id}", "POST", 400),
+            Endpoint("/order/{id}", "POST", 404)
+        )
+
+        val applicationAPIs = mutableListOf(
+            API("GET", "/order/{id}"),
+            API("POST", "/order/{id}")
+        )
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/order/{id}", "GET", 200, TestResult.Success, actualResponseStatus = 200),
+            TestResultRecord("/order/{id}", "POST", 201, TestResult.Success, actualResponseStatus = 201),
+            TestResultRecord("/order/{id}", "POST", 400, TestResult.Success, actualResponseStatus = 400)
+        )
+
+        val apiCoverageReport = OpenApiCoverageReportInput(
+            CONFIG_FILE_PATH,
+            testResultRecords,
+            applicationAPIs,
+            allEndpoints = endpointsInSpec,
+            endpointsAPISet = true
+        ).generate()
+
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 60, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("", "", 404, 0, 0, Remarks.DidNotRun),
+                    OpenApiCoverageConsoleRow("POST", "", 201, 1, 0, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("", "", 400, 1, 0, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("", "", 404, 0, 0, Remarks.DidNotRun)
+                ),
+                1, 0, 0, 0, 0
+            )
+        )
+    }
+
+    @Test
+    fun `test generate api coverage report with endpoints 2xx and 4xx in spec implemented without actuator`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/order/{id}", "GET", 200),
+            Endpoint("/order/{id}", "GET", 404),
+            Endpoint("/order/{id}", "POST", 201),
+            Endpoint("/order/{id}", "POST", 400),
+            Endpoint("/order/{id}", "POST", 404)
+        )
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/order/{id}", "GET", 200, TestResult.Success, actualResponseStatus = 200),
+            TestResultRecord("/order/{id}", "POST", 201, TestResult.Success, actualResponseStatus = 201),
+            TestResultRecord("/order/{id}", "POST", 400, TestResult.Success, actualResponseStatus = 400)
+        )
+
+        val apiCoverageReport =
+            OpenApiCoverageReportInput(CONFIG_FILE_PATH, testResultRecords, allEndpoints = endpointsInSpec).generate()
+
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 60, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("", "", 404, 0, 0, Remarks.DidNotRun),
+                    OpenApiCoverageConsoleRow("POST", "", 201, 1, 0, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("", "", 400, 1, 0, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("", "", 404, 0, 0, Remarks.DidNotRun)
+                ),
+                1, 0, 0, 0, 0
+            )
+        )
+    }
+
+    // BAD ORDER ID REQUESTS, FOR WITHOUT ACTUATOR IMPLEMENTATION DOESN'T MATTER
+
+    @Test
+    fun `test generate api coverage report with endpoint 2xx in spec without actuator bad order id`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/order/{id}", "GET", 200)
+        )
+
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
+        )
+
+        val apiCoverageReport =
+            OpenApiCoverageReportInput(CONFIG_FILE_PATH, testResultRecords, allEndpoints = endpointsInSpec).generate()
+
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 0, Remarks.NotCovered),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Missed),
+                ),
+                1, 0, 0, 1, 0
+            )
+        )
+    }
+
+    @Test
+    fun `test generate api coverage report with endpoint 2xx and 4xx in spec without with actuator bad order id`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/order/{id}", "GET", 200),
+            Endpoint("/order/{id}", "GET", 404)
+        )
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404),
+            TestResultRecord("/order/{id}", "GET", 404, TestResult.Success, actualResponseStatus = 404)
+        )
+
+        val apiCoverageReport =
+            OpenApiCoverageReportInput(CONFIG_FILE_PATH, testResultRecords, allEndpoints = endpointsInSpec).generate()
+
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.NotCovered),
+                    OpenApiCoverageConsoleRow("", "", 404, 2, 0, Remarks.Covered),
+                ),
+                1, 0, 0, 0, 0
+            )
+        )
+    }
+
+    @Test
+    fun `test generate api coverage report with endpoint 2xx in spec not implemented with actuator bad order id`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/order/{id}", "GET", 200)
+        )
+
+        val applicationAPIs = mutableListOf<API>()
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
+        )
+
+        val apiCoverageReport = OpenApiCoverageReportInput(
+            CONFIG_FILE_PATH,
+            testResultRecords,
+            applicationAPIs,
+            allEndpoints = endpointsInSpec,
+            endpointsAPISet = true
+        ).generate()
+
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 0, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Missed),
+                ),
+                1, 0, 0, 1, 1
+            )
+        )
+    }
+
+    @Test
+    fun `test generate api coverage report with endpoint 2xx and 4xx in spec not implemented with actuator bad order id`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/order/{id}", "GET", 200),
+            Endpoint("/order/{id}", "GET", 404)
+        )
+
+        val applicationAPIs = mutableListOf<API>()
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404),
+            TestResultRecord("/order/{id}", "GET", 404, TestResult.Success, actualResponseStatus = 404)
+        )
+
+        val apiCoverageReport = OpenApiCoverageReportInput(
+            CONFIG_FILE_PATH,
+            testResultRecords,
+            applicationAPIs,
+            allEndpoints = endpointsInSpec,
+            endpointsAPISet = true
+        ).generate()
+
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 404, 2, 0, Remarks.Covered),
+                ),
+                1, 0, 0, 0, 1
+            )
+        )
+    }
+
+    @Test
+    fun `test generate api coverage report with endpoint 2xx in spec implemented with actuator bad order id`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/order/{id}", "GET", 200)
+        )
+
+        val applicationAPIs = mutableListOf(
+            API("GET", "/order/{id}")
+        )
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
+        )
+
+        val apiCoverageReport = OpenApiCoverageReportInput(
+            CONFIG_FILE_PATH,
+            testResultRecords,
+            applicationAPIs,
+            allEndpoints = endpointsInSpec,
+            endpointsAPISet = true
+        ).generate()
+
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Missed),
+                ),
+                1, 0, 0, 1, 0
+            )
+        )
+    }
+
+    @Test
+    fun `test generate api coverage report with endpoint 2xx and 4xx in spec implemented with actuator bad order id`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/order/{id}", "GET", 200),
+            Endpoint("/order/{id}", "GET", 404)
+        )
+
+        val applicationAPIs = mutableListOf(
+            API("GET", "/order/{id}")
+        )
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404),
+            TestResultRecord("/order/{id}", "GET", 404, TestResult.Success, actualResponseStatus = 404)
+        )
+
+        val apiCoverageReport = OpenApiCoverageReportInput(
+            CONFIG_FILE_PATH,
+            testResultRecords,
+            applicationAPIs,
+            allEndpoints = endpointsInSpec,
+            endpointsAPISet = true
+        ).generate()
+
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 100, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("", "", 404, 2, 0, Remarks.Covered),
+                ),
+                1, 0, 0, 0, 0
             )
         )
     }

@@ -8,8 +8,6 @@
   },
   "http-response": {
     "status": 200,
-    "body": {
-      "id": 10
-    }
+    "body": "success"
   }
 }

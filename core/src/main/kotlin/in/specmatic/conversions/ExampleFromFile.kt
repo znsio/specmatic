@@ -1,10 +1,9 @@
 package `in`.specmatic.conversions
 
+import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.pattern.Row
-import `in`.specmatic.core.pattern.attempt
-import `in`.specmatic.core.pattern.parsedJSONObject
+import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import java.io.File
@@ -25,17 +24,57 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
             entry.map { it.key } to entry.map { it.value }
         }
 
+        val environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration()
+
+        val responseExample = response?.let { httpResponse ->
+            when {
+                environmentAndPropertiesConfiguration.validateResponseValue() ->
+                    ResponseValueExample(httpResponse)
+
+                else ->
+                    ResponseSchemaExample(httpResponse)
+            }
+
+        }
+
         return Row(
             columnNames,
             values,
             name = testName,
-            fileSource = this.file.canonicalPath
+            fileSource = this.file.canonicalPath,
+            responseExample = responseExample
         )
     }
 
     constructor(file: File) : this(parsedJSONObject(file.readText()), file)
 
     val expectationFilePath: String = file.canonicalPath
+
+    val response: HttpResponse?
+        get() {
+            if(responseBody == null && responseHeaders == null)
+                return null
+
+            val body = responseBody ?: EmptyString
+            val headers = responseHeaders ?: JSONObjectValue()
+
+            return HttpResponse(responseStatus, headers.jsonObject.mapValues { it.value.toStringLiteral() }, body)
+        }
+
+    val responseBody: Value? = attempt("Error reading response body in file ${file.parentFile.canonicalPath}") {
+        json.findFirstChildByPath("http-response.body")
+    }
+
+    val responseHeaders: JSONObjectValue? = attempt("Error reading response headers in file ${file.parentFile.canonicalPath}") {
+        val headers = json.findFirstChildByPath("http-response.headers")
+        if(headers == null)
+            return@attempt null
+
+        if(headers !is JSONObjectValue)
+            throw ContractException("http-response.headers should be a JSON object, but instead it was ${headers.toStringLiteral()}")
+
+        headers
+    }
 
     val responseStatus: Int = attempt("Error reading status in file ${file.parentFile.canonicalPath}") {
         json.findFirstChildByPath("http-response.status")?.toStringLiteral()?.toInt()

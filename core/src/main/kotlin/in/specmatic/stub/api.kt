@@ -116,10 +116,10 @@ internal fun createStub(
     )
 }
 
-internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMillis: Long, strict: Boolean = false): ContractStub {
+internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMillis: Long, strict: Boolean = false, givenConfigFileName: String? = null): ContractStub {
     val workingDirectory = WorkingDirectory()
     // TODO - see if these two can be extracted out.
-    val configFileName = getConfigFileName()
+    val configFileName = givenConfigFileName ?: getConfigFileName()
     exitIfDoesNotExist("config file", configFileName)
 
     val stubs = loadContractStubsFromImplicitPaths(contractStubPaths(configFileName))

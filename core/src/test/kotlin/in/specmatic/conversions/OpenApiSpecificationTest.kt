@@ -8022,6 +8022,29 @@ paths:
             .contains("WARNING: Ignoring request example named $exampleName for test or stub data, because no associated response example named $exampleName was found.")
     }
 
+    @Test
+    fun `when a header is missing in an expectation the header from the spec should be used`() {
+        val defaultSpecmaticConfig = Configuration.globalConfigFileName
+
+        try {
+            Configuration.globalConfigFileName = "src/test/resources/openapi/response_expectation_missing_content_type/specmatic.yaml"
+
+            createStub("localhost", 9000, 1000, false, "src/test/resources/openapi/response_expectation_missing_content_type/specmatic.yaml").use { stub ->
+                val response = stub.client.execute(
+                    HttpRequest("POST", "/person", body = StringValue("hello"))
+                )
+
+                val responseContentType = response.headers["Content-Type"]
+
+                assertThat(responseContentType).isEqualTo("text/something_else")
+
+                assertThat(response.body.toStringLiteral()).isEqualTo("world")
+            }
+        } finally {
+            Configuration.globalConfigFileName = defaultSpecmaticConfig
+        }
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

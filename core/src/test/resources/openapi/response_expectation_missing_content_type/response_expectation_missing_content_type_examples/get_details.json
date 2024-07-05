@@ -1,0 +1,11 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/person",
+    "body": "hello"
+  },
+  "http-response": {
+    "status": 200,
+    "body": "world"
+  }
+}

@@ -6,16 +6,14 @@ import `in`.specmatic.core.Flags
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.log.*
-import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSONArray
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.fail
 import org.junit.jupiter.api.Test
-import java.util.function.Consumer
 
 class LoadTestsFromExternalisedFiles {
     @Test
@@ -62,28 +60,6 @@ class LoadTestsFromExternalisedFiles {
         })
 
         println(results.report())
-        assertThat(results.successCount).isEqualTo(1)
-        assertThat(results.failureCount).isEqualTo(0)
-    }
-
-    @Test
-    fun `externalized tests should replace example tests`() {
-        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test_and_one_example.yaml")
-            .toFeature().loadExternalisedExamples()
-
-        val results = feature.executeTests(object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                assertThat(request.path).isEqualTo("/order_action_figure")
-                assertThat(request.method).isEqualTo("POST")
-                assertThat(request.body).isEqualTo(parsedJSONObject("""{"name": "Master Yoda", "description": "Head of the Jedi Council"}"""))
-
-                return HttpResponse.ok(parsedJSONObject("""{"id": 1}"""))
-            }
-
-            override fun setServerState(serverState: Map<String, Value>) {
-            }
-        })
-
         assertThat(results.successCount).isEqualTo(1)
         assertThat(results.failureCount).isEqualTo(0)
     }
@@ -238,4 +214,30 @@ class LoadTestsFromExternalisedFiles {
         assertThat(results.successCount).isEqualTo(1)
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
-}
+
+    @Test
+    fun `external and internal examples are both run as tests`() {
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/has_inline_and_external_examples.yaml")
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val idsSeen = mutableListOf<String>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val path = request.path ?: fail("Path expected")
+                idsSeen.add(path.split("/").last())
+
+                return HttpResponse(200, parsedJSONObject("""{"id": 10, "name": "Jack"}""")).also {
+                    println("---")
+                    println(request.toLogString())
+                    println(it.toLogString())
+                    println()
+                }
+            }
+        })
+
+        assertThat(idsSeen).containsExactlyInAnyOrder("123", "456")
+        assertThat(results.testCount).isEqualTo(2)
+    }}

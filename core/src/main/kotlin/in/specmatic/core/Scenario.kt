@@ -538,7 +538,7 @@ data class Scenario(
             listOf(Examples(columns, rowsWithPathData))
         }.flatten()
 
-        return this.copy(examples = newExamples)
+        return this.copy(examples = this.examples + newExamples)
     }
 
     private fun matchingRows(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>) =

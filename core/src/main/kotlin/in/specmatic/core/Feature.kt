@@ -1363,7 +1363,7 @@ data class Feature(
                         requestMethod,
                         requestPath,
                         responseStatus
-                    ) to exampleFromFile.toRow()
+                    ) to exampleFromFile.toRow(environmentAndPropertiesConfiguration)
                 }
             } catch (e: Throwable) {
                 logger.log(e, "Error reading file ${exampleFromFile.expectationFilePath}")

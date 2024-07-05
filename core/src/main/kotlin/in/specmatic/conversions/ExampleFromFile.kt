@@ -9,7 +9,7 @@ import `in`.specmatic.core.value.Value
 import java.io.File
 
 class ExampleFromFile(val json: JSONObjectValue, val file: File) {
-    fun toRow(): Row {
+    fun toRow(environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration()): Row {
         logger.log("Loading test file ${this.expectationFilePath}")
 
         val examples: Map<String, String> =
@@ -23,8 +23,6 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         ) = examples.entries.let { entry ->
             entry.map { it.key } to entry.map { it.value }
         }
-
-        val environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration()
 
         val responseExample = response?.let { httpResponse ->
             when {

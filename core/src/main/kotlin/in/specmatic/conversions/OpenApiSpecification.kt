@@ -61,6 +61,7 @@ class OpenApiSpecification(
     }
 
     companion object {
+
         fun fromFile(openApiFilePath: String, relativeTo: String = ""): OpenApiSpecification {
             val openApiFile = File(openApiFilePath).let { openApiFile ->
                 if (openApiFile.isAbsolute) {
@@ -74,9 +75,12 @@ class OpenApiSpecification(
         }
 
         fun fromFile(openApiFilePath: String): OpenApiSpecification {
-            return OpenApiSpecification(openApiFilePath, getParsedOpenApi(openApiFilePath))
+            return fromFile(openApiFilePath, EnvironmentAndPropertiesConfiguration())
         }
 
+        fun fromFile(openApiFilePath: String, environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration): OpenApiSpecification {
+            return OpenApiSpecification(openApiFilePath, getParsedOpenApi(openApiFilePath), environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration)
+        }
 
         fun getParsedOpenApi(openApiFilePath: String): OpenAPI {
             return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences())

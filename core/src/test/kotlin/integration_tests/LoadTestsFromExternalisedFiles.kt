@@ -240,4 +240,104 @@ class LoadTestsFromExternalisedFiles {
 
         assertThat(idsSeen).containsExactlyInAnyOrder("123", "456")
         assertThat(results.testCount).isEqualTo(2)
-    }}
+    }
+
+    @Test
+    fun `tests from external examples validate response schema as per the given example by default`() {
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/has_inline_and_external_examples.yaml")
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val idsSeen = mutableListOf<String>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val path = request.path ?: fail("Path expected")
+                idsSeen.add(path.split("/").last())
+
+                return HttpResponse(200, parsedJSONObject("""{"id": 10, "name": "Justin"}""")).also {
+                    println("---")
+                    println(request.toLogString())
+                    println(it.toLogString())
+                    println()
+                }
+            }
+        })
+
+        assertThat(idsSeen).containsExactlyInAnyOrder("123", "456")
+        assertThat(results.testCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `tests from external examples validate response values when the VALIDATE_RESPONSE_VALUE flag is true`() {
+        val enableResponseValueValidation = EnvironmentAndPropertiesConfiguration(
+            mapOf(
+                "VALIDATE_RESPONSE_VALUE" to "true"
+            ),
+            emptyMap()
+        )
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/has_inline_and_external_examples.yaml", enableResponseValueValidation)
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val path = request.path ?: fail("Path expected")
+                val id = path.split("/").last()
+
+                return when(id) {
+                    "123" -> HttpResponse(200, parsedJSONObject("""{"id": 123, "name": "John Doe"}"""))
+                    "456" -> HttpResponse(200, parsedJSONObject("""{"id": 456, "name": "Alice Johnson"}"""))
+                    else -> HttpResponse(400, "Expected either 123 or 456")
+                }.also {
+                    println("---")
+                    println(request.toLogString())
+                    println(it.toLogString())
+                    println()
+                }
+            }
+        })
+
+        assertThat(results.testCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `tests from external examples reject responses with values different from the example when the VALIDATE_RESPONSE_VALUE flag is true`() {
+        val enableResponseValueValidation = EnvironmentAndPropertiesConfiguration(
+            mapOf(
+                "VALIDATE_RESPONSE_VALUE" to "true"
+            ),
+            emptyMap()
+        )
+
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/has_inline_and_external_examples.yaml", enableResponseValueValidation)
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val path = request.path ?: fail("Path expected")
+                val id = path.split("/").last()
+
+                return when(id) {
+                    "123" -> HttpResponse(200, parsedJSONObject("""{"id": 123, "name": "Unexpected name instead of John Doe"}"""))
+                    "456" -> HttpResponse(200, parsedJSONObject("""{"id": 456, "name": "Unexpected name instead of Alice Johnson"}"""))
+                    else -> HttpResponse(400, "Expected either 123 or 456")
+                }.also {
+                    println("---")
+                    println(request.toLogString())
+                    println(it.toLogString())
+                    println()
+                }
+            }
+        })
+
+        println(results.report())
+
+        assertThat(results.testCount).isEqualTo(2)
+        assertThat(results.failureCount).isEqualTo(2)
+    }
+}

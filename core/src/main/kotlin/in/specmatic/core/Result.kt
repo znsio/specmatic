@@ -214,7 +214,10 @@ enum class TestResult {
     Failed,
     Skipped,
     NotImplemented,
-    DidNotRun
+    DidNotRun,
+    MissingInSpec,
+    NotCovered,
+    Covered
 }
 
 enum class FailureReason(val fluffLevel: Int) {

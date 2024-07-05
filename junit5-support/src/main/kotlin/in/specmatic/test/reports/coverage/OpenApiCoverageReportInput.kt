@@ -42,7 +42,7 @@ class OpenApiCoverageReportInput(
 
     fun generate(): OpenAPICoverageConsoleReport {
         val testResults = testResultRecords.filter { testResult -> excludedAPIs.none { it == testResult.path } }
-        val testResultsWithNotImplementedEndpoints = identifyTestsThatFailedBecauseOfEndpointsThatWereNotImplemented(testResults)
+        val testResultsWithNotImplementedEndpoints = identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults)
         var allTests = addTestResultsForMissingEndpoints(testResultsWithNotImplementedEndpoints)
         allTests = addTestResultsForTestsNotGeneratedBySpecmatic(allTests, allEndpoints)
         allTests = sortByPathMethodResponseStatus(allTests)
@@ -76,27 +76,22 @@ class OpenApiCoverageReportInput(
 
         val totalAPICount = apiTestsGrouped.keys.size
         val groupedTests = allTests.groupBy { it.path }
+        val missedTestSet = setOf(TestResult.Skipped, TestResult.MissingInSpec)
 
         val missedAPICount = groupedTests.count { (_, tests) ->
-            val failedNot404 = tests.any { it.result == TestResult.Failed && it.responseStatus != 404 }
-            val has404 = tests.any { it.responseStatus == 404 }
-            tests.all { it.result == TestResult.Skipped } || (failedNot404 && !has404)
+            tests.all { it.result in missedTestSet }
         }
 
         val notImplementedAPICount = groupedTests.count { (_, tests) ->
-            val failedNot404 = tests.any { it.result == TestResult.Failed && it.responseStatus != 404 }
-            val has404 = tests.any { it.responseStatus == 404 }
-            tests.all { it.result == TestResult.NotImplemented } || (failedNot404 && has404)
+            tests.all { it.result == TestResult.NotImplemented }
         }
 
         val partiallyMissedAPICount = groupedTests.count { (_, tests) ->
-            tests.any { it.result == TestResult.Skipped } && tests.any { it.result != TestResult.Skipped }
+            tests.any { it.result in missedTestSet } && tests.any { it.result !in missedTestSet }
         }
 
         val partiallyNotImplementedAPICount = groupedTests.count { (_, tests) ->
-            tests.any { it.result == TestResult.NotImplemented } && tests.any {
-                it.result in setOf(TestResult.Success, TestResult.Skipped, TestResult.Failed)
-            }
+            tests.any { it.result == TestResult.NotImplemented } && tests.any { it.result != TestResult.NotImplemented }
         }
 
         return OpenAPICoverageConsoleReport(apiCoverageRows, totalAPICount, missedAPICount, notImplementedAPICount, partiallyMissedAPICount, partiallyNotImplementedAPICount)
@@ -125,7 +120,7 @@ class OpenApiCoverageReportInput(
 
     fun generateJsonReport(): OpenApiCoverageJsonReport {
         val testResults = testResultRecords.filter { testResult -> excludedAPIs.none { it == testResult.path } }
-        val testResultsWithNotImplementedEndpoints = identifyTestsThatFailedBecauseOfEndpointsThatWereNotImplemented(testResults)
+        val testResultsWithNotImplementedEndpoints = identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults)
         val allTests = addTestResultsForMissingEndpoints(testResultsWithNotImplementedEndpoints)
         return OpenApiCoverageJsonReport(configFilePath, allTests)
     }
@@ -206,11 +201,34 @@ class OpenApiCoverageReportInput(
         )
     }
 
-    private fun identifyTestsThatFailedBecauseOfEndpointsThatWereNotImplemented(testResults: List<TestResultRecord>): List<TestResultRecord> {
-        val notImplementedTests =
-            testResults.filter { it.result == TestResult.Failed && (endpointsAPISet && applicationAPIs.none { api -> api.path == it.path && api.method == it.method }) }
-        return testResults.minus(notImplementedTests.toSet())
-            .plus(notImplementedTests.map { it.copy(result = TestResult.NotImplemented) })
+    private fun identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults: List<TestResultRecord>): List<TestResultRecord> {
+        val notImplementedAndMissingTests = mutableListOf<TestResultRecord>()
+        val failedTests = testResults.filter { it.result == TestResult.Failed }
+
+        for (test in failedTests) {
+
+            val pathHasErrorResponse = allEndpoints.any {
+                it.path == test.path && it.method == test.method && it.responseStatus == test.actualResponseStatus
+            }
+
+            notImplementedAndMissingTests.add(
+                test.copy(
+                    responseStatus = test.actualResponseStatus,
+                    result = if (pathHasErrorResponse) TestResult.Covered else TestResult.MissingInSpec,
+                    actualResponseStatus = test.actualResponseStatus
+                )
+            )
+
+            if (!endpointsAPISet) {
+                notImplementedAndMissingTests.add(test.copy(result = TestResult.NotCovered))
+                continue
+            }
+
+            val isInApplicationAPI = applicationAPIs.any { api -> api.path == test.path && api.method == test.method }
+            notImplementedAndMissingTests.add(test.copy(result = if (isInApplicationAPI) TestResult.Failed else TestResult.NotImplemented))
+        }
+
+        return testResults.minus(failedTests.toSet()).plus(notImplementedAndMissingTests);
     }
 }
 

@@ -8,7 +8,8 @@ enum class Remarks(val value: String) {
     Covered("covered"),
     Missed("missing in spec"),
     NotImplemented("not implemented"),
-    DidNotRun("did not run");
+    DidNotRun("did not run"),
+    NotCovered("not covered");
 
     override fun toString(): String {
         return value
@@ -19,6 +20,8 @@ enum class Remarks(val value: String) {
             if (testResultRecords.any { it.isExercised }) {
                 return when (testResultRecords.first().result) {
                     TestResult.NotImplemented -> NotImplemented
+                    TestResult.MissingInSpec -> Missed
+                    TestResult.NotCovered -> NotCovered
                     else -> Covered
                 }
             }

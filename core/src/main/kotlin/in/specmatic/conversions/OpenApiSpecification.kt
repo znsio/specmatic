@@ -682,6 +682,19 @@ class OpenApiSpecification(
                 toSecurityScheme(schemeName, scheme)
             } ?: mapOf(NO_SECURITY_SCHEMA_IN_SPECIFICATION to NoSecurityScheme())
 
+        val securitySchemesForRequestPattern: Map<String, OpenAPISecurityScheme> =
+            (parsedOpenApi.security.orEmpty() + operation.security.orEmpty())
+                .flatMap { it.keys }
+                .toSet()
+                .map {
+                    val securityScheme = securitySchemes[it]
+                        ?: throw ContractException("Security scheme used in $httpMethod ${httpPathPattern.path} does not exist in the spec")
+                    it to securityScheme
+                }
+            .toMap().ifEmpty {
+                    mapOf(NO_SECURITY_SCHEMA_IN_SPECIFICATION to NoSecurityScheme())
+                }
+
         val parameters = operation.parameters
 
         val headersMap = parameters.orEmpty().filterIsInstance<HeaderParameter>().associate {
@@ -694,18 +707,28 @@ class OpenApiSpecification(
             httpQueryParamPattern = httpQueryParamPattern,
             method = httpMethod,
             headersPattern = headersPattern,
-            securitySchemes = operationSecuritySchemes(operation, securitySchemes)
+            securitySchemes = operationSecuritySchemes(operation, securitySchemesForRequestPattern)
         )
 
         val exampleQueryParams = namedExampleParams(operation, QueryParameter::class.java)
         val examplePathParams = namedExampleParams(operation, PathParameter::class.java)
         val exampleHeaderParams = namedExampleParams(operation, HeaderParameter::class.java)
 
-        val exampleRequestBuilder = ExampleRequestBuilder(examplePathParams, exampleHeaderParams, exampleQueryParams, httpPathPattern, httpMethod, securitySchemes)
+        val exampleRequestBuilder = ExampleRequestBuilder(
+            examplePathParams,
+            exampleHeaderParams,
+            exampleQueryParams,
+            httpPathPattern,
+            httpMethod,
+            securitySchemesForRequestPattern
+        )
 
         val requestBody = resolveRequestBody(operation)
             ?: return listOf(
-                RequestPatternsData(requestPattern.copy(body = NoBodyPattern), exampleRequestBuilder.examplesBasedOnParameters)
+                RequestPatternsData(
+                    requestPattern.copy(body = NoBodyPattern),
+                    exampleRequestBuilder.examplesBasedOnParameters
+                )
             )
 
         return requestBody.content.map { (contentType, mediaType) ->
@@ -756,11 +779,11 @@ class OpenApiSpecification(
                 )
 
                 "application/xml" -> Pair(
-                        requestPattern.copy(
-                            body = toXMLPattern(mediaType),
-                            headersPattern = headersPatternWithContentType(requestPattern, contentType)
-                        ), emptyMap()
-                    )
+                    requestPattern.copy(
+                        body = toXMLPattern(mediaType),
+                        headersPattern = headersPatternWithContentType(requestPattern, contentType)
+                    ), emptyMap()
+                )
 
                 else -> {
                     val examplesFromMediaType = mediaType.examples ?: emptyMap()
@@ -774,7 +797,7 @@ class OpenApiSpecification(
                     val bodyIsRequired: Boolean = requestBody.required ?: true
 
                     val body = toSpecmaticPattern(mediaType, "request").let {
-                        if(bodyIsRequired)
+                        if (bodyIsRequired)
                             it
                         else
                             OptionalBodyPattern.fromPattern(it)

@@ -8,6 +8,7 @@ import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.DELAY_IN_SECONDS
 import `in`.specmatic.mock.ScenarioStub
+import `in`.specmatic.osAgnosticPath
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.test.HttpClient
 import `in`.specmatic.test.TestExecutor
@@ -28,6 +29,7 @@ import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForEntity
 import org.springframework.web.client.postForEntity
+import java.io.File
 import java.net.URI
 import java.nio.file.Paths
 import java.util.*
@@ -1398,5 +1400,100 @@ paths:
 
         assertThat(results.success()).isFalse()
         assertThat(results.report()).contains("Content-Type")
+    }
+
+    @Test
+    fun `should be able to set expectations for an API with a security scheme`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://api.example.com/v1
+    description: Optional server description, e.g. Main (production) server
+  - url: http://staging-api.example.com
+    description: Optional server description, e.g. Internal staging server for testing
+paths:
+  /hello:
+    post:
+      security:
+        - BearerAuth: []
+      summary: hello world
+      description: Optional extended description in CommonMark or HTML.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+            examples:
+              SUCCESS:
+                value:
+                  message: Hello World!
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                SUCCESS:
+                  value:
+                    Hello to you!
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+         """.trimIndent(), ""
+        ).toFeature()
+
+        val credentials = "Basic " + Base64.getEncoder().encodeToString("user:password".toByteArray())
+
+        HttpStub(feature).use { stub ->
+            val request = HttpRequest(
+                "POST",
+                "/hello",
+                mapOf("Authorization" to "Bearer $credentials", "Content-Type" to "application/json"),
+                parsedJSONObject("""{"message": "Hello there!"}""")
+            )
+
+            val expectedResponse = HttpResponse.ok("success")
+
+            stub.setExpectation(ScenarioStub(request, expectedResponse))
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.body).isEqualTo(StringValue("success"))
+        }
+    }
+
+    @Test
+    fun `should be able to load an externalized stub with an auth key`() {
+        val feature = OpenApiSpecification.fromFile(osAgnosticPath("src/test/resources/openapi/apiKeyAuthStub.yaml")).toFeature()
+
+        val examples = File(osAgnosticPath("src/test/resources/openapi/apiKeyAuthStub_examples")).listFiles().orEmpty().map { file ->
+            ScenarioStub.parse(file.readText())
+        }
+
+        HttpStub(feature, examples).use { stub ->
+            val request = HttpRequest(
+                "GET",
+                "/hello/10",
+                mapOf("X-API-KEY" to "abc123")
+            )
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.body.toStringLiteral()).isEqualTo("Hello, World!")
+        }
     }
 }

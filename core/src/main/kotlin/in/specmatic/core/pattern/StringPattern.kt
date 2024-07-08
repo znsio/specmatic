@@ -100,7 +100,7 @@ data class StringPattern (
 
         val withinRangeExample = this
 
-        val maxLengthExample = minLength?.let {
+        val maxLengthExample = maxLength?.let {
             ExactValuePattern(StringValue(randomString(it)))
         }
 

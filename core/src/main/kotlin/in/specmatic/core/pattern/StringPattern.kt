@@ -93,11 +93,34 @@ data class StringPattern (
 
         return StringValue(randomString(randomStringLength))
     }
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+        val minLengthExample = minLength?.let {
+            ExactValuePattern(StringValue(randomString(it)))
+        }
+
+        val withinRangeExample = this
+
+        val maxLengthExample = maxLength?.let {
+            ExactValuePattern(StringValue(randomString(it)))
+        }
+
+        return sequenceOf(minLengthExample, withinRangeExample, maxLengthExample).filterNotNull()
+    }
+
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return scalarAnnotation(this, sequenceOf(NullPattern, NumberPattern(), BooleanPattern()))
+        val current = this
+
+        return sequence {
+            yieldAll(scalarAnnotation(current, sequenceOf(NullPattern, NumberPattern(), BooleanPattern())))
+
+            if(minLength != null)
+                yield(HasValue(ExactValuePattern(StringValue(randomString(minLength - 1)))))
+
+            if(maxLength != null)
+                yield(HasValue(ExactValuePattern(StringValue(randomString(maxLength + 1)))))
+        }
     }
 
     override fun parse(value: String, resolver: Resolver): Value = StringValue(value)

@@ -278,4 +278,10 @@ internal class NumberPatternTest {
             ExactValuePattern(NumberValue(BigDecimal(20) + NumberPattern.BIG_DECIMAL_INC))
         )
     }
+
+    @Test
+    fun `NumberPattern with no constraints must generate a 3 digit number to ensure that Spring Boot is not able to convert it into an enum`() {
+        val number = NumberPattern().generate(Resolver()).toStringLiteral()
+        assertThat(number).hasSize(3)
+    }
 }

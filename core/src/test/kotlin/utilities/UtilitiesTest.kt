@@ -2,7 +2,6 @@ package utilities
 
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.DEFAULT_WORKING_DIRECTORY
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.SourceProvider
 import `in`.specmatic.core.git.GitCommand
@@ -27,8 +26,6 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
 import java.io.File
 import java.net.ServerSocket
 
@@ -244,8 +241,8 @@ internal class UtilitiesTest {
 
     @Test
     fun `load sources with git repo`() {
-        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
-        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+        val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
+        val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
@@ -253,9 +250,9 @@ internal class UtilitiesTest {
 
     @Test
     fun `load sources with multiple git repos`() {
-        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"]}," +
+        val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"]}," +
                 "{\"provider\": \"git\",\"repository\": \"https://repo2\",\"stub\": [\"c/1.$CONTRACT_EXTENSION\"]}]}"
-        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+        val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
                 GitRepo("https://repo1",null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()),
@@ -265,27 +262,27 @@ internal class UtilitiesTest {
     }
 
     @Test
-    fun `load sources with mono repo for stub-only qontract`() {
-        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
-        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+    fun `load sources with mono repo for stub-only config`() {
+        val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
+        val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
     }
 
     @Test
-    fun `load sources with mono repo for test-only qontract`() {
-        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"test\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
-        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+    fun `load sources with mono repo for test-only specmatic config`() {
+        val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"test\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
+        val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(GitMonoRepo(listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), listOf(), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
     }
 
     @Test
-    fun `load sources with mono repo for tests and stubs in qontract`() {
-        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"test\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"],\"stub\": [\"c/1.$CONTRACT_EXTENSION\"]}]}"
-        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+    fun `load sources with mono repo for tests and stubs in spec`() {
+        val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"test\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"],\"stub\": [\"c/1.$CONTRACT_EXTENSION\"]}]}"
+        val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(GitMonoRepo(listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), listOf("c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
@@ -293,9 +290,9 @@ internal class UtilitiesTest {
 
     @Test
     fun `load sources with multiple mono repos`() {
-        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"]}," +
+        val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"]}," +
                 "{\"provider\": \"git\",\"stub\": [\"c/1.$CONTRACT_EXTENSION\"]}]}"
-        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+        val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
             GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()),
@@ -306,9 +303,9 @@ internal class UtilitiesTest {
 
     @Test
     fun `load sources with git and mono repos`() {
-        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"]}," +
+        val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"]}," +
                 "{\"provider\": \"git\",\"stub\": [\"c/1.$CONTRACT_EXTENSION\"]}]}"
-        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+        val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
                 GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()),

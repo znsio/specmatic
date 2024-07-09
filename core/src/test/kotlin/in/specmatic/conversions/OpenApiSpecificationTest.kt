@@ -5,15 +5,16 @@ import `in`.specmatic.core.log.CompositePrinter
 import `in`.specmatic.core.log.LogMessage
 import `in`.specmatic.core.log.LogStrategy
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.pattern.NumberPattern.Companion.BIG_DECIMAL_INC
 import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.value.*
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.stub.HttpStub
-import `in`.specmatic.stub.HttpStubData
+import `in`.specmatic.stub.*
 import `in`.specmatic.stub.createStubFromContracts
 import `in`.specmatic.test.TestExecutor
 import `in`.specmatic.trimmedLinesString
+import integration_tests.testCount
 import io.ktor.util.reflect.*
 import io.mockk.every
 import io.mockk.mockk
@@ -30,6 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
+import java.math.BigDecimal
 import java.util.*
 import java.util.function.Consumer
 import java.util.stream.Stream
@@ -350,7 +352,7 @@ Pet:
             every { validateResponseValue() } returns true
         }
         val openApiSpecification = OpenApiSpecification(
-            openApiFilePath =  openApiFile,
+            openApiFilePath = openApiFile,
             parsedOpenApi = OpenApiSpecification.getParsedOpenApi(openApiFile),
             environmentAndPropertiesConfiguration = environmentAndPropertiesConfigurationMock
         )
@@ -5213,7 +5215,7 @@ paths:
             }
         """.trimIndent()
 
-            val stubDir = tempDir.resolve("data_data")
+            val stubDir = tempDir.resolve("data_examples")
             stubDir.mkdirs()
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
@@ -5269,7 +5271,7 @@ paths:
             }
         """.trimIndent()
 
-            val stubDir = tempDir.resolve("data_data")
+            val stubDir = tempDir.resolve("data_examples")
             stubDir.mkdirs()
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
@@ -5325,7 +5327,7 @@ paths:
             }
         """.trimIndent()
 
-            val stubDir = tempDir.resolve("data_data")
+            val stubDir = tempDir.resolve("data_examples")
             stubDir.mkdirs()
             val stubFile = stubDir.resolve("stub.json")
             stubFile.writeText(stubContent)
@@ -5435,8 +5437,8 @@ paths:
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
         val results: List<Result> =
-            feature.generateContractTestScenarios(emptyList()).toList().map { it.second.value }.map {
-                executeTest(it, object : TestExecutor {
+            feature.generateContractTests(emptyList()).toList().map {
+                it.runTest(object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.body).isInstanceOf(JSONObjectValue::class.java)
 
@@ -5448,7 +5450,7 @@ paths:
 
                     override fun setServerState(serverState: Map<String, Value>) {
                     }
-                })
+                }).first
             }
 
         assertThat(results).hasSize(1)
@@ -5502,8 +5504,8 @@ paths:
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
         val results: List<Result> =
-            feature.generateContractTestScenarios(emptyList()).toList().map { it.second.value }.map {
-                executeTest(it, object : TestExecutor {
+            feature.generateContractTests(emptyList()).toList().map {
+                it.runTest(object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.formFields).containsKey("Data")
 
@@ -5522,7 +5524,7 @@ paths:
 
                     override fun setServerState(serverState: Map<String, Value>) {
                     }
-                })
+                }).first
             }
 
         assertThat(results).hasSize(1)
@@ -5572,8 +5574,8 @@ paths:
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
         val results: List<Result> =
-            feature.generateContractTestScenarios(emptyList()).toList().map { it.second.value }.map {
-                executeTest(it, object : TestExecutor {
+            feature.generateContractTests(emptyList()).toList().map {
+                it.runTest(object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.formFields).containsKey("Data")
                         assertThat(request.formFields["Data"]).isEqualTo("abc123")
@@ -5584,7 +5586,7 @@ paths:
 
                     override fun setServerState(serverState: Map<String, Value>) {
                     }
-                })
+                }).first
             }
 
         assertThat(results).hasSize(1)
@@ -5632,8 +5634,8 @@ paths:
         val feature = OpenApiSpecification.fromYAML(contractString, "").toFeature()
 
         val results: List<Result> =
-            feature.generateContractTestScenarios(emptyList()).toList().map { it.second.value }.map {
-                executeTest(it, object : TestExecutor {
+            feature.generateContractTests(emptyList()).toList().map {
+                it.runTest(object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         assertThat(request.multiPartFormData.first().name).isEqualTo("Data")
 
@@ -5646,7 +5648,7 @@ paths:
 
                     override fun setServerState(serverState: Map<String, Value>) {
                     }
-                })
+                }).first
             }
 
         assertThat(results).hasSize(1)
@@ -6947,7 +6949,7 @@ paths:
 
         val specifications = OpenApiSpecification.fromYAML(openAPI, "").toScenarioInfos()
         assertTrue(specifications.first.isNotEmpty())
-        with(OpenApiSpecification.fromYAML(openAPI, "",).toFeature()) {
+        with(OpenApiSpecification.fromYAML(openAPI, "").toFeature()) {
             val result =
                 this.scenarios.first().matchesMock(
                     HttpRequest(
@@ -7291,7 +7293,7 @@ paths:
     @Test
     fun `should recognize a mandatory query param`() {
         val feature = OpenApiSpecification.fromYAML(
-                """
+            """
 openapi: 3.0.3
 info:
   title: My service
@@ -7405,7 +7407,8 @@ paths:
                             text/plain:
                               schema:
                                 type: string
-                """.trimIndent(), "").toFeature()
+                """.trimIndent(), ""
+        ).toFeature()
 
         feature.matchResult(
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
@@ -7452,7 +7455,8 @@ paths:
                             text/plain:
                               schema:
                                 type: string
-                """.trimIndent(), "").toFeature()
+                """.trimIndent(), ""
+        ).toFeature()
 
         feature.matchResult(
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
@@ -7499,7 +7503,8 @@ paths:
                             text/plain:
                               schema:
                                 type: string
-                """.trimIndent(), "").toFeature()
+                """.trimIndent(), ""
+        ).toFeature()
 
         feature.matchResult(
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
@@ -7545,7 +7550,8 @@ paths:
                             text/plain:
                               schema:
                                 type: string
-                """.trimIndent(), "").toFeature()
+                """.trimIndent(), ""
+        ).toFeature()
 
         feature.matchResult(
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
@@ -7602,7 +7608,8 @@ paths:
                             text/plain:
                               schema:
                                 type: string
-                """.trimIndent(), "").toFeature()
+                """.trimIndent(), ""
+        ).toFeature()
 
         feature.matchResult(
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": null}""")),
@@ -7642,7 +7649,8 @@ paths:
                             text/plain:
                               schema:
                                 type: string
-                """.trimIndent(), "").toFeature()
+                """.trimIndent(), ""
+        ).toFeature()
 
         feature.matchResult(
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": null}""")),
@@ -7679,13 +7687,361 @@ paths:
                         204:
                           description: "Get person by id"
                           content: {}
-                """.trimIndent(), "").toFeature()
+                """.trimIndent(), ""
+        ).toFeature()
 
         feature.matchResult(
             HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": "abc123"}""")),
             HttpResponse(204, EmptyString)
         ).let { matchResult ->
             assertThat(matchResult).withFailMessage(matchResult.reportString()).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
+    @Test
+    fun `minimum and maximum keywords in Number and Integer types get wired up`() {
+        val minAge = BigDecimal(18.0)
+        val maxAge = BigDecimal(120.0)
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /person:
+                    post:
+                      summary: "Get person by id"
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - age
+                              properties:
+                                age:
+                                  description: age of the person
+                                  type: number
+                                  minimum: $minAge
+                                  maximum: $maxAge
+                                  exclusiveMinimum: true
+                                  exclusiveMaximum: true
+                      responses:
+                        204:
+                          description: "Get person by id"
+                          content: {}
+                        400:
+                          description: "Invalid age"
+                          content: {}
+                """.trimIndent(), ""
+        ).toFeature().enableGenerativeTesting()
+
+        val actualAges = mutableListOf<BigDecimal>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonRequestBody = request.body as JSONObjectValue
+                return when (val age = jsonRequestBody.jsonObject["age"]) {
+                    is NumberValue -> {
+                        val ageValue = BigDecimal(age.number.toString())
+                        actualAges.add(ageValue)
+                        if (minAge < ageValue && ageValue < maxAge)
+                            HttpResponse(204, EmptyString)
+                        else
+                            HttpResponse(400, EmptyString)
+                    }
+
+                    else -> HttpResponse(400, EmptyString)
+                }
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+        assertThat(actualAges).contains(
+            minAge + BIG_DECIMAL_INC,
+            maxAge - BIG_DECIMAL_INC,
+            minAge - BIG_DECIMAL_INC,
+            maxAge + BIG_DECIMAL_INC
+        )
+
+        println(actualAges)
+
+        assertThat(results.results.size).isEqualTo(8)
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `400 status named response examples with no corresponding named request example should be ignored`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Data API"
+                  version: "1"
+                paths:
+                  /data:
+                    get:
+                      summary: "Get data"
+                      responses:
+                        200:
+                          description: "The data"
+                          content:
+                            text/plain:
+                              schema:
+                                type: integer
+                        400:
+                          description: "Could not get the data"
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                              examples:
+                                FAILED:
+                                  value: "failed"
+                    """.trimIndent(), ""
+        ).toFeature().enableGenerativeTesting()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.ok(NumberValue(10))
+            }
+        })
+
+        assertThat(results.testCount).isEqualTo(1)
+        assertThat(results.success()).isTrue()
+    }
+
+    @Test
+    fun `references in an XML structure which contains a ref should get dereferenced`() {
+        val xmlSpec = """
+            openapi: 3.0.0
+            info:
+              title: Testing API
+              version: 1.0.0
+              description: |
+                Testing XML
+            paths:
+              /ReqListKeys:
+                post:
+                  summary: Request list of keys
+                  operationId: reqListKeys
+                  requestBody:
+                    required: true
+                    content:
+                      application/xml:
+                        schema:
+                          ${"$"}ref: '#/components/schemas/ReqListKeys'
+                  responses:
+                    '200':
+                      description: Successful response
+                      content:
+                        application/xml:
+                          schema:
+                            ${"$"}ref: '#/components/schemas/RespListKeys'
+            components:
+              schemas:
+                ReqListKeys:
+                  type: object
+                  xml:
+                    name: "ReqListKeys"
+                    namespace: "http://xyz.org/upi/schema//"
+                    prefix: "upi"
+                  properties:
+                    Head:
+                      ${"$"}ref: '#/components/schemas/Head'
+                Head:
+                  type: object
+                  xml:
+                    name: "Head"
+                  properties:
+                    msgId:
+                      type: string
+                      xml:
+                        name: "msgId"
+                        attribute: true
+                    orgId:
+                      type: string
+                      xml:
+                        name: "orgId"
+                        attribute: true
+                    prodType:
+                      type: string
+                      xml:
+                        name: "prodType"
+                        attribute: true
+                    ts:
+                      type: string
+                      xml:
+                        name: "ts"
+                        attribute: true
+                    ver:
+                      type: string
+                      enum: [1.0, 2.0]
+                      xml:
+                        name: "ver"
+                        attribute: true
+                RespListKeys:
+                  type: object
+                  xml:
+                    name: "RespListKeys"
+                    namespace: "http://xyz.org/upi/schema/"
+                    prefix: "ns2"
+                  properties:
+                    Head:
+                      ${"$"}ref: '#/components/schemas/Head'
+
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(xmlSpec, "").toFeature()
+
+        val rawStub = """
+            {
+                "http-request": {
+                    "path": "/ReqListKeys",
+                    "method": "POST",
+                    "headers": {
+                        "Content-Type": "application/xml"
+                    },
+                    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<upi:ReqListKeys xmlns:upi=\"http://xyz.org/upi/schema/\">\n    <Head msgId=\"abcde\" orgId=\"157776\" prodType=\"UPI\" ts=\"1970-01-01T05:30:00+05:30\" ver=\"2.0\"/>\n</upi:ReqListKeys>"
+                },
+                "http-response": {
+                    "status": 200,
+                    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ns2:RespListKeys xmlns:ns2=\"http://xyz.org/upi/schema/\">\n    <Head msgId=\"syz\" orgId=\"org\" ts=\"2024-05-27T15:35:12+05:30\" ver=\"2.0\"/>\n</ns2:RespListKeys>\n",
+                    "status-text": "OK",
+                    "headers": {
+                        "Content-Type": "application/xml"
+                    }
+                }
+            }
+        """.trimIndent()
+
+        val expectation: ScenarioStub = stringToMockScenario(StringValue(rawStub))
+
+        HttpStub(feature, listOf(expectation)).use { stub ->
+            val request = expectation.request
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.body.toStringLiteral()).contains("msgId")
+        }
+    }
+
+    @Test
+    fun `check that a console warning is printed when a named response example has no corresponding named request example`() {
+        val (stdout, _) = captureStandardOutput {
+            OpenApiSpecification.fromYAML(
+                """
+                    ---
+                    openapi: "3.0.1"
+                    info:
+                      title: "Person API"
+                      version: "1"
+                    paths:
+                      /person:
+                        post:
+                          summary: "Get person by id"
+                          requestBody:
+                            content:
+                              application/json:
+                                schema:
+                                  required:
+                                  - age
+                                  properties:
+                                    age:
+                                      description: age of the person
+                                      type: number
+                          responses:
+                            200:
+                              description: "Get person by id"
+                              content:
+                                text/plain:
+                                  schema:
+                                    type: string
+                                  examples:
+                                    SUCCESSFUL_API_CALL:
+                                      value: added
+                    """.trimIndent(), ""
+            ).toFeature()
+        }
+
+        println(stdout)
+
+        val exampleName = "SUCCESSFUL_API_CALL"
+        assertThat(stdout)
+            .contains("Ignoring response example named $exampleName for test or stub data, because no associated request example named $exampleName was found.")
+    }
+
+    @Test
+    fun `check that a console warning is printed when a named request example has no corresponding named responsee example`() {
+        val (stdout, _) = captureStandardOutput {
+            OpenApiSpecification.fromYAML(
+                """
+                    ---
+                    openapi: "3.0.1"
+                    info:
+                      title: "Person API"
+                      version: "1"
+                    paths:
+                      /person:
+                        post:
+                          summary: "Get person by id"
+                          requestBody:
+                            content:
+                              application/json:
+                                schema:
+                                  required:
+                                  - age
+                                  properties:
+                                    age:
+                                      description: age of the person
+                                      type: number
+                                examples:
+                                  SUCCESSFUL_API_CALL:
+                                    value:
+                                      age: 10
+                          responses:
+                            200:
+                              description: "Get person by id"
+                              content:
+                                text/plain:
+                                  schema:
+                                    type: string
+                    """.trimIndent(), ""
+            ).toFeature()
+        }
+
+        println(stdout)
+
+        val exampleName = "SUCCESSFUL_API_CALL"
+
+        assertThat(stdout)
+            .contains("WARNING: Ignoring request example named $exampleName for test or stub data, because no associated response example named $exampleName was found.")
+    }
+
+    @Test
+    fun `when a header is missing in an expectation the header from the spec should be used`() {
+        val defaultSpecmaticConfig = Configuration.globalConfigFileName
+
+        try {
+            Configuration.globalConfigFileName = "src/test/resources/openapi/response_expectation_missing_content_type/specmatic.yaml"
+
+            createStub("localhost", 9000, 1000, false, "src/test/resources/openapi/response_expectation_missing_content_type/specmatic.yaml").use { stub ->
+                val response = stub.client.execute(
+                    HttpRequest("POST", "/person", body = StringValue("hello"))
+                )
+
+                val responseContentType = response.headers["Content-Type"]
+
+                assertThat(responseContentType).isEqualTo("text/something_else")
+
+                assertThat(response.body.toStringLiteral()).isEqualTo("world")
+            }
+        } finally {
+            Configuration.globalConfigFileName = defaultSpecmaticConfig
         }
     }
 

@@ -1,0 +1,4 @@
+sources:
+  - provider: filesystem
+    stub:
+      - src/test/resources/openapi/response_expectation_missing_content_type/response_expectation_missing_content_type.yaml

@@ -6,20 +6,18 @@ import `in`.specmatic.core.Flags
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.HttpResponse
 import `in`.specmatic.core.log.*
-import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSONArray
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.fail
 import org.junit.jupiter.api.Test
-import java.util.function.Consumer
 
 class LoadTestsFromExternalisedFiles {
     @Test
-    fun `should load and execute externalized tests for header and request body from _tests directory`() {
+    fun `should load and execute externalized tests for header and request body from _examples directory`() {
         val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test_and_no_example.yaml")
             .toFeature().loadExternalisedExamples()
 
@@ -43,14 +41,15 @@ class LoadTestsFromExternalisedFiles {
     }
 
     @Test
-    fun `externalized tests should replace example tests`() {
-        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test_and_one_example.yaml")
+    fun `should load and execute externalized tests for header and request body from _tests directory`() {
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test.yaml")
             .toFeature().loadExternalisedExamples()
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 assertThat(request.path).isEqualTo("/order_action_figure")
                 assertThat(request.method).isEqualTo("POST")
+                assertThat(request.headers).containsEntry("X-Request-ID", "12345")
                 assertThat(request.body).isEqualTo(parsedJSONObject("""{"name": "Master Yoda", "description": "Head of the Jedi Council"}"""))
 
                 return HttpResponse.ok(parsedJSONObject("""{"id": 1}"""))
@@ -60,6 +59,7 @@ class LoadTestsFromExternalisedFiles {
             }
         })
 
+        println(results.report())
         assertThat(results.successCount).isEqualTo(1)
         assertThat(results.failureCount).isEqualTo(0)
     }
@@ -74,30 +74,26 @@ class LoadTestsFromExternalisedFiles {
     fun `externalized tests should be validated`() {
         val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_invalid_externalized_test.yaml").toFeature().loadExternalisedExamples()
 
-        assertThatThrownBy {
-            feature.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    assertThat(request.path).isEqualTo("/order_action_figure")
-                    assertThat(request.method).isEqualTo("POST")
-                    assertThat(request.body).isEqualTo(parsedJSONObject("""{"name": "Master Yoda", "description": "Head of the Jedi Council"}"""))
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.path).isEqualTo("/order_action_figure")
+                assertThat(request.method).isEqualTo("POST")
+                assertThat(request.body).isEqualTo(parsedJSONObject("""{"name": "Master Yoda", "description": "Head of the Jedi Council"}"""))
 
-                    return HttpResponse.ok(parsedJSONObject("""{"id": 1}"""))
-                }
+                return HttpResponse.ok(parsedJSONObject("""{"id": 1}"""))
+            }
 
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
-        }.satisfies(Consumer {
-            assertThat(it).isInstanceOf(ContractException::class.java)
-            it as ContractException
-
-            assertThat(it.report())
-                .contains(">> REQUEST.BODY.description")
-                .contains("10")
-
-            println(it.report())
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
         })
 
+        println(results.report())
+
+        assertThat(results.report())
+            .contains(">> REQUEST.BODY.description")
+            .contains("10")
+
+        assertThat(results.success()).isFalse()
     }
 
     @Test
@@ -217,5 +213,131 @@ class LoadTestsFromExternalisedFiles {
 
         assertThat(results.successCount).isEqualTo(1)
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `external and internal examples are both run as tests`() {
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/has_inline_and_external_examples.yaml")
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val idsSeen = mutableListOf<String>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val path = request.path ?: fail("Path expected")
+                idsSeen.add(path.split("/").last())
+
+                return HttpResponse(200, parsedJSONObject("""{"id": 10, "name": "Jack"}""")).also {
+                    println("---")
+                    println(request.toLogString())
+                    println(it.toLogString())
+                    println()
+                }
+            }
+        })
+
+        assertThat(idsSeen).containsExactlyInAnyOrder("123", "456")
+        assertThat(results.testCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `tests from external examples validate response schema as per the given example by default`() {
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/has_inline_and_external_examples.yaml")
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val idsSeen = mutableListOf<String>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val path = request.path ?: fail("Path expected")
+                idsSeen.add(path.split("/").last())
+
+                return HttpResponse(200, parsedJSONObject("""{"id": 10, "name": "Justin"}""")).also {
+                    println("---")
+                    println(request.toLogString())
+                    println(it.toLogString())
+                    println()
+                }
+            }
+        })
+
+        assertThat(idsSeen).containsExactlyInAnyOrder("123", "456")
+        assertThat(results.testCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `tests from external examples validate response values when the VALIDATE_RESPONSE_VALUE flag is true`() {
+        val enableResponseValueValidation = EnvironmentAndPropertiesConfiguration(
+            mapOf(
+                "VALIDATE_RESPONSE_VALUE" to "true"
+            ),
+            emptyMap()
+        )
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/has_inline_and_external_examples.yaml", enableResponseValueValidation)
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val path = request.path ?: fail("Path expected")
+                val id = path.split("/").last()
+
+                return when(id) {
+                    "123" -> HttpResponse(200, parsedJSONObject("""{"id": 123, "name": "John Doe"}"""))
+                    "456" -> HttpResponse(200, parsedJSONObject("""{"id": 456, "name": "Alice Johnson"}"""))
+                    else -> HttpResponse(400, "Expected either 123 or 456")
+                }.also {
+                    println("---")
+                    println(request.toLogString())
+                    println(it.toLogString())
+                    println()
+                }
+            }
+        })
+
+        assertThat(results.testCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `tests from external examples reject responses with values different from the example when the VALIDATE_RESPONSE_VALUE flag is true`() {
+        val enableResponseValueValidation = EnvironmentAndPropertiesConfiguration(
+            mapOf(
+                "VALIDATE_RESPONSE_VALUE" to "true"
+            ),
+            emptyMap()
+        )
+
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/has_inline_and_external_examples.yaml", enableResponseValueValidation)
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val path = request.path ?: fail("Path expected")
+                val id = path.split("/").last()
+
+                return when(id) {
+                    "123" -> HttpResponse(200, parsedJSONObject("""{"id": 123, "name": "Unexpected name instead of John Doe"}"""))
+                    "456" -> HttpResponse(200, parsedJSONObject("""{"id": 456, "name": "Unexpected name instead of Alice Johnson"}"""))
+                    else -> HttpResponse(400, "Expected either 123 or 456")
+                }.also {
+                    println("---")
+                    println(request.toLogString())
+                    println(it.toLogString())
+                    println()
+                }
+            }
+        })
+
+        println(results.report())
+
+        assertThat(results.testCount).isEqualTo(2)
+        assertThat(results.failureCount).isEqualTo(2)
     }
 }

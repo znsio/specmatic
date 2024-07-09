@@ -747,8 +747,8 @@ Feature: multipart file upload
         """.trimIndent(), sourceSpecPath
         )
 
-        val contractTests = contract.generateContractTestScenarios(emptyList()).map { it.second.value }
-        val result = executeTest(contractTests.single(), object : TestExecutor {
+        val contractTests = contract.generateContractTests(emptyList())
+        val result = contractTests.single().runTest(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val multipartFileValues = request.multiPartFormData.filterIsInstance<MultiPartFileValue>()
                 assertThat(multipartFileValues.size).isEqualTo(1)
@@ -761,7 +761,7 @@ Feature: multipart file upload
 
             }
 
-        })
+        }).first
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
     }
@@ -1323,7 +1323,7 @@ Background:
         assertThat(flags["/pets/0 GET executed"]).isEqualTo(1)
         assertThat(flags.keys.filter { it.matches(Regex("""/pets/\d+ GET executed""")) }.size).isEqualTo(2)
         assertThat(flags.keys.any { it.matches(Regex("""/pets/\d+ DELETE executed""")) }).isNotNull
-        assertThat(flags.filter {(path, _) -> path.matches(Regex("""/pets/\d+ PATCH executed""")) }.values.sum()).isEqualTo(7)
+        assertThat(flags.filter {(path, _) -> path.matches(Regex("""/pets/\d+ PATCH executed""")) }.values.sum()).isEqualTo(21)
         assertTrue(results.success(), results.report())
     }
 
@@ -1385,7 +1385,7 @@ Background:
                 override fun setServerState(serverState: Map<String, Value>) {
                 }
             },
-            scenarioNames = listOf("create a pet. Response: pet response")
+            testDescriptionFilter = listOf("POST /pets -> 201")
         )
 
         assertFalse(results.success())
@@ -1454,7 +1454,7 @@ Background:
                 override fun setServerState(serverState: Map<String, Value>) {
                 }
             },
-            scenarioNames = listOf("create a pet. Response: pet response")
+            testDescriptionFilter = listOf("POST /pets -> 201")
         )
 
         assertFalse(results.success())
@@ -1518,7 +1518,7 @@ Background:
                 override fun setServerState(serverState: Map<String, Value>) {
                 }
             },
-            scenarioNames = listOf("create a pet. Response: pet response")
+            testDescriptionFilter = listOf("POST /pets -> 201")
         )
 
         assertFalse(results.success())
@@ -1670,17 +1670,18 @@ Scenario: zero should return not found
 
         var executed = false
 
-        val result = executeTest(feature.scenarios.first(), object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                executed = true
-                return if (request.queryParams.keys.containsAll(listOf("name", "message"))) HttpResponse.OK
-                else HttpResponse.ERROR_400
-            }
+        val result = `in`.specmatic.test.ScenarioAsTest(feature.scenarios.first(), DefaultStrategies)
+            .runTest(object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        executed = true
+                        return if (request.queryParams.keys.containsAll(listOf("name", "message"))) HttpResponse.OK
+                        else HttpResponse.ERROR_400
+                    }
 
-            override fun setServerState(serverState: Map<String, Value>) {
+                    override fun setServerState(serverState: Map<String, Value>) {
 
-            }
-        })
+                    }
+                }).first
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
         assertThat(executed).isTrue

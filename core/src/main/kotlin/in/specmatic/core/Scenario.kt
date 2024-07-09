@@ -8,6 +8,7 @@ import `in`.specmatic.core.utilities.exceptionCauseMessage
 import `in`.specmatic.core.utilities.mapZip
 import `in`.specmatic.core.value.*
 import `in`.specmatic.stub.RequestContext
+import `in`.specmatic.test.ContractTest
 import `in`.specmatic.test.TestExecutor
 
 object ContractAndStubMismatchMessages : MismatchMessages {
@@ -221,13 +222,31 @@ data class Scenario(
     fun generateHttpRequest(flagsBased: FlagsBased = DefaultStrategies): HttpRequest =
         scenarioBreadCrumb(this) { httpRequestPattern.generate(flagsBased.update(Resolver(expectedFacts, false, patterns))) }
 
+    fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
+        val resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck).copy(context = RequestContext(httpRequest))
+
+        return matches(httpResponse, mismatchMessages, unexpectedKeyCheck, resolver)
+    }
+
     fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
-        val resolver = Resolver(expectedFacts, false, patterns).copy(mismatchMessages = mismatchMessages).let {
-            if(unexpectedKeyCheck != null)
+        val resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck)
+
+        return matches(httpResponse, mismatchMessages, unexpectedKeyCheck, resolver)
+    }
+
+    private fun updatedResolver(
+        mismatchMessages: MismatchMessages,
+        unexpectedKeyCheck: UnexpectedKeyCheck?
+    ): Resolver {
+        return Resolver(expectedFacts, false, patterns).copy(mismatchMessages = mismatchMessages).let {
+            if (unexpectedKeyCheck != null)
                 it.copy(findKeyErrorCheck = it.findKeyErrorCheck.copy(unexpectedKeyCheck = unexpectedKeyCheck))
             else
                 it
         }
+    }
+
+    fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null, resolver: Resolver): Result {
 
         if (this.isNegative) {
             return if (is4xxResponse(httpResponse)) {
@@ -323,33 +342,11 @@ data class Scenario(
         val updatedResolver = flagsBased.update(resolver)
 
         rowsToValidate.forEach { row ->
-            val resolverForExample = updatedResolver.copy(
-                mismatchMessages = object : MismatchMessages {
-                    override fun mismatchMessage(expected: String, actual: String): String {
-                        return "Expected $expected as per the specification, but the example ${row.name} had $actual."
-                    }
-
-                    override fun unexpectedKey(keyLabel: String, keyName: String): String {
-                        return "The $keyLabel $keyName was found in the example ${row.name} but was not in the specification."
-                    }
-
-                    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
-                        return "The $keyLabel $keyName in the specification was missing in example ${row.name}"
-                    }
-
-                }
-            )
+            val resolverForExample = resolverForValidation(updatedResolver, row)
 
             try {
-                httpRequestPattern.newBasedOn(row, resolverForExample, status).first().value
-                val responseExample: ResponseExample? = row.responseExample
-
-                if (responseExample != null) {
-                    val responseMatchResult =
-                        httpResponsePattern.matches(responseExample.responseExample, resolverForExample)
-
-                    responseMatchResult.throwOnFailure()
-                }
+                validateRequestExample(row, resolverForExample)
+                validateResponseExample(row, resolverForExample)
             } catch(t: Throwable) {
                 val title = "Error loading test data for ${this.testDescription().trim()}".plus(
                     if(row.fileSource != null)
@@ -365,6 +362,41 @@ data class Scenario(
                 throw Exception(title + System.lineSeparator() + System.lineSeparator() + exceptionCauseMessage(t))
             }
         }
+    }
+
+    private fun resolverForValidation(
+        updatedResolver: Resolver,
+        row: Row
+    ) = updatedResolver.copy(
+        mismatchMessages = object : MismatchMessages {
+            override fun mismatchMessage(expected: String, actual: String): String {
+                return "Expected $expected as per the specification, but the example ${row.name} had $actual."
+            }
+
+            override fun unexpectedKey(keyLabel: String, keyName: String): String {
+                return "The $keyLabel $keyName was found in the example ${row.name} but was not in the specification."
+            }
+
+            override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+                return "The $keyLabel $keyName in the specification was missing in example ${row.name}"
+            }
+        },
+        mockMode = true
+    )
+
+    private fun validateResponseExample(row: Row, resolverForExample: Resolver) {
+        val responseExample: ResponseExample? = row.responseExample
+
+        if (responseExample != null) {
+            val responseMatchResult =
+                httpResponsePattern.matches(responseExample.responseExample, resolverForExample)
+
+            responseMatchResult.throwOnFailure()
+        }
+    }
+
+    private fun validateRequestExample(row: Row, resolverForExample: Resolver) {
+        httpRequestPattern.newBasedOn(row, resolverForExample, status).first().value
     }
 
     fun generateTestScenarios(
@@ -461,7 +493,7 @@ data class Scenario(
         scenarioBreadCrumb(this) {
             attempt(breadCrumb = "RESPONSE") {
                 val resolver = Resolver(expectedFacts, false, patterns)
-                Pair(resolver, HttpResponsePattern.fromResponseExpectation(response).generateResponse(resolver))
+                Pair(resolver, httpResponsePattern.fromResponseExpectation(response).generateResponse(resolver))
             }
         }
 
@@ -519,7 +551,7 @@ data class Scenario(
             listOf(Examples(columns, rowsWithPathData))
         }.flatten()
 
-        return this.copy(examples = newExamples)
+        return this.copy(examples = this.examples + newExamples)
     }
 
     private fun matchingRows(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>) =
@@ -571,58 +603,4 @@ object ContractAndResponseMismatch : MismatchMessages {
             keyLabel.lowercase().capitalizeFirstChar()
         } named $keyName in the specification was not found in the response"
     }
-}
-
-fun executeTest(testScenario: Scenario, testExecutor: TestExecutor, resolverStrategies: FlagsBased = DefaultStrategies): Result {
-    return executeTestAndReturnResultAndResponse(testScenario, testExecutor, resolverStrategies).first
-}
-
-fun executeTestAndReturnResultAndResponse(
-    testScenario: Scenario,
-    testExecutor: TestExecutor,
-    flagsBased: FlagsBased
-): Pair<Result, HttpResponse?> {
-    val request = testScenario.generateHttpRequest(flagsBased)
-
-    return try {
-        testExecutor.setServerState(testScenario.serverState)
-
-        testExecutor.preExecuteScenario(testScenario, request)
-
-        val response = testExecutor.execute(request)
-
-        val result = testResult(response, testScenario, flagsBased)
-
-        Pair(result.withBindings(testScenario.bindings, response), response)
-    } catch (exception: Throwable) {
-        Pair(Result.Failure(exceptionCauseMessage(exception))
-            .also { failure -> failure.updateScenario(testScenario) }, null)
-    }
-}
-
-private fun testResult(
-    response: HttpResponse,
-    testScenario: Scenario,
-    flagsBased: FlagsBased? = null
-): Result {
-
-    val result = when {
-        response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral())
-            .updateScenario(testScenario)
-        response.body is JSONObjectValue && ignorable(response.body) -> Result.Success()
-        else -> testScenario.matches(response, ContractAndResponseMismatch, flagsBased?.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
-    }.also { result ->
-        if (result is Result.Success && result.isPartialSuccess()) {
-            logger.log("    PARTIAL SUCCESS: ${result.partialSuccessMessage}")
-            logger.newLine()
-        }
-    }
-
-    return result
-}
-
-fun ignorable(body: JSONObjectValue): Boolean {
-    return Flags.customResponse() &&
-        (body.findFirstChildByPath("resultStatus.status")?.toStringLiteral() == "FAILED" &&
-            (body.findFirstChildByPath("resultStatus.errorCode")?.toStringLiteral() == "INVALID_REQUEST"))
 }

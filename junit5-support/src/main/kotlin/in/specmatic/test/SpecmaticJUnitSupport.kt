@@ -182,8 +182,9 @@ open class SpecmaticJUnitSupport {
         var name = ObjectName("in.specmatic:type=ContractTestStatistics")
 
         var mbs = ManagementFactory.getPlatformMBeanServer()
-        mbs.registerMBean(statistics, name)
 
+        if(!mbs.isRegistered(name))
+            mbs.registerMBean(statistics, name)
 
         val contractPaths = System.getProperty(CONTRACT_PATHS)
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)

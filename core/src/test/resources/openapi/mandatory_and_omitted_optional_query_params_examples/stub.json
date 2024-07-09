@@ -3,12 +3,11 @@
     "method": "GET",
     "path": "/products",
     "query": {
-      "brand_ids": [4,5,6]
+      "source": "farm"
     }
   },
   "http-response": {
     "status": 200,
-    "body": "product list from externalized test json"
-  },
-  "name": "Get Products"
+    "body": "success"
+  }
 }

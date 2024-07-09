@@ -7,24 +7,25 @@ import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
+import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.ContractException
 import java.io.File
 
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
-const val APPLICATION_NAME_LOWER_CASE_LEGACY = "qontract"
 const val DEFAULT_TIMEOUT_IN_SECONDS = "60"
 const val CONTRACT_EXTENSION = "spec"
-const val LEGACY_CONTRACT_EXTENSION = "qontract"
 const val YAML = "yaml"
 const val WSDL = "wsdl"
 const val YML = "yml"
 const val JSON = "json"
 val OPENAPI_FILE_EXTENSIONS = listOf(YAML, YML, JSON)
-val CONTRACT_EXTENSIONS = listOf(CONTRACT_EXTENSION, LEGACY_CONTRACT_EXTENSION, WSDL) + OPENAPI_FILE_EXTENSIONS
+val CONTRACT_EXTENSIONS = listOf(CONTRACT_EXTENSION, WSDL) + OPENAPI_FILE_EXTENSIONS
 const val DATA_DIR_SUFFIX = "_data"
+const val TEST_DIR_SUFFIX = "_tests"
+const val EXAMPLES_DIR_SUFFIX = "_examples"
 const val SPECMATIC_GITHUB_ISSUES = "https://github.com/znsio/specmatic/issues"
-const val   DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
+const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
 
 class WorkingDirectory(private val filePath: File) {
     constructor(path: String = DEFAULT_WORKING_DIRECTORY): this(File(path))
@@ -192,8 +193,9 @@ fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
     }
     try {
         return ObjectMapper(YAMLFactory()).readValue(configFile.readText(), SpecmaticConfig::class.java)
-    } catch(e: NoClassDefFoundError) {
-        throw Exception("This usually means that there's a dependency version conflict. If you are using Spring in a maven project, the most common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.", e)
+    } catch(e: LinkageError) {
+        logger.log(e, "A dependency version conflict has been detected. If you are using Spring in a maven project, a common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.")
+        throw e
     } catch (e: Throwable) {
         throw Exception("Your configuration file may have some missing configuration sections. Please ensure that the $configFileName file adheres to the schema described at: https://specmatic.in/documentation/specmatic_json.html", e)
     }

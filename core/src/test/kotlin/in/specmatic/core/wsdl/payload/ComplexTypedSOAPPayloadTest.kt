@@ -9,7 +9,7 @@ internal class ComplexTypedSOAPPayloadTest {
     @Test
     fun `generates a complex payload with a single namespace`() {
         val type = ComplexTypedSOAPPayload(SOAPMessageType.Input, "person", "Person", mapOf("ns0" to "http://ns"))
-        val statement = type.qontractStatement().first().trim()
+        val statement = type.specmaticStatement().first().trim()
 
         println(statement)
         assertThat(statement.trimmedLinesList()).isEqualTo("""

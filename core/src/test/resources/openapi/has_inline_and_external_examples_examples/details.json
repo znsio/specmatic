@@ -1,12 +1,13 @@
 {
   "http-request": {
     "method": "GET",
-    "path": "/data"
+    "path": "/person/456"
   },
   "http-response": {
     "status": 200,
     "body": {
-      "id": 10
+      "id": 456,
+      "name": "Alice Johnson"
     }
   }
 }

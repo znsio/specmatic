@@ -123,14 +123,35 @@ internal class NumberPatternTest {
 
     @Test
     fun `should generate 1 digit long random number when min and max length are not specified`() {
-        assertThat(NumberPattern().generate(Resolver()).toStringLiteral().length).isEqualTo(1)
+        assertThat(NumberPattern().generate(Resolver()).toStringLiteral().length).isEqualTo(3)
     }
 
     @Test
-    fun `should generate random number when minLength`() {
+    fun `should generate random number of minLength length when minLength is greater than 3`() {
         assertThat(
             NumberPattern(minLength = 8, maxLength = 12).generate(Resolver()).toStringLiteral().length
         ).isEqualTo(8)
+    }
+
+    @Test
+    fun `should generate random number of maxLength length when maxLength is less than 3`() {
+        assertThat(
+            NumberPattern(minLength = 1, maxLength = 2).generate(Resolver()).toStringLiteral().length
+        ).isEqualTo(2)
+    }
+
+    @Test
+    fun `should generate random number of length 3 when minLength is less than 3 is less than maxLength`() {
+        assertThat(
+            NumberPattern(minLength = 1, maxLength = 5).generate(Resolver()).toStringLiteral().length
+        ).isEqualTo(3)
+    }
+
+    @Test
+    fun `should generate random number of length 3 when minLength and maxLength are both equal to 3`() {
+        assertThat(
+            NumberPattern(minLength = 3, maxLength = 3).generate(Resolver()).toStringLiteral().length
+        ).isEqualTo(3)
     }
 
     @Test
@@ -277,5 +298,11 @@ internal class NumberPatternTest {
             ExactValuePattern(NumberValue(BigDecimal(10) - NumberPattern.BIG_DECIMAL_INC)),
             ExactValuePattern(NumberValue(BigDecimal(20) + NumberPattern.BIG_DECIMAL_INC))
         )
+    }
+
+    @Test
+    fun `NumberPattern with no constraints must generate a 3 digit number to ensure that Spring Boot is not able to convert it into an enum`() {
+        val number = NumberPattern().generate(Resolver()).toStringLiteral()
+        assertThat(number).hasSize(3)
     }
 }

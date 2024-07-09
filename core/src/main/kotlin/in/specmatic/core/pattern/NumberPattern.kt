@@ -74,8 +74,13 @@ data class NumberPattern(
     }
 
     override fun generate(resolver: Resolver): Value {
-        if (minAndMaxValuesNotSet())
-            return resolver.resolveExample(example, this) ?: NumberValue(randomNumber(minLength))
+        if (minAndMaxValuesNotSet()) {
+            val length =
+                if(minLength > 3) minLength
+                else if(maxLength < 3) maxLength
+                else 3
+            return resolver.resolveExample(example, this) ?: NumberValue(randomNumber(length))
+        }
 
         val min = if (minimum == LOWEST_DECIMAL) {
             if (maximum < smallestIncValue)

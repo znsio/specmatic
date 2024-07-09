@@ -21,18 +21,22 @@ data class NumberPattern(
     override val example: String? = null,
     val isDoubleFormat: Boolean = true
 ) : Pattern, ScalarType, HasDefaultExample {
-    companion object {
+
+  companion object {
         val BIG_DECIMAL_INC: BigDecimal = BigDecimal(Double.MIN_VALUE)
         val LOWEST_DECIMAL = BigDecimal("-1E+1000")
         val HIGHEST_DECIMAL = BigDecimal("1E+1000")
     }
 
     init {
-        require(minLength > 0) { "minLength cannot be less than 1" }
-        require(minLength <= maxLength) { "maxLength cannot be less than minLength" }
-        if (exclusiveMinimum || exclusiveMaximum)
-            require(minimum < maximum) { "Inappropriate minimum and maximum values set" }
-        require(minimum <= maximum) { "Inappropriate minimum and maximum values set" }
+        if (minLength <= 0) throw IllegalArgumentException("minLength cannot be less than 1")
+        if (maxLength < minLength) throw IllegalArgumentException("maxLength cannot be less than minLength")
+        if (minimum > maximum) {
+            throw IllegalArgumentException("Inappropriate minimum and maximum values set")
+        }
+        if ((exclusiveMinimum || exclusiveMaximum) && minimum == maximum) {
+            throw IllegalArgumentException("Inappropriate minimum and maximum values set")
+        }
     }
 
     private val smallestIncValue: BigDecimal

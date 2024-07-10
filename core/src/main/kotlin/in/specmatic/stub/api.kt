@@ -6,11 +6,7 @@ import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.log.StringLog
 import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.utilities.ContractPathData
-import `in`.specmatic.core.utilities.contractStubPaths
-import `in`.specmatic.core.utilities.examplesDirFor
-import `in`.specmatic.core.utilities.exitIfDoesNotExist
+import `in`.specmatic.core.utilities.*
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
@@ -71,12 +67,7 @@ fun createStubFromContracts(
     host: String = "localhost",
     port: Int = 9000
 ): ContractStub {
-    val validContractPaths = contractPaths.filter { path ->
-        File(path).extension in CONTRACT_EXTENSIONS
-    }
-    if (validContractPaths.isEmpty()) {
-        throw ContractException("No valid specification file found at given paths : $contractPaths")
-    }
+    checkIfContractPathsAreValid(contractPaths)
 
     return createStubFromContracts(
         contractPaths,
@@ -89,12 +80,7 @@ fun createStubFromContracts(
 
 // Used by stub client code
 fun createStubFromContracts(contractPaths: List<String>, host: String = "localhost", port: Int = 9000): ContractStub {
-    val validContractPaths = contractPaths.filter { path ->
-        File(path).extension in CONTRACT_EXTENSIONS
-    }
-    if (validContractPaths.isEmpty()) {
-        throw ContractException("No valid specification file found at given paths : $contractPaths")
-    }
+    checkIfContractPathsAreValid(contractPaths)
 
     return createStubFromContracts(
         contractPaths,

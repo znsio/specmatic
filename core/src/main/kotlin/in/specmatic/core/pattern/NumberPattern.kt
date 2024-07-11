@@ -19,7 +19,7 @@ data class NumberPattern(
     val maximum: BigDecimal = HIGHEST_DECIMAL,
     val exclusiveMaximum: Boolean = false,
     override val example: String? = null,
-    val isDoubleFormat: Boolean = true
+    val isDoubleFormat: Boolean = false
 ) : Pattern, ScalarType, HasDefaultExample {
 
   companion object {
@@ -79,11 +79,15 @@ data class NumberPattern(
 
     override fun generate(resolver: Resolver): Value {
         if (minAndMaxValuesNotSet()) {
-            val length =
-                if(minLength > 3) minLength
-                else if(maxLength < 3) maxLength
-                else 3
-            return resolver.resolveExample(example, this) ?: NumberValue(randomNumber(length))
+            val exampleValue = resolver.resolveExample(example, this)
+            if (exampleValue != null) return exampleValue
+            val length = when {
+                minLength > 3 -> minLength
+                maxLength < 3 -> maxLength
+                else -> 3
+            }
+            if (isDoubleFormat) return NumberValue(randomNumber(length).toDouble())
+            return NumberValue(randomNumber(length))
         }
 
         val min = if (minimum == LOWEST_DECIMAL) {

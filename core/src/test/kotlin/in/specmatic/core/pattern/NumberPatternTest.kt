@@ -123,7 +123,14 @@ internal class NumberPatternTest {
 
     @Test
     fun `should generate 1 digit long random number when min and max length are not specified`() {
-        assertThat(NumberPattern().generate(Resolver()).toStringLiteral().length).isEqualTo(3)
+        assertThat(NumberPattern(isDoubleFormat = false).generate(Resolver()).toStringLiteral().length).isEqualTo(3)
+    }
+
+    @Test
+    fun `should generate a random double number when min and max length are not specified`() {
+        val numberValue = NumberPattern(isDoubleFormat = true).generate(Resolver()) as NumberValue
+
+        assertThat((numberValue.number is Double)).isTrue()
     }
 
     @Test
@@ -190,7 +197,7 @@ internal class NumberPatternTest {
 
     @Test
     fun `should generate a number greater than minimum and maximum when are set and exclusive keywords are both true`() {
-        val generatedValues = (0..5).map { NumberPattern(minimum = BigDecimal(5.0), exclusiveMinimum = true, maximum = BigDecimal(10.0), exclusiveMaximum = true).generate(Resolver()) }
+        val generatedValues = (0..5).map { NumberPattern(minimum = BigDecimal(5.0), exclusiveMinimum = true, maximum = BigDecimal(10.0), exclusiveMaximum = true, isDoubleFormat = true).generate(Resolver()) }
         assertThat(generatedValues).allSatisfy {
             it as NumberValue
             assertThat(it.number.toDouble()).isGreaterThan(5.0)
@@ -288,7 +295,7 @@ internal class NumberPatternTest {
     @Tag(GENERATION)
     fun `negative values generated should include a value greater than minimum and maximum keyword values`() {
         val result =
-            NumberPattern(minimum = BigDecimal(10.0), maximum = BigDecimal(20.0)).negativeBasedOn(Row(), Resolver())
+            NumberPattern(minimum = BigDecimal(10.0), maximum = BigDecimal(20.0), isDoubleFormat = true).negativeBasedOn(Row(), Resolver())
                 .map { it.value }.toList()
 
         assertThat(result).containsExactlyInAnyOrder(
@@ -302,7 +309,7 @@ internal class NumberPatternTest {
 
     @Test
     fun `NumberPattern with no constraints must generate a 3 digit number to ensure that Spring Boot is not able to convert it into an enum`() {
-        val number = NumberPattern().generate(Resolver()).toStringLiteral()
+        val number = NumberPattern(isDoubleFormat = false).generate(Resolver()).toStringLiteral()
         assertThat(number).hasSize(3)
     }
 }

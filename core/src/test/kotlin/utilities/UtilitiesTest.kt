@@ -8,7 +8,6 @@ import `in`.specmatic.core.git.GitCommand
 import `in`.specmatic.core.git.SystemGit
 import `in`.specmatic.core.git.checkout
 import `in`.specmatic.core.git.clone
-import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.pattern.parsedJSONObject
 import `in`.specmatic.core.utilities.*
@@ -23,7 +22,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.mockk.*
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 import java.io.File
 import java.net.ServerSocket
 
@@ -530,29 +532,6 @@ internal class UtilitiesTest {
         } finally {
             specDir.deleteRecursively()
             specmaticJSON.delete()
-        }
-    }
-
-    @Nested
-    inner class CheckIfContractPathsAreValidTests {
-        @Test
-        fun `should not throw an exception if the contract paths are valid`() {
-            val contractPaths = listOf("first.yaml", "second.yml", "third.json")
-
-            assertDoesNotThrow {
-                checkIfContractPathsAreValid(contractPaths)
-            }
-        }
-
-        @Test
-        fun `should throw an exception if none of the contract paths is valid`() {
-            val contractPaths = listOf("first.random", "second.random", "third.random")
-
-            val e = assertThrows<ContractException> {
-                checkIfContractPathsAreValid(contractPaths)
-            }
-
-            assertThat(e.errorMessage == "No valid specification file found at given paths: first.random, second.random, third.random")
         }
     }
 

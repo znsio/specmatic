@@ -157,6 +157,10 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
     }
 
     override fun defaultBranch(): String {
+        System.getenv("LOCAL_GIT_BRANCH")?.let {
+            return it
+        }
+
         val defaultBranchName = System.getenv("GITHUB_BASE_REF") ?: defaultBranchFromGit()
         return "origin/${defaultBranchName}"
     }

@@ -186,15 +186,7 @@ open class SpecmaticJUnitSupport {
         if(!mbs.isRegistered(name))
             mbs.registerMBean(statistics, name)
 
-        val contractPaths = System.getProperty(CONTRACT_PATHS)?.let { paths ->
-            paths.split(",").filter { path ->
-                File(path).extension in CONTRACT_EXTENSIONS
-            }
-        }
-        if(contractPaths != null && contractPaths.isEmpty()) {
-            throw ContractException("No valid specification file found at given paths : ${System.getProperty(CONTRACT_PATHS)}")
-        }
-
+        val contractPaths = System.getProperty(CONTRACT_PATHS)
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
         val filterName: String? = System.getProperty(FILTER_NAME_PROPERTY) ?: System.getenv(FILTER_NAME_ENVIRONMENT_VARIABLE)
         val filterNotName: String? = System.getProperty(FILTER_NOT_NAME_PROPERTY) ?: System.getenv(FILTER_NOT_NAME_ENVIRONMENT_VARIABLE)
@@ -214,8 +206,10 @@ open class SpecmaticJUnitSupport {
         }
         val testScenarios = try {
             val (testScenarios, allEndpoints) = when {
-                (contractPaths != null) -> {
-                    val testScenariosAndEndpointsPairList = contractPaths.map {
+                contractPaths != null -> {
+                    val testScenariosAndEndpointsPairList = contractPaths.split(",").filter {
+                        File(it).extension in CONTRACT_EXTENSIONS
+                    }.map {
                         loadTestScenarios(
                             it,
                             suggestionsPath,

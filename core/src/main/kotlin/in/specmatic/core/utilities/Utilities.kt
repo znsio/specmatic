@@ -343,6 +343,15 @@ fun examplesDirFor(openApiFilePath: String, alternateSuffix: String): File {
         getExamplesDir(openApiFilePath, alternateSuffix)
 }
 
+fun checkIfContractPathsAreValid(contractPaths: List<String>) {
+    val validContractPaths = contractPaths.filter { path ->
+        File(path).extension in CONTRACT_EXTENSIONS
+    }
+    if (validContractPaths.isEmpty()) {
+        throw ContractException("No valid specification file found at given paths : ${contractPaths.joinToString(", ")}")
+    }
+}
+
 private fun getExamplesDir(openApiFilePath: String, suffix: String): File =
     File(openApiFilePath).canonicalFile.let {
         it.parentFile.resolve("${it.parent}/${it.nameWithoutExtension}$suffix")

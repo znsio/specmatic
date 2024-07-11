@@ -7766,8 +7766,6 @@ paths:
             maxAge + BIG_DECIMAL_INC
         )
 
-        println(actualAges)
-
         assertThat(results.results.size).isEqualTo(8)
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }

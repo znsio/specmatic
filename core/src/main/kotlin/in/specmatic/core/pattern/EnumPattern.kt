@@ -1,6 +1,7 @@
 package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.Resolver
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.Value
 
@@ -50,8 +51,13 @@ data class EnumPattern(
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return scalarAnnotation(this, pattern.negativeBasedOn(row, resolver).map { it.value })
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
+        val current = this
+        return sequence {
+            if(config.withDataTypeNegatives) {
+                yieldAll(scalarAnnotation(current, pattern.negativeBasedOn(row, resolver).map { it.value }))
+            }
+        }
     }
 
     override fun equals(other: Any?): Boolean = other is EnumPattern && other.pattern == this.pattern

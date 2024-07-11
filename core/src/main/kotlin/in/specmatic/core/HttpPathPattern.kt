@@ -157,7 +157,10 @@ data class HttpPathPattern(
     private fun negatively(patterns: List<URLPathSegmentPattern>, row: Row, resolver: Resolver): Sequence<ReturnValue<List<URLPathSegmentPattern>>> {
         val current = patterns.firstOrNull() ?: return emptySequence()
 
-        val negativesOfCurrent: Sequence<ReturnValue<List<URLPathSegmentPattern>>> = current.negativeBasedOn(row, resolver).map { negative ->
+        val negativesOfCurrent: Sequence<ReturnValue<List<URLPathSegmentPattern>>> = current.negativeBasedOn(
+            row,
+            resolver
+        ).map { negative ->
             listOf(negative) + positively(patterns.drop(1), row, resolver).map { HasValue(it) }
         }.sequenceListFold().map { it.ifValue { it.filterIsInstance<URLPathSegmentPattern>() } }
 

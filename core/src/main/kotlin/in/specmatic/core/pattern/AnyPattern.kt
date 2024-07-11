@@ -4,6 +4,7 @@ import `in`.specmatic.core.MismatchMessages
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.ScalarValue
@@ -138,7 +139,7 @@ data class AnyPattern(
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
         val nullable = pattern.any { it is NullPattern }
 
         val negativeTypeResults = pattern.asSequence().map {

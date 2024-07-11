@@ -1,6 +1,7 @@
 package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.*
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.utilities.mapZip
 import `in`.specmatic.core.utilities.stringToPatternMap
 import `in`.specmatic.core.utilities.withNullPattern
@@ -179,9 +180,9 @@ data class JSONObjectPattern(
                 newBasedOn(pattern, withNullPattern(resolver))
             }).map { it.value }.map { toJSONObjectPattern(it) }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> =
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> =
         allOrNothingCombinationIn(pattern.minus("...")) { pattern ->
-            AllNegativePatterns().negativeBasedOn(pattern, row, withNullPattern(resolver))
+            AllNegativePatterns().negativeBasedOn(pattern, row, withNullPattern(resolver), config)
         }.map { it.ifValue { toJSONObjectPattern(it) } }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)

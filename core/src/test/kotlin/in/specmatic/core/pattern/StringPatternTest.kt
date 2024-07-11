@@ -3,12 +3,12 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.GENERATION
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.UseDefaultExample
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldNotMatch
 import org.apache.commons.lang3.RandomStringUtils
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Condition
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -163,16 +163,77 @@ internal class StringPatternTest {
         val maxLength = 20
 
         val result = StringPattern(minLength = minLength, maxLength = maxLength).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
-        assertThat(result.map { it.typeName }).contains(
-            "null",
-            "number",
-            "boolean",
-        )
 
-        val randomlyGeneratedStrings = result.filterIsInstance<ExactValuePattern>().map { it.pattern.toString() }
+        assertThat(
+            result.filterIsInstance<StringPattern>().filter {
+                it.minLength == minLength-1 && it.maxLength == minLength-1 && it.regex == null
+            }
+        ).hasSize(1)
 
-        assertThat(randomlyGeneratedStrings.filter { it.length == minLength - 1 }).hasSize(1)
-        assertThat(randomlyGeneratedStrings.filter { it.length == maxLength + 1 }).hasSize(1)
+        assertThat(
+            result.filterIsInstance<StringPattern>().filter {
+                it.minLength == maxLength+1 && it.maxLength == maxLength+1 && it.regex == null
+            }
+        ).hasSize(1)
+    }
+
+    @Test
+    @Tag(GENERATION)
+    fun `negative value for regex should be generated when regex is provided`() {
+        val minLength = 10
+        val maxLength = 20
+
+        val result = StringPattern(
+            minLength = minLength,
+            maxLength = maxLength,
+            regex = "^[^0-9]*$"
+        ).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
+
+        assertThat(
+            result.filterIsInstance<StringPattern>().filter {
+                it.regex == "^[^0-9]*\$_"
+            }
+        ).hasSize(1)
+    }
+
+    @Test
+    @Tag(GENERATION)
+    fun `should exclude data type based negatives when withDataTypeNegatives config is false`() {
+        val minLength = 10
+        val maxLength = 20
+
+        val result = StringPattern(
+            minLength = minLength,
+            maxLength = maxLength,
+            regex = "^[^0-9]*$"
+        ).negativeBasedOn(
+            Row(),
+            Resolver(),
+            NegativePatternConfiguration(withDataTypeNegatives = false)
+        ).map { it.value }.toList()
+
+
+        assertThat(
+            result.filterIsInstance<NullPattern>()
+                    + result.filterIsInstance<NumberPattern>()
+                    + result.filterIsInstance<BooleanPattern>()
+        ).hasSize(0)
+
+        assertThat(
+            result.filterIsInstance<StringPattern>().filter { it.regex == "^[^0-9]*\$_" }
+        ).hasSize(1)
+
+        assertThat(
+            result.filterIsInstance<StringPattern>().filter {
+                it.minLength == minLength-1 && it.maxLength == minLength-1 && it.regex == null
+            }
+        ).hasSize(1)
+
+        assertThat(
+            result.filterIsInstance<StringPattern>().filter {
+                it.minLength == maxLength+1 && it.maxLength == maxLength+1 && it.regex == null
+            }
+        ).hasSize(1)
     }
 
     @Test

@@ -2,6 +2,7 @@ package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.value.Value
 
@@ -24,7 +25,7 @@ data class RestPattern(override val pattern: Pattern, override val typeAlias: St
             pattern.newBasedOn(cyclePreventedResolver).map { RestPattern(it) }
         }
     }
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
         return sequenceOf(HasValue(this))
     }
 

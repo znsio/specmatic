@@ -3,12 +3,12 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.core.value.Value
 import java.math.BigDecimal
 import java.security.SecureRandom
-import java.util.*
 
 data class NumberPattern(
     override val typeAlias: String? = null,
@@ -149,15 +149,20 @@ data class NumberPattern(
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        val dataTypeNegatives: Sequence<Pattern> = sequenceOf(NullPattern, BooleanPattern(), StringPattern())
-        val negativeForMinimumValue: Sequence<ReturnValue<Pattern>> =
-            negativeRangeValues(minValueIsSet(), minimum - smallestIncValue, "value less than minimum of $minimum")
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
+        val current = this
 
-        val negativeForMaximumValue: Sequence<ReturnValue<Pattern>> =
-            negativeRangeValues(maxValueIsSet(), maximum + smallestIncValue, "value greater than maximum of $maximum")
+        return sequence {
+            if (config.withDataTypeNegatives) {
+                yieldAll(scalarAnnotation(current, sequenceOf(NullPattern, BooleanPattern(), StringPattern())))
+            }
+            val negativeForMinimumValue: Sequence<ReturnValue<Pattern>> =
+                negativeRangeValues(minValueIsSet(), minimum - smallestIncValue, "value lesser than minimum value '$minimum'")
+            val negativeForMaximumValue: Sequence<ReturnValue<Pattern>> =
+                negativeRangeValues(maxValueIsSet(), maximum + smallestIncValue, "value greater than maximum value '$maximum'")
 
-        return scalarAnnotation(this, dataTypeNegatives) + negativeForMinimumValue + negativeForMaximumValue
+            yieldAll(negativeForMinimumValue + negativeForMaximumValue)
+        }
     }
 
     private fun negativeRangeValues(condition: Boolean, number: BigDecimal, message: String): Sequence<ReturnValue<Pattern>> {

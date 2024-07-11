@@ -3,6 +3,8 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.GENERATION
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.UseDefaultExample
+import `in`.specmatic.core.pattern.NumberPattern.Companion.BIG_DECIMAL_INC
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.NumberValue
 import `in`.specmatic.shouldNotMatch
@@ -293,17 +295,57 @@ internal class NumberPatternTest {
 
     @Test
     @Tag(GENERATION)
-    fun `negative values generated should include a value greater than minimum and maximum keyword values`() {
-        val result =
-            NumberPattern(minimum = BigDecimal(10.0), maximum = BigDecimal(20.0), isDoubleFormat = true).negativeBasedOn(Row(), Resolver())
-                .map { it.value }.toList()
+    fun `negative values generated should include a value greater than minimum and maximum keyword values when isDoubleFormat is true`() {
+        val pattern = NumberPattern(
+            minimum = BigDecimal(10.0),
+            maximum = BigDecimal(20.0),
+            isDoubleFormat = true
+        )
+        val result = pattern.negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
 
         assertThat(result).containsExactlyInAnyOrder(
             NullPattern,
             StringPattern(),
             BooleanPattern(),
-            ExactValuePattern(NumberValue(BigDecimal(10) - NumberPattern.BIG_DECIMAL_INC)),
-            ExactValuePattern(NumberValue(BigDecimal(20) + NumberPattern.BIG_DECIMAL_INC))
+            ExactValuePattern(NumberValue(pattern.minimum - BIG_DECIMAL_INC)),
+            ExactValuePattern(NumberValue(pattern.maximum + BIG_DECIMAL_INC)),
+        )
+    }
+
+    @Test
+    @Tag(GENERATION)
+    fun `negative values generated should include a value greater than minimum and maximum keyword values when isDoubleFormat is false`() {
+        val pattern = NumberPattern(
+            minimum = BigDecimal(10.0),
+            maximum = BigDecimal(20.0),
+        )
+        val result = pattern.negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
+
+        assertThat(result).containsExactlyInAnyOrder(
+            NullPattern,
+            StringPattern(),
+            BooleanPattern(),
+            ExactValuePattern(NumberValue(pattern.minimum - BigDecimal(1))),
+            ExactValuePattern(NumberValue(pattern.maximum + BigDecimal(1))),
+        )
+    }
+
+    @Test
+    @Tag(GENERATION)
+    fun `should exclude data type based negatives when withDataTypeNegatives config is false`() {
+        val pattern = NumberPattern(
+            minimum = BigDecimal(10.0),
+            maximum = BigDecimal(20.0),
+        )
+        val result = pattern.negativeBasedOn(
+            Row(),
+            Resolver(),
+            NegativePatternConfiguration(withDataTypeNegatives = false)
+        ).map { it.value }.toList()
+
+        assertThat(result).containsExactlyInAnyOrder(
+            ExactValuePattern(NumberValue(pattern.minimum - BigDecimal(1))),
+            ExactValuePattern(NumberValue(pattern.maximum + BigDecimal(1))),
         )
     }
 

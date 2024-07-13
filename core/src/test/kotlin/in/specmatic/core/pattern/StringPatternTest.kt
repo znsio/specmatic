@@ -179,5 +179,4 @@ internal class StringPatternTest {
     fun `string pattern encompasses email`() {
         assertThat(StringPattern().encompasses(EmailPattern(), Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
-
 }

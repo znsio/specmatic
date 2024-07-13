@@ -19,7 +19,7 @@ object UUIDPattern : Pattern, ScalarType {
 
     override fun generate(resolver: Resolver): StringValue = StringValue(UUID.randomUUID().toString())
 
-    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(this))
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(this))
 
     override fun newBasedOn(resolver: Resolver): Sequence<UUIDPattern> = sequenceOf(this)
 

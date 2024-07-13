@@ -67,7 +67,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         return JSONArrayValue(generate(pattern, resolverWithNullType))
     }
 
-    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithNullType = withNullPattern(resolver)
         val returnValues = newBasedOnR(pattern, row, resolverWithNullType)
 
@@ -133,7 +133,7 @@ fun newBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): Sequence<
     val values = patterns.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
             resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
-                pattern.newBasedOnR(row, cyclePreventedResolver).map { it.value }
+                pattern.newBasedOn(row, cyclePreventedResolver).map { it.value }
             }
         }
     }
@@ -145,7 +145,7 @@ fun newBasedOnR(patterns: List<Pattern>, row: Row, resolver: Resolver): Sequence
     val values = patterns.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
             resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
-                pattern.newBasedOnR(row, cyclePreventedResolver)
+                pattern.newBasedOn(row, cyclePreventedResolver)
             }
         }
     }.map { it.foldIntoReturnValueOfSequence().ifValue { it.map { it as Pattern? } } }

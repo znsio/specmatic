@@ -31,7 +31,7 @@ internal class AnythingPatternTest {
         val type = XMLPattern("<data>(anything)</data>")
         val row = Row(listOf("data"), listOf("abcxyz"))
 
-        val newType = type.newBasedOnR(row, Resolver()).map { it.value as XMLPattern }
+        val newType = type.newBasedOn(row, Resolver()).map { it.value as XMLPattern }
 
         val expected = ExactValuePattern(StringValue("abcxyz"))
         val firstNodeInType = newType.first().pattern.nodes.first()

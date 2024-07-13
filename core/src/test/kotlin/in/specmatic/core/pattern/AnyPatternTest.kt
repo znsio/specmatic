@@ -63,7 +63,7 @@ internal class AnyPatternTest {
                 NumberPattern(),
                 EnumPattern(listOf(StringValue("one"), StringValue("two")))
             )
-        ).newBasedOnR(Row(), Resolver()).map { it.value }.toList().let { patterns ->
+        ).newBasedOn(Row(), Resolver()).map { it.value }.toList().let { patterns ->
             patterns.map { it.typeName } shouldContainInAnyOrder listOf("number", "\"one\"", "\"two\"")
         }
     }
@@ -74,7 +74,7 @@ internal class AnyPatternTest {
         val pattern = AnyPattern(listOf(parsedPattern("""{"id": "(number)"}""")))
         val row = Row(listOf("id"), listOf("10"))
 
-        val value = pattern.newBasedOnR(row, Resolver()).map { it.value }.first().generate(Resolver())
+        val value = pattern.newBasedOn(row, Resolver()).map { it.value }.first().generate(Resolver())
 
         if(value is JSONObjectValue) {
             val id = value.jsonObject.getValue("id")
@@ -89,7 +89,7 @@ internal class AnyPatternTest {
     @Tag(GENERATION)
     fun `should create new patterns when the row has no values`() {
         val pattern = AnyPattern(listOf(parsedPattern("""{"id": "(number)"}""")))
-        val value = pattern.newBasedOnR(Row(), Resolver()).map { it.value }.first().generate(Resolver())
+        val value = pattern.newBasedOn(Row(), Resolver()).map { it.value }.first().generate(Resolver())
 
         value as JSONObjectValue
 

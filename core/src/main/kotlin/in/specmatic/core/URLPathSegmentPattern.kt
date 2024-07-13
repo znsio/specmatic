@@ -19,12 +19,12 @@ data class URLPathSegmentPattern(override val pattern: Pattern, override val key
     }
 
     fun newBasedOn_Wrapper(row: Row, resolver: Resolver): Sequence<Pattern> {
-        return newBasedOnR(row, resolver).map { it.value }
+        return newBasedOn(row, resolver).map { it.value }
     }
 
-    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> =
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> =
         resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
-            pattern.newBasedOnR(row, cyclePreventedResolver).map { it.ifValue { URLPathSegmentPattern(it, key) } }
+            pattern.newBasedOn(row, cyclePreventedResolver).map { it.ifValue { URLPathSegmentPattern(it, key) } }
         }
 
     override fun newBasedOn(resolver: Resolver): Sequence<URLPathSegmentPattern> =

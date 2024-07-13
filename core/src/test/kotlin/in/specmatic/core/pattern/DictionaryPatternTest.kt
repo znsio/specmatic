@@ -48,7 +48,7 @@ internal class DictionaryPatternTest {
         val jsonType = toTabularPattern(mapOf("data" to dictionaryType))
 
         val example = Row(listOf("data"), listOf("""{"1": "one"}"""))
-        val newJsonTypes = jsonType.newBasedOnR(example, Resolver()).map { it.value }.toList()
+        val newJsonTypes = jsonType.newBasedOn(example, Resolver()).map { it.value }.toList()
 
         assertThat(newJsonTypes).hasSize(1)
 

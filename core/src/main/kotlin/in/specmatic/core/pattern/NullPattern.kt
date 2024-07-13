@@ -20,10 +20,10 @@ object NullPattern : Pattern, ScalarType {
 
     override fun generate(resolver: Resolver): Value = NullValue
 
-    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(this))
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(this))
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return newBasedOnR(row, resolver).map { it.value }.map { HasValue(it) }
+        return newBasedOn(row, resolver).map { it.value }.map { HasValue(it) }
     }
 
     override fun parse(value: String, resolver: Resolver): Value {

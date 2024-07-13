@@ -86,7 +86,7 @@ data class AnyPattern(
     }
 
 
-    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         resolver.resolveExample(example, pattern)?.let {
             return sequenceOf(HasValue(ExactValuePattern(it)))
         }
@@ -97,7 +97,7 @@ data class AnyPattern(
                 try {
                     val patterns =
                         resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
-                            innerPattern.newBasedOnR(row, cyclePreventedResolver).map { it.value }
+                            innerPattern.newBasedOn(row, cyclePreventedResolver).map { it.value }
                         } ?: sequenceOf()
                     Pair(patterns.map { HasValue(it) }, null)
                 } catch (e: Throwable) {

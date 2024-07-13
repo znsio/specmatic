@@ -113,7 +113,7 @@ Feature: Recursive test
     @Tag(GENERATION)
     @Test
     fun `should generate a list of patterns each of which is a list pattern`() {
-        val patterns = ListPattern(NumberPattern()).newBasedOnR(Row(), Resolver()).map { it.value }
+        val patterns = ListPattern(NumberPattern()).newBasedOn(Row(), Resolver()).map { it.value }
 
         for(pattern in patterns) {
             assertTrue(pattern is ListPattern)

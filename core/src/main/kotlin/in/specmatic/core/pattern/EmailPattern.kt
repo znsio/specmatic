@@ -37,7 +37,7 @@ class EmailPattern (private val stringPatternDelegate: StringPattern) :
         return StringValue("$localPart@$domain.com")
     }
 
-    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return sequenceOf(HasValue(this))
     }
 

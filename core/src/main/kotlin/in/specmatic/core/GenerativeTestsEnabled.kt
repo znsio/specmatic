@@ -14,7 +14,7 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
     ): Sequence<ReturnValue<Pattern>> {
         // TODO generate value outside
         return resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
-            pattern.newBasedOnR(Row(), cyclePreventedResolver)
+            pattern.newBasedOn(Row(), cyclePreventedResolver)
         } ?: emptySequence()
     }
 
@@ -28,7 +28,7 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
         // TODO generate value outside
         val requestsFromFlattenedRow: Sequence<ReturnValue<Pattern>> =
             resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-                body.newBasedOnR(row.noteRequestBody(), cyclePreventedResolver)
+                body.newBasedOn(row.noteRequestBody(), cyclePreventedResolver)
             }
 
         var matchFound = false
@@ -60,11 +60,11 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
     ): Sequence<ReturnValue<Pattern>> {
         // TODO generate value outside
         val vanilla: Sequence<ReturnValue<Pattern>> = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-            body.newBasedOnR(Row(), cyclePreventedResolver)
+            body.newBasedOn(Row(), cyclePreventedResolver)
         }
 
         val fromExamples: Sequence<ReturnValue<Pattern>> = resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-            body.newBasedOnR(row, cyclePreventedResolver)
+            body.newBasedOn(row, cyclePreventedResolver)
         }
 
         val remainingVanilla: Sequence<ReturnValue<Pattern>> = vanilla.filterNot { vanillaTypeR ->

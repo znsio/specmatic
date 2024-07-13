@@ -69,7 +69,7 @@ data class TabularPattern(
         }
     }
 
-    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithNullType = withNullPattern(resolver)
         return allOrNothingCombinationIn(pattern, resolver.resolveRow(row)) { pattern ->
             newBasedOn(pattern, row, resolverWithNullType)
@@ -89,7 +89,7 @@ data class TabularPattern(
     }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return this.newBasedOnR(row, resolver).map { it.value }.map { HasValue(it) }
+        return this.newBasedOn(row, resolver).map { it.value }.map { HasValue(it) }
     }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)
@@ -174,7 +174,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Seq
                     when (val result = pattern.encompasses(rowPattern, resolver, resolver)) {
                         is Result.Success -> {
                             resolver.withCyclePrevention(rowPattern, isOptional(key)) { cyclePreventedResolver ->
-                                rowPattern.newBasedOnR(row, cyclePreventedResolver).map { it.value }
+                                rowPattern.newBasedOn(row, cyclePreventedResolver).map { it.value }
                             }?:
                             // Handle cycle (represented by null value) by using empty sequence for optional properties
                             emptySequence()
@@ -201,7 +201,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Seq
             }
         }
         else -> resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
-            pattern.newBasedOnR(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver)
+            pattern.newBasedOn(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver)
                 .map { it.value }
         }?:
         // Handle cycle (represented by null value) by using empty list for optional properties
@@ -223,7 +223,7 @@ fun newBasedOnR(row: Row, key: String, pattern: Pattern, resolver: Resolver): Se
                     when (val result = pattern.encompasses(rowPattern, resolver, resolver)) {
                         is Result.Success -> {
                             resolver.withCyclePrevention(rowPattern, isOptional(key)) { cyclePreventedResolver ->
-                                rowPattern.newBasedOnR(row, cyclePreventedResolver)
+                                rowPattern.newBasedOn(row, cyclePreventedResolver)
                             }?:
                             // Handle cycle (represented by null value) by using empty sequence for optional properties
                             emptySequence()
@@ -257,7 +257,7 @@ fun newBasedOnR(row: Row, key: String, pattern: Pattern, resolver: Resolver): Se
             }
         }
         else -> resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
-            pattern.newBasedOnR(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver)
+            pattern.newBasedOn(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver)
         }?:
         // Handle cycle (represented by null value) by using empty list for optional properties
         emptySequence()

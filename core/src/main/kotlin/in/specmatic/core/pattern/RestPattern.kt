@@ -13,9 +13,9 @@ data class RestPattern(override val pattern: Pattern, override val typeAlias: St
 
     override fun generate(resolver: Resolver): Value = resolver.withCyclePrevention(listPattern, listPattern::generate)
 
-    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
-            pattern.newBasedOnR(row, cyclePreventedResolver)
+            pattern.newBasedOn(row, cyclePreventedResolver)
         }
     }
 

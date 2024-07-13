@@ -95,7 +95,7 @@ data class StringPattern (
         return StringValue(randomString(randomStringLength))
     }
 
-    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val minLengthExample: ReturnValue<Pattern>? = minLength?.let {
             HasValue(ExactValuePattern(StringValue(randomString(it))), "minimum length string")
         }

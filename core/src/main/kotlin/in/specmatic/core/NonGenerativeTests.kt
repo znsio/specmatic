@@ -29,7 +29,7 @@ object NonGenerativeTests : GenerationStrategies {
         row: Row
     ): Sequence<ReturnValue<Pattern>> {
         return resolver.withCyclePrevention(body) { cyclePreventedResolver ->
-            body.newBasedOnR(row, cyclePreventedResolver)
+            body.newBasedOn(row, cyclePreventedResolver)
         }
     }
 

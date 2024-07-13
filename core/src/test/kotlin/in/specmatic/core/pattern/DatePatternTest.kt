@@ -3,7 +3,7 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.GENERATION
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
-import `in`.specmatic.core.pattern.DatePattern.newBasedOnR
+import `in`.specmatic.core.pattern.DatePattern.newBasedOn
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
@@ -43,7 +43,7 @@ internal class DatePatternTest {
 
     @Test
     fun `should return itself when generating a new pattern based on a row`() {
-        val datePatterns = newBasedOnR(Row(), Resolver()).map { it.value as DatePattern }.toList()
+        val datePatterns = newBasedOn(Row(), Resolver()).map { it.value as DatePattern }.toList()
         assertThat(datePatterns.size).isEqualTo(1)
         assertThat(datePatterns.first()).isEqualTo(DatePattern)
     }

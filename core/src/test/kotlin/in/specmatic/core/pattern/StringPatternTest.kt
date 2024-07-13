@@ -148,7 +148,7 @@ internal class StringPatternTest {
         val minLength = 10
         val maxLength = 20
 
-        val result = StringPattern(minLength = minLength, maxLength = maxLength).newBasedOnR(Row(), Resolver()).toList()
+        val result = StringPattern(minLength = minLength, maxLength = maxLength).newBasedOn(Row(), Resolver()).toList()
 
         val randomlyGeneratedStrings = result.map { it.value } .filterIsInstance<ExactValuePattern>().map { it.pattern.toString() }
 

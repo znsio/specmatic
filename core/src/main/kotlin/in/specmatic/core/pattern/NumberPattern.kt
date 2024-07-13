@@ -115,7 +115,7 @@ data class NumberPattern(
 
     private fun randomPositiveDigit() = (SecureRandom().nextInt(9) + 1)
 
-    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val values = mutableListOf<HasValue<Pattern>>()
 
         val messageForTestFromThisObject =

@@ -336,7 +336,7 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("csv"), listOf("[1, 2, 3]"))
 
         val type = parsedPattern("""{"csv": "(number*)"}""")
-        val newTypes = type.newBasedOnR(example, Resolver()).map { it.value }.toList()
+        val newTypes = type.newBasedOn(example, Resolver()).map { it.value }.toList()
 
         assertThat(newTypes).hasSize(1)
 
@@ -360,7 +360,7 @@ internal class HttpRequestPatternTest {
         val example = Row(listOf("data"), listOf("""{"one": 1}"""))
 
         val type = parsedPattern("""{"data": "(Data)"}""")
-        val newTypes = type.newBasedOnR(
+        val newTypes = type.newBasedOn(
             example,
             Resolver(newPatterns = mapOf("(Data)" to toTabularPattern(mapOf("one" to NumberPattern()))))
         ).map { it.value }.toList()

@@ -18,7 +18,7 @@ import java.net.URI
 import java.net.URL
 
 class Proxy(host: String, port: Int, baseURL: String, private val outputDirectory: FileWriter, keyData: KeyData? = null): Closeable {
-    constructor(host: String, port: Int, baseURL: String, proxyQontractDataDir: String, keyData: KeyData? = null) : this(host, port, baseURL, RealFileWriter(proxyQontractDataDir), keyData)
+    constructor(host: String, port: Int, baseURL: String, proxySpecmaticDataDir: String, keyData: KeyData? = null) : this(host, port, baseURL, RealFileWriter(proxySpecmaticDataDir), keyData)
 
     private val stubs = mutableListOf<NamedStub>()
 
@@ -149,7 +149,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
         } else {
             outputDirectory.createDirectory()
 
-            val stubDataDirectory = outputDirectory.subDirectory("${base}_data")
+            val stubDataDirectory = outputDirectory.subDirectory("${base}$EXAMPLES_DIR_SUFFIX")
             stubDataDirectory.createDirectory()
 
             stubs.mapIndexed { index, namedStub ->

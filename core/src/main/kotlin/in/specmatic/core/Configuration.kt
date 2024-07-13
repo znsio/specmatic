@@ -9,6 +9,16 @@ import java.io.File
 // Moving it here so we can use a function to read it which is not inside Configuration
 private var innerGlobalConfigFileName: String = ".${File.separator}${Configuration.DEFAULT_CONFIG_FILE_NAME}"
 fun getGlobalConfigFileName(): String = innerGlobalConfigFileName
+fun getConfigFileName(): String {
+    val configFileNameWithoutExtension = ".${File.separator}${APPLICATION_NAME_LOWER_CASE}"
+    val supportedExtensions = listOf(JSON, YAML, YML)
+
+    val configFileExtension = supportedExtensions.firstOrNull { extension ->
+        File("$configFileNameWithoutExtension.$extension").exists()
+    } ?: JSON
+
+    return "$configFileNameWithoutExtension.$configFileExtension"
+}
 
 class Configuration {
     companion object {
@@ -22,19 +32,19 @@ class Configuration {
             set(value) {
                 innerGlobalConfigFileName = value
                 _config = if(File(innerGlobalConfigFileName).exists())
-                    loadSpecmaticJsonConfig(innerGlobalConfigFileName)
+                    loadSpecmaticConfig(innerGlobalConfigFileName)
                 else
                     null
 
             }
 
-        private var _config: SpecmaticConfigJson? =
+        private var _config: SpecmaticConfig? =
             if(File(innerGlobalConfigFileName).exists())
-                loadSpecmaticJsonConfig(innerGlobalConfigFileName)
+                loadSpecmaticConfig(innerGlobalConfigFileName)
             else
                 null
 
-        var config: SpecmaticConfigJson?
+        var config: SpecmaticConfig?
             get() {
                 return _config
             }

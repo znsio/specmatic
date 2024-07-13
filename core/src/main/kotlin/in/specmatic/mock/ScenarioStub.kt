@@ -3,6 +3,7 @@ package `in`.specmatic.mock
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.value.*
+import `in`.specmatic.stub.stringToMockScenario
 
 data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val delayInSeconds: Int? = null, val stubToken: String? = null, val requestBodyRegex: String? = null) {
     fun toJSON(): JSONObjectValue {
@@ -12,6 +13,12 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         mockInteraction[MOCK_HTTP_RESPONSE] = response.toJSON()
 
         return JSONObjectValue(mockInteraction)
+    }
+
+    companion object {
+        fun parse(text: String): ScenarioStub {
+            return stringToMockScenario(StringValue(text))
+        }
     }
 }
 

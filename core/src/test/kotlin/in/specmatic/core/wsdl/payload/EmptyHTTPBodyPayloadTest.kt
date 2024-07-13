@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 internal class EmptyHTTPBodyPayloadTest {
     @Test
     fun `generates no statements`() {
-        val statements = EmptyHTTPBodyPayload().qontractStatement()
+        val statements = EmptyHTTPBodyPayload().specmaticStatement()
         assertThat(statements).isEmpty()
     }
 }

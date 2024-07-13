@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import `in`.specmatic.core.LEGACY_CONTRACT_EXTENSION
 import `in`.specmatic.core.CONTRACT_EXTENSION
 import `in`.specmatic.core.CONTRACT_EXTENSIONS
 import java.io.File
@@ -34,7 +33,7 @@ internal class FileOperationsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = [CONTRACT_EXTENSION, LEGACY_CONTRACT_EXTENSION])
+    @ValueSource(strings = [CONTRACT_EXTENSION])
     fun `given a contract with a matching extension, it is found to be valid`(extension: String, @TempDir tempDir: Path) {
         val validExtensionContract = tempDir.resolve("contract.$extension")
         val specFilePath = validExtensionContract.toAbsolutePath().toString()

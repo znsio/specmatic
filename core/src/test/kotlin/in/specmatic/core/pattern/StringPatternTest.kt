@@ -8,6 +8,7 @@ import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldNotMatch
 import org.apache.commons.lang3.RandomStringUtils
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Condition
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -142,7 +143,41 @@ internal class StringPatternTest {
     }
 
     @Test
+    @Tag(GENERATION)
+    fun `positive values for lengths should be generated when lengths are provided`() {
+        val minLength = 10
+        val maxLength = 20
+
+        val result = StringPattern(minLength = minLength, maxLength = maxLength).newBasedOnR(Row(), Resolver()).toList()
+
+        val randomlyGeneratedStrings = result.map { it.value } .filterIsInstance<ExactValuePattern>().map { it.pattern.toString() }
+
+        assertThat(randomlyGeneratedStrings.filter { it.length == minLength}).hasSize(1)
+        assertThat(randomlyGeneratedStrings.filter { it.length == maxLength}).hasSize(1)
+    }
+
+    @Test
+    @Tag(GENERATION)
+    fun `negative values for lengths should be generated when lengths are provided`() {
+        val minLength = 10
+        val maxLength = 20
+
+        val result = StringPattern(minLength = minLength, maxLength = maxLength).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
+        assertThat(result.map { it.typeName }).contains(
+            "null",
+            "number",
+            "boolean",
+        )
+
+        val randomlyGeneratedStrings = result.filterIsInstance<ExactValuePattern>().map { it.pattern.toString() }
+
+        assertThat(randomlyGeneratedStrings.filter { it.length == minLength - 1 }).hasSize(1)
+        assertThat(randomlyGeneratedStrings.filter { it.length == maxLength + 1 }).hasSize(1)
+    }
+
+    @Test
     fun `string pattern encompasses email`() {
         assertThat(StringPattern().encompasses(EmailPattern(), Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
+
 }

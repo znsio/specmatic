@@ -93,12 +93,7 @@ data class HttpResponsePattern(
         val body = response.body
 
         return when (response.status) {
-            status -> {
-                if(Flags.customResponse() && response.status.toString().startsWith("2") && body is JSONObjectValue && body.findFirstChildByPath("resultStatus.status")?.toStringLiteral() == "FAILED")
-                    MatchFailure(mismatchResult("status $status and resultStatus.status == \"SUCCESS\"", "status ${response.status} and resultStatus.status == \"${body.findFirstChildByPath("resultStatus.status")?.toStringLiteral()}\"").copy(breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))
-                else
-                    MatchSuccess(parameters)
-            }
+            status -> MatchSuccess(parameters)
             else -> MatchFailure(mismatchResult("status $status", "status ${response.status}").copy(breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))
         }
     }
@@ -149,14 +144,19 @@ data class HttpResponsePattern(
         return Result.fromResults(listOf(headerResult, bodyResult)).breadCrumb("RESPONSE")
     }
 
-    companion object {
-        fun fromResponseExpectation(response: HttpResponse): HttpResponsePattern {
-            return HttpResponsePattern(
-                HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }),
-                response.status,
-                response.body.exactMatchElseType()
-            )
-        }
+    fun fromResponseExpectation(response: HttpResponse): HttpResponsePattern {
+        val responseHeaders = response.headers.mapValues { stringToPattern(it.value, it.key) }
+
+        val contentTypeHeader = if("content-type" !in responseHeaders.keys.map { it.lowercase() } && headersPattern.contentType != null)
+            mapOf("Content-Type" to ExactValuePattern(StringValue(headersPattern.contentType)))
+        else
+            emptyMap()
+
+        return HttpResponsePattern(
+            HttpHeadersPattern(responseHeaders + contentTypeHeader),
+            response.status,
+            response.body.exactMatchElseType()
+        )
     }
 }
 

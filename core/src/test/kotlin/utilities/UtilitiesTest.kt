@@ -2,7 +2,6 @@ package utilities
 
 import `in`.specmatic.conversions.OpenApiSpecification
 import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.DEFAULT_WORKING_DIRECTORY
 import `in`.specmatic.core.HttpRequest
 import `in`.specmatic.core.SourceProvider
 import `in`.specmatic.core.git.GitCommand
@@ -27,8 +26,6 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
 import java.io.File
 import java.net.ServerSocket
 
@@ -212,7 +209,15 @@ internal class UtilitiesTest {
             File(it).createNewFile()
         }
 
-        File(configFilePath).printWriter().use { it.println("{\"sources\":[{\"provider\":\"git\",\"stub\":[\"..\\/a\\/1.$CONTRACT_EXTENSION\",\"..\\/b\\/1.$CONTRACT_EXTENSION\"],\"test\":[\"..\\/c\\/1.$CONTRACT_EXTENSION\"]}]}") }
+        File(configFilePath).printWriter().use { it.println(
+            """
+            {"sources":[
+                {"provider":"git",
+                    "stub":["../a/1.$CONTRACT_EXTENSION","../b/1.$CONTRACT_EXTENSION"],
+                    "test":["../c/1.$CONTRACT_EXTENSION"]}]
+                }
+            """.trimIndent()
+        ) }
 
         mockkConstructor(SystemGit::class)
         every { anyConstructed<SystemGit>().gitRoot() }.returns("/path/to/monorepo")
@@ -236,8 +241,8 @@ internal class UtilitiesTest {
 
     @Test
     fun `load sources with git repo`() {
-        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
-        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+        val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
+        val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
@@ -245,9 +250,9 @@ internal class UtilitiesTest {
 
     @Test
     fun `load sources with multiple git repos`() {
-        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"]}," +
+        val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"]}," +
                 "{\"provider\": \"git\",\"repository\": \"https://repo2\",\"stub\": [\"c/1.$CONTRACT_EXTENSION\"]}]}"
-        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+        val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
                 GitRepo("https://repo1",null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()),
@@ -257,27 +262,27 @@ internal class UtilitiesTest {
     }
 
     @Test
-    fun `load sources with mono repo for stub-only qontract`() {
-        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
-        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+    fun `load sources with mono repo for stub-only config`() {
+        val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
+        val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
     }
 
     @Test
-    fun `load sources with mono repo for test-only qontract`() {
-        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"test\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
-        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+    fun `load sources with mono repo for test-only specmatic config`() {
+        val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"test\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\",\"c/1.$CONTRACT_EXTENSION\"]}]}"
+        val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(GitMonoRepo(listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), listOf(), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
     }
 
     @Test
-    fun `load sources with mono repo for tests and stubs in qontract`() {
-        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"test\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"],\"stub\": [\"c/1.$CONTRACT_EXTENSION\"]}]}"
-        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+    fun `load sources with mono repo for tests and stubs in spec`() {
+        val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"test\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"],\"stub\": [\"c/1.$CONTRACT_EXTENSION\"]}]}"
+        val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(GitMonoRepo(listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), listOf("c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         assertThat(sources == expectedSources).isTrue
@@ -285,9 +290,9 @@ internal class UtilitiesTest {
 
     @Test
     fun `load sources with multiple mono repos`() {
-        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"]}," +
+        val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"]}," +
                 "{\"provider\": \"git\",\"stub\": [\"c/1.$CONTRACT_EXTENSION\"]}]}"
-        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+        val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
             GitMonoRepo(listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()),
@@ -298,9 +303,9 @@ internal class UtilitiesTest {
 
     @Test
     fun `load sources with git and mono repos`() {
-        val qontractJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"]}," +
+        val specmaticJson = "{\"sources\": [{\"provider\": \"git\",\"repository\": \"https://repo1\",\"stub\": [\"a/1.$CONTRACT_EXTENSION\",\"b/1.$CONTRACT_EXTENSION\"]}," +
                 "{\"provider\": \"git\",\"stub\": [\"c/1.$CONTRACT_EXTENSION\"]}]}"
-        val configJson = parsedJSON(qontractJson) as JSONObjectValue
+        val configJson = parsedJSON(specmaticJson) as JSONObjectValue
         val sources = loadSources(configJson)
         val expectedSources = listOf(
                 GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()),
@@ -327,157 +332,6 @@ internal class UtilitiesTest {
             ) = System.getenv().entries.first { it.value != "true" }
 
             assertThat(readEnvVarOrProperty(environmentVariableName, testSystemProperty)).isEqualTo(environmentVariableValue)
-        }
-    }
-
-    @Nested
-    inner class SpecmaticFolderIsIgnoredInGitRepoTest {
-
-        @ParameterizedTest
-        @ValueSource(booleans = [true, false])
-        fun `should create gitignore file add specmatic folder to it when contracts repo dir does not exist `(gitIgnoreFileExists:Boolean) {
-            val branchName = "featureBranch"
-            val sources = listOf(
-                GitRepo(
-                    "https://repo1",
-                    branchName, listOf(), listOf("a/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()
-                )
-            )
-            File(".spec").deleteRecursively()
-            deleteGitIgnoreFile()
-
-            if(!gitIgnoreFileExists) {
-                createEmptyGitIgnoreFile()
-            }
-
-            mockkStatic("in.specmatic.core.utilities.Utilities")
-            every { loadSources("/configFilePath") }.returns(sources)
-
-            mockkStatic("in.specmatic.core.git.GitOperations")
-            val repositoryDirectory = File(".spec/repos/repo1")
-            every { clone(File(".spec/repos"), any()) }.returns(repositoryDirectory)
-            every { checkout(repositoryDirectory, branchName) }.returns(Unit)
-            val mockGitCommand = mockk<GitCommand>()
-            every { mockGitCommand.checkIgnore(any()) }.returns("")
-
-            val contractPaths =
-                contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
-            assertThat(contractPaths.size).isEqualTo(1)
-            assertSpecmaticFolderIsIgnored()
-        }
-
-        @ParameterizedTest
-        @ValueSource(booleans = [true, false])
-        fun `should create gitignore file add specmatic folder to it when contracts repo dir exists and is clean`(gitIgnoreFileExists:Boolean) {
-            val sources = listOf(
-                GitRepo(
-                    "https://repo1",
-                    null,
-                    listOf(),
-                    listOf("a/1.$CONTRACT_EXTENSION"),
-                    SourceProvider.git.toString()
-                )
-            )
-            File(".spec").deleteRecursively()
-            File(".spec/repos/repo1").mkdirs()
-            deleteGitIgnoreFile()
-
-            if(!gitIgnoreFileExists) {
-                createEmptyGitIgnoreFile()
-            }
-
-            val mockGitCommand = mockk<GitCommand>()
-            every { mockGitCommand.fetch() }.returns("")
-            every { mockGitCommand.revisionsBehindCount() }.returns(0)
-            every { mockGitCommand.statusPorcelain() }.returns("")
-            every { mockGitCommand.checkIgnore(any()) }.returns("")
-            mockkStatic("in.specmatic.core.utilities.Utilities")
-            every { loadSources("/configFilePath") }.returns(sources)
-            every { getSystemGit(any()) }.returns(mockGitCommand)
-            every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
-
-            val contractPaths =
-                contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
-            assertThat(contractPaths.size).isEqualTo(1)
-            assertSpecmaticFolderIsIgnored()
-        }
-
-        @ParameterizedTest
-        @ValueSource(booleans = [true, false])
-        fun `should create gitignore file and add specmatic folder to it when contracts repo dir exists and is not clean`(gitIgnoreFileExists:Boolean) {
-            val sources = listOf(
-                GitRepo(
-                    "https://repo1",
-                    null,
-                    listOf(),
-                    listOf("a/1.$CONTRACT_EXTENSION"),
-                    SourceProvider.git.toString()
-                )
-            )
-            File(".spec").deleteRecursively()
-            File(".spec/repos/repo1").mkdirs()
-            deleteGitIgnoreFile()
-
-            if(!gitIgnoreFileExists) {
-                createEmptyGitIgnoreFile()
-            }
-
-            val mockGitCommand = mockk<GitCommand>()
-            every { mockGitCommand.fetch() }.returns("")
-            every { mockGitCommand.revisionsBehindCount() }.returns(0)
-            every { mockGitCommand.statusPorcelain() }.returns("someDir/someFile")
-            every { mockGitCommand.checkIgnore(any()) }.returns("")
-            mockkStatic("in.specmatic.core.utilities.Utilities")
-            every { loadSources("/configFilePath") }.returns(sources)
-            every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
-            every { getSystemGit(any()) }.returns(mockGitCommand)
-
-            mockkStatic("in.specmatic.core.git.GitOperations")
-            every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
-
-            val contractPaths =
-                contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
-            assertThat(contractPaths.size).isEqualTo(1)
-            assertSpecmaticFolderIsIgnored()
-        }
-
-        @ParameterizedTest
-        @ValueSource(booleans = [true, false])
-        fun `should create gitignore file and add specmatic folder to it when contracts repo dir exists and is behind remote`(gitIgnoreFileExists:Boolean) {
-            val sources = listOf(
-                GitRepo(
-                    "https://repo1",
-                    null,
-                    listOf(),
-                    listOf("a/1.$CONTRACT_EXTENSION"),
-                    SourceProvider.git.toString()
-                )
-            )
-            File(".spec").deleteRecursively()
-            File(".spec/repos/repo1").mkdirs()
-            deleteGitIgnoreFile()
-
-            if(!gitIgnoreFileExists) {
-                createEmptyGitIgnoreFile()
-            }
-
-            val mockGitCommand = mockk<GitCommand>()
-            every { mockGitCommand.fetch() }.returns("")
-            every { mockGitCommand.revisionsBehindCount() }.returns(1)
-            every { mockGitCommand.statusPorcelain() }.returns("")
-            every { mockGitCommand.checkIgnore(any()) }.returns("")
-            mockkStatic("in.specmatic.core.utilities.Utilities")
-            every { loadSources("/configFilePath") }.returns(sources)
-            every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
-            every { getSystemGit(any()) }.returns(mockGitCommand)
-
-            mockkStatic("in.specmatic.core.git.GitOperations")
-            every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
-
-            val contractPaths =
-                contractFilePathsFrom("/configFilePath", ".$CONTRACT_EXTENSION") { source -> source.stubContracts }
-            assertThat(contractPaths.size).isEqualTo(1)
-            assertSpecmaticFolderIsIgnored()
         }
     }
 
@@ -631,7 +485,7 @@ internal class UtilitiesTest {
                     "sources": [
                         {
                             "provider": "filesystem",
-                            "directory": "${specDir.name}"
+                            "directory": "${specDir.name}",
                             "stub": ["random.yaml"]
                         }
                     ]
@@ -679,14 +533,6 @@ internal class UtilitiesTest {
             specDir.deleteRecursively()
             specmaticJSON.delete()
         }
-    }
-
-    private fun assertSpecmaticFolderIsIgnored() {
-        val gitIgnoreFile = File(".gitignore")
-        val ignored =  gitIgnoreFile.readLines().any {
-            it.trim().contains(DEFAULT_WORKING_DIRECTORY)
-        }
-        assertThat(ignored).isTrue
     }
 
     private fun deleteGitIgnoreFile(){

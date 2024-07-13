@@ -5,8 +5,8 @@ import `in`.specmatic.core.wsdl.parser.SOAPMessageType
 
 data class SimpleTypedSOAPPayload(val soapMessageType: SOAPMessageType, val node: XMLNode, val namespaces: Map<String, String>) :
     SOAPPayload {
-    override fun qontractStatement(): List<String> {
+    override fun specmaticStatement(): List<String> {
         val body = soapMessage(node, namespaces)
-        return listOf("And ${soapMessageType.qontractBodyType}-body\n\"\"\"\n$body\n\"\"\"")
+        return listOf("And ${soapMessageType.specmaticBodyType}-body\n\"\"\"\n$body\n\"\"\"")
     }
 }

@@ -1,12 +1,10 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.NumberPattern
 import `in`.specmatic.core.pattern.StringPattern
 import `in`.specmatic.core.value.*
 import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -28,20 +26,16 @@ class ContractAsTestWithSamplesInTable {
   | 10 | 20 | 30 | 
   | hello | 30 | 40 | 
     """
-        Assertions.assertThrows(ContractException::class.java) { jsonResponsesTestsShouldBeVerifiedAgainstTable(contractGherkin) }
-    }
 
-    @Throws(Throwable::class)
-    private fun jsonResponsesTestsShouldBeVerifiedAgainstTable(contractGherkin: String) {
         val contractBehaviour = parseGherkinStringToFeature(contractGherkin)
         val results = contractBehaviour.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val accountId = request.queryParams.getOrElse("account_id") {
-                    val pathParts = request.path!!.split("/".toRegex()).toTypedArray()
+                    val pathParts = request.path!!.split("/".toRegex()).toTypedArray<String>()
                     pathParts[pathParts.size - 1]
                 }
                 assertEquals("GET", request.method)
-                assertTrue( NumberPattern().matches(NumberValue(accountId.toInt()), Resolver()) is Result.Success)
+                assertTrue(NumberPattern().matches(NumberValue(accountId.toInt()), Resolver()) is Result.Success)
                 val headers: HashMap<String, String> = object : HashMap<String, String>() {
                     init {
                         put("Content-Type", "application/json")
@@ -59,7 +53,9 @@ class ContractAsTestWithSamplesInTable {
             override fun setServerState(serverState: Map<String, Value>) {}
         })
 
-        assertThat(results.success()).isTrue()
+        assertThat(results.successCount).isOne()
+        assertThat(results.failureCount).isOne()
+        assertThat(results.success()).withFailMessage(results.report()).isFalse()
     }
 
     @Test
@@ -249,7 +245,7 @@ Feature: Contract for /balance API
                     }
                 }
 
-                val xmlResponseString: String = when(name.toStringLiteral()) {
+                val xmlResponseString: String = when (name.toStringLiteral()) {
                     "John Doe" -> "<account><account_id>10</account_id></account>"
                     "Jane Doe" -> "<account><account_id>20</account_id></account>"
                     else -> fail("Expected name to be either \"John Doe\" or \"Jane Doe\", got ${name.toStringLiteral()}")

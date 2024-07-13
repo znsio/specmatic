@@ -18,8 +18,9 @@ data class StringPattern (
     val regex: String? = null
 ) : Pattern, ScalarType, HasDefaultExample {
     init {
-        require(minLength?.let { maxLength?.let { minLength <= maxLength } }
-            ?: true) { """maxLength cannot be less than minLength""" }
+        if (minLength != null && maxLength != null && minLength > maxLength) {
+            throw IllegalArgumentException("maxLength cannot be less than minLength")
+        }
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
@@ -94,11 +95,34 @@ data class StringPattern (
         return StringValue(randomString(randomStringLength))
     }
 
-    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(this))
+    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        val minLengthExample: ReturnValue<Pattern>? = minLength?.let {
+            HasValue(ExactValuePattern(StringValue(randomString(it))), "minimum length string")
+        }
+
+        val withinRangeExample: ReturnValue<Pattern> = HasValue(this)
+
+        val maxLengthExample: ReturnValue<Pattern>? = maxLength?.let {
+            HasValue(ExactValuePattern(StringValue(randomString(it))), "maximum length string")
+        }
+
+        return sequenceOf(minLengthExample, withinRangeExample, maxLengthExample).filterNotNull()
+    }
+
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return scalarAnnotation(this, sequenceOf(NullPattern, NumberPattern(), BooleanPattern()))
+        val current = this
+
+        return sequence {
+            yieldAll(scalarAnnotation(current, sequenceOf(NullPattern, NumberPattern(), BooleanPattern())))
+
+            if(minLength != null)
+                yield(HasValue(ExactValuePattern(StringValue(randomString(minLength - 1)))))
+
+            if(maxLength != null)
+                yield(HasValue(ExactValuePattern(StringValue(randomString(maxLength + 1)))))
+        }
     }
 
     override fun parse(value: String, resolver: Resolver): Value = StringValue(value)

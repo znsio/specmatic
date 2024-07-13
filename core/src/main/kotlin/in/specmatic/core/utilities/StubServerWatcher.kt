@@ -2,6 +2,7 @@ package `in`.specmatic.core.utilities
 
 import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.CONTRACT_EXTENSIONS
+import `in`.specmatic.core.DATA_DIR_SUFFIX
 import `in`.specmatic.core.log.StringLog
 import java.io.File
 import java.nio.file.FileSystems
@@ -45,7 +46,8 @@ class StubServerWatcher(private val contractPaths: List<String>) {
         }
     }
 
-    private fun dataDirOf(contractFile: File): String {
-        return "${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}_data"
+    internal fun dataDirOf(contractFile: File): String {
+        val examplesDir = examplesDirFor("${contractFile.absoluteFile.parent}/${contractFile.name}", DATA_DIR_SUFFIX)
+        return "${examplesDir.absoluteFile.parent}/${examplesDir.name}"
     }
 }

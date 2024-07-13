@@ -60,7 +60,7 @@ data class XMLTypeData(val name: String = "", val realName: String, val attribut
     }
 
     fun getNodeOccurrence(): NodeOccurrence {
-        val attributeType = (attributes[OCCURS_ATTRIBUTE_NAME] ?: attributes[OCCURS_ATTRIBUTE_NAME_LEGACY]) as ExactValuePattern?
+        val attributeType = (attributes[OCCURS_ATTRIBUTE_NAME]) as ExactValuePattern?
 
         return when(attributeType?.pattern?.toStringLiteral()) {
             "optional" -> NodeOccurrence.Optional

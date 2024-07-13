@@ -2,9 +2,12 @@
 
 package `in`.specmatic.core.git
 
-import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
+import com.fasterxml.jackson.databind.ObjectMapper
 import `in`.specmatic.core.azure.AzureAuthCredentials
+import `in`.specmatic.core.getConfigFileName
+import `in`.specmatic.core.loadSpecmaticConfig
 import `in`.specmatic.core.log.logger
+import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.core.pattern.parsedJSON
 import `in`.specmatic.core.utilities.GitRepo
 import `in`.specmatic.core.utilities.getTransportCallingCallback
@@ -140,7 +143,7 @@ fun loadFromPath(json: Value?, path: List<String>): Value? {
 }
 
 fun getBearerToken(): String? {
-    val specmaticConfigFile = File(globalConfigFileName)
+    val specmaticConfigFile = File(getConfigFileName())
 
     return when {
         specmaticConfigFile.exists() ->
@@ -148,7 +151,7 @@ fun getBearerToken(): String? {
                 readBearerFromEnvVariable(config) ?: readBearerFromFile(config)
             }
         else -> null.also {
-            logger.log("$globalConfigFileName not found")
+            logger.log("Returning bearer token as null since Specmatic configuration file is not found.")
             logger.log("Current working directory is ${File(".").absolutePath}")
         }
     }
@@ -231,4 +234,11 @@ private fun getPersonalAccessTokenProperty(): String? {
     }
 }
 
-private fun readConfig(configFile: File) = parsedJSON(configFile.readText())
+private fun readConfig(configFile: File): Value {
+    try {
+        val config = loadSpecmaticConfig(configFile.name)
+        return parsedJSON(ObjectMapper().writeValueAsString(config))
+    } catch(e: Throwable) {
+        throw ContractException("Error loading Specmatic configuration: ${e.message}")
+    }
+}

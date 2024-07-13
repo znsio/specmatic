@@ -1,8 +1,8 @@
 package `in`.specmatic.test
 
-import `in`.specmatic.conversions.*
+import com.fasterxml.jackson.databind.ObjectMapper
+import `in`.specmatic.conversions.convertPathParameterStyle
 import `in`.specmatic.core.*
-import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
 import `in`.specmatic.core.log.ignoreLog
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
@@ -69,7 +69,7 @@ open class SpecmaticJUnitSupport {
         private const val ENDPOINTS_API = "endpointsAPI"
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
-        private var specmaticConfigJson: SpecmaticConfigJson? = null
+        private var specmaticConfig: SpecmaticConfig? = null
         val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
 
         private val threads: Vector<String> = Vector<String>()
@@ -91,7 +91,7 @@ open class SpecmaticJUnitSupport {
         private fun getReportConfiguration(): ReportConfiguration {
             val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
             val defaultReportTypes = ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
-            return when (val reportConfiguration = specmaticConfigJson?.report) {
+            return when (val reportConfiguration = specmaticConfig?.report) {
                 null -> {
                     logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
                     ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
@@ -146,7 +146,7 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: getGlobalConfigFileName()
+        val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: getConfigFileName()
 
         private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
     }
@@ -155,17 +155,19 @@ open class SpecmaticJUnitSupport {
         if(envName.isNullOrBlank())
             return JSONObjectValue()
 
-        val configFile = File(globalConfigFileName)
-        if(!configFile.exists())
-            throw ContractException("Environment name $envName was specified but config file (usually named specmatic.json) does not exist in the project root. Either avoid setting envName, or provide specmatic.json with the environment settings.")
+        val configFileName = getConfigFileName()
+        if(!File(configFileName).exists())
+            throw ContractException("Environment name $envName was specified but config file does not exist in the project root. Either avoid setting envName, or provide the configuration file with the environment settings.")
 
-        val config = loadConfigJSON(configFile)
-        val envConfig = config.findFirstChildByPath("environments.$envName") ?: return JSONObjectValue()
+        val config = loadSpecmaticConfig(configFileName)
 
-        if(envConfig !is JSONObjectValue)
-            throw ContractException("The environment config must be a JSON object.")
+        val envConfigFromFile = config.environments?.get(envName) ?: return JSONObjectValue()
 
-        return envConfig
+        try {
+            return parsedJSONObject(content = ObjectMapper().writeValueAsString(envConfigFromFile))
+        } catch(e: Throwable) {
+            throw ContractException("Error loading Specmatic configuration: ${e.message}")
+        }
     }
 
     private fun loadExceptionAsTestError(e: Throwable): Stream<DynamicTest> {
@@ -180,8 +182,9 @@ open class SpecmaticJUnitSupport {
         var name = ObjectName("in.specmatic:type=ContractTestStatistics")
 
         var mbs = ManagementFactory.getPlatformMBeanServer()
-        mbs.registerMBean(statistics, name)
 
+        if(!mbs.isRegistered(name))
+            mbs.registerMBean(statistics, name)
 
         val contractPaths = System.getProperty(CONTRACT_PATHS)
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
@@ -228,7 +231,7 @@ open class SpecmaticJUnitSupport {
 
                     createIfDoesNotExist(workingDirectory.path)
 
-                    specmaticConfigJson = getSpecmaticJson()
+                    specmaticConfig = getSpecmaticJson()
 
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
 
@@ -236,7 +239,7 @@ open class SpecmaticJUnitSupport {
 
                     val testScenariosAndEndpointsPairList = contractFilePaths.filter {
                         File(it.path).extension in CONTRACT_EXTENSIONS
-                    }.map { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfigJson?.security, filterName, filterNotName) }
+                    }.map { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfig?.security, filterName, filterNotName) }
 
                     val tests: Sequence<ContractTest> = testScenariosAndEndpointsPairList.asSequence().flatMap { it.first }
 
@@ -448,9 +451,9 @@ open class SpecmaticJUnitSupport {
         return Pair(tests, allEndpoints)
     }
 
-    private fun getSpecmaticJson(): SpecmaticConfigJson? {
+    private fun getSpecmaticJson(): SpecmaticConfig? {
         return try {
-            loadSpecmaticJsonConfig(configFile)
+            loadSpecmaticConfig(configFile)
         }
         catch (e: ContractException) {
             logger.log(exceptionCauseMessage(e))

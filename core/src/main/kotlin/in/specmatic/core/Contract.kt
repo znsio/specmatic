@@ -1,10 +1,9 @@
 package `in`.specmatic.core
 
-import `in`.specmatic.core.pattern.ContractException
 import `in`.specmatic.stub.HttpStub
 import `in`.specmatic.test.HttpClient
 
-data class Contract(val contract: Feature) {
+data class Contract(val feature: Feature) {
     companion object {
         fun fromGherkin(contractGherkin: String): Contract {
             return Contract(parseGherkinStringToFeature(contractGherkin))
@@ -14,11 +13,10 @@ data class Contract(val contract: Feature) {
     fun samples(fake: HttpStub) = samples(fake.endPoint)
 
     private fun samples(endPoint: String) {
-        val contractBehaviour = contract
         val httpClient = HttpClient(endPoint)
 
-        contractBehaviour.generateContractTestScenarios(emptyList()).map { it.second.value }.fold(Results()) { results, scenario ->
-            Results(results = results.results.plus(executeTest(scenario, httpClient)).toMutableList())
+        feature.generateContractTests(emptyList()).fold(Results()) { results, contractTest ->
+            Results(results = results.results.plus(contractTest.runTest(httpClient).first))
         }
     }
 }

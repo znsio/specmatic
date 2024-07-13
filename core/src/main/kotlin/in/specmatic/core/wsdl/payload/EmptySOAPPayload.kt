@@ -5,9 +5,9 @@ import `in`.specmatic.core.value.toXMLNode
 import `in`.specmatic.core.wsdl.parser.SOAPMessageType
 
 data class EmptySOAPPayload(private val soapMessageType: SOAPMessageType): SOAPPayload {
-    override fun qontractStatement(): List<String> {
+    override fun specmaticStatement(): List<String> {
         val body = emptySoapMessage()
-        return listOf("And ${soapMessageType.qontractBodyType}-body\n\"\"\"\n$body\n\"\"\"")
+        return listOf("And ${soapMessageType.specmaticBodyType}-body\n\"\"\"\n$body\n\"\"\"")
     }
 }
 

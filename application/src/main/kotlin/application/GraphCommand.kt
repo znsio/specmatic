@@ -3,7 +3,7 @@ package application
 import `in`.specmatic.core.azure.AzureAPI
 import `in`.specmatic.core.azure.PersonalAccessToken
 import `in`.specmatic.core.git.getPersonalAccessToken
-import `in`.specmatic.core.loadSpecmaticJsonConfig
+import `in`.specmatic.core.loadSpecmaticConfig
 import `in`.specmatic.core.log.CompositePrinter
 import `in`.specmatic.core.log.Verbose
 import `in`.specmatic.core.log.logger
@@ -32,7 +32,7 @@ class GraphCommand: Callable<Unit> {
         if (verbose)
             logger = Verbose(CompositePrinter())
 
-        val configJson = loadSpecmaticJsonConfig()
+        val configJson = loadSpecmaticConfig()
 
         val azureAuthToken = PersonalAccessToken(
             getPersonalAccessToken() ?: throw ContractException(

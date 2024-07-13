@@ -40,11 +40,11 @@ fun createSimpleType(element: XMLNode, wsdl: WSDL, actualElement: XMLNode? = nul
 
     val resolvedElement = actualElement ?: element
 
-    val qontractAttributes = deriveSpecmaticAttributes(resolvedElement)
+    val specmaticAttributes = deriveSpecmaticAttributes(resolvedElement)
     val fqname = resolvedElement.fullyQualifiedName(wsdl)
     val prefix = fqname.prefix.ifBlank { null }
 
-    return Pair(listOf(XMLNode(fqname.qName, qontractAttributes, listOf(value))), prefix)
+    return Pair(listOf(XMLNode(fqname.qName, specmaticAttributes, listOf(value))), prefix)
 }
 
 fun elementTypeValue(element: XMLNode): StringValue = when (val typeName = simpleTypeName(element)) {

@@ -5,6 +5,7 @@ import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.pattern.*
 import `in`.specmatic.core.pattern.Examples.Companion.examplesFrom
 import `in`.specmatic.core.utilities.capitalizeFirstChar
+import `in`.specmatic.core.utilities.examplesDirFor
 import `in`.specmatic.core.utilities.jsonStringToValueMap
 import `in`.specmatic.core.utilities.readEnvVarOrProperty
 import `in`.specmatic.core.value.*
@@ -189,16 +190,22 @@ data class Feature(
     }
 
     fun executeTests(
-        testExecutorFn: TestExecutor,
+        testExecutor: TestExecutor,
         suggestions: List<Scenario> = emptyList(),
-        scenarioNames: List<String> = emptyList()
-    ): Results =
-        generateContractTestScenarios(suggestions)
-            .map { it.second.value }
-            .filter { scenarioNames.isEmpty() || scenarioNames.contains(it.name) }
-            .fold(Results()) { results, scenario ->
-                Results(results = results.results.plus(executeTest(scenario, testExecutorFn, flagsBased)))
+        testDescriptionFilter: List<String> = emptyList()
+    ): Results {
+        return generateContractTests(suggestions)
+            .filter { contractTest ->
+                testDescriptionFilter.isEmpty() ||
+                        testDescriptionFilter.any { scenarioName ->
+                            contractTest.testDescription().contains(scenarioName)
+                        }
             }
+            .fold(Results()) { results, contractTest ->
+                val (result, _) = contractTest.runTest(testExecutor)
+                Results(results = results.results.plus(result))
+            }
+    }
 
     fun setServerState(serverState: Map<String, Value>) {
         this.serverState = this.serverState.plus(serverState)
@@ -300,7 +307,7 @@ data class Feature(
         return generateContractTestScenarios(suggestions).map { (originalScenario, returnValue) ->
             returnValue.realise(
                 hasValue = { concreteTestScenario, comment ->
-                    ScenarioTest(
+                    ScenarioAsTest(
                         concreteTestScenario,
                         flagsBased,
                         concreteTestScenario.sourceProvider,
@@ -367,7 +374,11 @@ data class Feature(
                     negativeScenarioResult.ifHasValue { result: HasValue<Scenario> ->
                         val description = result.valueDetails.singleLineDescription()
 
-                        HasValue(result.value.copy(descriptionFromPlugin = "${result.value.apiDescription} [${description}]"))
+                        val tag = if(description.isNotBlank())
+                            " [${description}]"
+                        else
+                            ""
+                        HasValue(result.value.copy(descriptionFromPlugin = "${result.value.apiDescription}$tag"))
                     }
                 }
 
@@ -1352,7 +1363,7 @@ data class Feature(
                         requestMethod,
                         requestPath,
                         responseStatus
-                    ) to exampleFromFile.toRow()
+                    ) to exampleFromFile.toRow(environmentAndPropertiesConfiguration)
                 }
             } catch (e: Throwable) {
                 logger.log(e, "Error reading file ${exampleFromFile.expectationFilePath}")
@@ -1417,11 +1428,8 @@ data class Feature(
         if (openApiFilePath.isBlank())
             return null
 
-        return File(openApiFilePath).canonicalFile.let {
-            it.parentFile.resolve(it.nameWithoutExtension + "_tests")
-        }
+        return examplesDirFor(openApiFilePath, TEST_DIR_SUFFIX)
     }
-
 
     private fun getTestsDirectory(contractFile: File): File? {
         val testDirectory = testDirectoryFileFromSpecificationPath(contractFile.path) ?: testDirectoryFileFromEnvironmentVariable()

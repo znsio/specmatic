@@ -50,8 +50,10 @@ fun isBuiltInPattern(pattern: Any): Boolean =
                 isLookupRowPattern(pattern) || " in " in pattern || isDictionaryPattern(pattern) -> true
                 else -> false
             }
+
             else -> false
         }
+
         else -> false
     }
 
@@ -96,6 +98,7 @@ internal fun getBuiltInPattern(patternString: String): Pattern =
                     val patterns = pieces.slice(1..2).map { parsedPattern(withPatternDelimiters(it.trim())) }
                     DictionaryPattern(patterns[0], patterns[1])
                 }
+
                 isLookupRowPattern(patternString) -> {
                     val patternParts = breakIntoParts(
                         withoutPatternDelimiters(patternString),
@@ -109,6 +112,7 @@ internal fun getBuiltInPattern(patternString: String): Pattern =
 
                     LookupRowPattern(pattern, key)
                 }
+
                 patternString.contains(" in ") -> {
                     val patternParts = breakIntoParts(
                         withoutPatternDelimiters(patternString),
@@ -122,9 +126,11 @@ internal fun getBuiltInPattern(patternString: String): Pattern =
 
                     PatternInStringPattern(parsedPattern(withPatternDelimiters(patternParts[0])))
                 }
+
                 else -> throw ContractException("Type $patternString does not exist.")
             }
         }
+
         else -> throw ContractException("Type $patternString is not a type specifier.")
     }
 
@@ -164,13 +170,14 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
         when {
             isPatternToken(it) && it.contains("/") -> {
                 val (container, type) = withoutPatternDelimiters(it).split("/")
-                if(container != "csv")
+                if (container != "csv")
                     throw ContractException("$container is not supported")
 
                 val typeString = "($type)"
                 val innerPattern = builtInPatterns[typeString] ?: DeferredPattern(typeString)
                 CsvPattern(innerPattern)
             }
+
             it.isEmpty() -> EmptyStringPattern
             it.startsWith("{") -> toJSONObjectPattern(it, typeAlias = typeAlias)
             it.startsWith("[") -> JSONArrayPattern(it, typeAlias = typeAlias)
@@ -187,9 +194,10 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
                         maxLength = restrictions["maxLength"]?.toIntOrNull()
                     )
                 } catch (e: IllegalArgumentException) {
-                    throw ContractException(e.message?:"", exceptionCause = e)
+                    throw ContractException(e.message ?: "", exceptionCause = e)
                 }
             }
+
             isNumberPatternWithRestrictions(it) -> {
                 val tokens = it.split(" ")
 
@@ -198,31 +206,35 @@ fun parsedPattern(rawContent: String, key: String? = null, typeAlias: String? = 
                 try {
                     NumberPattern(
                         typeAlias = typeAlias,
-                        minLength = restrictions["minLength"]?.toIntOrNull(),
-                        maxLength = restrictions["maxLength"]?.toIntOrNull()
+                        minLength = restrictions["minLength"]?.toInt() ?: 1,
+                        maxLength = restrictions["maxLength"]?.toInt() ?: Int.MAX_VALUE
                     )
                 } catch (e: IllegalArgumentException) {
-                    throw ContractException(e.message?:"", exceptionCause = e)
+                    throw ContractException(e.message ?: "", exceptionCause = e)
                 }
             }
+
             isPatternToken(it) -> when {
                 isDictionaryPattern(it) -> getBuiltInPattern(it)
                 isLookupRowPattern(it) -> {
                     val (pattern, lookupKey) = parseLookupRowPattern(it)
                     LookupRowPattern(parsedPattern(pattern, typeAlias = typeAlias), lookupKey)
                 }
+
                 isOptionalValuePattern(it) -> AnyPattern(
                     listOf(
                         DeferredPattern("(empty)", key),
                         parsedPattern(withoutNullToken(it), typeAlias = typeAlias)
                     )
                 )
+
                 isRestPattern(it) -> RestPattern(parsedPattern(withoutRestToken(it), typeAlias = typeAlias))
                 isRepeatingPattern(it) -> ListPattern(parsedPattern(withoutListToken(it), typeAlias = typeAlias))
                 it == "(number)" -> DeferredPattern(it, null)
                 isBuiltInPattern(it) -> getBuiltInPattern(it)
                 else -> DeferredPattern(it, key)
             }
+
             else -> ExactValuePattern(StringValue(it))
         }
     }
@@ -252,16 +264,27 @@ fun parsedJSON(content: String, mismatchMessages: MismatchMessages = DefaultMism
             it.startsWith("{") -> try {
                 JSONObjectValue(jsonStringToValueMap(it))
             } catch (e: Throwable) {
-                throw ContractException("Could not parse json object, got error: ${e.localizedMessage ?: e.message}",
-                    exceptionCause = e)
+                throw ContractException(
+                    "Could not parse json object, got error: ${e.localizedMessage ?: e.message}",
+                    exceptionCause = e
+                )
             }
+
             it.startsWith("[") -> try {
                 JSONArrayValue(jsonStringToValueArray(it))
             } catch (e: Throwable) {
-                throw ContractException("Could not parse json array, got error: ${e.localizedMessage ?: e.message}",
-                    exceptionCause = e)
+                throw ContractException(
+                    "Could not parse json array, got error: ${e.localizedMessage ?: e.message}",
+                    exceptionCause = e
+                )
             }
-            else -> throw ContractException(mismatchMessages.mismatchMessage("json value", stringInErrorMessage(content)))
+
+            else -> throw ContractException(
+                mismatchMessages.mismatchMessage(
+                    "json value",
+                    stringInErrorMessage(content)
+                )
+            )
         }
     }
 }
@@ -278,10 +301,18 @@ fun parsedJSONObject(content: String, mismatchMessages: MismatchMessages = Defau
             it.startsWith("{") -> try {
                 JSONObjectValue(jsonStringToValueMap(it))
             } catch (e: Throwable) {
-                throw ContractException("Could not parse json object, got error: ${e.localizedMessage ?: e.message}",
-                    exceptionCause = e)
+                throw ContractException(
+                    "Could not parse json object, got error: ${e.localizedMessage ?: e.message}",
+                    exceptionCause = e
+                )
             }
-            else -> throw ContractException(mismatchMessages.mismatchMessage("json object", stringInErrorMessage(content)))
+
+            else -> throw ContractException(
+                mismatchMessages.mismatchMessage(
+                    "json object",
+                    stringInErrorMessage(content)
+                )
+            )
         }
     }
 }
@@ -292,10 +323,18 @@ fun parsedJSONArray(content: String, mismatchMessages: MismatchMessages = Defaul
             it.startsWith("[") -> try {
                 JSONArrayValue(jsonStringToValueArray(it))
             } catch (e: Throwable) {
-                throw ContractException("Could not parse json array, got error: ${e.localizedMessage ?: e.message}",
-                    exceptionCause = e)
+                throw ContractException(
+                    "Could not parse json array, got error: ${e.localizedMessage ?: e.message}",
+                    exceptionCause = e
+                )
             }
-            else -> throw ContractException(mismatchMessages.mismatchMessage("json array", stringInErrorMessage(content)))
+
+            else -> throw ContractException(
+                mismatchMessages.mismatchMessage(
+                    "json array",
+                    stringInErrorMessage(content)
+                )
+            )
         }
     }
 }

@@ -48,5 +48,5 @@ class SubscribeCommand: Callable<Unit> {
                 exitProcess(1)
             }
         }
-   }
+    }
 }

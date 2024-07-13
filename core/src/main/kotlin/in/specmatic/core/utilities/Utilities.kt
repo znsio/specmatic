@@ -24,7 +24,6 @@ import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.JSONObjectValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import org.eclipse.jgit.util.TemporaryBuffer.LocalFile
 import org.w3c.dom.Node.*
 import java.io.File
 import java.io.StringReader
@@ -139,7 +138,7 @@ fun strings(list: List<Value>): List<String> {
     }
 }
 
-fun loadSources(configFilePath: String): List<ContractSource> = loadSources(loadSpecmaticJsonConfig(configFilePath))
+fun loadSources(configFilePath: String): List<ContractSource> = loadSources(loadSpecmaticConfig(configFilePath))
 
 fun loadConfigJSON(configFile: File): JSONObjectValue {
     val configJson = try {
@@ -155,8 +154,8 @@ fun loadConfigJSON(configFile: File): JSONObjectValue {
     return configJson
 }
 
-fun loadSources(specmaticConfigJson: SpecmaticConfigJson): List<ContractSource> {
-    return specmaticConfigJson.sources.map { source ->
+fun loadSources(specmaticConfig: SpecmaticConfig): List<ContractSource> {
+    return specmaticConfig.sources.map { source ->
         when(source.provider) {
             SourceProvider.git -> {
                 val stubPaths = source.stub ?: emptyList()
@@ -247,7 +246,7 @@ fun createIfDoesNotExist(workingDirectoryPath: String) {
 
 fun exitIfDoesNotExist(label: String, filePath: String) {
     if(!File(filePath).exists())
-        exitWithMessage("${label.capitalizeFirstChar()} $filePath does not exist")
+        exitWithMessage("${label.capitalizeFirstChar()} does not exist. (Could not find file ./specmatic.json OR ./specmatic.yaml OR ./specmatic.yml)")
 }
 
 fun exitIfAnyDoNotExist(label: String, filePaths: List<String>) {
@@ -260,8 +259,9 @@ fun exitIfAnyDoNotExist(label: String, filePaths: List<String>) {
 }
 
 // Used by SpecmaticJUnitSupport users for loading contracts to stub or mock
-fun contractStubPaths(): List<ContractPathData> =
-        contractFilePathsFrom(globalConfigFileName, DEFAULT_WORKING_DIRECTORY) { source -> source.stubContracts }
+fun contractStubPaths(configFileName: String): List<ContractPathData> {
+    return contractFilePathsFrom(configFileName, DEFAULT_WORKING_DIRECTORY) { source -> source.stubContracts }
+}
 
 fun interface ContractsSelectorPredicate {
     fun select(source: ContractSource): List<String>
@@ -334,3 +334,16 @@ fun saveJsonFile(jsonString: String, path: String, fileName: String) {
 fun readEnvVarOrProperty(envVarName: String, propertyName: String): String? {
     return System.getenv(envVarName) ?: System.getProperty(propertyName)
 }
+
+fun examplesDirFor(openApiFilePath: String, alternateSuffix: String): File {
+    val examplesDir = getExamplesDir(openApiFilePath, EXAMPLES_DIR_SUFFIX)
+    return if (examplesDir.isDirectory)
+        examplesDir
+    else
+        getExamplesDir(openApiFilePath, alternateSuffix)
+}
+
+private fun getExamplesDir(openApiFilePath: String, suffix: String): File =
+    File(openApiFilePath).canonicalFile.let {
+        it.parentFile.resolve("${it.parent}/${it.nameWithoutExtension}$suffix")
+    }

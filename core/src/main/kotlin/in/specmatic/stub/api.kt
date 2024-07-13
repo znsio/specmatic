@@ -8,6 +8,8 @@ import `in`.specmatic.core.log.consoleLog
 import `in`.specmatic.core.log.logger
 import `in`.specmatic.core.utilities.ContractPathData
 import `in`.specmatic.core.utilities.contractStubPaths
+import `in`.specmatic.core.utilities.examplesDirFor
+import `in`.specmatic.core.utilities.exitIfDoesNotExist
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.mock.NoMatchingScenario
 import `in`.specmatic.mock.ScenarioStub
@@ -37,7 +39,11 @@ fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath } ?: emptyList()
 
 fun createStub(host: String = "localhost", port: Int = 9000): ContractStub {
-    return createStub(host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT)
+    return createStub(host, port, false)
+}
+
+fun createStub(host: String = "localhost", port: Int = 9000, strict: Boolean = false): ContractStub {
+    return createStub(host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT, strict)
 }
 
 // Used by stub client code
@@ -46,7 +52,16 @@ fun createStub(
     host: String = "localhost",
     port: Int = 9000
 ): ContractStub {
-    return createStub(dataDirPaths, host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT)
+    return createStub(dataDirPaths, host, port, false)
+}
+
+fun createStub(
+    dataDirPaths: List<String>,
+    host: String = "localhost",
+    port: Int = 9000,
+    strict: Boolean = false
+): ContractStub {
+    return createStub(dataDirPaths, host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT, strict = strict)
 }
 
 fun createStubFromContracts(
@@ -78,9 +93,13 @@ internal fun createStub(
     dataDirPaths: List<String>,
     host: String = "localhost",
     port: Int = 9000,
-    timeoutMillis: Long
+    timeoutMillis: Long,
+    strict: Boolean = false
 ): ContractStub {
-    val contractPathData = contractStubPaths()
+    // TODO - see if these two can be extracted out.
+    val configFileName = getConfigFileName()
+    exitIfDoesNotExist("config file", configFileName)
+    val contractPathData = contractStubPaths(configFileName)
     val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
@@ -91,14 +110,19 @@ internal fun createStub(
         host,
         port,
         ::consoleLog,
-        specmaticConfigPath = File(getGlobalConfigFileName()).canonicalPath,
-        timeoutMillis = timeoutMillis
+        specmaticConfigPath = File(configFileName).canonicalPath,
+        timeoutMillis = timeoutMillis,
+        strictMode = strict
     )
 }
 
-internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMillis: Long): ContractStub {
+internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMillis: Long, strict: Boolean = false, givenConfigFileName: String? = null): ContractStub {
     val workingDirectory = WorkingDirectory()
-    val stubs = loadContractStubsFromImplicitPaths(contractStubPaths())
+    // TODO - see if these two can be extracted out.
+    val configFileName = givenConfigFileName ?: getConfigFileName()
+    exitIfDoesNotExist("config file", configFileName)
+
+    val stubs = loadContractStubsFromImplicitPaths(contractStubPaths(configFileName))
     val features = stubs.map { it.first }
     val expectations = contractInfoToHttpExpectations(stubs)
 
@@ -109,8 +133,9 @@ internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMil
         port,
         log = ::consoleLog,
         workingDirectory = workingDirectory,
-        specmaticConfigPath = File(getGlobalConfigFileName()).canonicalPath,
-        timeoutMillis = timeoutMillis
+        specmaticConfigPath = File(configFileName).canonicalPath,
+        timeoutMillis = timeoutMillis,
+        strictMode = strict
     )
 }
 
@@ -399,14 +424,14 @@ fun implicitContractDataDir(contractPath: String, customBase: String? = null): F
     val contractFile = File(contractPath)
 
     return if(customBase == null)
-        File("${contractFile.absoluteFile.parent}/${contractFile.nameWithoutExtension}$DATA_DIR_SUFFIX")
+        examplesDirFor("${contractFile.absoluteFile.parent}/${contractFile.name}", DATA_DIR_SUFFIX)
     else {
         val gitRoot: String = File(SystemGit().inGitRootOf(contractPath).workingDirectory).canonicalPath
         val fullContractPath = File(contractPath).canonicalPath
 
         val relativeContractPath = File(fullContractPath).relativeTo(File(gitRoot))
         File(gitRoot).resolve(customBase).resolve(relativeContractPath).let {
-            File("${it.parent}/${it.nameWithoutExtension}$DATA_DIR_SUFFIX")
+            examplesDirFor("${it.parent}/${it.name}", DATA_DIR_SUFFIX)
         }
     }
 }

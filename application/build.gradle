@@ -32,7 +32,7 @@ repositories {
 
 def ktor_version = "2.3.11"
 def junit_version = "5.10.2"
-def jgit_version = "6.9.0.202403050737-r"
+def jgit_version = "6.10.0.202406032230-r"
 
 dependencies {
     // TODO Put library reference overrides here to eliminate vulnerabilities, and remove the override when no longer needed
@@ -58,7 +58,7 @@ dependencies {
         exclude group: 'ch.qos.logback', module: 'logback-core'
     }
     implementation('org.springframework.boot:spring-boot-autoconfigure:3.3.0')
-    implementation('org.springframework:spring-core:6.1.8')
+    implementation('org.springframework:spring-core:6.1.9')
     implementation 'info.picocli:picocli:4.7.6'
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
     implementation "io.ktor:ktor-network-tls:$ktor_version"
@@ -98,7 +98,7 @@ dependencies {
     testImplementation 'com.ginsberg:junit5-system-exit:1.1.2'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
-    testImplementation 'io.kotest:kotest-assertions-core-jvm:5.9.0'
+    testImplementation 'io.kotest:kotest-assertions-core-jvm:5.9.1'
 }
 
 test {

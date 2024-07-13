@@ -40,8 +40,8 @@ data class GitRepo(
         configFilePath: String
     ): List<ContractPathData> {
         val userHome = File(System.getProperty("user.home"))
-        val defaultQontractWorkingDir = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
-        val defaultRepoDir = directoryRelativeTo(defaultQontractWorkingDir)
+        val defaultSpecmaticWorkingDir = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
+        val defaultRepoDir = directoryRelativeTo(defaultSpecmaticWorkingDir)
 
         val bundleDir = File(Configuration.TEST_BUNDLE_RELATIVE_PATH).resolve(repoName)
 
@@ -71,7 +71,6 @@ data class GitRepo(
                     }
                     contractsRepoDir.exists() && isClean(contractsRepoDir) -> {
                         logger.log("Contract repo exists, is clean, and is up to date with remote.")
-                        ensureThatSpecmaticFolderIsIgnored()
                         contractsRepoDir
                     }
                     else -> {
@@ -112,27 +111,7 @@ data class GitRepo(
             null -> logger.log("No branch specified, using default branch")
             else -> checkout(repositoryDirectory, branchName)
         }
-        ensureThatSpecmaticFolderIsIgnored()
         return repositoryDirectory
-    }
-
-    private fun ensureThatSpecmaticFolderIsIgnored() {
-        if(!isSpecmaticFolderIgnored()){
-            val gitIgnoreFile = File(".gitignore")
-            if(gitIgnoreFile.exists()){
-                logger.log("A .gitignore file exists for this git repo, but it does not contain the $DEFAULT_WORKING_DIRECTORY folder.")
-                addSpecmaticFolderToGitIgnoreFile(gitIgnoreFile)
-            }
-            else{
-                logger.log("Creating a gitignore file as it is missing for the current project.")
-                addSpecmaticFolderToGitIgnoreFile(gitIgnoreFile, false)
-            }
-        }
-    }
-
-    private fun addSpecmaticFolderToGitIgnoreFile(gitIgnoreFile: File, onNewLine:Boolean = true){
-        logger.log("Adding $DEFAULT_WORKING_DIRECTORY folder to .gitignore file.")
-        gitIgnoreFile.appendText("${if (onNewLine) "\n" else ""}$DEFAULT_WORKING_DIRECTORY")
     }
 
     private fun localRepoDir(workingDirectory: String): File = File(workingDirectory).resolve("repos")

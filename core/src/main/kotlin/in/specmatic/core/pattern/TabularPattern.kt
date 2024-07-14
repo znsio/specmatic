@@ -137,7 +137,7 @@ fun newMapBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver
         }
     }
 
-    return patternListR(patternCollection)
+    return patternList(patternCollection)
 }
 
 fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): Sequence<Map<String, Pattern>> {
@@ -222,16 +222,12 @@ fun key(pattern: Pattern, key: String): String {
     )
 }
 
-fun <ValueType> patternListR(patternCollection: Map<String, Sequence<ReturnValue<ValueType>>>): Sequence<ReturnValue<Map<String, ValueType>>> {
+fun <ValueType> patternList(patternCollection: Map<String, Sequence<ReturnValue<ValueType>>>): Sequence<ReturnValue<Map<String, ValueType>>> {
     if (patternCollection.isEmpty())
         return sequenceOf(HasValue(emptyMap()))
 
     val spec = CombinationSpec(patternCollection, Flags.maxTestRequestCombinations())
     return spec.selectedCombinations
-}
-
-fun <ValueType> patternList(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {
-    return patternListR(patternCollection.mapValues { it.value.map { HasValue(it) } }).map { it.value }
 }
 
 fun <ValueType> patternValues(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {

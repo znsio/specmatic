@@ -378,13 +378,17 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     override fun newBasedOn(resolver: Resolver): Sequence<XMLPattern> {
-        return allOrNothingCombinationIn(pattern.attributes) { attributePattern ->
-            attempt(breadCrumb = this.pattern.name) {
-                newBasedOn(attributePattern, resolver).map {
-                    it.mapKeys { entry -> withoutOptionality(entry.key) }
+        return allOrNothingCombinationIn<Pattern>(
+            pattern.attributes,
+            Row(),
+            null,
+            null, returnValues<Pattern> { attributePattern: Map<String, Pattern> ->
+                attempt(breadCrumb = this.pattern.name) {
+                    newBasedOn(attributePattern, resolver).map {
+                        it.mapKeys { entry -> withoutOptionality(entry.key) }
+                    }
                 }
-            }
-        }.flatMap { newAttributes ->
+            }).map { it.value }.flatMap { newAttributes ->
             val newNodesList = allOrNothingListCombinations(pattern.nodes.map { childPattern ->
                 attempt(breadCrumb = this.pattern.name) {
                     when (childPattern) {

@@ -129,9 +129,13 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
                 else
                     it
             }
-            allOrNothingCombinationIn(queryParams) { entry ->
-                newBasedOn(entry.mapKeys { withoutOptionality(it.key) }, resolver)
-            }
+            allOrNothingCombinationIn<Pattern>(
+                queryParams,
+                Row(),
+                null,
+                null, returnValues<Pattern> { entry: Map<String, Pattern> ->
+                    newBasedOn(entry.mapKeys { withoutOptionality(it.key) }, resolver)
+                }).map { it.value }
         }
     }
 

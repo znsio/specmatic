@@ -71,9 +71,13 @@ data class TabularPattern(
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithNullType = withNullPattern(resolver)
-        return allOrNothingCombinationIn(pattern, resolver.resolveRow(row)) { pattern ->
-            newMapBasedOn(pattern, row, resolverWithNullType).map { it.value }
-        }.map {
+        return allOrNothingCombinationIn<Pattern>(
+            pattern,
+            resolver.resolveRow(row),
+            null,
+            null, returnValues<Pattern> { pattern: Map<String, Pattern> ->
+                newMapBasedOn(pattern, row, resolverWithNullType).map { it.value }
+            }).map { it.value }.map {
             toTabularPattern(it.mapKeys { (key, _) ->
                 withoutOptionality(key)
             })
@@ -82,9 +86,14 @@ data class TabularPattern(
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         val resolverWithNullType = withNullPattern(resolver)
-        val allOrNothingCombinationIn = allOrNothingCombinationIn(pattern) { pattern ->
-            newBasedOn(pattern, resolverWithNullType)
-        }
+        val allOrNothingCombinationIn =
+            allOrNothingCombinationIn<Pattern>(
+                pattern,
+                Row(),
+                null,
+                null, returnValues<Pattern> { pattern: Map<String, Pattern> ->
+                    newBasedOn(pattern, resolverWithNullType)
+                }).map { it.value }
         return allOrNothingCombinationIn.map { toTabularPattern(it) }
     }
 
@@ -314,21 +323,15 @@ fun <ValueType> forEachKeyCombinationInR(
         creator(newPattern)
     }.flatten()
 
-fun <ValueType> allOrNothingCombinationIn(
-    patternMap: Map<String, ValueType>,
-    row: Row = Row(),
-    minPropertiesOrNull: Int? = null,
-    maxPropertiesOrNull: Int? = null,
-    creator: (Map<String, ValueType>) -> Sequence<Map<String, ValueType>>
-): Sequence<Map<String, ValueType>> {
-    val wrappedCreator: (Map<String, ValueType>) -> Sequence<ReturnValue<Map<String, ValueType>>> = { map ->
-        creator(map).map { HasValue(it) }
+fun <ValueType> returnValues(function: (Map<String, ValueType>) -> Sequence<Map<String, ValueType>>): (Map<String, ValueType>) -> Sequence<ReturnValue<Map<String, ValueType>>> {
+    val wrappedFunction: (Map<String, ValueType>) -> Sequence<ReturnValue<Map<String, ValueType>>> = { map ->
+        function(map).map { HasValue(it) }
     }
 
-    return allOrNothingCombinationInR(patternMap, row, minPropertiesOrNull, maxPropertiesOrNull, wrappedCreator).map { it.value }
+    return wrappedFunction
 }
 
-fun <ValueType> allOrNothingCombinationInR(
+fun <ValueType> allOrNothingCombinationIn(
     patternMap: Map<String, ValueType>,
     row: Row = Row(),
     minPropertiesOrNull: Int? = null,

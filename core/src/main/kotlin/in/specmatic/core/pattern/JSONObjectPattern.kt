@@ -161,7 +161,7 @@ data class JSONObjectPattern(
             minProperties,
             maxProperties
         ) { pattern ->
-            newBasedOnR(pattern, row, withNullPattern(resolver))
+            newMapBasedOn(pattern, row, withNullPattern(resolver))
         }.map { it: ReturnValue<Map<String, Pattern>> ->
             it.ifValue {
                 toJSONObjectPattern(it.mapKeys { (key, _) ->

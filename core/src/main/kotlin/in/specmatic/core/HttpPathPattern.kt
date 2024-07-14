@@ -96,36 +96,36 @@ data class HttpPathPattern(
         row: Row,
         resolver: Resolver
     ): Sequence<List<URLPathSegmentPattern>> {
-        val generatedPatterns = newBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathParamPattern ->
-            val key = urlPathParamPattern.key
-            if (key === null || !row.containsField(key)) return@mapIndexed urlPathParamPattern
-            attempt(breadCrumb = "[$index]") {
-                val rowValue = row.getField(key)
-                when {
-                    isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathParamPattern.key}\"") {
-                        val rowPattern = resolver.getPattern(rowValue)
-                        when (val result = urlPathParamPattern.encompasses(rowPattern, resolver, resolver)) {
-                            is Success -> urlPathParamPattern.copy(pattern = rowPattern)
-                            is Failure -> throw ContractException(result.toFailureReport())
+        val generatedPatterns = newListBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathParamPattern ->
+                val key = urlPathParamPattern.key
+                if (key === null || !row.containsField(key)) return@mapIndexed urlPathParamPattern
+                attempt(breadCrumb = "[$index]") {
+                    val rowValue = row.getField(key)
+                    when {
+                        isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathParamPattern.key}\"") {
+                            val rowPattern = resolver.getPattern(rowValue)
+                            when (val result = urlPathParamPattern.encompasses(rowPattern, resolver, resolver)) {
+                                is Success -> urlPathParamPattern.copy(pattern = rowPattern)
+                                is Failure -> throw ContractException(result.toFailureReport())
+                            }
+                        }
+
+                        else -> attempt("Format error in example of path parameter \"$key\"") {
+                            val value = urlPathParamPattern.parse(rowValue, resolver)
+
+                            val matchResult = urlPathParamPattern.matches(value, resolver)
+                            if (matchResult is Failure)
+                                throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
+
+                            URLPathSegmentPattern(
+                                ExactValuePattern(
+                                    value
+                                )
+                            )
                         }
                     }
-
-                    else -> attempt("Format error in example of path parameter \"$key\"") {
-                        val value = urlPathParamPattern.parse(rowValue, resolver)
-
-                        val matchResult = urlPathParamPattern.matches(value, resolver)
-                        if (matchResult is Failure)
-                            throw ContractException("""Could not run contract test, the example value ${value.toStringLiteral()} provided "id" does not match the contract.""")
-
-                        URLPathSegmentPattern(
-                            ExactValuePattern(
-                                value
-                            )
-                        )
-                    }
                 }
-            }
-        }, row, resolver)
+            }, row, resolver).map { it.value }
 
         //TODO: replace this with Generics
         return generatedPatterns.map { list -> list.map { it as URLPathSegmentPattern } }

@@ -27,7 +27,7 @@ data class LookupRowPattern(override val pattern: Pattern, override val key: Str
                 pattern.newBasedOn(row, cyclePreventedResolver)
             }
             // Cycle prevention handled in helper method
-            else -> newBasedOnR(row, key, pattern, resolver)
+            else -> newPatternsBasedOn(row, key, pattern, resolver)
         }
     }
 

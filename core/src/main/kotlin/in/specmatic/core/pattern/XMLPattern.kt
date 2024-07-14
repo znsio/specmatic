@@ -314,7 +314,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return forEachKeyCombinationIn(pattern.attributes, row) { attributePattern ->
             attempt(breadCrumb = pattern.name) {
-                newBasedOn(attributePattern, row, resolver).map {
+                newMapBasedOn(attributePattern, row, resolver).map { it.value }.map {
                     it.mapKeys { entry -> withoutOptionality(entry.key) }
                 }
             }

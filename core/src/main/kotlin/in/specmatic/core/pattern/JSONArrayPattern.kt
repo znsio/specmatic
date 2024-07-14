@@ -69,7 +69,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithNullType = withNullPattern(resolver)
-        val returnValues = newBasedOnR(pattern, row, resolverWithNullType)
+        val returnValues = newListBasedOn(pattern, row, resolverWithNullType)
 
         return returnValues.map { it.ifValue { JSONArrayPattern(it) } }
     }
@@ -129,19 +129,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
     override val typeName: String = "json array"
 }
 
-fun newBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): Sequence<List<Pattern>> {
-    val values = patterns.mapIndexed { index, pattern ->
-        attempt(breadCrumb = "[$index]") {
-            resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
-                pattern.newBasedOn(row, cyclePreventedResolver).map { it.value }
-            }
-        }
-    }
-
-    return listCombinations(values.map<Sequence<Pattern?>, HasValue<Sequence<Pattern?>>> { HasValue(it) }).map { it.value }
-}
-
-fun newBasedOnR(patterns: List<Pattern>, row: Row, resolver: Resolver): Sequence<ReturnValue<List<Pattern>>> {
+fun newListBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): Sequence<ReturnValue<List<Pattern>>> {
     val values = patterns.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
             resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->

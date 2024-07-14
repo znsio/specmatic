@@ -72,7 +72,7 @@ data class TabularPattern(
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithNullType = withNullPattern(resolver)
         return allOrNothingCombinationIn(pattern, resolver.resolveRow(row)) { pattern ->
-            newBasedOn(pattern, row, resolverWithNullType)
+            newMapBasedOn(pattern, row, resolverWithNullType).map { it.value }
         }.map {
             toTabularPattern(it.mapKeys { (key, _) ->
                 withoutOptionality(key)
@@ -130,20 +130,10 @@ data class TabularPattern(
     override val typeName: String = "json object"
 }
 
-fun newBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
-    val patternCollection: Map<String, Sequence<Pattern>> = patternMap.mapValues { (key, pattern) ->
-        attempt(breadCrumb = key) {
-            newBasedOn(row, key, pattern, resolver)
-        }
-    }
-
-    return patternList(patternCollection)
-}
-
-fun newBasedOnR(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
+fun newMapBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
     val patternCollection: Map<String, Sequence<ReturnValue<Pattern>>> = patternMap.mapValues { (key, pattern) ->
         attempt(breadCrumb = key) {
-            newBasedOnR(row, key, pattern, resolver)
+            newPatternsBasedOn(row, key, pattern, resolver)
         }
     }
 
@@ -160,56 +150,7 @@ fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): Sequence<M
     return patternValues(patternCollection)
 }
 
-fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Sequence<Pattern> {
-    val keyWithoutOptionality = key(pattern, key)
-
-    return when {
-        row.containsField(keyWithoutOptionality) -> {
-            val rowValue = row.getField(keyWithoutOptionality)
-
-            if (isPatternToken(rowValue)) {
-                val rowPattern = resolver.getPattern(rowValue)
-
-                attempt(breadCrumb = keyWithoutOptionality) {
-                    when (val result = pattern.encompasses(rowPattern, resolver, resolver)) {
-                        is Result.Success -> {
-                            resolver.withCyclePrevention(rowPattern, isOptional(key)) { cyclePreventedResolver ->
-                                rowPattern.newBasedOn(row, cyclePreventedResolver).map { it.value }
-                            }?:
-                            // Handle cycle (represented by null value) by using empty sequence for optional properties
-                            emptySequence()
-                        }
-                        is Result.Failure -> throw ContractException(result.toFailureReport())
-                    }
-                }
-            } else {
-                val parsedRowValue = attempt("Format error in example of \"$keyWithoutOptionality\"") {
-                    resolver.parse(pattern, rowValue)
-                }
-
-                val exactValuePattern =
-                    when (val matchResult = resolver.matchesPattern(null, pattern, parsedRowValue)) {
-                        is Result.Failure -> throw ContractException(matchResult.toFailureReport())
-                        else -> ExactValuePattern(parsedRowValue)
-                    }
-
-                val generativeTests: Sequence<Pattern> = resolver.generatedPatternsForGenerativeTests(pattern, key).map { it.value }
-
-                sequenceOf(exactValuePattern) + generativeTests.filterNot {
-                    it.encompasses(exactValuePattern, resolver, resolver) is Result.Success
-                }
-            }
-        }
-        else -> resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
-            pattern.newBasedOn(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver)
-                .map { it.value }
-        }?:
-        // Handle cycle (represented by null value) by using empty list for optional properties
-        emptySequence()
-    }
-}
-
-fun newBasedOnR(row: Row, key: String, pattern: Pattern, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+fun newPatternsBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
     val keyWithoutOptionality = key(pattern, key)
 
     return when {

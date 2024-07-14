@@ -120,7 +120,7 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
             }
 
             forEachKeyCombinationIn(queryParams, Row()) { entry ->
-                newBasedOn(entry, row, resolver)
+                newMapBasedOn(entry, row, resolver).map { it.value }
             }.map {
                 it.mapKeys { withoutOptionality(it.key) }
             }

@@ -461,7 +461,7 @@ data class HttpRequestPattern(
             } ?: sequenceOf(HasValue(null))
 
             val newQueryParamsPatterns: Sequence<ReturnValue<HttpQueryParamPattern>> =
-                if(status.toString().startsWith("2")) {
+                if (status.toString().startsWith("2")) {
                     val new = httpQueryParamPattern.newBasedOn(row, resolver)
                     httpQueryParamPattern.addComplimentaryPatterns(new, row, resolver)
                 } else {
@@ -470,7 +470,7 @@ data class HttpRequestPattern(
                     HasValue(HttpQueryParamPattern(it))
                 }
 
-            val newHeadersPattern: Sequence<ReturnValue<HttpHeadersPattern>> = if(status.toString().startsWith("2")) {
+            val newHeadersPattern: Sequence<ReturnValue<HttpHeadersPattern>> = if (status.toString().startsWith("2")) {
                 val new = headersPattern.newBasedOn(row, resolver)
                 headersPattern.addComplimentaryPatterns(new, row, resolver)
             } else {
@@ -503,7 +503,7 @@ data class HttpRequestPattern(
                         } else
                             ExactValuePattern(value)
 
-                        if(status.toString().startsWith("2"))
+                        if (status.toString().startsWith("2"))
                             resolver.generateHttpRequestbodies(body, row, requestBodyAsIs, value)
                         else
                             sequenceOf(HasValue(requestBodyAsIs))
@@ -513,8 +513,10 @@ data class HttpRequestPattern(
                 }
             }
 
-            val newFormFieldsPatterns: Sequence<ReturnValue<Map<String, Pattern>>> = newBasedOn(formFieldsPattern, row, resolver).map { HasValue(it) }
-            val newFormDataPartLists: Sequence<ReturnValue<List<MultiPartFormDataPattern>>> = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver).map { HasValue(it) }
+            val newFormFieldsPatterns: Sequence<ReturnValue<Map<String, Pattern>>> =
+                newMapBasedOn(formFieldsPattern, row, resolver).map { it.value }.map { HasValue(it) }
+            val newFormDataPartLists: Sequence<ReturnValue<List<MultiPartFormDataPattern>>> =
+                newMultiPartBasedOn(multiPartFormDataPattern, row, resolver).map { HasValue(it) }
 
             newHttpPathPatterns.flatMap("PATH") { newPathParamPattern ->
                 newQueryParamsPatterns.flatMap("QUERY") { newQueryParamPattern ->
@@ -630,7 +632,8 @@ data class HttpRequestPattern(
                         .map { it.ifValue { HttpPathPattern(it, httpPathPattern.path) } }
                 } ?: sequenceOf(null)
 
-            val newQueryParamsPatterns = httpQueryParamPattern.negativeBasedOn(row, resolver).map { it.ifValue { HttpQueryParamPattern(it) } }
+            val newQueryParamsPatterns =
+                httpQueryParamPattern.negativeBasedOn(row, resolver).map { it.ifValue { HttpQueryParamPattern(it) } }
 
             val newBodies: Sequence<ReturnValue<out Pattern>> = returnValue(breadCrumb = "BODY") {
                 body.let {
@@ -659,7 +662,7 @@ data class HttpRequestPattern(
             }
 
             val newHeadersPattern = headersPattern.negativeBasedOn(row, resolver)
-            val newFormFieldsPatterns = newBasedOn(formFieldsPattern, row, resolver)
+            val newFormFieldsPatterns = newMapBasedOn(formFieldsPattern, row, resolver).map { it.value }
             val newFormDataPartLists = newMultiPartBasedOn(multiPartFormDataPattern, row, resolver)
 
             sequence {
@@ -667,10 +670,14 @@ data class HttpRequestPattern(
                     // If security schemes are present, for now we'll just take the first scheme and assign it to each negative request pattern.
                     // Ideally we should generate negative patterns from the security schemes and use them.
                     val positivePattern: HttpRequestPattern =
-                        newBasedOn(row, resolver, 400).first().value.copy(securitySchemes = listOf(securitySchemes.first()))
+                        newBasedOn(
+                            row,
+                            resolver,
+                            400
+                        ).first().value.copy(securitySchemes = listOf(securitySchemes.first()))
 
                     newHttpPathPatterns.forEach { pathParamPatternR ->
-                        if(pathParamPatternR != null) {
+                        if (pathParamPatternR != null) {
                             yield(pathParamPatternR.ifValue { pathParamPattern ->
                                 positivePattern.copy(httpPathPattern = pathParamPattern)
                             })
@@ -705,7 +712,7 @@ data class HttpRequestPattern(
                             HasValue(positivePattern.copy(multiPartFormDataPattern = newFormDataPartListPattern))
                         )
                     }
-                } catch(t: Throwable) {
+                } catch (t: Throwable) {
                     yield(HasException(t))
                 }
             }

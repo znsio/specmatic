@@ -15,16 +15,18 @@ sealed class MultiPartFormDataPattern(open val name: String, open val contentTyp
 
 data class MultiPartContentPattern(override val name: String, val content: Pattern, override val contentType: String? = null) : MultiPartFormDataPattern(name, contentType) {
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<MultiPartContentPattern?> =
-            newBasedOn(row, withoutOptionality(name), content, resolver).map { newContent: Pattern -> MultiPartContentPattern(
+        newPatternsBasedOn(row, withoutOptionality(name), content, resolver).map { it.value }.map { newContent: Pattern ->
+            MultiPartContentPattern(
                 withoutOptionality(name),
                 newContent,
                 contentType
-            ) }.let {
-                when{
-                    isOptional(name) && !row.containsField(withoutOptionality(name)) -> sequenceOf(null).plus(it)
-                    else -> it
-                }
+            )
+        }.let {
+            when {
+                isOptional(name) && !row.containsField(withoutOptionality(name)) -> sequenceOf(null).plus(it)
+                else -> it
             }
+        }
 
     override fun generate(resolver: Resolver): MultiPartFormDataValue =
             MultiPartContentValue(name, resolver.withCyclePrevention(content, content::generate), specifiedContentType = contentType)

@@ -69,7 +69,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithNullType = withNullPattern(resolver)
-        val returnValues = newBasedOn(pattern, row, resolverWithNullType)
+        val returnValues = newBasedOnR(pattern, row, resolverWithNullType)
 
         return returnValues.map { it.ifValue { JSONArrayPattern(it) } }
     }
@@ -129,7 +129,19 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
     override val typeName: String = "json array"
 }
 
-fun newBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): Sequence<ReturnValue<List<Pattern>>> {
+fun newBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): Sequence<List<Pattern>> {
+    val values = patterns.mapIndexed { index, pattern ->
+        attempt(breadCrumb = "[$index]") {
+            resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                pattern.newBasedOn(row, cyclePreventedResolver).map { it.value }
+            }
+        }
+    }
+
+    return listCombinations(values)
+}
+
+fun newBasedOnR(patterns: List<Pattern>, row: Row, resolver: Resolver): Sequence<ReturnValue<List<Pattern>>> {
     val values = patterns.mapIndexed { index, pattern ->
         attempt(breadCrumb = "[$index]") {
             resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
@@ -138,7 +150,7 @@ fun newBasedOn(patterns: List<Pattern>, row: Row, resolver: Resolver): Sequence<
         }
     }.map { it.foldIntoReturnValueOfSequence().ifValue { it.map { it as Pattern? } } }
 
-    return listCombinations(values).distinct()
+    return listCombinationsR(values).distinct()
 }
 
 fun newBasedOn(patterns: List<Pattern>, resolver: Resolver): Sequence<List<Pattern>> {
@@ -150,15 +162,15 @@ fun newBasedOn(patterns: List<Pattern>, resolver: Resolver): Sequence<List<Patte
         }
     }
 
-    return listCombinations(values.map<Sequence<Pattern?>, HasValue<Sequence<Pattern?>>> { HasValue(it) }).map { it.value }
+    return listCombinations(values)
 }
 
-fun listCombinations(values: List<ReturnValue<Sequence<Pattern?>>>): Sequence<ReturnValue<List<Pattern>>> {
+fun listCombinationsR(values: List<ReturnValue<Sequence<Pattern?>>>): Sequence<ReturnValue<List<Pattern>>> {
     if (values.isEmpty())
         return sequenceOf(HasValue(emptyList()))
 
     val lastValueTypesR: ReturnValue<Sequence<Pattern?>> = values.last()
-    val subLists = listCombinations(values.dropLast(1))
+    val subLists = listCombinationsR(values.dropLast(1))
 
     return subLists.map { subListR ->
         subListR.combine(lastValueTypesR) { subList, lastValueTypes ->
@@ -170,6 +182,23 @@ fun listCombinations(values: List<ReturnValue<Sequence<Pattern?>>>): Sequence<Re
             }.toList()
         }
     }.foldToSequenceOfReturnValueList()
+}
+
+fun listCombinations(values: List<Sequence<Pattern?>>): Sequence<List<Pattern>> {
+    if (values.isEmpty())
+        return sequenceOf(emptyList())
+
+    val lastValueTypes: Sequence<Pattern?> = values.last()
+    val subLists = listCombinations(values.dropLast(1))
+
+    return subLists.flatMap { subList ->
+        lastValueTypes.map { lastValueType ->
+            if (lastValueType != null)
+                subList.plus(lastValueType)
+            else
+                subList
+        }
+    }
 }
 
 private enum class ValueSource {

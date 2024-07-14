@@ -339,35 +339,35 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
                 else -> {
                     listCombinations(pattern.nodes.map { childPattern ->
-                                        attempt(breadCrumb = pattern.name) {
-                                            when (childPattern) {
-                                                is XMLPattern -> {
-                                                    val dereferenced: XMLPattern = childPattern.dereferenceType(resolver)
+                        attempt(breadCrumb = pattern.name) {
+                            when (childPattern) {
+                                is XMLPattern -> {
+                                    val dereferenced: XMLPattern = childPattern.dereferenceType(resolver)
 
-                                                    resolver.withCyclePrevention(dereferenced) { cyclePreventedResolver ->
-                                                        when {
-                                                            dereferenced.occurMultipleTimes() -> {
-                                                                dereferenced.newBasedOn(row, cyclePreventedResolver)
-                                                                    .map { it.value as XMLPattern }
-                                                            }
-
-                                                            dereferenced.isOptional() -> {
-                                                                dereferenced.newBasedOn(row, cyclePreventedResolver)
-                                                                    .map { it.value as XMLPattern }.plus(null)
-                                                            }
-
-                                                            else -> dereferenced.newBasedOn(row, cyclePreventedResolver)
-                                                                .map { it.value as XMLPattern }
-                                                        }
-                                                    }
-                                                }
-
-                                                else -> resolver.withCyclePrevention(childPattern) { cyclePreventedResolver ->
-                                                    childPattern.newBasedOn(row, cyclePreventedResolver).map { it.value }
-                                                }
+                                    resolver.withCyclePrevention(dereferenced) { cyclePreventedResolver ->
+                                        when {
+                                            dereferenced.occurMultipleTimes() -> {
+                                                dereferenced.newBasedOn(row, cyclePreventedResolver)
+                                                    .map { it.value as XMLPattern }
                                             }
+
+                                            dereferenced.isOptional() -> {
+                                                dereferenced.newBasedOn(row, cyclePreventedResolver)
+                                                    .map { it.value as XMLPattern }.plus(null)
+                                            }
+
+                                            else -> dereferenced.newBasedOn(row, cyclePreventedResolver)
+                                                .map { it.value as XMLPattern }
                                         }
-                                    }.map { HasValue(it) }).map { it.value }
+                                    }
+                                }
+
+                                else -> resolver.withCyclePrevention(childPattern) { cyclePreventedResolver ->
+                                    childPattern.newBasedOn(row, cyclePreventedResolver).map { it.value }
+                                }
+                            }
+                        }
+                    })
                 }
             }
 

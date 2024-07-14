@@ -23,7 +23,7 @@ class ResponseBuilderTest {
                 return NullValue
             }
 
-            override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+            override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
                 TODO("Not yet implemented")
             }
 

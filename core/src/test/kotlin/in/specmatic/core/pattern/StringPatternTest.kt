@@ -150,7 +150,7 @@ internal class StringPatternTest {
 
         val result = StringPattern(minLength = minLength, maxLength = maxLength).newBasedOn(Row(), Resolver()).toList()
 
-        val randomlyGeneratedStrings = result.filterIsInstance<ExactValuePattern>().map { it.pattern.toString() }
+        val randomlyGeneratedStrings = result.map { it.value } .filterIsInstance<ExactValuePattern>().map { it.pattern.toString() }
 
         assertThat(randomlyGeneratedStrings.filter { it.length == minLength}).hasSize(1)
         assertThat(randomlyGeneratedStrings.filter { it.length == maxLength}).hasSize(1)
@@ -179,5 +179,4 @@ internal class StringPatternTest {
     fun `string pattern encompasses email`() {
         assertThat(StringPattern().encompasses(EmailPattern(), Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
     }
-
 }

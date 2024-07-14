@@ -38,7 +38,7 @@ internal class PatternInStringPatternTest {
 
     @Test
     fun `should generate a list of patterns based on a Row`() {
-        val patterns = PatternInStringPattern(NumberPattern()).newBasedOn(Row(), Resolver()).toList()
+        val patterns = PatternInStringPattern(NumberPattern()).newBasedOn(Row(), Resolver()).map { it.value }.toList()
 
         assertThat(patterns).hasSize(1)
 
@@ -46,7 +46,7 @@ internal class PatternInStringPatternTest {
 
         assertThat(pattern).isInstanceOf(PatternInStringPattern::class.java)
 
-        if(pattern !is PatternInStringPattern) fail("Expected PatternInStringPattern")
+        if (pattern !is PatternInStringPattern) fail("Expected PatternInStringPattern")
 
         assertThat(pattern.pattern).isInstanceOf(NumberPattern::class.java)
     }

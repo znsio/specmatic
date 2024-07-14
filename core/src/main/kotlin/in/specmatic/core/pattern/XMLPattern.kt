@@ -311,9 +311,9 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         return XMLNode(pattern.realName, newAttributes, nodes)
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<XMLPattern> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return forEachKeyCombinationIn(pattern.attributes, row) { attributePattern ->
-            attempt(breadCrumb = this.pattern.name) {
+            attempt(breadCrumb = pattern.name) {
                 newBasedOn(attributePattern, row, resolver).map {
                     it.mapKeys { entry -> withoutOptionality(entry.key) }
                 }
@@ -327,7 +327,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                             throw ContractException("Node ${pattern.name} is empty but an example with this name exists")
 
                         val parsedData =
-                                dereferenced.pattern.nodes[0].parse(row.getField(dereferenced.pattern.name), resolver)
+                            dereferenced.pattern.nodes[0].parse(row.getField(dereferenced.pattern.name), resolver)
                         val matchResult = dereferenced.pattern.nodes[0].matches(parsedData, resolver)
 
                         if (matchResult is Failure)
@@ -336,9 +336,10 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                         sequenceOf(listOf(ExactValuePattern(parsedData)))
                     }
                 }
+
                 else -> {
                     listCombinations(pattern.nodes.map { childPattern ->
-                        attempt(breadCrumb = this.pattern.name) {
+                        attempt(breadCrumb = pattern.name) {
                             when (childPattern) {
                                 is XMLPattern -> {
                                     val dereferenced: XMLPattern = childPattern.dereferenceType(resolver)
@@ -347,18 +348,22 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
                                         when {
                                             dereferenced.occurMultipleTimes() -> {
                                                 dereferenced.newBasedOn(row, cyclePreventedResolver)
+                                                    .map { it.value as XMLPattern }
                                             }
 
                                             dereferenced.isOptional() -> {
-                                                dereferenced.newBasedOn(row, cyclePreventedResolver).plus(null)
+                                                dereferenced.newBasedOn(row, cyclePreventedResolver)
+                                                    .map { it.value as XMLPattern }.plus(null)
                                             }
 
                                             else -> dereferenced.newBasedOn(row, cyclePreventedResolver)
+                                                .map { it.value as XMLPattern }
                                         }
                                     }
                                 }
+
                                 else -> resolver.withCyclePrevention(childPattern) { cyclePreventedResolver ->
-                                    childPattern.newBasedOn(row, cyclePreventedResolver)
+                                    childPattern.newBasedOn(row, cyclePreventedResolver).map { it.value }
                                 }
                             }
                         }
@@ -369,7 +374,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
             newNodesList.map { newNodes ->
                 XMLPattern(XMLTypeData(pattern.name, pattern.realName, newAttributes, newNodes))
             }
-        }
+        }.map { HasValue(it) }
     }
 
     override fun newBasedOn(resolver: Resolver): Sequence<XMLPattern> {
@@ -415,7 +420,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return newBasedOn(row, resolver).map { HasValue(it) }
+        return newBasedOn(row, resolver).map { it.value as XMLPattern }.map { HasValue(it) }
     }
 
     private fun dereferenceType(resolver: Resolver): XMLPattern {

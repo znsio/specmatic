@@ -74,7 +74,7 @@ class EnumPatternTest {
         fun `it should generate new patterns for all enum values when the row is empty`() {
             val enum = EnumPattern(listOf(StringValue("01"), StringValue("02")))
 
-            val newPatterns = enum.newBasedOn(Row(), Resolver()).toList()
+            val newPatterns = enum.newBasedOn(Row(), Resolver()).map { it.value }.toList()
 
             assertThat(newPatterns).containsExactlyInAnyOrder(
                 ExactValuePattern(StringValue("01")),
@@ -84,9 +84,11 @@ class EnumPatternTest {
 
         @Test
         fun `it should only pick the value in the row when the row is NOT empty`() {
-            val jsonPattern = JSONObjectPattern(mapOf("type" to EnumPattern(listOf(StringValue("01"), StringValue("02")))))
+            val jsonPattern =
+                JSONObjectPattern(mapOf("type" to EnumPattern(listOf(StringValue("01"), StringValue("02")))))
 
             val newPatterns = jsonPattern.newBasedOn(Row(listOf("type"), values = listOf("01")), Resolver())
+                .map { it.value as JSONObjectPattern }
 
             val values = newPatterns.map { it.generate(Resolver()) }.toList()
 
@@ -100,7 +102,8 @@ class EnumPatternTest {
         @Test
         fun `it should use the inline example if present`() {
             val enum = EnumPattern(listOf(StringValue("01"), StringValue("02")), example = "01")
-            val patterns = enum.newBasedOn(Row(), Resolver(defaultExampleResolver = UseDefaultExample)).toList()
+            val patterns =
+                enum.newBasedOn(Row(), Resolver(defaultExampleResolver = UseDefaultExample)).map { it.value }.toList()
 
             assertThat(patterns).containsExactly(
                 ExactValuePattern(StringValue("01"))

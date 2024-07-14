@@ -12,7 +12,7 @@ internal class LookupRowPatternTest {
         val pattern = LookupRowPattern(NumberPattern(), "customerId")
         val row = Row(listOf("customerId"), listOf("10"))
 
-        val newPattern = pattern.newBasedOn(row, Resolver())
+        val newPattern = pattern.newBasedOn(row, Resolver()).map { it.value }
         assertThat(newPattern.single()).isEqualTo(ExactValuePattern(NumberValue(10)))
     }
 
@@ -21,7 +21,7 @@ internal class LookupRowPatternTest {
         val pattern = LookupRowPattern(NumberPattern(), "customerId")
         val row = Row(emptyList(), emptyList())
 
-        val newPattern = pattern.newBasedOn(row, Resolver())
+        val newPattern = pattern.newBasedOn(row, Resolver()).map { it.value }
         assertThat(newPattern.single()).isEqualTo(NumberPattern())
     }
 

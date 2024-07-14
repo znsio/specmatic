@@ -68,7 +68,8 @@ data class TabularPattern(
             })
         }
     }
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithNullType = withNullPattern(resolver)
         return allOrNothingCombinationIn(pattern, resolver.resolveRow(row)) { pattern ->
             newBasedOn(pattern, row, resolverWithNullType)
@@ -76,7 +77,7 @@ data class TabularPattern(
             toTabularPattern(it.mapKeys { (key, _) ->
                 withoutOptionality(key)
             })
-        }
+        }.map { HasValue(it) }
     }
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
@@ -88,7 +89,7 @@ data class TabularPattern(
     }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return this.newBasedOn(row, resolver).map { HasValue(it) }
+        return this.newBasedOn(row, resolver).map { it.value }.map { HasValue(it) }
     }
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)
@@ -173,7 +174,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Seq
                     when (val result = pattern.encompasses(rowPattern, resolver, resolver)) {
                         is Result.Success -> {
                             resolver.withCyclePrevention(rowPattern, isOptional(key)) { cyclePreventedResolver ->
-                                rowPattern.newBasedOn(row, cyclePreventedResolver)
+                                rowPattern.newBasedOn(row, cyclePreventedResolver).map { it.value }
                             }?:
                             // Handle cycle (represented by null value) by using empty sequence for optional properties
                             emptySequence()
@@ -192,7 +193,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Seq
                         else -> ExactValuePattern(parsedRowValue)
                     }
 
-                val generativeTests: Sequence<Pattern> = resolver.generatedPatternsForGenerativeTestsR(pattern, key).map { it.value }
+                val generativeTests: Sequence<Pattern> = resolver.generatedPatternsForGenerativeTests(pattern, key).map { it.value }
 
                 sequenceOf(exactValuePattern) + generativeTests.filterNot {
                     it.encompasses(exactValuePattern, resolver, resolver) is Result.Success
@@ -201,6 +202,7 @@ fun newBasedOn(row: Row, key: String, pattern: Pattern, resolver: Resolver): Seq
         }
         else -> resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
             pattern.newBasedOn(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver)
+                .map { it.value }
         }?:
         // Handle cycle (represented by null value) by using empty list for optional properties
         emptySequence()
@@ -221,7 +223,7 @@ fun newBasedOnR(row: Row, key: String, pattern: Pattern, resolver: Resolver): Se
                     when (val result = pattern.encompasses(rowPattern, resolver, resolver)) {
                         is Result.Success -> {
                             resolver.withCyclePrevention(rowPattern, isOptional(key)) { cyclePreventedResolver ->
-                                rowPattern.newBasedOnR(row, cyclePreventedResolver)
+                                rowPattern.newBasedOn(row, cyclePreventedResolver)
                             }?:
                             // Handle cycle (represented by null value) by using empty sequence for optional properties
                             emptySequence()
@@ -240,7 +242,7 @@ fun newBasedOnR(row: Row, key: String, pattern: Pattern, resolver: Resolver): Se
                         else -> ExactValuePattern(parsedRowValue)
                     }
 
-                val generativePatterns: Sequence<ReturnValue<Pattern>> = resolver.generatedPatternsForGenerativeTestsR(pattern, key)
+                val generativePatterns: Sequence<ReturnValue<Pattern>> = resolver.generatedPatternsForGenerativeTests(pattern, key)
 
                 val sequence: Sequence<ReturnValue<Pattern>> =
                     sequenceOf(HasValue(exactValuePattern))
@@ -255,7 +257,7 @@ fun newBasedOnR(row: Row, key: String, pattern: Pattern, resolver: Resolver): Se
             }
         }
         else -> resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
-            pattern.newBasedOnR(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver)
+            pattern.newBasedOn(row.stepDownOneLevelInJSONHierarchy(keyWithoutOptionality), cyclePreventedResolver)
         }?:
         // Handle cycle (represented by null value) by using empty list for optional properties
         emptySequence()

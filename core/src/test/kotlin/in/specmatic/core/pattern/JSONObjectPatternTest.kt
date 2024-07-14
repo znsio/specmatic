@@ -323,7 +323,7 @@ internal class JSONObjectPatternTest {
         @Test
         fun `Given an optional key, the unsuffixed key should be looked up in the row when generating a pattern`() {
             val row = Row(listOf("id"), listOf("12345"))
-            val patterns = parsedPattern("""{"id?": "(number)"}""", null).newBasedOn(row, Resolver())
+            val patterns = parsedPattern("""{"id?": "(number)"}""", null).newBasedOn(row, Resolver()).map { it.value }
 
             val value = patterns.map { it.generate(Resolver()) }.map {
                 if (it !is JSONObjectValue)
@@ -340,7 +340,8 @@ internal class JSONObjectPatternTest {
         @Test
         fun `Given a column name in the examples, a json key must be replaced by the example`() {
             val row = Row(listOf("id"), listOf("10"))
-            val pattern = parsedPattern("""{"id": "(number)"}""", null).newBasedOn(row, Resolver()).first()
+            val pattern =
+                parsedPattern("""{"id": "(number)"}""", null).newBasedOn(row, Resolver()).map { it.value }.first()
 
             if (pattern !is JSONObjectPattern)
                 throw Exception("Expected JSONObjectPattern, got ${pattern.javaClass}")
@@ -352,7 +353,8 @@ internal class JSONObjectPatternTest {
         @Test
         fun `Given a column name in the examples, a json key in a lazily looked up pattern must be replaced by the example`() {
             val row = Row(listOf("id"), listOf("10"))
-            val actualPattern = parsedPattern("""{"id": "(number)"}""", null).newBasedOn(row, Resolver()).first()
+            val actualPattern =
+                parsedPattern("""{"id": "(number)"}""", null).newBasedOn(row, Resolver()).map { it.value }.first()
 
             val resolver = Resolver(newPatterns = mapOf("(Id)" to actualPattern))
 
@@ -374,7 +376,7 @@ internal class JSONObjectPatternTest {
 
             val row = Row(listOf("city"), listOf("Mumbai"))
 
-            val newPattern = personPattern.newBasedOn(row, resolver).first()
+            val newPattern = personPattern.newBasedOn(row, resolver).map { it.value }.first()
             if (newPattern !is JSONObjectPattern)
                 throw AssertionError("Expected JSONObjectPattern, got ${newPattern.javaClass.name}")
 
@@ -410,7 +412,7 @@ internal class JSONObjectPatternTest {
 
             System.setProperty("MAX_TEST_REQUEST_COMBINATIONS", "64")
             val newPatterns = try {
-                objPattern.newBasedOn(Row(), resolver).toList()
+                objPattern.newBasedOn(Row(), resolver).map { it.value }.toList()
             } finally {
                 System.clearProperty("MAX_TEST_REQUEST_COMBINATIONS")
             }
@@ -423,7 +425,7 @@ internal class JSONObjectPatternTest {
 
             val personPattern = parsedPattern("""{"name": "(string)"}""")
 
-            val newPattern = personPattern.newBasedOn(Row(), resolver).first()
+            val newPattern = personPattern.newBasedOn(Row(), resolver).map { it.value }.first()
 
             if (newPattern !is JSONObjectPattern)
                 throw AssertionError("Expected JSONObjectPattern, got ${newPattern.javaClass.name}")
@@ -433,11 +435,15 @@ internal class JSONObjectPatternTest {
 
         @Test
         fun `should return errors with id field`() {
-            val patterns = parsedPattern("""{"id?": "(number)"}""", null).newBasedOn(Row(), Resolver())
+            val patterns =
+                parsedPattern("""{"id?": "(number)"}""", null).newBasedOn(Row(), Resolver()).map { it.value }
 
             assertNotNull(patterns.find { pattern ->
                 val result = pattern.matches(JSONObjectValue(mapOf("id" to StringValue("abc"))), Resolver())
-                result is Result.Failure && result.toMatchFailureDetails() == MatchFailureDetails(listOf("id"), listOf("""Expected number, actual was "abc""""))
+                result is Result.Failure && result.toMatchFailureDetails() == MatchFailureDetails(
+                    listOf("id"),
+                    listOf("""Expected number, actual was "abc"""")
+                )
             })
         }
 
@@ -525,7 +531,7 @@ internal class JSONObjectPatternTest {
                 maxProperties = 3
             )
 
-            val newPatterns: List<JSONObjectPattern> = pattern.newBasedOn(Row(), Resolver()).toList()
+            val newPatterns: List<JSONObjectPattern> = pattern.newBasedOn(Row(), Resolver()).toList().map { it.value as JSONObjectPattern }
 
             assertThat(newPatterns).allSatisfy {
                 assertThat(it.pattern.keys).hasSizeGreaterThanOrEqualTo(2)

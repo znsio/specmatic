@@ -15,9 +15,7 @@ object AnythingPattern: Pattern {
         return StringValue(randomString(10))
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
-        return sequenceOf(this)
-    }
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(this))
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         return sequenceOf(this)

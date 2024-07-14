@@ -3,6 +3,7 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.GENERATION
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
+import `in`.specmatic.core.pattern.UUIDPattern.newBasedOn
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.shouldMatch
 import `in`.specmatic.shouldNotMatch
@@ -43,7 +44,7 @@ internal class UUIDPatternTest {
 
     @Test
     fun `should return itself when generating a new pattern based on a row`() {
-        val uuidPatterns = UUIDPattern.newBasedOn(Row(), Resolver()).toList()
+        val uuidPatterns = newBasedOn(Row(), Resolver()).map { it.value }.toList()
         assertEquals(1, uuidPatterns.size)
         assertEquals(UUIDPattern, uuidPatterns.first())
     }

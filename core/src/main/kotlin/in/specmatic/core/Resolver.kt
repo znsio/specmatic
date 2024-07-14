@@ -165,7 +165,7 @@ data class Resolver(
         return this.copy(patternMatchStrategy = matchAnything, parseStrategy = alwaysReturnStringValue)
     }
 
-    fun generatedPatternsForGenerativeTestsR(pattern: Pattern, key: String): Sequence<ReturnValue<Pattern>> {
+    fun generatedPatternsForGenerativeTests(pattern: Pattern, key: String): Sequence<ReturnValue<Pattern>> {
         return generation.generatedPatternsForGenerativeTests(this, pattern, key)
     }
 

@@ -12,11 +12,13 @@ data class RestPattern(override val pattern: Pattern, override val typeAlias: St
             listPattern.matches(sampleData, resolver)
 
     override fun generate(resolver: Resolver): Value = resolver.withCyclePrevention(listPattern, listPattern::generate)
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         return resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
-            pattern.newBasedOn(row, cyclePreventedResolver).map { RestPattern(it) }
+            pattern.newBasedOn(row, cyclePreventedResolver)
         }
     }
+
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         return resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
             pattern.newBasedOn(cyclePreventedResolver).map { RestPattern(it) }

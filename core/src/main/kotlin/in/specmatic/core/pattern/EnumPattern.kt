@@ -42,8 +42,8 @@ data class EnumPattern(
         return this.copy(pattern = pattern.copy(example = example))
     }
 
-    override fun newBasedOnR(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return pattern.newBasedOnR(row, resolver).map {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        return pattern.newBasedOn(row, resolver).map {
             it.ifHasValue {
                 HasValue(it.value, "selected ${it.value} from enum")
             }

@@ -39,7 +39,7 @@ data class Base64StringPattern(override val typeAlias: String? = null) : Pattern
         return StringValue(randomBase64String(randomStringLength))
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(HasValue(this))
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         // TODO ideally StringPattern should be in this list. However need to better understand how to generate

@@ -51,13 +51,15 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
         })
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val newValuePatterns = resolver.withCyclePrevention(valuePattern) { cyclePreventedResolver ->
             valuePattern.newBasedOn(Row(), cyclePreventedResolver)
         }
 
         return newValuePatterns.map {
-            DictionaryPattern(keyPattern, it)
+            it.ifValue {
+                DictionaryPattern(keyPattern, it)
+            }
         }
     }
 

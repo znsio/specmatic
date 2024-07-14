@@ -56,7 +56,7 @@ internal class CsvPatternTest {
 
     @Test
     fun `generates values for tests`() {
-        assertThat(CsvPattern(NumberPattern()).newBasedOn(Row(), Resolver()).toList()).satisfies(Consumer {
+        assertThat(CsvPattern(NumberPattern()).newBasedOn(Row(), Resolver()).map { it.value }.toList()).satisfies(Consumer {
             assertThat(it).hasSize(1)
             assertThat(it.first()).isInstanceOf(CsvPattern::class.java)
             assertThat(it.first().pattern).isInstanceOf(NumberPattern::class.java)

@@ -39,8 +39,10 @@ data class HasValue<T>(override val value: T, val valueDetails: List<ValueDetail
         }
     }
 
-    override fun <U> combineWith(valueResult: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T> {
+    override fun <U> assimilate(valueResult: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T> {
         if(valueResult is ReturnFailure)
+            return valueResult.cast<T>()
+        else if(valueResult is HasException)
             return valueResult.cast<T>()
 
         valueResult as HasValue<U>
@@ -72,6 +74,20 @@ data class HasValue<T>(override val value: T, val valueDetails: List<ValueDetail
 
     override fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U> {
         return fn(this)
+    }
+
+    override fun <U, V> combine(valueResult: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
+        if(valueResult is ReturnFailure)
+            return valueResult.cast<V>()
+
+        valueResult as HasValue<U>
+
+        return try {
+            val newValue = fn(value, valueResult.value)
+            HasValue(newValue, valueDetails.plus(valueResult.valueDetails))
+        } catch(t: Throwable) {
+            HasException(t)
+        }
     }
 
     override fun addDetails(message: String, breadCrumb: String): ReturnValue<T> {

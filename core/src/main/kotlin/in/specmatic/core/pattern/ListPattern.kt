@@ -49,21 +49,23 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         }, resolver)
     }
 
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
         return attempt(breadCrumb = "[]") {
             resolverWithEmptyType.withCyclePrevention(pattern, true) { cyclePreventedResolver ->
                 val patterns = pattern.newBasedOn(row.dropDownIntoList(), cyclePreventedResolver)
                 try {
-                    patterns.firstOrNull()
-                    patterns.map { ListPattern(it) }
+                    patterns.firstOrNull()?.value
+                    patterns.map {
+                        it.ifValue { ListPattern(it) }
+                    }
                 } catch(e: ContractException) {
                     if(e.isCycle)
                         null
                     else
                         throw e
                 }
-            } ?: sequenceOf(ExactValuePattern(JSONArrayValue(emptyList())))
+            } ?: sequenceOf(HasValue(ExactValuePattern(JSONArrayValue(emptyList()))))
         }
     }
 

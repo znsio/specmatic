@@ -37,7 +37,7 @@ internal class URLPatternTest {
     @Test
     fun `should return itself when generating a new url based on a row`() {
         val pattern = URLPattern(URLScheme.HTTPS)
-        val newPatterns = pattern.newBasedOn(Row(), Resolver()).toList()
+        val newPatterns = pattern.newBasedOn(Row(), Resolver()).toList().map { it.value }
 
         assertEquals(pattern, newPatterns.first())
         assertEquals(1, newPatterns.size)

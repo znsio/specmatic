@@ -94,15 +94,16 @@ data class StringPattern (
 
         return StringValue(randomString(randomStringLength))
     }
-    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<Pattern> {
-        val minLengthExample = minLength?.let {
-            ExactValuePattern(StringValue(randomString(it)))
+
+    override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+        val minLengthExample: ReturnValue<Pattern>? = minLength?.let {
+            HasValue(ExactValuePattern(StringValue(randomString(it))), "minimum length string")
         }
 
-        val withinRangeExample = this
+        val withinRangeExample: ReturnValue<Pattern> = HasValue(this)
 
-        val maxLengthExample = maxLength?.let {
-            ExactValuePattern(StringValue(randomString(it)))
+        val maxLengthExample: ReturnValue<Pattern>? = maxLength?.let {
+            HasValue(ExactValuePattern(StringValue(randomString(it))), "maximum length string")
         }
 
         return sequenceOf(minLengthExample, withinRangeExample, maxLengthExample).filterNotNull()

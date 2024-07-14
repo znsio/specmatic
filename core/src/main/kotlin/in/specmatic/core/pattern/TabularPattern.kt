@@ -289,7 +289,7 @@ private fun <ValueType> keyCombinations(
         }.toMap()
 }
 
-fun <ValueType> forEachKeyCombinationIn(
+fun <ValueType> forEachKeyCombinationGivenRowIn(
     patternMap: Map<String, ValueType>,
     row: Row,
     resolver: Resolver,
@@ -302,17 +302,6 @@ fun <ValueType> forEachKeyCombinationIn(
     }.flatten()
 
 fun <ValueType> forEachKeyCombinationIn(
-    patternMap: Map<String, ValueType>,
-    row: Row,
-    creator: (Map<String, ValueType>) -> Sequence<Map<String, ValueType>>
-): Sequence<Map<String, ValueType>> =
-    keySets(patternMap.keys.toList(), row).map { keySet ->
-        patternMap.filterKeys { key -> key in keySet }
-    }.map { newPattern ->
-        creator(newPattern)
-    }.flatten()
-
-fun <ValueType> forEachKeyCombinationInR(
     patternMap: Map<String, ValueType>,
     row: Row,
     creator: (Map<String, ValueType>) -> Sequence<ReturnValue<Map<String, ValueType>>>

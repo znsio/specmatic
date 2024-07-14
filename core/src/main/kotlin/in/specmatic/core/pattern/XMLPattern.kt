@@ -312,13 +312,15 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return forEachKeyCombinationIn(pattern.attributes, row) { attributePattern ->
-            attempt(breadCrumb = pattern.name) {
-                newMapBasedOn(attributePattern, row, resolver).map { it.value }.map {
-                    it.mapKeys { entry -> withoutOptionality(entry.key) }
+        return forEachKeyCombinationIn<Pattern>(
+            pattern.attributes,
+            row, returnValues<Pattern> { attributePattern: Map<String, Pattern> ->
+                attempt(breadCrumb = pattern.name) {
+                    newMapBasedOn(attributePattern, row, resolver).map { it.value }.map {
+                        it.mapKeys { entry -> withoutOptionality(entry.key) }
+                    }
                 }
-            }
-        }.flatMap { newAttributes ->
+            }).map { it.value }.flatMap { newAttributes ->
             val newNodesList = when {
                 row.containsField(pattern.name) -> {
                     attempt(breadCrumb = pattern.name) {

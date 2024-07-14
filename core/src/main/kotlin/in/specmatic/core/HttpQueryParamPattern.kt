@@ -43,9 +43,11 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
                     it
             }
 
-            val combinations = forEachKeyCombinationIn(row.withoutOmittedKeys(queryParams, resolver.defaultExampleResolver), row) { entry ->
-                newMapBasedOn(entry, row, resolver).map { it.value }
-            }
+            val combinations = forEachKeyCombinationIn<Pattern>(
+                row.withoutOmittedKeys(queryParams, resolver.defaultExampleResolver),
+                row, returnValues<Pattern> { entry: Map<String, Pattern> ->
+                    newMapBasedOn(entry, row, resolver).map { it.value }
+                }).map { it.value }
 
             combinations.map {
                 it.mapKeys { withoutOptionality(it.key) }
@@ -156,7 +158,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
                     it
             }
 
-            forEachKeyCombinationInR(queryParams, row) { entry ->
+            forEachKeyCombinationIn(queryParams, row) { entry ->
                 NegativeNonStringlyPatterns().negativeBasedOn(
                     entry.mapKeys { withoutOptionality(it.key) },
                     row,

@@ -184,7 +184,7 @@ data class HttpHeadersPattern(
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
-        val basedOnExamples = forEachKeyCombinationIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
+        val basedOnExamples = forEachKeyCombinationGivenRowIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
             newMapBasedOn(pattern, row, resolver).map { it.value }
         }
 

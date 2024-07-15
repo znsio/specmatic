@@ -119,9 +119,9 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.only
                     it
             }
 
-            forEachKeyCombinationIn(queryParams, Row()) { entry ->
-                newBasedOn(entry, row, resolver)
-            }.map {
+            forEachKeyCombinationIn<Pattern>(queryParams, Row(), returnValues<Pattern> { entry: Map<String, Pattern> ->
+                newMapBasedOn(entry, row, resolver).map { it.value }
+            }).map { it.value }.map {
                 it.mapKeys { withoutOptionality(it.key) }
             }
         }

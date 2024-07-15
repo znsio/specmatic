@@ -312,13 +312,15 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        return forEachKeyCombinationIn(pattern.attributes, row) { attributePattern ->
-            attempt(breadCrumb = pattern.name) {
-                newBasedOn(attributePattern, row, resolver).map {
-                    it.mapKeys { entry -> withoutOptionality(entry.key) }
+        return forEachKeyCombinationIn<Pattern>(
+            pattern.attributes,
+            row, returnValues<Pattern> { attributePattern: Map<String, Pattern> ->
+                attempt(breadCrumb = pattern.name) {
+                    newMapBasedOn(attributePattern, row, resolver).map { it.value }.map {
+                        it.mapKeys { entry -> withoutOptionality(entry.key) }
+                    }
                 }
-            }
-        }.flatMap { newAttributes ->
+            }).map { it.value }.flatMap { newAttributes ->
             val newNodesList = when {
                 row.containsField(pattern.name) -> {
                     attempt(breadCrumb = pattern.name) {
@@ -339,35 +341,35 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
 
                 else -> {
                     listCombinations(pattern.nodes.map { childPattern ->
-                        attempt(breadCrumb = pattern.name) {
-                            when (childPattern) {
-                                is XMLPattern -> {
-                                    val dereferenced: XMLPattern = childPattern.dereferenceType(resolver)
+                                        attempt(breadCrumb = pattern.name) {
+                                            when (childPattern) {
+                                                is XMLPattern -> {
+                                                    val dereferenced: XMLPattern = childPattern.dereferenceType(resolver)
 
-                                    resolver.withCyclePrevention(dereferenced) { cyclePreventedResolver ->
-                                        when {
-                                            dereferenced.occurMultipleTimes() -> {
-                                                dereferenced.newBasedOn(row, cyclePreventedResolver)
-                                                    .map { it.value as XMLPattern }
+                                                    resolver.withCyclePrevention(dereferenced) { cyclePreventedResolver ->
+                                                        when {
+                                                            dereferenced.occurMultipleTimes() -> {
+                                                                dereferenced.newBasedOn(row, cyclePreventedResolver)
+                                                                    .map { it.value as XMLPattern }
+                                                            }
+
+                                                            dereferenced.isOptional() -> {
+                                                                dereferenced.newBasedOn(row, cyclePreventedResolver)
+                                                                    .map { it.value as XMLPattern }.plus(null)
+                                                            }
+
+                                                            else -> dereferenced.newBasedOn(row, cyclePreventedResolver)
+                                                                .map { it.value as XMLPattern }
+                                                        }
+                                                    }
+                                                }
+
+                                                else -> resolver.withCyclePrevention(childPattern) { cyclePreventedResolver ->
+                                                    childPattern.newBasedOn(row, cyclePreventedResolver).map { it.value }
+                                                }
                                             }
-
-                                            dereferenced.isOptional() -> {
-                                                dereferenced.newBasedOn(row, cyclePreventedResolver)
-                                                    .map { it.value as XMLPattern }.plus(null)
-                                            }
-
-                                            else -> dereferenced.newBasedOn(row, cyclePreventedResolver)
-                                                .map { it.value as XMLPattern }
                                         }
-                                    }
-                                }
-
-                                else -> resolver.withCyclePrevention(childPattern) { cyclePreventedResolver ->
-                                    childPattern.newBasedOn(row, cyclePreventedResolver).map { it.value }
-                                }
-                            }
-                        }
-                    })
+                                    }.map { HasValue(it) }).map { it.value }
                 }
             }
 
@@ -378,13 +380,17 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
     }
 
     override fun newBasedOn(resolver: Resolver): Sequence<XMLPattern> {
-        return allOrNothingCombinationIn(pattern.attributes) { attributePattern ->
-            attempt(breadCrumb = this.pattern.name) {
-                newBasedOn(attributePattern, resolver).map {
-                    it.mapKeys { entry -> withoutOptionality(entry.key) }
+        return allOrNothingCombinationIn<Pattern>(
+            pattern.attributes,
+            Row(),
+            null,
+            null, returnValues<Pattern> { attributePattern: Map<String, Pattern> ->
+                attempt(breadCrumb = this.pattern.name) {
+                    newBasedOn(attributePattern, resolver).map {
+                        it.mapKeys { entry -> withoutOptionality(entry.key) }
+                    }
                 }
-            }
-        }.flatMap { newAttributes ->
+            }).map { it.value }.flatMap { newAttributes ->
             val newNodesList = allOrNothingListCombinations(pattern.nodes.map { childPattern ->
                 attempt(breadCrumb = this.pattern.name) {
                     when (childPattern) {

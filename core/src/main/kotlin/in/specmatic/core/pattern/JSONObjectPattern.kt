@@ -155,13 +155,13 @@ data class JSONObjectPattern(
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> =
-        allOrNothingCombinationInR(
+        allOrNothingCombinationIn(
             pattern.minus("..."),
             resolver.resolveRow(row),
             minProperties,
             maxProperties
         ) { pattern ->
-            newBasedOnR(pattern, row, withNullPattern(resolver))
+            newMapBasedOn(pattern, row, withNullPattern(resolver))
         }.map { it: ReturnValue<Map<String, Pattern>> ->
             it.ifValue {
                 toJSONObjectPattern(it.mapKeys { (key, _) ->
@@ -171,12 +171,16 @@ data class JSONObjectPattern(
     }
 
     override fun newBasedOn(resolver: Resolver): Sequence<JSONObjectPattern> =
-        allOrNothingCombinationIn(pattern.minus("...")) { pattern ->
-            newBasedOn(pattern, withNullPattern(resolver))
-        }.map { toJSONObjectPattern(it) }
+        allOrNothingCombinationIn<Pattern>(
+            pattern.minus("..."),
+            Row(),
+            null,
+            null, returnValues<Pattern> { pattern: Map<String, Pattern> ->
+                newBasedOn(pattern, withNullPattern(resolver))
+            }).map { it.value }.map { toJSONObjectPattern(it) }
 
     override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> =
-        allOrNothingCombinationInR(pattern.minus("...")) { pattern ->
+        allOrNothingCombinationIn(pattern.minus("...")) { pattern ->
             AllNegativePatterns().negativeBasedOn(pattern, row, withNullPattern(resolver))
         }.map { it.ifValue { toJSONObjectPattern(it) } }
 

@@ -1,6 +1,7 @@
 package `in`.specmatic.core
 
 import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.StringValue
@@ -32,7 +33,7 @@ data class URLPathSegmentPattern(override val pattern: Pattern, override val key
             pattern.newBasedOn(cyclePreventedResolver).map { URLPathSegmentPattern(it, key) }
         }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
         if(pattern is ExactValuePattern)
             return emptySequence()
 

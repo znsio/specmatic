@@ -4,6 +4,7 @@ import `in`.specmatic.core.pattern.Pattern
 import `in`.specmatic.core.pattern.ReturnValue
 import `in`.specmatic.core.pattern.Row
 import `in`.specmatic.core.pattern.TypeStack
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.value.NullValue
 import `in`.specmatic.core.value.Value
 import `in`.specmatic.stub.RequestContext
@@ -31,7 +32,7 @@ class ResponseBuilderTest {
                 TODO("Not yet implemented")
             }
 
-            override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+            override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
                 TODO("Not yet implemented")
             }
 

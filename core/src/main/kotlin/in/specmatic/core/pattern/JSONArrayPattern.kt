@@ -3,6 +3,7 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.utilities.stringTooPatternArray
 import `in`.specmatic.core.utilities.withNullPattern
 import `in`.specmatic.core.utilities.withNumberType
@@ -79,7 +80,7 @@ data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), o
         return newBasedOn(pattern, resolverWithNullType).map { JSONArrayPattern(it) }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = sequenceOf(NullPattern).let {
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> = sequenceOf(NullPattern).let {
         if(pattern.size == 1)
             it.plus(pattern[0])
         else

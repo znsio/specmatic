@@ -1,6 +1,7 @@
 package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.*
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 import java.util.*
@@ -41,7 +42,7 @@ class EmailPattern (private val stringPatternDelegate: StringPattern) :
         return sequenceOf(HasValue(this))
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
         val negativePatterns = stringPatternDelegate.negativeBasedOn(row, resolver).map { it.value }.plus(StringPattern())
         return scalarAnnotation(this, negativePatterns)
     }

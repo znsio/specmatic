@@ -2,6 +2,7 @@ package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.value.EmptyString
 import `in`.specmatic.core.value.Value
 
@@ -39,7 +40,7 @@ data class DeferredPattern(override val pattern: String, val key: String? = null
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
         return resolver.getPattern(pattern).negativeBasedOn(row, resolver)
     }
 

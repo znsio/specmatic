@@ -3,6 +3,7 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.*
 import `in`.specmatic.core.Result.Failure
 import `in`.specmatic.core.Result.Success
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.utilities.mapZip
 import `in`.specmatic.core.utilities.parseXML
 import `in`.specmatic.core.value.*
@@ -425,7 +426,7 @@ data class XMLPattern(override val pattern: XMLTypeData = XMLTypeData(realName =
         }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
         return newBasedOn(row, resolver).map { it.value as XMLPattern }.map { HasValue(it) }
     }
 

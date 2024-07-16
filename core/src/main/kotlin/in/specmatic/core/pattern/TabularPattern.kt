@@ -1,6 +1,7 @@
 package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.*
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.utilities.mapZip
 import `in`.specmatic.core.utilities.stringToPatternMap
 import `in`.specmatic.core.utilities.withNullPattern
@@ -97,7 +98,7 @@ data class TabularPattern(
         return allOrNothingCombinationIn.map { toTabularPattern(it) }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
         return this.newBasedOn(row, resolver).map { it.value }.map { HasValue(it) }
     }
 

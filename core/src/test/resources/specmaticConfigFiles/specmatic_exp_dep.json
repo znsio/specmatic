@@ -6,7 +6,7 @@
       "exposes": [
         "com/petstore/1.spec"
       ],
-      "depends": [
+      "dependencies": [
         "com/petstore/payment.spec"
       ]
     }

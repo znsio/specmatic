@@ -75,7 +75,7 @@ data class Source(
     val branch: String? = null,
     @field:JsonAlias("exposes")
     val test: List<String>? = null,
-    @field:JsonAlias("depends")
+    @field:JsonAlias("dependencies")
     val stub: List<String>? = null,
     val directory: String? = null,
 )

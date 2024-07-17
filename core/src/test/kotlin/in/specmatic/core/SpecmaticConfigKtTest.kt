@@ -13,6 +13,9 @@ internal class SpecmaticConfigKtTest {
         "./src/test/resources/specmaticConfigFiles/specmatic.yaml",
         "./src/test/resources/specmaticConfigFiles/specmatic.yml",
         "./src/test/resources/specmaticConfigFiles/specmatic.json",
+        "./src/test/resources/specmaticConfigFiles/specmatic_exp_dep.json",
+        "./src/test/resources/specmaticConfigFiles/specmatic_exp_dep.yml",
+        "./src/test/resources/specmaticConfigFiles/specmatic_exp_dep.yaml"
     )
     @ParameterizedTest
     fun `parse specmatic config file with all values`(configFile: String) {

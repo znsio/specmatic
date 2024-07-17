@@ -1,0 +1,83 @@
+{
+  "sources": [
+    {
+      "provider": "git",
+      "repository": "https://contracts",
+      "exposes": [
+        "com/petstore/1.spec"
+      ],
+      "depends": [
+        "com/petstore/payment.spec"
+      ]
+    }
+  ],
+  "auth": {
+    "bearer-file": "bearer.txt"
+  },
+  "pipeline": {
+    "provider": "azure",
+    "organization": "xnsio",
+    "project": "XNSIO",
+    "definitionId": 1
+  },
+  "environments": {
+    "staging": {
+      "baseurls": {
+        "auth.spec": "http://localhost:8080"
+      },
+      "variables": {
+        "username": "jackie",
+        "password": "PaSsWoRd"
+      }
+    }
+  },
+  "report": {
+    "formatters": [
+      {
+        "type": "text",
+        "layout": "table"
+      }
+    ],
+    "types": {
+      "APICoverage": {
+        "OpenAPI": {
+          "successCriteria": {
+            "minThresholdPercentage": 70,
+            "maxMissedEndpointsInSpec": 3,
+            "enforce": true
+          },
+          "excludedEndpoints": [
+            "/heartbeat",
+            "/health"
+          ]
+        }
+      }
+    }
+  },
+  "security": {
+    "OpenAPI": {
+      "securitySchemes": {
+        "oAuth2AuthCode": {
+          "type": "oauth2",
+          "token": "OAUTH1234"
+        },
+        "BearerAuth": {
+          "type": "bearer",
+          "token": "BEARER1234"
+        },
+        "ApiKeyAuthHeader": {
+          "type": "apiKey",
+          "value": "API-HEADER-USER"
+        },
+        "ApiKeyAuthQuery": {
+          "type": "apiKey",
+          "value": "API-QUERY-PARAM-USER"
+        },
+        "BasicAuth": {
+          "type": "basicAuth",
+          "token": "Abc123"
+        }
+      }
+    }
+  }
+}

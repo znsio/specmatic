@@ -1,9 +1,9 @@
 sources:
   - provider: git
     repository: https://contracts
-    exposes:
+    provides:
       - com/petstore/1.yaml
-    dependencies:
+    consumes:
       - com/petstore/payment.yaml
 
 auth:

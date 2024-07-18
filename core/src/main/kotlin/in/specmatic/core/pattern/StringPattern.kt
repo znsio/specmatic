@@ -4,6 +4,7 @@ import com.mifmif.common.regex.Generex
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.mismatchResult
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
@@ -111,17 +112,40 @@ data class StringPattern (
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
         val current = this
 
         return sequence {
-            yieldAll(scalarAnnotation(current, sequenceOf(NullPattern, NumberPattern(), BooleanPattern())))
+            if (config.withDataTypeNegatives) {
+                yieldAll(scalarAnnotation(current, sequenceOf(NullPattern, NumberPattern(), BooleanPattern())))
+            }
 
-            if(minLength != null)
-                yield(HasValue(ExactValuePattern(StringValue(randomString(minLength - 1)))))
-
-            if(maxLength != null)
-                yield(HasValue(ExactValuePattern(StringValue(randomString(maxLength + 1)))))
+            if (maxLength != null) {
+                val pattern = copy(
+                    minLength = maxLength.inc(),
+                    maxLength = maxLength.inc(),
+                    regex = null
+                )
+                yield(
+                    HasValue(pattern, "length greater than maxLength '$maxLength'")
+                )
+            }
+            if (minLength != null) {
+                val pattern = copy(
+                    minLength = minLength.dec(),
+                    maxLength = minLength.dec(),
+                    regex = null
+                )
+                yield(
+                    HasValue(
+                        pattern, "length lesser than minLength '$minLength'"
+                    )
+                )
+            }
+            if (regex != null) {
+                val pattern = copy(regex = regex.plus("_"))
+                yield(HasValue(pattern, "invalid regex"))
+            }
         }
     }
 

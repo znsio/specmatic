@@ -3,6 +3,7 @@ package `in`.specmatic.core.pattern
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
 import `in`.specmatic.core.Result.Failure
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.ListValue
 import `in`.specmatic.core.value.StringValue
@@ -107,7 +108,7 @@ data class QueryParameterArrayPattern(override val pattern: List<Pattern>, val p
         return pattern.first().newBasedOn(resolver).map { QueryParameterArrayPattern(listOf(it), parameterName) }
     }
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
         return pattern.first().negativeBasedOn(row, resolver).map { it.ifValue { QueryParameterArrayPattern(listOf(it), parameterName) } }
     }
 

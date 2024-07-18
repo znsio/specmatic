@@ -1,15 +1,18 @@
 package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.Resolver
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 
 abstract class NegativePatternsTemplate {
     fun negativeBasedOn(
         patternMap: Map<String, Pattern>,
         row: Row,
-        resolver: Resolver
+        resolver: Resolver,
+        config: NegativePatternConfiguration = NegativePatternConfiguration()
     ): Sequence<ReturnValue<Map<String, Pattern>>> {
         val eachKeyMappedToPatternMap: Map<String, Map<String, Pattern>> = patternMap.mapValues { patternMap }
-        val negativePatternsForEachKey: Map<String, Sequence<ReturnValue<Pattern>>> = getNegativePatterns(patternMap, resolver, row)
+        val negativePatternsForEachKey: Map<String, Sequence<ReturnValue<Pattern>>> =
+            getNegativePatterns(patternMap, resolver, row, config)
 
         val modifiedPatternMap: Map<String, Map<String, Sequence<ReturnValue<Pattern>>>?> =
             eachKeyMappedToPatternMap.mapValues { (keyToNegate, patterns) ->
@@ -43,7 +46,8 @@ abstract class NegativePatternsTemplate {
     abstract fun getNegativePatterns(
         patternMap: Map<String, Pattern>,
         resolver: Resolver,
-        row: Row
+        row: Row,
+        config: NegativePatternConfiguration = NegativePatternConfiguration()
     ): Map<String, Sequence<ReturnValue<Pattern>>>
 
 }

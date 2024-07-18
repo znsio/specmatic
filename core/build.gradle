@@ -18,13 +18,13 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "2.3.11"
+def ktor_version = "2.3.12"
 def jgit_version = "6.10.0.202406032230-r"
 def junit_version = "5.10.2"
 
 dependencies {
     // TODO Fix to eliminate vulnerabilities, remove when the enclosing library supports it
-    implementation 'io.netty:netty-codec-http:4.1.110.Final' // used by ktor-server-netty-jvm 2.3.9 in core
+    implementation 'io.netty:netty-codec-http:4.1.111.Final' // used by ktor-server-netty-jvm 2.3.9 in core
     implementation 'joda-time:joda-time:2.12.7' // used by swagger-parser 2.1.22
 
     implementation 'io.cucumber:gherkin:22.0.0'

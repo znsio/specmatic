@@ -2,6 +2,7 @@ package `in`.specmatic.core.pattern
 
 import `in`.specmatic.core.Resolver
 import `in`.specmatic.core.Result
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
 
@@ -18,7 +19,11 @@ interface Pattern {
     fun generate(resolver: Resolver): Value
     fun generateWithAll(resolver: Resolver) = resolver.withCyclePrevention(this, this::generate)
     fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>>
-    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>>
+    fun negativeBasedOn(
+        row: Row,
+        resolver: Resolver,
+        config: NegativePatternConfiguration = NegativePatternConfiguration()
+    ): Sequence<ReturnValue<Pattern>>
     fun newBasedOn(resolver: Resolver): Sequence<Pattern>
     fun parse(value: String, resolver: Resolver): Value
 

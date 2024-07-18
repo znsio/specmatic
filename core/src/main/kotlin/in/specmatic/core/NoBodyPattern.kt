@@ -1,9 +1,10 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.core.pattern.*
+import `in`.specmatic.core.pattern.config.NegativePatternConfiguration
 import `in`.specmatic.core.value.JSONArrayValue
 import `in`.specmatic.core.value.StringValue
 import `in`.specmatic.core.value.Value
-import `in`.specmatic.core.pattern.*
 
 object NoBodyPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
@@ -22,7 +23,7 @@ object NoBodyPattern : Pattern {
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> = emptySequence()
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> = emptySequence()
 
     override fun parse(value: String, resolver: Resolver): Value {
         return if(value.isBlank())

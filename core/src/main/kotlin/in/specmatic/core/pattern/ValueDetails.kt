@@ -35,7 +35,9 @@ data class ValueDetails(val messages: List<String> = emptyList(), private val br
 }
 
 fun List<ValueDetails>.singleLineDescription(): String {
-    return this.joinToString(", ") {
-        "${it.breadCrumbs} ${it.messages.joinToString(" ").trim()}"
-    }
+    return this.mapNotNull {
+        val message = it.messages.joinToString(" ").trim()
+        if (message.isBlank()) null
+        else "${it.breadCrumbs} $message"
+    }.joinToString(", ")
 }

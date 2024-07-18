@@ -73,9 +73,9 @@ data class Source(
     val provider: SourceProvider = SourceProvider.filesystem,
     val repository: String? = null,
     val branch: String? = null,
-    @field:JsonAlias("exposes")
+    @field:JsonAlias("provides")
     val test: List<String>? = null,
-    @field:JsonAlias("dependencies")
+    @field:JsonAlias("consumes")
     val stub: List<String>? = null,
     val directory: String? = null,
 )

@@ -2,9 +2,9 @@ sources:
   - provider: git
     repository: https://contracts
     test:
-      - com/petstore/1.spec
+      - com/petstore/1.yaml
     stub:
-      - com/petstore/payment.spec
+      - com/petstore/payment.yaml
 
 auth:
   bearer-file: bearer.txt

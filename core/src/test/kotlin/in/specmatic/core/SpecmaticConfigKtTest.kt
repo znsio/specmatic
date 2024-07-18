@@ -27,8 +27,8 @@ internal class SpecmaticConfigKtTest {
 
         assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
         assertThat(sources.first().repository).isEqualTo("https://contracts")
-        assertThat(sources.first().test).isEqualTo(listOf("com/petstore/1.spec"))
-        assertThat(sources.first().stub).isEqualTo(listOf("com/petstore/payment.spec"))
+        assertThat(sources.first().test).isEqualTo(listOf("com/petstore/1.yaml"))
+        assertThat(sources.first().stub).isEqualTo(listOf("com/petstore/payment.yaml"))
 
         assertThat(config.auth?.bearerFile).isEqualTo("bearer.txt")
 
@@ -65,7 +65,7 @@ internal class SpecmaticConfigKtTest {
                     {
                         "provider": "git",
                         "test": [
-                            "path/to/contract.spec"
+                            "path/to/contract.yaml"
                         ]
                     }
                 ]
@@ -77,6 +77,6 @@ internal class SpecmaticConfigKtTest {
         val sources = config.sources
 
         assertThat(sources.first().provider).isEqualTo(SourceProvider.git)
-        assertThat(sources.first().test).isEqualTo(listOf("path/to/contract.spec"))
+        assertThat(sources.first().test).isEqualTo(listOf("path/to/contract.yaml"))
     }
 }

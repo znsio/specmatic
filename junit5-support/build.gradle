@@ -24,7 +24,7 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
     implementation 'org.assertj:assertj-core:3.26.0'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.1'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.2'
 
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
     implementation "io.ktor:ktor-client-cio:${ktor_version}"

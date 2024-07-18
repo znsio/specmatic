@@ -1,9 +1,6 @@
 package `in`.specmatic.core
 
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonSubTypes
-import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.annotation.JsonTypeName
+import com.fasterxml.jackson.annotation.*
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
@@ -76,7 +73,9 @@ data class Source(
     val provider: SourceProvider = SourceProvider.filesystem,
     val repository: String? = null,
     val branch: String? = null,
+    @field:JsonAlias("provides")
     val test: List<String>? = null,
+    @field:JsonAlias("consumes")
     val stub: List<String>? = null,
     val directory: String? = null,
 )

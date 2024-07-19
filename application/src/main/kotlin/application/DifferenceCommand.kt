@@ -1,9 +1,9 @@
 package application
 
-import `in`.specmatic.core.*
-import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.log.logException
-import `in`.specmatic.core.pattern.ContractException
+import io.specmatic.core.*
+import io.specmatic.core.log.logger
+import io.specmatic.core.log.logException
+import io.specmatic.core.pattern.ContractException
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import java.util.concurrent.Callable

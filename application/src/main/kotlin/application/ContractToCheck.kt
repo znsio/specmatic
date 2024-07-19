@@ -1,7 +1,7 @@
 package application
 
-import `in`.specmatic.core.Feature
-import `in`.specmatic.core.git.GitCommand
+import io.specmatic.core.Feature
+import io.specmatic.core.git.GitCommand
 import java.io.File
 
 class ContractToCheck(private val contractFile: CanonicalFile, private val git: GitCommand) {

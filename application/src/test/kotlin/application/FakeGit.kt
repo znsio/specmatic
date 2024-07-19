@@ -1,7 +1,7 @@
 package application
 
-import `in`.specmatic.core.git.GitCommand
-import `in`.specmatic.core.git.SystemGit
+import io.specmatic.core.git.GitCommand
+import io.specmatic.core.git.SystemGit
 import java.io.File
 
 abstract class FakeGit: GitCommand {

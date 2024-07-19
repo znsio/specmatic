@@ -16,15 +16,15 @@ import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import picocli.CommandLine
-import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.pattern.parsedValue
-import `in`.specmatic.core.utilities.newXMLBuilder
-import `in`.specmatic.core.value.XMLNode
-import `in`.specmatic.core.value.XMLValue
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
+import io.specmatic.core.CONTRACT_EXTENSION
+import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.utilities.newXMLBuilder
+import io.specmatic.core.value.XMLNode
+import io.specmatic.core.value.XMLValue
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import org.assertj.core.api.Assertions.fail
 import org.w3c.dom.Document
 import org.xml.sax.InputSource
@@ -121,9 +121,9 @@ internal class TestCommandTest {
             <properties>
             <property name="contractPaths" value="service.yaml"/>
             </properties>
-            <testcase name="contractTest()[1]" classname="in.specmatic.test.SpecmaticJUnitSupport" time="1.028">
+            <testcase name="contractTest()[1]" classname="io.specmatic.test.SpecmaticJUnitSupport" time="1.028">
             <system-out><![CDATA[
-            unique-id: [engine:junit-jupiter]/[class:in.specmatic.test.SpecmaticJUnitSupport]/[test-factory:contractTest()]/[dynamic-test:#1]
+            unique-id: [engine:junit-jupiter]/[class:io.specmatic.test.SpecmaticJUnitSupport]/[test-factory:contractTest()]/[dynamic-test:#1]
             display-name:  Scenario: GET /pets/(petid:number) -> 200 | EX:200_OKAY
             ]]></system-out>
             </testcase>

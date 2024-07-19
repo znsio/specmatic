@@ -1,2 +1,0 @@
-package `in`.specmatic.core
-

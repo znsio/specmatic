@@ -1,14 +1,14 @@
 package application
 
-import `in`.specmatic.conversions.OpenApiSpecification
-import `in`.specmatic.core.*
-import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.pattern.parsedJSONArray
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.Value
-import `in`.specmatic.mock.NoMatchingScenario
-import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.mock.mockFromJSON
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.*
+import io.specmatic.core.log.logger
+import io.specmatic.core.pattern.parsedJSONArray
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.Value
+import io.specmatic.mock.NoMatchingScenario
+import io.specmatic.mock.ScenarioStub
+import io.specmatic.mock.mockFromJSON
 import picocli.CommandLine
 import java.io.File
 import java.net.URI

@@ -1,14 +1,14 @@
 package integration_tests
 
-import `in`.specmatic.conversions.OpenApiSpecification
-import `in`.specmatic.core.HttpRequest
-import `in`.specmatic.core.HttpResponse
-import `in`.specmatic.core.pattern.parsedJSONArray
-import `in`.specmatic.core.pattern.parsedJSONObject
-import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.stub.HttpStub
-import `in`.specmatic.stub.captureStandardOutput
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
+import io.specmatic.core.pattern.parsedJSONArray
+import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.value.StringValue
+import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.HttpStub
+import io.specmatic.stub.captureStandardOutput
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.util.*

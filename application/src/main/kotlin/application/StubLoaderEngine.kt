@@ -1,11 +1,11 @@
 package application
 
-import `in`.specmatic.core.Feature
-import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.utilities.ContractPathData
-import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.stub.loadContractStubsFromFiles
-import `in`.specmatic.stub.loadContractStubsFromImplicitPaths
+import io.specmatic.core.Feature
+import io.specmatic.core.log.logger
+import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.loadContractStubsFromFiles
+import io.specmatic.stub.loadContractStubsFromImplicitPaths
 import org.springframework.stereotype.Component
 import java.io.File
 

@@ -1,10 +1,10 @@
 package application
 
-import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import `in`.specmatic.core.getConfigFileName
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.utilities.exitWithMessage
-import `in`.specmatic.core.utilities.loadSources
+import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.getConfigFileName
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.utilities.exitWithMessage
+import io.specmatic.core.utilities.loadSources
 import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable

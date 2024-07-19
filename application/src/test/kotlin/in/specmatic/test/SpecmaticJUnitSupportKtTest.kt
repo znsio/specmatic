@@ -1,8 +1,8 @@
-package `in`.specmatic.test
+package io.specmatic.test
 
-import `in`.specmatic.conversions.OpenApiSpecification
-import `in`.specmatic.core.TestConfig
-import `in`.specmatic.test.reports.coverage.Endpoint
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.TestConfig
+import io.specmatic.test.reports.coverage.Endpoint
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

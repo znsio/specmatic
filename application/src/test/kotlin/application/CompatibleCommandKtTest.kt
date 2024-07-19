@@ -1,10 +1,10 @@
 package application
 
 import com.ninjasquad.springmockk.MockkBean
-import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.Result
-import `in`.specmatic.core.Results
-import `in`.specmatic.core.git.GitCommand
+import io.specmatic.core.CONTRACT_EXTENSION
+import io.specmatic.core.Result
+import io.specmatic.core.Results
+import io.specmatic.core.git.GitCommand
 import io.mockk.every
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach

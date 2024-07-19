@@ -1,4 +1,4 @@
-package `in`.specmatic.test
+package io.specmatic.test
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

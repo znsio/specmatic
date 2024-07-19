@@ -1,6 +1,6 @@
 package application
 
-import `in`.specmatic.core.log.logger
+import io.specmatic.core.log.logger
 import java.io.IOException
 import java.net.InetAddress
 import java.net.ServerSocket

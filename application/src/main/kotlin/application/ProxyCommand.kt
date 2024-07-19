@@ -1,13 +1,13 @@
 package application
 
 import picocli.CommandLine.*
-import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import `in`.specmatic.core.Configuration.Companion.DEFAULT_PROXY_HOST
-import `in`.specmatic.core.Configuration.Companion.DEFAULT_PROXY_PORT
-import `in`.specmatic.core.log.*
-import `in`.specmatic.core.utilities.exceptionCauseMessage
-import `in`.specmatic.core.utilities.exitWithMessage
-import `in`.specmatic.proxy.Proxy
+import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.Configuration.Companion.DEFAULT_PROXY_HOST
+import io.specmatic.core.Configuration.Companion.DEFAULT_PROXY_PORT
+import io.specmatic.core.log.*
+import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.exitWithMessage
+import io.specmatic.proxy.Proxy
 import java.io.File
 import java.lang.Thread.sleep
 import java.util.concurrent.Callable

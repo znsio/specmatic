@@ -2,7 +2,7 @@ Feature: simpleService
 
     Scenario: SimpleOperation
         When POST /SOAPService/SimpleSOAP
-        And enum SoapAction (string) values "http://specmatic.in/SOAPService/SimpleOperation",http://specmatic.in/SOAPService/SimpleOperation
+        And enum SoapAction (string) values "http://specmatic.io/SOAPService/SimpleOperation",http://specmatic.io/SOAPService/SimpleOperation
         And request-header SOAPAction (SoapAction)
         And request-body
         """

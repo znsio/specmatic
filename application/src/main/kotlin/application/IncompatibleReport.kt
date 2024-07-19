@@ -1,7 +1,7 @@
 package application
 
-import `in`.specmatic.core.PATH_NOT_RECOGNIZED_ERROR
-import `in`.specmatic.core.Results
+import io.specmatic.core.PATH_NOT_RECOGNIZED_ERROR
+import io.specmatic.core.Results
 
 data class IncompatibleReport(val results: Results, val message: String = "The newer contract is not backward compatible.") : CompatibilityReport {
     override fun message(): String {

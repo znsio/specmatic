@@ -1,14 +1,14 @@
 package application
 
-import `in`.specmatic.core.azure.AzureAPI
-import `in`.specmatic.core.azure.PersonalAccessToken
-import `in`.specmatic.core.git.getPersonalAccessToken
-import `in`.specmatic.core.loadSpecmaticConfig
-import `in`.specmatic.core.log.CompositePrinter
-import `in`.specmatic.core.log.Verbose
-import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.utilities.exitWithMessage
+import io.specmatic.core.azure.AzureAPI
+import io.specmatic.core.azure.PersonalAccessToken
+import io.specmatic.core.git.getPersonalAccessToken
+import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.log.CompositePrinter
+import io.specmatic.core.log.Verbose
+import io.specmatic.core.log.logger
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.utilities.exitWithMessage
 import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.util.concurrent.Callable

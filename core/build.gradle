@@ -86,7 +86,15 @@ publishing {
             from components.java
             pom {
                 name = 'Specmatic'
-                description = 'Turn your contracts into executable specifications. Contract Driven Development - Collaboratively Design & Independently Deploy MicroServices & MicroFrontends.'
+                description = """
+                    Turn your contracts into executable specifications. Contract Driven Development - Collaboratively Design & Independently Deploy MicroServices & MicroFrontends.
+                    
+                    Deprecation Notice for group ID "in.specmatic"
+                    ******************************************************************************************************
+                    Updates for "specmatic-core" will no longer be available under the deprecated group ID "in.specmatic". 
+                    Please update your dependencies to use the new group ID "io.specmatic".
+                    ******************************************************************************************************
+                """
                 url = 'https://specmatic.in'
                 licenses {
                     license {

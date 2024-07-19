@@ -1,11 +1,11 @@
 package application.test
 
-import `in`.specmatic.core.log.LogMessage
-import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.utilities.exceptionCauseMessage
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.StringValue
-import `in`.specmatic.test.SpecmaticJUnitSupport
+import io.specmatic.core.log.LogMessage
+import io.specmatic.core.log.logger
+import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.test.SpecmaticJUnitSupport
 import org.junit.platform.engine.TestDescriptor
 import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestExecutionListener

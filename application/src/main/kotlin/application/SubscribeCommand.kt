@@ -1,11 +1,11 @@
 package application
 
-import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
-import `in`.specmatic.core.git.NonZeroExitError
-import `in`.specmatic.core.git.SystemGit
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.utilities.*
+import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.Configuration.Companion.globalConfigFileName
+import io.specmatic.core.git.NonZeroExitError
+import io.specmatic.core.git.SystemGit
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.utilities.*
 import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable

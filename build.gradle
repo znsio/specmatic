@@ -21,7 +21,7 @@ subprojects {
     versionProps.load(new FileInputStream(versionPropsFile))
 
     def versionInfo = versionProps['version']
-
+    println("Version: $versionInfo")
     version versionInfo
 
 }

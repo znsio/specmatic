@@ -1,7 +1,7 @@
 package application
 
-import `in`.specmatic.core.Feature
-import `in`.specmatic.core.log.logger
+import io.specmatic.core.Feature
+import io.specmatic.core.log.logger
 import io.swagger.v3.core.util.Yaml
 import picocli.CommandLine
 import java.io.File

@@ -1,15 +1,15 @@
 package application
 
-import `in`.specmatic.conversions.OpenApiSpecification
-import `in`.specmatic.core.Feature
-import `in`.specmatic.core.git.SystemGit
-import `in`.specmatic.core.log.LogMessage
-import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.utilities.exceptionCauseMessage
-import `in`.specmatic.core.value.JSONArrayValue
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.StringValue
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.Feature
+import io.specmatic.core.git.SystemGit
+import io.specmatic.core.log.LogMessage
+import io.specmatic.core.log.logger
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.StringValue
 import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.io.File

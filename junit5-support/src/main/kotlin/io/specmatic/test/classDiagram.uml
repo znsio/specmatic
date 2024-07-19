@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement />
+  <nodes>
+    <node x="408.0" y="106.0">io.specmatic.test.ResultAssert.Companion</node>
+    <node x="-118.5" y="798.7">io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow</node>
+    <node x="344.0" y="231.0">io.specmatic.test.SpecmaticJUnitSupportKt</node>
+    <node x="-59.0" y="231.0">io.specmatic.test.reports.renderers.ReportRenderer</node>
+    <node x="-167.5" y="372.0">io.specmatic.test.reports.renderers.CoverageReportTextRenderer</node>
+    <node x="173.66666666666666" y="231.0">io.specmatic.test.SpecmaticJUnitSupport.Companion</node>
+    <node x="-37.0" y="918.7">io.specmatic.test.reports.coverage.console.Remarks</node>
+    <node x="46.0" y="300.0">io.specmatic.test.reports.OpenApiCoverageReportProcessor</node>
+    <node x="403.0" y="-14.0">io.specmatic.test.ResultAssert</node>
+    <node x="427.33333333333337" y="918.7">io.specmatic.test.reports.coverage.json.OpenApiCoverageOperation</node>
+    <node x="437.83333333333337" y="594.2666666666667">io.specmatic.test.reports.coverage.Endpoint</node>
+    <node x="440.33333333333337" y="474.2666666666667">io.specmatic.test.reports.coverage.OpenApiCoverageReportInput</node>
+    <node x="151.66666666666669" y="138.0">io.specmatic.test.API</node>
+    <node x="619.3333333333334" y="594.2666666666667">io.specmatic.test.reports.coverage.CoverageGroupKey</node>
+    <node x="352.0" y="170.0">io.specmatic.test.SpecmaticJUnitSupport</node>
+    <node x="133.0" y="372.0">io.specmatic.test.reports.OpenApiCoverageReportProcessor.Companion</node>
+    <node x="468.7222222222223" y="678.7">io.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport</node>
+    <node x="303.1666666666667" y="678.7">io.specmatic.test.reports.coverage.console.Remarks.Companion</node>
+    <node x="-148.0" y="678.7">io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="io.specmatic.test.reports.OpenApiCoverageReportProcessor" target="io.specmatic.test.reports.renderers.ReportRenderer" relationship="DEPENDENCY">
+      <point x="-146.5" y="-14.0" />
+      <point x="13.5" y="14.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.OpenApiCoverageReportProcessor.Companion" target="io.specmatic.test.reports.OpenApiCoverageReportProcessor" relationship="INNER_CLASS">
+      <point x="-15.0" y="-14.0" />
+      <point x="-15.0" y="14.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.OpenApiCoverageReportProcessor" target="io.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport" relationship="DEPENDENCY">
+      <point x="84.5" y="14.0" />
+      <point x="284.5" y="724.2" />
+      <point x="603.2222222222223" y="724.2" />
+      <point x="0.0" y="14.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.coverage.OpenApiCoverageReportInput" target="io.specmatic.test.reports.coverage.console.Remarks.Companion" relationship="DEPENDENCY">
+      <point x="-90.0" y="14.0" />
+      <point x="486.33333333333337" y="564.7666666666667" />
+      <point x="371.5" y="564.7666666666667" />
+      <point x="1.3333333333333144" y="-14.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.OpenApiCoverageReportProcessor" target="io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport" relationship="DEPENDENCY">
+      <point x="0.0" y="14.0" />
+      <point x="200.0" y="354.5" />
+      <point x="117.0" y="354.5" />
+      <point x="117.0" y="503.0" />
+      <point x="20.0" y="503.0" />
+      <point x="0.0" y="-14.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.coverage.OpenApiCoverageReportInput" target="io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport" relationship="CREATE">
+      <point x="-136.0" y="-0.26666666666670835" />
+      <point x="132.0" y="488.0" />
+      <point x="112.0" y="-14.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.coverage.OpenApiCoverageReportInput" target="io.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport" relationship="CREATE">
+      <point x="72.16666666666663" y="-14.0" />
+      <point x="648.5" y="456.7666666666667" />
+      <point x="885.8333333333334" y="456.7666666666667" />
+      <point x="885.8333333333334" y="692.7" />
+      <point x="134.5" y="0.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport" target="io.specmatic.test.reports.coverage.CoverageGroupKey" relationship="CREATE">
+      <point x="127.0" y="-14.0" />
+      <point x="-6.111111111111086" y="14.0" />
+    </edge>
+    <edge source="io.specmatic.test.SpecmaticJUnitSupport" target="io.specmatic.test.reports.coverage.OpenApiCoverageReportInput" relationship="TO_ONE">
+      <point x="113.0" y="0.0" />
+      <point x="603.5" y="184.0" />
+      <point x="603.5" y="280.0" />
+      <point x="576.333" y="280.0" />
+      <point x="-3.3333333340124227E-4" y="-13.999666666666712" />
+    </edge>
+    <edge source="io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow" target="io.specmatic.test.reports.coverage.console.Remarks" relationship="TO_ONE">
+      <point x="-20.0" y="14.0" />
+      <point x="0.0" y="-14.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.coverage.console.Remarks.Companion" target="io.specmatic.test.reports.coverage.console.Remarks" relationship="INNER_CLASS">
+      <point x="0.0" y="14.0" />
+      <point x="370.1666666666667" y="932.7" />
+      <point x="57.0" y="0.0" />
+    </edge>
+    <edge source="io.specmatic.test.SpecmaticJUnitSupport" target="io.specmatic.test.ResultAssert.Companion" relationship="DEPENDENCY">
+      <point x="10.0" y="-14.0" />
+      <point x="0.0" y="14.0" />
+    </edge>
+    <edge source="io.specmatic.test.ResultAssert.Companion" target="io.specmatic.test.ResultAssert" relationship="INNER_CLASS">
+      <point x="0.0" y="-14.0" />
+      <point x="0.0" y="14.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport" target="io.specmatic.test.reports.coverage.console.Remarks" relationship="DEPENDENCY">
+      <point x="-156.0" y="14.0" />
+      <point x="-136.0" y="932.7" />
+      <point x="-57.0" y="0.0" />
+    </edge>
+    <edge source="io.specmatic.test.SpecmaticJUnitSupport.Companion" target="io.specmatic.test.API" relationship="CREATE">
+      <point x="-30.99999999999997" y="-14.0" />
+      <point x="0.0" y="14.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport" target="io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow" relationship="TO_MANY">
+      <point x="20.0" y="14.0" />
+      <point x="0.0" y="-14.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.coverage.OpenApiCoverageReportInput" target="io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow" relationship="CREATE">
+      <point x="136.0" y="0.0" />
+      <point x="870.8333333333334" y="488.2666666666667" />
+      <point x="870.8333333333334" y="812.7" />
+      <point x="158.5" y="0.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.renderers.CoverageReportTextRenderer" target="io.specmatic.test.reports.renderers.ReportRenderer" relationship="REALIZATION">
+      <point x="0.0" y="-14.0" />
+      <point x="-74.0" y="14.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.renderers.CoverageReportTextRenderer" target="io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport" relationship="DEPENDENCY">
+      <point x="133.5" y="0.0" />
+      <point x="117.0" y="386.0" />
+      <point x="117.0" y="503.0" />
+      <point x="20.0" y="503.0" />
+      <point x="0.0" y="-14.0" />
+    </edge>
+    <edge source="io.specmatic.test.SpecmaticJUnitSupport" target="io.specmatic.test.reports.coverage.Endpoint" relationship="CREATE">
+      <point x="99.5" y="-14.0" />
+      <point x="564.5" y="88.5" />
+      <point x="729.8333333333334" y="88.5" />
+      <point x="729.8333333333334" y="549.7666666666667" />
+      <point x="516.3333333333334" y="549.7666666666667" />
+      <point x="0.0" y="-14.0" />
+    </edge>
+    <edge source="io.specmatic.test.SpecmaticJUnitSupport.Companion" target="io.specmatic.test.SpecmaticJUnitSupport" relationship="INNER_CLASS">
+      <point x="0.0" y="-14.0" />
+      <point x="240.66666666666666" y="184.0" />
+      <point x="-113.0" y="0.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.OpenApiCoverageReportProcessor" target="io.specmatic.test.reports.coverage.OpenApiCoverageReportInput" relationship="TO_ONE">
+      <point x="0.0" y="-14.0" />
+      <point x="200.0" y="280.0" />
+      <point x="576.333" y="280.0" />
+      <point x="-3.3333333340124227E-4" y="-13.999666666666712" />
+    </edge>
+    <edge source="io.specmatic.test.ResultAssert.Companion" target="io.specmatic.test.ResultAssert" relationship="CREATE">
+      <point x="15.0" y="-14.0" />
+      <point x="15.0" y="14.0" />
+    </edge>
+    <edge source="io.specmatic.test.SpecmaticJUnitSupport" target="io.specmatic.test.reports.coverage.OpenApiCoverageReportInput" relationship="CREATE">
+      <point x="25.0" y="-14.0" />
+      <point x="490.0" y="152.5" />
+      <point x="633.5" y="152.5" />
+      <point x="57.16666666666663" y="-14.0" />
+    </edge>
+    <edge source="io.specmatic.test.SpecmaticJUnitSupport.Companion" target="io.specmatic.test.reports.OpenApiCoverageReportProcessor" relationship="CREATE">
+      <point x="-55.66666666666666" y="14.0" />
+      <point x="-15.0" y="-14.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.OpenApiCoverageReportProcessor" target="io.specmatic.test.reports.renderers.CoverageReportTextRenderer" relationship="CREATE">
+      <point x="-146.5" y="14.0" />
+      <point x="87.5" y="-14.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.coverage.OpenApiCoverageReportInput" target="io.specmatic.test.reports.coverage.Endpoint" relationship="TO_MANY">
+      <point x="-75.0" y="14.0" />
+      <point x="-15.0" y="-14.0" />
+    </edge>
+    <edge source="io.specmatic.test.reports.coverage.OpenApiCoverageReportInput" target="io.specmatic.test.API" relationship="TO_MANY">
+      <point x="42.16666666666663" y="-14.0" />
+      <point x="618.5" y="-31.5" />
+      <point x="209.66666666666669" y="-31.5" />
+      <point x="0.0" y="-14.0" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Compact" zoom="0.9029029029029029" showDependencies="true" x="361.49999999999994" y="467.49999999999994" />
+  <SelectedNodes>
+    <node>io.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport</node>
+  </SelectedNodes>
+  <Categories>
+    <Category>Fields</Category>
+    <Category>Inner Classes</Category>
+  </Categories>
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>private</VISIBILITY>
+</Diagram>
+

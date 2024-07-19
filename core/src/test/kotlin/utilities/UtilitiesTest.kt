@@ -1,20 +1,20 @@
 package utilities
 
-import `in`.specmatic.conversions.OpenApiSpecification
-import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.HttpRequest
-import `in`.specmatic.core.SourceProvider
-import `in`.specmatic.core.git.GitCommand
-import `in`.specmatic.core.git.SystemGit
-import `in`.specmatic.core.git.checkout
-import `in`.specmatic.core.git.clone
-import `in`.specmatic.core.pattern.parsedJSON
-import `in`.specmatic.core.pattern.parsedJSONObject
-import `in`.specmatic.core.utilities.*
-import `in`.specmatic.core.value.JSONObjectValue
-import `in`.specmatic.core.value.toXMLNode
-import `in`.specmatic.osAgnosticPath
-import `in`.specmatic.stub.createStub
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.CONTRACT_EXTENSION
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.SourceProvider
+import io.specmatic.core.git.GitCommand
+import io.specmatic.core.git.SystemGit
+import io.specmatic.core.git.checkout
+import io.specmatic.core.git.clone
+import io.specmatic.core.pattern.parsedJSON
+import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.utilities.*
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.toXMLNode
+import io.specmatic.osAgnosticPath
+import io.specmatic.stub.createStub
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -50,10 +50,10 @@ internal class UtilitiesTest {
         val sources = listOf(GitRepo("https://repo1", null, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         File(".spec").deleteRecursively()
 
-        mockkStatic("in.specmatic.core.utilities.Utilities")
+        mockkStatic("io.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
 
-        mockkStatic("in.specmatic.core.git.GitOperations")
+        mockkStatic("io.specmatic.core.git.GitOperations")
         every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
 
 
@@ -74,10 +74,10 @@ internal class UtilitiesTest {
             branchName, listOf(), listOf("a/1.$CONTRACT_EXTENSION", "b/1.$CONTRACT_EXTENSION", "c/1.$CONTRACT_EXTENSION"), SourceProvider.git.toString()))
         File(".spec").deleteRecursively()
 
-        mockkStatic("in.specmatic.core.utilities.Utilities")
+        mockkStatic("io.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
 
-        mockkStatic("in.specmatic.core.git.GitOperations")
+        mockkStatic("io.specmatic.core.git.GitOperations")
         val repositoryDirectory = File(".spec/repos/repo1")
         every { clone(File(".spec/repos"), any()) }.returns(repositoryDirectory)
         every { checkout(repositoryDirectory, branchName) }.returns(Unit)
@@ -110,7 +110,7 @@ internal class UtilitiesTest {
         every { mockGitCommand.fetch() }.returns("")
         every { mockGitCommand.revisionsBehindCount() }.returns(0)
         every { mockGitCommand.statusPorcelain() }.returns("")
-        mockkStatic("in.specmatic.core.utilities.Utilities")
+        mockkStatic("io.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
         every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
 
@@ -155,11 +155,11 @@ internal class UtilitiesTest {
         every { mockGitCommand.fetch() }.returns("")
         every { mockGitCommand.revisionsBehindCount() }.returns(0)
         every { mockGitCommand.statusPorcelain() }.returns("someDir/someFile")
-        mockkStatic("in.specmatic.core.utilities.Utilities")
+        mockkStatic("io.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
         every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
 
-        mockkStatic("in.specmatic.core.git.GitOperations")
+        mockkStatic("io.specmatic.core.git.GitOperations")
         every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
 
 
@@ -182,11 +182,11 @@ internal class UtilitiesTest {
         every { mockGitCommand.statusPorcelain() }.returns("")
         every { mockGitCommand.fetch() }.returns("changes")
         every { mockGitCommand.revisionsBehindCount() }.returns(1)
-        mockkStatic("in.specmatic.core.utilities.Utilities")
+        mockkStatic("io.specmatic.core.utilities.Utilities")
         every { loadSources("/configFilePath") }.returns(sources)
         every { getSystemGitWithAuth(any()) }.returns(mockGitCommand)
 
-        mockkStatic("in.specmatic.core.git.GitOperations")
+        mockkStatic("io.specmatic.core.git.GitOperations")
         every { clone(File(".spec/repos"), any()) }.returns(File(".spec/repos/repo1"))
 
 

@@ -1,8 +1,8 @@
 package application
 
-import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.utilities.saveJsonFile
-import `in`.specmatic.reports.CentralContractRepoReport
+import io.specmatic.core.log.logger
+import io.specmatic.core.utilities.saveJsonFile
+import io.specmatic.reports.CentralContractRepoReport
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import picocli.CommandLine

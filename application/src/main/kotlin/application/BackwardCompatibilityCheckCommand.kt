@@ -1,11 +1,11 @@
 package application
 
-import `in`.specmatic.conversions.OpenApiSpecification
-import `in`.specmatic.core.CONTRACT_EXTENSIONS
-import `in`.specmatic.core.git.GitCommand
-import `in`.specmatic.core.git.SystemGit
-import `in`.specmatic.core.testBackwardCompatibility
-import `in`.specmatic.core.utilities.exitWithMessage
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.CONTRACT_EXTENSIONS
+import io.specmatic.core.git.GitCommand
+import io.specmatic.core.git.SystemGit
+import io.specmatic.core.testBackwardCompatibility
+import io.specmatic.core.utilities.exitWithMessage
 import kotlinx.serialization.json.Json
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command

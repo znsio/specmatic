@@ -1,9 +1,9 @@
 package application
 
-import `in`.specmatic.core.Configuration.Companion.globalConfigFileName
-import `in`.specmatic.core.DEFAULT_WORKING_DIRECTORY
-import `in`.specmatic.core.utilities.ContractPathData
-import `in`.specmatic.core.utilities.contractFilePathsFrom
+import io.specmatic.core.Configuration.Companion.globalConfigFileName
+import io.specmatic.core.DEFAULT_WORKING_DIRECTORY
+import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.utilities.contractFilePathsFrom
 import org.springframework.stereotype.Component
 
 @Component

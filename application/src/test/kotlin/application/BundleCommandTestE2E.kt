@@ -1,6 +1,6 @@
 package application
 
-import `in`.specmatic.core.Configuration
+import io.specmatic.core.Configuration
 import io.ktor.util.*
 import io.ktor.utils.io.streams.*
 import io.mockk.clearAllMocks

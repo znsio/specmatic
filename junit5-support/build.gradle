@@ -36,7 +36,7 @@ test {
     useJUnitPlatform()
 }
 
-group = 'in.specmatic'
+group = 'io.specmatic'
 
 jar {
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
@@ -58,16 +58,8 @@ publishing {
             from components.java
             pom {
                 name = 'SpecmaticJUnit5Support'
-                description = """
-                    Run contracts as tests in Junit tests using Specmatic.
-                    
-                    Deprecation Notice for group ID "in.specmatic"
-                    ******************************************************************************************************
-                    Updates for "junit5-support" will no longer be available under the deprecated group ID "in.specmatic". 
-                    Please update your dependencies to use the new group ID "io.specmatic".
-                    ******************************************************************************************************
-                """
-                url = 'https://specmatic.in'
+                description = 'Specmatic JUnit 5 Support'
+                url = 'https://specmatic.io'
                 licenses {
                     license {
                         name = 'MIT'
@@ -78,12 +70,12 @@ publishing {
                     developer {
                         id = 'specmaticBuilders'
                         name = 'Specmatic Builders'
-                        email = 'info@specmatic.in'
+                        email = 'info@specmatic.io'
                     }
                 }
                 scm {
                     connection = 'scm:git:git@github.com:znsio/specmatic.git'
-                    url = 'https://specmatic.in/'
+                    url = 'https://specmatic.io/'
                 }
             }
         }

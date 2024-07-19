@@ -1,14 +1,14 @@
 package application
 
-import `in`.specmatic.core.Feature
-import `in`.specmatic.core.WorkingDirectory
-import `in`.specmatic.core.log.NewLineLogMessage
-import `in`.specmatic.core.log.StringLog
-import `in`.specmatic.core.log.consoleLog
-import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.stub.HttpClientFactory
-import `in`.specmatic.stub.HttpStub
-import `in`.specmatic.stub.contractInfoToHttpExpectations
+import io.specmatic.core.Feature
+import io.specmatic.core.WorkingDirectory
+import io.specmatic.core.log.NewLineLogMessage
+import io.specmatic.core.log.StringLog
+import io.specmatic.core.log.consoleLog
+import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.HttpClientFactory
+import io.specmatic.stub.HttpStub
+import io.specmatic.stub.contractInfoToHttpExpectations
 import org.springframework.stereotype.Component
 
 @Component

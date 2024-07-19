@@ -115,7 +115,7 @@ jacocoTestReport {
     }
 }
 
-group = 'in.specmatic'
+group = 'io.specmatic'
 
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
@@ -139,16 +139,8 @@ publishing {
             from components.java
             pom {
                 name = 'Specmatic Executable'
-                description = """
-                    Command-line standalone executable jar for Specmatic
-                    
-                    Deprecation Notice for group ID "in.specmatic"
-                    ******************************************************************************************************
-                    Updates for "specmatic-executable" will no longer be available under the deprecated group ID "in.specmatic". 
-                    Please update your dependencies to use the new group ID "io.specmatic".
-                    ******************************************************************************************************
-                """
-                url = 'https://specmatic.in'
+                description = 'Command-line standalone executable jar for Specmatic'
+                url = 'https://specmatic.io'
                 licenses {
                     license {
                         name = 'MIT'
@@ -159,12 +151,12 @@ publishing {
                     developer {
                         id = 'specmaticBuilders'
                         name = 'Specmatic Builders'
-                        email = 'info@specmatic.in'
+                        email = 'info@specmatic.io'
                     }
                 }
                 scm {
                     connection = 'scm:git:git@github.com:znsio/specmatic.git'
-                    url = 'https://specmatic.in/'
+                    url = 'https://specmatic.io/'
                 }
             }
         }

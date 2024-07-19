@@ -2,12 +2,12 @@
 
 package application
 
-import `in`.specmatic.core.YAML
-import `in`.specmatic.core.log.HeadingLog
-import `in`.specmatic.core.log.Verbose
-import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.parseGherkinStringToFeature
-import `in`.specmatic.core.utilities.exitWithMessage
+import io.specmatic.core.YAML
+import io.specmatic.core.log.HeadingLog
+import io.specmatic.core.log.Verbose
+import io.specmatic.core.log.logger
+import io.specmatic.core.parseGherkinStringToFeature
+import io.specmatic.core.utilities.exitWithMessage
 import io.swagger.v3.core.util.Yaml
 import org.springframework.beans.factory.annotation.Autowired
 import picocli.CommandLine

@@ -1,6 +1,6 @@
 package application
 
-import `in`.specmatic.core.utilities.StubServerWatcher
+import io.specmatic.core.utilities.StubServerWatcher
 import org.springframework.stereotype.Component
 
 @Component

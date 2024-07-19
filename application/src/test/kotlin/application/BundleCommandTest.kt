@@ -1,15 +1,15 @@
 package application
 
 import com.ninjasquad.springmockk.MockkBean
-import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import io.mockk.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import picocli.CommandLine
-import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.CONTRACT_EXTENSION
+import io.specmatic.core.utilities.ContractPathData
 import java.io.File
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, BundleCommand::class])

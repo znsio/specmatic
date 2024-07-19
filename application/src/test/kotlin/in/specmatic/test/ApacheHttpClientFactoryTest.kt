@@ -1,4 +1,4 @@
-package `in`.specmatic.test
+package io.specmatic.test
 
 import io.mockk.justRun
 import io.mockk.mockk

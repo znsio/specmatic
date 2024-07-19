@@ -1,12 +1,12 @@
 package integration_tests
 
-import `in`.specmatic.GENERATION
-import `in`.specmatic.conversions.EnvironmentAndPropertiesConfiguration
-import `in`.specmatic.conversions.OpenApiSpecification
-import `in`.specmatic.core.*
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.value.*
-import `in`.specmatic.test.TestExecutor
+import io.specmatic.GENERATION
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.*
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.value.*
+import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Tag

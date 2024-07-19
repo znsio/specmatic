@@ -1,9 +1,9 @@
-package `in`.specmatic.test
+package io.specmatic.test
 
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import `in`.specmatic.core.parseGherkinStringToFeature
-import `in`.specmatic.test.ResultAssert.Companion.assertThat
+import io.specmatic.core.parseGherkinStringToFeature
+import io.specmatic.test.ResultAssert.Companion.assertThat
 
 internal class ResultAssertTest {
     @Test
@@ -16,7 +16,7 @@ internal class ResultAssertTest {
               Then status 200
         """.trimIndent())
 
-        val failure = `in`.specmatic.core.Result.Failure("For some reason").updateScenario(feature.scenarios.single())
+        val failure = io.specmatic.core.Result.Failure("For some reason").updateScenario(feature.scenarios.single())
         assertThatThrownBy { assertThat(failure).isSuccess() }.isInstanceOf(java.lang.AssertionError::class.java)
     }
 }

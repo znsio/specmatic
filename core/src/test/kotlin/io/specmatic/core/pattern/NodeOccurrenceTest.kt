@@ -1,12 +1,12 @@
 package io.specmatic.core.pattern
 
+import io.specmatic.core.Result
+import io.specmatic.core.pattern.ResultType.FailureResult
+import io.specmatic.core.pattern.ResultType.SuccessResult
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import io.specmatic.core.Result
-import io.specmatic.core.pattern.ResultType.FailureResult
-import io.specmatic.core.pattern.ResultType.SuccessResult
 import java.util.stream.Stream
 
 enum class ResultType {

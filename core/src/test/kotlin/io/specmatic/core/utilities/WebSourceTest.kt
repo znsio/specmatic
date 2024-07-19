@@ -1,11 +1,11 @@
 package io.specmatic.core.utilities
 
-import io.specmatic.core.DEFAULT_WORKING_DIRECTORY
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.specmatic.core.DEFAULT_WORKING_DIRECTORY
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test

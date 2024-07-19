@@ -1,14 +1,14 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.core.ContractCache
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Test
-import io.specmatic.core.ContractFileWithExports
-import io.specmatic.core.References
 import io.mockk.every
 import io.mockk.mockk
+import io.specmatic.core.ContractCache
+import io.specmatic.core.ContractFileWithExports
+import io.specmatic.core.References
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 internal class ReferenceValueTest {
     private val contractFile = mockk<ContractFileWithExports>()

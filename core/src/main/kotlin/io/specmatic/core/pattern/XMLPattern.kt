@@ -1,8 +1,11 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.core.*
+import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.Resolver
+import io.specmatic.core.Result
 import io.specmatic.core.Result.Failure
 import io.specmatic.core.Result.Success
+import io.specmatic.core.mismatchResult
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.utilities.mapZip
 import io.specmatic.core.utilities.parseXML

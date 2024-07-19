@@ -1,13 +1,13 @@
 package io.specmatic.core
 
-import org.json.JSONObject
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Test
-import org.xml.sax.SAXException
 import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.Value
 import io.specmatic.core.value.toXMLNode
+import org.json.JSONObject
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
+import org.xml.sax.SAXException
 import java.io.IOException
 import javax.xml.parsers.ParserConfigurationException
 

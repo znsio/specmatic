@@ -2,7 +2,10 @@ package io.specmatic.core.pattern
 
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.XMLNode
-import io.specmatic.core.wsdl.parser.message.*
+import io.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
+import io.specmatic.core.wsdl.parser.message.NILLABLE_ATTRIBUTE_NAME
+import io.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
+import io.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 
 data class XMLTypeData(val name: String = "", val realName: String, val attributes: Map<String, Pattern> = emptyMap(), val nodes: List<Pattern> = emptyList()) {
     fun getAttributeValue(name: String): String? =

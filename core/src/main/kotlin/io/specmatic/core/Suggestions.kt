@@ -1,7 +1,7 @@
 package io.specmatic.core
 
-import io.specmatic.core.utilities.readFile
 import io.cucumber.messages.types.GherkinDocument
+import io.specmatic.core.utilities.readFile
 
 class Suggestions(val scenarios: List<Scenario>) {
     constructor(contractGherkinDocument: GherkinDocument) : this(lex(contractGherkinDocument, "").second)

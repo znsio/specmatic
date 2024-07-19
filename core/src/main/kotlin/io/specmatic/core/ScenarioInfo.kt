@@ -1,7 +1,9 @@
 package io.specmatic.core
 
 import io.specmatic.conversions.ApiSpecification
-import io.specmatic.core.pattern.*
+import io.specmatic.core.pattern.ExactValuePattern
+import io.specmatic.core.pattern.Examples
+import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.value.Value
 
 data class ScenarioInfo(

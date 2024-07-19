@@ -2,15 +2,15 @@ package io.specmatic.core.wsdl.parser
 
 import io.mockk.every
 import io.mockk.mockk
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.fail
-import org.junit.jupiter.api.Test
 import io.specmatic.core.value.XMLNode
 import io.specmatic.core.value.toXMLNode
 import io.specmatic.core.wsdl.parser.message.GetMessageTypeReference
 import io.specmatic.core.wsdl.parser.message.MessageTypeInfoParserStart
 import io.specmatic.core.wsdl.parser.message.MessageTypeProcessingComplete
 import io.specmatic.core.wsdl.payload.EmptyHTTPBodyPayload
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions.fail
+import org.junit.jupiter.api.Test
 
 internal class MessageTypeInfoParserStartTest {
     @Test

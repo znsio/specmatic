@@ -1,7 +1,8 @@
 package io.specmatic.core
 
+import io.mockk.every
+import io.mockk.mockk
 import io.specmatic.conversions.OpenApiSpecification
-import org.assertj.core.api.Assertions.assertThat
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
@@ -9,9 +10,8 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.mock.mockFromJSON
 import io.specmatic.osAgnosticPath
-import io.mockk.every
-import io.mockk.mockk
 import io.swagger.v3.core.util.Yaml
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

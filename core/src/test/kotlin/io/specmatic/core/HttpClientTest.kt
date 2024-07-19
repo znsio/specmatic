@@ -1,17 +1,16 @@
 package io.specmatic.core
 
-import io.specmatic.stub.HttpStub
-import io.specmatic.test.HttpClient
-import org.json.JSONObject
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Test
-import io.specmatic.core.value.StringValue
-import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.specmatic.core.value.StringValue
+import io.specmatic.stub.HttpStub
+import io.specmatic.test.HttpClient
+import org.json.JSONObject
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
 
 class HttpClientTest {
 

@@ -2,13 +2,13 @@ package io.specmatic.core.pattern
 
 import io.specmatic.GENERATION
 import io.specmatic.core.Resolver
-import org.junit.jupiter.api.Test
 import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.shouldNotMatch
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 
 internal class ExactValuePatternTest {
     @Test

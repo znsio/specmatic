@@ -1,11 +1,10 @@
 package io.specmatic.core.utilities
 
 import io.specmatic.core.NoBodyValue
-import kotlinx.serialization.*
-import kotlinx.serialization.json.*
-
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.*
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.*
 
 val indentedJson = Json {
     prettyPrint = true

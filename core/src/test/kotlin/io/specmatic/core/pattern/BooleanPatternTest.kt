@@ -4,11 +4,11 @@ import io.specmatic.GENERATION
 import io.specmatic.core.Resolver
 import io.specmatic.core.UseDefaultExample
 import io.specmatic.core.value.BooleanValue
-import org.junit.jupiter.api.Test
 import io.specmatic.core.value.NullValue
 import io.specmatic.shouldNotMatch
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 
 internal class BooleanPatternTest {
     @Test

@@ -1,5 +1,11 @@
 package io.specmatic.core
 
+import io.cucumber.gherkin.GherkinDocumentBuilder
+import io.cucumber.gherkin.Parser
+import io.cucumber.messages.IdGenerator
+import io.cucumber.messages.IdGenerator.Incrementing
+import io.cucumber.messages.types.*
+import io.cucumber.messages.types.Examples
 import io.specmatic.conversions.*
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
@@ -13,12 +19,6 @@ import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStubData
 import io.specmatic.test.*
-import io.cucumber.gherkin.GherkinDocumentBuilder
-import io.cucumber.gherkin.Parser
-import io.cucumber.messages.IdGenerator
-import io.cucumber.messages.IdGenerator.Incrementing
-import io.cucumber.messages.types.*
-import io.cucumber.messages.types.Examples
 import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.info.Info

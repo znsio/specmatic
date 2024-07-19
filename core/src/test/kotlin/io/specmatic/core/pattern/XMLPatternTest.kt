@@ -1,9 +1,5 @@
 package io.specmatic.core.pattern
 
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.Test
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.value.*
@@ -13,6 +9,10 @@ import io.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import io.specmatic.shouldMatch
 import io.specmatic.shouldNotMatch
 import io.specmatic.trimmedLinesString
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import java.util.function.Consumer
 

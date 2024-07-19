@@ -1,14 +1,14 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.GENERATION
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.fail
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.value.StringValue
 import io.specmatic.shouldMatch
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
 
 internal class PatternInStringPatternTest {
     @Test

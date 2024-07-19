@@ -1,12 +1,7 @@
 package io.specmatic.conversions
 
-import io.specmatic.core.HttpQueryParamPattern
 import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.Pattern
-import io.specmatic.core.pattern.QueryParameterArrayPattern
-import io.specmatic.core.pattern.QueryParameterScalarPattern
 import io.swagger.v3.oas.models.Operation
-import io.swagger.v3.oas.models.parameters.QueryParameter
 
 class OpenApiOperation(val operation: Operation) {
     fun validateParameters() {

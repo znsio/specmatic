@@ -1,10 +1,10 @@
 package io.specmatic.core
 
+import io.mockk.every
+import io.mockk.mockk
 import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.value.StringValue
-import io.mockk.every
-import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

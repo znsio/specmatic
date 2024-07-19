@@ -1,13 +1,13 @@
 package io.specmatic.core
 
-import io.specmatic.core.pattern.StringPattern
-import io.specmatic.core.utilities.parseXML
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Test
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.NumberPattern
+import io.specmatic.core.pattern.StringPattern
+import io.specmatic.core.utilities.parseXML
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
 
 class XMLMatching {
     private val threeQuotes = "\"\"\""

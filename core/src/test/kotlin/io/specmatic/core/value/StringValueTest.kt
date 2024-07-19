@@ -1,13 +1,13 @@
 package io.specmatic.core.value
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.pattern.DeferredPattern
 import io.specmatic.core.pattern.StringPattern
 import io.specmatic.optionalPattern
 import io.specmatic.shouldMatch
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 
 internal class StringValueTest {
     @Test

@@ -1,6 +1,9 @@
 package io.specmatic.conversions
 
 import com.fasterxml.jackson.databind.node.ArrayNode
+import io.cucumber.messages.internal.com.fasterxml.jackson.databind.ObjectMapper
+import io.cucumber.messages.types.Step
+import io.ktor.util.reflect.*
 import io.specmatic.core.*
 import io.specmatic.core.Result.Failure
 import io.specmatic.core.log.LogStrategy
@@ -11,9 +14,6 @@ import io.specmatic.core.value.*
 import io.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
 import io.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import io.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
-import io.cucumber.messages.internal.com.fasterxml.jackson.databind.ObjectMapper
-import io.cucumber.messages.types.Step
-import io.ktor.util.reflect.*
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem

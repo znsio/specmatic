@@ -1,8 +1,8 @@
 package io.specmatic.core.wsdl.parser.message
 
+import io.mockk.mockk
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.value.toXMLNode
-import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test

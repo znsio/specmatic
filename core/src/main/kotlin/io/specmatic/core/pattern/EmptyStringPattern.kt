@@ -4,7 +4,10 @@ import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.mismatchResult
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
-import io.specmatic.core.value.*
+import io.specmatic.core.value.EmptyString
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
 
 object EmptyStringPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {

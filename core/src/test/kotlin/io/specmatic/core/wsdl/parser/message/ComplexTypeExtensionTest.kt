@@ -2,12 +2,12 @@ package io.specmatic.core.wsdl.parser.message
 
 import io.mockk.every
 import io.mockk.mockk
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import io.specmatic.core.pattern.XMLPattern
 import io.specmatic.core.value.toXMLNode
 import io.specmatic.core.wsdl.parser.WSDL
 import io.specmatic.core.wsdl.parser.WSDLTypeInfo
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 
 internal class ComplexTypeExtensionTest {
     @Test

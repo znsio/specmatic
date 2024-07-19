@@ -1,9 +1,9 @@
 package io.specmatic.core.wsdl.parser.message
 
-import io.specmatic.core.value.toXMLNode
-import io.specmatic.core.wsdl.parser.WSDL
 import io.mockk.every
 import io.mockk.mockk
+import io.specmatic.core.value.toXMLNode
+import io.specmatic.core.wsdl.parser.WSDL
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

@@ -1,5 +1,7 @@
 package io.specmatic.core.wsdl.parser
 
+import io.mockk.every
+import io.mockk.mockk
 import io.specmatic.core.value.FullyQualifiedName
 import io.specmatic.core.value.XMLNode
 import io.specmatic.core.value.toXMLNode
@@ -7,8 +9,6 @@ import io.specmatic.core.wsdl.parser.message.GetMessageTypeReference
 import io.specmatic.core.wsdl.parser.message.MessageTypeProcessingComplete
 import io.specmatic.core.wsdl.parser.message.ParseMessageWithElementRef
 import io.specmatic.core.wsdl.payload.EmptySOAPPayload
-import io.mockk.every
-import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Test

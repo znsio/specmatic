@@ -1,11 +1,11 @@
 package io.specmatic.core.value
 
+import io.ktor.http.*
 import io.specmatic.core.ExampleDeclarations
 import io.specmatic.core.Result
 import io.specmatic.core.pattern.ExactValuePattern
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.StringPattern
-import io.ktor.http.*
 import org.w3c.dom.Document
 import org.w3c.dom.Node
 

@@ -2,7 +2,9 @@ package io.specmatic.core.value
 
 import io.specmatic.core.ExampleDeclarations
 import io.specmatic.core.pattern.*
-import io.specmatic.core.utilities.*
+import io.specmatic.core.utilities.capitalizeFirstChar
+import io.specmatic.core.utilities.valueMapToPrettyJsonString
+import io.specmatic.core.utilities.valueMapToUnindentedJsonString
 
 data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Value, JSONComposite {
     override val httpContentType = "application/json"

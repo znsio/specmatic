@@ -1,8 +1,8 @@
 package io.specmatic.core.value
 
+import io.specmatic.core.pattern.isPatternToken
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import io.specmatic.core.pattern.isPatternToken
 
 internal class UseExampleDeclarationsTest {
     @Test

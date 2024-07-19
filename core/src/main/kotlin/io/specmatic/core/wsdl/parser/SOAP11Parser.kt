@@ -3,7 +3,10 @@ package io.specmatic.core.wsdl.parser
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.XMLPattern
 import io.specmatic.core.value.XMLNode
-import io.specmatic.core.wsdl.parser.message.*
+import io.specmatic.core.wsdl.parser.message.MessageTypeInfoParser
+import io.specmatic.core.wsdl.parser.message.MessageTypeInfoParserStart
+import io.specmatic.core.wsdl.parser.message.fromTypeAttribute
+import io.specmatic.core.wsdl.parser.message.isPrimitiveType
 import io.specmatic.core.wsdl.parser.operation.SOAPOperationTypeInfo
 import io.specmatic.core.wsdl.payload.SoapPayloadType
 import java.net.URI

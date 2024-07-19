@@ -1,13 +1,13 @@
 package io.specmatic.core.wsdl.parser.message
 
-import io.specmatic.core.value.FullyQualifiedName
-import io.specmatic.core.value.StringValue
 import io.mockk.every
 import io.mockk.mockk
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
+import io.specmatic.core.value.FullyQualifiedName
+import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.toXMLNode
 import io.specmatic.core.wsdl.parser.WSDL
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 
 internal class ElementReferenceTest {
     @Test

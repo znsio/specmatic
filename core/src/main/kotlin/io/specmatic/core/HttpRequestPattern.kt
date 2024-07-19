@@ -1,12 +1,12 @@
 package io.specmatic.core
 
+import io.ktor.util.*
 import io.specmatic.conversions.NoSecurityScheme
 import io.specmatic.conversions.OpenAPISecurityScheme
 import io.specmatic.core.Result.Failure
 import io.specmatic.core.Result.Success
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
-import io.ktor.util.*
 
 private const val MULTIPART_FORMDATA_BREADCRUMB = "MULTIPART-FORMDATA"
 private const val FORM_FIELDS_BREADCRUMB = "FORM-FIELDS"

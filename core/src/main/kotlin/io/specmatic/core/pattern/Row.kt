@@ -1,7 +1,6 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.core.DefaultExampleResolver
-import io.specmatic.core.HttpResponse
 import io.specmatic.core.OMIT
 import io.specmatic.core.References
 import io.specmatic.core.value.JSONArrayValue

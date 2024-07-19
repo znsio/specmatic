@@ -1,9 +1,9 @@
 package io.specmatic.core
 
-import org.junit.jupiter.api.Test
 import io.specmatic.core.pattern.Row
 import io.specmatic.core.pattern.keySets
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class KeySetsTest {
     @Test

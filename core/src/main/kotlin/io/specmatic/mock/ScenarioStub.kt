@@ -1,8 +1,13 @@
 package io.specmatic.mock
 
-import io.specmatic.core.*
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
 import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.value.*
+import io.specmatic.core.requestFromJSON
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
 import io.specmatic.stub.stringToMockScenario
 
 data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val delayInSeconds: Int? = null, val stubToken: String? = null, val requestBodyRegex: String? = null) {

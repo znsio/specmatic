@@ -1,13 +1,13 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.GENERATION
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.value.NullValue
 import io.specmatic.shouldNotMatch
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 
 internal class DeferredPatternTest {
     @Test

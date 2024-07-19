@@ -1,10 +1,10 @@
 package io.specmatic.core
 
+import io.ktor.http.*
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
-import io.ktor.http.*
 
 const val HEADERS_BREADCRUMB = "HEADERS"
 

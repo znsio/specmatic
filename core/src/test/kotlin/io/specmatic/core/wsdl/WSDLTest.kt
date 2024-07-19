@@ -1,12 +1,12 @@
 package io.specmatic.core.wsdl
 
 import io.specmatic.Utils.readTextResource
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import io.specmatic.core.CONTRACT_EXTENSION
 import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.value.toXMLNode
 import io.specmatic.core.wsdl.parser.WSDL
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 
 class WSDLTest {
     @Test

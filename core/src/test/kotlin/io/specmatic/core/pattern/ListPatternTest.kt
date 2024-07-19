@@ -3,14 +3,14 @@ package io.specmatic.core.pattern
 import io.specmatic.GENERATION
 import io.specmatic.core.*
 import io.specmatic.core.value.JSONArrayValue
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
 import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.shouldNotMatch
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 
 internal class ListPatternTest {
     @Test

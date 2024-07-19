@@ -4,8 +4,8 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.stub.isOpenAPI
 import io.specmatic.stub.hasOpenApiFileExtension
+import io.specmatic.stub.isOpenAPI
 import java.io.File
 
 class CentralContractRepoReport {

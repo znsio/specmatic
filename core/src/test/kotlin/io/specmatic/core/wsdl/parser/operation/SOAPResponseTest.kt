@@ -1,10 +1,10 @@
 package io.specmatic.core.wsdl.parser.operation
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import io.specmatic.core.wsdl.parser.SOAPMessageType
 import io.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import io.specmatic.core.wsdl.payload.EmptySOAPPayload
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 
 internal class SOAPResponseTest {
     @Test

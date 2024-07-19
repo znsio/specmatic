@@ -1,7 +1,6 @@
 package io.specmatic.core.pattern
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class HasValueTest {

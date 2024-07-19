@@ -1,10 +1,10 @@
 package io.specmatic.core.value
 
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.trimmedLinesList
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.trimmedLinesList
 
 internal class XMLNodeTest {
     @Test

@@ -2,7 +2,6 @@ package io.specmatic.core.pattern
 
 import io.cucumber.messages.types.Examples
 import io.cucumber.messages.types.TableRow
-import java.util.*
 
 data class Examples(val columnNames: List<String> = emptyList(), val rows: List<Row> = listOf()) {
     val isEmpty: Boolean

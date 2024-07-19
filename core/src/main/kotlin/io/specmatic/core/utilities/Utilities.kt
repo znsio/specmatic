@@ -2,19 +2,12 @@
 
 package io.specmatic.core.utilities
 
-import org.eclipse.jgit.api.TransportConfigCallback
-import org.eclipse.jgit.transport.SshTransport
-import org.eclipse.jgit.transport.TransportHttp
-import org.eclipse.jgit.transport.sshd.SshdSessionFactory
-import org.w3c.dom.Document
-import org.w3c.dom.Node
-import org.xml.sax.InputSource
-import io.specmatic.core.log.consoleLog
 import io.specmatic.core.*
 import io.specmatic.core.Configuration.Companion.globalConfigFileName
 import io.specmatic.core.azure.AzureAuthCredentials
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
+import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.NullPattern
@@ -24,7 +17,14 @@ import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
+import org.eclipse.jgit.api.TransportConfigCallback
+import org.eclipse.jgit.transport.SshTransport
+import org.eclipse.jgit.transport.TransportHttp
+import org.eclipse.jgit.transport.sshd.SshdSessionFactory
+import org.w3c.dom.Document
+import org.w3c.dom.Node
 import org.w3c.dom.Node.*
+import org.xml.sax.InputSource
 import java.io.File
 import java.io.StringReader
 import java.io.StringWriter

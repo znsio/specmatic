@@ -1,8 +1,8 @@
 package io.specmatic.core.pattern
 
-import org.junit.jupiter.api.Test
 import io.specmatic.core.value.EmptyString
 import io.specmatic.shouldMatch
+import org.junit.jupiter.api.Test
 
 internal class EmptyStringPatternTest {
     @Test

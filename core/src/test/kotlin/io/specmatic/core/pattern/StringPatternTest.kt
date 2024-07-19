@@ -2,6 +2,7 @@ package io.specmatic.core.pattern
 
 import io.specmatic.GENERATION
 import io.specmatic.core.Resolver
+import io.specmatic.core.Result
 import io.specmatic.core.UseDefaultExample
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.NullValue
@@ -16,7 +17,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.stream.Stream
-import io.specmatic.core.Result as Result
 
 internal class StringPatternTest {
     @Test

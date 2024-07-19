@@ -1,12 +1,12 @@
 package io.specmatic.core.pattern
 
-import org.junit.jupiter.api.Test
 import io.specmatic.core.Resolver
 import io.specmatic.core.pattern.NullPattern.newBasedOn
 import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.shouldMatch
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 internal class NullPatternTest {
     @Test

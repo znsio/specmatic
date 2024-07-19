@@ -1,15 +1,14 @@
 package io.specmatic.core
 
-import org.assertj.core.api.Assertions.assertThat
 import io.specmatic.core.pattern.NumberPattern
+import io.specmatic.core.value.*
 import io.specmatic.test.TestExecutor
+import org.assertj.core.api.Assertions.assertThat
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
-import io.specmatic.core.value.*
 import java.util.*
-import org.junit.jupiter.api.Assertions.assertTrue
 
 class SetupFacts {
     @Test

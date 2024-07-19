@@ -1,7 +1,6 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.*
-import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.stub.softCastValueToXML
 

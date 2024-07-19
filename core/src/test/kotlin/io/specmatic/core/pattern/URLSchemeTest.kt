@@ -1,13 +1,14 @@
 package io.specmatic.core.pattern
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.fail
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.value.StringValue
 import io.specmatic.shouldMatch
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
 
 internal class URLSchemeTest {
     @Test

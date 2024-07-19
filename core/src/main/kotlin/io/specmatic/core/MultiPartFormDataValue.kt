@@ -1,5 +1,9 @@
 package io.specmatic.core
 
+import io.ktor.client.request.forms.*
+import io.ktor.http.*
+import io.ktor.utils.io.core.*
+import io.ktor.utils.io.streams.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.isPatternToken
@@ -7,10 +11,6 @@ import io.specmatic.core.pattern.parsedPattern
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
-import io.ktor.client.request.forms.*
-import io.ktor.http.*
-import io.ktor.utils.io.core.*
-import io.ktor.utils.io.streams.*
 import java.io.File
 import kotlin.text.String
 

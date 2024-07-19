@@ -1,13 +1,13 @@
 package io.specmatic.core.pattern
 
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Test
+import io.mockk.every
+import io.mockk.mockk
 import io.specmatic.core.ContractCache
 import io.specmatic.core.ContractFileWithExports
 import io.specmatic.core.References
-import io.mockk.every
-import io.mockk.mockk
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Test
 
 internal class RowTest {
     @Test

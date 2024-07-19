@@ -1,5 +1,6 @@
 package io.specmatic.core.pattern
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import io.specmatic.core.*
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NullValue
@@ -8,17 +9,12 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.shouldMatch
 import io.specmatic.shouldNotMatch
 import io.specmatic.stub.HttpStub
-import com.fasterxml.jackson.annotation.JsonProperty
 import io.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.fail
 import org.springframework.web.client.RestTemplate
 import java.net.URI
 import java.util.function.Consumer

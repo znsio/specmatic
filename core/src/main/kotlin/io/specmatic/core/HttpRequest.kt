@@ -1,14 +1,14 @@
 package io.specmatic.core
 
+import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
+import io.ktor.http.*
+import io.ktor.http.content.*
 import io.specmatic.conversions.guessType
 import io.specmatic.core.GherkinSection.When
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.URIUtils.parseQuery
 import io.specmatic.core.value.*
-import io.ktor.client.request.*
-import io.ktor.client.request.forms.*
-import io.ktor.http.*
-import io.ktor.http.content.*
 import org.apache.http.client.utils.URLEncodedUtils
 import org.apache.http.message.BasicNameValuePair
 import java.io.File

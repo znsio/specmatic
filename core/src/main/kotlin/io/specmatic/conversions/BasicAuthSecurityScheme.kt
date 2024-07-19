@@ -1,13 +1,13 @@
 package io.specmatic.conversions
 
-import io.specmatic.core.*
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpRequestPattern
+import io.specmatic.core.Result
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Row
-import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.pattern.randomString
-import io.ktor.util.*
 import org.apache.http.HttpHeaders.AUTHORIZATION
-import java.util.Base64
+import java.util.*
 
 data class BasicAuthSecurityScheme(private val token: String? = null) : OpenAPISecurityScheme {
     override fun matches(httpRequest: HttpRequest): Result {

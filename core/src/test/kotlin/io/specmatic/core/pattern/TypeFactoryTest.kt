@@ -1,11 +1,11 @@
 package io.specmatic.core.pattern
 
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
 import io.specmatic.core.Resolver
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.XMLNode
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 class TypeFactoryTest {
     @Test

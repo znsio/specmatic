@@ -1,8 +1,6 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.*
-import io.specmatic.core.pattern.isOptional
-import io.specmatic.core.pattern.withoutOptionality
 import io.specmatic.core.value.Value
 
 data class GenerativeTestsEnabled(private val positiveOnly: Boolean = Flags.onlyPositive()) : GenerationStrategies {

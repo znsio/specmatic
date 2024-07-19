@@ -1,13 +1,13 @@
 package io.specmatic.core.pattern
 
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.fail
 import io.specmatic.core.Resolver
 import io.specmatic.core.value.StringValue
 import io.specmatic.shouldMatch
 import io.specmatic.shouldNotMatch
-import java.net.URI
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
+import java.net.URI
 
 internal class URLPatternTest {
     @Test

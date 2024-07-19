@@ -1,9 +1,7 @@
 package io.specmatic.core
 
-import com.fasterxml.jackson.annotation.JsonFormat.Value
 import io.specmatic.core.pattern.*
 import org.assertj.core.api.Assertions.*
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.util.function.Consumer
 

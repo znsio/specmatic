@@ -1,10 +1,10 @@
 package io.specmatic.core
 
+import io.ktor.util.reflect.*
 import io.specmatic.core.Result.Failure
 import io.specmatic.core.Result.Success
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
-import io.ktor.util.reflect.*
 import java.net.URI
 
 val OMIT = listOf("(OMIT)", "(omit)")

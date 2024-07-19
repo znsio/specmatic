@@ -3,7 +3,10 @@ package io.specmatic.core.pattern
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.value.*
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.ListValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
 
 data class QueryParameterScalarPattern(override val pattern: Pattern): Pattern by pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {

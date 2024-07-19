@@ -1,11 +1,11 @@
 package io.specmatic.conversions
 
+import io.cucumber.messages.types.FeatureChild
+import io.cucumber.messages.types.Step
 import io.specmatic.core.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.value.toXMLNode
 import io.specmatic.core.wsdl.parser.WSDL
-import io.cucumber.messages.types.FeatureChild
-import io.cucumber.messages.types.Step
 import io.swagger.v3.parser.util.ClasspathHelper
 import java.net.URI
 import java.nio.file.Files

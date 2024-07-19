@@ -3,6 +3,7 @@
 package io.specmatic.core.git
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.ktor.http.*
 import io.specmatic.core.azure.AzureAuthCredentials
 import io.specmatic.core.getConfigFileName
 import io.specmatic.core.loadSpecmaticConfig
@@ -13,7 +14,6 @@ import io.specmatic.core.utilities.GitRepo
 import io.specmatic.core.utilities.getTransportCallingCallback
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
-import io.ktor.http.*
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.HttpTransport

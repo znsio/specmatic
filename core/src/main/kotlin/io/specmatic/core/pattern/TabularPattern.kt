@@ -1,12 +1,12 @@
 package io.specmatic.core.pattern
 
+import io.cucumber.messages.types.TableRow
 import io.specmatic.core.*
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.utilities.mapZip
 import io.specmatic.core.utilities.stringToPatternMap
 import io.specmatic.core.utilities.withNullPattern
 import io.specmatic.core.value.*
-import io.cucumber.messages.types.TableRow
 
 fun toTabularPattern(jsonContent: String, typeAlias: String? = null): TabularPattern =
     toTabularPattern(stringToPatternMap(jsonContent), typeAlias)

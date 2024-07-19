@@ -6,10 +6,10 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.mapZip
-import io.specmatic.core.value.*
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.True
+import io.specmatic.core.value.Value
 import io.specmatic.stub.RequestContext
-import io.specmatic.test.ContractTest
-import io.specmatic.test.TestExecutor
 
 object ContractAndStubMismatchMessages : MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {

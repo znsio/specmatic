@@ -1,6 +1,8 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.core.*
+import io.specmatic.core.Resolver
+import io.specmatic.core.Result
+import io.specmatic.core.mismatchResult
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value

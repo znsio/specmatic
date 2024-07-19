@@ -1,14 +1,14 @@
 package io.specmatic.core.pattern
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
-import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.Resolver
+import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.testBackwardCompatibility
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.shouldMatch
 import io.specmatic.shouldNotMatch
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 
 internal class DictionaryPatternTest {
     @Test

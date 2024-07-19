@@ -8,7 +8,7 @@ import io.specmatic.core.utilities.withNullPattern
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
-import java.util.Optional
+import java.util.*
 
 fun toJSONObjectPattern(jsonContent: String, typeAlias: String?): JSONObjectPattern =
     toJSONObjectPattern(stringToPatternMap(jsonContent), typeAlias)

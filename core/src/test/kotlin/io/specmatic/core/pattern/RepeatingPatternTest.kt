@@ -1,10 +1,10 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.core.Resolver
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.NumberValue
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 internal class RepeatingPatternTest {
     @Test

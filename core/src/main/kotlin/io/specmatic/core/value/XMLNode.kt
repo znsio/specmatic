@@ -1,8 +1,5 @@
 package io.specmatic.core.value
 
-import org.w3c.dom.Attr
-import org.w3c.dom.Document
-import org.w3c.dom.Node
 import io.specmatic.core.ExampleDeclarations
 import io.specmatic.core.Result
 import io.specmatic.core.pattern.ContractException
@@ -11,6 +8,9 @@ import io.specmatic.core.pattern.XMLPattern
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.parseXML
 import io.specmatic.core.wsdl.parser.WSDL
+import org.w3c.dom.Attr
+import org.w3c.dom.Document
+import org.w3c.dom.Node
 
 fun toXMLNode(document: Document, parentNamespaces: Map<String, String> = emptyMap()): XMLNode = nonTextXMLNode(document.documentElement, parentNamespaces)
 

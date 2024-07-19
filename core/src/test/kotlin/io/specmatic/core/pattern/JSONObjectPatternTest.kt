@@ -1,16 +1,18 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.GENERATION
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
-import io.specmatic.core.*
+import io.specmatic.core.MatchFailureDetails
+import io.specmatic.core.Resolver
+import io.specmatic.core.Result
 import io.specmatic.core.value.*
 import io.specmatic.shouldNotMatch
 import io.specmatic.trimmedLinesString
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.util.function.Consumer

@@ -1,8 +1,8 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.core.parseGherkinString
-import org.junit.jupiter.api.Test
 import io.specmatic.shouldMatch
+import org.junit.jupiter.api.Test
 
 class StringMatchTest {
     @Test

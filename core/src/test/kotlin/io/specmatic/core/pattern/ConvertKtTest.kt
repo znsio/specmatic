@@ -1,8 +1,8 @@
 package io.specmatic.core.pattern
 
-import org.junit.jupiter.api.Test
 import io.specmatic.shouldMatch
 import io.specmatic.shouldNotMatch
+import org.junit.jupiter.api.Test
 
 internal class ConvertKtTest {
     @Test

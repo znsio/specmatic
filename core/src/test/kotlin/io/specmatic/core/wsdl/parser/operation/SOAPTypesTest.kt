@@ -1,8 +1,8 @@
 package io.specmatic.core.wsdl.parser.operation
 
+import io.specmatic.core.pattern.XMLPattern
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import io.specmatic.core.pattern.XMLPattern
 
 internal class SOAPTypesTest {
     @Test

@@ -1,6 +1,5 @@
 package io.specmatic.test
 
-import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.Result
 import io.specmatic.core.Scenario

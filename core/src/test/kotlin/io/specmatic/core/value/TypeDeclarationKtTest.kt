@@ -1,11 +1,11 @@
 package io.specmatic.core.value
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import io.specmatic.core.pattern.DeferredPattern
 import io.specmatic.core.pattern.TabularPattern
-import io.specmatic.core.pattern.toTabularPattern
 import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.pattern.toTabularPattern
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 
 internal class TypeDeclarationKtTest {
     @Test

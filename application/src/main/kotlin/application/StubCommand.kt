@@ -1,11 +1,8 @@
 package application
 
-import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import io.specmatic.core.CONTRACT_EXTENSIONS
-import io.specmatic.core.Configuration
+import io.specmatic.core.*
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
-import io.specmatic.core.WorkingDirectory
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
@@ -116,6 +113,7 @@ class StubCommand : Callable<Unit> {
             contractSources = when (contractPaths.isEmpty()) {
                 true -> {
                     logger.debug("No contractPaths specified. Using configuration file named $configFileName")
+                    Configuration.globalConfigFileName = getConfigFileName()
                     specmaticConfigPath = File(Configuration.globalConfigFileName).canonicalPath
                     specmaticConfig.contractStubPathData()
                 }

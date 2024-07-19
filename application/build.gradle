@@ -139,7 +139,15 @@ publishing {
             from components.java
             pom {
                 name = 'Specmatic Executable'
-                description = 'Command-line standalone executable jar for Specmatic'
+                description = """
+                    Command-line standalone executable jar for Specmatic
+                    
+                    Deprecation Notice for group ID "in.specmatic"
+                    ******************************************************************************************************
+                    Updates for "specmatic-executable" will no longer be available under the deprecated group ID "in.specmatic". 
+                    Please update your dependencies to use the new group ID "io.specmatic".
+                    ******************************************************************************************************
+                """
                 url = 'https://specmatic.in'
                 licenses {
                     license {

@@ -105,15 +105,16 @@ class StubCommand : Callable<Unit> {
         else
             NonVerbose(CompositePrinter(logPrinters))
 
-        configFileName?.let {
-            Configuration.globalConfigFileName = it
+        if (configFileName != null) {
+            Configuration.globalConfigFileName = configFileName as String
+        } else {
+            Configuration.globalConfigFileName = getConfigFileName()
         }
 
         try {
             contractSources = when (contractPaths.isEmpty()) {
                 true -> {
                     logger.debug("No contractPaths specified. Using configuration file named $configFileName")
-                    Configuration.globalConfigFileName = getConfigFileName()
                     specmaticConfigPath = File(Configuration.globalConfigFileName).canonicalPath
                     specmaticConfig.contractStubPathData()
                 }

@@ -1,16 +1,28 @@
 package integration_tests
 
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.unmockkAll
 import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.VALIDATE_RESPONSE_VALUE
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.Flags
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.value.Value
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class ValueAssertionsTest {
+
+    @BeforeEach
+    fun setup() {
+        unmockkAll()
+    }
+
     @Test
     fun `should validate exact header and body values in the response`() {
         val feature = OpenApiSpecification.fromYAML(
@@ -62,7 +74,7 @@ paths:
                   value: "Product added successfully"
             """.trimIndent(),
             "",
-            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration.setProperty(Flags.VALIDATE_RESPONSE_VALUE, "true")
+            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration.setProperty(VALIDATE_RESPONSE_VALUE, "true")
         ).toFeature()
         feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -135,7 +147,7 @@ paths:
             "",
             environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
                 emptyMap(),
-                mapOf(Flags.VALIDATE_RESPONSE_VALUE to "true")
+                mapOf(VALIDATE_RESPONSE_VALUE to "true")
             )
         ).toFeature()
         feature.executeTests(object : TestExecutor {
@@ -146,6 +158,7 @@ paths:
             assertThat(results.success()).withFailMessage(results.report()).isTrue()
         }
     }
+
     @Test
     fun `validation should fail if there are extra response headers`() {
         val feature = OpenApiSpecification.fromYAML(
@@ -192,7 +205,7 @@ paths:
             "",
             environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
                 emptyMap(),
-                mapOf(Flags.VALIDATE_RESPONSE_VALUE to "true")
+                mapOf(VALIDATE_RESPONSE_VALUE to "true")
             )
         ).toFeature()
             feature.executeTests(object : TestExecutor {
@@ -214,6 +227,10 @@ paths:
 
     @Test
     fun `should validate exact body value in the response`() {
+        val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
+            every { enableResponseValueValidation } returns true
+        }
+
         val feature = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.3
@@ -257,8 +274,7 @@ paths:
             """.trimIndent(),
             "",
             environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
-                emptyMap(),
-                mapOf(Flags.VALIDATE_RESPONSE_VALUE to "true")
+                specmaticConfig
             )
         ).toFeature()
         feature.executeTests(object : TestExecutor {
@@ -339,7 +355,7 @@ paths:
             "",
             environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(
                 emptyMap(),
-                mapOf(Flags.VALIDATE_RESPONSE_VALUE to "true")
+                mapOf(VALIDATE_RESPONSE_VALUE to "true")
             )
         ).toFeature()
         feature.executeTests(object : TestExecutor {

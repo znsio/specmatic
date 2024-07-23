@@ -40,7 +40,10 @@ fun strategiesFromFlags(flags: EnvironmentAndPropertiesConfiguration): FlagsBase
 
     return FlagsBased(
         defaultExampleResolver = if (flags.schemaExampleDefaultEnabled()) UseDefaultExample else DoNotUseDefaultExample,
-        generation = if (flags.generativeTestingEnabled()) GenerativeTestsEnabled() else NonGenerativeTests,
+        generation = when {
+            flags.generativeTestingEnabled() -> GenerativeTestsEnabled(positiveOnly = flags.onlyPositive())
+            else -> NonGenerativeTests
+        },
         unexpectedKeyCheck = if (flags.extensibleSchema()) IgnoreUnexpectedKeys else null,
         positivePrefix = positivePrefix,
         negativePrefix = negativePrefix

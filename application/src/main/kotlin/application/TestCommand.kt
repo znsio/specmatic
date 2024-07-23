@@ -1,6 +1,7 @@
 package application
 
 import application.test.ContractExecutionListener
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.SPECMATIC_TEST_PARALLELISM
 import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.Configuration
 import io.specmatic.core.DEFAULT_TIMEOUT_IN_SECONDS
@@ -211,7 +212,7 @@ class TestCommand : Callable<Unit> {
         try {
             parallelism.toInt()
         } catch(e: Throwable) {
-            exitWithMessage("The value of the ${Flags.SPECMATIC_TEST_PARALLELISM} environment variable must be either 'true' or an integer value")
+            exitWithMessage("The value of the $SPECMATIC_TEST_PARALLELISM environment variable must be either 'true' or an integer value")
         }
     }
 }

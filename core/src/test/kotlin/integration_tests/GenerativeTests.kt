@@ -1,14 +1,29 @@
 package integration_tests
 
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.unmockkAll
 import io.specmatic.GENERATION
 import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.ONLY_POSITIVE
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.SPECMATIC_GENERATIVE_TESTS
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.*
+import io.specmatic.core.Feature
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
+import io.specmatic.core.Results
+import io.specmatic.core.Scenario
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.value.*
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NullValue
+import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
@@ -19,6 +34,12 @@ internal val Results.testCount: Int
 
 @Tag(GENERATION)
 class GenerativeTests {
+
+    @BeforeEach
+    fun setup() {
+        unmockkAll()
+    }
+
     @Test
     fun `generative tests for enums when an example is provided`() {
         val feature = OpenApiSpecification.fromYAML(
@@ -155,7 +176,7 @@ class GenerativeTests {
                     }
                 })
             } finally {
-                System.clearProperty(Flags.ONLY_POSITIVE)
+                System.clearProperty(ONLY_POSITIVE)
             }
 
             assertThat(optionalKeyOccurrence).isEqualTo(7)
@@ -1150,12 +1171,16 @@ class GenerativeTests {
                 }
             })
         } finally {
-            System.clearProperty(Flags.ONLY_POSITIVE)
+            System.clearProperty(ONLY_POSITIVE)
         }
     }
 
     @Test
     fun `the flag SPECMATIC_GENERATIVE_TESTS should be used`() {
+        val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
+            every { enableResiliencyTests } returns true
+        }
+
         val feature = OpenApiSpecification.fromYAML(
             """
             openapi: 3.0.0
@@ -1198,7 +1223,7 @@ class GenerativeTests {
                       description: The name of the product
                       example: 'Soap'
                 """, "",
-            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(), mapOf(Flags.SPECMATIC_GENERATIVE_TESTS to "true"))
+            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(specmaticConfig)
         ).toFeature()
 
         val testType = mutableListOf<String>()
@@ -1237,8 +1262,11 @@ class GenerativeTests {
     @Test
     fun `the flag ONLY_POSITIVE should be used`() {
         try {
-            System.setProperty(Flags.SPECMATIC_GENERATIVE_TESTS, "true")
-            System.setProperty(Flags.ONLY_POSITIVE, "true")
+            val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
+                every { enableResiliencyTests } returns true
+                every { enableOnlyPositiveTests } returns true
+            }
+
 
             val feature = OpenApiSpecification.fromYAML(
                 """
@@ -1286,7 +1314,7 @@ class GenerativeTests {
                           type: number
                           description: The price of the product
                     """, "",
-                environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration.setProperties(mapOf(Flags.SPECMATIC_GENERATIVE_TESTS to "true", Flags.ONLY_POSITIVE to "true"))
+                environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(specmaticConfig)
             ).toFeature()
 
             val testType = mutableListOf<String>()
@@ -1327,8 +1355,8 @@ class GenerativeTests {
             assertThat(results.failureCount).isEqualTo(0)
 
         } finally {
-            System.clearProperty(Flags.SPECMATIC_GENERATIVE_TESTS)
-            System.clearProperty(Flags.ONLY_POSITIVE)
+            System.clearProperty(SPECMATIC_GENERATIVE_TESTS)
+            System.clearProperty(ONLY_POSITIVE)
         }
     }
 

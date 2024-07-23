@@ -1,6 +1,7 @@
 package io.specmatic.test
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
 import io.specmatic.core.log.ignoreLog
@@ -239,7 +240,22 @@ open class SpecmaticJUnitSupport {
 
                     val testScenariosAndEndpointsPairList = contractFilePaths.filter {
                         File(it.path).extension in CONTRACT_EXTENSIONS
-                    }.map { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfig?.security, filterName, filterNotName) }
+                    }.map {
+                        loadTestScenarios(
+                            it.path,
+                            "",
+                            "",
+                            testConfig,
+                            it.provider,
+                            it.repository,
+                            it.branch,
+                            it.specificationPath,
+                            specmaticConfig?.security,
+                            filterName,
+                            filterNotName,
+                            specmaticConfig = specmaticConfig
+                        )
+                    }
 
                     val tests: Sequence<ContractTest> = testScenariosAndEndpointsPairList.asSequence().flatMap { it.first }
 
@@ -398,7 +414,8 @@ open class SpecmaticJUnitSupport {
         specificationPath: String? = null,
         securityConfiguration: SecurityConfiguration? = null,
         filterName: String?,
-        filterNotName: String?
+        filterNotName: String?,
+        specmaticConfig: SpecmaticConfig? = null
     ): Pair<Sequence<ContractTest>, List<Endpoint>> {
         if(hasOpenApiFileExtension(path) && !isOpenAPI(path))
             return Pair(emptySequence(), emptyList())
@@ -412,7 +429,8 @@ open class SpecmaticJUnitSupport {
                 sourceRepository,
                 sourceRepositoryBranch,
                 specificationPath,
-                securityConfiguration
+                securityConfiguration,
+                environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(specmaticConfig = specmaticConfig)
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
         feature.validateExamplesOrException()

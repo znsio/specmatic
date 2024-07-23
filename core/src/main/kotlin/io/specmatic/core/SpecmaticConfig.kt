@@ -1,8 +1,20 @@
 package io.specmatic.core
 
-import com.fasterxml.jackson.annotation.*
+import com.fasterxml.jackson.annotation.JsonAlias
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.EXTENSIBLE_SCHEMA
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.MAX_TEST_REQUEST_COMBINATIONS
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.ONLY_POSITIVE
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.SCHEMA_EXAMPLE_DEFAULT
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.SPECMATIC_GENERATIVE_TESTS
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.VALIDATE_RESPONSE_VALUE
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.booleanFlag
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.flagValue
 import io.specmatic.core.Configuration.Companion.globalConfigFileName
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
@@ -88,7 +100,13 @@ data class SpecmaticConfig(
     val hooks: Map<String, String> = emptyMap(),
     val repository: RepositoryInfo? = null,
     val report: ReportConfiguration? = null,
-    val security: SecurityConfiguration? = null
+    val security: SecurityConfiguration? = null,
+    val enableResiliencyTests: Boolean? = booleanFlag(SPECMATIC_GENERATIVE_TESTS),
+    val enableOnlyPositiveTests: Boolean? = booleanFlag(ONLY_POSITIVE),
+    val enableResponseValueValidation: Boolean? = booleanFlag(VALIDATE_RESPONSE_VALUE),
+    val enableExtensibleSchema: Boolean? = booleanFlag(EXTENSIBLE_SCHEMA),
+    val schemaExampleDefault: Boolean? = booleanFlag(SCHEMA_EXAMPLE_DEFAULT),
+    val maxTestRequestCombinations: Int? = flagValue(MAX_TEST_REQUEST_COMBINATIONS)?.toInt()
 )
 
 data class RepositoryInfo(

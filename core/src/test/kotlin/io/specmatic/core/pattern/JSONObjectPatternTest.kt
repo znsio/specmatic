@@ -1,5 +1,8 @@
 package io.specmatic.core.pattern
 
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import io.specmatic.GENERATION
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -399,6 +402,9 @@ internal class JSONObjectPatternTest {
 
         @Test
         fun `Should avoid combinatorial explosion when many request properties with many possible values`() {
+            mockkStatic("io.specmatic.core.FlagsKt")
+            every { Flags.maxTestRequestCombinations() } returns 64
+
             val resolver = Resolver(
                 newPatterns = (1..6).associate { paramIndex ->
                     "(enum${paramIndex})" to AnyPattern((0..9).map { possibleValueIndex ->
@@ -409,14 +415,14 @@ internal class JSONObjectPatternTest {
 
             val objPattern = parsedPattern("""{"p1": "(enum1)", "p2": "(enum2)", "p3": "(enum3)", "p4": "(enum4)", "p5": "(enum5)", "p6": "(enum6)"}""")
 
-
-            System.setProperty("MAX_TEST_REQUEST_COMBINATIONS", "64")
             val newPatterns = try {
                 objPattern.newBasedOn(Row(), resolver).map { it.value }.toList()
             } finally {
                 System.clearProperty("MAX_TEST_REQUEST_COMBINATIONS")
             }
             assertThat(newPatterns).hasSize(64)
+
+            unmockkStatic("io.specmatic.core.FlagsKt")
         }
 
         @Test

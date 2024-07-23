@@ -1,10 +1,14 @@
 package integration_tests
 
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.unmockkAll
 import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration
+import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.LOCAL_TESTS_DIRECTORY
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.Flags
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
@@ -13,9 +17,16 @@ import io.specmatic.core.value.Value
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.fail
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class LoadTestsFromExternalisedFiles {
+
+    @BeforeEach
+    fun setup() {
+        unmockkAll()
+    }
+
     @Test
     fun `should load and execute externalized tests for header and request body from _examples directory`() {
         val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_test_and_no_example.yaml")
@@ -196,7 +207,7 @@ class LoadTestsFromExternalisedFiles {
         """.trimIndent()
 
         val feature = OpenApiSpecification
-            .fromYAML(spec, "", environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(Flags.LOCAL_TESTS_DIRECTORY to "src/test/resources/local_tests"), emptyMap()))
+            .fromYAML(spec, "", environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(LOCAL_TESTS_DIRECTORY to "src/test/resources/local_tests"), emptyMap()))
             .toFeature()
             .loadExternalisedExamples()
 
@@ -305,15 +316,15 @@ class LoadTestsFromExternalisedFiles {
 
     @Test
     fun `tests from external examples reject responses with values different from the example when the VALIDATE_RESPONSE_VALUE flag is true`() {
-        val enableResponseValueValidation = EnvironmentAndPropertiesConfiguration(
-            mapOf(
-                "VALIDATE_RESPONSE_VALUE" to "true"
-            ),
-            emptyMap()
-        )
+        val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
+            every { enableResponseValueValidation } returns true
+        }
 
         val feature = OpenApiSpecification
-            .fromFile("src/test/resources/openapi/has_inline_and_external_examples.yaml", enableResponseValueValidation)
+            .fromFile(
+                "src/test/resources/openapi/has_inline_and_external_examples.yaml",
+                EnvironmentAndPropertiesConfiguration(specmaticConfig)
+            )
             .toFeature()
             .loadExternalisedExamples()
 

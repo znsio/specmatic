@@ -1,10 +1,13 @@
 package integration_tests
 
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.unmockkAll
 import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.Flags
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.value.*
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
@@ -319,6 +322,9 @@ class DefaultValuesInOpenapiSpecification {
 
     @Test
     fun `SCHEMA_EXAMPLE_DEFAULT should switch on the schema example default feature`() {
+        val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
+            every { schemaExampleDefault } returns true
+        }
         val feature = OpenApiSpecification.fromYAML(
             """
             openapi: 3.0.0
@@ -361,7 +367,7 @@ class DefaultValuesInOpenapiSpecification {
                       description: The price of the product
                       example: 10
                 """, "",
-            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration.setProperty(Flags.SCHEMA_EXAMPLE_DEFAULT, "true")
+            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(specmaticConfig = specmaticConfig)
         ).toFeature()
 
         val results = feature.executeTests(object : TestExecutor {
@@ -379,5 +385,6 @@ class DefaultValuesInOpenapiSpecification {
 
         assertThat(results.successCount).isEqualTo(1)
         assertThat(results.failureCount).isEqualTo(0)
+        unmockkAll()
     }
 }

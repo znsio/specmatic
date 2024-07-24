@@ -351,7 +351,7 @@ Pet:
     fun `scenarios should have examples of type ResponseValueExample leading to response value validation when VALIDATE_RESPONSE_VALUE flag is true and response is not empty`() {
         val openApiFile = "src/test/resources/openapi/response_schema_validation_including_optional_spec.yaml"
         val specmaticConfig = mockk<SpecmaticConfig> {
-            every { validateResponseValue() } returns true
+            every { isResponseValueValidationEnabled() } returns true
         }
         val openApiSpecification = OpenApiSpecification(
             openApiFilePath = openApiFile,

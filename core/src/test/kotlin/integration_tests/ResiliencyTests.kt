@@ -1177,7 +1177,7 @@ class GenerativeTests {
     @Test
     fun `the flag SPECMATIC_GENERATIVE_TESTS should be used`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-            every { generativeTestingEnabled() } returns true
+            every { isResiliencyTestingEnabled() } returns true
         }
 
         val feature = OpenApiSpecification.fromYAML(
@@ -1262,8 +1262,8 @@ class GenerativeTests {
     fun `the flag ONLY_POSITIVE should be used`() {
         try {
             val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-                every { generativeTestingEnabled() } returns true
-                every { onlyPositive() } returns true
+                every { isResiliencyTestingEnabled() } returns true
+                every { isOnlyPositiveTestingEnabled() } returns true
             }
 
 

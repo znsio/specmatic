@@ -1,6 +1,8 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.IgnoreUnexpectedKeys
+import io.specmatic.core.utilities.Flags.Companion.SCHEMA_EXAMPLE_DEFAULT
+import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 
 const val POSITIVE_TEST_DESCRIPTION_PREFIX = "+ve "
 const val NEGATIVE_TEST_DESCRIPTION_PREFIX = "-ve "
@@ -32,18 +34,18 @@ data class FlagsBased(
 
 fun strategiesFromFlags(specmaticConfig: SpecmaticConfig): FlagsBased {
     val (positivePrefix, negativePrefix) =
-        if (specmaticConfig.generativeTestingEnabled())
+        if (specmaticConfig.isResiliencyTestingEnabled())
             Pair(POSITIVE_TEST_DESCRIPTION_PREFIX, NEGATIVE_TEST_DESCRIPTION_PREFIX)
         else
             Pair("", "")
 
     return FlagsBased(
-        defaultExampleResolver = if (specmaticConfig.schemaExampleDefaultEnabled()) UseDefaultExample else DoNotUseDefaultExample,
+        defaultExampleResolver = if (getBooleanValue(SCHEMA_EXAMPLE_DEFAULT)) UseDefaultExample else DoNotUseDefaultExample,
         generation = when {
-            specmaticConfig.generativeTestingEnabled() -> GenerativeTestsEnabled(positiveOnly = specmaticConfig.onlyPositive())
+            specmaticConfig.isResiliencyTestingEnabled() -> GenerativeTestsEnabled(positiveOnly = specmaticConfig.isOnlyPositiveTestingEnabled())
             else -> NonGenerativeTests
         },
-        unexpectedKeyCheck = if (specmaticConfig.extensibleSchema()) IgnoreUnexpectedKeys else null,
+        unexpectedKeyCheck = if (specmaticConfig.isExtensibleSchemaEnabled()) IgnoreUnexpectedKeys else null,
         positivePrefix = positivePrefix,
         negativePrefix = negativePrefix
     )

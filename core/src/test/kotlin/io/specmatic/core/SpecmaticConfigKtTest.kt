@@ -2,6 +2,12 @@ package io.specmatic.core
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
+import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
+import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
+import io.specmatic.core.utilities.Flags.Companion.SCHEMA_EXAMPLE_DEFAULT
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_GENERATIVE_TESTS
+import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -52,6 +58,10 @@ internal class SpecmaticConfigKtTest {
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("ApiKeyAuthQuery") as APIKeySecuritySchemeConfiguration).value).isEqualTo("API-QUERY-PARAM-USER")
 
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("BasicAuth") as BasicAuthSecuritySchemeConfiguration).token).isEqualTo("Abc123")
+
+        assertThat(config.isResiliencyTestingEnabled()).isEqualTo(true)
+        assertThat(config.isExtensibleSchemaEnabled()).isTrue()
+        assertThat(config.isResponseValueValidationEnabled()).isTrue()
     }
 
     @Test
@@ -120,5 +130,71 @@ internal class SpecmaticConfigKtTest {
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("ApiKeyAuthQuery") as APIKeySecuritySchemeConfiguration).value).isEqualTo("API-QUERY-PARAM-USER")
 
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("BasicAuth") as BasicAuthSecuritySchemeConfiguration).token).isEqualTo("Abc123")
+    }
+
+    @Test
+    fun `should create SpecmaticConfig with flag values read from system properties`() {
+        val properties = mapOf(
+            SPECMATIC_GENERATIVE_TESTS to "true",
+            ONLY_POSITIVE to "false",
+            VALIDATE_RESPONSE_VALUE to "true",
+            EXTENSIBLE_SCHEMA to "false",
+            SCHEMA_EXAMPLE_DEFAULT to "true",
+            MAX_TEST_REQUEST_COMBINATIONS to "50"
+        )
+        properties.forEach { System.setProperty(it.key, it.value) }
+
+        val config = SpecmaticConfig()
+
+        assertThat(config.isResiliencyTestingEnabled()).isTrue()
+        assertThat(config.isOnlyPositiveTestingEnabled()).isFalse()
+        assertThat(config.isResponseValueValidationEnabled()).isTrue()
+        assertThat(config.isExtensibleSchemaEnabled()).isFalse()
+
+        properties.forEach { System.clearProperty(it.key) }
+    }
+
+    @Test
+    fun `isResiliencyTestingEnabled should return true if either of SPECMATIC_GENERATIVE_TESTS and ONLY_POSITIVE is true`() {
+        try {
+            System.setProperty(SPECMATIC_GENERATIVE_TESTS, "true")
+
+            assertThat(SpecmaticConfig().isResiliencyTestingEnabled()).isTrue()
+        } finally {
+            System.clearProperty(SPECMATIC_GENERATIVE_TESTS)
+        }
+
+        try {
+            System.setProperty(ONLY_POSITIVE, "true")
+
+            assertThat(SpecmaticConfig().isResiliencyTestingEnabled()).isTrue()
+        } finally {
+            System.clearProperty(ONLY_POSITIVE)
+        }
+    }
+
+    @CsvSource(
+        "./src/test/resources/specmaticConfigFiles/specmatic.yaml",
+        "./src/test/resources/specmaticConfigFiles/specmatic.yml",
+        "./src/test/resources/specmaticConfigFiles/specmatic.json",
+    )
+    @ParameterizedTest
+    fun `should give preferences to values coming from config file over the env vars or system properties`(configFile: String) {
+        val props = mapOf(
+            SPECMATIC_GENERATIVE_TESTS to "false",
+            VALIDATE_RESPONSE_VALUE to "false",
+            EXTENSIBLE_SCHEMA to "false"
+        )
+        try {
+            props.forEach { System.setProperty(it.key, it.value) }
+
+            val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
+
+            assertThat(config.isResiliencyTestingEnabled()).isTrue()
+            assertThat(config.isResponseValueValidationEnabled()).isTrue()
+            assertThat(config.isExtensibleSchemaEnabled()).isTrue()
+        } finally {
+            props.forEach { System.clearProperty(it.key) }
+        }
     }
 }

@@ -287,7 +287,7 @@ class LoadTestsFromExternalisedFiles {
     @Test
     fun `tests from external examples validate response values when the VALIDATE_RESPONSE_VALUE flag is true`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-            every { validateResponseValue() } returns true
+            every { isResponseValueValidationEnabled() } returns true
         }
         val feature = OpenApiSpecification
             .fromFile("src/test/resources/openapi/has_inline_and_external_examples.yaml", specmaticConfig)
@@ -318,7 +318,7 @@ class LoadTestsFromExternalisedFiles {
     @Test
     fun `tests from external examples reject responses with values different from the example when the VALIDATE_RESPONSE_VALUE flag is true`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-            every { validateResponseValue() } returns true
+            every { isResponseValueValidationEnabled() } returns true
         }
 
         val feature = OpenApiSpecification

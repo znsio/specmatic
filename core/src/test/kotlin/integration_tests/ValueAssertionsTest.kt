@@ -23,7 +23,7 @@ class ValueAssertionsTest {
     @Test
     fun `should validate exact header and body values in the response`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-            every { validateResponseValue() } returns true
+            every { isResponseValueValidationEnabled() } returns true
         }
 
         val feature = OpenApiSpecification.fromYAML(
@@ -105,7 +105,7 @@ paths:
     @Test
     fun `should validate exact header values in the response`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-            every { validateResponseValue() } returns true
+            every { isResponseValueValidationEnabled() } returns true
         }
 
         val feature = OpenApiSpecification.fromYAML(
@@ -164,7 +164,7 @@ paths:
     @Test
     fun `validation should fail if there are extra response headers`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-            every { validateResponseValue() } returns true
+            every { isResponseValueValidationEnabled() } returns true
         }
 
         val feature = OpenApiSpecification.fromYAML(
@@ -231,7 +231,7 @@ paths:
     @Test
     fun `should validate exact body value in the response`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-            every { validateResponseValue() } returns true
+            every { isResponseValueValidationEnabled() } returns true
         }
 
         val feature = OpenApiSpecification.fromYAML(
@@ -306,7 +306,7 @@ paths:
     @Test
     fun `breadcrumb for response value validation failure should not duplicate RESPONSE`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-            every { validateResponseValue() } returns true
+            every { isResponseValueValidationEnabled() } returns true
         }
 
         val feature = OpenApiSpecification.fromYAML(

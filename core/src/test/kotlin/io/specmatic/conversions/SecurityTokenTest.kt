@@ -27,10 +27,12 @@ class SecurityTokenTest {
         val tokenMap = mapOf(schemeName to token)
         tokenMap.forEach { System.setProperty(it.key, it.value) }
 
-        val securityToken = getSecurityTokenForBearerScheme( null, schemeName)
-        assertThat(securityToken).isEqualTo(token)
-
-        tokenMap.forEach { System.clearProperty(it.key) }
+        try {
+            val securityToken = getSecurityTokenForBearerScheme( null, schemeName)
+            assertThat(securityToken).isEqualTo(token)
+        } finally {
+            tokenMap.forEach { System.clearProperty(it.key) }
+        }
     }
 
     @Test
@@ -41,10 +43,12 @@ class SecurityTokenTest {
         val tokenMap = mapOf(schemeName to envToken)
         tokenMap.forEach { System.setProperty(it.key, it.value) }
 
-        val securityToken = getSecurityTokenForBearerScheme(BearerSecuritySchemeConfiguration("bearer", configToken), schemeName)
-        assertThat(securityToken).isEqualTo(envToken)
-
-        tokenMap.forEach { System.clearProperty(it.key) }
+        try {
+            val securityToken = getSecurityTokenForBearerScheme(BearerSecuritySchemeConfiguration("bearer", configToken), schemeName)
+            assertThat(securityToken).isEqualTo(envToken)
+        } finally {
+            tokenMap.forEach { System.clearProperty(it.key) }
+        }
     }
 
     @Test
@@ -64,10 +68,12 @@ class SecurityTokenTest {
         val tokenMap = mapOf(schemeName to token)
         tokenMap.forEach { System.setProperty(it.key, it.value) }
 
-        val securityToken = getSecurityTokenForBearerScheme(null, schemeName)
-        assertThat(securityToken).isEqualTo(token)
-
-        tokenMap.forEach { System.clearProperty(it.key) }
+        try {
+            val securityToken = getSecurityTokenForBearerScheme(null, schemeName)
+            assertThat(securityToken).isEqualTo(token)
+        } finally {
+            tokenMap.forEach { System.clearProperty(it.key) }
+        }
     }
 
     @Test
@@ -78,10 +84,12 @@ class SecurityTokenTest {
         val tokenMap = mapOf(schemeName to envToken)
         tokenMap.forEach { System.setProperty(it.key, it.value) }
 
-        val securityToken = getSecurityTokenForBearerScheme(OAuth2SecuritySchemeConfiguration("oauth2", configToken), schemeName)
-        assertThat(securityToken).isEqualTo(envToken)
-
-        tokenMap.forEach { System.clearProperty(it.key) }
+        try {
+            val securityToken = getSecurityTokenForBearerScheme(OAuth2SecuritySchemeConfiguration("oauth2", configToken), schemeName)
+            assertThat(securityToken).isEqualTo(envToken)
+        } finally {
+            tokenMap.forEach { System.clearProperty(it.key) }
+        }
     }
 
     @Test
@@ -91,10 +99,12 @@ class SecurityTokenTest {
         val tokenMap = mapOf(SPECMATIC_OAUTH2_TOKEN to envToken)
         tokenMap.forEach { System.setProperty(it.key, it.value) }
 
-        val securityToken = getSecurityTokenForBearerScheme(null, schemeName)
-        assertThat(securityToken).isEqualTo(envToken)
-
-        tokenMap.forEach { System.clearProperty(it.key) }
+        try {
+            val securityToken = getSecurityTokenForBearerScheme(null, schemeName)
+            assertThat(securityToken).isEqualTo(envToken)
+        } finally {
+            tokenMap.forEach { System.clearProperty(it.key) }
+        }
     }
 
     @Test
@@ -111,10 +121,12 @@ class SecurityTokenTest {
         val tokenMap = mapOf(schemeName to token)
         tokenMap.forEach { System.setProperty(it.key, it.value) }
 
-        val securityToken = getSecurityTokenForApiKeyScheme(null, schemeName)
-        assertThat(securityToken).isEqualTo(token)
-
-        tokenMap.forEach { System.clearProperty(it.key) }
+        try {
+            val securityToken = getSecurityTokenForApiKeyScheme(null, schemeName)
+            assertThat(securityToken).isEqualTo(token)
+        } finally {
+            tokenMap.forEach { System.clearProperty(it.key) }
+        }
     }
 
     @Test
@@ -125,9 +137,11 @@ class SecurityTokenTest {
         val tokenMap = mapOf(schemeName to envToken)
         tokenMap.forEach { System.setProperty(it.key, it.value) }
 
-        val securityToken = getSecurityTokenForApiKeyScheme(APIKeySecuritySchemeConfiguration("apikey", configToken), schemeName)
-        assertThat(securityToken).isEqualTo(envToken)
-
-        tokenMap.forEach { System.clearProperty(it.key) }
+        try {
+            val securityToken = getSecurityTokenForApiKeyScheme(APIKeySecuritySchemeConfiguration("apikey", configToken), schemeName)
+            assertThat(securityToken).isEqualTo(envToken)
+        } finally {
+            tokenMap.forEach { System.clearProperty(it.key) }
+        }
     }
 }

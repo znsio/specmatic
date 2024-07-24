@@ -15,7 +15,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class ExtendableSchema {
+class ExtensibleSchemaTest {
 
     @BeforeEach
     fun beforeEach() {
@@ -25,7 +25,7 @@ class ExtendableSchema {
     @Test
     fun `when extensible schema is enabled, a JSON request object with unexpected keys should be accepted when running tests`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-            every { extensibleSchema() } returns true
+            every { isExtensibleSchemaEnabled() } returns true
         }
         val feature =
             OpenApiSpecification.fromYAML(
@@ -81,7 +81,7 @@ paths:
     @Test
     fun `when extensible schema is enabled, a JSON response object with unexpected keys should be accepted when running tests`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-            every { extensibleSchema() } returns true
+            every { isExtensibleSchemaEnabled() } returns true
         }
         val feature =
             OpenApiSpecification.fromYAML(
@@ -141,7 +141,7 @@ paths:
     @Test
     fun `with extensible schema and generative tests enabled both positive and negative generated tests should appear`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-            every { extensibleSchema() } returns true
+            every { isExtensibleSchemaEnabled() } returns true
         }
         val feature =
             OpenApiSpecification.fromYAML(

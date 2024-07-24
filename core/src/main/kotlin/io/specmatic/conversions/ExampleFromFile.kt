@@ -27,7 +27,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
 
         val responseExample = response?.let { httpResponse ->
             when {
-                specmaticConfig.validateResponseValue() ->
+                specmaticConfig.isResponseValueValidationEnabled() ->
                     ResponseValueExample(httpResponse)
 
                 else ->

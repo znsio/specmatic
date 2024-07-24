@@ -479,7 +479,7 @@ class OpenApiSpecification(
 
             val resolvedResponseExample =
                 when {
-                    specmaticConfig.validateResponseValue() ->
+                    specmaticConfig.isResponseValueValidationEnabled() ->
                         ResponseValueExample(responseExample)
 
                     else ->

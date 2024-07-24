@@ -3,7 +3,6 @@ package integration_tests
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
@@ -323,7 +322,7 @@ class DefaultValuesInOpenapiSpecification {
     @Test
     fun `SCHEMA_EXAMPLE_DEFAULT should switch on the schema example default feature`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-            every { schemaExampleDefault } returns true
+            every { schemaExampleDefaultEnabled() } returns true
         }
         val feature = OpenApiSpecification.fromYAML(
             """
@@ -367,7 +366,7 @@ class DefaultValuesInOpenapiSpecification {
                       description: The price of the product
                       example: 10
                 """, "",
-            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(specmaticConfig = specmaticConfig)
+            specmaticConfig = specmaticConfig
         ).toFeature()
 
         val results = feature.executeTests(object : TestExecutor {

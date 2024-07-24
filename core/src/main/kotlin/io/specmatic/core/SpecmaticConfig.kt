@@ -7,17 +7,17 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.EXTENSIBLE_SCHEMA
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.MAX_TEST_REQUEST_COMBINATIONS
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.ONLY_POSITIVE
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.SCHEMA_EXAMPLE_DEFAULT
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.SPECMATIC_GENERATIVE_TESTS
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.VALIDATE_RESPONSE_VALUE
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.booleanFlag
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.flagValue
 import io.specmatic.core.Configuration.Companion.globalConfigFileName
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
+import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
+import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
+import io.specmatic.core.utilities.Flags.Companion.SCHEMA_EXAMPLE_DEFAULT
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_GENERATIVE_TESTS
+import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
+import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
+import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import java.io.File
 
 const val APPLICATION_NAME = "Specmatic"
@@ -101,13 +101,37 @@ data class SpecmaticConfig(
     val repository: RepositoryInfo? = null,
     val report: ReportConfiguration? = null,
     val security: SecurityConfiguration? = null,
-    val enableResiliencyTests: Boolean? = booleanFlag(SPECMATIC_GENERATIVE_TESTS),
-    val enableOnlyPositiveTests: Boolean? = booleanFlag(ONLY_POSITIVE),
-    val enableResponseValueValidation: Boolean? = booleanFlag(VALIDATE_RESPONSE_VALUE),
-    val enableExtensibleSchema: Boolean? = booleanFlag(EXTENSIBLE_SCHEMA),
-    val schemaExampleDefault: Boolean? = booleanFlag(SCHEMA_EXAMPLE_DEFAULT),
-    val maxTestRequestCombinations: Int? = flagValue(MAX_TEST_REQUEST_COMBINATIONS)?.toInt()
-)
+    val enableResiliencyTests: Boolean? = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
+    val enableOnlyPositiveTests: Boolean? = getBooleanValue(ONLY_POSITIVE),
+    val enableResponseValueValidation: Boolean? = getBooleanValue(VALIDATE_RESPONSE_VALUE),
+    val enableExtensibleSchema: Boolean? = getBooleanValue(EXTENSIBLE_SCHEMA),
+    val schemaExampleDefault: Boolean? = getBooleanValue(SCHEMA_EXAMPLE_DEFAULT),
+    val maxTestRequestCombinations: Int? = getStringValue(MAX_TEST_REQUEST_COMBINATIONS)?.toInt() ?: Int.MAX_VALUE
+) {
+    fun extensibleSchema(): Boolean {
+        return (enableExtensibleSchema == true)
+    }
+
+    fun schemaExampleDefaultEnabled(): Boolean {
+        return (schemaExampleDefault == true)
+    }
+
+    fun generativeTestingEnabled(): Boolean {
+        return (enableResiliencyTests == true)
+    }
+
+    fun maxTestRequestCombinations(): Int {
+        return (maxTestRequestCombinations ?: Int.MAX_VALUE)
+    }
+
+    fun onlyPositive(): Boolean {
+        return (enableOnlyPositiveTests == true)
+    }
+
+    fun validateResponseValue(): Boolean {
+        return (enableResponseValueValidation == true)
+    }
+}
 
 data class RepositoryInfo(
     val provider: String,

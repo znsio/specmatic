@@ -7,6 +7,8 @@ import io.specmatic.core.utilities.stringToPatternMap
 import io.specmatic.core.utilities.withNullPattern
 import io.specmatic.core.value.*
 import io.cucumber.messages.types.TableRow
+import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
+import io.specmatic.core.utilities.Flags.Companion.getStringValue
 
 fun toTabularPattern(jsonContent: String, typeAlias: String? = null): TabularPattern =
     toTabularPattern(stringToPatternMap(jsonContent), typeAlias)
@@ -236,7 +238,8 @@ fun <ValueType> patternList(patternCollection: Map<String, Sequence<ReturnValue<
     if (patternCollection.isEmpty())
         return sequenceOf(HasValue(emptyMap()))
 
-    val spec = CombinationSpec(patternCollection, Flags.maxTestRequestCombinations())
+    val maxTestRequestCombinations = getStringValue(MAX_TEST_REQUEST_COMBINATIONS)?.toInt() ?: Int.MAX_VALUE
+    val spec = CombinationSpec(patternCollection, maxTestRequestCombinations)
     return spec.selectedCombinations
 }
 

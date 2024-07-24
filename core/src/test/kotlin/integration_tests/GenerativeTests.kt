@@ -4,9 +4,6 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.specmatic.GENERATION
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.ONLY_POSITIVE
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration.Companion.SPECMATIC_GENERATIVE_TESTS
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.Feature
 import io.specmatic.core.HttpRequest
@@ -15,6 +12,8 @@ import io.specmatic.core.Results
 import io.specmatic.core.Scenario
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_GENERATIVE_TESTS
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.NumberValue
@@ -1178,7 +1177,7 @@ class GenerativeTests {
     @Test
     fun `the flag SPECMATIC_GENERATIVE_TESTS should be used`() {
         val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-            every { enableResiliencyTests } returns true
+            every { generativeTestingEnabled() } returns true
         }
 
         val feature = OpenApiSpecification.fromYAML(
@@ -1223,7 +1222,7 @@ class GenerativeTests {
                       description: The name of the product
                       example: 'Soap'
                 """, "",
-            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(specmaticConfig)
+            specmaticConfig = specmaticConfig
         ).toFeature()
 
         val testType = mutableListOf<String>()
@@ -1263,8 +1262,8 @@ class GenerativeTests {
     fun `the flag ONLY_POSITIVE should be used`() {
         try {
             val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-                every { enableResiliencyTests } returns true
-                every { enableOnlyPositiveTests } returns true
+                every { generativeTestingEnabled() } returns true
+                every { onlyPositive() } returns true
             }
 
 
@@ -1314,7 +1313,7 @@ class GenerativeTests {
                           type: number
                           description: The price of the product
                     """, "",
-                environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(specmaticConfig)
+                specmaticConfig = specmaticConfig
             ).toFeature()
 
             val testType = mutableListOf<String>()

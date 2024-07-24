@@ -1,7 +1,6 @@
 package io.specmatic.test
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
 import io.specmatic.core.log.ignoreLog
@@ -232,7 +231,7 @@ open class SpecmaticJUnitSupport {
 
                     createIfDoesNotExist(workingDirectory.path)
 
-                    specmaticConfig = getSpecmaticJson()
+                    specmaticConfig = getSpecmaticConfig()
 
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
 
@@ -430,7 +429,7 @@ open class SpecmaticJUnitSupport {
                 sourceRepositoryBranch,
                 specificationPath,
                 securityConfiguration,
-                environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(specmaticConfig = specmaticConfig)
+                specmaticConfig = specmaticConfig ?: SpecmaticConfig()
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
         feature.validateExamplesOrException()
@@ -469,7 +468,7 @@ open class SpecmaticJUnitSupport {
         return Pair(tests, allEndpoints)
     }
 
-    private fun getSpecmaticJson(): SpecmaticConfig? {
+    private fun getSpecmaticConfig(): SpecmaticConfig? {
         return try {
             loadSpecmaticConfig(configFile)
         }

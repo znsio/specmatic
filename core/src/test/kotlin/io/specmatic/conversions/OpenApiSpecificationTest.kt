@@ -18,6 +18,7 @@ import integration_tests.testCount
 import io.ktor.util.reflect.*
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.unmockkAll
 import io.swagger.v3.core.util.Yaml
 import io.swagger.v3.oas.models.OpenAPI
 import org.assertj.core.api.Assertions.*
@@ -68,6 +69,7 @@ internal class OpenApiSpecificationTest {
 
     @BeforeEach
     fun setup() {
+        unmockkAll()
         val openAPI = """
 openapi: 3.0.0
 info:
@@ -348,13 +350,13 @@ Pet:
     @Test
     fun `scenarios should have examples of type ResponseValueExample leading to response value validation when VALIDATE_RESPONSE_VALUE flag is true and response is not empty`() {
         val openApiFile = "src/test/resources/openapi/response_schema_validation_including_optional_spec.yaml"
-        val environmentAndPropertiesConfigurationMock = mockk<EnvironmentAndPropertiesConfiguration>() {
+        val specmaticConfig = mockk<SpecmaticConfig> {
             every { validateResponseValue() } returns true
         }
         val openApiSpecification = OpenApiSpecification(
             openApiFilePath = openApiFile,
             parsedOpenApi = OpenApiSpecification.getParsedOpenApi(openApiFile),
-            environmentAndPropertiesConfiguration = environmentAndPropertiesConfigurationMock
+            specmaticConfig = specmaticConfig
         )
 
         val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()

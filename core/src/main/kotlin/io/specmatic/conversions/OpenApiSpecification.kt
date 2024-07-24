@@ -54,7 +54,7 @@ class OpenApiSpecification(
     private val sourceRepositoryBranch: String? = null,
     private val specificationPath: String? = null,
     private val securityConfiguration: SecurityConfiguration? = null,
-    private val environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration()
+    private val specmaticConfig: SpecmaticConfig = SpecmaticConfig()
 ) : IncludedSpecification, ApiSpecification {
     init {
         logger.log(openApiSpecificationInfo(openApiFilePath, parsedOpenApi))
@@ -75,11 +75,11 @@ class OpenApiSpecification(
         }
 
         fun fromFile(openApiFilePath: String): OpenApiSpecification {
-            return fromFile(openApiFilePath, EnvironmentAndPropertiesConfiguration())
+            return fromFile(openApiFilePath, SpecmaticConfig())
         }
 
-        fun fromFile(openApiFilePath: String, environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration): OpenApiSpecification {
-            return OpenApiSpecification(openApiFilePath, getParsedOpenApi(openApiFilePath), environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration)
+        fun fromFile(openApiFilePath: String, specmaticConfig: SpecmaticConfig): OpenApiSpecification {
+            return OpenApiSpecification(openApiFilePath, getParsedOpenApi(openApiFilePath), specmaticConfig = specmaticConfig)
         }
 
         fun getParsedOpenApi(openApiFilePath: String): OpenAPI {
@@ -99,7 +99,7 @@ class OpenApiSpecification(
             sourceRepositoryBranch: String? = null,
             specificationPath: String? = null,
             securityConfiguration: SecurityConfiguration? = null,
-            environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration()
+            specmaticConfig: SpecmaticConfig = SpecmaticConfig()
         ): OpenApiSpecification {
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), openApiFilePath)
@@ -125,7 +125,7 @@ class OpenApiSpecification(
                 sourceRepositoryBranch,
                 specificationPath,
                 securityConfiguration,
-                environmentAndPropertiesConfiguration
+                specmaticConfig
             )
         }
 
@@ -160,7 +160,7 @@ class OpenApiSpecification(
             specification = specificationPath,
             serviceType = SERVICE_TYPE_HTTP,
             stubsFromExamples = stubsFromExamples,
-            environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration
+            specmaticConfig = specmaticConfig
         )
     }
 
@@ -479,7 +479,7 @@ class OpenApiSpecification(
 
             val resolvedResponseExample =
                 when {
-                    environmentAndPropertiesConfiguration.validateResponseValue() ->
+                    specmaticConfig.validateResponseValue() ->
                         ResponseValueExample(responseExample)
 
                     else ->
@@ -875,7 +875,7 @@ class OpenApiSpecification(
         }
 
         if (securityScheme.type == SecurityScheme.Type.APIKEY) {
-            val apiKey = getSecurityTokenForApiKeyScheme(securitySchemeConfiguration, schemeName, environmentAndPropertiesConfiguration)
+            val apiKey = getSecurityTokenForApiKeyScheme(securitySchemeConfiguration, schemeName)
             if (securityScheme.`in` == SecurityScheme.In.HEADER)
                 return APIKeyInHeaderSecurityScheme(securityScheme.name, apiKey)
 
@@ -893,7 +893,7 @@ class OpenApiSpecification(
         securitySchemeConfiguration: SecuritySchemeConfiguration?,
         environmentVariable: String,
     ): BearerSecurityScheme {
-        val token = getSecurityTokenForBearerScheme(securitySchemeConfiguration, environmentVariable, environmentAndPropertiesConfiguration)
+        val token = getSecurityTokenForBearerScheme(securitySchemeConfiguration, environmentVariable)
         return BearerSecurityScheme(token)
     }
 
@@ -901,7 +901,7 @@ class OpenApiSpecification(
         securitySchemeConfiguration: SecuritySchemeConfiguration?,
         environmentVariable: String,
     ): BasicAuthSecurityScheme {
-        val token = getSecurityTokenForBasicAuthScheme(securitySchemeConfiguration, environmentVariable, environmentAndPropertiesConfiguration)
+        val token = getSecurityTokenForBasicAuthScheme(securitySchemeConfiguration, environmentVariable)
         return BasicAuthSecurityScheme(token)
     }
 

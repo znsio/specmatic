@@ -1,6 +1,5 @@
 package io.specmatic.core
 
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration
 import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 
 const val POSITIVE_TEST_DESCRIPTION_PREFIX = "+ve "
@@ -31,20 +30,20 @@ data class FlagsBased(
     }
 }
 
-fun strategiesFromFlags(flags: EnvironmentAndPropertiesConfiguration): FlagsBased {
+fun strategiesFromFlags(specmaticConfig: SpecmaticConfig): FlagsBased {
     val (positivePrefix, negativePrefix) =
-        if (flags.generativeTestingEnabled())
+        if (specmaticConfig.generativeTestingEnabled())
             Pair(POSITIVE_TEST_DESCRIPTION_PREFIX, NEGATIVE_TEST_DESCRIPTION_PREFIX)
         else
             Pair("", "")
 
     return FlagsBased(
-        defaultExampleResolver = if (flags.schemaExampleDefaultEnabled()) UseDefaultExample else DoNotUseDefaultExample,
+        defaultExampleResolver = if (specmaticConfig.schemaExampleDefaultEnabled()) UseDefaultExample else DoNotUseDefaultExample,
         generation = when {
-            flags.generativeTestingEnabled() -> GenerativeTestsEnabled(positiveOnly = flags.onlyPositive())
+            specmaticConfig.generativeTestingEnabled() -> GenerativeTestsEnabled(positiveOnly = specmaticConfig.onlyPositive())
             else -> NonGenerativeTests
         },
-        unexpectedKeyCheck = if (flags.extensibleSchema()) IgnoreUnexpectedKeys else null,
+        unexpectedKeyCheck = if (specmaticConfig.extensibleSchema()) IgnoreUnexpectedKeys else null,
         positivePrefix = positivePrefix,
         negativePrefix = negativePrefix
     )

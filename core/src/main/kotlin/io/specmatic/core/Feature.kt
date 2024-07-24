@@ -19,6 +19,8 @@ import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
+import io.specmatic.core.utilities.Flags.Companion.LOCAL_TESTS_DIRECTORY
+import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.info.Info
@@ -29,8 +31,26 @@ import io.swagger.v3.oas.models.responses.ApiResponses
 import java.io.File
 import java.net.URI
 
-fun parseContractFileToFeature(contractPath: String, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null, sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null, environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration()): Feature {
-    return parseContractFileToFeature(File(contractPath), hook, sourceProvider, sourceRepository, sourceRepositoryBranch, specificationPath, securityConfiguration, environmentAndPropertiesConfiguration)
+fun parseContractFileToFeature(
+    contractPath: String,
+    hook: Hook = PassThroughHook(),
+    sourceProvider: String? = null,
+    sourceRepository: String? = null,
+    sourceRepositoryBranch: String? = null,
+    specificationPath: String? = null,
+    securityConfiguration: SecurityConfiguration? = null,
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+): Feature {
+    return parseContractFileToFeature(
+        File(contractPath),
+        hook,
+        sourceProvider,
+        sourceRepository,
+        sourceRepositoryBranch,
+        specificationPath,
+        securityConfiguration,
+        specmaticConfig
+    )
 }
 
 fun checkExists(file: File) = file.also {
@@ -38,11 +58,20 @@ fun checkExists(file: File) = file.also {
         throw ContractException("File ${file.path} does not exist (absolute path ${file.canonicalPath})")
 }
 
-fun parseContractFileToFeature(file: File, hook: Hook = PassThroughHook(), sourceProvider:String? = null, sourceRepository:String? = null, sourceRepositoryBranch:String? = null, specificationPath:String? = null, securityConfiguration: SecurityConfiguration? = null, environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration()): Feature {
+fun parseContractFileToFeature(
+    file: File,
+    hook: Hook = PassThroughHook(),
+    sourceProvider: String? = null,
+    sourceRepository: String? = null,
+    sourceRepositoryBranch: String? = null,
+    specificationPath: String? = null,
+    securityConfiguration: SecurityConfiguration? = null,
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
 
     return when (file.extension) {
-        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath, securityConfiguration = securityConfiguration, environmentAndPropertiesConfiguration = environmentAndPropertiesConfiguration).toFeature()
+        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath, securityConfiguration = securityConfiguration, specmaticConfig = specmaticConfig).toFeature()
         WSDL -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
         else -> throw unsupportedFileExtensionContractException(file.path, file.extension)
@@ -80,8 +109,8 @@ data class Feature(
     val specification:String? = null,
     val serviceType:String? = null,
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
-    val environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(),
-    val flagsBased: FlagsBased = strategiesFromFlags(environmentAndPropertiesConfiguration)
+    val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig)
 ) {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         return this.copy(flagsBased = this.flagsBased.copy(
@@ -1363,7 +1392,7 @@ data class Feature(
                         requestMethod,
                         requestPath,
                         responseStatus
-                    ) to exampleFromFile.toRow(environmentAndPropertiesConfiguration)
+                    ) to exampleFromFile.toRow(specmaticConfig)
                 }
             } catch (e: Throwable) {
                 logger.log(e, "Error reading file ${exampleFromFile.expectationFilePath}")
@@ -1377,7 +1406,7 @@ data class Feature(
     fun loadExternalisedExamples(): Feature {
         val testsDirectory = getTestsDirectory(File(this.path))
         val externalisedExamplesFromDefaultDirectory = loadExternalisedJSONExamples(testsDirectory)
-        val externalisedExamplesFromLocalDirectory = environmentAndPropertiesConfiguration.localTestsDirectory()?.let {
+        val externalisedExamplesFromLocalDirectory = getStringValue(LOCAL_TESTS_DIRECTORY)?.let {
             loadExternalisedJSONExamples(File(it))
         } ?: emptyMap()
 

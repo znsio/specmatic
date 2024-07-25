@@ -562,7 +562,7 @@ internal class HttpRequestPatternTest {
 
         val row = Row(listOf("(REQUEST-BODY)"), listOf("""{ "id": 10 }"""))
         val patterns =
-            pattern.newBasedOn(row, Resolver(generation = GenerativeTestsEnabled())).map { it.value }.toList()
+            pattern.newBasedOn(row, Resolver(generation = GenerativeTestsEnabled(false))).map { it.value }.toList()
 
         assertThat(patterns).hasSize(1)
     }

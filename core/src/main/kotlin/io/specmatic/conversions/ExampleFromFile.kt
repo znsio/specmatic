@@ -1,6 +1,7 @@
 package io.specmatic.conversions
 
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.EmptyString
@@ -9,7 +10,7 @@ import io.specmatic.core.value.Value
 import java.io.File
 
 class ExampleFromFile(val json: JSONObjectValue, val file: File) {
-    fun toRow(environmentAndPropertiesConfiguration: EnvironmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration()): Row {
+    fun toRow(specmaticConfig: SpecmaticConfig = SpecmaticConfig()): Row {
         logger.log("Loading test file ${this.expectationFilePath}")
 
         val examples: Map<String, String> =
@@ -26,7 +27,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
 
         val responseExample = response?.let { httpResponse ->
             when {
-                environmentAndPropertiesConfiguration.validateResponseValue() ->
+                specmaticConfig.isResponseValueValidationEnabled() ->
                     ResponseValueExample(httpResponse)
 
                 else ->

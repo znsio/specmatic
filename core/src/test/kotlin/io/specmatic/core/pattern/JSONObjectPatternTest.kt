@@ -1,16 +1,23 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.GENERATION
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
-import io.specmatic.core.*
-import io.specmatic.core.value.*
+import io.specmatic.core.MatchFailureDetails
+import io.specmatic.core.Resolver
+import io.specmatic.core.Result
+import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NullValue
+import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
 import io.specmatic.shouldNotMatch
 import io.specmatic.trimmedLinesString
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.util.function.Consumer
@@ -399,6 +406,8 @@ internal class JSONObjectPatternTest {
 
         @Test
         fun `Should avoid combinatorial explosion when many request properties with many possible values`() {
+            System.setProperty(MAX_TEST_REQUEST_COMBINATIONS, "64")
+
             val resolver = Resolver(
                 newPatterns = (1..6).associate { paramIndex ->
                     "(enum${paramIndex})" to AnyPattern((0..9).map { possibleValueIndex ->
@@ -409,14 +418,14 @@ internal class JSONObjectPatternTest {
 
             val objPattern = parsedPattern("""{"p1": "(enum1)", "p2": "(enum2)", "p3": "(enum3)", "p4": "(enum4)", "p5": "(enum5)", "p6": "(enum6)"}""")
 
-
-            System.setProperty("MAX_TEST_REQUEST_COMBINATIONS", "64")
             val newPatterns = try {
                 objPattern.newBasedOn(Row(), resolver).map { it.value }.toList()
             } finally {
                 System.clearProperty("MAX_TEST_REQUEST_COMBINATIONS")
             }
             assertThat(newPatterns).hasSize(64)
+
+            System.clearProperty(MAX_TEST_REQUEST_COMBINATIONS)
         }
 
         @Test

@@ -1,11 +1,20 @@
 package io.specmatic.core
 
-import com.fasterxml.jackson.annotation.*
+import com.fasterxml.jackson.annotation.JsonAlias
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.specmatic.core.Configuration.Companion.globalConfigFileName
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
+import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_GENERATIVE_TESTS
+import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
+import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import java.io.File
 
 const val APPLICATION_NAME = "Specmatic"
@@ -48,6 +57,65 @@ fun String.loadContract(): Feature {
     return parseContractFileToFeature(File(this))
 }
 
+data class SpecmaticConfig(
+    val sources: List<Source> = emptyList(),
+    val auth: Auth? = null,
+    val pipeline: Pipeline? = null,
+    val environments: Map<String, Environment>? = null,
+    val hooks: Map<String, String> = emptyMap(),
+    val repository: RepositoryInfo? = null,
+    val report: ReportConfiguration? = null,
+    val security: SecurityConfiguration? = null,
+    val test: TestConfiguration? = TestConfiguration()
+) {
+    fun isExtensibleSchemaEnabled(): Boolean {
+        return (test?.allowExtensibleSchema == true)
+    }
+
+    fun isResiliencyTestingEnabled(): Boolean {
+        return (test?.resiliencyTests?.enable != ResiliencyTestSuite.none)
+    }
+
+    fun isOnlyPositiveTestingEnabled(): Boolean {
+        return (test?.resiliencyTests?.enable == ResiliencyTestSuite.positiveOnly)
+    }
+
+    fun isResponseValueValidationEnabled(): Boolean {
+        return (test?.validateResponseValues == true)
+    }
+}
+
+data class TestConfiguration(
+    val resiliencyTests: ResiliencyTestsConfig? = ResiliencyTestsConfig(
+        isResiliencyTestFlagEnabled = getBooleanValue(SPECMATIC_GENERATIVE_TESTS),
+        isOnlyPositiveFlagEnabled = getBooleanValue(ONLY_POSITIVE)
+    ),
+    val validateResponseValues: Boolean? = getBooleanValue(VALIDATE_RESPONSE_VALUE),
+    val allowExtensibleSchema: Boolean? = getBooleanValue(EXTENSIBLE_SCHEMA),
+)
+
+enum class ResiliencyTestSuite {
+    all, positiveOnly, none
+}
+
+data class ResiliencyTestsConfig(
+    val enable: ResiliencyTestSuite = ResiliencyTestSuite.none
+) {
+    constructor(isResiliencyTestFlagEnabled: Boolean, isOnlyPositiveFlagEnabled: Boolean) : this(
+        enable = getEnableFrom(isResiliencyTestFlagEnabled, isOnlyPositiveFlagEnabled)
+    )
+
+    companion object {
+        private fun getEnableFrom(isResiliencyTestFlagEnabled: Boolean, isOnlyPositiveFlagEnabled: Boolean): ResiliencyTestSuite {
+            return when {
+                isResiliencyTestFlagEnabled -> ResiliencyTestSuite.all
+                isOnlyPositiveFlagEnabled -> ResiliencyTestSuite.positiveOnly
+                else -> ResiliencyTestSuite.none
+            }
+        }
+    }
+}
+
 data class Auth(
     @JsonProperty("bearer-file") val bearerFile: String = "bearer.txt",
     @JsonProperty("bearer-environment-variable") val bearerEnvironmentVariable: String? = null
@@ -78,17 +146,6 @@ data class Source(
     @field:JsonAlias("consumes")
     val stub: List<String>? = null,
     val directory: String? = null,
-)
-
-data class SpecmaticConfig(
-    val sources: List<Source> = emptyList(),
-    val auth: Auth? = null,
-    val pipeline: Pipeline? = null,
-    val environments: Map<String, Environment>? = null,
-    val hooks: Map<String, String> = emptyMap(),
-    val repository: RepositoryInfo? = null,
-    val report: ReportConfiguration? = null,
-    val security: SecurityConfiguration? = null
 )
 
 data class RepositoryInfo(

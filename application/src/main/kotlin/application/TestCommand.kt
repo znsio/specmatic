@@ -3,10 +3,11 @@ package application
 import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.Configuration
 import io.specmatic.core.DEFAULT_TIMEOUT_IN_SECONDS
-import io.specmatic.core.Flags
 import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_PARALLELISM
+import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.core.utilities.newXMLBuilder
 import io.specmatic.core.utilities.xmlToString
@@ -179,7 +180,7 @@ class TestCommand : Callable<Unit> {
     }
 
     private fun setParallelism() {
-        Flags.testParallelism()?.let { parallelism ->
+        getStringValue(SPECMATIC_TEST_PARALLELISM)?.let { parallelism ->
             validateParallelism(parallelism)
 
             System.setProperty("junit.jupiter.execution.parallel.enabled", "true");
@@ -206,7 +207,7 @@ class TestCommand : Callable<Unit> {
         try {
             parallelism.toInt()
         } catch(e: Throwable) {
-            exitWithMessage("The value of the ${Flags.SPECMATIC_TEST_PARALLELISM} environment variable must be either 'true' or an integer value")
+            exitWithMessage("The value of the $SPECMATIC_TEST_PARALLELISM environment variable must be either 'true' or an integer value")
         }
     }
 }

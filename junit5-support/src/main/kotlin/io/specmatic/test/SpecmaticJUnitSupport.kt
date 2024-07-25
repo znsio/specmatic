@@ -231,7 +231,7 @@ open class SpecmaticJUnitSupport {
 
                     createIfDoesNotExist(workingDirectory.path)
 
-                    specmaticConfig = getSpecmaticJson()
+                    specmaticConfig = getSpecmaticConfig()
 
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
 
@@ -239,7 +239,22 @@ open class SpecmaticJUnitSupport {
 
                     val testScenariosAndEndpointsPairList = contractFilePaths.filter {
                         File(it.path).extension in CONTRACT_EXTENSIONS
-                    }.map { loadTestScenarios(it.path, "", "", testConfig, it.provider, it.repository, it.branch, it.specificationPath, specmaticConfig?.security, filterName, filterNotName) }
+                    }.map {
+                        loadTestScenarios(
+                            it.path,
+                            "",
+                            "",
+                            testConfig,
+                            it.provider,
+                            it.repository,
+                            it.branch,
+                            it.specificationPath,
+                            specmaticConfig?.security,
+                            filterName,
+                            filterNotName,
+                            specmaticConfig = specmaticConfig
+                        )
+                    }
 
                     val tests: Sequence<ContractTest> = testScenariosAndEndpointsPairList.asSequence().flatMap { it.first }
 
@@ -398,7 +413,8 @@ open class SpecmaticJUnitSupport {
         specificationPath: String? = null,
         securityConfiguration: SecurityConfiguration? = null,
         filterName: String?,
-        filterNotName: String?
+        filterNotName: String?,
+        specmaticConfig: SpecmaticConfig? = null
     ): Pair<Sequence<ContractTest>, List<Endpoint>> {
         if(hasOpenApiFileExtension(path) && !isOpenAPI(path))
             return Pair(emptySequence(), emptyList())
@@ -412,7 +428,8 @@ open class SpecmaticJUnitSupport {
                 sourceRepository,
                 sourceRepositoryBranch,
                 specificationPath,
-                securityConfiguration
+                securityConfiguration,
+                specmaticConfig = specmaticConfig ?: SpecmaticConfig()
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
         feature.validateExamplesOrException()
@@ -451,7 +468,7 @@ open class SpecmaticJUnitSupport {
         return Pair(tests, allEndpoints)
     }
 
-    private fun getSpecmaticJson(): SpecmaticConfig? {
+    private fun getSpecmaticConfig(): SpecmaticConfig? {
         return try {
             loadSpecmaticConfig(configFile)
         }

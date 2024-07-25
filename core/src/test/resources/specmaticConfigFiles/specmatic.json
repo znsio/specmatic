@@ -79,5 +79,12 @@
         }
       }
     }
+  },
+  "test": {
+    "resiliencyTests": {
+      "enable": "all"
+    },
+    "validateResponseValues": true,
+    "allowExtensibleSchema": true
   }
 }

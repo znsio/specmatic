@@ -1,20 +1,32 @@
 package integration_tests
 
-import io.specmatic.conversions.EnvironmentAndPropertiesConfiguration
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.unmockkAll
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.Flags
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.Scenario
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class ExtendableSchema {
+class ExtensibleSchemaTest {
+
+    @BeforeEach
+    fun beforeEach() {
+        unmockkAll()
+    }
+
     @Test
     fun `when extensible schema is enabled, a JSON request object with unexpected keys should be accepted when running tests`() {
+        val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
+            every { isExtensibleSchemaEnabled() } returns true
+        }
         val feature =
             OpenApiSpecification.fromYAML(
                 """
@@ -52,7 +64,7 @@ paths:
                                   value: success
             """.trimIndent(),
                 "",
-                environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(), mapOf(Flags.EXTENSIBLE_SCHEMA to "true"))
+                specmaticConfig = specmaticConfig
             ).toFeature()
 
         val results = feature.executeTests(object : TestExecutor {
@@ -68,6 +80,9 @@ paths:
 
     @Test
     fun `when extensible schema is enabled, a JSON response object with unexpected keys should be accepted when running tests`() {
+        val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
+            every { isExtensibleSchemaEnabled() } returns true
+        }
         val feature =
             OpenApiSpecification.fromYAML(
                 """
@@ -109,7 +124,7 @@ paths:
                                       name: John
             """.trimIndent(),
                 "",
-                environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(), mapOf(Flags.EXTENSIBLE_SCHEMA to "true"))
+                specmaticConfig = specmaticConfig
             ).toFeature()
 
         val results = feature.executeTests(object : TestExecutor {
@@ -125,6 +140,9 @@ paths:
 
     @Test
     fun `with extensible schema and generative tests enabled both positive and negative generated tests should appear`() {
+        val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
+            every { isExtensibleSchemaEnabled() } returns true
+        }
         val feature =
             OpenApiSpecification.fromYAML(
                 """
@@ -160,7 +178,7 @@ paths:
                                                       value: success
             """.trimIndent(),
                 "",
-                environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration(mapOf(), mapOf(Flags.EXTENSIBLE_SCHEMA to "true"))
+                specmaticConfig = specmaticConfig
             ).toFeature().enableGenerativeTesting()
 
         val testTypes = mutableListOf<String>()

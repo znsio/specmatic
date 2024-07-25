@@ -1,6 +1,5 @@
 package application
 
-import application.test.ContractExecutionListener
 import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.Configuration
 import io.specmatic.core.DEFAULT_TIMEOUT_IN_SECONDS
@@ -156,8 +155,6 @@ class TestCommand : Callable<Unit> {
                 .selectors(selectClass(SpecmaticJUnitSupport::class.java))
                 .build()
         junitLauncher.discover(request)
-        val contractExecutionListener = ContractExecutionListener()
-        junitLauncher.registerTestExecutionListeners(contractExecutionListener)
 
         junitReportDirName?.let { dirName ->
             val reportListener = org.junit.platform.reporting.legacy.xml.LegacyXmlReportGeneratingListener(Paths.get(dirName), PrintWriter(System.out, true))
@@ -177,8 +174,6 @@ class TestCommand : Callable<Unit> {
                 throw ContractException("Was expecting a JUnit report file called TEST-junit-jupiter.xml inside $junitReportDirName but could not find it.")
             }
         }
-
-        contractExecutionListener.exitProcess()
     }
     catch (e: Throwable) {
         logger.log(e)

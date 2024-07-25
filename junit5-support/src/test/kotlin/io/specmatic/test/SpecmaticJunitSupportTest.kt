@@ -5,6 +5,7 @@ import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.PROTOCOL
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
+import io.specmatic.test.listeners.ContractExecutionListener
 import io.specmatic.test.reports.coverage.Endpoint
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.junit.platform.launcher.TestExecutionListener
 import org.opentest4j.TestAbortedException
 import java.util.*
 
@@ -139,6 +141,15 @@ class SpecmaticJunitSupportTest {
             SpecmaticJUnitSupport().constructTestBaseURL()
         }
         assertThat(ex.message).isEqualTo("Please specify $TEST_BASE_URL OR host and port as environment variables")
+    }
+
+    @Test
+    fun `ContractExecutionListener should be registered`() {
+        val registeredListeners = ServiceLoader.load(TestExecutionListener::class.java)
+            .map { it.javaClass.name }
+            .toMutableList()
+
+        assertThat(registeredListeners).contains(ContractExecutionListener::class.java.name)
     }
 
     @AfterEach

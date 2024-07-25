@@ -1,4 +1,4 @@
-package application.test
+package io.specmatic.test.listeners
 
 import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestIdentifier

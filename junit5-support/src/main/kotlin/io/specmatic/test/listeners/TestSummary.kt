@@ -1,4 +1,4 @@
-package application.test
+package io.specmatic.test.listeners
 
 data class TestSummary(val success: Int, val partialSuccesses: Int, val aborted: Int, val failure: Int) {
     val message: String

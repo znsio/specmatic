@@ -1,4 +1,4 @@
-package application.test
+package io.specmatic.test.listeners
 
 import org.fusesource.jansi.Ansi
 import org.junit.platform.engine.TestExecutionResult

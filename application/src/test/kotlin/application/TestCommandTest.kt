@@ -20,13 +20,17 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.platform.launcher.Launcher
 import org.junit.platform.launcher.LauncherDiscoveryRequest
+import org.junit.platform.launcher.TestExecutionListener
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.w3c.dom.Document
 import org.xml.sax.InputSource
 import picocli.CommandLine
 import java.io.StringReader
+import java.util.*
+import java.util.function.Consumer
 import java.util.stream.Stream
+
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, TestCommand::class])
 internal class TestCommandTest {
@@ -70,14 +74,12 @@ internal class TestCommandTest {
     }
 
     @Test
-    fun `it should execute junit test with execution listener`() {
-        every { junitLauncher.discover(any()) }.returns(mockk())
-        every { junitLauncher.registerTestExecutionListeners(any<ContractExecutionListener>()) }.returns(mockk())
+    fun `ContractExecutionListener should be registered`() {
+        val registeredListeners = ServiceLoader.load(TestExecutionListener::class.java)
+            .map { it.javaClass.name }
+            .toMutableList()
 
-        CommandLine(testCommand, factory).execute("api_1.$CONTRACT_EXTENSION")
-
-        verify(exactly = 1) { junitLauncher.discover(any()) }
-        verify(exactly = 1) { junitLauncher.execute(any<LauncherDiscoveryRequest>()) }
+        assertThat(registeredListeners).contains(ContractExecutionListener::class.java.name)
     }
 
     @Test

@@ -1,11 +1,18 @@
 package application
 
-import application.test.ContractExecutionListener
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import io.specmatic.core.CONTRACT_EXTENSION
+import io.specmatic.core.utilities.newXMLBuilder
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
+import io.specmatic.test.listeners.ContractExecutionListener
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.fail
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -15,19 +22,9 @@ import org.junit.platform.launcher.Launcher
 import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import picocli.CommandLine
-import io.specmatic.core.CONTRACT_EXTENSION
-import io.specmatic.core.pattern.parsedValue
-import io.specmatic.core.utilities.newXMLBuilder
-import io.specmatic.core.value.XMLNode
-import io.specmatic.core.value.XMLValue
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
-import org.assertj.core.api.Assertions.fail
 import org.w3c.dom.Document
 import org.xml.sax.InputSource
+import picocli.CommandLine
 import java.io.StringReader
 import java.util.stream.Stream
 
@@ -80,7 +77,6 @@ internal class TestCommandTest {
         CommandLine(testCommand, factory).execute("api_1.$CONTRACT_EXTENSION")
 
         verify(exactly = 1) { junitLauncher.discover(any()) }
-        verify(exactly = 1) { junitLauncher.registerTestExecutionListeners(any<ContractExecutionListener>()) }
         verify(exactly = 1) { junitLauncher.execute(any<LauncherDiscoveryRequest>()) }
     }
 

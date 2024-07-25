@@ -1,10 +1,6 @@
-package application.test
+package io.specmatic.test.listeners
 
-import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.logger
-import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.StringValue
 import io.specmatic.test.SpecmaticJUnitSupport
 import org.junit.platform.engine.TestDescriptor
 import org.junit.platform.engine.TestExecutionResult

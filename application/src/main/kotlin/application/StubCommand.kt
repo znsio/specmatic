@@ -1,17 +1,14 @@
 package application
 
-import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import `in`.specmatic.core.CONTRACT_EXTENSIONS
-import `in`.specmatic.core.Configuration
-import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
-import `in`.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
-import `in`.specmatic.core.WorkingDirectory
-import `in`.specmatic.core.log.*
-import `in`.specmatic.core.utilities.ContractPathData
-import `in`.specmatic.core.utilities.exitIfAnyDoNotExist
-import `in`.specmatic.core.utilities.exitWithMessage
-import `in`.specmatic.stub.ContractStub
-import `in`.specmatic.stub.HttpClientFactory
+import io.specmatic.core.*
+import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
+import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
+import io.specmatic.core.log.*
+import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.utilities.exitIfAnyDoNotExist
+import io.specmatic.core.utilities.exitWithMessage
+import io.specmatic.stub.ContractStub
+import io.specmatic.stub.HttpClientFactory
 import org.springframework.beans.factory.annotation.Autowired
 import picocli.CommandLine.*
 import java.io.File
@@ -108,8 +105,10 @@ class StubCommand : Callable<Unit> {
         else
             NonVerbose(CompositePrinter(logPrinters))
 
-        configFileName?.let {
-            Configuration.globalConfigFileName = it
+        if (configFileName != null) {
+            Configuration.globalConfigFileName = configFileName as String
+        } else {
+            Configuration.globalConfigFileName = getConfigFileName()
         }
 
         try {

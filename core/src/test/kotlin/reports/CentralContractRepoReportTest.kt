@@ -1,10 +1,10 @@
 package reports
 
-import `in`.specmatic.osAgnosticPath
-import `in`.specmatic.reports.CentralContractRepoReport
-import `in`.specmatic.reports.CentralContractRepoReportJson
-import `in`.specmatic.reports.SpecificationOperation
-import `in`.specmatic.reports.SpecificationRow
+import io.specmatic.osAgnosticPath
+import io.specmatic.reports.CentralContractRepoReport
+import io.specmatic.reports.CentralContractRepoReportJson
+import io.specmatic.reports.SpecificationOperation
+import io.specmatic.reports.SpecificationRow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll

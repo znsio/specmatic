@@ -1,12 +1,15 @@
 package integration_tests
 
-import `in`.specmatic.conversions.EnvironmentAndPropertiesConfiguration
-import `in`.specmatic.conversions.OpenApiSpecification
-import `in`.specmatic.core.Flags
-import `in`.specmatic.core.HttpRequest
-import `in`.specmatic.core.HttpResponse
-import `in`.specmatic.core.value.*
-import `in`.specmatic.test.TestExecutor
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.unmockkAll
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
+import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.utilities.Flags.Companion.SCHEMA_EXAMPLE_DEFAULT
+import io.specmatic.core.value.*
+import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -319,8 +322,11 @@ class DefaultValuesInOpenapiSpecification {
 
     @Test
     fun `SCHEMA_EXAMPLE_DEFAULT should switch on the schema example default feature`() {
-        val feature = OpenApiSpecification.fromYAML(
-            """
+        System.setProperty(SCHEMA_EXAMPLE_DEFAULT, "true")
+
+        try {
+            val feature = OpenApiSpecification.fromYAML(
+                """
             openapi: 3.0.0
             info:
               version: 1.0.0
@@ -361,23 +367,25 @@ class DefaultValuesInOpenapiSpecification {
                       description: The price of the product
                       example: 10
                 """, "",
-            environmentAndPropertiesConfiguration = EnvironmentAndPropertiesConfiguration.setProperty(Flags.SCHEMA_EXAMPLE_DEFAULT, "true")
-        ).toFeature()
+            ).toFeature()
 
-        val results = feature.executeTests(object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                val body = request.body as JSONObjectValue
-                assertThat(body.jsonObject["name"]).isEqualTo(StringValue("Soap"))
-                assertThat(body.jsonObject["price"]).isEqualTo(NumberValue(10))
-                return HttpResponse.OK
-            }
+            val results = feature.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val body = request.body as JSONObjectValue
+                    assertThat(body.jsonObject["name"]).isEqualTo(StringValue("Soap"))
+                    assertThat(body.jsonObject["price"]).isEqualTo(NumberValue(10))
+                    return HttpResponse.OK
+                }
 
-            override fun setServerState(serverState: Map<String, Value>) {
+                override fun setServerState(serverState: Map<String, Value>) {
 
-            }
-        })
+                }
+            })
 
-        assertThat(results.successCount).isEqualTo(1)
-        assertThat(results.failureCount).isEqualTo(0)
+            assertThat(results.successCount).isEqualTo(1)
+            assertThat(results.failureCount).isEqualTo(0)
+        } finally {
+            System.clearProperty(SCHEMA_EXAMPLE_DEFAULT)
+        }
     }
 }

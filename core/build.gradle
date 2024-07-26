@@ -18,13 +18,13 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "2.3.11"
+def ktor_version = "2.3.12"
 def jgit_version = "6.10.0.202406032230-r"
-def junit_version = "5.10.2"
+def junit_version = "5.10.3"
 
 dependencies {
     // TODO Fix to eliminate vulnerabilities, remove when the enclosing library supports it
-    implementation 'io.netty:netty-codec-http:4.1.110.Final' // used by ktor-server-netty-jvm 2.3.9 in core
+    implementation 'io.netty:netty-codec-http:4.1.112.Final' // used by ktor-server-netty-jvm 2.3.9 in core
     implementation 'joda-time:joda-time:2.12.7' // used by swagger-parser 2.1.22
 
     implementation 'io.cucumber:gherkin:22.0.0'
@@ -42,7 +42,7 @@ dependencies {
 
     implementation 'com.flipkart.zjsonpatch:zjsonpatch:0.4.16'
 
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.1'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.2'
 
     implementation 'io.swagger.parser.v3:swagger-parser:2.1.22'
 
@@ -50,13 +50,13 @@ dependencies {
     implementation 'com.github.mifmif:generex:1.0.2'
 
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
-    testImplementation 'org.assertj:assertj-core:3.26.0'
+    testImplementation 'org.assertj:assertj-core:3.26.3'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
     testImplementation 'org.json:json:20240303'
-    testImplementation 'org.springframework:spring-web:5.3.36'
-    testImplementation 'io.mockk:mockk:1.13.11'
-    testImplementation 'org.assertj:assertj-core:3.26.0'
+    testImplementation 'org.springframework:spring-web:5.3.37'
+    testImplementation 'io.mockk:mockk:1.13.12'
+    testImplementation 'org.assertj:assertj-core:3.26.3'
     testImplementation "io.ktor:ktor-client-mock-jvm:$ktor_version"
 }
 
@@ -64,7 +64,7 @@ test {
     useJUnitPlatform()
 }
 
-group = 'in.specmatic'
+group = 'io.specmatic'
 
 jar {
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
@@ -87,7 +87,7 @@ publishing {
             pom {
                 name = 'Specmatic'
                 description = 'Turn your contracts into executable specifications. Contract Driven Development - Collaboratively Design & Independently Deploy MicroServices & MicroFrontends.'
-                url = 'https://specmatic.in'
+                url = 'https://specmatic.io'
                 licenses {
                     license {
                         name = 'MIT'
@@ -98,12 +98,12 @@ publishing {
                     developer {
                         id = 'specmaticBuilders'
                         name = 'Specmatic Builders'
-                        email = 'info@specmatic.in'
+                        email = 'info@specmatic.io'
                     }
                 }
                 scm {
                     connection = 'scm:git:git@github.com:znsio/specmatic.git'
-                    url = 'https://specmatic.in/'
+                    url = 'https://specmatic.io/'
                 }
             }
         }

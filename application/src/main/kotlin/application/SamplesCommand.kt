@@ -1,9 +1,9 @@
 package application
 
-import `in`.specmatic.core.*
-import `in`.specmatic.core.log.*
+import io.specmatic.core.*
+import io.specmatic.core.log.*
 import picocli.CommandLine.*
-import `in`.specmatic.stub.HttpStub
+import io.specmatic.stub.HttpStub
 import java.io.File
 import java.util.concurrent.Callable
 

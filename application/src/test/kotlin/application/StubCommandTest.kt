@@ -2,13 +2,13 @@ package application
 
 import com.ginsberg.junit.exit.ExpectSystemExitWithStatus
 import com.ninjasquad.springmockk.MockkBean
-import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.CONTRACT_EXTENSIONS
-import `in`.specmatic.core.parseGherkinStringToFeature
-import `in`.specmatic.core.utilities.ContractPathData
-import `in`.specmatic.core.utilities.StubServerWatcher
-import `in`.specmatic.mock.ScenarioStub
-import `in`.specmatic.stub.HttpClientFactory
+import io.specmatic.core.CONTRACT_EXTENSION
+import io.specmatic.core.CONTRACT_EXTENSIONS
+import io.specmatic.core.parseGherkinStringToFeature
+import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.utilities.StubServerWatcher
+import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.HttpClientFactory
 import io.mockk.every
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat

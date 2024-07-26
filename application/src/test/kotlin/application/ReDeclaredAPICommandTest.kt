@@ -1,6 +1,6 @@
 package application
 
-import `in`.specmatic.conversions.OpenApiSpecification
+import io.specmatic.conversions.OpenApiSpecification
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat

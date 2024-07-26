@@ -4,7 +4,7 @@ import org.springframework.boot.Banner
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import picocli.CommandLine
-import `in`.specmatic.core.utilities.UncaughtExceptionHandler
+import io.specmatic.core.utilities.UncaughtExceptionHandler
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.*

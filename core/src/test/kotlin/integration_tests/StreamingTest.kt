@@ -1,6 +1,6 @@
 package integration_tests
 
-import `in`.specmatic.conversions.OpenApiSpecification
+import io.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

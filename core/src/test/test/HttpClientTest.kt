@@ -1,4 +1,4 @@
-package `in`.specmatic.test
+package io.specmatic.test
 
 import io.ktor.utils.io.charsets.*
 import org.assertj.core.api.Assertions.assertThat

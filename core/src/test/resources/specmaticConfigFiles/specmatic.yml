@@ -56,3 +56,9 @@ security:
       BasicAuth:
         type: basicAuth
         token: Abc123
+
+test:
+  resiliencyTests:
+    enable: all
+  validateResponseValues: true
+  allowExtensibleSchema: true

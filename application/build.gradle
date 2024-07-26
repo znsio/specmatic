@@ -30,21 +30,21 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "2.3.11"
-def junit_version = "5.10.2"
+def ktor_version = "2.3.12"
+def junit_version = "5.10.3"
 def jgit_version = "6.10.0.202406032230-r"
 
 dependencies {
     // TODO Put library reference overrides here to eliminate vulnerabilities, and remove the override when no longer needed
-    implementation 'io.netty:netty-codec-http:4.1.110.Final' // used by ktor-server-netty-jvm 2.3.9 in core
+    implementation 'io.netty:netty-codec-http:4.1.112.Final' // used by ktor-server-netty-jvm 2.3.9 in core
     implementation 'joda-time:joda-time:2.12.7' // used by swagger-parser 2.1.22
 
 
     implementation 'com.arakelian:java-jq:2.0.0'
     testImplementation 'com.arakelian:java-jq:2.0.0'
 
-    implementation 'org.assertj:assertj-core:3.26.0'
-    implementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
+    implementation 'org.assertj:assertj-core:3.26.3'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'
 
     implementation('info.picocli:picocli-spring-boot-starter:4.7.6') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
@@ -52,20 +52,20 @@ dependencies {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter'
         exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
     }
-    implementation('org.springframework.boot:spring-boot-starter:3.3.0') {
+    implementation('org.springframework.boot:spring-boot-starter:3.3.2') {
         exclude group: 'org.springframework', module: 'spring-core'
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude group: 'ch.qos.logback', module: 'logback-core'
     }
-    implementation('org.springframework.boot:spring-boot-autoconfigure:3.3.0')
-    implementation('org.springframework:spring-core:6.1.9')
+    implementation('org.springframework.boot:spring-boot-autoconfigure:3.3.2')
+    implementation('org.springframework:spring-core:6.1.11')
     implementation 'info.picocli:picocli:4.7.6'
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
     implementation "io.ktor:ktor-network-tls:$ktor_version"
     implementation "io.ktor:ktor-network-tls-certificates:$ktor_version"
 
-    implementation 'org.junit.platform:junit-platform-launcher:1.10.2'
-    implementation 'org.junit.platform:junit-platform-reporting:1.10.2'
+    implementation 'org.junit.platform:junit-platform-launcher:1.10.3'
+    implementation 'org.junit.platform:junit-platform-reporting:1.10.3'
 
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
@@ -77,8 +77,6 @@ dependencies {
     implementation(project(':core'))
     implementation(project(':junit5-support'))
 
-    implementation 'org.fusesource.jansi:jansi:2.4.1'
-
     implementation "io.ktor:ktor-client-cio:$ktor_version"
     implementation 'io.swagger.parser.v3:swagger-parser:2.1.22'
 
@@ -86,15 +84,15 @@ dependencies {
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
-    testImplementation('org.springframework.boot:spring-boot-starter-test:3.3.0') {
+    testImplementation('org.springframework.boot:spring-boot-starter-test:3.3.2') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude module: 'mockito-core'
     }
-    testImplementation 'io.mockk:mockk:1.13.11'
+    testImplementation 'io.mockk:mockk:1.13.12'
     testImplementation('com.ninja-squad:springmockk:3.1.1') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
     }
-    testImplementation 'org.assertj:assertj-core:3.26.0'
+    testImplementation 'org.assertj:assertj-core:3.26.3'
     testImplementation 'com.ginsberg:junit5-system-exit:1.1.2'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
@@ -115,7 +113,7 @@ jacocoTestReport {
     }
 }
 
-group = 'in.specmatic'
+group = 'io.specmatic'
 
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
@@ -140,7 +138,7 @@ publishing {
             pom {
                 name = 'Specmatic Executable'
                 description = 'Command-line standalone executable jar for Specmatic'
-                url = 'https://specmatic.in'
+                url = 'https://specmatic.io'
                 licenses {
                     license {
                         name = 'MIT'
@@ -151,12 +149,12 @@ publishing {
                     developer {
                         id = 'specmaticBuilders'
                         name = 'Specmatic Builders'
-                        email = 'info@specmatic.in'
+                        email = 'info@specmatic.io'
                     }
                 }
                 scm {
                     connection = 'scm:git:git@github.com:znsio/specmatic.git'
-                    url = 'https://specmatic.in/'
+                    url = 'https://specmatic.io/'
                 }
             }
         }

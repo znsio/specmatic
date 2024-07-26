@@ -2,11 +2,11 @@
 
 package application
 
-import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import `in`.specmatic.core.YAML
-import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.utilities.ContractPathData
-import `in`.specmatic.stub.customImplicitStubBase
+import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.YAML
+import io.specmatic.core.log.logger
+import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.stub.customImplicitStubBase
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import picocli.CommandLine

@@ -1,29 +1,29 @@
 package application
 
-import application.test.ContractExecutionListener
-import `in`.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import `in`.specmatic.core.Configuration
-import `in`.specmatic.core.DEFAULT_TIMEOUT_IN_SECONDS
-import `in`.specmatic.core.Flags
-import `in`.specmatic.core.log.Verbose
-import `in`.specmatic.core.log.logger
-import `in`.specmatic.core.pattern.ContractException
-import `in`.specmatic.core.utilities.exitWithMessage
-import `in`.specmatic.core.utilities.newXMLBuilder
-import `in`.specmatic.core.utilities.xmlToString
-import `in`.specmatic.test.SpecmaticJUnitSupport
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONFIG_FILE_NAME
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME_PROPERTY
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME_PROPERTY
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
+import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.Configuration
+import io.specmatic.core.DEFAULT_TIMEOUT_IN_SECONDS
+import io.specmatic.core.log.Verbose
+import io.specmatic.core.log.logger
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_PARALLELISM
+import io.specmatic.core.utilities.Flags.Companion.getStringValue
+import io.specmatic.core.utilities.exitWithMessage
+import io.specmatic.core.utilities.newXMLBuilder
+import io.specmatic.core.utilities.xmlToString
+import io.specmatic.test.SpecmaticJUnitSupport
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONFIG_FILE_NAME
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME_PROPERTY
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME_PROPERTY
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.launcher.Launcher
 import org.junit.platform.launcher.LauncherDiscoveryRequest
@@ -155,8 +155,6 @@ class TestCommand : Callable<Unit> {
                 .selectors(selectClass(SpecmaticJUnitSupport::class.java))
                 .build()
         junitLauncher.discover(request)
-        val contractExecutionListener = ContractExecutionListener()
-        junitLauncher.registerTestExecutionListeners(contractExecutionListener)
 
         junitReportDirName?.let { dirName ->
             val reportListener = org.junit.platform.reporting.legacy.xml.LegacyXmlReportGeneratingListener(Paths.get(dirName), PrintWriter(System.out, true))
@@ -176,15 +174,13 @@ class TestCommand : Callable<Unit> {
                 throw ContractException("Was expecting a JUnit report file called TEST-junit-jupiter.xml inside $junitReportDirName but could not find it.")
             }
         }
-
-        contractExecutionListener.exitProcess()
     }
     catch (e: Throwable) {
         logger.log(e)
     }
 
     private fun setParallelism() {
-        Flags.testParallelism()?.let { parallelism ->
+        getStringValue(SPECMATIC_TEST_PARALLELISM)?.let { parallelism ->
             validateParallelism(parallelism)
 
             System.setProperty("junit.jupiter.execution.parallel.enabled", "true");
@@ -211,7 +207,7 @@ class TestCommand : Callable<Unit> {
         try {
             parallelism.toInt()
         } catch(e: Throwable) {
-            exitWithMessage("The value of the ${Flags.SPECMATIC_TEST_PARALLELISM} environment variable must be either 'true' or an integer value")
+            exitWithMessage("The value of the $SPECMATIC_TEST_PARALLELISM environment variable must be either 'true' or an integer value")
         }
     }
 }

@@ -1,8 +1,8 @@
 package application
 
-import `in`.specmatic.reports.CentralContractRepoReportJson
-import `in`.specmatic.reports.SpecificationOperation
-import `in`.specmatic.reports.SpecificationRow
+import io.specmatic.reports.CentralContractRepoReportJson
+import io.specmatic.reports.SpecificationOperation
+import io.specmatic.reports.SpecificationRow
 import kotlinx.serialization.json.Json
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll

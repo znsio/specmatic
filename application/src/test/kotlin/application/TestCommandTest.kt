@@ -1,11 +1,18 @@
 package application
 
-import application.test.ContractExecutionListener
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import io.specmatic.core.CONTRACT_EXTENSION
+import io.specmatic.core.utilities.newXMLBuilder
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
+import io.specmatic.test.listeners.ContractExecutionListener
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.fail
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -13,23 +20,17 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.platform.launcher.Launcher
 import org.junit.platform.launcher.LauncherDiscoveryRequest
+import org.junit.platform.launcher.TestExecutionListener
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import picocli.CommandLine
-import `in`.specmatic.core.CONTRACT_EXTENSION
-import `in`.specmatic.core.pattern.parsedValue
-import `in`.specmatic.core.utilities.newXMLBuilder
-import `in`.specmatic.core.value.XMLNode
-import `in`.specmatic.core.value.XMLValue
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
-import `in`.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
-import org.assertj.core.api.Assertions.fail
 import org.w3c.dom.Document
 import org.xml.sax.InputSource
+import picocli.CommandLine
 import java.io.StringReader
+import java.util.*
+import java.util.function.Consumer
 import java.util.stream.Stream
+
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = [SpecmaticApplication::class, TestCommand::class])
 internal class TestCommandTest {
@@ -73,15 +74,12 @@ internal class TestCommandTest {
     }
 
     @Test
-    fun `it should execute junit test with execution listener`() {
-        every { junitLauncher.discover(any()) }.returns(mockk())
-        every { junitLauncher.registerTestExecutionListeners(any<ContractExecutionListener>()) }.returns(mockk())
+    fun `ContractExecutionListener should be registered`() {
+        val registeredListeners = ServiceLoader.load(TestExecutionListener::class.java)
+            .map { it.javaClass.name }
+            .toMutableList()
 
-        CommandLine(testCommand, factory).execute("api_1.$CONTRACT_EXTENSION")
-
-        verify(exactly = 1) { junitLauncher.discover(any()) }
-        verify(exactly = 1) { junitLauncher.registerTestExecutionListeners(any<ContractExecutionListener>()) }
-        verify(exactly = 1) { junitLauncher.execute(any<LauncherDiscoveryRequest>()) }
+        assertThat(registeredListeners).contains(ContractExecutionListener::class.java.name)
     }
 
     @Test
@@ -121,9 +119,9 @@ internal class TestCommandTest {
             <properties>
             <property name="contractPaths" value="service.yaml"/>
             </properties>
-            <testcase name="contractTest()[1]" classname="in.specmatic.test.SpecmaticJUnitSupport" time="1.028">
+            <testcase name="contractTest()[1]" classname="io.specmatic.test.SpecmaticJUnitSupport" time="1.028">
             <system-out><![CDATA[
-            unique-id: [engine:junit-jupiter]/[class:in.specmatic.test.SpecmaticJUnitSupport]/[test-factory:contractTest()]/[dynamic-test:#1]
+            unique-id: [engine:junit-jupiter]/[class:io.specmatic.test.SpecmaticJUnitSupport]/[test-factory:contractTest()]/[dynamic-test:#1]
             display-name:  Scenario: GET /pets/(petid:number) -> 200 | EX:200_OKAY
             ]]></system-out>
             </testcase>

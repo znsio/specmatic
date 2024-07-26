@@ -1,12 +1,12 @@
-package `in`.specmatic.test
+package io.specmatic.test
 
-import `in`.specmatic.core.TestResult
-import `in`.specmatic.test.ApiCoverageReportInputTest.Companion.CONFIG_FILE_PATH
-import `in`.specmatic.test.reports.coverage.Endpoint
-import `in`.specmatic.test.reports.coverage.OpenApiCoverageReportInput
-import `in`.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
-import `in`.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
-import `in`.specmatic.test.reports.coverage.console.Remarks
+import io.specmatic.core.TestResult
+import io.specmatic.test.ApiCoverageReportInputTest.Companion.CONFIG_FILE_PATH
+import io.specmatic.test.reports.coverage.Endpoint
+import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
+import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
+import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
+import io.specmatic.test.reports.coverage.console.Remarks
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

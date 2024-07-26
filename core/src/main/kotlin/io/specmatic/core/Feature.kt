@@ -19,8 +19,6 @@ import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
-import io.specmatic.core.utilities.Flags.Companion.LOCAL_TESTS_DIRECTORY
-import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.info.Info
@@ -1406,11 +1404,13 @@ data class Feature(
     fun loadExternalisedExamples(): Feature {
         val testsDirectory = getTestsDirectory(File(this.path))
         val externalisedExamplesFromDefaultDirectory = loadExternalisedJSONExamples(testsDirectory)
-        val externalisedExamplesFromLocalDirectory = getStringValue(LOCAL_TESTS_DIRECTORY)?.let {
-            loadExternalisedJSONExamples(File(it))
-        } ?: emptyMap()
+        val externalisedExampleDirsFromConfig = specmaticConfig.exampleDirectories
 
-        val allExternalisedJSONExamples = externalisedExamplesFromDefaultDirectory + externalisedExamplesFromLocalDirectory
+        val externalisedExamplesFromExampleDirs = externalisedExampleDirsFromConfig.flatMap { directory ->
+            loadExternalisedJSONExamples(File(directory)).entries
+        }.associate { it.toPair() }
+
+        val allExternalisedJSONExamples = externalisedExamplesFromDefaultDirectory + externalisedExamplesFromExampleDirs
 
         if(allExternalisedJSONExamples.isEmpty())
             return this

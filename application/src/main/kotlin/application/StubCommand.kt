@@ -33,8 +33,8 @@ class StubCommand : Callable<Unit> {
     @Parameters(arity = "0..*", description = ["Contract file paths"])
     var contractPaths: List<String> = mutableListOf()
 
-    @Option(names = ["--data"], description = ["Directory in which contract data may be found"], required = false)
-    var dataDirs: List<String> = mutableListOf()
+    @Option(names = ["--data", "--examples"], description = ["Directories containing JSON examples"], required = false)
+    var exampleDirs: List<String> = mutableListOf()
 
     @Option(names = ["--host"], description = ["Host for the http stub"], defaultValue = DEFAULT_HTTP_STUB_HOST)
     lateinit var host: String
@@ -129,7 +129,7 @@ class StubCommand : Callable<Unit> {
 
             if(httpStub != null) {
                 addShutdownHook()
-                val watcher = watchMaker.make(contractPaths.plus(dataDirs))
+                val watcher = watchMaker.make(contractPaths.plus(exampleDirs))
                 watcher.watchForChanges {
                     restartServer()
                 }
@@ -168,7 +168,7 @@ class StubCommand : Callable<Unit> {
 
     private fun startServer() {
         val workingDirectory = WorkingDirectory()
-        val stubData = stubLoaderEngine.loadStubs(contractSources, dataDirs)
+        val stubData = stubLoaderEngine.loadStubs(contractSources, exampleDirs)
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 

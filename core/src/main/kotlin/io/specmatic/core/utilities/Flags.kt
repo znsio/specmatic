@@ -10,7 +10,7 @@ class Flags {
         const val SCHEMA_EXAMPLE_DEFAULT = "SCHEMA_EXAMPLE_DEFAULT"
         const val SPECMATIC_TEST_PARALLELISM = "SPECMATIC_TEST_PARALLELISM"
 
-        const val LOCAL_TESTS_DIRECTORY = "LOCAL_TESTS_DIRECTORY"
+        const val EXAMPLE_DIRECTORIES = "EXAMPLE_DIRECTORIES"
 
         fun getStringValue(flagName: String): String? = System.getenv(flagName) ?: System.getProperty(flagName)
 

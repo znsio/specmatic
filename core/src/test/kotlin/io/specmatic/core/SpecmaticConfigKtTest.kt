@@ -2,6 +2,7 @@ package io.specmatic.core
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
 import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
@@ -58,6 +59,8 @@ internal class SpecmaticConfigKtTest {
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("ApiKeyAuthQuery") as APIKeySecuritySchemeConfiguration).value).isEqualTo("API-QUERY-PARAM-USER")
 
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("BasicAuth") as BasicAuthSecuritySchemeConfiguration).token).isEqualTo("Abc123")
+
+        assertThat(config.exampleDirectories).isEqualTo(listOf("test/data", "stub/examples"))
 
         assertThat(config.isResiliencyTestingEnabled()).isEqualTo(true)
         assertThat(config.isExtensibleSchemaEnabled()).isTrue()
@@ -140,7 +143,8 @@ internal class SpecmaticConfigKtTest {
             VALIDATE_RESPONSE_VALUE to "true",
             EXTENSIBLE_SCHEMA to "false",
             SCHEMA_EXAMPLE_DEFAULT to "true",
-            MAX_TEST_REQUEST_COMBINATIONS to "50"
+            MAX_TEST_REQUEST_COMBINATIONS to "50",
+            EXAMPLE_DIRECTORIES to "test/data,stub/examples"
         )
         properties.forEach { System.setProperty(it.key, it.value) }
 
@@ -150,6 +154,7 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.isOnlyPositiveTestingEnabled()).isFalse()
         assertThat(config.isResponseValueValidationEnabled()).isTrue()
         assertThat(config.isExtensibleSchemaEnabled()).isFalse()
+        assertThat(config.exampleDirectories).isEqualTo(listOf("test/data", "stub/examples"))
 
         properties.forEach { System.clearProperty(it.key) }
     }
@@ -183,7 +188,8 @@ internal class SpecmaticConfigKtTest {
         val props = mapOf(
             SPECMATIC_GENERATIVE_TESTS to "false",
             VALIDATE_RESPONSE_VALUE to "false",
-            EXTENSIBLE_SCHEMA to "false"
+            EXTENSIBLE_SCHEMA to "false",
+            EXAMPLE_DIRECTORIES to "api/tests,api/stubs"
         )
         try {
             props.forEach { System.setProperty(it.key, it.value) }
@@ -193,6 +199,7 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isResiliencyTestingEnabled()).isTrue()
             assertThat(config.isResponseValueValidationEnabled()).isTrue()
             assertThat(config.isExtensibleSchemaEnabled()).isTrue()
+            assertThat(config.exampleDirectories).isEqualTo(listOf("test/data", "stub/examples"))
         } finally {
             props.forEach { System.clearProperty(it.key) }
         }

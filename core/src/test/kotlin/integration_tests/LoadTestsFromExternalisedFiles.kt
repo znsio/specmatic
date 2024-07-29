@@ -225,9 +225,12 @@ class LoadTestsFromExternalisedFiles {
             }
         })
 
-        assertThat(results.successCount).isEqualTo(1)
-        assertThat(results.success()).withFailMessage(results.report()).isTrue()
-        System.clearProperty(EXAMPLE_DIRECTORIES)
+        try {
+            assertThat(results.successCount).isEqualTo(1)
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        } finally {
+            System.clearProperty(EXAMPLE_DIRECTORIES)
+        }
     }
 
     @Test

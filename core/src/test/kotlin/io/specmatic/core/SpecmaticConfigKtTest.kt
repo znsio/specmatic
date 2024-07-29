@@ -60,7 +60,7 @@ internal class SpecmaticConfigKtTest {
 
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("BasicAuth") as BasicAuthSecuritySchemeConfiguration).token).isEqualTo("Abc123")
 
-        assertThat(config.examples).isEqualTo(listOf("test/data", "stub/examples"))
+        assertThat(config.examples).isEqualTo(listOf("folder1/examples", "folder2/examples"))
 
         assertThat(config.isResiliencyTestingEnabled()).isEqualTo(true)
         assertThat(config.isExtensibleSchemaEnabled()).isTrue()
@@ -144,19 +144,19 @@ internal class SpecmaticConfigKtTest {
             EXTENSIBLE_SCHEMA to "false",
             SCHEMA_EXAMPLE_DEFAULT to "true",
             MAX_TEST_REQUEST_COMBINATIONS to "50",
-            EXAMPLE_DIRECTORIES to "test/data,stub/examples"
+            EXAMPLE_DIRECTORIES to "folder1/examples,folder2/examples"
         )
-        properties.forEach { System.setProperty(it.key, it.value) }
-
-        val config = SpecmaticConfig()
-
-        assertThat(config.isResiliencyTestingEnabled()).isTrue()
-        assertThat(config.isOnlyPositiveTestingEnabled()).isFalse()
-        assertThat(config.isResponseValueValidationEnabled()).isTrue()
-        assertThat(config.isExtensibleSchemaEnabled()).isFalse()
-        assertThat(config.examples).isEqualTo(listOf("test/data", "stub/examples"))
-
-        properties.forEach { System.clearProperty(it.key) }
+        try {
+            properties.forEach { System.setProperty(it.key, it.value) }
+            val config = SpecmaticConfig()
+            assertThat(config.isResiliencyTestingEnabled()).isTrue()
+            assertThat(config.isOnlyPositiveTestingEnabled()).isFalse()
+            assertThat(config.isResponseValueValidationEnabled()).isTrue()
+            assertThat(config.isExtensibleSchemaEnabled()).isFalse()
+            assertThat(config.examples).isEqualTo(listOf("folder1/examples", "folder2/examples"))
+        } finally {
+            properties.forEach { System.clearProperty(it.key) }
+        }
     }
 
     @Test
@@ -189,17 +189,15 @@ internal class SpecmaticConfigKtTest {
             SPECMATIC_GENERATIVE_TESTS to "false",
             VALIDATE_RESPONSE_VALUE to "false",
             EXTENSIBLE_SCHEMA to "false",
-            EXAMPLE_DIRECTORIES to "api/tests,api/stubs"
+            EXAMPLE_DIRECTORIES to "folder1/examples,folder2/examples"
         )
         try {
             props.forEach { System.setProperty(it.key, it.value) }
-
             val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
-
             assertThat(config.isResiliencyTestingEnabled()).isTrue()
             assertThat(config.isResponseValueValidationEnabled()).isTrue()
             assertThat(config.isExtensibleSchemaEnabled()).isTrue()
-            assertThat(config.examples).isEqualTo(listOf("test/data", "stub/examples"))
+            assertThat(config.examples).isEqualTo(listOf("folder1/examples", "folder2/examples"))
         } finally {
             props.forEach { System.clearProperty(it.key) }
         }

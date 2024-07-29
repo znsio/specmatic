@@ -105,10 +105,12 @@ internal class TestCommandTest {
             systemPropertyValue: String
     ) {
         every { specmaticConfig.contractTestPaths() }.returns(contractsToBeRunAsTests)
-
-        CommandLine(testCommand, factory).execute(optionName, optionValue)
-
-        assertThat(System.getProperty(systemPropertyName)).isEqualTo(systemPropertyValue)
+        try {
+            CommandLine(testCommand, factory).execute(optionName, optionValue)
+            assertThat(System.getProperty(systemPropertyName)).isEqualTo(systemPropertyValue)
+        } finally {
+            System.clearProperty(systemPropertyName)
+        }
     }
 
     @Test

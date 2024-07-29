@@ -64,6 +64,6 @@ test:
   allowExtensibleSchema: true
 
 examples:
-  - test/data
-  - stub/examples
+  - folder1/examples
+  - folder2/examples
 

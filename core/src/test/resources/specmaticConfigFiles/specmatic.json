@@ -87,5 +87,5 @@
     "validateResponseValues": true,
     "allowExtensibleSchema": true
   },
-  "examples": ["test/data", "stub/examples"]
+  "examples": ["folder1/examples", "folder2/examples"]
 }

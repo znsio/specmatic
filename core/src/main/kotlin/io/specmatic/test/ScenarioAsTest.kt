@@ -31,7 +31,8 @@ data class ScenarioAsTest(
             sourceRepository,
             sourceRepositoryBranch,
             specification,
-            serviceType
+            serviceType,
+            actualResponseStatus = response?.status ?: 0
         )
     }
 

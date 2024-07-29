@@ -11,8 +11,9 @@ data class TestResultRecord(
     val sourceRepository: String? = null,
     val sourceRepositoryBranch: String? = null,
     val specification: String? = null,
-    val serviceType: String? = null
+    val serviceType: String? = null,
+    val actualResponseStatus: Int = 0
 ) {
-    val isExercised = result !in listOf(TestResult.Skipped, TestResult.DidNotRun)
-    val isCovered = result !in listOf(TestResult.Skipped, TestResult.DidNotRun, TestResult.NotImplemented)
+    val isExercised = result !in setOf(TestResult.Skipped, TestResult.DidNotRun)
+    val isCovered = result in setOf(TestResult.Success, TestResult.Error, TestResult.Failed, TestResult.Covered)
 }

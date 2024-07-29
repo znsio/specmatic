@@ -16,6 +16,7 @@ class ApiCoverageReportInputTest {
     companion object {
         const val CONFIG_FILE_PATH = "./specmatic.json"
     }
+
     @Test
     fun `test generates api coverage report when all endpoints are covered`() {
         val testReportRecords = mutableListOf(
@@ -202,8 +203,8 @@ class ApiCoverageReportInputTest {
         val testReportRecords = mutableListOf(
             TestResultRecord("/route1", "GET", 200, TestResult.Success),
             TestResultRecord("/route1", "POST", 200, TestResult.Success),
-            TestResultRecord("/route2", "GET", 200, TestResult.Failed),
-            TestResultRecord("/route2", "POST", 200, TestResult.Failed)
+            TestResultRecord("/route2", "GET", 200, TestResult.Failed, actualResponseStatus = 404),
+            TestResultRecord("/route2", "POST", 200, TestResult.Failed, actualResponseStatus = 404)
         )
 
         val endpointsInSpec = mutableListOf(
@@ -218,12 +219,14 @@ class ApiCoverageReportInputTest {
         assertThat(apiCoverageReport).isEqualTo(
             OpenAPICoverageConsoleReport(
                 listOf(
-                    OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100,  Remarks.Covered),
-                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0,  Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 0,  Remarks.NotImplemented),
-                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0,  Remarks.NotImplemented)
+                    OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 0, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Missed),
+                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Missed)
                 ),
-                2, 0, 1, 0, 0
+                2, 0, 0, 1, 1
             )
         )
     }
@@ -242,7 +245,7 @@ class ApiCoverageReportInputTest {
             TestResultRecord("/route1", "GET", 200, TestResult.Success),
             TestResultRecord("/route1", "POST", 200, TestResult.Success),
             TestResultRecord("/route2", "GET", 200, TestResult.Success),
-            TestResultRecord("/route2", "POST", 200, TestResult.Failed)
+            TestResultRecord("/route2", "POST", 200, TestResult.Failed, actualResponseStatus = 404)
         )
 
         val endpointsInSpec = mutableListOf(
@@ -257,14 +260,15 @@ class ApiCoverageReportInputTest {
         assertThat(apiCoverageReport).isEqualTo(
             OpenAPICoverageConsoleReport(
                 listOf(
-                    OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100,  Remarks.Covered),
-                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0,  Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 50,  Remarks.Covered),
-                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0,  Remarks.NotImplemented),
-                    OpenApiCoverageConsoleRow("GET", "/route3/{route_id}", 0, 0, 0,  Remarks.Missed),
-                    OpenApiCoverageConsoleRow("POST", "", 0, 0, 0,  Remarks.Missed)
+                    OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 33, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("POST", "", 200, 1, 0, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Missed),
+                    OpenApiCoverageConsoleRow("GET", "/route3/{route_id}", 0, 0, 0, Remarks.Missed),
+                    OpenApiCoverageConsoleRow("POST", "", 0, 0, 0, Remarks.Missed)
                 ),
-                3, 1, 0, 0, 1
+                3, 1, 0, 1, 1
             )
         )
     }
@@ -283,7 +287,7 @@ class ApiCoverageReportInputTest {
             TestResultRecord("/route1", "GET", 200, TestResult.Success, "git", "https://github.com/znsio/specmatic-order-contracts.git", "main", "in/specmatic/examples/store/route1.yaml", "HTTP"),
             TestResultRecord("/route1", "POST", 200, TestResult.Success, "git", "https://github.com/znsio/specmatic-order-contracts.git", "main", "in/specmatic/examples/store/route1.yaml", "HTTP"),
             TestResultRecord("/route2", "GET", 200, TestResult.Success, "git", "https://github.com/znsio/specmatic-order-contracts.git", "main", "in/specmatic/examples/store/route2.yaml", "HTTP"),
-            TestResultRecord("/route2", "POST", 200, TestResult.Failed, "git", "https://github.com/znsio/specmatic-order-contracts.git", "main", "in/specmatic/examples/store/route2.yaml", "HTTP")
+            TestResultRecord("/route2", "POST", 200, TestResult.Failed, "git", "https://github.com/znsio/specmatic-order-contracts.git", "main", "in/specmatic/examples/store/route2.yaml", "HTTP", actualResponseStatus = 404)
         )
 
         val endpointsInSpec = mutableListOf(
@@ -298,7 +302,9 @@ class ApiCoverageReportInputTest {
             encodeDefaults = false
         }
         val reportJson = json.encodeToString(openApiCoverageJsonReport)
-        assertThat(reportJson.trimIndent()).isEqualTo("""{"specmaticConfigPath":"./specmatic.json","apiCoverage":[{"type":"git","repository":"https://github.com/znsio/specmatic-order-contracts.git","branch":"main","specification":"in/specmatic/examples/store/route1.yaml","serviceType":"HTTP","operations":[{"path":"/route1","method":"GET","responseCode":200,"count":1,"coverageStatus":"covered"},{"path":"/route1","method":"POST","responseCode":200,"count":1,"coverageStatus":"covered"}]},{"type":"git","repository":"https://github.com/znsio/specmatic-order-contracts.git","branch":"main","specification":"in/specmatic/examples/store/route2.yaml","serviceType":"HTTP","operations":[{"path":"/route2","method":"GET","responseCode":200,"count":1,"coverageStatus":"covered"},{"path":"/route2","method":"POST","responseCode":200,"count":1,"coverageStatus":"not implemented"}]},{"type":null,"repository":null,"branch":null,"specification":null,"serviceType":"HTTP","operations":[{"path":"/route3/{route_id}","method":"GET","coverageStatus":"missing in spec"},{"path":"/route3/{route_id}","method":"POST","coverageStatus":"missing in spec"}]}]}""")
+        assertThat(reportJson.trimIndent()).isEqualTo(
+            """{"specmaticConfigPath":"./specmatic.json","apiCoverage":[{"type":"git","repository":"https://github.com/znsio/specmatic-order-contracts.git","branch":"main","specification":"in/specmatic/examples/store/route1.yaml","serviceType":"HTTP","operations":[{"path":"/route1","method":"GET","responseCode":200,"count":1,"coverageStatus":"covered"},{"path":"/route1","method":"POST","responseCode":200,"count":1,"coverageStatus":"covered"}]},{"type":"git","repository":"https://github.com/znsio/specmatic-order-contracts.git","branch":"main","specification":"in/specmatic/examples/store/route2.yaml","serviceType":"HTTP","operations":[{"path":"/route2","method":"GET","responseCode":200,"count":1,"coverageStatus":"covered"},{"path":"/route2","method":"POST","responseCode":404,"count":1,"coverageStatus":"missing in spec"},{"path":"/route2","method":"POST","responseCode":200,"count":1,"coverageStatus":"not implemented"}]},{"type":null,"repository":null,"branch":null,"specification":null,"serviceType":"HTTP","operations":[{"path":"/route3/{route_id}","method":"GET","coverageStatus":"missing in spec"},{"path":"/route3/{route_id}","method":"POST","coverageStatus":"missing in spec"}]}]}"""
+        )
     }
 
     @Test

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test
 class TestResultRecordTest {
 
     @Test
-    fun `should not be exercised for results Skipped and DidNotRun`() {
+    fun `should not be considered exercised when result is Skipped or DidNotRun`() {
         listOf(TestResult.Skipped, TestResult.DidNotRun).forEach {
             val record = TestResultRecord(
                 path = "/example/path",
@@ -16,12 +16,12 @@ class TestResultRecordTest {
                 responseStatus = 200,
                 result = it
             )
-            assertFalse(record.isExercised, "Record should not be exercised for Result: $it")
+            assertFalse(record.isExercised, "Record should not be considered exercised for Result: $it")
         }
     }
 
     @Test
-    fun `should be exercised for other results`() {
+    fun `should be considered exercised for other results`() {
         TestResult.entries.filterNot { it in listOf(TestResult.Skipped, TestResult.DidNotRun) }.forEach {
             val record = TestResultRecord(
                 path = "/example/path",
@@ -29,12 +29,12 @@ class TestResultRecordTest {
                 responseStatus = 200,
                 result = it
             )
-            assertTrue(record.isExercised, "Record should be exercised for Result: $it")
+            assertTrue(record.isExercised, "Record should be considered exercised for Result: $it")
         }
     }
 
     @Test
-    fun `should be covered for results Success, Error, Failed and Covered`() {
+    fun `should be considered covered when results Success, Error, Failed or Covered`() {
         listOf(TestResult.Success, TestResult.Error, TestResult.Failed, TestResult.Covered).forEach {
             val record = TestResultRecord(
                 path = "/example/path",
@@ -42,12 +42,12 @@ class TestResultRecordTest {
                 responseStatus = 200,
                 result = it
             )
-            assertTrue(record.isCovered, "Record should be covered for result $it")
+            assertTrue(record.isCovered, "Record should be considered covered for result $it")
         }
     }
 
     @Test
-    fun `should not be covered for other results`() {
+    fun `should not be considered covered for other results`() {
         TestResult.entries.filterNot { it in listOf(TestResult.Success, TestResult.Error, TestResult.Failed, TestResult.Covered) }.forEach {
             val record = TestResultRecord(
                 path = "/example/path",
@@ -55,7 +55,7 @@ class TestResultRecordTest {
                 responseStatus = 200,
                 result = it
             )
-            assertFalse(record.isCovered, "Record should not be covered for result $it")
+            assertFalse(record.isCovered, "Record should not be considered covered for result $it")
         }
     }
 }

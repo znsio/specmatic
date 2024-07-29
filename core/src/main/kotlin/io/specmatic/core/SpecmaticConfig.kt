@@ -69,7 +69,7 @@ data class SpecmaticConfig(
     val report: ReportConfiguration? = null,
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
-    val exampleDirectories: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList()
+    val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList()
 ) {
     fun isExtensibleSchemaEnabled(): Boolean {
         return (test?.allowExtensibleSchema == true)

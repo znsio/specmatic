@@ -60,7 +60,7 @@ internal class SpecmaticConfigKtTest {
 
         assertThat((config.security?.OpenAPI?.securitySchemes?.get("BasicAuth") as BasicAuthSecuritySchemeConfiguration).token).isEqualTo("Abc123")
 
-        assertThat(config.exampleDirectories).isEqualTo(listOf("test/data", "stub/examples"))
+        assertThat(config.examples).isEqualTo(listOf("test/data", "stub/examples"))
 
         assertThat(config.isResiliencyTestingEnabled()).isEqualTo(true)
         assertThat(config.isExtensibleSchemaEnabled()).isTrue()
@@ -154,7 +154,7 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.isOnlyPositiveTestingEnabled()).isFalse()
         assertThat(config.isResponseValueValidationEnabled()).isTrue()
         assertThat(config.isExtensibleSchemaEnabled()).isFalse()
-        assertThat(config.exampleDirectories).isEqualTo(listOf("test/data", "stub/examples"))
+        assertThat(config.examples).isEqualTo(listOf("test/data", "stub/examples"))
 
         properties.forEach { System.clearProperty(it.key) }
     }
@@ -199,7 +199,7 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isResiliencyTestingEnabled()).isTrue()
             assertThat(config.isResponseValueValidationEnabled()).isTrue()
             assertThat(config.isExtensibleSchemaEnabled()).isTrue()
-            assertThat(config.exampleDirectories).isEqualTo(listOf("test/data", "stub/examples"))
+            assertThat(config.examples).isEqualTo(listOf("test/data", "stub/examples"))
         } finally {
             props.forEach { System.clearProperty(it.key) }
         }

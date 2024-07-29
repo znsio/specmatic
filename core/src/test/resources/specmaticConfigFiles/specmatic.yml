@@ -63,7 +63,7 @@ test:
   validateResponseValues: true
   allowExtensibleSchema: true
 
-exampleDirectories:
+examples:
   - test/data
   - stub/examples
 

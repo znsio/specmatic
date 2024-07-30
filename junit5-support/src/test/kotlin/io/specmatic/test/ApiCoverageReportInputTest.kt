@@ -48,7 +48,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("", "", "401", "1", 0, Remarks.Covered),
                     OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 100, Remarks.Covered)
                 ),
-                2,  0, 0, 0, 0
+                totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
     }
@@ -91,7 +91,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("GET", "/route3", 0, 0, 0, Remarks.Missed),
                     OpenApiCoverageConsoleRow("POST", "", 0, 0, 0, Remarks.Missed)
                 ),
-                3, 1, 0, 1, 0
+                totalEndpointsCount = 3, missedEndpointsCount = 1, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
             )
         )
     }
@@ -139,7 +139,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 100,  Remarks.Covered),
                     OpenApiCoverageConsoleRow("POST", "", 200, 1, 0,  Remarks.Covered)
                 ),
-                2,  0, 0, 0, 0
+                totalEndpointsCount = 2,  missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
     }
@@ -226,7 +226,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("POST", "", 200, 1, 0, Remarks.NotImplemented),
                     OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Missed)
                 ),
-                2, 0, 0, 1, 1
+                totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
             )
         )
     }
@@ -268,7 +268,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("GET", "/route3/{route_id}", 0, 0, 0, Remarks.Missed),
                     OpenApiCoverageConsoleRow("POST", "", 0, 0, 0, Remarks.Missed)
                 ),
-                3, 1, 0, 1, 1
+                totalEndpointsCount = 3, missedEndpointsCount = 1, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
             )
         )
     }
@@ -344,7 +344,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Covered),
                     OpenApiCoverageConsoleRow("POST", "", 500, 1, 0, Remarks.Covered)
                 ),
-                2, 0, 0, 0, 0
+                totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
     }

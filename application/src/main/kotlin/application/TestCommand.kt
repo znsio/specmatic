@@ -24,6 +24,7 @@ import io.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
+import io.specmatic.test.listeners.ContractExecutionListener
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.launcher.Launcher
 import org.junit.platform.launcher.LauncherDiscoveryRequest
@@ -174,6 +175,8 @@ class TestCommand : Callable<Unit> {
                 throw ContractException("Was expecting a JUnit report file called TEST-junit-jupiter.xml inside $junitReportDirName but could not find it.")
             }
         }
+
+        ContractExecutionListener.exitProcess()
     }
     catch (e: Throwable) {
         logger.log(e)

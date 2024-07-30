@@ -23,18 +23,25 @@ private fun stdOutIsRedirected() = System.console() == null
 
 class ContractExecutionListener : TestExecutionListener {
 
-    private var totalRun: Int = 0
+    companion object {
+        private var totalRun: Int = 0
+        private var success: Int = 0
+        private var failure: Int = 0
+        private var aborted: Int = 0
 
-    private var success: Int = 0
-    private var failure: Int = 0
-    private var aborted: Int = 0
+        private val failedLog: MutableList<String> = mutableListOf()
+        private var couldNotStart = false
+        private val exceptionsThrown = mutableListOf<Throwable>()
+        private val printer: ContractExecutionPrinter = getContractExecutionPrinter()
 
-    private val failedLog: MutableList<String> = mutableListOf()
-
-    private var couldNotStart = false
-    private val exceptionsThrown = mutableListOf<Throwable>()
-
-    private val printer: ContractExecutionPrinter = getContractExecutionPrinter()
+        fun exitProcess() {
+            val exitStatus = when (failure != 0 || couldNotStart) {
+                true -> 1
+                false -> 0
+            }
+            exitProcess(exitStatus)
+        }
+    }
 
     override fun executionSkipped(testIdentifier: TestIdentifier?, reason: String?) {
         super.executionSkipped(testIdentifier, reason)
@@ -123,15 +130,6 @@ class ContractExecutionListener : TestExecutionListener {
         }
 
         printer.printFinalSummary(TestSummary(success, SpecmaticJUnitSupport.partialSuccesses.size, aborted, failure))
-    }
-
-    fun exitProcess() {
-        val exitStatus = when (failure != 0 || couldNotStart) {
-            true -> 1
-            false -> 0
-        }
-
-        exitProcess(exitStatus)
     }
 }
 

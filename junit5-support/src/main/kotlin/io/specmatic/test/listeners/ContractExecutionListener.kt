@@ -24,7 +24,6 @@ private fun stdOutIsRedirected() = System.console() == null
 class ContractExecutionListener : TestExecutionListener {
 
     companion object {
-        private var totalRun: Int = 0
         private var success: Int = 0
         private var failure: Int = 0
         private var aborted: Int = 0
@@ -131,15 +130,4 @@ class ContractExecutionListener : TestExecutionListener {
 
         printer.printFinalSummary(TestSummary(success, SpecmaticJUnitSupport.partialSuccesses.size, aborted, failure))
     }
-}
-
-private fun progressUpdate(totalTestsRun: Int, countOfTests: Int): String {
-    return "Tests run: $totalTestsRun/$countOfTests (${percentage(totalTestsRun, countOfTests)}%)"
-}
-
-private fun percentage(totalTestsRun: Int, countOfTests: Int): String {
-    return if(countOfTests == 0)
-        "0"
-    else
-        ((totalTestsRun.toDouble() / countOfTests.toDouble()) * 100).toInt().toString()
 }

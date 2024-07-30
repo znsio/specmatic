@@ -5,6 +5,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import io.specmatic.core.CONTRACT_EXTENSION
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.newXMLBuilder
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
@@ -28,7 +29,6 @@ import org.xml.sax.InputSource
 import picocli.CommandLine
 import java.io.StringReader
 import java.util.*
-import java.util.function.Consumer
 import java.util.stream.Stream
 
 
@@ -105,10 +105,12 @@ internal class TestCommandTest {
             systemPropertyValue: String
     ) {
         every { specmaticConfig.contractTestPaths() }.returns(contractsToBeRunAsTests)
-
-        CommandLine(testCommand, factory).execute(optionName, optionValue)
-
-        assertThat(System.getProperty(systemPropertyName)).isEqualTo(systemPropertyValue)
+        try {
+            CommandLine(testCommand, factory).execute(optionName, optionValue)
+            assertThat(System.getProperty(systemPropertyName)).isEqualTo(systemPropertyValue)
+        } finally {
+            System.clearProperty(systemPropertyName)
+        }
     }
 
     @Test
@@ -150,6 +152,7 @@ internal class TestCommandTest {
                 Arguments.of("--port", "9999", PORT, "9999"),
                 Arguments.of("--host", "10.10.10.10", HOST, "10.10.10.10"),
                 Arguments.of("--timeout", "33", TIMEOUT, "33"),
+                Arguments.of("--examples", "test/data", Flags.EXAMPLE_DIRECTORIES, "test/data")
         )
     }
 

@@ -10,7 +10,7 @@ import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
-import io.specmatic.core.utilities.Flags.Companion.LOCAL_TESTS_DIRECTORY
+import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.test.TestExecutor
@@ -205,7 +205,7 @@ class LoadTestsFromExternalisedFiles {
                       description: Name of the person
         """.trimIndent()
 
-        System.setProperty(LOCAL_TESTS_DIRECTORY, "src/test/resources/local_tests")
+        System.setProperty(EXAMPLE_DIRECTORIES, "src/test/resources/local_tests")
         val feature = OpenApiSpecification
             .fromYAML(
                 spec,
@@ -225,9 +225,12 @@ class LoadTestsFromExternalisedFiles {
             }
         })
 
-        assertThat(results.successCount).isEqualTo(1)
-        assertThat(results.success()).withFailMessage(results.report()).isTrue()
-        System.clearProperty(LOCAL_TESTS_DIRECTORY)
+        try {
+            assertThat(results.successCount).isEqualTo(1)
+            assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        } finally {
+            System.clearProperty(EXAMPLE_DIRECTORIES)
+        }
     }
 
     @Test

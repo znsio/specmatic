@@ -6,6 +6,7 @@ import io.specmatic.core.DEFAULT_TIMEOUT_IN_SECONDS
 import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_PARALLELISM
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.specmatic.core.utilities.exitWithMessage
@@ -102,6 +103,9 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--debug"], description = ["Debug logs"])
     var verboseMode: Boolean = false
 
+    @Option(names = ["--examples"], description = ["Directories containing JSON examples"], required = false)
+    var exampleDirs: List<String> = mutableListOf()
+
     override fun call() = try {
         setParallelism()
 
@@ -134,6 +138,10 @@ class TestCommand : Callable<Unit> {
         System.setProperty(INLINE_SUGGESTIONS, suggestions)
         System.setProperty(ENV_NAME, envName)
         System.setProperty("protocol", protocol)
+
+        if(exampleDirs.isNotEmpty()) {
+            System.setProperty(EXAMPLE_DIRECTORIES, exampleDirs.joinToString(","))
+        }
 
         if(filterName.isNotBlank()) {
             System.setProperty(FILTER_NAME_PROPERTY, filterName)

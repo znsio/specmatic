@@ -86,5 +86,6 @@
     },
     "validateResponseValues": true,
     "allowExtensibleSchema": true
-  }
+  },
+  "examples": ["folder1/examples", "folder2/examples"]
 }

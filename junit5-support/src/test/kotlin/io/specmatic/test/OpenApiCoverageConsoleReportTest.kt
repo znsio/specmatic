@@ -20,7 +20,7 @@ class OpenApiCoverageConsoleReportTest {
             OpenApiCoverageConsoleRow("GET", "/route3", 200, 0, 0, Remarks.DidNotRun),
         )
 
-        val coverageReport = OpenAPICoverageConsoleReport(rows, 3,0, 0, 1, 0)
+        val coverageReport = OpenAPICoverageConsoleReport(rows, totalEndpointsCount = 3, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0)
 
         assertThat(coverageReport.totalCoveragePercentage).isEqualTo(28)
     }

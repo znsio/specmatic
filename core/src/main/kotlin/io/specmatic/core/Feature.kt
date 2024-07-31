@@ -1385,7 +1385,14 @@ data class Feature(
         if (files.isNullOrEmpty())
             return emptyMap()
 
-        return files.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
+        val examlesInSubdirectories: Map<OpenApiSpecification.OperationIdentifier, List<Row>> =
+            files.filter {
+                it.isDirectory
+            }.fold(emptyMap()) { acc, item ->
+                acc + loadExternalisedJSONExamples(item)
+            }
+
+        return examlesInSubdirectories + files.filterNot { it.isDirectory }.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
             try {
                 with(exampleFromFile) {
                     OpenApiSpecification.OperationIdentifier(

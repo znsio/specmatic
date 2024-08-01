@@ -379,4 +379,82 @@ class LoadTestsFromExternalisedFiles {
         assertThat(results.testCount).isEqualTo(2)
         assertThat(results.failureCount).isEqualTo(2)
     }
+
+    @Test
+    fun `tests from external examples should override inline examples`() {
+        val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
+            every { isResponseValueValidationEnabled() } returns true
+        }
+
+        val feature = OpenApiSpecification
+            .fromFile(
+                "src/test/resources/openapi/has_inline_and_external_examples_with_same_name.yaml",
+                specmaticConfig
+            )
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val path = request.path ?: fail("Path expected")
+                val id = path.split("/").last()
+
+                return when(id) {
+                    "123" -> throw Exception("The inline example should not have been used")
+                    "456" -> HttpResponse(200, parsedJSONObject("""{"id": 456, "name": "John Marsh Doe"}"""))
+                    else -> HttpResponse(400, "Expected either 123 or 456")
+                }.also {
+                    println("---")
+                    println(request.toLogString())
+                    println(it.toLogString())
+                    println()
+                }
+            }
+        })
+
+        println(results.report())
+
+        assertThat(results.testCount).isEqualTo(1)
+        assertThat(results.failureCount).isEqualTo(0)
+    }
+
+    @Test
+    fun `tests from external examples from explicitly specified directory should override inline examples and examples from implicit examples directory`() {
+        val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
+            every { isResponseValueValidationEnabled() } returns true
+            every { examples } returns listOf("src/test/resources/openapi/externalised_examples_to_override_inline_and_external_implicit")
+        }
+
+        val feature = OpenApiSpecification
+            .fromFile(
+                "src/test/resources/openapi/has_inline_and_external_examples_with_same_name.yaml",
+                specmaticConfig
+            )
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val path = request.path ?: fail("Path expected")
+                val id = path.split("/").last()
+
+                return when(id) {
+                    "123" -> throw Exception("The inline example should not have been used")
+                    "456" -> HttpResponse(200, parsedJSONObject("""{"id": 456, "name": "Johnny Jones"}"""))
+                    else -> HttpResponse(400, "Expected either 123 or 456")
+                }.also {
+                    println("---")
+                    println(request.toLogString())
+                    println(it.toLogString())
+                    println()
+                }
+            }
+        })
+
+        println(results.report())
+
+        assertThat(results.testCount).isEqualTo(1)
+        assertThat(results.failureCount).isEqualTo(0)
+    }
+
 }

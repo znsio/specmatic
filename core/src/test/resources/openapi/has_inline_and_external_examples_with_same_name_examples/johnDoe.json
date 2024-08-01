@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/person/456"
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": 456,
+      "name": "John Marsh Doe"
+    }
+  }
+}

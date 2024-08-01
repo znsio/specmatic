@@ -1363,73 +1363,76 @@ data class Feature(
         return schema
     }
 
-    fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Feature {
+    fun useExamples(externalisedJSONExamples: List<ExampleFromFile>): Feature {
         val scenariosWithExamples: List<Scenario> = scenarios.map {
-            it.useExamples(externalisedJSONExamples)
+            it.useExamples(externalisedJSONExamples, specmaticConfig)
         }
 
         return this.copy(scenarios = scenariosWithExamples)
     }
 
-    private fun loadExternalisedJSONExamples(testsDirectory: File?): Map<OpenApiSpecification.OperationIdentifier, List<Row>> {
+    private fun loadExternalisedJSONExamples(testsDirectory: File?): List<ExampleFromFile> {
         if (testsDirectory == null)
-            return emptyMap()
+            return emptyList()
 
         if (!testsDirectory.exists())
-            return emptyMap()
+            return emptyList()
 
         val files = testsDirectory.listFiles()
 
         if (files.isNullOrEmpty())
-            return emptyMap()
+            return emptyList()
 
-        val examlesInSubdirectories: Map<OpenApiSpecification.OperationIdentifier, List<Row>> =
+        val examlesInSubdirectories: List<ExampleFromFile> =
             files.filter {
                 it.isDirectory
-            }.fold(emptyMap()) { acc, item ->
+            }.fold(emptyList()) { acc, item ->
                 acc + loadExternalisedJSONExamples(item)
             }
 
-        return examlesInSubdirectories + files.filterNot { it.isDirectory }.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
-            try {
-                with(exampleFromFile) {
-                    OpenApiSpecification.OperationIdentifier(
-                        requestMethod,
-                        requestPath,
-                        responseStatus
-                    ) to exampleFromFile.toRow(specmaticConfig)
-                }
-            } catch (e: Throwable) {
-                logger.log(e, "Error reading file ${exampleFromFile.expectationFilePath}")
-                null
-            }
-        }
-            .groupBy { (operationIdentifier, _) -> operationIdentifier }
-            .mapValues { (_, value) -> value.map { it.second } }
+        return examlesInSubdirectories + files.filterNot { it.isDirectory }.map { ExampleFromFile(it) }
+
+//        return examlesInSubdirectories + files.filterNot { it.isDirectory }.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
+//            try {
+//                with(exampleFromFile) {
+//                    OpenApiSpecification.OperationIdentifier(
+//                        requestMethod,
+//                        requestPath,
+//                        responseStatus
+//                    ) to exampleFromFile.toRow(specmaticConfig)
+//                }
+//            } catch (e: Throwable) {
+//                logger.log(e, "Error reading file ${exampleFromFile.expectationFilePath}")
+//                null
+//            }
+//        }
+//            .groupBy { (operationIdentifier, _) -> operationIdentifier }
+//            .mapValues { (_, value) -> value.map { it.second } }
     }
 
     fun loadExternalisedExamples(): Feature {
-        val testsDirectory = getTestsDirectory(File(this.path))
-        val externalisedExamplesFromDefaultDirectory = loadExternalisedJSONExamples(testsDirectory)
         val externalisedExampleDirsFromConfig = specmaticConfig.examples
-
         val externalisedExamplesFromExampleDirs = externalisedExampleDirsFromConfig.flatMap { directory ->
-            loadExternalisedJSONExamples(File(directory)).entries
-        }.associate { it.toPair() }
+            loadExternalisedJSONExamples(File(directory))
+        }
 
-        val allExternalisedJSONExamples = externalisedExamplesFromDefaultDirectory + externalisedExamplesFromExampleDirs
+        val namesOfExamplesFromExampleDirs = externalisedExamplesFromExampleDirs.map { it.testName }.toSet()
 
-        if(allExternalisedJSONExamples.isEmpty())
+        val testsDirectory = getTestsDirectory(File(this.path))
+        val externalisedExamplesFromDefaultDirectory = loadExternalisedJSONExamples(testsDirectory).filterNot {
+            it.testName in namesOfExamplesFromExampleDirs
+        }
+
+
+        val allExternalisedExamples = externalisedExamplesFromDefaultDirectory + externalisedExamplesFromExampleDirs
+
+        if(allExternalisedExamples.isEmpty())
             return this
 
-        val featureWithExternalisedExamples = useExamples(allExternalisedJSONExamples)
+        val featureWithExternalisedExamples = useExamples(allExternalisedExamples)
 
         val externalizedExampleFilePaths =
-            allExternalisedJSONExamples.entries.flatMap { (_, rows) ->
-                rows.map {
-                    it.fileSource
-                }
-            }.filterNotNull().sorted().toSet()
+            allExternalisedExamples.map { it.file.canonicalPath }.toSet()
 
         val utilizedFileSources =
             featureWithExternalisedExamples.scenarios.asSequence().flatMap { scenarioInfo ->

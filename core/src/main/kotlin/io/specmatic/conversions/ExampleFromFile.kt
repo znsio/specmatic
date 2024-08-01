@@ -10,6 +10,14 @@ import io.specmatic.core.value.Value
 import java.io.File
 
 class ExampleFromFile(val json: JSONObjectValue, val file: File) {
+    fun toOpenAPIOperationIdentifier(): OpenApiSpecification.OperationIdentifier {
+        return OpenApiSpecification.OperationIdentifier(
+            requestMethod,
+            requestPath,
+            responseStatus
+        )
+    }
+
     fun toRow(specmaticConfig: SpecmaticConfig = SpecmaticConfig()): Row {
         logger.log("Loading test file ${this.expectationFilePath}")
 

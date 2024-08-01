@@ -1,5 +1,6 @@
 package io.specmatic.core
 
+import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
@@ -8,8 +9,6 @@ import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.mapZip
 import io.specmatic.core.value.*
 import io.specmatic.stub.RequestContext
-import io.specmatic.test.ContractTest
-import io.specmatic.test.TestExecutor
 
 object ContractAndStubMismatchMessages : MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
@@ -537,8 +536,16 @@ data class Scenario(
         }
     }
 
-    fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Scenario {
-        val matchingTestData: Map<OpenApiSpecification.OperationIdentifier, List<Row>> = matchingRows(externalisedJSONExamples)
+    fun useExamples(externalisedExamples: List<ExampleFromFile>, specmaticConfig: SpecmaticConfig): Scenario {
+
+        val externalisedExamplesMap: Map<OpenApiSpecification.OperationIdentifier, List<Row>> =
+            externalisedExamples.groupBy {
+                it.toOpenAPIOperationIdentifier()
+            }.mapValues {
+                it.value.map { it.toRow(specmaticConfig) }
+            }
+
+        val matchingTestData: Map<OpenApiSpecification.OperationIdentifier, List<Row>> = matchingRows(externalisedExamplesMap)
 
         val newExamples: List<Examples> = matchingTestData.map { (operationId, rows) ->
             if(rows.isEmpty())
@@ -551,7 +558,17 @@ data class Scenario(
             listOf(Examples(columns, rowsWithPathData))
         }.flatten()
 
-        return this.copy(examples = this.examples + newExamples)
+        val externalisedExampleNames = externalisedExamples.map { it.testName }.toSet()
+
+        val inlineExamplesThatAreNotOverridden = this.examples.map {
+            it.copy(
+                rows = it.rows.filter {
+                    it.name !in externalisedExampleNames
+                }
+            )
+        }
+
+        return this.copy(examples = inlineExamplesThatAreNotOverridden + newExamples)
     }
 
     private fun matchingRows(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>) =

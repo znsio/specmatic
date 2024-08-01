@@ -21,11 +21,10 @@ data class ScenarioAsTest(
     override fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord {
         val resultStatus = result.testResult()
 
-        val responseStatus = scenario.getStatus(response)
         return TestResultRecord(
             convertPathParameterStyle(scenario.path),
             scenario.method,
-            responseStatus,
+            scenario.status,
             resultStatus,
             sourceProvider,
             sourceRepository,

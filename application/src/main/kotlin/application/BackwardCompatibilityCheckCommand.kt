@@ -1,17 +1,19 @@
 package application
 
+import application.BackwardCompatibilityCheckCommand.CompatibilityResult.*
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.CONTRACT_EXTENSIONS
+import io.specmatic.core.Feature
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.testBackwardCompatibility
 import io.specmatic.core.utilities.exitWithMessage
-import kotlinx.serialization.json.Json
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
 import java.io.File
 import java.util.concurrent.Callable
 import java.util.regex.Pattern
+import kotlin.system.exitProcess
 
 @Component
 @Command(
@@ -26,8 +28,6 @@ class BackwardCompatibilityCheckCommand(
     private val newLine = System.lineSeparator()
 
     companion object {
-        private const val SUCCESS = "success"
-        private const val FAILED = "failed"
         private const val HEAD = "HEAD"
         private const val MARGIN_SPACE = "  "
     }
@@ -38,7 +38,7 @@ class BackwardCompatibilityCheckCommand(
 
         val filesReferringToChangedSchemaFiles = filesReferringToChangedSchemaFiles(filesChangedInCurrentBranch)
 
-        val filesToCheck: Set<String> = filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles
+        val specificationsToCheck: Set<String> = filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles
 
 
         logFilesToBeCheckedForBackwardCompatibility(
@@ -46,20 +46,19 @@ class BackwardCompatibilityCheckCommand(
             filesReferringToChangedSchemaFiles
         )
 
-        val result = runBackwardCompatibilityCheckFor(filesToCheck)
+        val result = runBackwardCompatibilityCheckFor(specificationsToCheck)
 
-        if (result == FAILED) {
-            exitWithMessage("$newLine Verdict: FAIL, backward incompatible changes were found.")
-        }
-        println("$newLine Verdict: PASS, all changes were backward compatible")
+        println()
+        println(result.report)
+        exitProcess(result.exitCode)
     }
 
-    private fun runBackwardCompatibilityCheckFor(files: Set<String>): String {
+    private fun runBackwardCompatibilityCheckFor(files: Set<String>): CompatibilityReport {
         val branchWithChanges = gitCommand.currentBranch()
         val treeishWithChanges = if (branchWithChanges == HEAD) gitCommand.detachedHEAD() else branchWithChanges
 
         try {
-            val failures = files.mapIndexed { index, specFilePath ->
+            val results = files.mapIndexed { index, specFilePath ->
                 try {
                     println("${index.inc()}. Running the check for $specFilePath:")
 
@@ -69,7 +68,7 @@ class BackwardCompatibilityCheckCommand(
                     val olderFile = gitCommand.getFileInTheDefaultBranch(specFilePath, treeishWithChanges)
                     if (olderFile == null) {
                         println("$specFilePath is a new file.$newLine")
-                        return@mapIndexed SUCCESS
+                        return@mapIndexed PASSED
                     }
 
                     gitCommand.checkout(gitCommand.defaultBranch())
@@ -85,7 +84,18 @@ class BackwardCompatibilityCheckCommand(
                                 MARGIN_SPACE
                             )
                         )
-                        SUCCESS
+
+                        if(!examplesAreValid(newer, "newer")) {
+                            println(
+                                "$newLine *** Examples in $specFilePath are not valid. ***$newLine".prependIndent(
+                                    MARGIN_SPACE
+                                )
+                            )
+
+                            FAILED
+                        }
+                        else
+                            PASSED
                     } else {
                         println("$newLine ${backwardCompatibilityResult.report().prependIndent(MARGIN_SPACE)}")
                         println(
@@ -98,11 +108,21 @@ class BackwardCompatibilityCheckCommand(
                 } finally {
                     gitCommand.checkout(treeishWithChanges)
                 }
-            }.filter { it == FAILED }
+            }
 
-            return if (failures.isNotEmpty()) FAILED else SUCCESS
+            return CompatibilityReport(results)
         } finally {
             gitCommand.checkout(treeishWithChanges)
+        }
+    }
+
+    private fun examplesAreValid(feature: Feature, which: String): Boolean {
+        return try {
+            feature.validateExamplesOrException()
+            true
+        } catch (t: Throwable) {
+            println()
+            false
         }
     }
 
@@ -110,13 +130,18 @@ class BackwardCompatibilityCheckCommand(
         changedFiles: Set<String>,
         filesReferringToChangedFiles: Set<String>
     ) {
+        val INDENT = "  "
+
         println("Checking backward compatibility of the following files: $newLine")
-        println("Files that have changed - ")
-        changedFiles.forEach { println(it) }
+        println("${INDENT}Files that have changed:")
+        changedFiles.forEach { println(it.prependIndent("${INDENT}${INDENT}")) }
         println()
-        println("Files referring to the changed files - ")
-        filesReferringToChangedFiles.forEach { println(it) }
-        println()
+
+        if(filesReferringToChangedFiles.isNotEmpty()) {
+            println("${INDENT}Files referring to the changed files - ")
+            filesReferringToChangedFiles.forEach { println(it.prependIndent("${INDENT}${INDENT}")) }
+            println()
+        }
 
         println("-".repeat(20))
         println()
@@ -157,5 +182,23 @@ class BackwardCompatibilityCheckCommand(
         if (this.extension !in CONTRACT_EXTENSIONS) return false
         return OpenApiSpecification.isParsable(this.path)
     }
-}
 
+    class CompatibilityReport(results: List<CompatibilityResult>) {
+        val report: String
+        val exitCode: Int
+
+        init {
+            val failed: Boolean = results.any { it == FAILED }
+            val failedCount = results.count { it == FAILED }
+            val passedCount = results.count { it == PASSED }
+
+            report = "Files checked: ${results.size} (Passed: ${passedCount}, Failed: $failedCount)"
+            exitCode = if(failed) 1 else 0
+        }
+
+    }
+
+    enum class CompatibilityResult {
+        PASSED, FAILED
+    }
+}

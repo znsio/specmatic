@@ -545,9 +545,13 @@ data class Scenario(
                 it.value.map { it.toRow(specmaticConfig) }
             }
 
-        val matchingTestData: Map<OpenApiSpecification.OperationIdentifier, List<Row>> = matchingRows(externalisedExamplesMap)
+        val matchingExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>> = matchingRows(externalisedExamplesMap)
 
-        val newExamples: List<Examples> = matchingTestData.map { (operationId, rows) ->
+        matchingExamples.flatMap { it.value }.map { it.fileSource }.forEach { exampleFilePath ->
+            logger.log("Loading test file $exampleFilePath")
+        }
+
+        val newExamples: List<Examples> = matchingExamples.map { (operationId, rows) ->
             if(rows.isEmpty())
                 return@map emptyList()
 

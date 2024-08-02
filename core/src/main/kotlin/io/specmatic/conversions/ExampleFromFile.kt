@@ -19,8 +19,6 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
     }
 
     fun toRow(specmaticConfig: SpecmaticConfig = SpecmaticConfig()): Row {
-        logger.log("Loading test file ${this.expectationFilePath}")
-
         val examples: Map<String, String> =
             headers
                 .plus(queryParams)

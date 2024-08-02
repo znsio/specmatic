@@ -2,11 +2,13 @@ package application
 
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.CONTRACT_EXTENSIONS
+import io.specmatic.core.Feature
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
+import io.specmatic.core.log.logger
 import io.specmatic.core.testBackwardCompatibility
+import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.exitWithMessage
-import kotlinx.serialization.json.Json
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
 import java.io.File
@@ -38,7 +40,7 @@ class BackwardCompatibilityCheckCommand(
 
         val filesReferringToChangedSchemaFiles = filesReferringToChangedSchemaFiles(filesChangedInCurrentBranch)
 
-        val filesToCheck: Set<String> = filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles
+        val modifiedSpecifications: Set<String> = filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles
 
 
         logFilesToBeCheckedForBackwardCompatibility(
@@ -46,7 +48,7 @@ class BackwardCompatibilityCheckCommand(
             filesReferringToChangedSchemaFiles
         )
 
-        val result = runBackwardCompatibilityCheckFor(filesToCheck)
+        val result = runBackwardCompatibilityCheckFor(modifiedSpecifications)
 
         if (result == FAILED) {
             exitWithMessage("$newLine Verdict: FAIL, backward incompatible changes were found.")
@@ -64,7 +66,10 @@ class BackwardCompatibilityCheckCommand(
                     println("${index.inc()}. Running the check for $specFilePath:")
 
                     // newer => the file with changes on the branch
-                    val newer = OpenApiSpecification.fromFile(specFilePath).toFeature()
+                    val newer = OpenApiSpecification.fromFile(specFilePath).toFeature().loadExternalisedExamples()
+
+                    if(!examplesAreValid(newer, "newer"))
+                        return@mapIndexed FAILED
 
                     val olderFile = gitCommand.getFileInTheDefaultBranch(specFilePath, treeishWithChanges)
                     if (olderFile == null) {
@@ -75,7 +80,7 @@ class BackwardCompatibilityCheckCommand(
                     gitCommand.checkout(gitCommand.defaultBranch())
 
                     // older => the same file on the default (e.g. main) branch
-                    val older = OpenApiSpecification.fromFile(olderFile.path).toFeature()
+                    val older = OpenApiSpecification.fromFile(olderFile.path).toFeature().loadExternalisedExamples()
 
                     val backwardCompatibilityResult = testBackwardCompatibility(older, newer)
 
@@ -103,6 +108,16 @@ class BackwardCompatibilityCheckCommand(
             return if (failures.isNotEmpty()) FAILED else SUCCESS
         } finally {
             gitCommand.checkout(treeishWithChanges)
+        }
+    }
+
+    private fun examplesAreValid(feature: Feature, which: String): Boolean {
+        return try {
+            feature.validateExamplesOrException()
+            true
+        } catch (t: Throwable) {
+            println()
+            false
         }
     }
 

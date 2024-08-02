@@ -80,7 +80,7 @@ class BackwardCompatibilityCheckCommand(
                     gitCommand.checkout(gitCommand.defaultBranch())
 
                     // older => the same file on the default (e.g. main) branch
-                    val older = OpenApiSpecification.fromFile(olderFile.path).toFeature().loadExternalisedExamples()
+                    val older = OpenApiSpecification.fromFile(olderFile.path).toFeature()
 
                     val backwardCompatibilityResult = testBackwardCompatibility(older, newer)
 

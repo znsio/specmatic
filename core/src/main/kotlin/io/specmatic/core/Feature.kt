@@ -4,10 +4,6 @@ import io.specmatic.conversions.*
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.Examples.Companion.examplesFrom
-import io.specmatic.core.utilities.capitalizeFirstChar
-import io.specmatic.core.utilities.examplesDirFor
-import io.specmatic.core.utilities.jsonStringToValueMap
-import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.*
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
@@ -19,6 +15,7 @@ import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
+import io.specmatic.core.utilities.*
 import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.info.Info
@@ -1483,9 +1480,12 @@ data class Feature(
     }
 
     fun validateExamplesOrException() {
-        scenarios.forEach { scenario ->
-            scenario.validExamplesOrException(flagsBased.copy(generation = NonGenerativeTests))
-        }
+        val errors = scenarios.map { scenario ->
+            nullOrExceptionString { scenario.validExamplesOrException(flagsBased.copy(generation = NonGenerativeTests)) }
+        }.filterNotNull()
+
+        if(errors.isNotEmpty())
+            throw ContractException(errors.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))
     }
 }
 

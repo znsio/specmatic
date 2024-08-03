@@ -6,6 +6,7 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.mapZip
+import io.specmatic.core.utilities.nullOrExceptionString
 import io.specmatic.core.value.*
 import io.specmatic.stub.RequestContext
 import io.specmatic.test.ContractTest
@@ -341,27 +342,38 @@ data class Scenario(
 
         val updatedResolver = flagsBased.update(resolver)
 
-        rowsToValidate.forEach { row ->
+        val errors = rowsToValidate.map { row ->
             val resolverForExample = resolverForValidation(updatedResolver, row)
 
-            try {
+            val requestError = nullOrExceptionString {
                 validateRequestExample(row, resolverForExample)
+            }
+
+            val responseError = nullOrExceptionString {
                 validateResponseExample(row, resolverForExample)
-            } catch(t: Throwable) {
-                val title = "Error loading test data for ${this.testDescription().trim()}".plus(
+            }
+
+            val errors = listOf(requestError, responseError).filterNotNull().map { it.prependIndent("  ") }
+
+            if(errors.isNotEmpty()) {
+                val title = "Error loading test data for ${this.apiDescription.trim()}".plus(
                     if(row.fileSource != null)
                         " from ${row.fileSource}"
                     else
-                        ""
+                        " from inline example ${row.name}"
                 )
 
-                logger.log(title)
-                logger.newLine()
-                logger.log(t)
+                listOf(title).plus(errors).joinToString("${System.lineSeparator()}${System.lineSeparator()}").also { message ->
+                    logger.log(message)
 
-                throw Exception(title + System.lineSeparator() + System.lineSeparator() + exceptionCauseMessage(t))
-            }
-        }
+                    logger.newLine()
+                }
+            } else
+                null
+        }.filterNotNull()
+
+        if(errors.isNotEmpty())
+            throw ContractException(errors.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))
     }
 
     private fun resolverForValidation(

@@ -159,12 +159,16 @@ class BackwardCompatibilityCheckCommand(
                             )
                         )
 
+                        println()
+
                         if(!examplesAreValid(newer, "newer")) {
                             println(
                                 "$newLine *** Examples in $specFilePath are not valid. ***$newLine".prependIndent(
                                     MARGIN_SPACE
                                 )
                             )
+
+                            println()
 
                             FAILED
                         }
@@ -177,6 +181,9 @@ class BackwardCompatibilityCheckCommand(
                                 MARGIN_SPACE
                             )
                         )
+
+                        println()
+
                         FAILED
                     }
                 } finally {

@@ -2,12 +2,11 @@ package application
 
 import application.BackwardCompatibilityCheckCommand.CompatibilityResult.*
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.CONTRACT_EXTENSIONS
-import io.specmatic.core.Feature
+import io.specmatic.core.*
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
-import io.specmatic.core.testBackwardCompatibility
 import io.specmatic.core.utilities.exitWithMessage
+import io.specmatic.stub.isOpenAPI
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
 import java.io.File
@@ -16,6 +15,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.Callable
 import java.util.regex.Pattern
+import kotlin.io.path.extension
+import kotlin.io.path.pathString
 import kotlin.system.exitProcess
 
 const val ONE_INDENT = "  "
@@ -121,9 +122,9 @@ class BackwardCompatibilityCheckCommand(
     }
 
     private fun findSpecFiles(path: Path): List<Path> {
-        val extensions = listOf(".yml", ".yaml", ".spec", ".wsdl")
+        val extensions = CONTRACT_EXTENSIONS
         return extensions.map { path.resolveSibling(path.fileName.toString() + it) }
-            .filter { Files.exists(it) }
+            .filter { Files.exists(it) && (isOpenAPI(it.pathString) || it.extension in listOf(WSDL, CONTRACT_EXTENSION)) }
     }
 
     private fun runBackwardCompatibilityCheckFor(files: Set<String>): CompatibilityReport {

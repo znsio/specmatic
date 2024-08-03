@@ -144,7 +144,7 @@ data class TabularPattern(
 
 fun newMapBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
     val patternCollection: Map<String, Sequence<ReturnValue<Pattern>>> = patternMap.mapValues { (key, pattern) ->
-        attempt(breadCrumb = key) {
+        attempt(breadCrumb = withoutOptionality(key)) {
             newPatternsBasedOn(row, key, pattern, resolver)
         }
     }
@@ -154,7 +154,7 @@ fun newMapBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver
 
 fun newBasedOn(patternMap: Map<String, Pattern>, resolver: Resolver): Sequence<Map<String, Pattern>> {
     val patternCollection = patternMap.mapValues { (key, pattern) ->
-        attempt(breadCrumb = key) {
+        attempt(breadCrumb = withoutOptionality(key)) {
             newBasedOn(key, pattern, resolver)
         }
     }

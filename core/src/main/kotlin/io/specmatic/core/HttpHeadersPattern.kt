@@ -71,7 +71,7 @@ data class HttpHeadersPattern(
         }
 
         val keyErrorResults: List<Result.Failure> = keyErrors.map {
-            it.missingKeyToResult("header", resolver.mismatchMessages).breadCrumb(it.name)
+            it.missingKeyToResult("header", resolver.mismatchMessages).breadCrumb(withoutOptionality(it.name))
         }
 
         val lowercasedHeadersWithRelevantKeys = headersWithRelevantKeys.mapKeys { it.key.lowercase() }

@@ -1681,7 +1681,7 @@ components:
 
 
     @Test
-    fun `invalid requests should be caught by the validator` () {
+    fun `invalid request body example should be caught by the validator` () {
         val feature = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.0
@@ -1726,7 +1726,385 @@ paths:
     }
 
     @Test
-    fun `invalid responses should be caught by the validator` () {
+    fun `invalid mandatory request header example should be caught by the validator` () {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    parameters:
+      - in: header
+        name: X-Test-Header
+        schema:
+          type: number
+        required: true
+        examples:
+          200_OK:
+            value: "abc"
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            examples:
+              200_OK:
+                value:
+                  data: 10
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              examples:
+                200_OK:
+                  value: 10
+              schema:
+                type: number
+""".trimIndent(), ""
+        ).toFeature()
+
+        assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.HEADERS.X-Test-Header")
+        })
+    }
+
+    @Test
+    fun `invalid optional request header example should be caught by the validator` () {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    parameters:
+      - in: header
+        name: X-Test-Header
+        schema:
+          type: number
+        examples:
+          200_OK:
+            value: "abc"
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            examples:
+              200_OK:
+                value:
+                  data: 10
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              examples:
+                200_OK:
+                  value: 10
+              schema:
+                type: number
+""".trimIndent(), ""
+        ).toFeature()
+
+        assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.HEADERS.X-Test-Header")
+            assertThat(exceptionCauseMessage(exception)).doesNotContain("REQUEST.HEADERS.X-Test-Header?")
+        })
+    }
+
+    @Test
+    fun `invalid mandatory query parameter example should be caught by the validator` () {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    parameters:
+      - in: query
+        name: enabled
+        schema:
+          type: boolean
+        required: true
+        examples:
+          200_OK:
+            value: "abc"
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            examples:
+              200_OK:
+                value:
+                  data: 10
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              examples:
+                200_OK:
+                  value: 10
+              schema:
+                type: number
+""".trimIndent(), ""
+        ).toFeature()
+
+        assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.QUERY.enabled")
+        })
+    }
+
+    @Test
+    fun `invalid optional query parameter example should be caught by the validator` () {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    parameters:
+      - in: query
+        name: enabled
+        schema:
+          type: boolean
+        examples:
+          200_OK:
+            value: "abc"
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            examples:
+              200_OK:
+                value:
+                  data: 10
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              examples:
+                200_OK:
+                  value: 10
+              schema:
+                type: number
+""".trimIndent(), ""
+        ).toFeature()
+
+        assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.QUERY.enabled")
+        })
+    }
+
+    @Test
+    fun `invalid mandatory response header example should be caught by the validator` () {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            examples:
+              200_OK:
+                value:
+                  data: 10
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          headers:
+            X-Value:
+              schema:
+                type: integer
+              required: true
+              examples:
+                200_OK:
+                  value:
+                    "abc"
+          content:
+            text/plain:
+              examples:
+                200_OK:
+                  value: 10
+              schema:
+                type: number
+""".trimIndent(), ""
+        ).toFeature()
+
+        assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
+            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADERS.X-Value")
+        })
+    }
+
+    @Test
+    fun `invalid optional response header example should be caught by the validator` () {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            examples:
+              200_OK:
+                value:
+                  data: 10
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          headers:
+            X-Value:
+              schema:
+                type: integer
+              examples:
+                200_OK:
+                  value:
+                    "abc"
+          content:
+            text/plain:
+              examples:
+                200_OK:
+                  value: 10
+              schema:
+                type: number
+""".trimIndent(), ""
+        ).toFeature()
+
+        assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
+            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADERS.X-Value")
+            assertThat(exceptionCauseMessage(exception)).doesNotContain("RESPONSE.HEADERS.X-Value?")
+        })
+    }
+
+    @Test
+    fun `all errors across request and response should be caught and returned together` () {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data:
+    post:
+      summary: hello world
+      description: test
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+              required:
+                - data
+            examples:
+              200_OK:
+                value:
+                  data: "abc"
+      responses:
+        '200':
+          description: Says hello
+          headers:
+            X-Value:
+              schema:
+                type: integer
+              examples:
+                200_OK:
+                  value:
+                    "abc"
+          content:
+            text/plain:
+              examples:
+                200_OK:
+                  value: "abc"
+              schema:
+                type: number
+""".trimIndent(), ""
+        ).toFeature()
+
+        assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.BODY.data")
+            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADERS.X-Value")
+            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.BODY")
+        })
+    }
+
+    @Test
+    fun `invalid response body example should be caught by the validator` () {
         val feature = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.0

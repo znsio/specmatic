@@ -1995,6 +1995,59 @@ paths:
     }
 
     @Test
+    fun `invalid path parameter example should be caught by the validator` () {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data/{id}:
+    post:
+      summary: hello world
+      description: test
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: integer
+          examples:
+            200_OK:
+              value: "abc"
+      requestBody:
+        content:
+          application/json:
+            examples:
+              200_OK:
+                value:
+                  data: 10
+            schema:
+              type: object
+              properties:
+                data:
+                  type: number
+              required:
+                - data
+      responses:
+        '200':
+          description: Says hello
+          content:
+            text/plain:
+              schema:
+                type: number
+              examples:
+                200_OK:
+                  value: 10
+""".trimIndent(), ""
+        ).toFeature()
+
+        assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PATH.id")
+        })
+    }
+
+    @Test
     fun `invalid optional response header example should be caught by the validator` () {
         val feature = OpenApiSpecification.fromYAML(
             """
@@ -2049,7 +2102,7 @@ paths:
     }
 
     @Test
-    fun `all errors across request and response should be caught and returned together` () {
+    fun `all errors across request body and response headers and body should be caught and returned together` () {
         val feature = OpenApiSpecification.fromYAML(
             """
 openapi: 3.0.0

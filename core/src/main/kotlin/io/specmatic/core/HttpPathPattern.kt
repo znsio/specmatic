@@ -99,7 +99,7 @@ data class HttpPathPattern(
         val generatedPatterns = newListBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathParamPattern ->
                 val key = urlPathParamPattern.key
                 if (key === null || !row.containsField(key)) return@mapIndexed urlPathParamPattern
-                attempt(breadCrumb = "[$index]") {
+                attempt(breadCrumb = "PATH.${withoutOptionality(key)}") {
                     val rowValue = row.getField(key)
                     when {
                         isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathParamPattern.key}\"") {

@@ -11,9 +11,15 @@ import io.specmatic.core.utilities.exitWithMessage
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.Callable
 import java.util.regex.Pattern
 import kotlin.system.exitProcess
+
+const val ONE_INDENT = "  "
+const val TWO_INDENTS = "${ONE_INDENT}${ONE_INDENT}"
 
 @Component
 @Command(
@@ -34,23 +40,90 @@ class BackwardCompatibilityCheckCommand(
 
     override fun call() {
         val filesChangedInCurrentBranch: Set<String> = getOpenAPISpecFilesChangedInCurrentBranch()
+
         if (filesChangedInCurrentBranch.isEmpty()) exitWithMessage("${newLine}No OpenAPI spec files were changed, skipping the check.$newLine")
 
         val filesReferringToChangedSchemaFiles = filesReferringToChangedSchemaFiles(filesChangedInCurrentBranch)
 
-        val specificationsToCheck: Set<String> = filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles
-
+        val specificationsOfChangedExternalisedExamples: Set<String> = getSpecificationsOfChangedExternalisedExamples(filesChangedInCurrentBranch)
 
         logFilesToBeCheckedForBackwardCompatibility(
             filesChangedInCurrentBranch,
-            filesReferringToChangedSchemaFiles
+            filesReferringToChangedSchemaFiles,
+            specificationsOfChangedExternalisedExamples
         )
+
+        val specificationsToCheck: Set<String> = filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles + specificationsOfChangedExternalisedExamples
 
         val result = runBackwardCompatibilityCheckFor(specificationsToCheck)
 
         println()
         println(result.report)
         exitProcess(result.exitCode)
+    }
+
+    private fun getSpecificationsOfChangedExternalisedExamples(filesChangedInCurrentBranch: Set<String>): Set<String> {
+        data class CollectedFiles(
+            val specifications: MutableSet<String> = mutableSetOf(),
+            val examplesMissingSpecifications: MutableList<String> = mutableListOf(),
+            val ignoredFiles: MutableList<String> = mutableListOf()
+        )
+
+        val collectedFiles = filesChangedInCurrentBranch.fold(CollectedFiles()) { acc, filePath ->
+            val path = Paths.get(filePath)
+            val examplesDir = path.find { it.toString().endsWith("_examples") || it.toString().endsWith("_tests") }
+
+            if (examplesDir == null) {
+                acc.ignoredFiles.add(filePath)
+            } else {
+                val parentPath = examplesDir.parent
+                val strippedPath = parentPath.resolve(examplesDir.fileName.toString().removeSuffix("_examples"))
+                val specFiles = findSpecFiles(strippedPath)
+
+                if (specFiles.isNotEmpty()) {
+                    acc.specifications.addAll(specFiles.map { it.toString() })
+                } else {
+                    acc.examplesMissingSpecifications.add(filePath)
+                }
+            }
+            acc
+        }
+
+        val result = collectedFiles.specifications.toMutableSet()
+
+        collectedFiles.examplesMissingSpecifications.forEach { filePath ->
+            val path = Paths.get(filePath)
+            val examplesDir = path.find { it.toString().endsWith("_examples") || it.toString().endsWith("_tests") }
+            if (examplesDir != null) {
+                val parentPath = examplesDir.parent
+                val strippedPath = parentPath.resolve(examplesDir.fileName.toString().removeSuffix("_examples"))
+                val specFiles = findSpecFiles(strippedPath)
+                if (specFiles.isNotEmpty()) {
+                    result.addAll(specFiles.map { it.toString() })
+                } else {
+                    result.add("${strippedPath}.yaml")
+                }
+            }
+        }
+
+        return result
+    }
+
+    private fun Path.find(predicate: (Path) -> Boolean): Path? {
+        var current: Path? = this
+        while (current != null) {
+            if (predicate(current)) {
+                return current
+            }
+            current = current.parent
+        }
+        return null
+    }
+
+    private fun findSpecFiles(path: Path): List<Path> {
+        val extensions = listOf(".yml", ".yaml", ".spec", ".wsdl")
+        return extensions.map { path.resolveSibling(path.fileName.toString() + it) }
+            .filter { Files.exists(it) }
     }
 
     private fun runBackwardCompatibilityCheckFor(files: Set<String>): CompatibilityReport {
@@ -63,7 +136,7 @@ class BackwardCompatibilityCheckCommand(
                     println("${index.inc()}. Running the check for $specFilePath:")
 
                     // newer => the file with changes on the branch
-                    val newer = OpenApiSpecification.fromFile(specFilePath).toFeature()
+                    val newer = OpenApiSpecification.fromFile(specFilePath).toFeature().loadExternalisedExamples()
 
                     val olderFile = gitCommand.getFileInTheDefaultBranch(specFilePath, treeishWithChanges)
                     if (olderFile == null) {
@@ -128,18 +201,24 @@ class BackwardCompatibilityCheckCommand(
 
     private fun logFilesToBeCheckedForBackwardCompatibility(
         changedFiles: Set<String>,
-        filesReferringToChangedFiles: Set<String>
+        filesReferringToChangedFiles: Set<String>,
+        specificationsOfChangedExternalisedExamples: Set<String>
     ) {
-        val INDENT = "  "
 
         println("Checking backward compatibility of the following files: $newLine")
-        println("${INDENT}Files that have changed:")
-        changedFiles.forEach { println(it.prependIndent("${INDENT}${INDENT}")) }
+        println("${ONE_INDENT}Files that have changed:")
+        changedFiles.forEach { println(it.prependIndent(TWO_INDENTS)) }
         println()
 
         if(filesReferringToChangedFiles.isNotEmpty()) {
-            println("${INDENT}Files referring to the changed files - ")
-            filesReferringToChangedFiles.forEach { println(it.prependIndent("${INDENT}${INDENT}")) }
+            println("${ONE_INDENT}Files referring to the changed files - ")
+            filesReferringToChangedFiles.forEach { println(it.prependIndent(TWO_INDENTS)) }
+            println()
+        }
+
+        if(specificationsOfChangedExternalisedExamples.isNotEmpty()) {
+            println("${ONE_INDENT}Specifications whose externalised examples were changed - ")
+            filesReferringToChangedFiles.forEach { println(it.prependIndent(TWO_INDENTS)) }
             println()
         }
 

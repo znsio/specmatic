@@ -145,7 +145,7 @@ class BackwardCompatibilityCheckCommand(
                     println("${index.inc()}. Running the check for $specFilePath:")
 
                     // newer => the file with changes on the branch
-                    val newer = OpenApiSpecification.fromFile(specFilePath).toFeature().loadExternalisedExamples()
+                    val (newer, unusedExamples) = OpenApiSpecification.fromFile(specFilePath).toFeature().loadExternalisedExamplesAndListUnloadableExamples()
 
                     val olderFile = gitCommand.getFileInTheDefaultBranch(specFilePath, treeishWithChanges)
                     if (olderFile == null) {
@@ -169,6 +169,8 @@ class BackwardCompatibilityCheckCommand(
 
                         println()
 
+                        var errorsFound = false
+
                         if(!examplesAreValid(newer, "newer")) {
                             println(
                                 "$newLine *** Examples in $specFilePath are not valid. ***$newLine".prependIndent(
@@ -178,6 +180,23 @@ class BackwardCompatibilityCheckCommand(
 
                             println()
 
+                            errorsFound = true
+                        }
+
+                        if(unusedExamples.isNotEmpty()) {
+                            println(
+                                "$newLine *** Some examples for $specFilePath could not be loaded. ***$newLine".prependIndent(
+                                    MARGIN_SPACE
+                                )
+                            )
+
+                            println()
+
+                            errorsFound = true
+
+                        }
+
+                        if(errorsFound) {
                             FAILED
                         }
                         else

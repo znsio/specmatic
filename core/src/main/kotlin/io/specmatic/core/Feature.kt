@@ -1405,7 +1405,7 @@ data class Feature(
             .mapValues { (_, value) -> value.map { it.second } }
     }
 
-    fun loadExternalisedExamples(): Feature {
+    fun loadExternalisedExamplesAndListUnloadableExamples(): Pair<Feature, Set<String>> {
         val testsDirectory = getTestsDirectory(File(this.path))
         val externalisedExamplesFromDefaultDirectory = loadExternalisedJSONExamples(testsDirectory)
         val externalisedExampleDirsFromConfig = specmaticConfig.examples
@@ -1417,7 +1417,7 @@ data class Feature(
         val allExternalisedJSONExamples = externalisedExamplesFromDefaultDirectory + externalisedExamplesFromExampleDirs
 
         if(allExternalisedJSONExamples.isEmpty())
-            return this
+            return this to emptySet()
 
         val featureWithExternalisedExamples = useExamples(allExternalisedJSONExamples)
 
@@ -1446,13 +1446,13 @@ data class Feature(
             unusedExternalizedExamples.sorted().forEach {
                 logger.log("  $it")
             }
-
-            throw ContractException("Aborting, as externalised examples could not be loaded. Please ensure that all examples are for APIs in this specification. Validate the methods, paths and status codes.")
         }
 
+        return featureWithExternalisedExamples to unusedExternalizedExamples
+    }
 
-
-        return featureWithExternalisedExamples
+    fun loadExternalisedExamples(): Feature {
+        return loadExternalisedExamplesAndListUnloadableExamples().first
     }
 
     private fun testDirectoryFileFromEnvironmentVariable(): File? {

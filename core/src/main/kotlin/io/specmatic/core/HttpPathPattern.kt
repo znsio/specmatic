@@ -36,7 +36,7 @@ data class HttpPathPattern(
 
     fun matches(path: String, resolver: Resolver): Result {
         val httpRequest = HttpRequest(path = path)
-        return matches(httpRequest, resolver).withFailureReason(FailureReason.URLPathMisMatch)
+        return matches(httpRequest, resolver)
     }
 
     fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
@@ -46,7 +46,8 @@ data class HttpPathPattern(
         if (pathSegmentPatterns.size != pathSegments.size)
             return Failure(
                 "Expected $path (having ${pathSegments.size} path segments) to match ${this.path} (which has ${pathSegmentPatterns.size} path segments).",
-                breadCrumb = "PATH"
+                breadCrumb = "PATH",
+                failureReason = FailureReason.URLPathMisMatch
             )
 
         pathSegmentPatterns.zip(pathSegments).forEach { (urlPathPattern, token) ->
@@ -55,8 +56,8 @@ data class HttpPathPattern(
                 val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, parsedValue)
                 if (result is Failure) {
                     return when (urlPathPattern.key) {
-                        null -> result.breadCrumb("PATH ($path)")
-                        else -> result.breadCrumb("PATH ($path)").breadCrumb(urlPathPattern.key)
+                        null -> result.breadCrumb("PATH ($path)").withFailureReason(FailureReason.URLPathMisMatch)
+                        else -> result.breadCrumb(urlPathPattern.key).breadCrumb("PATH")
                     }
                 }
             } catch (e: ContractException) {

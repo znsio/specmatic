@@ -331,9 +331,9 @@ class OpenApiSpecification(
                     val scenarioInfos =
                         httpResponsePatterns.map { (response, responseMediaType: MediaType, httpResponsePattern, responseExamples: Map<String, HttpResponse>) ->
 
-                            httpRequestPatterns.map { (httpRequestPattern, _: Map<String, List<HttpRequest>>, openApiRequest) ->
+                            httpRequestPatterns.map { (httpRequestPattern, requestExamples: Map<String, List<HttpRequest>>, openApiRequest) ->
                                 val specmaticExampleRows: List<Row> =
-                                    testRowsFromExamples(responseExamples, operation, openApiRequest)
+                                    testRowsFromExamples(responseExamples, requestExamples, operation, openApiRequest)
                                 val scenarioName = scenarioName(operation, response, httpRequestPattern)
 
                                 val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
@@ -449,17 +449,10 @@ class OpenApiSpecification(
 
     private fun testRowsFromExamples(
         responseExamples: Map<String, HttpResponse>,
+        requestExampleAsHttpRequests: Map<String, List<HttpRequest>>,
         operation: Operation,
         openApiRequest: Pair<String, MediaType>?
     ): List<Row> {
-        val parameterKeys = operation.parameters.orEmpty()
-            .flatMap { parameter ->
-                parameter.examples.orEmpty().keys
-            }.toSet()
-
-        val requestBodyExampleNames = requestBodyExampleNames(openApiRequest)
-
-        val requestKeys = parameterKeys + requestBodyExampleNames
 
         return responseExamples.mapNotNull { (exampleName, responseExample) ->
             val parameterExamples: Map<String, Any> = parameterExamples(operation, exampleName)
@@ -496,7 +489,8 @@ class OpenApiSpecification(
                         } else valueString
                     },
                 name = exampleName,
-                responseExample = resolvedResponseExample.takeIf { it.responseExample.isNotEmpty() }
+                responseExample = resolvedResponseExample.takeIf { it.responseExample.isNotEmpty() },
+                requestExample = requestExampleAsHttpRequests[exampleName]?.first()
             )
         }
     }

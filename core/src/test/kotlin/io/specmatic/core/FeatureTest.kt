@@ -9,6 +9,8 @@ import io.specmatic.test.ScenarioTestGenerationException
 import io.specmatic.test.ScenarioTestGenerationFailure
 import io.specmatic.test.TestExecutor
 import io.specmatic.trimmedLinesList
+import org.assertj.core.api.AbstractObjectAssert
+import org.assertj.core.api.AbstractThrowableAssert
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.json.JSONObject
@@ -1883,7 +1885,7 @@ paths:
         ).toFeature()
 
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
-            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.QUERY.enabled")
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.QUERY-PARAMS.enabled")
         })
     }
 
@@ -1936,7 +1938,7 @@ paths:
         ).toFeature()
 
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
-            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.QUERY.enabled")
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.QUERY-PARAMS.enabled")
         })
     }
 
@@ -2122,12 +2124,16 @@ paths:
               properties:
                 data:
                   type: number
+                info:
+                  type: number
               required:
                 - data
+                - info
             examples:
               200_OK:
                 value:
                   data: "abc"
+                  info: "abc"
       responses:
         '200':
           description: Says hello
@@ -2137,8 +2143,7 @@ paths:
                 type: integer
               examples:
                 200_OK:
-                  value:
-                    "abc"
+                  value: "abc"
           content:
             text/plain:
               examples:
@@ -2150,7 +2155,84 @@ paths:
         ).toFeature()
 
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
-            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.BODY.data")
+            assertThat(exceptionCauseMessage(exception)).contains(">> REQUEST.BODY")
+            assertThat(exceptionCauseMessage(exception)).contains(">> data")
+            assertThat(exceptionCauseMessage(exception)).contains(">> info")
+            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADERS.X-Value")
+            assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.BODY")
+        })
+    }
+
+    @Test
+    fun `all errors across path and params and headers and response headers and body should be caught and returned together` () {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data/{id}:
+    get:
+      summary: hello world
+      description: test
+      security:
+        - apiKey: []
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: integer
+          required: true
+          examples:
+            200_OK:
+              value: "abc"
+        - name: enabled
+          in: query
+          schema:
+            type: boolean
+          required: true
+          examples:
+            200_OK:
+              value: "abc"
+        - name: X-Token
+          in: header
+          schema:
+            type: integer
+          required: true
+          examples:
+            200_OK:
+              value: "abc"
+      responses:
+        '200':
+          description: Says hello
+          headers:
+            X-Value:
+              schema:
+                type: integer
+              examples:
+                200_OK:
+                  value: "abc"
+          content:
+            text/plain:
+              schema:
+                type: number
+              examples:
+                200_OK:
+                  value: "abc"
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+""".trimIndent(), ""
+        ).toFeature()
+
+        assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.PATH.id")
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.QUERY-PARAMS.enabled")
+            assertThat(exceptionCauseMessage(exception)).contains("REQUEST.HEADERS.X-Token")
             assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADERS.X-Value")
             assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.BODY")
         })

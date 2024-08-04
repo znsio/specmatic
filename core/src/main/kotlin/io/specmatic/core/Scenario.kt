@@ -408,7 +408,13 @@ data class Scenario(
     }
 
     private fun validateRequestExample(row: Row, resolverForExample: Resolver) {
-        httpRequestPattern.newBasedOn(row, resolverForExample, status).first().value
+        if(row.requestExample != null) {
+            val result = httpRequestPattern.matches(row.requestExample, resolver, resolver)
+            if(!status.toString().startsWith("4"))
+                result.throwOnFailure()
+        } else {
+            httpRequestPattern.newBasedOn(row, resolverForExample, status).first().value
+        }
     }
 
     fun generateTestScenarios(

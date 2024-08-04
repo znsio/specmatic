@@ -5,6 +5,7 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
+import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.stub.isOpenAPI
 import org.springframework.stereotype.Component
@@ -56,7 +57,14 @@ class BackwardCompatibilityCheckCommand(
 
         val specificationsToCheck: Set<String> = filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles + specificationsOfChangedExternalisedExamples
 
-        val result = runBackwardCompatibilityCheckFor(specificationsToCheck)
+        val result = try {
+            runBackwardCompatibilityCheckFor(specificationsToCheck)
+        } catch(e: Throwable) {
+            logger.newLine()
+            logger.newLine()
+            logger.log(e)
+            exitProcess(1)
+        }
 
         println()
         println(result.report)

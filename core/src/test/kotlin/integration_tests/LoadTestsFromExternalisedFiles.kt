@@ -14,8 +14,7 @@ import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.test.TestExecutor
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.fail
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -153,7 +152,7 @@ class LoadTestsFromExternalisedFiles {
     }
 
     @Test
-    fun `unUtilized externalized tests should be logged`() {
+    fun `unUtilized externalized tests should be logged and an exception thrown`() {
         val defaultLogger = logger
         val logBuffer = object : CompositePrinter(emptyList()) {
             var buffer: MutableList<String> = mutableListOf()
@@ -167,17 +166,13 @@ class LoadTestsFromExternalisedFiles {
         try {
             logger = testLogger
 
-            val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_irrelevant_externalized_test.yaml")
-                .toFeature().loadExternalisedExamples()
+            assertThatThrownBy {
+                OpenApiSpecification
+                    .fromFile("src/test/resources/openapi/has_irrelevant_externalized_test.yaml")
+                    .toFeature()
+                    .loadExternalisedExamples()
+            }.hasMessageContaining("externalised examples could not be loaded")
 
-            feature.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    return HttpResponse.ok(parsedJSONArray("""[{"name": "Master Yoda", "description": "Head of the Jedi Council"}]"""))
-                }
-
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
         } finally {
             logger = defaultLogger
         }

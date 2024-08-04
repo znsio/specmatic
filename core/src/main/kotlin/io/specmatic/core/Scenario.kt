@@ -356,12 +356,11 @@ data class Scenario(
             val errors = listOf(requestError, responseError).filterNotNull().map { it.prependIndent("  ") }
 
             if(errors.isNotEmpty()) {
-                val title = "Error loading test data for ${this.apiDescription.trim()}".plus(
-                    if(row.fileSource != null)
-                        " from ${row.fileSource}"
-                    else
-                        " from inline example ${row.name}"
-                )
+                val title = if(row.fileSource != null) {
+                    "Error loading example for ${this.apiDescription.trim()} from ${row.fileSource}"
+                } else {
+                    "Error loading example named ${row.name} for ${this.apiDescription.trim()}"
+                }
 
                 listOf(title).plus(errors).joinToString("${System.lineSeparator()}${System.lineSeparator()}").also { message ->
                     logger.log(message)

@@ -1446,7 +1446,11 @@ data class Feature(
             unusedExternalizedExamples.sorted().forEach {
                 logger.log("  $it")
             }
+
+            throw ContractException("Aborting, as externalised examples could not be loaded. Please ensure that all examples are for APIs in this specification. Validate the methods, paths and status codes.")
         }
+
+
 
         return featureWithExternalisedExamples
     }

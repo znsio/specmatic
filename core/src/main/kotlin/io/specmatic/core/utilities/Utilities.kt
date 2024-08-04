@@ -348,11 +348,15 @@ private fun getExamplesDir(openApiFilePath: String, suffix: String): File =
         it.parentFile.resolve("${it.parent}/${it.nameWithoutExtension}$suffix")
     }
 
-fun nullOrExceptionString(fn: () -> Unit): String? {
+fun nullOrExceptionString(fn: () -> Result): String? {
     return try {
-        fn()
-        null
-    } catch(t: Throwable) {
+        val result = fn()
+        if(result is Result.Failure)
+            return result.reportString()
+
+        return null
+    }
+    catch(t: Throwable) {
         logger.exceptionString(t)
     }
 }

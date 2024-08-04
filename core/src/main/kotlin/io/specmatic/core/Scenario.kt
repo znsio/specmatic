@@ -396,25 +396,29 @@ data class Scenario(
         mockMode = true
     )
 
-    private fun validateResponseExample(row: Row, resolverForExample: Resolver) {
+    private fun validateResponseExample(row: Row, resolverForExample: Resolver): Result {
         val responseExample: ResponseExample? = row.responseExample
 
         if (responseExample != null) {
             val responseMatchResult =
                 httpResponsePattern.matches(responseExample.responseExample, resolverForExample)
 
-            responseMatchResult.throwOnFailure()
+            return responseMatchResult
         }
+
+        return Result.Success()
     }
 
-    private fun validateRequestExample(row: Row, resolverForExample: Resolver) {
+    private fun validateRequestExample(row: Row, resolverForExample: Resolver): Result {
         if(row.requestExample != null) {
             val result = httpRequestPattern.matches(row.requestExample, resolver, resolver)
-            if(!status.toString().startsWith("4"))
-                result.throwOnFailure()
+            if(result is Result.Failure && !status.toString().startsWith("4"))
+                return result
         } else {
             httpRequestPattern.newBasedOn(row, resolverForExample, status).first().value
         }
+
+        return Result.Success()
     }
 
     fun generateTestScenarios(

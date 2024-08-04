@@ -1481,7 +1481,12 @@ data class Feature(
 
     fun validateExamplesOrException() {
         val errors = scenarios.map { scenario ->
-            nullOrExceptionString { scenario.validExamplesOrException(flagsBased.copy(generation = NonGenerativeTests)) }
+            try {
+                scenario.validExamplesOrException(flagsBased.copy(generation = NonGenerativeTests))
+                null
+            } catch(e: Throwable) {
+                exceptionCauseMessage(e)
+            }
         }.filterNotNull()
 
         if(errors.isNotEmpty())

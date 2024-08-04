@@ -166,13 +166,14 @@ class LoadTestsFromExternalisedFiles {
         try {
             logger = testLogger
 
-            assertThatThrownBy {
+            val (_, unusedExamplesFilePaths) =
                 OpenApiSpecification
                     .fromFile("src/test/resources/openapi/has_irrelevant_externalized_test.yaml")
                     .toFeature()
-                    .loadExternalisedExamples()
-            }.hasMessageContaining("externalised examples could not be loaded")
+                    .loadExternalisedExamplesAndListUnloadableExamples()
 
+            assertThat(unusedExamplesFilePaths).hasSize(1)
+            assertThat(unusedExamplesFilePaths.first()).endsWith("irrelevant_test.json")
         } finally {
             logger = defaultLogger
         }

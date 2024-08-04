@@ -2155,9 +2155,8 @@ paths:
         ).toFeature()
 
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
-            assertThat(exceptionCauseMessage(exception)).contains(">> REQUEST.BODY")
-            assertThat(exceptionCauseMessage(exception)).contains(">> data")
-            assertThat(exceptionCauseMessage(exception)).contains(">> info")
+            assertThat(exceptionCauseMessage(exception)).contains(">> REQUEST.BODY.data")
+            assertThat(exceptionCauseMessage(exception)).contains(">> REQUEST.BODY.info")
             assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.HEADERS.X-Value")
             assertThat(exceptionCauseMessage(exception)).contains("RESPONSE.BODY")
         })

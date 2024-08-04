@@ -50,28 +50,37 @@ data class HttpPathPattern(
                 failureReason = FailureReason.URLPathMisMatch
             )
 
-        pathSegmentPatterns.zip(pathSegments).forEach { (urlPathPattern, token) ->
+        val results = pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
             try {
                 val parsedValue = urlPathPattern.tryParse(token, resolver)
                 val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, parsedValue)
                 if (result is Failure) {
-                    return when (urlPathPattern.key) {
+                    when (urlPathPattern.key) {
                         null -> result.breadCrumb("PATH ($path)").withFailureReason(FailureReason.URLPathMisMatch)
                         else -> result.breadCrumb(urlPathPattern.key).breadCrumb("PATH")
                     }
+                } else {
+                    Result.Success()
                 }
             } catch (e: ContractException) {
                 e.failure().breadCrumb("PATH ($path)").let { failure ->
                     urlPathPattern.key?.let { failure.breadCrumb(urlPathPattern.key) } ?: failure
-                }
+                }.withFailureReason(FailureReason.URLPathMisMatch)
             } catch (e: Throwable) {
                 Failure(e.localizedMessage).breadCrumb("PATH ($path)").let { failure ->
                     urlPathPattern.key?.let { failure.breadCrumb(urlPathPattern.key) } ?: failure
-                }
+                }.withFailureReason(FailureReason.URLPathMisMatch)
             }
         }
 
-        return Success()
+        val failures = results.filterIsInstance<Result.Failure>()
+
+        val finalMatchResult = Result.fromResults(failures)
+
+        return if(failures.any { it.failureReason == FailureReason.URLPathMisMatch })
+            finalMatchResult.withFailureReason(FailureReason.URLPathMisMatch)
+        else
+            finalMatchResult
     }
 
     fun generate(resolver: Resolver): String {

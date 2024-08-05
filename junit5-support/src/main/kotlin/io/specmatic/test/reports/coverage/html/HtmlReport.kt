@@ -88,7 +88,7 @@ class HtmlReport {
                     <span class="text-lg">&larr;</span>
                     <span>Go Back</span>
                 </button>
-                <ul id="response-summary" class="flex items-center justify-between flex-1 px-10 border-2 border-red-300 rounded-md">
+                <ul id="response-summary" class="flex items-center justify-between flex-1 px-10 gap-10 border-2 border-red-300 rounded-md font-roboto">
                 </ul>
             </div>
             <ul id="scenarios" class="flex flex-col gap-3 py-2 mt-3">

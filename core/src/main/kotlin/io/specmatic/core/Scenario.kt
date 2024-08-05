@@ -410,7 +410,7 @@ data class Scenario(
 
     private fun validateRequestExample(row: Row, resolverForExample: Resolver): Result {
         if(row.requestExample != null) {
-            val result = httpRequestPattern.matches(row.requestExample, resolver, resolver)
+            val result = httpRequestPattern.matches(row.requestExample, resolverForExample, resolverForExample)
             if(result is Result.Failure && !status.toString().startsWith("4"))
                 return result
         } else {

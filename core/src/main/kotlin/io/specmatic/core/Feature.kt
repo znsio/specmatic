@@ -1446,6 +1446,8 @@ data class Feature(
             unusedExternalizedExamples.sorted().forEach {
                 logger.log("  $it")
             }
+
+            logger.newLine()
         }
 
         return featureWithExternalisedExamples to unusedExternalizedExamples

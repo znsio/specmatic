@@ -162,6 +162,24 @@ internal class HttpPathPatternTest {
     }
 
     @Test
+    fun `should return all path param errors together`() {
+        val pattern = buildHttpPathPattern("/pets/(petid:number)/file/(fileid:number)")
+        val mismatchResult = pattern.matches(URI("/pets/abc/file/def")) as Result.Failure
+
+        assertThat(mismatchResult.failureReason).isNotEqualTo(FailureReason.URLPathMisMatch)
+        assertThat(mismatchResult.reportString())
+            .contains("PATH.petid")
+            .contains("PATH.fileid")
+    }
+
+    @Test
+    fun `should return failure reason as url mismatch if there is even one literal path segment mismatch`() {
+        val pattern = buildHttpPathPattern("/pets/(id:number)/data")
+        val mismatchResult = pattern.matches(URI("/pets/abc/info")) as Result.Failure
+        assertThat(mismatchResult.failureReason).isEqualTo(FailureReason.URLPathMisMatch)
+    }
+
+    @Test
     @Tag(GENERATION)
     fun `should generate a path with a concrete value given a path pattern with newBasedOn`() {
         val matcher = buildHttpPathPattern(URI("/pets/(status:boolean)"))

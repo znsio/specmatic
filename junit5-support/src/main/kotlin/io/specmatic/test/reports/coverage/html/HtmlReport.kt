@@ -273,7 +273,7 @@ class HtmlReport {
                     val scenarioDataList = statusMap.getOrPut(status) { mutableListOf() }
 
                     for (test in testResults) {
-                        val matchingLogMessage = groupedHttpLogMessages.getValue(method).firstOrNull {
+                        val matchingLogMessage = groupedHttpLogMessages.get(method)?.firstOrNull {
                             it.scenario == test.scenario
                         }
 

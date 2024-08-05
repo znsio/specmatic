@@ -71,7 +71,7 @@ class HtmlReport {
             <thead>
                 <tr class="font-bold">
                   <td>Coverage</td>
-                  <td>Path</td>
+                  <td colspan="2">Path</td>
                   <td>Method</td>
                   <td>Response</td>
                   <td>Exercised</td>
@@ -200,7 +200,7 @@ class HtmlReport {
         return """
                 <tr>
                     <td $pathSpan>${coverageRow.endpointCoverage}%</td>
-                    <td $pathSpan>${coverageRow.endpointPath}</td>
+                    <td $pathSpan colspan="2">${coverageRow.endpointPath}</td>
                     <td $methodSpan>${coverageRow.endpointMethod}</td>
                     <td>${coverageRow.responseStatus}</td>
                     <td>${coverageRow.count}</td>

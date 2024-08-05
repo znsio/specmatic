@@ -67,7 +67,7 @@ class HtmlReport {
 <body class="flex flex-col min-h-screen gap-3 p-4 font-mono">
     ${makeHeader()}
     <main class="flex items-start flex-1 overflow-hidden border-t-2 shadow-md group print:overflow-visible print:shadow-none" data-item="table">
-        <table id="reports" class="font-mono overflow-hidden group-data-[item=details]:min-w-0 group-data-[item=table]:min-w-full duration-500 transition-all">
+        <table id="reports" class="font-mono overflow-hidden group-data-[item=details]:min-w-0 group-data-[item=table]:min-w-full duration-500 transition-all max-w-full">
             <thead>
                 <tr class="font-bold">
                   <td>Coverage</td>
@@ -77,12 +77,12 @@ class HtmlReport {
                   <td>Exercised</td>
                   <td>Result</td>
                 </tr>
-             </thead>
+            </thead>
             <tbody>
                 ${makeTableRows()}
             </tbody>
         </table>
-        <div id="details" class="print:hidden group-data-[item=table]:min-w-0 group-data-[item=details]:min-w-full duration-500 transition-all p-2 flex-shrink-0">
+        <div id="details" class="print:hidden group-data-[item=table]:min-w-0 group-data-[item=details]:min-w-full duration-500 transition-all p-2 flex-shrink-0 max-w-full">
             <div class="flex gap-3 top-2" id="response-details">
                 <button id="go-back" class="px-6 py-2 text-white duration-500 bg-blue-500 rounded-md hover:bg-blue-700 group">
                     <span class="text-lg">&larr;</span>
@@ -214,16 +214,16 @@ class HtmlReport {
     private fun makeFooter(): String {
         return """
     <footer class="flex items-center justify-between p-2 print:flex-col print:gap-2 mt-auto">
-      <p>Generated On: <span class="font-mono">${generatedOnTimestamp()}</span></p>
-      <div class="flex items-center gap-2">
-          <span class="whitespace-nowrap">Powered By</span>
-          <img src="assets/specmatic-logo.svg" alt="Specmatic" class="mb-2 w-44">
-          <p>[${getSpecmaticVersion()}]</p>
+        <p>Generated On: <span class="font-mono">${generatedOnTimestamp()}</span></p>
+        <div class="flex items-center gap-2">
+            <span class="whitespace-nowrap">Powered By</span>
+            <img src="assets/specmatic-logo.svg" alt="Specmatic" class="mb-2 w-44">
+            <p>[${getSpecmaticVersion()}]</p>
         </div>
-      <div class="flex items-center gap-1">
-          <p>Copyright</p>
-          <p class="text-3xl">&copy;</p>
-          <p>All Rights Reserved</p>
+        <div class="flex items-center gap-1">
+            <p>Copyright</p>
+            <p class="text-3xl">&copy;</p>
+            <p>All Rights Reserved</p>
         </div>
     </footer>
         """.trim()

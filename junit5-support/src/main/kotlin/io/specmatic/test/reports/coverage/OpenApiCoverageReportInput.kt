@@ -18,7 +18,9 @@ class OpenApiCoverageReportInput(
     private val applicationAPIs: MutableList<API> = mutableListOf(),
     private val excludedAPIs: MutableList<String> = mutableListOf(),
     private val allEndpoints: MutableList<Endpoint> = mutableListOf(),
-    private var endpointsAPISet: Boolean = false
+    private var endpointsAPISet: Boolean = false,
+    internal var finalizedTestResultRecords: List<TestResultRecord> = emptyList(),
+    internal var apiCoverageRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf()
 ) {
     fun addTestReportRecords(testResultRecord: TestResultRecord) {
         testResultRecords.add(testResultRecord)
@@ -46,9 +48,9 @@ class OpenApiCoverageReportInput(
         var allTests = addTestResultsForMissingEndpoints(testResultsWithNotImplementedEndpoints)
         allTests = addTestResultsForTestsNotGeneratedBySpecmatic(allTests, allEndpoints)
         allTests = sortByPathMethodResponseStatus(allTests)
+        finalizedTestResultRecords = allTests
 
         val apiTestsGrouped = groupTestsByPathMethodAndResponseStatus(allTests)
-        val apiCoverageRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf()
         apiTestsGrouped.forEach { (route, methodMap) ->
             val routeAPIRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf()
             val topLevelCoverageRow = createTopLevelApiCoverageRow(route, methodMap)
@@ -65,7 +67,8 @@ class OpenApiCoverageReportInput(
                                 responseStatus = responseStatus.toString(),
                                 count = testResults.count{it.isExercised}.toString(),
                                 coveragePercentage = 0,
-                                remarks = Remarks.resolve(testResults)
+                                remarks = Remarks.resolve(testResults),
+                                endpointMethod = method
                             )
                         )
                     }
@@ -197,7 +200,9 @@ class OpenApiCoverageReportInput(
             responseStatus!!,
             exercisedCount!!,
             coveragePercentage,
-            remarks
+            remarks,
+            endpointPath = route,
+            endpointMethod = method
         )
     }
 

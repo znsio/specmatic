@@ -2,21 +2,36 @@ package io.specmatic.core.log
 
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.Scenario
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.stub.HttpStubResponse
 
-data class HttpLogMessage(private var requestTime: String = "", var request: HttpRequest = HttpRequest(), private var responseTime: String = "", var response: HttpResponse = HttpResponse.OK, var contractPath: String = "", val targetServer: String = "", val comment: String?  =null):
+data class HttpLogMessage(
+    var requestTime: CurrentDate = CurrentDate(),
+    var request: HttpRequest = HttpRequest(),
+    var responseTime: CurrentDate? = null,
+    var response: HttpResponse? = null,
+    var contractPath: String = "",
+    val targetServer: String = "",
+    val comment: String? = null,
+    var scenario: Scenario? = null,
+    var exception: Exception? = null
+) :
     LogMessage {
     fun addRequest(httpRequest: HttpRequest) {
-        requestTime = CurrentDate().toLogString()
+        requestTime = CurrentDate()
         this.request = httpRequest
     }
 
     fun addResponse(httpResponse: HttpResponse) {
-        responseTime = CurrentDate().toLogString()
+        responseTime = CurrentDate()
         this.response = httpResponse
+    }
+
+    fun addException(exception: Exception) {
+        this.exception = exception
     }
 
     private fun target(): String {
@@ -58,21 +73,20 @@ data class HttpLogMessage(private var requestTime: String = "", var request: Htt
             request.toLogString("$linePrefix$linePrefix"),
             "",
             "${linePrefix}Response at $responseTime",
-            response.toLogString("$linePrefix$linePrefix")
+            response?.toLogString("$linePrefix$linePrefix")
         )
 
         val messageSuffix = listOf("")
-
         return (messagePrefix + commentLines + contractPathLines + mainMessage + messageSuffix).joinToString(System.lineSeparator())
     }
 
     override fun toJSONObject(): JSONObjectValue {
         val log = mutableMapOf<String, Value>()
 
-        log["requestTime"] = StringValue(requestTime)
+        log["requestTime"] = StringValue(requestTime.toLogString())
         log["http-request"] = request.toJSON()
-        log["http-response"] = response.toJSON()
-        log["responseTime"] = StringValue(responseTime)
+        log["http-response"] = response?.toJSON() ?: JSONObjectValue()
+        log["responseTime"] = StringValue(responseTime?.toLogString() ?: "")
         log["contractMatched"] = StringValue(contractPath)
 
         return JSONObjectValue(log.toMap())
@@ -84,6 +98,6 @@ data class HttpLogMessage(private var requestTime: String = "", var request: Htt
     }
 
     fun logStartRequestTime() {
-        this.requestTime = CurrentDate().toLogString()
+        this.requestTime = CurrentDate()
     }
 }

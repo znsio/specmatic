@@ -16,6 +16,7 @@ import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.*
 import io.specmatic.test.reports.OpenApiCoverageReportProcessor
 import io.specmatic.test.reports.coverage.Endpoint
 import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
+import io.specmatic.test.reports.coverage.html.HtmlReport
 import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DynamicTest
@@ -78,7 +79,11 @@ open class SpecmaticJUnitSupport {
         @JvmStatic
         fun report() {
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
-            reportProcessors.forEach { it.process(getReportConfiguration()) }
+            try {
+                reportProcessors.forEach { it.process(getReportConfiguration()) }
+            } finally {
+                HtmlReport().generate()
+            }
 
             threads.distinct().let {
                 if(it.size > 1) {

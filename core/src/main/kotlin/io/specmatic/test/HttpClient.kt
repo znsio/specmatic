@@ -39,33 +39,37 @@ class HttpClient(
     private val httpClientFactory: HttpClientFactory = ApacheHttpClientFactory(timeout)
 ) : TestExecutor {
     private val serverStateURL = "/_$APPLICATION_NAME_LOWER_CASE/state"
+    private lateinit var httpLogMessage: HttpLogMessage;
 
     override fun execute(request: HttpRequest): HttpResponse {
         val url = URL(request.getURL(baseURL))
 
         val requestWithFileContent = request.loadFileContentIntoParts()
-
-        val httpLogMessage = HttpLogMessage(targetServer = baseURL)
         httpLogMessage.logStartRequestTime()
 
         logger.debug("Starting request ${request.method} ${request.path}")
 
-        return runBlocking {
-            httpClientFactory.create().use { ktorClient ->
-                val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
-                    requestWithFileContent.buildKTORRequest(this, url)
-                }
+        return try {
+            runBlocking {
+                httpClientFactory.create().use { ktorClient ->
+                    val ktorResponse: io.ktor.client.statement.HttpResponse = ktorClient.request(url) {
+                        requestWithFileContent.buildKTORRequest(this, url)
+                    }
 
-                val outboundRequest: HttpRequest =
-                    ktorHttpRequestToHttpRequestForLogging(ktorResponse.request, requestWithFileContent)
-                httpLogMessage.addRequest(outboundRequest)
+                    val outboundRequest: HttpRequest =
+                        ktorHttpRequestToHttpRequestForLogging(ktorResponse.request, requestWithFileContent)
+                    httpLogMessage.addRequest(outboundRequest)
 
-                ktorResponseToHttpResponse(ktorResponse).also {
-                    httpLogMessage.addResponse(it)
-                    log(httpLogMessage)
-                    ktorClient.close()
+                    ktorResponseToHttpResponse(ktorResponse).also {
+                        httpLogMessage.addResponse(it)
+                        log(httpLogMessage)
+                        ktorClient.close()
+                    }
                 }
             }
+        } catch (e: Exception) {
+            httpLogMessage.addException(e)
+            throw e
         }
     }
 
@@ -124,6 +128,11 @@ class HttpClient(
                 }
             }
         }
+    }
+
+    override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+        httpLogMessage = HttpLogMessage(targetServer = baseURL, request = request, scenario = scenario)
+        DataRecorder.addHttpLog(httpLogMessage)
     }
 }
 

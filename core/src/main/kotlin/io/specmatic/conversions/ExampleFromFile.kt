@@ -1,6 +1,5 @@
 package io.specmatic.conversions
 
-import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.logger
@@ -9,7 +8,7 @@ import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.mockFromJSON
-import io.specmatic.stub.stringToMockScenario
+import io.specmatic.stub.httpResponseLog
 import java.io.File
 
 class ExampleFromFile(val json: JSONObjectValue, val file: File) {
@@ -28,13 +27,13 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
             entry.map { it.key } to entry.map { it.value }
         }
 
-        val responseExample = response?.let { httpResponse ->
+        val responseExample: ResponseExample? = response?.let { httpResponse ->
             when {
                 specmaticConfig.isResponseValueValidationEnabled() ->
                     ResponseValueExample(httpResponse)
 
                 else ->
-                    ResponseSchemaExample(httpResponse)
+                    null
             }
 
         }
@@ -46,8 +45,9 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
             values,
             name = testName,
             fileSource = this.file.canonicalPath,
-            responseExample = responseExample,
-            requestExample = mockFromJSON.request
+            responseExampleForValidation = responseExample,
+            requestExample = mockFromJSON.request,
+            responseExample = response
         )
     }
 

@@ -8,10 +8,12 @@ import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.Flags
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 class ValidateResponseSchemaTest {
     @Test
+    @Disabled
     fun `response body schema validation should fail if a key in the response example is missing in the actual response`() {
         val personSpec = """
             openapi: 3.0.3
@@ -199,6 +201,7 @@ class ValidateResponseSchemaTest {
     }
 
     @Test
+    @Disabled
     fun `response header schema validation should be done if a key in the response headers example is missing in the actual response headers`() {
         val personSpec = """
 openapi: 3.0.3

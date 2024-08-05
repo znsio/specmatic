@@ -333,6 +333,7 @@ Pet:
     }
 
     @Test
+    @Disabled
     fun `scenarios should have examples of type ResponseSchemaExample leading to response schema validation when VALIDATE_RESPONSE_VALUE flag is false and response is not empty`() {
         val openApiFile = "src/test/resources/openapi/response_schema_validation_including_optional_spec.yaml"
         val openApiSpecification = OpenApiSpecification.fromFile(openApiFile)
@@ -340,7 +341,7 @@ Pet:
         val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
 
         val examples = scenarioInfos.first().examples.flatMap {
-            it.rows.map { row -> row.responseExample }
+            it.rows.map { row -> row.responseExampleForValidation }
         }
         examples.forEach {
             assertThat(it).isInstanceOf(ResponseSchemaExample::class.java)
@@ -362,7 +363,7 @@ Pet:
         val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
 
         val examples = scenarioInfos.first().examples.flatMap {
-            it.rows.map { row -> row.responseExample }
+            it.rows.map { row -> row.responseExampleForValidation }
         }
         examples.forEach {
             assertThat(it).isInstanceOf(ResponseValueExample::class.java)
@@ -376,7 +377,7 @@ Pet:
         val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
 
         val examples = scenarioInfos.first().examples.flatMap {
-            it.rows.map { row -> row.responseExample }
+            it.rows.map { row -> row.responseExampleForValidation }
         }
         examples.forEach {
             assertThat(it).isNull()

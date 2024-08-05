@@ -1,15 +1,14 @@
 package io.specmatic.core
 
-import com.fasterxml.jackson.annotation.JsonFormat.Value
 import io.specmatic.core.pattern.*
 import org.assertj.core.api.Assertions.*
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.util.function.Consumer
 
 class ScenarioTest {
     @Test
     fun `should validate and reject an invalid response in an example row`() {
+        val responseExample = HttpResponse(200, """{"id": "abc123"}""")
         val scenario = Scenario(
             "",
             HttpRequestPattern(
@@ -34,7 +33,10 @@ class ScenarioTest {
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
                         mapOf("(REQUEST-BODY)" to """{"id": 10}""")
-                    ).copy(responseExample = ResponseSchemaExample(HttpResponse(200, """{"id": "abc123"}"""))))
+                    ).copy(
+                        responseExampleForValidation = ResponseSchemaExample(responseExample),
+                        responseExample = responseExample
+                    ))
                 )
             ),
             emptyMap(),
@@ -76,7 +78,7 @@ class ScenarioTest {
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
                         mapOf("(REQUEST-BODY)" to """{"id": "abc123" }""")
-                    ).copy(responseExample = ResponseSchemaExample(HttpResponse(200, """{"id": 10}"""))))
+                    ).copy(responseExampleForValidation = ResponseSchemaExample(HttpResponse(200, """{"id": 10}"""))))
                 )
             ),
             emptyMap(),
@@ -118,7 +120,7 @@ class ScenarioTest {
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
                         mapOf("(REQUEST-BODY)" to """{"id": 10}""")
-                    ).copy(responseExample = ResponseSchemaExample(HttpResponse(200, """{"id": "(number)"}"""))))
+                    ).copy(responseExampleForValidation = ResponseSchemaExample(HttpResponse(200, """{"id": "(number)"}"""))))
                 )
             ),
             emptyMap(),
@@ -156,7 +158,7 @@ class ScenarioTest {
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
                         mapOf("(REQUEST-BODY)" to """{"id": "(number)" }""")
-                    ).copy(responseExample = ResponseSchemaExample(HttpResponse(200, """{"id": 10}"""))))
+                    ).copy(responseExampleForValidation = ResponseSchemaExample(HttpResponse(200, """{"id": 10}"""))))
                 )
             ),
             emptyMap(),
@@ -170,6 +172,7 @@ class ScenarioTest {
 
     @Test
     fun `should validate and reject a response in an example row with a non-matching pattern specification as value`() {
+        val responseExample = HttpResponse(200, """{"id": "(string)"}""")
         val scenario = Scenario(
             "",
             HttpRequestPattern(
@@ -194,7 +197,10 @@ class ScenarioTest {
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
                         mapOf("(REQUEST-BODY)" to """{"id": 10}""")
-                    ).copy(responseExample = ResponseSchemaExample(HttpResponse(200, """{"id": "(string)"}"""))))
+                    ).copy(
+                        responseExampleForValidation = ResponseSchemaExample(responseExample),
+                        responseExample = responseExample
+                    ))
                 )
             ),
             emptyMap(),
@@ -236,7 +242,7 @@ class ScenarioTest {
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
                         mapOf("(REQUEST-BODY)" to """{"id": "(string)" }""")
-                    ).copy(responseExample = ResponseSchemaExample(HttpResponse(200, """{"id": 10}"""))))
+                    ).copy(responseExampleForValidation = ResponseSchemaExample(HttpResponse(200, """{"id": 10}"""))))
                 )
             ),
             emptyMap(),

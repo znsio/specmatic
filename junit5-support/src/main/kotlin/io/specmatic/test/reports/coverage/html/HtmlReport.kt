@@ -42,7 +42,6 @@ class HtmlReport {
         private var totalFailures = 0
         private var totalSkipped = 0
         private var totalSuccess = 0
-        private var totalDidNotRun = 0
     }
 
     fun generate() {
@@ -200,7 +199,7 @@ class HtmlReport {
         val methodSpan = if (showMethodInfo) "rowspan=\"$methodRowSpan\"" else "class=\"hidden\""
         return """
                 <tr>
-                    <td $pathSpan>${coverageRow.coveragePercentage}%</td>
+                    <td $pathSpan>${coverageRow.endpointCoverage}%</td>
                     <td $pathSpan>${coverageRow.endpointPath}</td>
                     <td $methodSpan>${coverageRow.endpointMethod}</td>
                     <td>${coverageRow.responseStatus}</td>

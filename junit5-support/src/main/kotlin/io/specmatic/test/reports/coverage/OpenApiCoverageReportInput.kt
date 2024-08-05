@@ -202,7 +202,8 @@ class OpenApiCoverageReportInput(
             coveragePercentage,
             remarks,
             endpointPath = route,
-            endpointMethod = method
+            endpointMethod = method,
+            endpointCoverage = coveragePercentage
         )
     }
 

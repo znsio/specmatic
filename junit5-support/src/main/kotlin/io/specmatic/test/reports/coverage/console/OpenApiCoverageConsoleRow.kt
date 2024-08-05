@@ -9,6 +9,7 @@ data class OpenApiCoverageConsoleRow(
     val remarks: Remarks,
     val endpointPath: String = "",
     val endpointMethod: String = "",
+    val endpointCoverage: Int = 0
 ) {
     constructor(
         method: String,
@@ -19,7 +20,8 @@ data class OpenApiCoverageConsoleRow(
         remarks: Remarks,
         endpointPath: String = "",
         endpointMethod: String = "",
-    ) : this(method, path, responseStatus.toString(), count.toString(), coveragePercentage, remarks, endpointPath, endpointMethod)
+        endpointCoverage: Int = 0
+    ) : this(method, path, responseStatus.toString(), count.toString(), coveragePercentage, remarks, endpointPath, endpointMethod, endpointCoverage)
 
     fun toRowString(maxPathSize: Int, maxRemarksSize: Int): String {
         val longestStatus = "coverage"

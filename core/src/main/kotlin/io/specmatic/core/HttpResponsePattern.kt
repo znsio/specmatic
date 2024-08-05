@@ -41,7 +41,7 @@ data class HttpResponsePattern(
     }
 
     fun matches(response: HttpResponse, resolver: Resolver): Result {
-        val result = _matches(response, resolver)
+        val result = matchesResponse(response, resolver)
 
         return when(result) {
             is Result.Failure -> result.breadCrumb("RESPONSE")
@@ -49,7 +49,7 @@ data class HttpResponsePattern(
         }
     }
 
-    fun _matches(response: HttpResponse, resolver: Resolver): Result {
+    fun matchesResponse(response: HttpResponse, resolver: Resolver): Result {
         return response to resolver to
             ::matchStatus then
             ::matchHeaders then

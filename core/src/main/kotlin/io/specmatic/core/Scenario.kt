@@ -6,6 +6,7 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.mapZip
+import io.specmatic.core.utilities.nullOrExceptionString
 import io.specmatic.core.value.*
 import io.specmatic.stub.RequestContext
 import io.specmatic.test.ContractTest
@@ -341,27 +342,37 @@ data class Scenario(
 
         val updatedResolver = flagsBased.update(resolver)
 
-        rowsToValidate.forEach { row ->
+        val errors = rowsToValidate.map { row ->
             val resolverForExample = resolverForValidation(updatedResolver, row)
 
-            try {
+            val requestError = nullOrExceptionString {
                 validateRequestExample(row, resolverForExample)
-                validateResponseExample(row, resolverForExample)
-            } catch(t: Throwable) {
-                val title = "Error loading test data for ${this.testDescription().trim()}".plus(
-                    if(row.fileSource != null)
-                        " from ${row.fileSource}"
-                    else
-                        ""
-                )
-
-                logger.log(title)
-                logger.newLine()
-                logger.log(t)
-
-                throw Exception(title + System.lineSeparator() + System.lineSeparator() + exceptionCauseMessage(t))
             }
-        }
+
+            val responseError = nullOrExceptionString {
+                validateResponseExample(row, resolverForExample)
+            }
+
+            val errors = listOf(requestError, responseError).filterNotNull().map { it.prependIndent("  ") }
+
+            if(errors.isNotEmpty()) {
+                val title = if(row.fileSource != null) {
+                    "Error loading example for ${this.apiDescription.trim()} from ${row.fileSource}"
+                } else {
+                    "Error loading example named ${row.name} for ${this.apiDescription.trim()}"
+                }
+
+                listOf(title).plus(errors).joinToString("${System.lineSeparator()}${System.lineSeparator()}").also { message ->
+                    logger.log(message)
+
+                    logger.newLine()
+                }
+            } else
+                null
+        }.filterNotNull()
+
+        if(errors.isNotEmpty())
+            throw ContractException(errors.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))
     }
 
     private fun resolverForValidation(
@@ -384,19 +395,29 @@ data class Scenario(
         mockMode = true
     )
 
-    private fun validateResponseExample(row: Row, resolverForExample: Resolver) {
+    private fun validateResponseExample(row: Row, resolverForExample: Resolver): Result {
         val responseExample: ResponseExample? = row.responseExample
 
         if (responseExample != null) {
             val responseMatchResult =
                 httpResponsePattern.matches(responseExample.responseExample, resolverForExample)
 
-            responseMatchResult.throwOnFailure()
+            return responseMatchResult
         }
+
+        return Result.Success()
     }
 
-    private fun validateRequestExample(row: Row, resolverForExample: Resolver) {
-        httpRequestPattern.newBasedOn(row, resolverForExample, status).first().value
+    private fun validateRequestExample(row: Row, resolverForExample: Resolver): Result {
+        if(row.requestExample != null) {
+            val result = httpRequestPattern.matches(row.requestExample, resolverForExample, resolverForExample)
+            if(result is Result.Failure && !status.toString().startsWith("4"))
+                return result
+        } else {
+            httpRequestPattern.newBasedOn(row, resolverForExample, status).first().value
+        }
+
+        return Result.Success()
     }
 
     fun generateTestScenarios(

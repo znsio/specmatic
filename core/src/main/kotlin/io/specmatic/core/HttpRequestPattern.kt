@@ -180,25 +180,30 @@ data class HttpRequestPattern(
         }
     }
 
-    private fun matchMethod(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
-        val (httpRequest, resolver) = parameters
+    private fun matchMethod(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
+        val (httpRequest, resolver, failures) = parameters
+
         method.let {
             return if (it != httpRequest.method)
                 MatchFailure(mismatchResult(method ?: "", httpRequest.method ?: "").copy(failureReason = FailureReason.MethodMismatch).breadCrumb("METHOD"))
             else
-                MatchSuccess(Triple(httpRequest, resolver, emptyList()))
+                MatchSuccess(Triple(httpRequest, resolver, failures))
         }
     }
 
-    private fun matchPath(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Pair<HttpRequest, Resolver>> {
+    private fun matchPath(parameters: Pair<HttpRequest, Resolver>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver) = parameters
 
         val result = matchesPath(httpRequest.path!!, resolver)
 
-        return if (result is Failure)
-            MatchFailure(result)
+        return if (result is Failure) {
+            if(result.failureReason == FailureReason.URLPathMisMatch)
+                MatchFailure<Triple<HttpRequest, Resolver, List<Failure>>>(result)
+            else
+                MatchSuccess(Triple(parameters.first, parameters.second, listOf(result)))
+        }
         else
-            MatchSuccess(parameters)
+            MatchSuccess(Triple(parameters.first, parameters.second, emptyList()))
     }
 
     fun matchesPath(

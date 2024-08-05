@@ -347,3 +347,16 @@ private fun getExamplesDir(openApiFilePath: String, suffix: String): File =
     File(openApiFilePath).canonicalFile.let {
         it.parentFile.resolve("${it.parent}/${it.nameWithoutExtension}$suffix")
     }
+
+fun nullOrExceptionString(fn: () -> Result): String? {
+    return try {
+        val result = fn()
+        if(result is Result.Failure)
+            return result.reportString()
+
+        return null
+    }
+    catch(t: Throwable) {
+        logger.exceptionString(t)
+    }
+}

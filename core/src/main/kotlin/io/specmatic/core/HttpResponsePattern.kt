@@ -72,7 +72,7 @@ data class HttpResponsePattern(
 
             val expectedResponseValue: HttpResponsePattern =
                 HttpResponsePattern(
-                    HttpHeadersPattern(responseExample.responseExample.headers.mapValues { stringToPattern(it.value, it.key) }),
+                    responseExample.headersPattern(),
                     responseExample.responseExample.status,
                     responseExample.bodyPattern()
                 )

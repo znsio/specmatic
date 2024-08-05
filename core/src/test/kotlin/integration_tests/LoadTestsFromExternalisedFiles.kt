@@ -14,8 +14,7 @@ import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.test.TestExecutor
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.fail
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -75,6 +74,30 @@ class LoadTestsFromExternalisedFiles {
     }
 
     @Test
+    fun `should load and execute externalized tests for header and request body from _examples sub-directory`() {
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_externalized_tests_in_subdirectories.yaml")
+            .toFeature().loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.path).isEqualTo("/order_action_figure")
+                assertThat(request.method).isEqualTo("POST")
+                assertThat(request.headers).containsEntry("X-Request-ID", "12345")
+                assertThat(request.body).isEqualTo(parsedJSONObject("""{"name": "Master Yoda", "description": "Head of the Jedi Council"}"""))
+
+                return HttpResponse.ok(parsedJSONObject("""{"id": 1}"""))
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {
+            }
+        })
+
+        println(results.report())
+        assertThat(results.successCount).isEqualTo(2)
+        assertThat(results.failureCount).isEqualTo(0)
+    }
+
+    @Test
     fun `externalized tests be converted to rows`() {
         val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_two_externalised_tests.yaml").toFeature().loadExternalisedExamples()
         assertThat(feature.scenarios.first().examples.first().rows.size).isEqualTo(2)
@@ -129,7 +152,7 @@ class LoadTestsFromExternalisedFiles {
     }
 
     @Test
-    fun `unUtilized externalized tests should be logged`() {
+    fun `unUtilized externalized tests should be logged and an exception thrown`() {
         val defaultLogger = logger
         val logBuffer = object : CompositePrinter(emptyList()) {
             var buffer: MutableList<String> = mutableListOf()
@@ -143,17 +166,14 @@ class LoadTestsFromExternalisedFiles {
         try {
             logger = testLogger
 
-            val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_irrelevant_externalized_test.yaml")
-                .toFeature().loadExternalisedExamples()
+            val (_, unusedExamplesFilePaths) =
+                OpenApiSpecification
+                    .fromFile("src/test/resources/openapi/has_irrelevant_externalized_test.yaml")
+                    .toFeature()
+                    .loadExternalisedExamplesAndListUnloadableExamples()
 
-            feature.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    return HttpResponse.ok(parsedJSONArray("""[{"name": "Master Yoda", "description": "Head of the Jedi Council"}]"""))
-                }
-
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
+            assertThat(unusedExamplesFilePaths).hasSize(1)
+            assertThat(unusedExamplesFilePaths.first()).endsWith("irrelevant_test.json")
         } finally {
             logger = defaultLogger
         }

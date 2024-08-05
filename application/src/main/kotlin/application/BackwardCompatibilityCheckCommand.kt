@@ -1,17 +1,27 @@
 package application
 
+import application.BackwardCompatibilityCheckCommand.CompatibilityResult.*
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.CONTRACT_EXTENSIONS
+import io.specmatic.core.*
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
-import io.specmatic.core.testBackwardCompatibility
+import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.exitWithMessage
-import kotlinx.serialization.json.Json
+import io.specmatic.stub.isOpenAPI
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.Callable
 import java.util.regex.Pattern
+import kotlin.io.path.extension
+import kotlin.io.path.pathString
+import kotlin.system.exitProcess
+
+const val ONE_INDENT = "  "
+const val TWO_INDENTS = "${ONE_INDENT}${ONE_INDENT}"
 
 @Component
 @Command(
@@ -26,50 +36,121 @@ class BackwardCompatibilityCheckCommand(
     private val newLine = System.lineSeparator()
 
     companion object {
-        private const val SUCCESS = "success"
-        private const val FAILED = "failed"
         private const val HEAD = "HEAD"
         private const val MARGIN_SPACE = "  "
     }
 
     override fun call() {
         val filesChangedInCurrentBranch: Set<String> = getOpenAPISpecFilesChangedInCurrentBranch()
+
         if (filesChangedInCurrentBranch.isEmpty()) exitWithMessage("${newLine}No OpenAPI spec files were changed, skipping the check.$newLine")
 
         val filesReferringToChangedSchemaFiles = filesReferringToChangedSchemaFiles(filesChangedInCurrentBranch)
 
-        val filesToCheck: Set<String> = filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles
-
+        val specificationsOfChangedExternalisedExamples: Set<String> = getSpecificationsOfChangedExternalisedExamples(filesChangedInCurrentBranch)
 
         logFilesToBeCheckedForBackwardCompatibility(
             filesChangedInCurrentBranch,
-            filesReferringToChangedSchemaFiles
+            filesReferringToChangedSchemaFiles,
+            specificationsOfChangedExternalisedExamples
         )
 
-        val result = runBackwardCompatibilityCheckFor(filesToCheck)
+        val specificationsToCheck: Set<String> = filesChangedInCurrentBranch + filesReferringToChangedSchemaFiles + specificationsOfChangedExternalisedExamples
 
-        if (result == FAILED) {
-            exitWithMessage("$newLine Verdict: FAIL, backward incompatible changes were found.")
+        val result = try {
+            runBackwardCompatibilityCheckFor(specificationsToCheck)
+        } catch(e: Throwable) {
+            logger.newLine()
+            logger.newLine()
+            logger.log(e)
+            exitProcess(1)
         }
-        println("$newLine Verdict: PASS, all changes were backward compatible")
+
+        println()
+        println(result.report)
+        exitProcess(result.exitCode)
     }
 
-    private fun runBackwardCompatibilityCheckFor(files: Set<String>): String {
+    private fun getSpecificationsOfChangedExternalisedExamples(filesChangedInCurrentBranch: Set<String>): Set<String> {
+        data class CollectedFiles(
+            val specifications: MutableSet<String> = mutableSetOf(),
+            val examplesMissingSpecifications: MutableList<String> = mutableListOf(),
+            val ignoredFiles: MutableList<String> = mutableListOf()
+        )
+
+        val collectedFiles = filesChangedInCurrentBranch.fold(CollectedFiles()) { acc, filePath ->
+            val path = Paths.get(filePath)
+            val examplesDir = path.find { it.toString().endsWith("_examples") || it.toString().endsWith("_tests") }
+
+            if (examplesDir == null) {
+                acc.ignoredFiles.add(filePath)
+            } else {
+                val parentPath = examplesDir.parent
+                val strippedPath = parentPath.resolve(examplesDir.fileName.toString().removeSuffix("_examples"))
+                val specFiles = findSpecFiles(strippedPath)
+
+                if (specFiles.isNotEmpty()) {
+                    acc.specifications.addAll(specFiles.map { it.toString() })
+                } else {
+                    acc.examplesMissingSpecifications.add(filePath)
+                }
+            }
+            acc
+        }
+
+        val result = collectedFiles.specifications.toMutableSet()
+
+        collectedFiles.examplesMissingSpecifications.forEach { filePath ->
+            val path = Paths.get(filePath)
+            val examplesDir = path.find { it.toString().endsWith("_examples") || it.toString().endsWith("_tests") }
+            if (examplesDir != null) {
+                val parentPath = examplesDir.parent
+                val strippedPath = parentPath.resolve(examplesDir.fileName.toString().removeSuffix("_examples"))
+                val specFiles = findSpecFiles(strippedPath)
+                if (specFiles.isNotEmpty()) {
+                    result.addAll(specFiles.map { it.toString() })
+                } else {
+                    result.add("${strippedPath}.yaml")
+                }
+            }
+        }
+
+        return result
+    }
+
+    private fun Path.find(predicate: (Path) -> Boolean): Path? {
+        var current: Path? = this
+        while (current != null) {
+            if (predicate(current)) {
+                return current
+            }
+            current = current.parent
+        }
+        return null
+    }
+
+    private fun findSpecFiles(path: Path): List<Path> {
+        val extensions = CONTRACT_EXTENSIONS
+        return extensions.map { path.resolveSibling(path.fileName.toString() + it) }
+            .filter { Files.exists(it) && (isOpenAPI(it.pathString) || it.extension in listOf(WSDL, CONTRACT_EXTENSION)) }
+    }
+
+    private fun runBackwardCompatibilityCheckFor(files: Set<String>): CompatibilityReport {
         val branchWithChanges = gitCommand.currentBranch()
         val treeishWithChanges = if (branchWithChanges == HEAD) gitCommand.detachedHEAD() else branchWithChanges
 
         try {
-            val failures = files.mapIndexed { index, specFilePath ->
+            val results = files.mapIndexed { index, specFilePath ->
                 try {
                     println("${index.inc()}. Running the check for $specFilePath:")
 
                     // newer => the file with changes on the branch
-                    val newer = OpenApiSpecification.fromFile(specFilePath).toFeature()
+                    val (newer, unusedExamples) = OpenApiSpecification.fromFile(specFilePath).toFeature().loadExternalisedExamplesAndListUnloadableExamples()
 
                     val olderFile = gitCommand.getFileInTheDefaultBranch(specFilePath, treeishWithChanges)
                     if (olderFile == null) {
                         println("$specFilePath is a new file.$newLine")
-                        return@mapIndexed SUCCESS
+                        return@mapIndexed PASSED
                     }
 
                     gitCommand.checkout(gitCommand.defaultBranch())
@@ -85,7 +166,41 @@ class BackwardCompatibilityCheckCommand(
                                 MARGIN_SPACE
                             )
                         )
-                        SUCCESS
+
+                        println()
+
+                        var errorsFound = false
+
+                        if(!examplesAreValid(newer, "newer")) {
+                            println(
+                                "$newLine *** Examples in $specFilePath are not valid. ***$newLine".prependIndent(
+                                    MARGIN_SPACE
+                                )
+                            )
+
+                            println()
+
+                            errorsFound = true
+                        }
+
+                        if(unusedExamples.isNotEmpty()) {
+                            println(
+                                "$newLine *** Some examples for $specFilePath could not be loaded. ***$newLine".prependIndent(
+                                    MARGIN_SPACE
+                                )
+                            )
+
+                            println()
+
+                            errorsFound = true
+
+                        }
+
+                        if(errorsFound) {
+                            FAILED
+                        }
+                        else
+                            PASSED
                     } else {
                         println("$newLine ${backwardCompatibilityResult.report().prependIndent(MARGIN_SPACE)}")
                         println(
@@ -93,30 +208,54 @@ class BackwardCompatibilityCheckCommand(
                                 MARGIN_SPACE
                             )
                         )
+
+                        println()
+
                         FAILED
                     }
                 } finally {
                     gitCommand.checkout(treeishWithChanges)
                 }
-            }.filter { it == FAILED }
+            }
 
-            return if (failures.isNotEmpty()) FAILED else SUCCESS
+            return CompatibilityReport(results)
         } finally {
             gitCommand.checkout(treeishWithChanges)
         }
     }
 
+    private fun examplesAreValid(feature: Feature, which: String): Boolean {
+        return try {
+            feature.validateExamplesOrException()
+            true
+        } catch (t: Throwable) {
+            println()
+            false
+        }
+    }
+
     private fun logFilesToBeCheckedForBackwardCompatibility(
         changedFiles: Set<String>,
-        filesReferringToChangedFiles: Set<String>
+        filesReferringToChangedFiles: Set<String>,
+        specificationsOfChangedExternalisedExamples: Set<String>
     ) {
+
         println("Checking backward compatibility of the following files: $newLine")
-        println("Files that have changed - ")
-        changedFiles.forEach { println(it) }
+        println("${ONE_INDENT}Files that have changed:")
+        changedFiles.forEach { println(it.prependIndent(TWO_INDENTS)) }
         println()
-        println("Files referring to the changed files - ")
-        filesReferringToChangedFiles.forEach { println(it) }
-        println()
+
+        if(filesReferringToChangedFiles.isNotEmpty()) {
+            println("${ONE_INDENT}Files referring to the changed files - ")
+            filesReferringToChangedFiles.forEach { println(it.prependIndent(TWO_INDENTS)) }
+            println()
+        }
+
+        if(specificationsOfChangedExternalisedExamples.isNotEmpty()) {
+            println("${ONE_INDENT}Specifications whose externalised examples were changed - ")
+            filesReferringToChangedFiles.forEach { println(it.prependIndent(TWO_INDENTS)) }
+            println()
+        }
 
         println("-".repeat(20))
         println()
@@ -157,5 +296,23 @@ class BackwardCompatibilityCheckCommand(
         if (this.extension !in CONTRACT_EXTENSIONS) return false
         return OpenApiSpecification.isParsable(this.path)
     }
-}
 
+    class CompatibilityReport(results: List<CompatibilityResult>) {
+        val report: String
+        val exitCode: Int
+
+        init {
+            val failed: Boolean = results.any { it == FAILED }
+            val failedCount = results.count { it == FAILED }
+            val passedCount = results.count { it == PASSED }
+
+            report = "Files checked: ${results.size} (Passed: ${passedCount}, Failed: $failedCount)"
+            exitCode = if(failed) 1 else 0
+        }
+
+    }
+
+    enum class CompatibilityResult {
+        PASSED, FAILED
+    }
+}

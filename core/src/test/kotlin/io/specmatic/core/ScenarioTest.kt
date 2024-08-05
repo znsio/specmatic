@@ -34,7 +34,6 @@ class ScenarioTest {
                     listOf(Row(
                         mapOf("(REQUEST-BODY)" to """{"id": 10}""")
                     ).copy(
-                        responseExampleForValidation = ResponseSchemaExample(responseExample),
                         responseExample = responseExample
                     ))
                 )
@@ -78,7 +77,7 @@ class ScenarioTest {
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
                         mapOf("(REQUEST-BODY)" to """{"id": "abc123" }""")
-                    ).copy(responseExampleForValidation = ResponseSchemaExample(HttpResponse(200, """{"id": 10}"""))))
+                    ).copy(responseExample = HttpResponse(200, """{"id": 10}""")))
                 )
             ),
             emptyMap(),
@@ -120,7 +119,7 @@ class ScenarioTest {
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
                         mapOf("(REQUEST-BODY)" to """{"id": 10}""")
-                    ).copy(responseExampleForValidation = ResponseSchemaExample(HttpResponse(200, """{"id": "(number)"}"""))))
+                    ).copy(responseExample = HttpResponse(200, """{"id": "(number)"}""")))
                 )
             ),
             emptyMap(),
@@ -158,7 +157,7 @@ class ScenarioTest {
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
                         mapOf("(REQUEST-BODY)" to """{"id": "(number)" }""")
-                    ).copy(responseExampleForValidation = ResponseSchemaExample(HttpResponse(200, """{"id": 10}"""))))
+                    ))
                 )
             ),
             emptyMap(),
@@ -198,7 +197,6 @@ class ScenarioTest {
                     listOf(Row(
                         mapOf("(REQUEST-BODY)" to """{"id": 10}""")
                     ).copy(
-                        responseExampleForValidation = ResponseSchemaExample(responseExample),
                         responseExample = responseExample
                     ))
                 )
@@ -242,7 +240,7 @@ class ScenarioTest {
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
                         mapOf("(REQUEST-BODY)" to """{"id": "(string)" }""")
-                    ).copy(responseExampleForValidation = ResponseSchemaExample(HttpResponse(200, """{"id": 10}"""))))
+                    ))
                 )
             ),
             emptyMap(),

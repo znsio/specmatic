@@ -910,8 +910,10 @@ fun dumpIntoFirstAvailableStringField(httpResponse: HttpResponse, stringValue: S
 }
 
 fun dumpIntoFirstAvailableStringField(jsonObjectValue: JSONObjectValue, stringValue: String): JSONObjectValue {
-    val key = jsonObjectValue.jsonObject.keys.find {
-        jsonObjectValue.jsonObject.getValue(it) is StringValue
+    val key = jsonObjectValue.jsonObject.keys.find { key ->
+        key == "message" && jsonObjectValue.jsonObject.getValue(key) is StringValue
+    } ?: jsonObjectValue.jsonObject.keys.find { key ->
+        jsonObjectValue.jsonObject.getValue(key) is StringValue
     }
 
     if(key != null)

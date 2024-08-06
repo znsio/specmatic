@@ -47,6 +47,7 @@ class OpenApiCoverageReportInput(
         val testResultsWithNotImplementedEndpoints = identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults)
         var allTests = addTestResultsForMissingEndpoints(testResultsWithNotImplementedEndpoints)
         allTests = addTestResultsForTestsNotGeneratedBySpecmatic(allTests, allEndpoints)
+        allTests = checkForInvalidTestsAndUpdateResult(allTests)
         allTests = sortByPathMethodResponseStatus(allTests)
         finalizedTestResultRecords = allTests
 
@@ -100,6 +101,24 @@ class OpenApiCoverageReportInput(
         return OpenAPICoverageConsoleReport(apiCoverageRows, totalAPICount, missedAPICount, notImplementedAPICount, partiallyMissedAPICount, partiallyNotImplementedAPICount)
     }
 
+    private fun checkForInvalidTestsAndUpdateResult(allTests: List<TestResultRecord>): List<TestResultRecord> {
+        val invalidTestResults = mutableListOf<TestResultRecord>()
+
+        allTests.forEach {
+            if (!isTestResultValid(it)) {
+                invalidTestResults.add(it)
+            }
+        }
+
+        val updatedInvalidTestResults = invalidTestResults.map {
+            it.copy(
+                isValid = false
+            )
+        }
+
+        return allTests.minus(invalidTestResults.toSet()).plus(updatedInvalidTestResults)
+    }
+
     private fun addTestResultsForTestsNotGeneratedBySpecmatic(allTests: List<TestResultRecord>, allEndpoints: List<Endpoint>): List<TestResultRecord> {
         val endpointsWithoutTests =
             allEndpoints.filter { endpoint ->
@@ -112,7 +131,7 @@ class OpenApiCoverageReportInput(
                 endpoint.path,
                 endpoint.method,
                 endpoint.responseStatus,
-                if (isEndpointInvalid(endpoint)) TestResult.Invalid else TestResult.DidNotRun,
+                TestResult.DidNotRun,
                 endpoint.sourceProvider,
                 endpoint.sourceRepository,
                 endpoint.sourceRepositoryBranch,
@@ -122,18 +141,18 @@ class OpenApiCoverageReportInput(
         )
     }
 
-    private fun isEndpointInvalid(endPoint: Endpoint): Boolean {
+    private fun isTestResultValid(testResultRecord: TestResultRecord): Boolean {
         val paramRegex = Regex("\\{.+}")
-        val isPathWithParams = paramRegex.find(endPoint.path) != null
+        val isPathWithParams = paramRegex.find(testResultRecord.path) != null
 
         if(!isPathWithParams) {
-            return when (endPoint.responseStatus) {
-                404 -> true
-                else -> false
+            return when (testResultRecord.responseStatus) {
+                404 -> false
+                else -> true
             }
         }
 
-        return false
+        return true
     }
 
     fun generateJsonReport(): OpenApiCoverageJsonReport {
@@ -232,11 +251,11 @@ class OpenApiCoverageReportInput(
                 it.path == test.path && it.method == test.method && it.responseStatus == test.actualResponseStatus
             }
 
-            if(test.actualResponseStatus != 0) {
+            if(test.actualResponseStatus != 0 && !pathHasErrorResponse) {
                 notImplementedAndMissingTests.add(
                     test.copy(
                         responseStatus = test.actualResponseStatus,
-                        result = if (pathHasErrorResponse) TestResult.Covered else TestResult.MissingInSpec,
+                        result = TestResult.MissingInSpec,
                         actualResponseStatus = test.actualResponseStatus
                     )
                 )
@@ -251,7 +270,7 @@ class OpenApiCoverageReportInput(
             notImplementedAndMissingTests.add(test.copy(result = if (isInApplicationAPI) TestResult.Failed else TestResult.NotImplemented))
         }
 
-        return testResults.minus(failedTests.toSet()).plus(notImplementedAndMissingTests);
+        return testResults.minus(failedTests.toSet()).plus(notImplementedAndMissingTests)
     }
 }
 

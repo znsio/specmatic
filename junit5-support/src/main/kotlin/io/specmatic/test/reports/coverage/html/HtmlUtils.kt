@@ -24,6 +24,7 @@ fun createAssetsDir(reportsDir: String) {
     val fileNames = listOf(
         "badge.svg",
         "blocked.svg",
+        "check-badge.svg",
         "clipboard-document-list.svg",
         "clock.svg",
         "download.svg",

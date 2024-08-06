@@ -18,9 +18,12 @@ enum class Remarks(val value: String) {
 
     companion object{
         fun resolve(testResultRecords: List<TestResultRecord>): Remarks {
+            if(!testResultRecords.first().isValid) {
+                return Invalid
+            }
+
             if (testResultRecords.any { it.isExercised }) {
                 return when (testResultRecords.first().result) {
-                    TestResult.Invalid -> Invalid
                     TestResult.NotImplemented -> NotImplemented
                     TestResult.MissingInSpec -> Missed
                     TestResult.NotCovered -> NotCovered
@@ -28,7 +31,6 @@ enum class Remarks(val value: String) {
                 }
             }
             return when (val result = testResultRecords.first().result) {
-                TestResult.Invalid -> Invalid
                 TestResult.Skipped -> Missed
                 TestResult.DidNotRun -> DidNotRun
                 else -> throw ContractException("Cannot determine remarks for unknown test result: $result")

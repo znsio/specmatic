@@ -112,8 +112,7 @@ class HtmlReport {
     }
 
     private fun makeHeader(): String {
-        val successRate =
-            if (totalTests > 0) ((totalTests - totalFailures - totalErrors - totalSkipped) * 100 / totalTests) else 100
+        val successRate =  if (totalTests > 0) (totalSuccess * 100 / totalTests) else 100
         val hasFailed = totalFailures > 0 || totalErrors > 0
         val summaryResult = if (hasFailed) "rejected" else "approved"
 
@@ -127,10 +126,14 @@ class HtmlReport {
           </button>
         </div>
         <div id="summary" class="flex justify-between gap-5 p-1 border-2 bg-$summaryResult">
-          <ol id="results" class="flex flex-wrap items-center justify-between flex-1 px-2 gap-x-10">
+          <ol id="results" class="flex flex-wrap items-center justify-between flex-1 px-2 gap-x-5">
             <li class="flex items-center gap-2" id="success">
               <img src="assets/trend-up.svg" alt="success rate" class="size-8 $summaryResult">
               <p>Success Rate: $successRate%</p>
+            </li>
+            <li class="flex items-center gap-2" id="success">
+              <img src="assets/check-badge.svg" alt="success" class="size-8">
+              <p>Success: $totalSuccess</p>
             </li>
             <li class="flex items-center gap-2" id="failed">
               <img src="assets/x-circle.svg" alt="failed" class="size-8">
@@ -146,7 +149,7 @@ class HtmlReport {
             </li>
             <li class="flex items-center gap-2" id="total-tests">
               <img src="assets/clipboard-document-list.svg" alt="total-tests" class="size-8">
-              <p>Total Test: $totalTests</p>
+              <p>Total Tests: $totalTests</p>
             </li>
             <li class="flex items-center gap-2" id="total-time">
               <img src="assets/clock.svg" alt="total-time" class="size-8">
@@ -198,7 +201,7 @@ class HtmlReport {
         val pathSpan = if (showPathInfo) "rowspan=\"$pathRowSpan\"" else "class=\"hidden\""
         val methodSpan = if (showMethodInfo) "rowspan=\"$methodRowSpan\"" else "class=\"hidden\""
         return """
-                <tr>
+                <tr class="capitalize">
                     <td $pathSpan>${coverageRow.endpointCoverage}%</td>
                     <td $pathSpan colspan="2">${coverageRow.endpointPath}</td>
                     <td $methodSpan>${coverageRow.endpointMethod}</td>
@@ -241,7 +244,6 @@ class HtmlReport {
                 TestResult.MissingInSpec -> totalFailures++
                 TestResult.NotCovered -> totalFailures++
                 TestResult.Covered -> totalSuccess++
-                TestResult.Invalid -> totalFailures++
             }
         }
     }
@@ -284,6 +286,7 @@ class HtmlReport {
                                 url = matchingLogMessage?.targetServer ?: "Unknown URL",
                                 duration = matchingLogMessage?.duration() ?: 0,
                                 result = test.result.toString(),
+                                isValid = test.isValid,
                                 request = matchingLogMessage?.request?.toLogString() ?: "No Request",
                                 requestTime = matchingLogMessage?.requestTime?.toEpochMillis() ?: 0,
                                 response = getResponseString(matchingLogMessage, test.result),
@@ -339,6 +342,7 @@ data class ScenarioData(
     val url: String,
     val duration: Long,
     val result: String,
+    val isValid: Boolean,
     val request: String,
     val requestTime: Long,
     val response: String,

@@ -126,14 +126,14 @@ class OpenApiCoverageReportInput(
         val paramRegex = Regex("\\{.+}")
         val isPathWithParams = paramRegex.find(endPoint.path) != null
 
-        if(isPathWithParams) {
+        if(!isPathWithParams) {
             return when (endPoint.responseStatus) {
-                404 -> false
-                else -> true
+                404 -> true
+                else -> false
             }
         }
 
-        return true
+        return false
     }
 
     fun generateJsonReport(): OpenApiCoverageJsonReport {

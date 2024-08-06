@@ -120,7 +120,7 @@ class HtmlReport {
     <header class="border-2 shadow-md">
         <div class="flex items-center justify-between p-4" id="banner">
           <img src="assets/specmatic-logo.svg" alt="Specmatic" class="w-1/5 h-14">
-          <h2 class="text-3xl font-medium font-roboto">Contract Test Results</h2>
+          <h2 class="text-3xl font-medium font-roboto">CTK Results</h2>
           <button class="p-2 duration-100 border-2 active:scale-105 hover:border-blue-500" id="downloadButton">
             <img src="assets/download.svg" alt="Download Button" class="size-8">
           </button>

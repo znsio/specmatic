@@ -1,6 +1,5 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.*
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONComposite
@@ -17,8 +16,9 @@ data class Row(
     val name: String = "",
     val fileSource: String? = null,
     val requestBodyJSONExample: JSONExample? = null,
-    val responseExample: ResponseExample? = null,
-    val requestExample: HttpRequest? = null
+    val responseExampleForValidation: ResponseExample? = null,
+    val requestExample: HttpRequest? = null,
+    val responseExample: HttpResponse? = null
 ) {
     constructor(examples: Map<String, String>) :this(examples.keys.toList(), examples.values.toList())
 

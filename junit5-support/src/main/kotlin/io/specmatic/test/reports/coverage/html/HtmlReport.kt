@@ -127,7 +127,7 @@ class HtmlReport {
           </button>
         </div>
         <div id="summary" class="flex justify-between gap-5 p-1 border-2 bg-$summaryResult">
-          <ol id="results" class="flex flex-wrap items-center justify-between flex-1 px-2">
+          <ol id="results" class="flex flex-wrap items-center justify-between flex-1 px-2 gap-x-10">
             <li class="flex items-center gap-2" id="success">
               <img src="assets/trend-up.svg" alt="success rate" class="size-8 $summaryResult">
               <p>Success Rate: $successRate%</p>
@@ -205,7 +205,7 @@ class HtmlReport {
                     <td>${coverageRow.responseStatus}</td>
                     <td>${coverageRow.count}</td>
                     <td>
-                        <span class="px-4 py-1 font-medium bg-${getBadgeColor(coverageRow.remarks)}-300 rounded-lg">${coverageRow.remarks}</span>
+                        <span class="px-4 py-1.5 font-medium bg-${getBadgeColor(coverageRow.remarks)}-300 rounded-lg">${coverageRow.remarks}</span>
                     </td>
                 </tr>
         """.trim()
@@ -241,6 +241,7 @@ class HtmlReport {
                 TestResult.MissingInSpec -> totalFailures++
                 TestResult.NotCovered -> totalFailures++
                 TestResult.Covered -> totalSuccess++
+                TestResult.Invalid -> totalFailures++
             }
         }
     }

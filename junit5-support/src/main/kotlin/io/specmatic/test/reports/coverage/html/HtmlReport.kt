@@ -71,7 +71,7 @@ class HtmlReport {
             <thead>
                 <tr class="font-bold">
                   <td>Coverage</td>
-                  <td>Path</td>
+                  <td colspan="2">Path</td>
                   <td>Method</td>
                   <td>Response</td>
                   <td>Exercised</td>
@@ -88,7 +88,7 @@ class HtmlReport {
                     <span class="text-lg">&larr;</span>
                     <span>Go Back</span>
                 </button>
-                <ul id="response-summary" class="flex items-center justify-between flex-1 px-10 border-2 border-red-300 rounded-md">
+                <ul id="response-summary" class="flex items-center justify-between flex-1 px-10 gap-10 border-2 border-red-300 rounded-md font-roboto">
                 </ul>
             </div>
             <ul id="scenarios" class="flex flex-col gap-3 py-2 mt-3">
@@ -127,7 +127,7 @@ class HtmlReport {
           </button>
         </div>
         <div id="summary" class="flex justify-between gap-5 p-1 border-2 bg-$summaryResult">
-          <ol id="results" class="flex flex-wrap items-center justify-between flex-1 px-2">
+          <ol id="results" class="flex flex-wrap items-center justify-between flex-1 px-2 gap-x-10">
             <li class="flex items-center gap-2" id="success">
               <img src="assets/trend-up.svg" alt="success rate" class="size-8 $summaryResult">
               <p>Success Rate: $successRate%</p>
@@ -200,12 +200,12 @@ class HtmlReport {
         return """
                 <tr>
                     <td $pathSpan>${coverageRow.endpointCoverage}%</td>
-                    <td $pathSpan>${coverageRow.endpointPath}</td>
+                    <td $pathSpan colspan="2">${coverageRow.endpointPath}</td>
                     <td $methodSpan>${coverageRow.endpointMethod}</td>
                     <td>${coverageRow.responseStatus}</td>
                     <td>${coverageRow.count}</td>
                     <td>
-                        <span class="px-4 py-1 font-medium bg-${getBadgeColor(coverageRow.remarks)}-300 rounded-lg">${coverageRow.remarks}</span>
+                        <span class="px-4 py-1.5 font-medium bg-${getBadgeColor(coverageRow.remarks)}-300 rounded-lg">${coverageRow.remarks}</span>
                     </td>
                 </tr>
         """.trim()
@@ -241,6 +241,7 @@ class HtmlReport {
                 TestResult.MissingInSpec -> totalFailures++
                 TestResult.NotCovered -> totalFailures++
                 TestResult.Covered -> totalSuccess++
+                TestResult.Invalid -> totalFailures++
             }
         }
     }

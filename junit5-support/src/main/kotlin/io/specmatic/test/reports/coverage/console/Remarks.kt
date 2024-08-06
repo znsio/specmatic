@@ -9,7 +9,8 @@ enum class Remarks(val value: String) {
     Missed("missing in spec"),
     NotImplemented("not implemented"),
     DidNotRun("did not run"),
-    NotCovered("not covered");
+    NotCovered("not covered"),
+    Invalid("invalid");
 
     override fun toString(): String {
         return value
@@ -19,6 +20,7 @@ enum class Remarks(val value: String) {
         fun resolve(testResultRecords: List<TestResultRecord>): Remarks {
             if (testResultRecords.any { it.isExercised }) {
                 return when (testResultRecords.first().result) {
+                    TestResult.Invalid -> Invalid
                     TestResult.NotImplemented -> NotImplemented
                     TestResult.MissingInSpec -> Missed
                     TestResult.NotCovered -> NotCovered
@@ -26,6 +28,7 @@ enum class Remarks(val value: String) {
                 }
             }
             return when (val result = testResultRecords.first().result) {
+                TestResult.Invalid -> Invalid
                 TestResult.Skipped -> Missed
                 TestResult.DidNotRun -> DidNotRun
                 else -> throw ContractException("Cannot determine remarks for unknown test result: $result")

@@ -106,12 +106,13 @@ class OpenApiCoverageReportInput(
                 allTests.none { it.path == endpoint.path && it.method == endpoint.method && it.responseStatus == endpoint.responseStatus }
                         && excludedAPIs.none { it == endpoint.path }
             }
+
         return allTests.plus(
             endpointsWithoutTests.map { endpoint ->  TestResultRecord(
                 endpoint.path,
                 endpoint.method,
                 endpoint.responseStatus,
-                TestResult.DidNotRun,
+                if (isEndpointInvalid(endpoint)) TestResult.Invalid else TestResult.DidNotRun,
                 endpoint.sourceProvider,
                 endpoint.sourceRepository,
                 endpoint.sourceRepositoryBranch,
@@ -119,6 +120,20 @@ class OpenApiCoverageReportInput(
                 endpoint.serviceType
             ) }
         )
+    }
+
+    private fun isEndpointInvalid(endPoint: Endpoint): Boolean {
+        val paramRegex = Regex("\\{.+}")
+        val isPathWithParams = paramRegex.find(endPoint.path) != null
+
+        if(!isPathWithParams) {
+            return when (endPoint.responseStatus) {
+                404 -> true
+                else -> false
+            }
+        }
+
+        return false
     }
 
     fun generateJsonReport(): OpenApiCoverageJsonReport {
@@ -217,13 +232,15 @@ class OpenApiCoverageReportInput(
                 it.path == test.path && it.method == test.method && it.responseStatus == test.actualResponseStatus
             }
 
-            notImplementedAndMissingTests.add(
-                test.copy(
-                    responseStatus = test.actualResponseStatus,
-                    result = if (pathHasErrorResponse) TestResult.Covered else TestResult.MissingInSpec,
-                    actualResponseStatus = test.actualResponseStatus
+            if(test.actualResponseStatus != 0) {
+                notImplementedAndMissingTests.add(
+                    test.copy(
+                        responseStatus = test.actualResponseStatus,
+                        result = if (pathHasErrorResponse) TestResult.Covered else TestResult.MissingInSpec,
+                        actualResponseStatus = test.actualResponseStatus
+                    )
                 )
-            )
+            }
 
             if (!endpointsAPISet) {
                 notImplementedAndMissingTests.add(test.copy(result = TestResult.NotCovered))

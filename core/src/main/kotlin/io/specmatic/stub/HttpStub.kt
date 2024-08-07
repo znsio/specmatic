@@ -1,19 +1,6 @@
 package io.specmatic.stub
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.specmatic.core.*
-import io.specmatic.core.log.*
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.parsedValue
-import io.specmatic.core.utilities.*
-import io.specmatic.core.value.EmptyString
-import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.Value
-import io.specmatic.core.value.toXMLNode
-import io.specmatic.mock.*
-import io.specmatic.stub.report.StubEndpoint
-import io.specmatic.stub.report.StubUsageReport
-import io.specmatic.test.HttpClient
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
@@ -24,6 +11,16 @@ import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
+import io.specmatic.core.*
+import io.specmatic.core.log.*
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.utilities.*
+import io.specmatic.core.value.*
+import io.specmatic.mock.*
+import io.specmatic.stub.report.StubEndpoint
+import io.specmatic.stub.report.StubUsageReport
+import io.specmatic.test.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.delay
@@ -43,10 +40,6 @@ data class HttpStubResponse(
     val feature: Feature? = null,
     val scenario: Scenario? = null
 )
-
-interface RequestInterceptor {
-    fun interceptRequest(httpRequest: HttpRequest): HttpRequest?
-}
 
 class HttpStub(
     private val features: List<Feature>,
@@ -842,9 +835,6 @@ object ContractAndRequestsMismatch : MismatchMessages {
     }
 }
 
-data class RequestContext(val httpRequest: HttpRequest) : Context
-
-
 private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest): StubbedResponseResult {
     data class ResponseDetails(val feature: Feature, val successResponse: ResponseBuilder?, val results: Results)
 
@@ -861,11 +851,33 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
         null -> {
             val failureResults = responses.filter { it.successResponse == null }.map { it.results }
 
-            val httpFailureResponse = failureResults.reduce { first, second ->
+            val combinedFailureResult = failureResults.reduce { first, second ->
                 first.plus(second)
-            }.withoutFluff().generateErrorHttpResponse(httpRequest)
+            }.withoutFluff()
 
-            NotStubbed(HttpStubResponse(httpFailureResponse))
+            val firstScenarioWith400Response = failureResults.flatMap { it.results }.filter {
+                it is Result.Failure
+                    && it.failureReason == null
+                    && it.scenario?.let { it.status == 400 || it.status == 422 } == true
+            }.map { it.scenario!! }.firstOrNull()
+
+            if(firstScenarioWith400Response != null && Flags.getBooleanValue("SPECMATIC_GENERATIVE_STUB") == true) {
+                val httpResponse = (firstScenarioWith400Response as Scenario).generateHttpResponse(emptyMap())
+                val updatedResponse: HttpResponse = dumpIntoFirstAvailableStringField(httpResponse, combinedFailureResult.report())
+
+                FoundStubbedResponse(
+                    HttpStubResponse(
+                        updatedResponse,
+                        contractPath = "",
+                        feature = fakeResponse?.feature,
+                        scenario = fakeResponse?.successResponse?.scenario
+                    )
+                )
+            } else {
+                val httpFailureResponse = combinedFailureResult.generateErrorHttpResponse(httpRequest)
+
+                NotStubbed(HttpStubResponse(httpFailureResponse))
+            }
         }
 
         else -> FoundStubbedResponse(
@@ -877,6 +889,69 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
             )
         )
     }
+}
+
+fun dumpIntoFirstAvailableStringField(httpResponse: HttpResponse, stringValue: String): HttpResponse {
+    val responseBody = httpResponse.body
+
+    if(responseBody !is JSONObjectValue)
+        return httpResponse
+
+    val newBody = dumpIntoFirstAvailableStringField(responseBody, stringValue)
+
+    return httpResponse.copy(body = newBody)
+}
+
+fun dumpIntoFirstAvailableStringField(jsonObjectValue: JSONObjectValue, stringValue: String): JSONObjectValue {
+    val key = jsonObjectValue.jsonObject.keys.find { key ->
+        key == "message" && jsonObjectValue.jsonObject[key] is StringValue
+    } ?: jsonObjectValue.jsonObject.keys.find { key ->
+        jsonObjectValue.jsonObject[key] is StringValue
+    }
+
+    if(key != null)
+        return jsonObjectValue.copy(
+            jsonObject = jsonObjectValue.jsonObject.plus(
+                key to StringValue(stringValue)
+            )
+        )
+
+    val newMap = jsonObjectValue.jsonObject.mapValues { (key, value) ->
+        if(value is JSONObjectValue) {
+            dumpIntoFirstAvailableStringField(value, stringValue)
+        } else if(value is JSONArrayValue) {
+            dumpIntoFirstAvailableStringField(value, stringValue)
+        } else {
+            value
+        }
+    }
+
+    return jsonObjectValue.copy(newMap)
+}
+
+fun dumpIntoFirstAvailableStringField(jsonArrayValue: JSONArrayValue, stringValue: String): JSONArrayValue {
+    val indexOfFirstStringValue = jsonArrayValue.list.indexOfFirst { it is StringValue }
+
+    if(indexOfFirstStringValue >= 0) {
+        val mutableList = jsonArrayValue.list.toMutableList()
+        mutableList.add(indexOfFirstStringValue, StringValue(stringValue))
+
+        return jsonArrayValue.copy(
+            list = mutableList
+        )
+    }
+
+    val newList = jsonArrayValue.list.map { value ->
+        if(value is JSONObjectValue) {
+            dumpIntoFirstAvailableStringField(value, stringValue)
+        } else if(value is JSONArrayValue) {
+            dumpIntoFirstAvailableStringField(value, stringValue)
+        } else {
+            value
+        }
+    }
+
+    return jsonArrayValue.copy(list = newList)
 }
 
 private fun strictModeHttp400Response(

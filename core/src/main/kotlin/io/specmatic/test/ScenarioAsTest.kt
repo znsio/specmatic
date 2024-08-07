@@ -5,7 +5,10 @@ import io.specmatic.core.*
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.logger
+import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.Value
 
 data class ScenarioAsTest(
     val scenario: Scenario,
@@ -16,16 +19,22 @@ data class ScenarioAsTest(
     private val specification: String? = null,
     private val serviceType: String? = null,
     private val annotations: String? = null,
-    private val validators: List<ResponseValidator> = emptyList()
+    private val validators: List<ResponseValidator> = emptyList(),
+    private val originalScenario: Scenario,
+    private val workflow: Workflow = Workflow(),
 ) : ContractTest {
+
+    companion object {
+        private var id: Value? = null
+    }
+
     override fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord {
         val resultStatus = result.testResult()
 
-        val responseStatus = scenario.getStatus(response)
         return TestResultRecord(
             convertPathParameterStyle(scenario.path),
             scenario.method,
-            responseStatus,
+            scenario.status,
             resultStatus,
             sourceProvider,
             sourceRepository,
@@ -73,7 +82,9 @@ data class ScenarioAsTest(
         testExecutor: TestExecutor,
         flagsBased: FlagsBased
     ): Pair<Result, HttpResponse?> {
-        val request = testScenario.generateHttpRequest(flagsBased)
+        val request = testScenario.generateHttpRequest(flagsBased).let {
+            workflow.updateRequest(it, originalScenario)
+        }
 
         return try {
             testExecutor.setServerState(testScenario.serverState)
@@ -81,6 +92,8 @@ data class ScenarioAsTest(
             testExecutor.preExecuteScenario(testScenario, request)
 
             val response = testExecutor.execute(request)
+
+            workflow.extractDataFrom(request, response, originalScenario)
 
             val validatorResult = validators.asSequence().map { it.validate(scenario, response) }.filterNotNull().firstOrNull()
             val result = validatorResult ?: testResult(request, response, testScenario, flagsBased)

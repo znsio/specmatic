@@ -1453,7 +1453,7 @@ data class Feature(
                     val method = example.request.method
                     val path = example.request.path
                     val responseCode = example.response.status
-                    logger.log("    $method $path -> $responseCode not found in the specification")
+                    logger.log("    $method $path -> $responseCode does not match any operation in the specification")
                 } catch(e: Throwable) {
                     logger.log("    Could not parse the example: ${exceptionCauseMessage(e)}")
                 }

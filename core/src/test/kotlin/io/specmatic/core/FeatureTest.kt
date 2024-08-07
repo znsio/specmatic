@@ -2349,7 +2349,7 @@ paths:
         }
 
         assertThat(output)
-            .contains("POST /order_action_figure -> 200 not found in the specification")
+            .contains("POST /order_action_figure -> 200 does not match any operation in the specification")
     }
 
     companion object {

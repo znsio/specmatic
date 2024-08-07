@@ -15,9 +15,12 @@ import java.io.File
 import java.util.concurrent.Callable
 
 
-@Command(name = "stub",
-        mixinStandardHelpOptions = true,
-        description = ["Start a stub server with contract"])
+@Command(
+    name = "stub",
+    aliases = ["virtualize"],
+    mixinStandardHelpOptions = true,
+    description = ["Start a stub server with contract"]
+)
 class StubCommand : Callable<Unit> {
     var httpStub: ContractStub? = null
 

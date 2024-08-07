@@ -5,6 +5,7 @@ import io.specmatic.core.pattern.NumberPattern
 import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
+import io.specmatic.stub.captureStandardOutput
 import io.specmatic.test.ScenarioTestGenerationException
 import io.specmatic.test.ScenarioTestGenerationFailure
 import io.specmatic.test.TestExecutor
@@ -2337,6 +2338,18 @@ paths:
         assertThatThrownBy { feature.validateExamplesOrException() }.satisfies(Consumer { exception ->
             assertThat(exceptionCauseMessage(exception)).contains("200_OK")
         })
+    }
+
+    @Test
+    fun `show the reason why an example was ignored when loading it for test`() {
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/has_irrelevant_externalized_test.yaml").toFeature()
+
+        val (output, _) = captureStandardOutput {
+            feature.loadExternalisedExamples()
+        }
+
+        assertThat(output)
+            .contains("POST /order_action_figure -> 200 not found in the specification")
     }
 
     companion object {

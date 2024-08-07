@@ -16,6 +16,7 @@ import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
 import io.specmatic.core.utilities.*
+import io.specmatic.stub.stringToMockScenario
 import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.info.Info
@@ -1443,8 +1444,19 @@ data class Feature(
             println()
             logger.log("The following externalized examples were not used:")
 
-            unusedExternalizedExamples.sorted().forEach {
-                logger.log("  $it")
+            unusedExternalizedExamples.sorted().forEach { externalizedExamplePath: String ->
+                logger.log("  $externalizedExamplePath")
+
+                try {
+                    val example = ScenarioStub.parse(File(externalizedExamplePath).readText())
+
+                    val method = example.request.method
+                    val path = example.request.path
+                    val responseCode = example.response.status
+                    logger.log("    $method $path -> $responseCode not found in the specification")
+                } catch(e: Throwable) {
+                    logger.log("    Could not parse the example: ${exceptionCauseMessage(e)}")
+                }
             }
 
             logger.newLine()

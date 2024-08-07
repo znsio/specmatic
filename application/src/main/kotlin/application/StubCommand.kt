@@ -5,6 +5,7 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.stub.ContractStub
@@ -87,6 +88,9 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--logPrefix"], description = ["Prefix of log file"])
     var logPrefix: String = "specmatic"
 
+    @Option(names = ["--delay-in-ms"], description = ["Stub response delay in milliseconds"])
+    var delayInMilliseconds: Long = 0
+
     @Autowired
     val watchMaker = WatchMaker()
 
@@ -101,6 +105,10 @@ class StubCommand : Callable<Unit> {
     var specmaticConfigPath: String? = null
 
     override fun call() {
+        if (delayInMilliseconds > 0) {
+            System.setProperty(SPECMATIC_STUB_DELAY, delayInMilliseconds.toString())
+        }
+
         val logPrinters = configureLogPrinters()
 
         logger = if(verbose)

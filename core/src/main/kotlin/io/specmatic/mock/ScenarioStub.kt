@@ -5,7 +5,7 @@ import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
 
-data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val delayInSeconds: Int? = null, val stubToken: String? = null, val requestBodyRegex: String? = null) {
+data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val delayInMilliseconds: Long? = null, val stubToken: String? = null, val requestBodyRegex: String? = null) {
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
 
@@ -25,6 +25,7 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
 const val MOCK_HTTP_REQUEST = "http-request"
 const val MOCK_HTTP_RESPONSE = "http-response"
 const val DELAY_IN_SECONDS = "delay-in-seconds"
+const val DELAY_IN_MILLISECONDS = "delay-in-milliseconds"
 const val TRANSIENT_MOCK = "http-stub"
 const val TRANSIENT_MOCK_ID = "$TRANSIENT_MOCK-id"
 const val REQUEST_BODY_REGEX = "bodyRegex"
@@ -44,10 +45,13 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
     val mockResponse: HttpResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
 
     val delayInSeconds: Int? = getIntOrNull(DELAY_IN_SECONDS, mockSpec)
+    val delayInMilliseconds: Long? = getLongOrNull(DELAY_IN_MILLISECONDS, mockSpec)
+    val delayInMs: Long? = delayInMilliseconds ?: delayInSeconds?.toLong()?.times(1000)
+
     val stubToken: String? = getStringOrNull(TRANSIENT_MOCK_ID, mockSpec)
     val requestBodyRegex: String? = getRequestBodyRegexOrNull(mockSpec)
 
-    return ScenarioStub(request = mockRequest, response = mockResponse, delayInSeconds = delayInSeconds, stubToken = stubToken, requestBodyRegex = requestBodyRegex)
+    return ScenarioStub(request = mockRequest, response = mockResponse, delayInMilliseconds = delayInMs, stubToken = stubToken, requestBodyRegex = requestBodyRegex)
 }
 
 fun getRequestBodyRegexOrNull(mockSpec: Map<String, Value>): String? {
@@ -72,6 +76,15 @@ fun getIntOrNull(key: String, mapData: Map<String, Value>): Int? {
     return data?.let {
         if(data !is NumberValue) throw ContractException("$key should be a number")
         return data.number.toInt()
+    }
+}
+
+fun getLongOrNull(key: String, mapData: Map<String, Value>): Long? {
+    val data = mapData[key]
+
+    return data?.let {
+        if(data !is NumberValue) throw ContractException("$key should be a number")
+        return data.number.toLong()
     }
 }
 

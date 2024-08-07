@@ -11,7 +11,7 @@ data class HttpStubData(
     val requestType: HttpRequestPattern,
     val response: HttpResponse,
     val resolver: Resolver,
-    val delayInSeconds: Int? = null,
+    val delayInMilliseconds: Long? = null,
     val responsePattern: HttpResponsePattern,
     val contractPath: String = "",
     val stubToken: String? = null,

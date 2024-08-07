@@ -8112,8 +8112,8 @@ components:
         val specmaticConfig = SpecmaticConfig(
             workflow = WorkflowConfiguration(
                 mapOf(
-                    "POST /order -> 201" to WorkflowIDOperation(extract = "BODY.id"),
-                    "GET /order/{id} -> 201" to WorkflowIDOperation(use = "PATH.id")
+                    "POST /orders -> 201" to WorkflowIDOperation(extract = "BODY.id"),
+                    "GET /orders/(orderId:string) -> 200" to WorkflowIDOperation(use = "PATH.orderId")
                 )
             )
         )

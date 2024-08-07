@@ -28,6 +28,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.Writer
 import java.nio.charset.Charset
 import java.util.*
@@ -53,7 +54,7 @@ class HttpStub(
     val httpClientFactory: HttpClientFactory = HttpClientFactory(),
     val workingDirectory: WorkingDirectory? = null,
     val specmaticConfigPath: String? = null,
-    private val timeoutMillis: Long = 0
+    private val timeoutMillis: Long = 0,
 ) : ContractStub {
     constructor(
         feature: Feature,
@@ -75,6 +76,14 @@ class HttpStub(
         const val JSON_REPORT_PATH = "./build/reports/specmatic"
         const val JSON_REPORT_FILE_NAME = "stub_usage_report.json"
     }
+
+    val data: String = if(specmaticConfigPath != null && File(specmaticConfigPath).exists()) "" else ""
+
+    private val specmaticConfig: SpecmaticConfig =
+        if(specmaticConfigPath != null && File(specmaticConfigPath).exists())
+            loadSpecmaticConfig(specmaticConfigPath)
+        else
+            SpecmaticConfig()
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(staticHttpStubData(rawHttpStubs))
 
@@ -204,7 +213,7 @@ class HttpStub(
                         isSseExpectationCreation(httpRequest) -> handleSseExpectationCreationRequest(httpRequest)
                         isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
                         isFlushTransientStubsRequest(httpRequest) -> handleFlushTransientStubsRequest(httpRequest)
-                        else -> serveStubResponse(httpRequest)
+                        else -> serveStubResponse(httpRequest, specmaticConfig)
                     }
 
                     if (httpRequest.path!!.startsWith("""/features/default""")) {
@@ -356,7 +365,7 @@ class HttpStub(
     private fun handleFetchLogRequest(): HttpStubResponse =
         HttpStubResponse(HttpResponse.ok(StringValue(LogTail.getString())))
 
-    private fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse {
+    private fun serveStubResponse(httpRequest: HttpRequest, specmaticConfig: SpecmaticConfig): HttpStubResponse {
         val result: StubbedResponseResult = getHttpResponse(
             httpRequest,
             features,
@@ -364,7 +373,8 @@ class HttpStub(
             threadSafeHttpStubQueue,
             strictMode,
             passThroughTargetBase,
-            httpClientFactory
+            httpClientFactory,
+            specmaticConfig
         )
 
         result.log(_logs, httpRequest)
@@ -707,7 +717,8 @@ fun getHttpResponse(
     threadSafeStubQueue: ThreadSafeListOfStubs,
     strictMode: Boolean,
     passThroughTargetBase: String = "",
-    httpClientFactory: HttpClientFactory? = null
+    httpClientFactory: HttpClientFactory? = null,
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig()
 ): StubbedResponseResult {
     return try {
         val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
@@ -719,7 +730,7 @@ fun getHttpResponse(
         else if (strictMode) {
             NotStubbed(HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults)))
         } else {
-            fakeHttpResponse(features, httpRequest)
+            fakeHttpResponse(features, httpRequest, specmaticConfig)
         }
     } finally {
         features.forEach { feature ->
@@ -835,7 +846,7 @@ object ContractAndRequestsMismatch : MismatchMessages {
     }
 }
 
-private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest): StubbedResponseResult {
+private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest, specmaticConfig: SpecmaticConfig = SpecmaticConfig()): StubbedResponseResult {
     data class ResponseDetails(val feature: Feature, val successResponse: ResponseBuilder?, val results: Results)
 
     if (features.isEmpty())
@@ -861,7 +872,7 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
                     && it.scenario?.let { it.status == 400 || it.status == 422 } == true
             }.map { it.scenario!! }.firstOrNull()
 
-            if(firstScenarioWith400Response != null && Flags.getBooleanValue("SPECMATIC_GENERATIVE_STUB") == true) {
+            if(firstScenarioWith400Response != null && specmaticConfig.stub.generative == true) {
                 val httpResponse = (firstScenarioWith400Response as Scenario).generateHttpResponse(emptyMap())
                 val updatedResponse: HttpResponse = dumpIntoFirstAvailableStringField(httpResponse, combinedFailureResult.report())
 

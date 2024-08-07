@@ -14,6 +14,7 @@ import io.specmatic.test.HttpClient
 import io.specmatic.test.TestExecutor
 import io.mockk.every
 import io.mockk.mockk
+import io.specmatic.stub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.RepeatedTest
@@ -1547,21 +1548,15 @@ components:
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-        System.setProperty("SPECMATIC_GENERATIVE_STUB", "true")
+        HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
+            val response = stub.client.execute(request)
 
-        try {
-            HttpStub(feature).use { stub ->
-                val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
-                val response = stub.client.execute(request)
+            assertThat(response.status).isEqualTo(400)
+            assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
 
-                assertThat(response.status).isEqualTo(400)
-                assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
-
-                val responseBody = response.body as JSONObjectValue
-                assertThat(responseBody.jsonObject["message"]?.toStringLiteral()).contains("REQUEST.BODY.data")
-            }
-        } finally {
-            System.clearProperty("SPECMATIC_GENERATIVE_STUB")
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.jsonObject["message"]?.toStringLiteral()).contains("REQUEST.BODY.data")
         }
     }
 
@@ -1615,21 +1610,15 @@ components:
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-        System.setProperty("SPECMATIC_GENERATIVE_STUB", "true")
+        HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
+            val response = stub.client.execute(request)
 
-        try {
-            HttpStub(feature).use { stub ->
-                val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
-                val response = stub.client.execute(request)
+            assertThat(response.status).isEqualTo(422)
+            assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
 
-                assertThat(response.status).isEqualTo(422)
-                assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
-
-                val responseBody = response.body as JSONObjectValue
-                assertThat(responseBody.jsonObject["message"]?.toStringLiteral()).contains("REQUEST.BODY.data")
-            }
-        } finally {
-            System.clearProperty("SPECMATIC_GENERATIVE_STUB")
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.jsonObject["message"]?.toStringLiteral()).contains("REQUEST.BODY.data")
         }
     }
 
@@ -1683,21 +1672,15 @@ components:
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-        System.setProperty("SPECMATIC_GENERATIVE_STUB", "true")
+        HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
+            val response = stub.client.execute(request)
 
-        try {
-            HttpStub(feature).use { stub ->
-                val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
-                val response = stub.client.execute(request)
+            assertThat(response.status).isEqualTo(422)
+            assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
 
-                assertThat(response.status).isEqualTo(422)
-                assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
-
-                val responseBody = response.body as JSONObjectValue
-                assertThat(responseBody.jsonObject["error_info"]?.toStringLiteral()).contains("REQUEST.BODY.data")
-            }
-        } finally {
-            System.clearProperty("SPECMATIC_GENERATIVE_STUB")
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.jsonObject["error_info"]?.toStringLiteral()).contains("REQUEST.BODY.data")
         }
     }
 
@@ -1751,21 +1734,15 @@ components:
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-        System.setProperty("SPECMATIC_GENERATIVE_STUB", "true")
+        HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
+            val response = stub.client.execute(request)
 
-        try {
-            HttpStub(feature).use { stub ->
-                val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
-                val response = stub.client.execute(request)
+            assertThat(response.status).isEqualTo(422)
+            assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
 
-                assertThat(response.status).isEqualTo(422)
-                assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
-
-                val responseBody = response.body as JSONObjectValue
-                assertThat(responseBody.jsonObject["message"]).isInstanceOf(NumberValue::class.java)
-            }
-        } finally {
-            System.clearProperty("SPECMATIC_GENERATIVE_STUB")
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.jsonObject["message"]).isInstanceOf(NumberValue::class.java)
         }
     }
 }

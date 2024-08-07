@@ -20,7 +20,7 @@ class WorkflowTest {
             status = 201,
             body = JSONObjectPattern(
                 mapOf(
-                    "id" to StringPattern()
+                    "id" to NumberPattern()
                 )
             )
         ),
@@ -34,14 +34,14 @@ class WorkflowTest {
         "Get data",
         HttpRequestPattern(
             method = "GET",
-            httpPathPattern = buildHttpPathPattern("/data/(id:string)"),
+            httpPathPattern = buildHttpPathPattern("/data/(id:number)"),
             body = StringPattern()
         ),
         HttpResponsePattern(
             status = 200,
             body = JSONObjectPattern(
                 mapOf(
-                    "id" to StringPattern()
+                    "id" to NumberPattern()
                 )
             )
         ),
@@ -53,13 +53,13 @@ class WorkflowTest {
 
     @Test
     fun `should fetch the specified id out a response and add it to a request`() {
-        val request = HttpRequest("POST", "/data/id-from-test-data", body = StringValue("data"))
-        val response = HttpResponse(201, body = parsedJSONObject("""{"id": "id-from-response"}"""))
+        val request = HttpRequest("POST", "/data/1", body = StringValue("data"))
+        val response = HttpResponse(201, body = parsedJSONObject("""{"id": "1000"}"""))
 
         val workflow = Workflow(
             workflow = WorkflowConfiguration(
                 ids = mapOf(
-                    "GET /data/(id:string) -> 200" to WorkflowIDOperation(use = "PATH.id"),
+                    "GET /data/(id:number) -> 200" to WorkflowIDOperation(use = "PATH.id"),
                     "POST /data -> 201" to WorkflowIDOperation(extract = "BODY.id")
                 )
             )
@@ -68,14 +68,14 @@ class WorkflowTest {
         workflow.extractDataFrom(response, postScenario)
         val updatedRequest = workflow.updateRequest(request, getScenario)
 
-        assertThat(updatedRequest.path).isEqualTo("/data/id-from-response")
+        assertThat(updatedRequest.path).isEqualTo("/data/1000")
 
     }
 
     @Test
     fun `should fetch the specified id out a response and add it to a request when configured for all requests`() {
-        val request = HttpRequest("POST", "/data/id-from-test-data", body = StringValue("data"))
-        val response = HttpResponse(201, body = parsedJSONObject("""{"id": "id-from-response"}"""))
+        val request = HttpRequest("POST", "/data/1", body = StringValue("data"))
+        val response = HttpResponse(201, body = parsedJSONObject("""{"id": "1000"}"""))
 
         val workflow = Workflow(
             workflow = WorkflowConfiguration(
@@ -89,7 +89,7 @@ class WorkflowTest {
         workflow.extractDataFrom(response, postScenario)
         val updatedRequest = workflow.updateRequest(request, getScenario)
 
-        assertThat(updatedRequest.path).isEqualTo("/data/id-from-response")
+        assertThat(updatedRequest.path).isEqualTo("/data/1000")
 
     }
 }

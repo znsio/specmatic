@@ -1667,7 +1667,7 @@ components:
                               - error_info
                             properties:
                               error_info:
-                                type: id
+                                type: string
         """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()

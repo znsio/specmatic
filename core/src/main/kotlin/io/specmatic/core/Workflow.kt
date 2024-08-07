@@ -9,7 +9,7 @@ class Workflow(
 ) {
     var id: Value? = null
 
-    fun extractDataFrom(request: HttpRequest, response: HttpResponse, originalScenario: Scenario) {
+    fun extractDataFrom(response: HttpResponse, originalScenario: Scenario) {
         val operation = workflow.ids.get(originalScenario.apiDescription)
 
         if(operation == null)

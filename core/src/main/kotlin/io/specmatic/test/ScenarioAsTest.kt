@@ -93,7 +93,7 @@ data class ScenarioAsTest(
 
             val response = testExecutor.execute(request)
 
-            workflow.extractDataFrom(request, response, originalScenario)
+            workflow.extractDataFrom(response, originalScenario)
 
             val validatorResult = validators.asSequence().map { it.validate(scenario, response) }.filterNotNull().firstOrNull()
             val result = validatorResult ?: testResult(request, response, testScenario, flagsBased)

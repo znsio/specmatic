@@ -1,15 +1,12 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.*
-import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.Value
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.*
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class WorkflowTest {
-    val postScenario = Scenario(
+    val postScenarioReturningNumber = Scenario(
         "Add data",
         HttpRequestPattern(
             method = "POST",
@@ -30,7 +27,28 @@ class WorkflowTest {
         emptyMap(),
     )
 
-    val getScenario = Scenario(
+    val postScenarioReturningString = Scenario(
+        "Add data",
+        HttpRequestPattern(
+            method = "POST",
+            httpPathPattern = buildHttpPathPattern("/data"),
+            body = StringPattern()
+        ),
+        HttpResponsePattern(
+            status = 201,
+            body = JSONObjectPattern(
+                mapOf(
+                    "id" to StringPattern()
+                )
+            )
+        ),
+        emptyMap(),
+        emptyList(),
+        emptyMap(),
+        emptyMap(),
+    )
+
+    val getScenarioAcceptingNumberInPath = Scenario(
         "Get data",
         HttpRequestPattern(
             method = "GET",
@@ -65,8 +83,8 @@ class WorkflowTest {
             )
         )
 
-        workflow.extractDataFrom(response, postScenario)
-        val updatedRequest = workflow.updateRequest(request, getScenario)
+        workflow.extractDataFrom(response, postScenarioReturningNumber)
+        val updatedRequest = workflow.updateRequest(request, getScenarioAcceptingNumberInPath)
 
         assertThat(updatedRequest.path).isEqualTo("/data/1000")
 
@@ -86,10 +104,31 @@ class WorkflowTest {
             )
         )
 
-        workflow.extractDataFrom(response, postScenario)
-        val updatedRequest = workflow.updateRequest(request, getScenario)
+        workflow.extractDataFrom(response, postScenarioReturningNumber)
+        val updatedRequest = workflow.updateRequest(request, getScenarioAcceptingNumberInPath)
 
         assertThat(updatedRequest.path).isEqualTo("/data/1000")
 
+    }
+
+    @Test
+    fun `should complain if the returned id is of the wrong type`() {
+        val request = HttpRequest("POST", "/data/1", body = StringValue("data"))
+        val response = HttpResponse(201, body = parsedJSONObject("""{"id": "abc"}"""))
+
+        val workflow = Workflow(
+            workflow = WorkflowConfiguration(
+                ids = mapOf(
+                    "*" to WorkflowIDOperation(use = "PATH.id"),
+                    "POST /data -> 201" to WorkflowIDOperation(extract = "BODY.id")
+                )
+            )
+        )
+
+        workflow.extractDataFrom(response, postScenarioReturningNumber)
+
+        assertThatThrownBy {
+            workflow.updateRequest(request, getScenarioAcceptingNumberInPath)
+        }.hasMessageContaining("Expected number")
     }
 }

@@ -89,6 +89,10 @@ class Workflow(
                         updatedPath.set(indexToUpdate, it.toStringLiteral())
                     }
 
+                    val result = originalScenario.httpRequestPattern.httpPathPattern?.matches(updatedPath.joinToString("/"), originalScenario.resolver)
+
+                    result?.throwOnFailure()
+
                     request.copy(path = updatedPath.joinToString("/"))
                 }
             }

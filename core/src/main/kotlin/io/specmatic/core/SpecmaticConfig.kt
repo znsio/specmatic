@@ -59,8 +59,7 @@ fun String.loadContract(): Feature {
     return parseContractFileToFeature(File(this))
 }
 
-data class StubConfiguration(
-    val generative: Boolean = false
+data class StubConfiguration(val generative: Boolean = false)
 
 data class WorkflowIDOperation(
     val extract: String? = null,

@@ -65,6 +65,11 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.isResiliencyTestingEnabled()).isEqualTo(true)
         assertThat(config.isExtensibleSchemaEnabled()).isTrue()
         assertThat(config.isResponseValueValidationEnabled()).isTrue()
+
+        val htmlConfig = config.report?.formatters?.first { it.type == ReportFormatterType.HTML }
+        assertThat(htmlConfig?.title).isEqualTo("Test Report")
+        assertThat(htmlConfig?.heading).isEqualTo("Test Results")
+        assertThat(htmlConfig?.outputDirectory).isEqualTo("output")
     }
 
     @Test
@@ -144,7 +149,7 @@ internal class SpecmaticConfigKtTest {
             EXTENSIBLE_SCHEMA to "false",
             SCHEMA_EXAMPLE_DEFAULT to "true",
             MAX_TEST_REQUEST_COMBINATIONS to "50",
-            EXAMPLE_DIRECTORIES to "folder1/examples,folder2/examples"
+            EXAMPLE_DIRECTORIES to "folder1/examples,folder2/examples",
         )
         try {
             properties.forEach { System.setProperty(it.key, it.value) }

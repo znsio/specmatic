@@ -39,7 +39,7 @@ class HttpClient(
     private val httpClientFactory: HttpClientFactory = ApacheHttpClientFactory(timeout)
 ) : TestExecutor {
     private val serverStateURL = "/_$APPLICATION_NAME_LOWER_CASE/state"
-    private lateinit var httpLogMessage: HttpLogMessage;
+    private var httpLogMessage: HttpLogMessage = HttpLogMessage(targetServer = baseURL)
 
     override fun execute(request: HttpRequest): HttpResponse {
         val url = URL(request.getURL(baseURL))
@@ -131,7 +131,7 @@ class HttpClient(
     }
 
     override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
-        httpLogMessage = HttpLogMessage(targetServer = baseURL, request = request, scenario = scenario)
+        httpLogMessage = httpLogMessage.copy(scenario = scenario, request = request)
         DataRecorder.addHttpLog(httpLogMessage)
     }
 }

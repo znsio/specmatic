@@ -82,7 +82,7 @@ open class SpecmaticJUnitSupport {
             try {
                 reportProcessors.forEach { it.process(getReportConfiguration()) }
             } finally {
-                HtmlReport().generate()
+                HtmlReport(specmaticConfig?.report).generate()
             }
 
             threads.distinct().let {

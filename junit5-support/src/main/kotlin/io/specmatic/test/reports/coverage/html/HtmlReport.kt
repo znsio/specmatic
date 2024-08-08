@@ -2,11 +2,9 @@ package io.specmatic.test.reports.coverage.html
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
-import io.specmatic.core.TestResult
+import io.specmatic.core.*
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger
-import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_REPORT_DIRECTORY
-import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.specmatic.test.DataRecorder
 import io.specmatic.test.DataRecorder.displayName
 import io.specmatic.test.DataRecorder.duration
@@ -19,29 +17,33 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 
-class HtmlReport {
+class HtmlReport(report: ReportConfiguration?) {
     companion object {
-        private val testResultRecords = SpecmaticJUnitSupport.openApiCoverageReportInput.finalizedTestResultRecords
-
+        private val groupedTestResultRecords = SpecmaticJUnitSupport.openApiCoverageReportInput.groupedTestResultRecords
         private val groupedHttpLogMessages = DataRecorder.testHttpLogMessages.groupBy { it.scenario?.method }
 
-        private val apiCoverageRows = SpecmaticJUnitSupport.openApiCoverageReportInput.apiCoverageRows
-            .groupBy { it.endpointPath }.mapValues { pathGroup -> pathGroup.value.groupBy { it.endpointMethod } }
+        private val groupedApiCoverageRows = SpecmaticJUnitSupport.openApiCoverageReportInput.apiCoverageRows
+            .groupBy { it.path }.mapValues { pathGroup -> pathGroup.value.groupBy { it.method } }
 
-        private val groupedTestResultRecords = testResultRecords.groupBy { it.path }
-            .mapValues { pathGroup ->
-                pathGroup.value.groupBy { it.method }
-                    .mapValues { methodGroup -> methodGroup.value.groupBy { it.responseStatus } }
-            }
-
-        private val outputDirectory =(getStringValue(SPECMATIC_REPORT_DIRECTORY) ?: "reports/specmatic") + "/html"
         internal val successResultSet = setOf(TestResult.Success, TestResult.DidNotRun, TestResult.Covered)
-
-        private val totalTests: Int = testResultRecords.size
+        private var totalTests: Int = 0
         private var totalErrors = 0
         private var totalFailures = 0
         private var totalSkipped = 0
         private var totalSuccess = 0
+
+        private var outputDirectory = "reports/specmatic/html"
+        var pageTitle: String = "Specmatic Report"
+        var reportHeading: String = "Contract Test Results"
+    }
+
+    init {
+        val htmlConfig = report?.formatters?.firstOrNull { it.type == ReportFormatterType.HTML }
+        htmlConfig?.let {
+            outputDirectory = it.outputDirectory ?: outputDirectory
+            pageTitle = it.title ?: pageTitle
+            reportHeading = it.heading ?: reportHeading
+        }
     }
 
     fun generate() {
@@ -61,7 +63,7 @@ class HtmlReport {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
-    <title>Specmatic Report</title>
+    <title>$pageTitle</title>
     <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body class="flex flex-col min-h-screen gap-3 p-4 font-mono">
@@ -120,7 +122,7 @@ class HtmlReport {
     <header class="border-2 shadow-md">
         <div class="flex items-center justify-between p-4" id="banner">
           <img src="assets/specmatic-logo.svg" alt="Specmatic" class="w-1/5 h-14">
-          <h2 class="text-3xl font-medium font-roboto">CTK Results</h2>
+          <h2 class="text-3xl font-medium font-roboto">$reportHeading</h2>
           <button class="p-2 duration-100 border-2 active:scale-105 hover:border-blue-500" id="downloadButton">
             <img src="assets/download.svg" alt="Download Button" class="size-8">
           </button>
@@ -168,7 +170,7 @@ class HtmlReport {
     private fun makeTableRows(): String {
         val builder = StringBuilder()
 
-        apiCoverageRows.forEach { (_, methodGroup) ->
+        groupedApiCoverageRows.forEach { (_, methodGroup) ->
             val pathRowSpan = methodGroup.values.sumOf { it.size }
 
             methodGroup.entries.forEachIndexed { methodIndex, entry ->
@@ -202,9 +204,9 @@ class HtmlReport {
         val methodSpan = if (showMethodInfo) "rowspan=\"$methodRowSpan\"" else "class=\"hidden\""
         return """
                 <tr class="capitalize">
-                    <td $pathSpan>${coverageRow.endpointCoverage}%</td>
-                    <td $pathSpan colspan="2">${coverageRow.endpointPath}</td>
-                    <td $methodSpan>${coverageRow.endpointMethod}</td>
+                    <td $pathSpan>${coverageRow.coveragePercentage}%</td>
+                    <td $pathSpan colspan="2">${coverageRow.path}</td>
+                    <td $methodSpan>${coverageRow.method}</td>
                     <td>${coverageRow.responseStatus}</td>
                     <td>${coverageRow.count}</td>
                     <td>
@@ -233,17 +235,24 @@ class HtmlReport {
     }
 
     private fun calculateTestGroupCounts() {
-        for (test in testResultRecords) {
-            when (test.result) {
-                TestResult.Error -> totalErrors++
-                TestResult.Failed -> totalFailures++
-                TestResult.Skipped -> totalSkipped++
-                TestResult.Success -> totalSuccess++
-                TestResult.NotImplemented -> totalFailures++
-                TestResult.DidNotRun -> totalSkipped++
-                TestResult.MissingInSpec -> totalFailures++
-                TestResult.NotCovered -> totalFailures++
-                TestResult.Covered -> totalSuccess++
+        groupedTestResultRecords.forEach { pathGroup ->
+            pathGroup.value.forEach { methodGroup ->
+                methodGroup.value.forEach { responseGroup ->
+                    responseGroup.value.forEach {
+                        when (it.result) {
+                            TestResult.Error -> totalErrors++
+                            TestResult.Failed -> totalFailures++
+                            TestResult.Skipped -> totalSkipped++
+                            TestResult.Success -> totalSuccess++
+                            TestResult.NotImplemented -> totalFailures++
+                            TestResult.DidNotRun -> totalSkipped++
+                            TestResult.MissingInSpec -> totalFailures++
+                            TestResult.NotCovered -> totalFailures++
+                            TestResult.Covered -> totalSuccess++
+                        }
+                        totalTests++
+                    }
+                }
             }
         }
     }
@@ -256,8 +265,10 @@ class HtmlReport {
 
     private fun getSpecmaticVersion(): String {
         val props = Properties()
-        // TODO - Remove Hardcoded Value, Read from Actual File
-        return "2.0.3"
+        HtmlReport::class.java.classLoader.getResourceAsStream("version.properties").use {
+            props.load(it)
+        }
+        return props.getProperty("version")
     }
 
     private fun getTotalDuration(): Long {
@@ -276,7 +287,7 @@ class HtmlReport {
                     val scenarioDataList = statusMap.getOrPut(status) { mutableListOf() }
 
                     for (test in testResults) {
-                        val matchingLogMessage = groupedHttpLogMessages.get(method)?.firstOrNull {
+                        val matchingLogMessage = groupedHttpLogMessages[method]?.firstOrNull {
                             it.scenario == test.scenario
                         }
 

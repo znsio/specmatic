@@ -19,7 +19,7 @@ class OpenApiCoverageReportInput(
     private val excludedAPIs: MutableList<String> = mutableListOf(),
     private val allEndpoints: MutableList<Endpoint> = mutableListOf(),
     private var endpointsAPISet: Boolean = false,
-    internal var finalizedTestResultRecords: List<TestResultRecord> = emptyList(),
+    internal var groupedTestResultRecords: MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>> = mutableMapOf(),
     internal var apiCoverageRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf()
 ) {
     fun addTestReportRecords(testResultRecord: TestResultRecord) {
@@ -49,10 +49,9 @@ class OpenApiCoverageReportInput(
         allTests = addTestResultsForTestsNotGeneratedBySpecmatic(allTests, allEndpoints)
         allTests = checkForInvalidTestsAndUpdateResult(allTests)
         allTests = sortByPathMethodResponseStatus(allTests)
-        finalizedTestResultRecords = allTests
 
-        val apiTestsGrouped = groupTestsByPathMethodAndResponseStatus(allTests)
-        apiTestsGrouped.forEach { (route, methodMap) ->
+        groupedTestResultRecords = groupTestsByPathMethodAndResponseStatus(allTests)
+        groupedTestResultRecords.forEach { (route, methodMap) ->
             val routeAPIRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf()
             val topLevelCoverageRow = createTopLevelApiCoverageRow(route, methodMap)
             methodMap.forEach { (method, responseCodeMap) ->
@@ -60,16 +59,15 @@ class OpenApiCoverageReportInput(
                     if (routeAPIRows.isEmpty()) {
                         routeAPIRows.add(topLevelCoverageRow)
                     } else {
-                        val rowMethod = if (routeAPIRows.none { it.method == method }) method else ""
+                        val methodExists = routeAPIRows.any { it.method == method }
                         routeAPIRows.add(
                             topLevelCoverageRow.copy(
-                                method = rowMethod,
-                                path ="",
+                                method = method,
+                                showMethod = !methodExists,
+                                showPath = false,
                                 responseStatus = responseStatus.toString(),
                                 count = testResults.count{it.isExercised}.toString(),
-                                coveragePercentage = 0,
                                 remarks = Remarks.resolve(testResults),
-                                endpointMethod = method
                             )
                         )
                     }
@@ -78,7 +76,7 @@ class OpenApiCoverageReportInput(
             apiCoverageRows.addAll(routeAPIRows)
         }
 
-        val totalAPICount = apiTestsGrouped.keys.size
+        val totalAPICount = groupedTestResultRecords.keys.size
         val testsGroupedByPath = allTests.groupBy { it.path }
         val skippedAndMissingInSpecTestResults = setOf(TestResult.Skipped, TestResult.MissingInSpec)
 
@@ -201,10 +199,7 @@ class OpenApiCoverageReportInput(
             responseStatus!!,
             exercisedCount!!,
             coveragePercentage,
-            remarks,
-            endpointPath = route,
-            endpointMethod = method,
-            endpointCoverage = coveragePercentage
+            remarks
         )
     }
 

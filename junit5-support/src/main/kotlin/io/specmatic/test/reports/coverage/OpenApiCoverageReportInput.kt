@@ -45,6 +45,7 @@ class OpenApiCoverageReportInput(
         val testResultsWithNotImplementedEndpoints = identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults)
         var allTests = addTestResultsForMissingEndpoints(testResultsWithNotImplementedEndpoints)
         allTests = addTestResultsForTestsNotGeneratedBySpecmatic(allTests, allEndpoints)
+        allTests = checkForInvalidTestsAndUpdateResult(allTests)
         allTests = sortByPathMethodResponseStatus(allTests)
 
         val apiTestsGrouped = groupTestsByPathMethodAndResponseStatus(allTests)
@@ -211,13 +212,15 @@ class OpenApiCoverageReportInput(
                 it.path == test.path && it.method == test.method && it.responseStatus == test.actualResponseStatus
             }
 
-            notImplementedAndMissingTests.add(
-                test.copy(
-                    responseStatus = test.actualResponseStatus,
-                    result = if (pathHasErrorResponse) TestResult.Covered else TestResult.MissingInSpec,
-                    actualResponseStatus = test.actualResponseStatus
+            if(test.actualResponseStatus != 0) {
+                notImplementedAndMissingTests.add(
+                    test.copy(
+                        responseStatus = test.actualResponseStatus,
+                        result = if (pathHasErrorResponse) TestResult.Covered else TestResult.MissingInSpec,
+                        actualResponseStatus = test.actualResponseStatus
+                    )
                 )
-            )
+            }
 
             if (!endpointsAPISet) {
                 notImplementedAndMissingTests.add(test.copy(result = TestResult.NotCovered))
@@ -228,7 +231,39 @@ class OpenApiCoverageReportInput(
             notImplementedAndMissingTests.add(test.copy(result = if (isInApplicationAPI) TestResult.Failed else TestResult.NotImplemented))
         }
 
-        return testResults.minus(failedTests.toSet()).plus(notImplementedAndMissingTests);
+        return testResults.minus(failedTests.toSet()).plus(notImplementedAndMissingTests)
+    }
+
+    private fun checkForInvalidTestsAndUpdateResult(allTests: List<TestResultRecord>): List<TestResultRecord> {
+        val invalidTestResults = mutableListOf<TestResultRecord>()
+
+        allTests.forEach {
+            if (!isTestResultValid(it)) {
+                invalidTestResults.add(it)
+            }
+        }
+
+        val updatedInvalidTestResults = invalidTestResults.map {
+            it.copy(
+                isValid = false
+            )
+        }
+
+        return allTests.minus(invalidTestResults.toSet()).plus(updatedInvalidTestResults)
+    }
+
+    private fun isTestResultValid(testResultRecord: TestResultRecord): Boolean {
+        val paramRegex = Regex("\\{.+}")
+        val isPathWithParams = paramRegex.find(testResultRecord.path) != null
+
+        if(!isPathWithParams) {
+            return when (testResultRecord.responseStatus) {
+                404 -> false
+                else -> true
+            }
+        }
+
+        return true
     }
 }
 

@@ -101,31 +101,12 @@ class OpenApiCoverageReportInput(
         return OpenAPICoverageConsoleReport(apiCoverageRows, totalAPICount, missedAPICount, notImplementedAPICount, partiallyMissedAPICount, partiallyNotImplementedAPICount)
     }
 
-    private fun checkForInvalidTestsAndUpdateResult(allTests: List<TestResultRecord>): List<TestResultRecord> {
-        val invalidTestResults = mutableListOf<TestResultRecord>()
-
-        allTests.forEach {
-            if (!isTestResultValid(it)) {
-                invalidTestResults.add(it)
-            }
-        }
-
-        val updatedInvalidTestResults = invalidTestResults.map {
-            it.copy(
-                isValid = false
-            )
-        }
-
-        return allTests.minus(invalidTestResults.toSet()).plus(updatedInvalidTestResults)
-    }
-
     private fun addTestResultsForTestsNotGeneratedBySpecmatic(allTests: List<TestResultRecord>, allEndpoints: List<Endpoint>): List<TestResultRecord> {
         val endpointsWithoutTests =
             allEndpoints.filter { endpoint ->
                 allTests.none { it.path == endpoint.path && it.method == endpoint.method && it.responseStatus == endpoint.responseStatus }
                         && excludedAPIs.none { it == endpoint.path }
             }
-
         return allTests.plus(
             endpointsWithoutTests.map { endpoint ->  TestResultRecord(
                 endpoint.path,
@@ -139,20 +120,6 @@ class OpenApiCoverageReportInput(
                 endpoint.serviceType
             ) }
         )
-    }
-
-    private fun isTestResultValid(testResultRecord: TestResultRecord): Boolean {
-        val paramRegex = Regex("\\{.+}")
-        val isPathWithParams = paramRegex.find(testResultRecord.path) != null
-
-        if(!isPathWithParams) {
-            return when (testResultRecord.responseStatus) {
-                404 -> false
-                else -> true
-            }
-        }
-
-        return true
     }
 
     fun generateJsonReport(): OpenApiCoverageJsonReport {
@@ -243,34 +210,52 @@ class OpenApiCoverageReportInput(
 
     private fun identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults: List<TestResultRecord>): List<TestResultRecord> {
         val notImplementedAndMissingTests = mutableListOf<TestResultRecord>()
-        val failedTests = testResults.filter { it.result == TestResult.Failed }
+        val failedTestResults = testResults.filter { it.result == TestResult.Failed }
 
-        for (test in failedTests) {
+        for (failedTestResult in failedTestResults) {
 
             val pathHasErrorResponse = allEndpoints.any {
-                it.path == test.path && it.method == test.method && it.responseStatus == test.actualResponseStatus
+                it.path == failedTestResult.path && it.method == failedTestResult.method && it.responseStatus == failedTestResult.actualResponseStatus
             }
 
-            if(test.actualResponseStatus != 0 && !pathHasErrorResponse) {
+            if(!failedTestResult.isConnectionRefused()) {
                 notImplementedAndMissingTests.add(
-                    test.copy(
-                        responseStatus = test.actualResponseStatus,
-                        result = TestResult.MissingInSpec,
-                        actualResponseStatus = test.actualResponseStatus
+                    failedTestResult.copy(
+                        responseStatus = failedTestResult.actualResponseStatus,
+                        result = if (pathHasErrorResponse) TestResult.Covered else TestResult.MissingInSpec,
+                        actualResponseStatus = failedTestResult.actualResponseStatus
                     )
                 )
             }
 
             if (!endpointsAPISet) {
-                notImplementedAndMissingTests.add(test.copy(result = TestResult.NotCovered))
+                notImplementedAndMissingTests.add(failedTestResult.copy(result = TestResult.NotCovered))
                 continue
             }
 
-            val isInApplicationAPI = applicationAPIs.any { api -> api.path == test.path && api.method == test.method }
-            notImplementedAndMissingTests.add(test.copy(result = if (isInApplicationAPI) TestResult.Failed else TestResult.NotImplemented))
+            val isInApplicationAPI = applicationAPIs.any { api -> api.path == failedTestResult.path && api.method == failedTestResult.method }
+            notImplementedAndMissingTests.add(failedTestResult.copy(result = if (isInApplicationAPI) TestResult.Failed else TestResult.NotImplemented))
         }
 
-        return testResults.minus(failedTests.toSet()).plus(notImplementedAndMissingTests)
+        return testResults.minus(failedTestResults.toSet()).plus(notImplementedAndMissingTests)
+    }
+
+    private fun checkForInvalidTestsAndUpdateResult(allTests: List<TestResultRecord>): List<TestResultRecord> {
+        val invalidTestResults = allTests.filterNot(::isTestResultValid)
+        val updatedInvalidTestResults = invalidTestResults.map { it.copy( isValid = false ) }
+
+        return allTests.minus(invalidTestResults.toSet()).plus(updatedInvalidTestResults)
+    }
+
+    private fun isTestResultValid(testResultRecord: TestResultRecord): Boolean {
+        val paramRegex = Regex("\\{.+}")
+        val isPathWithParams = paramRegex.find(testResultRecord.path) != null
+        if (isPathWithParams) return true
+
+        return when (testResultRecord.responseStatus) {
+            404 -> false
+            else -> true
+        }
     }
 }
 

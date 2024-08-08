@@ -341,7 +341,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("", "", "401", "1", 0, Remarks.Covered),
                     OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 75, Remarks.Covered),
                     OpenApiCoverageConsoleRow("", "", 400, 0, 0, Remarks.DidNotRun),
-                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Invalid),
                     OpenApiCoverageConsoleRow("POST", "", 500, 1, 0, Remarks.Covered)
                 ),
                 totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0

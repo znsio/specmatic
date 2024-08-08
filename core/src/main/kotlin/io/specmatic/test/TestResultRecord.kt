@@ -19,4 +19,5 @@ data class TestResultRecord(
 ) {
     val isExercised = result !in setOf(TestResult.Skipped, TestResult.DidNotRun)
     val isCovered = result in setOf(TestResult.Success, TestResult.Error, TestResult.Failed, TestResult.Covered)
+    fun isConnectionRefused() = actualResponseStatus == 0
 }

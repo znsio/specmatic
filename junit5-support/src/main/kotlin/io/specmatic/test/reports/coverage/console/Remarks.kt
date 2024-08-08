@@ -18,7 +18,7 @@ enum class Remarks(val value: String) {
 
     companion object{
         fun resolve(testResultRecords: List<TestResultRecord>): Remarks {
-            if(!testResultRecords.first().isValid) {
+            if(!testResultRecords.any { it.isValid }) {
                 return when (testResultRecords.first().result) {
                     TestResult.MissingInSpec -> Missed
                     else -> Invalid

@@ -5,6 +5,7 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
@@ -38,14 +39,15 @@ class HttpStubDelayTest {
     }
 
     @Test
-    fun `test is delayed when delay is provided in arguments`() = runBlocking {
+    fun `should be delayed when delay is provided in arguments`() = runBlocking {
         val delayInMillis = 1000L
 
         val timeTaken = measureTimeMillis {
             respondToKtorHttpResponse(
                 call = applicationCall,
                 httpResponse = httpResponse,
-                delayInMilliSeconds = delayInMillis
+                delayInMilliSeconds = delayInMillis,
+                specmaticConfig = SpecmaticConfig()
             )
         }
 
@@ -56,15 +58,16 @@ class HttpStubDelayTest {
     }
 
     @Test
-    fun `test delay in argument is prioritized over system property`() = runBlocking {
-        System.setProperty(SPECMATIC_STUB_DELAY, "2000")
+    fun `delay in argument should be prioritized over system property`() = runBlocking {
+        System.setProperty(SPECMATIC_STUB_DELAY, "0")
         val delayInMillis = 1000L
 
         val timeTaken = measureTimeMillis {
             respondToKtorHttpResponse(
                 call = applicationCall,
                 httpResponse = httpResponse,
-                delayInMilliSeconds = delayInMillis
+                delayInMilliSeconds = delayInMillis,
+                specmaticConfig = SpecmaticConfig()
             )
         }
 
@@ -79,14 +82,15 @@ class HttpStubDelayTest {
     }
 
     @Test
-    fun `test delay in system property is used when no delay in argument`() = runBlocking {
-        val delayInMs = 2000L
+    fun `delay in system or config property should be used when no delay in argument`() = runBlocking {
+        val delayInMs = 5000L
         System.setProperty(SPECMATIC_STUB_DELAY, delayInMs.toString())
 
         val timeTaken = measureTimeMillis {
             respondToKtorHttpResponse(
                 call = applicationCall,
                 httpResponse = httpResponse,
+                specmaticConfig = SpecmaticConfig()
             )
         }
 
@@ -101,12 +105,13 @@ class HttpStubDelayTest {
     }
 
     @Test
-    fun `test minimum delay when no delay argument or system property`() = runBlocking {
+    fun `should be no delay when no delay argument or system or config property`() = runBlocking {
         val maxDelayInMs = 1000L
         val timeTaken = measureTimeMillis {
             respondToKtorHttpResponse(
                 call = applicationCall,
                 httpResponse = httpResponse,
+                specmaticConfig = SpecmaticConfig()
             )
         }
 

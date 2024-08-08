@@ -8,6 +8,7 @@ import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
 import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
 import io.specmatic.core.utilities.Flags.Companion.SCHEMA_EXAMPLE_DEFAULT
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_GENERATIVE_TESTS
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -65,6 +66,9 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.isResiliencyTestingEnabled()).isEqualTo(true)
         assertThat(config.isExtensibleSchemaEnabled()).isTrue()
         assertThat(config.isResponseValueValidationEnabled()).isTrue()
+
+        assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
+        assertThat(config.stub.generative).isEqualTo(false)
     }
 
     @Test
@@ -144,7 +148,8 @@ internal class SpecmaticConfigKtTest {
             EXTENSIBLE_SCHEMA to "false",
             SCHEMA_EXAMPLE_DEFAULT to "true",
             MAX_TEST_REQUEST_COMBINATIONS to "50",
-            EXAMPLE_DIRECTORIES to "folder1/examples,folder2/examples"
+            EXAMPLE_DIRECTORIES to "folder1/examples,folder2/examples",
+            SPECMATIC_STUB_DELAY to "1000"
         )
         try {
             properties.forEach { System.setProperty(it.key, it.value) }
@@ -154,6 +159,7 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isResponseValueValidationEnabled()).isTrue()
             assertThat(config.isExtensibleSchemaEnabled()).isFalse()
             assertThat(config.examples).isEqualTo(listOf("folder1/examples", "folder2/examples"))
+            assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
         } finally {
             properties.forEach { System.clearProperty(it.key) }
         }
@@ -189,7 +195,8 @@ internal class SpecmaticConfigKtTest {
             SPECMATIC_GENERATIVE_TESTS to "false",
             VALIDATE_RESPONSE_VALUE to "false",
             EXTENSIBLE_SCHEMA to "false",
-            EXAMPLE_DIRECTORIES to "folder1/examples,folder2/examples"
+            EXAMPLE_DIRECTORIES to "folder1/examples,folder2/examples",
+            SPECMATIC_STUB_DELAY to "5000"
         )
         try {
             props.forEach { System.setProperty(it.key, it.value) }
@@ -198,6 +205,7 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isResponseValueValidationEnabled()).isTrue()
             assertThat(config.isExtensibleSchemaEnabled()).isTrue()
             assertThat(config.examples).isEqualTo(listOf("folder1/examples", "folder2/examples"))
+            assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
         } finally {
             props.forEach { System.clearProperty(it.key) }
         }

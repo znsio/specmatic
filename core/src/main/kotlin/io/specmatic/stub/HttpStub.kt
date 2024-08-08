@@ -250,7 +250,7 @@ class HttpStub(
                             )
                         }
                     } else {
-                        respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInMilliSeconds)
+                        respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInMilliSeconds, specmaticConfig)
                         httpLogMessage.addResponse(httpStubResponse)
                     }
                 } catch (e: ContractException) {
@@ -691,7 +691,8 @@ internal fun toParams(queryParameters: Parameters): List<Pair<String, String>> =
 internal suspend fun respondToKtorHttpResponse(
     call: ApplicationCall,
     httpResponse: HttpResponse,
-    delayInMilliSeconds: Long? = null
+    delayInMilliSeconds: Long? = null,
+    specmaticConfig: SpecmaticConfig? = null
 ) {
     val contentType = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
     val textContent = TextContent(
@@ -705,7 +706,7 @@ internal suspend fun respondToKtorHttpResponse(
         call.response.headers.append(name, value)
     }
 
-    val delayInMs = delayInMilliSeconds ?: getLongValue(SPECMATIC_STUB_DELAY)
+    val delayInMs = delayInMilliSeconds ?: specmaticConfig?.stub?.delayInMilliseconds
     if (delayInMs != null) {
         delay(delayInMs)
     }

@@ -1,19 +1,6 @@
 package io.specmatic.stub
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.specmatic.core.*
-import io.specmatic.core.log.*
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.parsedValue
-import io.specmatic.core.utilities.*
-import io.specmatic.core.value.EmptyString
-import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.Value
-import io.specmatic.core.value.toXMLNode
-import io.specmatic.mock.*
-import io.specmatic.stub.report.StubEndpoint
-import io.specmatic.stub.report.StubUsageReport
-import io.specmatic.test.HttpClient
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
@@ -24,6 +11,16 @@ import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
+import io.specmatic.core.*
+import io.specmatic.core.log.*
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.utilities.*
+import io.specmatic.core.value.*
+import io.specmatic.mock.*
+import io.specmatic.stub.report.StubEndpoint
+import io.specmatic.stub.report.StubUsageReport
+import io.specmatic.test.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.delay
@@ -31,6 +28,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.Writer
 import java.nio.charset.Charset
 import java.util.*
@@ -44,10 +42,6 @@ data class HttpStubResponse(
     val scenario: Scenario? = null
 )
 
-interface RequestInterceptor {
-    fun interceptRequest(httpRequest: HttpRequest): HttpRequest?
-}
-
 class HttpStub(
     private val features: List<Feature>,
     rawHttpStubs: List<HttpStubData> = emptyList(),
@@ -60,7 +54,7 @@ class HttpStub(
     val httpClientFactory: HttpClientFactory = HttpClientFactory(),
     val workingDirectory: WorkingDirectory? = null,
     val specmaticConfigPath: String? = null,
-    private val timeoutMillis: Long = 0
+    private val timeoutMillis: Long = 0,
 ) : ContractStub {
     constructor(
         feature: Feature,
@@ -82,6 +76,14 @@ class HttpStub(
         const val JSON_REPORT_PATH = "./build/reports/specmatic"
         const val JSON_REPORT_FILE_NAME = "stub_usage_report.json"
     }
+
+    val data: String = if(specmaticConfigPath != null && File(specmaticConfigPath).exists()) "" else ""
+
+    private val specmaticConfig: SpecmaticConfig =
+        if(specmaticConfigPath != null && File(specmaticConfigPath).exists())
+            loadSpecmaticConfig(specmaticConfigPath)
+        else
+            SpecmaticConfig()
 
     private val threadSafeHttpStubs = ThreadSafeListOfStubs(staticHttpStubData(rawHttpStubs))
 
@@ -211,7 +213,7 @@ class HttpStub(
                         isSseExpectationCreation(httpRequest) -> handleSseExpectationCreationRequest(httpRequest)
                         isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
                         isFlushTransientStubsRequest(httpRequest) -> handleFlushTransientStubsRequest(httpRequest)
-                        else -> serveStubResponse(httpRequest)
+                        else -> serveStubResponse(httpRequest, specmaticConfig)
                     }
 
                     if (httpRequest.path!!.startsWith("""/features/default""")) {
@@ -363,7 +365,7 @@ class HttpStub(
     private fun handleFetchLogRequest(): HttpStubResponse =
         HttpStubResponse(HttpResponse.ok(StringValue(LogTail.getString())))
 
-    private fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse {
+    private fun serveStubResponse(httpRequest: HttpRequest, specmaticConfig: SpecmaticConfig): HttpStubResponse {
         val result: StubbedResponseResult = getHttpResponse(
             httpRequest,
             features,
@@ -371,7 +373,8 @@ class HttpStub(
             threadSafeHttpStubQueue,
             strictMode,
             passThroughTargetBase,
-            httpClientFactory
+            httpClientFactory,
+            specmaticConfig
         )
 
         result.log(_logs, httpRequest)
@@ -714,7 +717,8 @@ fun getHttpResponse(
     threadSafeStubQueue: ThreadSafeListOfStubs,
     strictMode: Boolean,
     passThroughTargetBase: String = "",
-    httpClientFactory: HttpClientFactory? = null
+    httpClientFactory: HttpClientFactory? = null,
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig()
 ): StubbedResponseResult {
     return try {
         val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
@@ -726,7 +730,7 @@ fun getHttpResponse(
         else if (strictMode) {
             NotStubbed(HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults)))
         } else {
-            fakeHttpResponse(features, httpRequest)
+            fakeHttpResponse(features, httpRequest, specmaticConfig)
         }
     } finally {
         features.forEach { feature ->
@@ -842,10 +846,7 @@ object ContractAndRequestsMismatch : MismatchMessages {
     }
 }
 
-data class RequestContext(val httpRequest: HttpRequest) : Context
-
-
-private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest): StubbedResponseResult {
+private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest, specmaticConfig: SpecmaticConfig = SpecmaticConfig()): StubbedResponseResult {
     data class ResponseDetails(val feature: Feature, val successResponse: ResponseBuilder?, val results: Results)
 
     if (features.isEmpty())
@@ -861,11 +862,33 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
         null -> {
             val failureResults = responses.filter { it.successResponse == null }.map { it.results }
 
-            val httpFailureResponse = failureResults.reduce { first, second ->
+            val combinedFailureResult = failureResults.reduce { first, second ->
                 first.plus(second)
-            }.withoutFluff().generateErrorHttpResponse(httpRequest)
+            }.withoutFluff()
 
-            NotStubbed(HttpStubResponse(httpFailureResponse))
+            val firstScenarioWith400Response = failureResults.flatMap { it.results }.filter {
+                it is Result.Failure
+                    && it.failureReason == null
+                    && it.scenario?.let { it.status == 400 || it.status == 422 } == true
+            }.map { it.scenario!! }.firstOrNull()
+
+            if(firstScenarioWith400Response != null && specmaticConfig.stub.generative == true) {
+                val httpResponse = (firstScenarioWith400Response as Scenario).generateHttpResponse(emptyMap())
+                val updatedResponse: HttpResponse = dumpIntoFirstAvailableStringField(httpResponse, combinedFailureResult.report())
+
+                FoundStubbedResponse(
+                    HttpStubResponse(
+                        updatedResponse,
+                        contractPath = "",
+                        feature = fakeResponse?.feature,
+                        scenario = fakeResponse?.successResponse?.scenario
+                    )
+                )
+            } else {
+                val httpFailureResponse = combinedFailureResult.generateErrorHttpResponse(httpRequest)
+
+                NotStubbed(HttpStubResponse(httpFailureResponse))
+            }
         }
 
         else -> FoundStubbedResponse(
@@ -877,6 +900,69 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest):
             )
         )
     }
+}
+
+fun dumpIntoFirstAvailableStringField(httpResponse: HttpResponse, stringValue: String): HttpResponse {
+    val responseBody = httpResponse.body
+
+    if(responseBody !is JSONObjectValue)
+        return httpResponse
+
+    val newBody = dumpIntoFirstAvailableStringField(responseBody, stringValue)
+
+    return httpResponse.copy(body = newBody)
+}
+
+fun dumpIntoFirstAvailableStringField(jsonObjectValue: JSONObjectValue, stringValue: String): JSONObjectValue {
+    val key = jsonObjectValue.jsonObject.keys.find { key ->
+        key == "message" && jsonObjectValue.jsonObject[key] is StringValue
+    } ?: jsonObjectValue.jsonObject.keys.find { key ->
+        jsonObjectValue.jsonObject[key] is StringValue
+    }
+
+    if(key != null)
+        return jsonObjectValue.copy(
+            jsonObject = jsonObjectValue.jsonObject.plus(
+                key to StringValue(stringValue)
+            )
+        )
+
+    val newMap = jsonObjectValue.jsonObject.mapValues { (key, value) ->
+        if(value is JSONObjectValue) {
+            dumpIntoFirstAvailableStringField(value, stringValue)
+        } else if(value is JSONArrayValue) {
+            dumpIntoFirstAvailableStringField(value, stringValue)
+        } else {
+            value
+        }
+    }
+
+    return jsonObjectValue.copy(newMap)
+}
+
+fun dumpIntoFirstAvailableStringField(jsonArrayValue: JSONArrayValue, stringValue: String): JSONArrayValue {
+    val indexOfFirstStringValue = jsonArrayValue.list.indexOfFirst { it is StringValue }
+
+    if(indexOfFirstStringValue >= 0) {
+        val mutableList = jsonArrayValue.list.toMutableList()
+        mutableList.add(indexOfFirstStringValue, StringValue(stringValue))
+
+        return jsonArrayValue.copy(
+            list = mutableList
+        )
+    }
+
+    val newList = jsonArrayValue.list.map { value ->
+        if(value is JSONObjectValue) {
+            dumpIntoFirstAvailableStringField(value, stringValue)
+        } else if(value is JSONArrayValue) {
+            dumpIntoFirstAvailableStringField(value, stringValue)
+        } else {
+            value
+        }
+    }
+
+    return jsonArrayValue.copy(list = newList)
 }
 
 private fun strictModeHttp400Response(

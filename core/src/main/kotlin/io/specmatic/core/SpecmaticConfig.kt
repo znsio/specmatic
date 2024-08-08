@@ -59,6 +59,8 @@ fun String.loadContract(): Feature {
     return parseContractFileToFeature(File(this))
 }
 
+data class StubConfiguration(val generative: Boolean = false)
+
 data class WorkflowIDOperation(
     val extract: String? = null,
     val use: String? = null
@@ -78,6 +80,7 @@ data class SpecmaticConfig(
     val report: ReportConfiguration? = null,
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
+    val stub: StubConfiguration = StubConfiguration(),
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
     val workflow: WorkflowConfiguration? = null
 ) {

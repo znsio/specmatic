@@ -329,6 +329,8 @@ data class Feature(
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
     fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> {
+        val workflow = Workflow(specmaticConfig.workflow ?: WorkflowConfiguration())
+
         return generateContractTestScenarios(suggestions).map { (originalScenario, returnValue) ->
             returnValue.realise(
                 hasValue = { concreteTestScenario, comment ->
@@ -340,7 +342,9 @@ data class Feature(
                         concreteTestScenario.sourceRepositoryBranch,
                         concreteTestScenario.specification,
                         concreteTestScenario.serviceType,
-                        comment
+                        comment,
+                        workflow = workflow,
+                        originalScenario = originalScenario
                     )
                 },
                 orFailure = {

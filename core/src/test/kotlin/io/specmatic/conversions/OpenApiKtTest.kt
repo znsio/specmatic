@@ -1670,7 +1670,7 @@ Scenario: zero should return not found
 
         var executed = false
 
-        val result = io.specmatic.test.ScenarioAsTest(feature.scenarios.first(), DefaultStrategies)
+        val result = io.specmatic.test.ScenarioAsTest(feature.scenarios.first(), DefaultStrategies, originalScenario = feature.scenarios.first())
             .runTest(object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
                         executed = true

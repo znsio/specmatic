@@ -4,12 +4,14 @@ import io.specmatic.core.HttpResponse
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
+import io.specmatic.core.utilities.URIUtils.parseQuery
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.mockFromJSON
 import io.specmatic.stub.httpResponseLog
 import java.io.File
+import java.net.URI
 
 class ExampleFromFile(val json: JSONObjectValue, val file: File) {
     fun toRow(specmaticConfig: SpecmaticConfig = SpecmaticConfig()): Row {
@@ -97,11 +99,18 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         json.findFirstChildByPath("name")?.toStringLiteral() ?: file.nameWithoutExtension
     }
 
-    val queryParams: Map<String, String> =
-        attempt("Error reading query params in file ${file.parentFile.canonicalPath}") {
-            (json.findFirstChildByPath("http-request.query") as JSONObjectValue?)?.jsonObject?.mapValues { (_, value) ->
-                value.toStringLiteral()
-            } ?: emptyMap()
+    val queryParams: Map<String, String>
+        get() {
+            val uri = URI.create(requestPath)
+            val queryParamsFromURL = parseQuery(uri.query)
+
+            val queryParamsFromJSONBlock = attempt("Error reading query params in file ${file.parentFile.canonicalPath}") {
+                (json.findFirstChildByPath("http-request.query") as JSONObjectValue?)?.jsonObject?.mapValues { (_, value) ->
+                    value.toStringLiteral()
+                } ?: emptyMap()
+            }
+
+            return queryParamsFromURL + queryParamsFromJSONBlock
         }
 
     val headers: Map<String, String> = attempt("Error reading headers in file ${file.parentFile.canonicalPath}") {

@@ -1,0 +1,81 @@
+openapi: 3.0.0
+info:
+  title: Simple Order API
+  version: 1.0.0
+  description: A simple API for creating and fetching orders
+  contact:
+    name: API Support
+    email: support@example.com
+    url: https://www.example.com/support
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: https://staging-api.example.com/v1
+    description: Staging server
+
+tags:
+  - name: orders
+    description: Operations about orders
+
+paths:
+  /orders:
+    post:
+      summary: Create a new order
+      operationId: createOrder
+      tags:
+        - orders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+
+  /orders/{orderId}:
+    get:
+      summary: Get order details
+      operationId: getOrder
+      tags:
+        - orders
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+components:
+  schemas:
+    Order:
+      type: object
+      required:
+        - productId
+        - quantity
+      properties:
+        productId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+    Id:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string

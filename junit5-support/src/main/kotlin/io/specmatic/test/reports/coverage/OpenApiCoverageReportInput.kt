@@ -45,6 +45,7 @@ class OpenApiCoverageReportInput(
         val testResultsWithNotImplementedEndpoints = identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults)
         var allTests = addTestResultsForMissingEndpoints(testResultsWithNotImplementedEndpoints)
         allTests = addTestResultsForTestsNotGeneratedBySpecmatic(allTests, allEndpoints)
+        allTests = checkForInvalidTestsAndUpdateResult(allTests)
         allTests = sortByPathMethodResponseStatus(allTests)
 
         val apiTestsGrouped = groupTestsByPathMethodAndResponseStatus(allTests)
@@ -203,32 +204,52 @@ class OpenApiCoverageReportInput(
 
     private fun identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults: List<TestResultRecord>): List<TestResultRecord> {
         val notImplementedAndMissingTests = mutableListOf<TestResultRecord>()
-        val failedTests = testResults.filter { it.result == TestResult.Failed }
+        val failedTestResults = testResults.filter { it.result == TestResult.Failed }
 
-        for (test in failedTests) {
+        for (failedTestResult in failedTestResults) {
 
             val pathHasErrorResponse = allEndpoints.any {
-                it.path == test.path && it.method == test.method && it.responseStatus == test.actualResponseStatus
+                it.path == failedTestResult.path && it.method == failedTestResult.method && it.responseStatus == failedTestResult.actualResponseStatus
             }
 
-            notImplementedAndMissingTests.add(
-                test.copy(
-                    responseStatus = test.actualResponseStatus,
-                    result = if (pathHasErrorResponse) TestResult.Covered else TestResult.MissingInSpec,
-                    actualResponseStatus = test.actualResponseStatus
+            if(!failedTestResult.isConnectionRefused()) {
+                notImplementedAndMissingTests.add(
+                    failedTestResult.copy(
+                        responseStatus = failedTestResult.actualResponseStatus,
+                        result = if (pathHasErrorResponse) TestResult.Covered else TestResult.MissingInSpec,
+                        actualResponseStatus = failedTestResult.actualResponseStatus
+                    )
                 )
-            )
+            }
 
             if (!endpointsAPISet) {
-                notImplementedAndMissingTests.add(test.copy(result = TestResult.NotCovered))
+                notImplementedAndMissingTests.add(failedTestResult.copy(result = TestResult.NotCovered))
                 continue
             }
 
-            val isInApplicationAPI = applicationAPIs.any { api -> api.path == test.path && api.method == test.method }
-            notImplementedAndMissingTests.add(test.copy(result = if (isInApplicationAPI) TestResult.Failed else TestResult.NotImplemented))
+            val isInApplicationAPI = applicationAPIs.any { api -> api.path == failedTestResult.path && api.method == failedTestResult.method }
+            notImplementedAndMissingTests.add(failedTestResult.copy(result = if (isInApplicationAPI) TestResult.Failed else TestResult.NotImplemented))
         }
 
-        return testResults.minus(failedTests.toSet()).plus(notImplementedAndMissingTests);
+        return testResults.minus(failedTestResults.toSet()).plus(notImplementedAndMissingTests)
+    }
+
+    private fun checkForInvalidTestsAndUpdateResult(allTests: List<TestResultRecord>): List<TestResultRecord> {
+        val invalidTestResults = allTests.filterNot(::isTestResultValid)
+        val updatedInvalidTestResults = invalidTestResults.map { it.copy( isValid = false ) }
+
+        return allTests.minus(invalidTestResults.toSet()).plus(updatedInvalidTestResults)
+    }
+
+    private fun isTestResultValid(testResultRecord: TestResultRecord): Boolean {
+        val paramRegex = Regex("\\{.+}")
+        val isPathWithParams = paramRegex.find(testResultRecord.path) != null
+        if (isPathWithParams) return true
+
+        return when (testResultRecord.responseStatus) {
+            404 -> false
+            else -> true
+        }
     }
 }
 

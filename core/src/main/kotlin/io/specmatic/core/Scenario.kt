@@ -4,13 +4,10 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.capitalizeFirstChar
-import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.mapZip
 import io.specmatic.core.utilities.nullOrExceptionString
 import io.specmatic.core.value.*
 import io.specmatic.stub.RequestContext
-import io.specmatic.test.ContractTest
-import io.specmatic.test.TestExecutor
 
 object ContractAndStubMismatchMessages : MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
@@ -396,11 +393,11 @@ data class Scenario(
     )
 
     private fun validateResponseExample(row: Row, resolverForExample: Resolver): Result {
-        val responseExample: ResponseExample? = row.responseExample
+        val responseExample: HttpResponse? = row.responseExample
 
         if (responseExample != null) {
             val responseMatchResult =
-                httpResponsePattern.matches(responseExample.responseExample, resolverForExample)
+                httpResponsePattern.matches(responseExample, resolverForExample)
 
             return responseMatchResult
         }

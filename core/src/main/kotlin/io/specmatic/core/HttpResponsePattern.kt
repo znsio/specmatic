@@ -1,7 +1,6 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.*
-import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.stub.softCastValueToXML
 
@@ -42,7 +41,7 @@ data class HttpResponsePattern(
     }
 
     fun matches(response: HttpResponse, resolver: Resolver): Result {
-        val result = _matches(response, resolver)
+        val result = matchesResponse(response, resolver)
 
         return when(result) {
             is Result.Failure -> result.breadCrumb("RESPONSE")
@@ -50,7 +49,7 @@ data class HttpResponsePattern(
         }
     }
 
-    fun _matches(response: HttpResponse, resolver: Resolver): Result {
+    fun matchesResponse(response: HttpResponse, resolver: Resolver): Result {
         return response to resolver to
             ::matchStatus then
             ::matchHeaders then
@@ -63,7 +62,7 @@ data class HttpResponsePattern(
 
     fun withResponseExampleValue(row: Row, resolver: Resolver): HttpResponsePattern =
         attempt(breadCrumb = "RESPONSE") {
-            val responseExample: ResponseExample = row.responseExample ?: return@attempt this
+            val responseExample: ResponseExample = row.responseExampleForValidation ?: return@attempt this
 
             val responseExampleMatchResult = matches(responseExample.responseExample, resolver)
 

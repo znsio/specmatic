@@ -14,6 +14,7 @@ import io.specmatic.test.HttpClient
 import io.specmatic.test.TestExecutor
 import io.mockk.every
 import io.mockk.mockk
+import io.specmatic.stub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.RepeatedTest
@@ -1494,6 +1495,321 @@ components:
             val response = stub.client.execute(request)
 
             assertThat(response.body.toStringLiteral()).isEqualTo("Hello, World!")
+        }
+    }
+
+    @Test
+    fun `a generative stub should respond to an invalid request with a 400 per the spec with the error in the message key`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+              version: 0.1.9
+            servers:
+              - url: http://api.example.com/v1
+                description: Optional server description, e.g. Main (production) server
+              - url: http://staging-api.example.com
+                description: Optional server description, e.g. Internal staging server for testing
+            paths:
+              /hello:
+                post:
+                  summary: hello world
+                  description: Optional extended description in CommonMark or HTML.
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - data
+                          properties:
+                            data:
+                              type: string
+                  responses:
+                    '200':
+                      description: Says hello
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    '400':
+                      description: Bad request
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - message
+                            properties:
+                              message:
+                                type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(400)
+            assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.jsonObject["message"]?.toStringLiteral()).contains("REQUEST.BODY.data")
+        }
+    }
+
+    @Test
+    fun `a generative stub should respond to an invalid request with a 422 with the error in the message key`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+              version: 0.1.9
+            servers:
+              - url: http://api.example.com/v1
+                description: Optional server description, e.g. Main (production) server
+              - url: http://staging-api.example.com
+                description: Optional server description, e.g. Internal staging server for testing
+            paths:
+              /hello:
+                post:
+                  summary: hello world
+                  description: Optional extended description in CommonMark or HTML.
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - data
+                          properties:
+                            data:
+                              type: string
+                  responses:
+                    '200':
+                      description: Says hello
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    '422':
+                      description: Bad request
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - message
+                            properties:
+                              message:
+                                type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(422)
+            assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.jsonObject["message"]?.toStringLiteral()).contains("REQUEST.BODY.data")
+        }
+    }
+
+    @Test
+    fun `a generative stub should respond to an invalid request with a 422 with the error in the message key 2 levels deep`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+              version: 0.1.9
+            servers:
+              - url: http://api.example.com/v1
+                description: Optional server description, e.g. Main (production) server
+              - url: http://staging-api.example.com
+                description: Optional server description, e.g. Internal staging server for testing
+            paths:
+              /hello:
+                post:
+                  summary: hello world
+                  description: Optional extended description in CommonMark or HTML.
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - data
+                          properties:
+                            data:
+                              type: string
+                  responses:
+                    '200':
+                      description: Says hello
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    '422':
+                      description: Bad request
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - error_info
+                            properties:
+                              error_info:
+                                type: object
+                                required:
+                                  - message
+                                properties:
+                                  message:
+                                    type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(422)
+            assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.findFirstChildByPath("error_info.message")?.toStringLiteral()).contains("REQUEST.BODY.data")
+        }
+    }
+
+    @Test
+    fun `a generative stub should return the error in any available string key in the 4xx response if message is not found`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+              version: 0.1.9
+            servers:
+              - url: http://api.example.com/v1
+                description: Optional server description, e.g. Main (production) server
+              - url: http://staging-api.example.com
+                description: Optional server description, e.g. Internal staging server for testing
+            paths:
+              /hello:
+                post:
+                  summary: hello world
+                  description: Optional extended description in CommonMark or HTML.
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - data
+                          properties:
+                            data:
+                              type: string
+                  responses:
+                    '200':
+                      description: Says hello
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    '422':
+                      description: Bad request
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - error_info
+                            properties:
+                              error_info:
+                                type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(422)
+            assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.jsonObject["error_info"]?.toStringLiteral()).contains("REQUEST.BODY.data")
+        }
+    }
+
+    @Test
+    fun `a generative stub should return a randomized 4xx response when it cannot find a string key`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+              version: 0.1.9
+            servers:
+              - url: http://api.example.com/v1
+                description: Optional server description, e.g. Main (production) server
+              - url: http://staging-api.example.com
+                description: Optional server description, e.g. Internal staging server for testing
+            paths:
+              /hello:
+                post:
+                  summary: hello world
+                  description: Optional extended description in CommonMark or HTML.
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - data
+                          properties:
+                            data:
+                              type: string
+                  responses:
+                    '200':
+                      description: Says hello
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                    '422':
+                      description: Bad request
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - message
+                            properties:
+                              message:
+                                type: integer
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        HttpStub(listOf(feature), specmaticConfigPath = "src/test/resources/specmatic_config_wtih_generate_stub.yaml").use { stub ->
+            val request = HttpRequest("POST", path = "/hello", body = parsedJSONObject("""{"data": 10}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(422)
+            assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.jsonObject["message"]).isInstanceOf(NumberValue::class.java)
         }
     }
 }

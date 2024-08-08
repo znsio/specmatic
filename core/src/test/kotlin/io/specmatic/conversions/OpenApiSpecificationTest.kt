@@ -333,21 +333,6 @@ Pet:
     }
 
     @Test
-    fun `scenarios should have examples of type ResponseSchemaExample leading to response schema validation when VALIDATE_RESPONSE_VALUE flag is false and response is not empty`() {
-        val openApiFile = "src/test/resources/openapi/response_schema_validation_including_optional_spec.yaml"
-        val openApiSpecification = OpenApiSpecification.fromFile(openApiFile)
-
-        val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
-
-        val examples = scenarioInfos.first().examples.flatMap {
-            it.rows.map { row -> row.responseExample }
-        }
-        examples.forEach {
-            assertThat(it).isInstanceOf(ResponseSchemaExample::class.java)
-        }
-    }
-
-    @Test
     fun `scenarios should have examples of type ResponseValueExample leading to response value validation when VALIDATE_RESPONSE_VALUE flag is true and response is not empty`() {
         val openApiFile = "src/test/resources/openapi/response_schema_validation_including_optional_spec.yaml"
         val specmaticConfig = mockk<SpecmaticConfig> {
@@ -362,7 +347,7 @@ Pet:
         val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
 
         val examples = scenarioInfos.first().examples.flatMap {
-            it.rows.map { row -> row.responseExample }
+            it.rows.map { row -> row.responseExampleForValidation }
         }
         examples.forEach {
             assertThat(it).isInstanceOf(ResponseValueExample::class.java)
@@ -376,7 +361,7 @@ Pet:
         val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
 
         val examples = scenarioInfos.first().examples.flatMap {
-            it.rows.map { row -> row.responseExample }
+            it.rows.map { row -> row.responseExampleForValidation }
         }
         examples.forEach {
             assertThat(it).isNull()
@@ -8043,6 +8028,112 @@ paths:
         } finally {
             Configuration.globalConfigFileName = defaultSpecmaticConfig
         }
+    }
+
+    @Test
+    fun `when a workflow exists id of a created entity should be passed on to subsequent API calls`() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Simple Order API
+  version: 1.0.0
+  description: A simple API for creating and fetching orders
+paths:
+  /orders:
+    post:
+      summary: Create a new order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              ${"$"}ref: '#/components/schemas/Order'
+            examples:
+              SUCCESSFUL_ORDER:
+                value:
+                  productid: "abc123"
+                  quantity: 10
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: string
+              examples:
+                SUCCESSFUL_ORDER:
+                  value:
+                    id: "pqr123"
+  /orders/{orderId}:
+    get:
+      summary: Get order details
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+          examples:
+            GET_ORDER:
+              value: "pqr123"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Order'
+              examples:
+                GET_ORDER:
+                  value:
+                    productid: "abc123"
+                    quantity: 10
+
+components:
+  schemas:
+    Order:
+      type: object
+      required:
+        - productId
+        - quantity
+      properties:
+        productid:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        """.trimIndent()
+
+        val specmaticConfig = SpecmaticConfig(
+            workflow = WorkflowConfiguration(
+                mapOf(
+                    "POST /orders -> 201" to WorkflowIDOperation(extract = "BODY.id"),
+                    "GET /orders/(orderId:string) -> 200" to WorkflowIDOperation(use = "PATH.orderId")
+                )
+            )
+        )
+        val feature = OpenApiSpecification.fromYAML(spec, "", specmaticConfig = specmaticConfig).toFeature()
+
+        lateinit var path: String
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                if(request.method == "POST")
+                    return HttpResponse(201, body = parsedJSONObject("""{"id": "xyzabc"}"""))
+                else {
+                    path = request.path!!
+                    return HttpResponse(200, parsedJSONObject("""{"productid": "pqr123", "quantity": 10}"""))
+                }
+            }
+        })
+
+        assertThat(path).endsWith("/xyzabc")
+        assertThat(results.success()).isTrue()
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

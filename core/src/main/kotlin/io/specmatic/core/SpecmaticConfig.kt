@@ -61,6 +61,14 @@ fun String.loadContract(): Feature {
 
 data class StubConfiguration(
     val generative: Boolean = false
+
+data class WorkflowIDOperation(
+    val extract: String? = null,
+    val use: String? = null
+)
+
+data class WorkflowConfiguration(
+    val ids: Map<String, WorkflowIDOperation> = emptyMap()
 )
 
 data class SpecmaticConfig(
@@ -74,7 +82,8 @@ data class SpecmaticConfig(
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
-    val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList()
+    val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
+    val workflow: WorkflowConfiguration? = null
 ) {
     fun isExtensibleSchemaEnabled(): Boolean {
         return (test?.allowExtensibleSchema == true)

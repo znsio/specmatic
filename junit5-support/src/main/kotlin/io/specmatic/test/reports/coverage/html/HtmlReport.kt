@@ -203,14 +203,14 @@ class HtmlReport(report: ReportConfiguration?) {
         val pathSpan = if (showPathInfo) "rowspan=\"$pathRowSpan\"" else "class=\"hidden\""
         val methodSpan = if (showMethodInfo) "rowspan=\"$methodRowSpan\"" else "class=\"hidden\""
         return """
-                <tr class="capitalize">
+                <tr>
                     <td $pathSpan>${coverageRow.coveragePercentage}%</td>
                     <td $pathSpan colspan="2">${coverageRow.path}</td>
                     <td $methodSpan>${coverageRow.method}</td>
                     <td>${coverageRow.responseStatus}</td>
                     <td>${coverageRow.count}</td>
                     <td>
-                        <span class="px-4 py-1.5 font-medium bg-${getBadgeColor(coverageRow.remarks)}-300 rounded-lg">${coverageRow.remarks}</span>
+                        <span class="capitalize px-4 py-1.5 font-medium bg-${getBadgeColor(coverageRow.remarks)}-300 rounded-lg">${coverageRow.remarks}</span>
                     </td>
                 </tr>
         """.trim()

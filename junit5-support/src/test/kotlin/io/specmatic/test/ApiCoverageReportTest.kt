@@ -393,4 +393,77 @@ class ApiCoverageReportTest {
             )
         )
     }
+
+    // FOLLOWING TESTS ARE FOR INVALID REMARK (Actuator Doesn't Matter)
+
+    @Test
+    fun `No Param GET 200 in spec not implemented with actuator`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/orders", "GET", 200)
+        )
+        val applicationAPIs = mutableListOf<API>()
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/orders", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
+        )
+        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
+
+        assertThat(apiCoverageReport).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 0, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Missed),
+                ), totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
+            )
+        )
+    }
+
+    @Test
+    fun `No Param GET 200 and 404 in spec not implemented without actuator`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/orders", "GET", 200), Endpoint("/orders", "GET", 404)
+        )
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/orders", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
+        )
+        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
+
+        assertThat(
+            apiCoverageReport
+        ).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 50, Remarks.NotCovered),
+                    OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Invalid),
+                ), totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+            )
+        )
+    }
+
+    @Test
+    fun `No Param GET 200 and 404 in spec implemented with actuator`() {
+        val endpointsInSpec = mutableListOf(
+            Endpoint("/orders", "GET", 200), Endpoint("/orders", "GET", 404)
+        )
+        val applicationAPIs = mutableListOf<API>(
+            API("GET", "/orders")
+        )
+
+        val testResultRecords = mutableListOf(
+            TestResultRecord("/orders", "GET", 200, TestResult.Success, actualResponseStatus = 200)
+        )
+        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
+
+        assertThat(
+            apiCoverageReport
+        ).isEqualTo(
+            OpenAPICoverageConsoleReport(
+                listOf(
+                    OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 50, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("", "", 404, 0, 0, Remarks.Invalid),
+                ), totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+            )
+        )
+    }
 }

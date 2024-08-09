@@ -1,11 +1,11 @@
 package io.specmatic.proxy
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.routing.*
 import io.specmatic.core.*
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.mock.ScenarioStub
@@ -86,7 +86,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                 }
             }
 
-            healthCheckModule()
+            configureHealthCheckModule()
         }
 
         when (keyData) {
@@ -99,26 +99,6 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                 this.port = port
             }
         }
-    }
-
-    private fun Application.healthCheckModule() {
-        routing {
-            get("/actuator/health") {
-                val healthStatus = mapOf("status" to "UP")
-                respondToKtorHttpResponse(
-                    call,
-                    HttpResponse(
-                        status = 200,
-                        body = ObjectMapper().writeValueAsString(healthStatus),
-                        headers = mapOf("Content-Type" to "application/json")
-                    )
-                )
-            }
-        }
-    }
-
-    private fun HttpRequest.isHealthCheckRequest(): Boolean {
-       return (this.path == "/actuator/health") && (this.method == "GET")
     }
 
     private fun withoutContentEncodingGzip(httpResponse: HttpResponse): HttpResponse {

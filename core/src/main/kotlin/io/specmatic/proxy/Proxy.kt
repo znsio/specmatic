@@ -17,8 +17,8 @@ import java.io.Closeable
 import java.net.URI
 import java.net.URL
 
-class Proxy(host: String, port: Int, baseURL: String, private val outputDirectory: FileWriter, keyData: KeyData? = null): Closeable {
-    constructor(host: String, port: Int, baseURL: String, proxySpecmaticDataDir: String, keyData: KeyData? = null) : this(host, port, baseURL, RealFileWriter(proxySpecmaticDataDir), keyData)
+class Proxy(host: String, port: Int, baseURL: String, private val outputDirectory: FileWriter, keyData: KeyData? = null, timeoutInMilliseconds: Long = DEFAULT_TIMEOUT_IN_MILLISECONDS): Closeable {
+    constructor(host: String, port: Int, baseURL: String, proxySpecmaticDataDir: String, keyData: KeyData? = null, timeoutInMilliseconds: Long) : this(host, port, baseURL, RealFileWriter(proxySpecmaticDataDir), keyData, timeoutInMilliseconds)
 
     private val stubs = mutableListOf<NamedStub>()
 
@@ -47,7 +47,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                         }
 
                         else -> try {
-                            val client = HttpClient(proxyURL(httpRequest, baseURL))
+                            val client = HttpClient(proxyURL(httpRequest, baseURL), timeoutInMilliseconds = timeoutInMilliseconds)
 
                             val requestToSend = targetHost?.let {
                                 httpRequest.withHost(targetHost)

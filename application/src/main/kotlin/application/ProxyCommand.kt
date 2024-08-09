@@ -4,6 +4,7 @@ import picocli.CommandLine.*
 import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.Configuration.Companion.DEFAULT_PROXY_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_PROXY_PORT
+import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.exitWithMessage
@@ -46,6 +47,9 @@ class ProxyCommand : Callable<Unit> {
     @Option(names = ["--debug"], description = ["Write verbose logs to console for debugging"])
     var debugLog = false
 
+    @Option(names = ["--timeout-in-ms"], description = ["Response Timeout in milliseconds, Defaults to $DEFAULT_TIMEOUT_IN_MILLISECONDS"])
+    var timeoutInMs: Long = DEFAULT_TIMEOUT_IN_MILLISECONDS
+
     var proxy: Proxy? = null
 
     override fun call() {
@@ -57,7 +61,7 @@ class ProxyCommand : Callable<Unit> {
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
         val keyStoreData = certInfo.getHttpsCert()
 
-        proxy = Proxy(host, port, targetBaseURL, proxySpecmaticDataDir, keyStoreData)
+        proxy = Proxy(host, port, targetBaseURL, proxySpecmaticDataDir, keyStoreData, timeoutInMs)
         addShutdownHook()
 
         val protocol = keyStoreData?.let { "https" } ?: "http"

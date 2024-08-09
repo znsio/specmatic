@@ -40,7 +40,7 @@ class HttpStubDelayTest {
 
     @Test
     fun `should be delayed when delay is provided in arguments`() = runBlocking {
-        val delayInMillis = 1000L
+        val delayInMillis = 500L
 
         val timeTaken = measureTimeMillis {
             respondToKtorHttpResponse(
@@ -60,7 +60,7 @@ class HttpStubDelayTest {
     @Test
     fun `delay in argument should be prioritized over system property`() = runBlocking {
         System.setProperty(SPECMATIC_STUB_DELAY, "0")
-        val delayInMillis = 1000L
+        val delayInMillis = 500L
 
         val timeTaken = measureTimeMillis {
             respondToKtorHttpResponse(
@@ -83,7 +83,7 @@ class HttpStubDelayTest {
 
     @Test
     fun `delay in system or config property should be used when no delay in argument`() = runBlocking {
-        val delayInMs = 5000L
+        val delayInMs = 500L
         System.setProperty(SPECMATIC_STUB_DELAY, delayInMs.toString())
 
         val timeTaken = measureTimeMillis {

@@ -157,7 +157,7 @@ internal class SpecmaticConfigKtTest {
             SCHEMA_EXAMPLE_DEFAULT to "true",
             MAX_TEST_REQUEST_COMBINATIONS to "50",
             EXAMPLE_DIRECTORIES to "folder1/examples,folder2/examples",
-            SPECMATIC_STUB_DELAY to "1000"
+            SPECMATIC_STUB_DELAY to "1000",
             SPECMATIC_TEST_TIMEOUT to "5000"
         )
         try {
@@ -206,7 +206,7 @@ internal class SpecmaticConfigKtTest {
             VALIDATE_RESPONSE_VALUE to "false",
             EXTENSIBLE_SCHEMA to "false",
             EXAMPLE_DIRECTORIES to "folder1/examples,folder2/examples",
-            SPECMATIC_STUB_DELAY to "5000"
+            SPECMATIC_STUB_DELAY to "5000",
             EXAMPLE_DIRECTORIES to "folder1/examples,folder2/examples",
             SPECMATIC_TEST_TIMEOUT to "5000"
         )

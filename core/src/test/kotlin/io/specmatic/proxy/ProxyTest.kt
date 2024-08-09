@@ -8,7 +8,7 @@ import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.stub.HttpStub
 import io.ktor.http.*
-import io.specmatic.mock.DELAY_IN_SECONDS
+import io.specmatic.mock.DELAY_IN_MILLISECONDS
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -261,7 +261,7 @@ internal class ProxyTest {
     }
 
     @Test
-    fun `should not timeout if custom timeout is greater than default with slow response`() {
+    fun `should not timeout if custom timeout is greater than backend service delay`() {
         HttpStub(simpleFeature).use { fake ->
             val expectation = """ {
                 "http-request": {
@@ -273,13 +273,13 @@ internal class ProxyTest {
                     "status": 200,
                     "body": "100"
                 },
-                "$DELAY_IN_SECONDS": 7
+                "$DELAY_IN_MILLISECONDS": 100
             }""".trimIndent()
 
             val stubResponse =  RestTemplate().postForEntity<String>(fake.endPoint + "/_specmatic/expectations", expectation)
             assertThat(stubResponse.statusCode.value()).isEqualTo(200)
 
-            Proxy(host = "localhost", port = 9001, "", fakeFileWriter, timeoutInMilliseconds = 8000).use {
+            Proxy(host = "localhost", port = 9001, "", fakeFileWriter, timeoutInMilliseconds = 200).use {
                 val restProxy = java.net.Proxy(java.net.Proxy.Type.HTTP, InetSocketAddress("localhost", 9001))
                 val requestFactory = SimpleClientHttpRequestFactory()
                 requestFactory.setProxy(restProxy)
@@ -293,7 +293,7 @@ internal class ProxyTest {
     }
 
     @Test
-    fun `should timeout if custom timeout is less than default with slow response`() {
+    fun `should timeout if custom timeout is less than backend service delay`() {
         HttpStub(simpleFeature).use { fake ->
             val expectation = """ {
                 "http-request": {
@@ -305,14 +305,14 @@ internal class ProxyTest {
                     "status": 200,
                     "body": "100"
                 },
-                "$DELAY_IN_SECONDS": 5
+                "$DELAY_IN_MILLISECONDS": 200
             }""".trimIndent()
 
             val stubResponse =  RestTemplate().postForEntity<String>(fake.endPoint + "/_specmatic/expectations", expectation)
             assertThat(stubResponse.statusCode.value()).isEqualTo(200)
 
             assertThrows<Exception>{
-                Proxy(host = "localhost", port = 9001, "", fakeFileWriter, timeoutInMilliseconds = 2000).use {
+                Proxy(host = "localhost", port = 9001, "", fakeFileWriter, timeoutInMilliseconds = 100).use {
                     val restProxy = java.net.Proxy(java.net.Proxy.Type.HTTP, InetSocketAddress("localhost", 9001))
                     val requestFactory = SimpleClientHttpRequestFactory()
                     requestFactory.setProxy(restProxy)

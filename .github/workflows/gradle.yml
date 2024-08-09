@@ -39,8 +39,6 @@ jobs:
         
         if [ $? -eq 0 ]
         then
-          java -jar application/build/libs/specmatic.jar --version
-        
           exit 1
         fi
 

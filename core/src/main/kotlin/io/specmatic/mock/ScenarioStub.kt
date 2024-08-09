@@ -46,7 +46,7 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
 
     val delayInSeconds: Int? = getIntOrNull(DELAY_IN_SECONDS, mockSpec)
     val delayInMilliseconds: Long? = getLongOrNull(DELAY_IN_MILLISECONDS, mockSpec)
-    val delayInMs: Long? = delayInMilliseconds ?: delayInSeconds?.toLong()?.times(1000)
+    val delayInMs: Long? = delayInMilliseconds ?: delayInSeconds?.let { it.toLong().times(1000) }
 
     val stubToken: String? = getStringOrNull(TRANSIENT_MOCK_ID, mockSpec)
     val requestBodyRegex: String? = getRequestBodyRegexOrNull(mockSpec)

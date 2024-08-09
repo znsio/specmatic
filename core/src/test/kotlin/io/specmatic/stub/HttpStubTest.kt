@@ -1032,6 +1032,26 @@ paths:
     }
 
     @Test
+    fun `should return health status as UP if the actuator health endpoint is hit`() {
+        val specification =
+            OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_space_in_path.yaml").toFeature()
+
+        HttpStub(specification).use { stub ->
+            val request = HttpRequest("GET", "/actuator/health")
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            response.body.let {
+                assertThat(it).isInstanceOf(JSONObjectValue::class.java)
+                it as JSONObjectValue
+
+                assertThat(it.jsonObject["status"]?.toStringLiteral()).isEqualTo("UP")
+            }
+        }
+    }
+
+    @Test
     fun `should load a stub with a space in the path and return the stubbed response`() {
         val pathWithSpace = "/da ta"
 

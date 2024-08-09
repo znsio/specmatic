@@ -14,6 +14,7 @@ import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_GENERATIVE_TESTS
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
@@ -61,7 +62,10 @@ fun String.loadContract(): Feature {
     return parseContractFileToFeature(File(this))
 }
 
-data class StubConfiguration(val generative: Boolean = false)
+data class StubConfiguration(
+    val generative: Boolean? = false,
+    val delayInMilliseconds: Long? = getLongValue(SPECMATIC_STUB_DELAY)
+)
 
 data class WorkflowIDOperation(
     val extract: String? = null,

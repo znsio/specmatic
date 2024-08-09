@@ -12,6 +12,8 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
 import io.specmatic.core.*
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedValue
@@ -36,7 +38,7 @@ import kotlin.text.toCharArray
 
 data class HttpStubResponse(
     val response: HttpResponse,
-    val delayInSeconds: Int? = null,
+    val delayInMilliSeconds: Long? = null,
     val contractPath: String = "",
     val feature: Feature? = null,
     val scenario: Scenario? = null
@@ -76,8 +78,6 @@ class HttpStub(
         const val JSON_REPORT_PATH = "./build/reports/specmatic"
         const val JSON_REPORT_FILE_NAME = "stub_usage_report.json"
     }
-
-    val data: String = if(specmaticConfigPath != null && File(specmaticConfigPath).exists()) "" else ""
 
     private val specmaticConfig: SpecmaticConfig =
         if(specmaticConfigPath != null && File(specmaticConfigPath).exists())
@@ -197,6 +197,8 @@ class HttpStub(
                     val rawHttpRequest = ktorHttpRequestToHttpRequest(call)
                     httpLogMessage.addRequest(rawHttpRequest)
 
+                    if(rawHttpRequest.isHealthCheckRequest()) return@intercept
+
                     val httpRequest = requestInterceptors.fold(rawHttpRequest) { request, requestInterceptor ->
                         requestInterceptor.interceptRequest(request) ?: request
                     }
@@ -248,7 +250,7 @@ class HttpStub(
                             )
                         }
                     } else {
-                        respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInSeconds)
+                        respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInMilliSeconds, specmaticConfig)
                         httpLogMessage.addResponse(httpStubResponse)
                     }
                 } catch (e: ContractException) {
@@ -271,6 +273,8 @@ class HttpStub(
 
                 log(httpLogMessage)
             }
+
+            configureHealthCheckModule()
         }
 
         when (keyData) {
@@ -689,7 +693,8 @@ internal fun toParams(queryParameters: Parameters): List<Pair<String, String>> =
 internal suspend fun respondToKtorHttpResponse(
     call: ApplicationCall,
     httpResponse: HttpResponse,
-    delayInSeconds: Int? = null
+    delayInMilliSeconds: Long? = null,
+    specmaticConfig: SpecmaticConfig? = null
 ) {
     val contentType = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
     val textContent = TextContent(
@@ -703,8 +708,9 @@ internal suspend fun respondToKtorHttpResponse(
         call.response.headers.append(name, value)
     }
 
-    if (delayInSeconds != null) {
-        delay(delayInSeconds * 1000L)
+    val delayInMs = delayInMilliSeconds ?: specmaticConfig?.stub?.delayInMilliseconds
+    if (delayInMs != null) {
+        delay(delayInMs)
     }
 
     call.respond(textContent)
@@ -776,7 +782,7 @@ private fun stubbedResponse(
         val softCastResponse = it.softCastResponseToXML(httpRequest).response
         HttpStubResponse(
             softCastResponse,
-            it.delayInSeconds,
+            it.delayInMilliseconds,
             it.contractPath,
             scenario = mock.scenario,
             feature = mock.feature

@@ -44,6 +44,12 @@ internal class ProxyTest {
                 Then status 200
                 And response-body 100
             
+              Scenario: Square
+                When POST /multiply
+                And request-body (number)
+                Then status 200
+                And response-body 100
+                
               Scenario: Random
                 When GET /
                 Then status 200
@@ -64,7 +70,7 @@ internal class ProxyTest {
     @Test
     fun `basic test of the proxy`() {
         HttpStub(simpleFeature).use {
-            Proxy(host = "localhost", port = 9001, "", fakeFileWriter).use {
+            Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
                 val restProxy = java.net.Proxy(java.net.Proxy.Type.HTTP, InetSocketAddress("localhost", 9001))
                 val requestFactory = SimpleClientHttpRequestFactory()
                 requestFactory.setProxy(restProxy)
@@ -84,7 +90,33 @@ internal class ProxyTest {
             )
         }.doesNotThrowAnyException()
         assertThatCode { parsedJSON(fakeFileWriter.receivedStub ?: "") }.doesNotThrowAnyException()
-        assertThat(fakeFileWriter.receivedPaths.toList()).containsExactlyInAnyOrder("proxy_generated.yaml", "stub1.json")
+        assertThat(fakeFileWriter.receivedPaths.toList()).containsExactlyInAnyOrder("proxy_generated.yaml", "POST-200-1.json")
+    }
+
+    @Test
+    fun `basic test of the proxy with a request containing a path variable`() {
+        HttpStub(simpleFeature).use {
+            Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
+                val restProxy = java.net.Proxy(java.net.Proxy.Type.HTTP, InetSocketAddress("localhost", 9001))
+                val requestFactory = SimpleClientHttpRequestFactory()
+                requestFactory.setProxy(restProxy)
+                val client = RestTemplate(requestFactory)
+                val response = client.postForEntity("http://localhost:9000/multiply", "10", String::class.java)
+
+                assertThat(response.statusCodeValue).isEqualTo(200)
+                assertThatNoException().isThrownBy { response.body!!.toInt() }
+            }
+        }
+
+        assertThat(fakeFileWriter.receivedContract?.trim()).startsWith("openapi:")
+        assertThatCode {
+            OpenApiSpecification.fromYAML(
+                fakeFileWriter.receivedContract!!,
+                ""
+            )
+        }.doesNotThrowAnyException()
+        assertThatCode { parsedJSON(fakeFileWriter.receivedStub ?: "") }.doesNotThrowAnyException()
+        assertThat(fakeFileWriter.receivedPaths.toList()).containsExactlyInAnyOrder("proxy_generated.yaml", "multiply-POST-200-1.json")
     }
 
     @Test
@@ -107,7 +139,7 @@ internal class ProxyTest {
             )
         }.doesNotThrowAnyException()
         assertThatCode { parsedJSON(fakeFileWriter.receivedStub ?: "") }.doesNotThrowAnyException()
-        assertThat(fakeFileWriter.receivedPaths).containsExactlyInAnyOrder("proxy_generated.yaml", "stub1.json")
+        assertThat(fakeFileWriter.receivedPaths).containsExactlyInAnyOrder("proxy_generated.yaml", "POST-200-1.json")
     }
 
     @Test
@@ -212,6 +244,19 @@ internal class ProxyTest {
 
         HttpStub(OpenApiSpecification.fromYAML(fakeFileWriter.receivedContract!!, "").toFeature()).use { stub ->
 
+        }
+    }
+
+    @Test
+    fun `should return health status as UP if the actuator health endpoint is hit`() {
+        HttpStub(simpleFeature).use {
+            Proxy(host = "localhost", port = 9001, "http://localhost:9001", fakeFileWriter).use {
+                val client = RestTemplate()
+                val response = client.getForEntity("http://localhost:9001/actuator/health", Map::class.java)
+
+                assertThat(response.statusCodeValue).isEqualTo(200)
+                assertThat(response.body).isEqualTo(mapOf("status" to "UP"))
+            }
         }
     }
 

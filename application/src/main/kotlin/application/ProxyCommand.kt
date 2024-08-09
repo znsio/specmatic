@@ -17,7 +17,7 @@ import java.util.concurrent.Callable
         mixinStandardHelpOptions = true,
         description = ["Proxies requests to the specified target and converts the result into contracts and stubs"])
 class ProxyCommand : Callable<Unit> {
-    @Option(names = ["--target"], description = ["Base URL of the target to proxy"])
+    @Option(names = ["--target"], description = ["Base URL of the target to proxy"], required = true)
     var targetBaseURL: String = ""
 
     @Option(names = ["--host"], description = ["Host for the proxy"], defaultValue = DEFAULT_PROXY_HOST)

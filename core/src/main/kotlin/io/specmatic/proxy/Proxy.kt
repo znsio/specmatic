@@ -4,6 +4,8 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.specmatic.core.*
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.mock.ScenarioStub
@@ -35,6 +37,8 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                 try {
                     val httpRequest = ktorHttpRequestToHttpRequest(call)
 
+                    if(httpRequest.isHealthCheckRequest()) return@intercept
+
                     when (httpRequest.method?.uppercase()) {
                         "CONNECT" -> {
                             val errorResponse = HttpResponse(400, "CONNECT is not supported")
@@ -55,10 +59,18 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
 
                             val httpResponse = client.execute(requestToSend)
 
-                            //TODO: Fix toQueryString for array query parameter support in proxy
                             val name =
                                 "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams.asMap())}"
-                            stubs.add(NamedStub(name, ScenarioStub(httpRequest.withoutDynamicHeaders(), httpResponse.withoutDynamicHeaders())))
+                            stubs.add(
+                                NamedStub(
+                                    name,
+                                    getShortNameForNamedStub(httpRequest, baseURL, httpResponse.status),
+                                    ScenarioStub(
+                                        httpRequest.withoutDynamicHeaders(),
+                                        httpResponse.withoutDynamicHeaders()
+                                    )
+                                )
+                            )
 
                             respondToKtorHttpResponse(call, withoutContentEncodingGzip(httpResponse))
                         } catch (e: Throwable) {
@@ -81,6 +93,8 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                     respondToKtorHttpResponse(call, errorResponse)
                 }
             }
+
+            configureHealthCheckModule()
         }
 
         when (keyData) {
@@ -93,6 +107,25 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                 this.port = port
             }
         }
+    }
+
+    private fun toQueryString(queryParams: Map<String, String>): String {
+        return queryParams.entries.joinToString("&") { entry ->
+            "${entry.key}=${entry.value}"
+        }.let { when {
+            it.isEmpty() -> it
+            else -> "?$it"
+        }}
+    }
+
+    private fun getShortNameForNamedStub(httpRequest: HttpRequest, baseURL: String, responseStatus: Int): String {
+        val (method, path) = httpRequest
+        val formattedPath = path?.replace(baseURL, "")
+            ?.replace("/", ".")
+            ?.drop(1)
+            .orEmpty()
+        if (formattedPath.isEmpty()) return "$method-$responseStatus"
+        return "$formattedPath-$method-$responseStatus"
     }
 
     private fun withoutContentEncodingGzip(httpResponse: HttpResponse): HttpResponse {
@@ -128,15 +161,6 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
         server.start()
     }
 
-    private fun toQueryString(queryParams: Map<String, String>): String {
-        return queryParams.entries.joinToString("&") { entry ->
-            "${entry.key}=${entry.value}"
-        }.let { when {
-            it.isEmpty() -> it
-            else -> "?$it"
-        }}
-    }
-
     override fun close() {
         server.stop(0, 0)
 
@@ -153,7 +177,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
             stubDataDirectory.createDirectory()
 
             stubs.mapIndexed { index, namedStub ->
-                val fileName = "stub${index + 1}.json"
+                val fileName = "${namedStub.shortName}-${index.inc()}.json"
                 println("Writing stub data to $fileName")
                 stubDataDirectory.writeText(fileName, namedStub.stub.toJSON().toStringLiteral())
             }

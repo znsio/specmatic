@@ -94,5 +94,8 @@
     "allowExtensibleSchema": true,
     "timeoutInMilliseconds": 3000
   },
+  "stub": {
+    "delayInMilliseconds": 1000
+  },
   "examples": ["folder1/examples", "folder2/examples"]
 }

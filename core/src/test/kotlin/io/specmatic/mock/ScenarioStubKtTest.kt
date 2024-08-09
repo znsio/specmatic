@@ -765,7 +765,7 @@ internal class ScenarioStubKtTest {
     }
 
     @Test
-    fun `load delay from stub info`() {
+    fun `load delay from stub info in seconds`() {
         val stubText = """
 {
   "http-request": {
@@ -782,7 +782,50 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val scenarioStub = mockFromJSON(jsonStringToValueMap(stubText))
-        assertThat(scenarioStub.delayInSeconds).isEqualTo(10)
+        assertThat(scenarioStub.delayInMilliseconds).isEqualTo(10000)
+    }
+
+    @Test
+    fun `load delay from stub info in milliseconds`() {
+        val stubText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square"
+  },
+
+  "http-response": {
+    "status": 200
+  },
+  
+  "$DELAY_IN_MILLISECONDS": 1000
+}
+        """.trim()
+
+        val scenarioStub = mockFromJSON(jsonStringToValueMap(stubText))
+        assertThat(scenarioStub.delayInMilliseconds).isEqualTo(1000)
+    }
+
+    @Test
+    fun `delay in milliseconds priority over delay in seconds`() {
+        val stubText = """
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/square"
+  },
+
+  "http-response": {
+    "status": 200
+  },
+  
+  "$DELAY_IN_SECONDS": 10,
+  "$DELAY_IN_MILLISECONDS": 1000
+}
+        """.trim()
+
+        val scenarioStub = mockFromJSON(jsonStringToValueMap(stubText))
+        assertThat(scenarioStub.delayInMilliseconds).isEqualTo(1000)
     }
 
     @Test
@@ -801,7 +844,7 @@ internal class ScenarioStubKtTest {
         """.trim()
 
         val scenarioStub = mockFromJSON(jsonStringToValueMap(stubText))
-        assertThat(scenarioStub.delayInSeconds).isNull()
+        assertThat(scenarioStub.delayInMilliseconds).isNull()
     }
 
     @Test

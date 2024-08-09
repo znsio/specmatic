@@ -19,7 +19,7 @@ class ThreadSafeListOfStubs(private val httpStubs: MutableList<HttpStubData>) {
         synchronized(this) {
             result.second.let {
                 if(it != null)
-                    httpStubs.add(0, it.copy(delayInSeconds = stub.delayInSeconds, stubToken = stub.stubToken))
+                    httpStubs.add(0, it.copy(delayInMilliseconds = stub.delayInMilliseconds, stubToken = stub.stubToken))
             }
         }
     }

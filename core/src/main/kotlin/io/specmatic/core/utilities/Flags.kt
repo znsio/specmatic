@@ -9,11 +9,14 @@ class Flags {
         const val MAX_TEST_REQUEST_COMBINATIONS = "MAX_TEST_REQUEST_COMBINATIONS"
         const val SCHEMA_EXAMPLE_DEFAULT = "SCHEMA_EXAMPLE_DEFAULT"
         const val SPECMATIC_TEST_PARALLELISM = "SPECMATIC_TEST_PARALLELISM"
+        const val SPECMATIC_STUB_DELAY = "SPECMATIC_STUB_DELAY"
 
         const val EXAMPLE_DIRECTORIES = "EXAMPLE_DIRECTORIES"
 
         fun getStringValue(flagName: String): String? = System.getenv(flagName) ?: System.getProperty(flagName)
 
         fun getBooleanValue(flagName: String) = ( getStringValue(flagName) ?: "false").toBoolean()
+
+        fun getLongValue(flagName: String): Long? = ( getStringValue(flagName))?.toLong()
     }
 }

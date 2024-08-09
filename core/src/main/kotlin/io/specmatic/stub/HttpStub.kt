@@ -21,6 +21,8 @@ import io.specmatic.mock.*
 import io.specmatic.stub.report.StubEndpoint
 import io.specmatic.stub.report.StubUsageReport
 import io.specmatic.test.HttpClient
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
+import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.delay
@@ -36,7 +38,7 @@ import kotlin.text.toCharArray
 
 data class HttpStubResponse(
     val response: HttpResponse,
-    val delayInSeconds: Int? = null,
+    val delayInMilliSeconds: Long? = null,
     val contractPath: String = "",
     val feature: Feature? = null,
     val scenario: Scenario? = null
@@ -248,7 +250,7 @@ class HttpStub(
                             )
                         }
                     } else {
-                        respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInSeconds)
+                        respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInMilliSeconds, specmaticConfig)
                         httpLogMessage.addResponse(httpStubResponse)
                     }
                 } catch (e: ContractException) {
@@ -689,7 +691,8 @@ internal fun toParams(queryParameters: Parameters): List<Pair<String, String>> =
 internal suspend fun respondToKtorHttpResponse(
     call: ApplicationCall,
     httpResponse: HttpResponse,
-    delayInSeconds: Int? = null
+    delayInMilliSeconds: Long? = null,
+    specmaticConfig: SpecmaticConfig? = null
 ) {
     val contentType = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
     val textContent = TextContent(
@@ -703,8 +706,9 @@ internal suspend fun respondToKtorHttpResponse(
         call.response.headers.append(name, value)
     }
 
-    if (delayInSeconds != null) {
-        delay(delayInSeconds * 1000L)
+    val delayInMs = delayInMilliSeconds ?: specmaticConfig?.stub?.delayInMilliseconds
+    if (delayInMs != null) {
+        delay(delayInMs)
     }
 
     call.respond(textContent)
@@ -776,7 +780,7 @@ private fun stubbedResponse(
         val softCastResponse = it.softCastResponseToXML(httpRequest).response
         HttpStubResponse(
             softCastResponse,
-            it.delayInSeconds,
+            it.delayInMilliseconds,
             it.contractPath,
             scenario = mock.scenario,
             feature = mock.feature

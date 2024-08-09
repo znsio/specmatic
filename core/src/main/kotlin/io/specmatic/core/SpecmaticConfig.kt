@@ -175,13 +175,19 @@ data class ReportConfiguration(
 )
 
 data class ReportFormatter(
-    val type: ReportFormatterType = ReportFormatterType.TEXT,
-    val layout: ReportFormatterLayout = ReportFormatterLayout.TABLE
+    var type: ReportFormatterType = ReportFormatterType.TEXT,
+    val layout: ReportFormatterLayout = ReportFormatterLayout.TABLE,
+    val title: String? = "Specmatic Report",
+    val heading: String? = "Contract Test Results",
+    val outputDirectory: String? = "reports/specmatic/html"
 )
 
 enum class ReportFormatterType {
     @JsonProperty("text")
-    TEXT
+    TEXT,
+
+    @JsonProperty("html")
+    HTML
 }
 
 enum class ReportFormatterLayout {

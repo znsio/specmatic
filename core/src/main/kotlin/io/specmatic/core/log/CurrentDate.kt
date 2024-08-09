@@ -15,6 +15,14 @@ class CurrentDate(private val date: Calendar = Calendar.getInstance()) {
         return "$year-${month + 1}-$day $hour:$minute:$second.$millisecond"
     }
 
+    override fun toString(): String {
+        return toLogString()
+    }
+
+    fun toEpochMillis(): Long {
+        return date.timeInMillis
+    }
+
     fun toFileNameString(): String {
         val parts = listOf(
             Calendar.YEAR,

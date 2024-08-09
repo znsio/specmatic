@@ -6,7 +6,9 @@ data class OpenApiCoverageConsoleRow(
     val responseStatus: String,
     val count: String,
     val coveragePercentage: Int = 0,
-    val remarks: Remarks
+    val remarks: Remarks,
+    val showPath: Boolean = true,
+    val showMethod: Boolean = true,
 ) {
     constructor(
         method: String,
@@ -14,8 +16,10 @@ data class OpenApiCoverageConsoleRow(
         responseStatus: Int,
         count: Int,
         coveragePercentage: Int,
-        remarks: Remarks
-    ) : this(method, path, responseStatus.toString(), count.toString(), coveragePercentage, remarks)
+        remarks: Remarks,
+        showPath: Boolean = true,
+        showMethod: Boolean = true,
+    ) : this(method, path, responseStatus.toString(), count.toString(), coveragePercentage, remarks, showPath, showMethod)
 
     fun toRowString(maxPathSize: Int, maxRemarksSize: Int): String {
         val longestStatus = "coverage"
@@ -30,9 +34,11 @@ data class OpenApiCoverageConsoleRow(
         val countFormat = "%${"# exercised".length}s"
         val remarksFormat = "%-${maxRemarksSize}s"
 
-        val coveragePercentage = if (path.isNotEmpty()) "$coveragePercentage%" else ""
+        val pathText = if (showPath) path else ""
+        val methodText = if (showMethod) method else ""
+        val coveragePercentage = if (showPath) "$coveragePercentage%" else ""
 
-        return "| ${statusFormat.format(coveragePercentage)} | ${pathFormat.format(path)} | ${methodFormat.format(method)} | ${
+        return "| ${statusFormat.format(coveragePercentage)} | ${pathFormat.format(pathText)} | ${methodFormat.format(methodText)} | ${
             responseFormat.format(
                 responseStatus
             )

@@ -1,5 +1,6 @@
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.log.CurrentDate
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
@@ -8,13 +9,14 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 internal class HttpLogMessageTest {
-    private val httpLog = HttpLogMessage("start-time", HttpRequest("GET", "/"), "end-time", HttpResponse.OK, "/path/to/file")
+    private val dateTime: CurrentDate = CurrentDate()
+    private val httpLog = HttpLogMessage(dateTime, HttpRequest("GET", "/"), dateTime, HttpResponse.OK, "/path/to/file")
 
     @Test
     fun `render an http log message as JSON`() {
         val json: JSONObjectValue = httpLog.toJSONObject()
-        assertThat(json.getString("requestTime")).isEqualTo("start-time")
-        assertThat(json.getString("responseTime")).isEqualTo("end-time")
+        assertThat(json.getString("requestTime")).isEqualTo(dateTime.toString())
+        assertThat(json.getString("responseTime")).isEqualTo(dateTime.toString())
         assertThat(json.getString("contractMatched")).isEqualTo("/path/to/file")
 
         assertThat(json.findFirstChildByPath("http-request.path")).isEqualTo(StringValue("/"))
@@ -32,11 +34,11 @@ internal class HttpLogMessageTest {
 
         println(text)
 
-        assertThat(text).contains("start-time")
+        assertThat(text).contains("$dateTime")
         assertThat(text).contains("GET /")
 
         assertThat(text).contains("200 OK")
-        assertThat(text).contains("end-time")
+        assertThat(text).contains("$dateTime")
 
         assertThat(text).contains("/path/to/file")
     }

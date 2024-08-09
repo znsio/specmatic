@@ -21,7 +21,7 @@ class OpenApiCoverageConsoleRowTest {
     @Test
     fun `test renders path, method, response, count with coverage percentage blank for sub level row of covered endpoint`() {
         val path  = "/route1"
-        val coverageRowString = OpenApiCoverageConsoleRow("POST", "", 200, 1, 0, Remarks.Missed).toRowString(
+        val coverageRowString = OpenApiCoverageConsoleRow("POST", "", 200, 1, 0, Remarks.Missed, showPath = false).toRowString(
             path.length,
             Remarks.Missed.toString().length
         )
@@ -44,7 +44,7 @@ class OpenApiCoverageConsoleRowTest {
     @Test
     fun `test renders coverage percentage, path, method, with response, count for sub level row of missed endpoint`() {
         val path  = "/route1"
-        val coverageRowString = OpenApiCoverageConsoleRow("POST", "", 0, 1, 0, Remarks.Missed).toRowString(
+        val coverageRowString = OpenApiCoverageConsoleRow("POST", "/route1", 0, 1, 0, Remarks.Missed, showPath = false).toRowString(
             path.length,
             Remarks.Missed.toString().length
         )
@@ -66,7 +66,7 @@ class OpenApiCoverageConsoleRowTest {
     @Test
     fun `test renders coverage percentage, path, method, with response, count for sub level row of not implemented endpoint`() {
         val path  = "/route1"
-        val coverageRowString = OpenApiCoverageConsoleRow("GET", "", 200, 0, 0, Remarks.NotImplemented).toRowString(
+        val coverageRowString = OpenApiCoverageConsoleRow("GET", "/route1", 200, 0, 0, Remarks.NotImplemented, showPath = false).toRowString(
             path.length,
             Remarks.NotImplemented.toString().length
         )

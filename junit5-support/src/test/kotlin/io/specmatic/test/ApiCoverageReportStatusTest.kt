@@ -92,7 +92,7 @@ class ApiCoverageReportStatusTest {
         assertThat(apiCoverageReport.rows).isEqualTo(
             listOf(
                 OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
-                OpenApiCoverageConsoleRow("", "", 400, 1, 0, Remarks.Missed)
+                OpenApiCoverageConsoleRow("GET", "/route1", 400, 1, 50, Remarks.Missed, showPath = false, showMethod = false)
             )
         )
     }
@@ -119,7 +119,7 @@ class ApiCoverageReportStatusTest {
         assertThat(apiCoverageReport.rows).isEqualTo(
             listOf(
                 OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 0, Remarks.NotCovered),
-                OpenApiCoverageConsoleRow("", "", 400, 1, 0, Remarks.Missed)
+                OpenApiCoverageConsoleRow("GET", "/route1", 400, 1, 0, Remarks.Missed, showPath = false, showMethod = false)
             )
         )
     }
@@ -151,7 +151,7 @@ class ApiCoverageReportStatusTest {
             listOf(
                 OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
                 OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 0, Remarks.NotImplemented),
-                OpenApiCoverageConsoleRow("", "", 404, 1, 0, Remarks.Missed)
+                OpenApiCoverageConsoleRow("GET", "/route2", 404, 1, 0, Remarks.Missed, showPath = false, showMethod = false)
             )
         )
     }
@@ -211,7 +211,7 @@ class ApiCoverageReportStatusTest {
         assertThat(apiCoverageReport.rows).isEqualTo(
             listOf(
                 OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
-                OpenApiCoverageConsoleRow("", "", 400, 0, 0, Remarks.DidNotRun)
+                OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.DidNotRun, showPath = false, showMethod = false)
             )
         )
     }

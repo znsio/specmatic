@@ -43,6 +43,7 @@ group = 'io.specmatic'
 
 jar {
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+    from '../version.properties'
 }
 
 tasks.withType(JavaCompile) {

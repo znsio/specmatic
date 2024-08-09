@@ -66,9 +66,14 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.isResiliencyTestingEnabled()).isEqualTo(true)
         assertThat(config.isExtensibleSchemaEnabled()).isTrue()
         assertThat(config.isResponseValueValidationEnabled()).isTrue()
-
+        
         assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
         assertThat(config.stub.generative).isEqualTo(false)
+        
+        val htmlConfig = config.report?.formatters?.first { it.type == ReportFormatterType.HTML }
+        assertThat(htmlConfig?.title).isEqualTo("Test Report")
+        assertThat(htmlConfig?.heading).isEqualTo("Test Results")
+        assertThat(htmlConfig?.outputDirectory).isEqualTo("output")
     }
 
     @Test

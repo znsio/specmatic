@@ -27,6 +27,10 @@ report:
   formatters:
     - type: text
       layout: table
+    - type: html
+      title: Test Report
+      heading: Test Results
+      outputDirectory: output
   types:
     APICoverage:
       OpenAPI:

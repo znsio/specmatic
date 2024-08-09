@@ -30,6 +30,8 @@ jobs:
         ./gradlew clean
         git clean -fd
         ./gradlew build
+        java -jar application/build/libs/specmatic.jar --version 2>&1 | grep slf4j
+        if [ $? = 0 ]; then exit 1; fi
 
     - name: Upload core Gradle Log
       if: always()

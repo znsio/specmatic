@@ -12,6 +12,8 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
 import io.specmatic.core.*
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedValue
@@ -199,6 +201,8 @@ class HttpStub(
                     val rawHttpRequest = ktorHttpRequestToHttpRequest(call)
                     httpLogMessage.addRequest(rawHttpRequest)
 
+                    if(rawHttpRequest.isHealthCheckRequest()) return@intercept
+
                     val httpRequest = requestInterceptors.fold(rawHttpRequest) { request, requestInterceptor ->
                         requestInterceptor.interceptRequest(request) ?: request
                     }
@@ -273,6 +277,8 @@ class HttpStub(
 
                 log(httpLogMessage)
             }
+
+            configureHealthCheckModule()
         }
 
         when (keyData) {

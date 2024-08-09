@@ -215,6 +215,19 @@ internal class ProxyTest {
 
         }
     }
+
+    @Test
+    fun `should return health status as UP if the actuator health endpoint is hit`() {
+        HttpStub(simpleFeature).use {
+            Proxy(host = "localhost", port = 9001, "http://localhost:9001", fakeFileWriter).use {
+                val client = RestTemplate()
+                val response = client.getForEntity("http://localhost:9001/actuator/health", Map::class.java)
+
+                assertThat(response.statusCodeValue).isEqualTo(200)
+                assertThat(response.body).isEqualTo(mapOf("status" to "UP"))
+            }
+        }
+    }
 }
 
 class FakeFileWriter : FileWriter {

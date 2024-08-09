@@ -4,6 +4,8 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.specmatic.core.*
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.mock.ScenarioStub
@@ -34,6 +36,8 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
             intercept(ApplicationCallPipeline.Call) {
                 try {
                     val httpRequest = ktorHttpRequestToHttpRequest(call)
+
+                    if(httpRequest.isHealthCheckRequest()) return@intercept
 
                     when (httpRequest.method?.uppercase()) {
                         "CONNECT" -> {
@@ -81,6 +85,8 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                     respondToKtorHttpResponse(call, errorResponse)
                 }
             }
+
+            configureHealthCheckModule()
         }
 
         when (keyData) {

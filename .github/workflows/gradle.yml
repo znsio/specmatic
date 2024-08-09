@@ -35,7 +35,11 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         java -jar application/build/libs/specmatic.jar --version 2>&1 | grep slf4j
-        if [ $? -eq 0 ]; then exit 1; fi
+        
+        if [ $? -eq 0 ]
+        then
+          exit 1
+        fi
 
     - name: Upload core Gradle Log
       if: always()

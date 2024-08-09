@@ -10,7 +10,7 @@ import org.apache.http.ssl.SSLContextBuilder
 const val BREATHING_ROOM_FOR_REQUEST_TIMEOUT_TO_KICK_IN_FIRST = 1
 
 class ApacheHttpClientFactory(override val timeoutPolicy: TimeoutPolicy): HttpClientFactory {
-    constructor(timeout: Int): this(TimeoutPolicy(timeout))
+    constructor(timeoutInMilliseconds: Long): this(TimeoutPolicy(timeoutInMilliseconds))
 
     override fun create(): HttpClient = HttpClient(Apache) {
         expectSuccess = false

@@ -66,6 +66,7 @@ test:
     enable: all
   validateResponseValues: true
   allowExtensibleSchema: true
+  timeoutInMilliseconds: 3000
 
 examples:
   - folder1/examples

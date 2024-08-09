@@ -53,8 +53,6 @@ open class SpecmaticJUnitSupport {
         const val CONTRACT_PATHS = "contractPaths"
         const val WORKING_DIRECTORY = "workingDirectory"
         const val CONFIG_FILE_NAME = "manifestFile"
-        const val TIMEOUT = "timeout"
-        private const val DEFAULT_TIMEOUT = "60"
         const val INLINE_SUGGESTIONS = "suggestions"
         const val SUGGESTIONS_PATH = "suggestionsPath"
         const val HOST = "host"
@@ -196,7 +194,7 @@ open class SpecmaticJUnitSupport {
         val filterName: String? = System.getProperty(FILTER_NAME_PROPERTY) ?: System.getenv(FILTER_NAME_ENVIRONMENT_VARIABLE)
         val filterNotName: String? = System.getProperty(FILTER_NOT_NAME_PROPERTY) ?: System.getenv(FILTER_NOT_NAME_ENVIRONMENT_VARIABLE)
 
-        val timeout = System.getProperty(TIMEOUT, DEFAULT_TIMEOUT).toInt()
+        val timeoutInMilliseconds = specmaticConfig?.test?.timeoutInMilliseconds ?: DEFAULT_TIMEOUT_IN_MILLISECONDS
 
         val suggestionsData = System.getProperty(INLINE_SUGGESTIONS) ?: ""
         val suggestionsPath = System.getProperty(SUGGESTIONS_PATH) ?: ""
@@ -285,7 +283,7 @@ open class SpecmaticJUnitSupport {
         }
 
         return try {
-            dynamicTestStream(testScenarios, testBaseURL, timeout)
+            dynamicTestStream(testScenarios, testBaseURL, timeoutInMilliseconds)
         } catch(e: Throwable) {
             logger.logError(e)
             loadExceptionAsTestError(e)
@@ -295,7 +293,7 @@ open class SpecmaticJUnitSupport {
     private fun dynamicTestStream(
         testScenarios: Sequence<ContractTest>,
         testBaseURL: String,
-        timeout: Int
+        timeoutInMilliseconds: Long
     ): Stream<DynamicTest> {
         try {
             queryActuator()
@@ -312,7 +310,7 @@ open class SpecmaticJUnitSupport {
                 var testResult: Pair<Result, HttpResponse?>? = null
 
                 try {
-                    testResult = contractTest.runTest(testBaseURL, timeout)
+                    testResult = contractTest.runTest(testBaseURL, timeoutInMilliseconds)
                     val (result, response) = testResult
 
                     if (result is Result.Success && result.isPartialSuccess()) {

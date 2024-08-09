@@ -30,13 +30,13 @@ import java.util.*
 import java.util.zip.GZIPInputStream
 
 // API for non-Kotlin invokers
-fun createHttpClient(baseURL: String, timeout: Int) = HttpClient(baseURL, timeout)
+fun createHttpClient(baseURL: String, timeoutInMilliseconds: Long) = HttpClient(baseURL, timeoutInMilliseconds)
 
 class HttpClient(
     val baseURL: String,
-    private val timeout: Int = 60,
+    private val timeoutInMilliseconds: Long = 6000,
     private val log: (event: LogMessage) -> Unit = ::consoleLog,
-    private val httpClientFactory: HttpClientFactory = ApacheHttpClientFactory(timeout)
+    private val httpClientFactory: HttpClientFactory = ApacheHttpClientFactory(timeoutInMilliseconds)
 ) : TestExecutor {
     private val serverStateURL = "/_$APPLICATION_NAME_LOWER_CASE/state"
     private var httpLogMessage: HttpLogMessage = HttpLogMessage(targetServer = baseURL)

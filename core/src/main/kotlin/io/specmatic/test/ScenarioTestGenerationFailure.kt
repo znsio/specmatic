@@ -14,7 +14,7 @@ class ScenarioTestGenerationFailure(val scenario: Scenario, val failure: Result.
         return scenario.testDescription()
     }
 
-    override fun runTest(testBaseURL: String, timeOut: Int): Pair<Result, HttpResponse?> {
+    override fun runTest(testBaseURL: String, timeoutInMilliseconds: Long): Pair<Result, HttpResponse?> {
         return Pair(failure.updateScenario(scenario), null)
     }
 

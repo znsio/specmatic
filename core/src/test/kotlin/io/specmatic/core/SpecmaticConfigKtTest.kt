@@ -8,6 +8,7 @@ import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
 import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
 import io.specmatic.core.utilities.Flags.Companion.SCHEMA_EXAMPLE_DEFAULT
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_GENERATIVE_TESTS
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import org.assertj.core.api.Assertions.assertThat
@@ -66,14 +67,16 @@ internal class SpecmaticConfigKtTest {
         assertThat(config.isResiliencyTestingEnabled()).isEqualTo(true)
         assertThat(config.isExtensibleSchemaEnabled()).isTrue()
         assertThat(config.isResponseValueValidationEnabled()).isTrue()
-        
+
         assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
         assertThat(config.stub.generative).isEqualTo(false)
-        
+
         val htmlConfig = config.report?.formatters?.first { it.type == ReportFormatterType.HTML }
         assertThat(htmlConfig?.title).isEqualTo("Test Report")
         assertThat(htmlConfig?.heading).isEqualTo("Test Results")
         assertThat(htmlConfig?.outputDirectory).isEqualTo("output")
+
+        assertThat(config.test?.timeoutInMilliseconds).isEqualTo(3000)
     }
 
     @Test
@@ -154,7 +157,8 @@ internal class SpecmaticConfigKtTest {
             SCHEMA_EXAMPLE_DEFAULT to "true",
             MAX_TEST_REQUEST_COMBINATIONS to "50",
             EXAMPLE_DIRECTORIES to "folder1/examples,folder2/examples",
-            SPECMATIC_STUB_DELAY to "1000"
+            SPECMATIC_STUB_DELAY to "1000",
+            SPECMATIC_TEST_TIMEOUT to "5000"
         )
         try {
             properties.forEach { System.setProperty(it.key, it.value) }
@@ -165,6 +169,7 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isExtensibleSchemaEnabled()).isFalse()
             assertThat(config.examples).isEqualTo(listOf("folder1/examples", "folder2/examples"))
             assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
+            assertThat(config.test?.timeoutInMilliseconds).isEqualTo(5000)
         } finally {
             properties.forEach { System.clearProperty(it.key) }
         }
@@ -201,7 +206,9 @@ internal class SpecmaticConfigKtTest {
             VALIDATE_RESPONSE_VALUE to "false",
             EXTENSIBLE_SCHEMA to "false",
             EXAMPLE_DIRECTORIES to "folder1/examples,folder2/examples",
-            SPECMATIC_STUB_DELAY to "5000"
+            SPECMATIC_STUB_DELAY to "5000",
+            EXAMPLE_DIRECTORIES to "folder1/examples,folder2/examples",
+            SPECMATIC_TEST_TIMEOUT to "5000"
         )
         try {
             props.forEach { System.setProperty(it.key, it.value) }
@@ -211,6 +218,7 @@ internal class SpecmaticConfigKtTest {
             assertThat(config.isExtensibleSchemaEnabled()).isTrue()
             assertThat(config.examples).isEqualTo(listOf("folder1/examples", "folder2/examples"))
             assertThat(config.stub.delayInMilliseconds).isEqualTo(1000L)
+            assertThat(config.test?.timeoutInMilliseconds).isEqualTo(3000)
         } finally {
             props.forEach { System.clearProperty(it.key) }
         }

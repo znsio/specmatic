@@ -6,11 +6,11 @@ import io.mockk.mockk
 import io.mockk.verify
 import io.specmatic.core.CONTRACT_EXTENSION
 import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.newXMLBuilder
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import io.specmatic.test.listeners.ContractExecutionListener
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.fail
@@ -151,7 +151,8 @@ internal class TestCommandTest {
         fun commandLineArguments(): Stream<Arguments> = Stream.of(
                 Arguments.of("--port", "9999", PORT, "9999"),
                 Arguments.of("--host", "10.10.10.10", HOST, "10.10.10.10"),
-                Arguments.of("--timeout", "33", TIMEOUT, "33"),
+                Arguments.of("--timeout", "3", SPECMATIC_TEST_TIMEOUT, "3000"),
+                Arguments.of("--timeout-in-ms","12000", SPECMATIC_TEST_TIMEOUT, "12000"),
                 Arguments.of("--examples", "test/data", Flags.EXAMPLE_DIRECTORIES, "test/data")
         )
     }

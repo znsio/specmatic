@@ -16,7 +16,7 @@ class ScenarioTestGenerationException(val scenario: Scenario, val e: Throwable, 
         return scenario.testDescription()
     }
 
-    override fun runTest(testBaseURL: String, timeOut: Int): Pair<Result, HttpResponse?> {
+    override fun runTest(testBaseURL: String, timeoutInMilliseconds: Long): Pair<Result, HttpResponse?> {
         return error()
     }
 

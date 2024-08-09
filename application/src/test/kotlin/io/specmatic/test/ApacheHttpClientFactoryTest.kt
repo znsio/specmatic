@@ -11,16 +11,14 @@ import kotlin.random.Random
 class ApacheHttpClientFactoryTest {
     @Test
     fun `the client should set a timeout policy with socketTimeout giving breathing room for requestTimeout to kick in first`() {
-        val randomTimeoutInSeconds = Random.nextInt(1, 6)
+        val randomTimeoutInMilliseconds = Random.nextInt(1, 6) * 1000L
 
-        val httpClientFactory: HttpClientFactory = ApacheHttpClientFactory(randomTimeoutInSeconds)
+        val httpClientFactory: HttpClientFactory = ApacheHttpClientFactory(randomTimeoutInMilliseconds)
         val timeoutPolicyFromHttpClientFactory = httpClientFactory.timeoutPolicy
 
-        val expectedRequestTimeout = secondsToMillis(randomTimeoutInSeconds)
-        val expectedSocketTimeout =
-            secondsToMillis(randomTimeoutInSeconds + BREATHING_ROOM_FOR_REQUEST_TIMEOUT_TO_KICK_IN_FIRST)
+        val expectedSocketTimeout = randomTimeoutInMilliseconds + BREATHING_ROOM_FOR_REQUEST_TIMEOUT_TO_KICK_IN_FIRST
 
-        assertThat(timeoutPolicyFromHttpClientFactory.requestTimeoutInMillis).isEqualTo(expectedRequestTimeout)
+        assertThat(timeoutPolicyFromHttpClientFactory.requestTimeoutInMillis).isEqualTo(randomTimeoutInMilliseconds)
         assertThat(timeoutPolicyFromHttpClientFactory.socketTimeoutInMillis).isEqualTo(expectedSocketTimeout)
     }
 

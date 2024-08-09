@@ -23,8 +23,6 @@ import io.specmatic.mock.*
 import io.specmatic.stub.report.StubEndpoint
 import io.specmatic.stub.report.StubUsageReport
 import io.specmatic.test.HttpClient
-import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
-import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.delay
@@ -80,8 +78,6 @@ class HttpStub(
         const val JSON_REPORT_PATH = "./build/reports/specmatic"
         const val JSON_REPORT_FILE_NAME = "stub_usage_report.json"
     }
-
-    val data: String = if(specmaticConfigPath != null && File(specmaticConfigPath).exists()) "" else ""
 
     private val specmaticConfig: SpecmaticConfig =
         if(specmaticConfigPath != null && File(specmaticConfigPath).exists())

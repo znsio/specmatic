@@ -132,7 +132,7 @@ class HttpClient(
 
     override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
         httpLogMessage = httpLogMessage.copy(scenario = scenario, request = request)
-        DataRecorder.addHttpLog(httpLogMessage)
+        TestInteractionsLog.addHttpLog(httpLogMessage)
     }
 }
 

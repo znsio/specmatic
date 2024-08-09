@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import io.specmatic.core.*
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger
-import io.specmatic.test.DataRecorder
-import io.specmatic.test.DataRecorder.displayName
-import io.specmatic.test.DataRecorder.duration
+import io.specmatic.test.TestInteractionsLog
+import io.specmatic.test.TestInteractionsLog.displayName
+import io.specmatic.test.TestInteractionsLog.duration
 import io.specmatic.test.SpecmaticJUnitSupport
 import io.specmatic.test.TestResultRecord
 import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
@@ -20,7 +20,7 @@ import java.util.*
 class HtmlReport(report: ReportConfiguration?) {
     companion object {
         private val groupedTestResultRecords = SpecmaticJUnitSupport.openApiCoverageReportInput.groupedTestResultRecords
-        private val groupedHttpLogMessages = DataRecorder.testHttpLogMessages.groupBy { it.scenario?.method }
+        private val groupedHttpLogMessages = TestInteractionsLog.testHttpLogMessages.groupBy { it.scenario?.method }
 
         private val groupedApiCoverageRows = SpecmaticJUnitSupport.openApiCoverageReportInput.apiCoverageRows
             .groupBy { it.path }.mapValues { pathGroup -> pathGroup.value.groupBy { it.method } }
@@ -272,7 +272,7 @@ class HtmlReport(report: ReportConfiguration?) {
     }
 
     private fun getTotalDuration(): Long {
-        return DataRecorder.testHttpLogMessages.sumOf { it.duration() }
+        return TestInteractionsLog.testHttpLogMessages.sumOf { it.duration() }
     }
 
     private fun groupScenarios(): MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<ScenarioData>>>> {

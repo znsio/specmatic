@@ -100,4 +100,8 @@ data class HttpLogMessage(
     fun logStartRequestTime() {
         this.requestTime = CurrentDate()
     }
+
+    fun isTestLog(): Boolean {
+        return  scenario != null
+    }
 }

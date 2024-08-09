@@ -70,7 +70,7 @@ dependencies {
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
-    implementation 'org.slf4j:slf4j-nop:2.0.13'
+    implementation 'org.slf4j:slf4j-nop:2.0.15'
 
     implementation 'org.apache.ant:ant-junit:1.10.14'
 

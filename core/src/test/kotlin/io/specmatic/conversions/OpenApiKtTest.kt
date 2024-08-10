@@ -79,6 +79,14 @@ Scenario: zero should return not found
                 Arguments.of("openapi/helloMultipartWithExamples.yaml", "input.txt"),
             )
         }
+
+        @JvmStatic
+        fun swaggerAndOpenAPI(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of("openapi"),
+                Arguments.of("swagger")
+            )
+        }
     }
 
     @Test
@@ -568,14 +576,15 @@ Background:
         })
     }
 
-    @Test
-    fun `should generate stub with non primitive open api data types`() {
+    @ParameterizedTest
+    @MethodSource("swaggerAndOpenAPI")
+    fun `should generate stub with non primitive open api data types`(specType: String) {
         val feature = parseGherkinStringToFeature(
             """
 Feature: Hello world
 
 Background:
-  Given openapi openapi/petstore-expanded.yaml
+  Given openapi $specType/petstore-expanded.yaml
         """.trimIndent(), sourceSpecPath
         )
 
@@ -828,14 +837,15 @@ Background:
         }
     }
 
-    @Test
-    fun `should generate stub with http post and non primitive request and response data types`() {
+    @ParameterizedTest
+    @MethodSource("swaggerAndOpenAPI")
+    fun `should generate stub with http post and non primitive request and response data types`(specType: String) {
         val feature = parseGherkinStringToFeature(
             """
 Feature: Hello world
 
 Background:
-  Given openapi openapi/petstore-expanded.yaml
+  Given openapi $specType/petstore-expanded.yaml
         """.trimIndent(), sourceSpecPath
         )
 

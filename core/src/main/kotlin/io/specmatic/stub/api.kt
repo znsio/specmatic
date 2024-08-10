@@ -447,11 +447,20 @@ fun loadIfOpenAPISpecification(contractPathData: ContractPathData): Pair<String,
 private fun recognizedExtensionButNotOpenAPI(contractPathData: ContractPathData) =
     !hasOpenApiFileExtension(contractPathData.path) && File(contractPathData.path).extension in CONTRACT_EXTENSIONS
 
-fun isOpenAPI(path: String): Boolean =
-    try {
+fun isOpenAPI(path: String): Boolean {
+    val openAPI30 = try {
         Yaml().load<MutableMap<String, Any?>>(File(path).reader()).contains("openapi")
-    } catch(e: Throwable) {
+    } catch (e: Throwable) {
         logger.log(e, "Could not parse $path")
         false
     }
+
+    val swagger = try {
+        Yaml().load<MutableMap<String, Any?>>(File(path).reader()).contains("swagger")
+    } catch (e: Throwable) {
+        logger.log(e, "Could not parse $path")
+        false
+    }
+    return swagger || openAPI30
+}
 

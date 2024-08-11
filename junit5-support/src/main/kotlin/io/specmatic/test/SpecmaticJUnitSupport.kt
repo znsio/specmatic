@@ -194,7 +194,9 @@ open class SpecmaticJUnitSupport {
         val filterName: String? = System.getProperty(FILTER_NAME_PROPERTY) ?: System.getenv(FILTER_NAME_ENVIRONMENT_VARIABLE)
         val filterNotName: String? = System.getProperty(FILTER_NOT_NAME_PROPERTY) ?: System.getenv(FILTER_NOT_NAME_ENVIRONMENT_VARIABLE)
 
-        val timeoutInMilliseconds = specmaticConfig?.test?.timeoutInMilliseconds ?: DEFAULT_TIMEOUT_IN_MILLISECONDS
+        specmaticConfig = getSpecmaticConfig()
+
+        val timeoutInMilliseconds = specmaticConfig?.test?.timeoutInMilliseconds ?: try { Flags.getLongValue(Flags.SPECMATIC_TEST_TIMEOUT) } catch(e: Throwable) { throw e } ?:  DEFAULT_TIMEOUT_IN_MILLISECONDS
 
         val suggestionsData = System.getProperty(INLINE_SUGGESTIONS) ?: ""
         val suggestionsPath = System.getProperty(SUGGESTIONS_PATH) ?: ""
@@ -233,8 +235,6 @@ open class SpecmaticJUnitSupport {
                     exitIfDoesNotExist("config file", configFile)
 
                     createIfDoesNotExist(workingDirectory.path)
-
-                    specmaticConfig = getSpecmaticConfig()
 
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
 

@@ -1397,7 +1397,7 @@ data class Feature(
                 with(exampleFromFile) {
                     OpenApiSpecification.OperationIdentifier(
                         requestMethod,
-                        pathOnly(requestPath),
+                        requestPath,
                         responseStatus
                     ) to exampleFromFile.toRow(specmaticConfig)
                 }
@@ -1408,10 +1408,6 @@ data class Feature(
         }
             .groupBy { (operationIdentifier, _) -> operationIdentifier }
             .mapValues { (_, value) -> value.map { it.second } }
-    }
-
-    private fun pathOnly(requestPath: String): String {
-        return URI(requestPath).path ?: ""
     }
 
     fun loadExternalisedExamplesAndListUnloadableExamples(): Pair<Feature, Set<String>> {

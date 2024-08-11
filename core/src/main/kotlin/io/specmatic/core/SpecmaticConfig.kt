@@ -15,6 +15,7 @@ import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_GENERATIVE_TESTS
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
@@ -23,7 +24,7 @@ import java.io.File
 
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
-const val DEFAULT_TIMEOUT_IN_SECONDS = "60"
+const val DEFAULT_TIMEOUT_IN_MILLISECONDS: Long = 6000L
 const val CONTRACT_EXTENSION = "spec"
 const val YAML = "yaml"
 const val WSDL = "wsdl"
@@ -113,6 +114,7 @@ data class TestConfiguration(
     ),
     val validateResponseValues: Boolean? = getBooleanValue(VALIDATE_RESPONSE_VALUE),
     val allowExtensibleSchema: Boolean? = getBooleanValue(EXTENSIBLE_SCHEMA),
+    val timeoutInMilliseconds: Long? = getLongValue(SPECMATIC_TEST_TIMEOUT)
 )
 
 enum class ResiliencyTestSuite {

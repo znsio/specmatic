@@ -2352,6 +2352,15 @@ paths:
             .contains("POST /order_action_figure -> 200 does not match any operation in the specification")
     }
 
+    @Test
+    fun `validate an invalid query param in the path of an externalised example`() {
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_invalid_external_query_in_url.yaml").toFeature().loadExternalisedExamples()
+
+        assertThatThrownBy {
+            feature.validateExamplesOrException()
+        }.hasMessageContaining("REQUEST.QUERY-PARAMS.enabled")
+    }
+
     companion object {
         @JvmStatic
         fun singleFeatureContractSource(): Stream<Arguments> {

@@ -32,7 +32,7 @@ class HtmlReport(report: ReportConfiguration?) {
         private var totalSkipped = 0
         private var totalSuccess = 0
 
-        private var outputDirectory = "reports/specmatic/html"
+        private var outputDirectory = "./build/reports/specmatic/html"
         var pageTitle: String = "Specmatic Report"
         var reportHeading: String = "Contract Test Results"
     }

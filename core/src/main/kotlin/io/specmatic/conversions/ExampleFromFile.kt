@@ -91,9 +91,16 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         json.findFirstChildByPath("http-request.method")?.toStringLiteral()
     } ?: throw ContractException("Request method was not found.")
 
-    val requestPath: String = attempt("Error reading path in file ${file.parentFile.canonicalPath}") {
+    private val rawPath: String? =
         json.findFirstChildByPath("http-request.path")?.toStringLiteral()
+
+    val requestPath: String = attempt("Error reading path in file ${file.parentFile.canonicalPath}") {
+        rawPath?.let { pathOnly(it) }
     } ?: throw ContractException("Request path was not found.")
+
+    private fun pathOnly(requestPath: String): String {
+        return URI(requestPath).path ?: ""
+    }
 
     val testName: String = attempt("Error reading expectation name in file ${file.parentFile.canonicalPath}") {
         json.findFirstChildByPath("name")?.toStringLiteral() ?: file.nameWithoutExtension
@@ -101,7 +108,11 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
 
     val queryParams: Map<String, String>
         get() {
-            val uri = URI.create(requestPath)
+            val path = attempt("Error reading path in file ${file.parentFile.canonicalPath}") {
+                rawPath ?: throw ContractException("Request path was not found.")
+            }
+
+            val uri = URI.create(path)
             val queryParamsFromURL = parseQuery(uri.query)
 
             val queryParamsFromJSONBlock = attempt("Error reading query params in file ${file.parentFile.canonicalPath}") {

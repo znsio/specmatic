@@ -1,0 +1,12 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/data?enabled=not-a-boolean"
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": 10
+    }
+  }
+}

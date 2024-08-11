@@ -3,6 +3,7 @@ package io.specmatic.core
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.pattern.NumberPattern
 import io.specmatic.core.pattern.StringPattern
+import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
 import io.specmatic.stub.captureStandardOutput
@@ -2350,6 +2351,30 @@ paths:
 
         assertThat(output)
             .contains("POST /order_action_figure -> 200 does not match any operation in the specification")
+    }
+
+    @Test
+    fun `validate an invalid query param in the path of an externalised example`() {
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_invalid_external_query_in_url.yaml").toFeature().loadExternalisedExamples()
+
+        assertThatThrownBy {
+            feature.validateExamplesOrException()
+        }.hasMessageContaining("REQUEST.QUERY-PARAMS.enabled")
+    }
+
+    @Test
+    fun `validate and use an query param in the path of an externalised example`() {
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_valid_external_query_in_url.yaml").toFeature().loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.path).isEqualTo("/data")
+                assertThat(request.queryParams.getValues("enabled").single()).isEqualTo("true")
+                return HttpResponse(200, parsedJSONObject("""{"id": 10}"""))
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 
     companion object {

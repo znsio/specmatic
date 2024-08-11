@@ -91,7 +91,8 @@
       "enable": "all"
     },
     "validateResponseValues": true,
-    "allowExtensibleSchema": true
+    "allowExtensibleSchema": true,
+    "timeoutInMilliseconds": 3000
   },
   "stub": {
     "delayInMilliseconds": 1000

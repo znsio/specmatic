@@ -2,12 +2,13 @@ package application
 
 import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.Configuration
-import io.specmatic.core.DEFAULT_TIMEOUT_IN_SECONDS
+import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
 import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_PARALLELISM
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.core.utilities.newXMLBuilder
@@ -23,7 +24,6 @@ import io.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.TIMEOUT
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
 import io.specmatic.test.listeners.ContractExecutionListener
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
@@ -88,8 +88,11 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--https"], description = ["Use https instead of the default http"], required = false)
     var useHttps: Boolean = false
 
-    @Option(names = ["--timeout"], description = ["Specify a timeout in seconds for the test requests. Default value is $DEFAULT_TIMEOUT_IN_SECONDS"], required = false, defaultValue = DEFAULT_TIMEOUT_IN_SECONDS)
-    var timeout: Int = 60
+    @Option(names = ["--timeout"], description = ["Specify a timeout in seconds for the test requests. Default value is ${DEFAULT_TIMEOUT_IN_MILLISECONDS / 1000}"], required = false)
+    var timeout: Long? = null
+
+    @Option(names = ["--timeout-in-ms"], description = ["Specify a timeout in milliseconds for the test requests, Defaults to $DEFAULT_TIMEOUT_IN_MILLISECONDS"], required = false)
+    var timeoutInMs: Long? = null
 
     @Option(names = ["--junitReportDir"], description = ["Create junit xml reports in this directory"])
     var junitReportDirName: String? = null
@@ -131,9 +134,11 @@ class TestCommand : Callable<Unit> {
             else -> "http"
         }
 
+        val timeoutInMs = timeoutInMs ?: timeout?.times(1000) ?: DEFAULT_TIMEOUT_IN_MILLISECONDS
+
         System.setProperty(HOST, host)
         System.setProperty(PORT, port.toString())
-        System.setProperty(TIMEOUT, timeout.toString())
+        System.setProperty(SPECMATIC_TEST_TIMEOUT, timeoutInMs.toString())
         System.setProperty(SUGGESTIONS_PATH, suggestionsPath)
         System.setProperty(INLINE_SUGGESTIONS, suggestions)
         System.setProperty(ENV_NAME, envName)

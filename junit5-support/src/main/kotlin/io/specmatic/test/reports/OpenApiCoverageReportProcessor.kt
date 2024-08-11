@@ -51,12 +51,7 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
     }
 
     private fun configureOpenApiCoverageReportRenderers(reportConfiguration: ReportConfiguration): List<ReportRenderer<OpenAPICoverageConsoleReport>> {
-        return reportConfiguration.formatters!!.map {
-            when (it.type) {
-                ReportFormatterType.TEXT -> CoverageReportTextRenderer()
-                else -> throw Exception("Report formatter type: ${it.type} is not supported")
-            }
-        }
+        return listOf(CoverageReportTextRenderer())
     }
 
     private fun assertSuccessCriteria(

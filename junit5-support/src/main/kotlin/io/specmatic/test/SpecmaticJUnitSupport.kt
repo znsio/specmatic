@@ -196,7 +196,7 @@ open class SpecmaticJUnitSupport {
 
         specmaticConfig = getSpecmaticConfig()
 
-        val timeoutInMilliseconds = specmaticConfig?.test?.timeoutInMilliseconds ?: try { Flags.getLongValue(Flags.SPECMATIC_TEST_TIMEOUT) } catch(e: Throwable) { throw e } ?:  DEFAULT_TIMEOUT_IN_MILLISECONDS
+        val timeoutInMilliseconds = specmaticConfig?.test?.timeoutInMilliseconds ?: try { Flags.getLongValue(Flags.SPECMATIC_TEST_TIMEOUT) } catch(e: NumberFormatException) { throw ContractException("${Flags.SPECMATIC_TEST_TIMEOUT} should be a value of type long") } ?:  DEFAULT_TIMEOUT_IN_MILLISECONDS
 
         val suggestionsData = System.getProperty(INLINE_SUGGESTIONS) ?: ""
         val suggestionsPath = System.getProperty(SUGGESTIONS_PATH) ?: ""

@@ -8136,6 +8136,66 @@ components:
         assertThat(results.success()).isTrue()
     }
 
+    @Test
+    fun `parse Swagger 2 0`() {
+        val swaggerSpec = """
+swagger: '2.0'
+info:
+  version: '1.0.0'
+  title: Employee API
+produces:
+  - application/json
+paths:
+  /employee/{id}:
+    get:
+      summary: Get Employee by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: integer
+      responses:
+        200:
+          description: Employee data
+          schema:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              department:
+                type: integer
+        404:
+          description: Employee not found
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(swaggerSpec, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val path = request.path!!
+                path.split("/").last().toInt()
+
+                return HttpResponse(200, body = parsedJSONObject("""{"id": 10, "name": "Jack", "department": 123}"""))
+            }
+
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+
+        HttpStub(feature).use { stub ->
+            val request = HttpRequest("GET", "/employee/10")
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val jsonObjectValue = response.body as JSONObjectValue
+            assertThat(jsonObjectValue.findFirstChildByPath("id")).isInstanceOf(NumberValue::class.java)
+            assertThat(jsonObjectValue.findFirstChildByPath("name")).isInstanceOf(StringValue::class.java)
+            assertThat(jsonObjectValue.findFirstChildByPath("department")).isInstanceOf(NumberValue::class.java)
+        }
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

@@ -1480,8 +1480,8 @@ class OpenApiSpecification(
                 emptyList()
             else it.split("/")
         }
-        val pathParamMap: Map<String, PathParameter> =
-            parameters.filterIsInstance<PathParameter>().associateBy {
+        val pathParamMap: Map<String, Parameter> =
+            parameters.filterIsInstance<Parameter>().filter { it.`in`?.lowercase() == "path" }.associateBy {
                 it.name
             }
 

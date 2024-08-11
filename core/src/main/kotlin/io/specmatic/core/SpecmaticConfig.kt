@@ -186,7 +186,7 @@ data class ReportFormatter(
     val layout: ReportFormatterLayout = ReportFormatterLayout.TABLE,
     val title: String? = "Specmatic Report",
     val heading: String? = "Contract Test Results",
-    val outputDirectory: String? = "reports/specmatic/html"
+    val outputDirectory: String? = "./build/reports/specmatic/html"
 )
 
 enum class ReportFormatterType {

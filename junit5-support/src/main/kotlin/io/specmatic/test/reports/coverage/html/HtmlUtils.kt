@@ -11,10 +11,10 @@ fun loadFileFromClasspath(fileName: String): InputStream {
         ?: throw IllegalArgumentException("File not found in Classpath: $fileName")
 }
 
-fun loadFileFromClasspathAndSaveIt(fileName: String, outputPath: String = ".") {
+fun loadFileFromClasspathAndSaveIt(fileName: String, outputPath: String = ".", outputFileName: String = "") {
     val fileStream = loadFileFromClasspath(fileName)
     fileStream.use { stream ->
-        val targetPath = Paths.get(outputPath, fileName)
+        val targetPath = Paths.get(outputPath, outputFileName)
         targetPath.parent.toFile().mkdirs()
         Files.copy(stream, targetPath, StandardCopyOption.REPLACE_EXISTING)
     }
@@ -41,8 +41,9 @@ fun createAssetsDir(reportsDir: String) {
 
     fileNames.forEach { fileName ->
         loadFileFromClasspathAndSaveIt(
-            "assets/${fileName}",
-            reportsDir
+            "templates/assets/$fileName",
+            reportsDir,
+            "assets/$fileName"
         )
     }
 }

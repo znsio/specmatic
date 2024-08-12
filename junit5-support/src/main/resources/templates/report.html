@@ -29,7 +29,7 @@
     <div
         id="summary"
         class="flex justify-between gap-5 p-1 border-2"
-        th:classappend="${summaryResult == 'rejected' ? bg-rejected : bg-approved}"
+        th:classappend="${summaryResult == 'rejected'} ? bg-rejected : bg-approved"
     >
         <ol id="results" class="flex flex-wrap items-center justify-between flex-1 px-2 gap-x-5">
             <li class="flex items-center gap-2" id="successRate">

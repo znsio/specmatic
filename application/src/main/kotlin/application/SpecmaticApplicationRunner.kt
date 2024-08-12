@@ -14,6 +14,10 @@ class SpecmaticApplicationRunner(specmaticCommand: SpecmaticCommand, private val
     override fun run(vararg args: String) {
         val cmd = CommandLine(myCommand, factory)
         cmd.subcommands.getValue("generate-completion").commandSpec.usageMessage().hidden(true)
+        
+        // Get console width or default to 80
+        val width = System.getenv("COLUMNS")?.toIntOrNull() ?: 150
+        cmd.usageHelpWidth = width
 
         exitCode = cmd.execute(*args)
     }

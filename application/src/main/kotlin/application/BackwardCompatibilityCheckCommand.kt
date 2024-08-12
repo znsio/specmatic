@@ -10,6 +10,7 @@ import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.stub.isOpenAPI
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
+import picocli.CommandLine.Option
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -26,13 +27,22 @@ const val TWO_INDENTS = "${ONE_INDENT}${ONE_INDENT}"
 @Component
 @Command(
     name = "backwardCompatibilityCheck",
-    mixinStandardHelpOptions = true,
-    description = ["Checks backward compatibility of a directory across the current HEAD and the main branch"]
+    description = ["Checks backward compatibility of a directory across the current HEAD and the main branch and provides additional subcommands for related operations."],
+    subcommands = [
+        CompareCommand::class,
+        CompatibleCommand::class,
+        PushCommand::class,
+        DifferenceCommand::class,
+    ],
+    mixinStandardHelpOptions = true
 )
 class BackwardCompatibilityCheckCommand(
     private val gitCommand: GitCommand = SystemGit(),
 ) : Callable<Unit> {
 
+    @Option(names = ["-d", "--directory"], description = ["Directory to check for backward compatibility"])
+
+    private var directory: String = ".";
     private val newLine = System.lineSeparator()
 
     companion object {
@@ -281,14 +291,15 @@ class BackwardCompatibilityCheckCommand(
     }
 
     internal fun allOpenApiSpecFiles(): List<File> {
-        return File(".").walk().toList().filterNot {
+        return File(directory).walk().toList().filterNot {
             ".git" in it.path
         }.filter { it.isFile && it.isOpenApiSpec() }
     }
 
     private fun getOpenAPISpecFilesChangedInCurrentBranch(): Set<String> {
         return gitCommand.getFilesChangeInCurrentBranch().filter {
-            File(it).exists() && File(it).isOpenApiSpec()
+            val file = File(directory, it)
+            file.exists() && file.isOpenApiSpec()
         }.toSet()
     }
 

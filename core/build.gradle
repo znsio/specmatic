@@ -27,7 +27,7 @@ dependencies {
     implementation 'io.netty:netty-codec-http:4.1.112.Final' // used by ktor-server-netty-jvm 2.3.9 in core
     implementation 'joda-time:joda-time:2.12.7' // used by swagger-parser 2.1.22
 
-    implementation 'io.cucumber:gherkin:22.0.0'
+    implementation 'io.cucumber:gherkin:29.0.0'
     implementation "io.ktor:ktor-server-netty:$ktor_version"
     implementation "io.ktor:ktor-server-core:$ktor_version"
     implementation "io.ktor:ktor-client-core-jvm:$ktor_version"

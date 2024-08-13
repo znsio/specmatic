@@ -19,6 +19,10 @@ enum class Remarks(val value: String) {
 
     companion object{
         fun resolve(testResultRecords: List<TestResultRecord>): Remarks {
+            if(testResultRecords.any { it.isWip }) {
+                return Wip
+            }
+
             if(!testResultRecords.any { it.isValid }) {
                 return when (testResultRecords.first().result) {
                     TestResult.MissingInSpec -> Missed
@@ -28,7 +32,6 @@ enum class Remarks(val value: String) {
 
             if (testResultRecords.any { it.isExercised }) {
                 return when (testResultRecords.first().result) {
-                    TestResult.Wip -> Wip
                     TestResult.NotImplemented -> NotImplemented
                     TestResult.MissingInSpec -> Missed
                     TestResult.NotCovered -> NotCovered

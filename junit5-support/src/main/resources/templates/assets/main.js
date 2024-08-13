@@ -209,8 +209,10 @@ function createScenarioInformation(scenario) {
 	scenarioDuration.textContent = `${scenario.duration}ms`;
 
 	const scenarioResult = document.createElement("span");
-	scenarioResult.classList.add(...PILL_CSS, `bg-${getColor(scenario.result)}-300`, "w-32");
-	scenarioResult.textContent = scenario.valid ? scenario.remark : "Invalid";
+    const pillColor = (scenario.wip && scenario.result !== "Success") ? "yellow" : getColor(scenario.result);
+    const pillText = scenario.wip ? "WIP" : scenario.valid ? scenario.result : "Invalid";
+	scenarioResult.classList.add(...PILL_CSS, `bg-${pillColor}-300`, "w-32");
+	scenarioResult.textContent = pillText;
 
 	const badgeDiv = document.createElement("div");
 	badgeDiv.classList.add("flex", "items-center", "gap-2");
@@ -330,7 +332,7 @@ function filterScenariosByResult(scenarios, result) {
 function createSummaryForFilteredScenariosByResult(result, scenarios) {
     const liElement = document.createElement("li");
     liElement.classList.add("flex", "items-center", "justify-center", "text-white", "tracking-widest", "font-bold",
-        "text-center", "w-full", "h-full", `bg-${getColor(result)}-500`, "uppercase")
+        "text-center", "w-full", "h-full", `bg-${getColor(result)}-500`, "uppercase", "text-lg")
     liElement.textContent = `${result}: ${scenarios.length}`;
     return liElement
 }

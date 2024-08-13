@@ -15,7 +15,8 @@ data class TestResultRecord(
     val serviceType: String? = null,
     val actualResponseStatus: Int = 0,
     val scenarioResult: Result? = null,
-    val isValid: Boolean = true
+    val isValid: Boolean = true,
+    val isWip: Boolean = false
 ) {
     val isExercised = result !in setOf(TestResult.Skipped, TestResult.DidNotRun)
     val isCovered = result in setOf(TestResult.Success, TestResult.Error, TestResult.Failed, TestResult.Covered)

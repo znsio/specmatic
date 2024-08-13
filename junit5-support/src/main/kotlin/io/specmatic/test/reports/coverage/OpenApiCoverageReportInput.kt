@@ -256,7 +256,7 @@ class OpenApiCoverageReportInput(
 
     private fun identifyWipTestsAndUpdateResult(testResults: List<TestResultRecord>): List<TestResultRecord> {
         val wipTestResults = testResults.filter { it.scenarioResult?.scenario?.ignoreFailure == true }
-        val updatedWipTestResults = wipTestResults.map { it.copy(result = TestResult.Wip) }
+        val updatedWipTestResults = wipTestResults.map { it.copy(isWip = true) }
         return testResults.minus(wipTestResults.toSet()).plus(updatedWipTestResults)
     }
 }

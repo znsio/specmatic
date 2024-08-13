@@ -102,10 +102,10 @@ class HtmlReport(report: ReportConfiguration?) {
                 methodGroup.value.forEach { responseGroup ->
                     responseGroup.value.forEach {
                         when (it.result) {
-                            TestResult.Error -> totalErrors++
-                            TestResult.Skipped, TestResult.DidNotRun, TestResult.Wip -> totalSkipped++
+                            TestResult.Skipped, TestResult.DidNotRun -> totalSkipped++
                             TestResult.Success, TestResult.Covered  -> totalSuccess++
-                            else -> totalFailures++
+                            TestResult.Error -> if (it.isWip) totalSkipped++ else totalErrors++
+                            else -> if(it.isWip) totalSkipped++ else totalFailures++
                         }
                         totalTests++
                     }
@@ -148,7 +148,7 @@ class HtmlReport(report: ReportConfiguration?) {
                             it.scenario == test.scenarioResult?.scenario
                         }
                         val scenarioName = getTestName(test, matchingLogMessage)
-                        val htmlResult = categorizeResult(test.result)
+                        val htmlResult = categorizeResult(test)
 
                         scenarioDataList.add(
                             ScenarioData(
@@ -157,6 +157,7 @@ class HtmlReport(report: ReportConfiguration?) {
                                 duration = matchingLogMessage?.duration() ?: 0,
                                 remark = test.result.toString(),
                                 valid = test.isValid,
+                                wip = test.isWip,
                                 request = getRequestString(matchingLogMessage),
                                 requestTime = matchingLogMessage?.requestTime?.toEpochMillis() ?: 0,
                                 response = getResponseString(matchingLogMessage),
@@ -166,7 +167,6 @@ class HtmlReport(report: ReportConfiguration?) {
                                 details = getReportDetail(scenarioName, test, htmlResult)
                             )
                         )
-
                     }
                 }
             }
@@ -214,7 +214,7 @@ class HtmlReport(report: ReportConfiguration?) {
 
         testScenarios.forEach {
             when (it.result) {
-                HtmlResult.Failed, HtmlResult.Error -> return "red"
+                HtmlResult.Failed, HtmlResult.Error -> return if(it.wip) "yellow" else "red"
                 HtmlResult.Skipped -> return "yellow"
                 else -> {}
             }
@@ -230,12 +230,12 @@ class HtmlReport(report: ReportConfiguration?) {
         return json
     }
 
-    private fun categorizeResult(testResult: TestResult): HtmlResult {
-        return when(testResult) {
+    private fun categorizeResult(testResult: TestResultRecord): HtmlResult {
+        return when(testResult.result) {
             TestResult.Success, TestResult.Covered -> HtmlResult.Success
-            TestResult.Error -> HtmlResult.Error
-            TestResult.Skipped, TestResult.DidNotRun, TestResult.Wip -> HtmlResult.Skipped
-            else -> HtmlResult.Failed
+            TestResult.Skipped, TestResult.DidNotRun-> HtmlResult.Skipped
+            TestResult.Error -> if(testResult.isWip) HtmlResult.Skipped else HtmlResult.Error
+            else -> if(testResult.isWip) HtmlResult.Skipped else HtmlResult.Failed
         }
     }
 }
@@ -246,6 +246,7 @@ data class ScenarioData(
     val duration: Long,
     val remark: String,
     val valid: Boolean,
+    val wip: Boolean,
     val request: String,
     val requestTime: Long,
     val response: String,

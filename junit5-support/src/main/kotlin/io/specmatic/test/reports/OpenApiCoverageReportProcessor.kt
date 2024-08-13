@@ -6,6 +6,7 @@ import io.specmatic.core.log.logger
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 import io.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport
 import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
+import io.specmatic.test.reports.coverage.html.CoverageReportHtmlRenderer
 import io.specmatic.test.reports.renderers.CoverageReportTextRenderer
 import io.specmatic.test.reports.renderers.ReportRenderer
 import kotlinx.serialization.encodeToString
@@ -27,7 +28,7 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
         } else {
             val renderers = configureOpenApiCoverageReportRenderers(reportConfiguration)
             renderers.forEach { renderer ->
-                logger.log(renderer.render(openAPICoverageReport))
+                logger.log(renderer.render(openAPICoverageReport, reportConfiguration))
             }
             saveAsJson(openApiCoverageReportInput.generateJsonReport())
         }
@@ -51,7 +52,13 @@ class OpenApiCoverageReportProcessor(private val openApiCoverageReportInput: Ope
     }
 
     private fun configureOpenApiCoverageReportRenderers(reportConfiguration: ReportConfiguration): List<ReportRenderer<OpenAPICoverageConsoleReport>> {
-        return listOf(CoverageReportTextRenderer())
+        return reportConfiguration.formatters!!.map {
+            when (it.type) {
+                ReportFormatterType.TEXT -> CoverageReportTextRenderer()
+                ReportFormatterType.HTML -> CoverageReportHtmlRenderer()
+                else -> throw Exception("Report formatter type: ${it.type} is not supported")
+            }
+        }
     }
 
     private fun assertSuccessCriteria(

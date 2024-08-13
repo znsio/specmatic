@@ -77,11 +77,7 @@ open class SpecmaticJUnitSupport {
         @JvmStatic
         fun report() {
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
-            try {
-                reportProcessors.forEach { it.process(getReportConfiguration()) }
-            } finally {
-                HtmlReport(specmaticConfig?.report).generate()
-            }
+            reportProcessors.forEach { it.process(getReportConfiguration()) }
 
             threads.distinct().let {
                 if(it.size > 1) {
@@ -92,7 +88,7 @@ open class SpecmaticJUnitSupport {
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
-            val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
+            val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE), ReportFormatter(ReportFormatterType.HTML))
             val defaultReportTypes = ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
             return when (val reportConfiguration = specmaticConfig?.report) {
                 null -> {
@@ -100,7 +96,19 @@ open class SpecmaticJUnitSupport {
                     ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
                 }
                 else -> {
-                    reportConfiguration.copy(formatters = reportConfiguration.formatters ?: defaultFormatters)
+                    reportConfiguration.copy(
+                        formatters = defaultFormatters.map { defaultFormatter ->
+                            val existingFormatter = reportConfiguration.formatters?.firstOrNull { it.type == defaultFormatter.type }
+                            defaultFormatter.copy(
+                                type = existingFormatter?.type ?: defaultFormatter.type,
+                                layout = existingFormatter?.layout ?: defaultFormatter.layout,
+                                title = existingFormatter?.title ?: defaultFormatter.title,
+                                heading = existingFormatter?.heading ?: defaultFormatter.heading,
+                                outputDirectory = existingFormatter?.outputDirectory ?: defaultFormatter.outputDirectory
+                            )
+                        }
+                    )
+
                 }
             }
         }

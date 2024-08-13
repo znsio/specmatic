@@ -18,19 +18,18 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 
-class HtmlReport(report: ReportConfiguration?) {
+class HtmlReport(htmlReportFormat: ReportFormatter){
 
-    private val groupedTestResultRecords = SpecmaticJUnitSupport.openApiCoverageReportInput.groupedTestResultRecords
     private val groupedHttpLogMessages = TestInteractionsLog.testHttpLogMessages.groupBy { it.scenario?.method }
+    private val groupedTestResultRecords = SpecmaticJUnitSupport.openApiCoverageReportInput.groupedTestResultRecords
     private val groupedApiCoverageRows = SpecmaticJUnitSupport.openApiCoverageReportInput.apiCoverageRows
         .groupBy { it.path }.mapValues { pathGroup -> pathGroup.value.groupBy { it.method } }
     private val groupedScenarios = groupScenarios()
 
 
-    private val htmlConfig = report?.formatters?.firstOrNull { it.type == ReportFormatterType.HTML }
-    private val outputDirectory = htmlConfig?.outputDirectory ?: "build/reports/specmatic/html"
-    private val pageTitle = htmlConfig?.title ?: "Specmatic Report"
-    private val reportHeading = htmlConfig?.heading ?: "Contract Test Results"
+    private val outputDirectory = htmlReportFormat.outputDirectory
+    private val pageTitle = htmlReportFormat.title
+    private val reportHeading = htmlReportFormat.heading
 
     private var totalTests = 0
     private var totalErrors = 0
@@ -39,7 +38,7 @@ class HtmlReport(report: ReportConfiguration?) {
     private var totalSuccess = 0
 
     fun generate() {
-        logger.log("Generating HTML report in $outputDirectory...")
+        logger.log("Generating HTML report...")
         createAssetsDir(outputDirectory)
         calculateTestGroupCounts()
 

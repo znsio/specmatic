@@ -2,11 +2,10 @@
   "data": {
     "@department": {
       "engineering": {
-        "manager": "Jack"
+        "location": "Bangalore"
       },
       "sales": {
-        "manager": "Jill",
-        "location": "San Francisco"
+        "location": "Mumbai"
       }
     }
   },
@@ -14,16 +13,13 @@
     "method": "POST",
     "path": "/person",
     "body": {
-      "name": "Jane",
-      "department": "(string)"
+      "department": "{{@department}}"
     }
   },
   "http-response": {
     "status": 200,
     "body": {
-      "id": 10,
-      "name": "{{REQUEST.BODY.name}}",
-      "manager": "{{@department}}"
+      "location": "{{@department}}"
     }
   }
 }

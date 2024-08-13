@@ -13,10 +13,8 @@ paths:
             schema:
               type: object
               required:
-                - name
+                - department
               properties:
-                name:
-                  type: string
                 department:
                   type: string
       responses:
@@ -27,12 +25,7 @@ paths:
               schema:
                 type: object
                 required:
-                  - id
-                  - name
+                  - location
                 properties:
-                  id:
-                    type: number
-                  name:
-                    type: string
                   location:
                     type: string

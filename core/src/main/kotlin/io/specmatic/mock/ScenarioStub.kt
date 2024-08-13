@@ -5,7 +5,7 @@ import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
 
-data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val delayInMilliseconds: Long? = null, val stubToken: String? = null, val requestBodyRegex: String? = null) {
+data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val delayInMilliseconds: Long? = null, val stubToken: String? = null, val requestBodyRegex: String? = null, val data: JSONObjectValue = JSONObjectValue()) {
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
 
@@ -13,6 +13,148 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         mockInteraction[MOCK_HTTP_RESPONSE] = response.toJSON()
 
         return JSONObjectValue(mockInteraction)
+    }
+
+    private fun combinations(data: Map<String, Map<String, Map<String, Value>>>): List<Map<String, Map<String, Map<String, Value>>>> {
+        // Helper function to compute Cartesian product of multiple lists
+        fun <T> cartesianProduct(lists: List<List<T>>): List<List<T>> {
+            return lists.fold(listOf(listOf())) { acc, list ->
+                acc.flatMap { item -> list.map { value -> item + value } }
+            }
+        }
+
+        // Generate the Cartesian product of the values in the input map
+        val product = cartesianProduct(data.map { (key, nestedMap) ->
+            nestedMap.map { (nestedKey, valueMap) ->
+                mapOf(key to mapOf(nestedKey to valueMap))
+            }
+        })
+
+        // Convert each product result into a combined map
+        return product.map { item ->
+            item.reduce { acc, map -> acc + map }
+        }
+    }
+
+    fun resolveDataSubstitutions(): List<ScenarioStub> {
+        if(data.jsonObject.isEmpty())
+            return listOf(this)
+
+        val substitutions = unwrapSubstitutions(data)
+
+        val combinations = combinations(substitutions)
+
+        return combinations.map { combination ->
+            replaceInExample(combination)
+        }
+    }
+
+    private fun unwrapSubstitutions(rawSubstitutions: JSONObjectValue): Map<String, Map<String, Map<String, Value>>> {
+        val substitutions = rawSubstitutions.jsonObject.mapValues {
+            val json =
+                it.value as? JSONObjectValue ?: throw ContractException("Invalid structure of data in the example file")
+
+            json.jsonObject.mapValues {
+                val json =
+                    it.value as? JSONObjectValue ?: throw ContractException("Invalid structure of data in the example file")
+
+                json.jsonObject.mapValues {
+                    it.value
+                }
+            }
+        }
+        return substitutions
+    }
+
+    fun replaceInRequestBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+        return value.copy(
+            value.jsonObject.mapValues {
+                replaceInRequestBody(it.value, substitutions)
+            }
+        )
+    }
+
+    fun replaceInRequestBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+        return value.copy(
+            value.list.map {
+                replaceInRequestBody(value, substitutions)
+            }
+        )
+    }
+
+    fun replaceInRequestBody(value: Value, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+        return when(value) {
+            is StringValue -> {
+                if(value.string.startsWith("{{@") && value.string.endsWith("}}")) {
+                    val substitutionSetName = value.string.removeSurrounding("{{", "}}")
+                    val substitutionSet = substitutions[substitutionSetName] ?: throw ContractException("$substitutionSetName does not exist in the data")
+
+                    val substitutionKey = substitutionSet.keys.firstOrNull() ?: throw ContractException("$substitutionSetName in data is empty")
+
+                    StringValue(substitutionKey)
+                } else
+                    value
+            }
+            is JSONObjectValue -> {
+                replaceInRequestBody(value, substitutions)
+            }
+            is JSONArrayValue -> {
+                replaceInRequestBody(value, substitutions)
+            }
+            else -> value
+        }
+    }
+
+    fun replaceInExample(substitutions: Map<String, Map<String, Map<String, Value>>>): ScenarioStub {
+        val newRequestBody = replaceInRequestBody(request.body, substitutions)
+        val newRequest = request.copy(body = newRequestBody)
+
+        val newResponseBody = replaceInResponseBody(response.body, substitutions, "")
+        val newResponse = response.copy(body = newResponseBody)
+
+        return copy(
+            request = newRequest,
+            response = newResponse
+        )
+    }
+
+    fun replaceInResponseBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+        return value.copy(
+            value.jsonObject.mapValues {
+                replaceInResponseBody(it.value, substitutions, it.key)
+            }
+        )
+    }
+
+    fun replaceInResponseBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+        return value.copy(
+            value.list.map {
+                replaceInResponseBody(value, substitutions)
+            }
+        )
+    }
+
+    fun replaceInResponseBody(value: Value, substitutions: Map<String, Map<String, Map<String, Value>>>, key: String): Value {
+        return when(value) {
+            is StringValue -> {
+                if(value.string.startsWith("{{@") && value.string.endsWith("}}")) {
+                    val substitutionSetName = value.string.removeSurrounding("{{", "}}")
+                    val substitutionSet = substitutions[substitutionSetName] ?: throw ContractException("$substitutionSetName does not exist in the data")
+
+                    val substitutionValue = substitutionSet.values.first()[key] ?: throw ContractException("$substitutionSetName does not contain a value for $key")
+
+                    substitutionValue
+                } else
+                    value
+            }
+            is JSONObjectValue -> {
+                replaceInResponseBody(value, substitutions)
+            }
+            is JSONArrayValue -> {
+                replaceInResponseBody(value, substitutions)
+            }
+            else -> value
+        }
     }
 
     companion object {
@@ -44,6 +186,8 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
     val mockRequest: HttpRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
     val mockResponse: HttpResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
 
+    val data = getJSONObjectValue("data", mockSpec)
+
     val delayInSeconds: Int? = getIntOrNull(DELAY_IN_SECONDS, mockSpec)
     val delayInMilliseconds: Long? = getLongOrNull(DELAY_IN_MILLISECONDS, mockSpec)
     val delayInMs: Long? = delayInMilliseconds ?: delayInSeconds?.let { it.toLong().times(1000) }
@@ -51,7 +195,7 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
     val stubToken: String? = getStringOrNull(TRANSIENT_MOCK_ID, mockSpec)
     val requestBodyRegex: String? = getRequestBodyRegexOrNull(mockSpec)
 
-    return ScenarioStub(request = mockRequest, response = mockResponse, delayInMilliseconds = delayInMs, stubToken = stubToken, requestBodyRegex = requestBodyRegex)
+    return ScenarioStub(request = mockRequest, response = mockResponse, delayInMilliseconds = delayInMs, stubToken = stubToken, requestBodyRegex = requestBodyRegex, data = JSONObjectValue(data))
 }
 
 fun getRequestBodyRegexOrNull(mockSpec: Map<String, Value>): String? {

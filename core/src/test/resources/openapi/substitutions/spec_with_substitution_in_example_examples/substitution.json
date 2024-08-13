@@ -1,0 +1,16 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/person",
+    "body": {
+      "name": "Jane"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": 10,
+      "name": "{{REQUEST.BODY.name}}"
+    }
+  }
+}

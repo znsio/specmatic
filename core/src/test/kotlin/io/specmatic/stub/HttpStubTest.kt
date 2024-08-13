@@ -14,7 +14,6 @@ import io.specmatic.test.HttpClient
 import io.specmatic.test.TestExecutor
 import io.mockk.every
 import io.mockk.mockk
-import io.specmatic.stub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.RepeatedTest
@@ -1830,6 +1829,20 @@ components:
 
             val responseBody = response.body as JSONObjectValue
             assertThat(responseBody.jsonObject["message"]).isInstanceOf(NumberValue::class.java)
+        }
+    }
+
+    @Test
+    fun `stub example with substitution`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_substitution_in_example.yaml")
+
+        createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Jane"}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val jsonResponse = response.body as JSONObjectValue
+            assertThat(jsonResponse.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo("Jane")
         }
     }
 }

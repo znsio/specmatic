@@ -12,11 +12,11 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
 import io.specmatic.core.*
-import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
-import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.utilities.*
 import io.specmatic.core.value.*
 import io.specmatic.mock.*
@@ -35,14 +35,6 @@ import java.io.Writer
 import java.nio.charset.Charset
 import java.util.*
 import kotlin.text.toCharArray
-
-data class HttpStubResponse(
-    val response: HttpResponse,
-    val delayInMilliSeconds: Long? = null,
-    val contractPath: String = "",
-    val feature: Feature? = null,
-    val scenario: Scenario? = null
-)
 
 class HttpStub(
     private val features: List<Feature>,
@@ -730,7 +722,7 @@ fun getHttpResponse(
         val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
 
         if(matchingStubResponse != null)
-            FoundStubbedResponse(matchingStubResponse)
+            FoundStubbedResponse(matchingStubResponse.resolveSubstitutions(httpRequest))
         else if (httpClientFactory != null && passThroughTargetBase.isNotBlank())
             NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
         else if (strictMode) {

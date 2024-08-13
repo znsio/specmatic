@@ -42,7 +42,7 @@ data class ScenarioAsTest(
             specification,
             serviceType,
             actualResponseStatus = response?.status ?: 0,
-            scenario = result.scenario
+            scenarioResult = result
         )
     }
 

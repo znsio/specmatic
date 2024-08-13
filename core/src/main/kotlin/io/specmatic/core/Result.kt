@@ -217,7 +217,8 @@ enum class TestResult {
     DidNotRun,
     MissingInSpec,
     NotCovered,
-    Covered
+    Covered,
+    Wip
 }
 
 enum class FailureReason(val fluffLevel: Int) {

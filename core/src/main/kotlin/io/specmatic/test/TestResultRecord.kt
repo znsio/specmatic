@@ -1,6 +1,6 @@
 package io.specmatic.test
 
-import io.specmatic.core.ScenarioDetailsForResult
+import io.specmatic.core.Result
 import io.specmatic.core.TestResult
 
 data class TestResultRecord(
@@ -14,8 +14,8 @@ data class TestResultRecord(
     val specification: String? = null,
     val serviceType: String? = null,
     val actualResponseStatus: Int = 0,
-    val scenario: ScenarioDetailsForResult? = null,
-    val isValid: Boolean = true,
+    val scenarioResult: Result? = null,
+    val isValid: Boolean = true
 ) {
     val isExercised = result !in setOf(TestResult.Skipped, TestResult.DidNotRun)
     val isCovered = result in setOf(TestResult.Success, TestResult.Error, TestResult.Failed, TestResult.Covered)

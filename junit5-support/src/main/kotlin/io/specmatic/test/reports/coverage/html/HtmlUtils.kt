@@ -30,7 +30,7 @@ fun createAssetsDir(reportsDir: String) {
         "download.svg",
         "exclamation-triangle.svg",
         "favicon.svg",
-        "index.js",
+        "main.js",
         "mark-approved.svg",
         "mark-rejected.svg",
         "specmatic-logo.svg",

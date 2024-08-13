@@ -11,7 +11,6 @@ import io.specmatic.test.TestInteractionsLog.displayName
 import io.specmatic.test.TestInteractionsLog.duration
 import io.specmatic.test.TestResultRecord
 import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
-import io.specmatic.test.reports.coverage.console.Remarks
 import io.specmatic.test.reports.coverage.html.HtmlTemplateConfiguration.Companion.configureTemplateEngine
 import org.thymeleaf.context.Context
 import java.io.File
@@ -25,6 +24,7 @@ class HtmlReport(report: ReportConfiguration?) {
     private val groupedHttpLogMessages = TestInteractionsLog.testHttpLogMessages.groupBy { it.scenario?.method }
     private val groupedApiCoverageRows = SpecmaticJUnitSupport.openApiCoverageReportInput.apiCoverageRows
         .groupBy { it.path }.mapValues { pathGroup -> pathGroup.value.groupBy { it.method } }
+    private val groupedScenarios = groupScenarios()
 
 
     private val htmlConfig = report?.formatters?.firstOrNull { it.type == ReportFormatterType.HTML }
@@ -32,8 +32,7 @@ class HtmlReport(report: ReportConfiguration?) {
     private val pageTitle = htmlConfig?.title ?: "Specmatic Report"
     private val reportHeading = htmlConfig?.heading ?: "Contract Test Results"
 
-    private val successResultSet = setOf(TestResult.Success, TestResult.DidNotRun, TestResult.Covered)
-    private var totalTests: Int = 0
+    private var totalTests = 0
     private var totalErrors = 0
     private var totalFailures = 0
     private var totalSkipped = 0
@@ -51,12 +50,6 @@ class HtmlReport(report: ReportConfiguration?) {
     }
 
     private fun generateHtmlReportText(): String {
-        val jsonTestDataScript = """
-            <script id="json-data" type="application/json">
-                ${dumpTestData(groupScenarios())}
-            </script>
-        """.trimIndent()
-
         val templateVariables = mapOf(
             "pageTitle" to pageTitle,
             "reportHeading" to reportHeading,
@@ -71,7 +64,7 @@ class HtmlReport(report: ReportConfiguration?) {
             "tableRows" to tableRows(),
             "specmaticVersion" to "[${getSpecmaticVersion()}]",
             "summaryResult" to summaryResult(),
-            "jsonTestDataScript" to jsonTestDataScript
+            "jsonTestData" to dumpTestData(groupedScenarios)
         )
 
         return configureTemplateEngine().process(
@@ -88,19 +81,15 @@ class HtmlReport(report: ReportConfiguration?) {
 
     private fun tableRows(): List<TableRow> {
         return groupedApiCoverageRows.flatMap { (_, methodGroup) ->
-            val pathRowSpan = methodGroup.values.sumOf { it.size }
-
-            methodGroup.entries.flatMapIndexed { methodIndex, entry ->
-                val coverageRowList = entry.value
-
-                coverageRowList.mapIndexed { testIndex, coverageRow ->
+            methodGroup.flatMap { (_, coverageRows) ->
+                coverageRows.map {
                     TableRow(
-                        pathRowSpan,
-                        coverageRowList.size,
-                        methodIndex == 0 && testIndex == 0,
-                        testIndex == 0,
-                        coverageRow,
-                        getBadgeColor(coverageRow.remarks)
+                        pathRowSpan = methodGroup.values.sumOf { rows ->  rows.size },
+                        methodRowSpan = coverageRows.size,
+                        showPath = it.showPath,
+                        showMethod = it.showMethod,
+                        coverageRow = it,
+                        badgeColor = getBadgeColor(it)
                     )
                 }
             }
@@ -114,14 +103,9 @@ class HtmlReport(report: ReportConfiguration?) {
                     responseGroup.value.forEach {
                         when (it.result) {
                             TestResult.Error -> totalErrors++
-                            TestResult.Failed -> totalFailures++
-                            TestResult.Skipped -> totalSkipped++
-                            TestResult.Success -> totalSuccess++
-                            TestResult.NotImplemented -> totalFailures++
-                            TestResult.DidNotRun -> totalSkipped++
-                            TestResult.MissingInSpec -> totalFailures++
-                            TestResult.NotCovered -> totalFailures++
-                            TestResult.Covered -> totalSuccess++
+                            TestResult.Skipped, TestResult.DidNotRun, TestResult.Wip -> totalSkipped++
+                            TestResult.Success, TestResult.Covered  -> totalSuccess++
+                            else -> totalFailures++
                         }
                         totalTests++
                     }
@@ -161,22 +145,25 @@ class HtmlReport(report: ReportConfiguration?) {
 
                     for (test in testResults) {
                         val matchingLogMessage = groupedHttpLogMessages[method]?.firstOrNull {
-                            it.scenario == test.scenario
+                            it.scenario == test.scenarioResult?.scenario
                         }
+                        val scenarioName = getTestName(test, matchingLogMessage)
+                        val htmlResult = categorizeResult(test.result)
 
                         scenarioDataList.add(
                             ScenarioData(
-                                name = getTestName(test, matchingLogMessage),
+                                name = scenarioName,
                                 url = matchingLogMessage?.targetServer ?: "Unknown URL",
                                 duration = matchingLogMessage?.duration() ?: 0,
-                                result = test.result.toString(),
+                                remark = test.result.toString(),
                                 valid = test.isValid,
-                                request = matchingLogMessage?.request?.toLogString() ?: "No Request",
+                                request = getRequestString(matchingLogMessage),
                                 requestTime = matchingLogMessage?.requestTime?.toEpochMillis() ?: 0,
-                                response = getResponseString(matchingLogMessage, test.result),
+                                response = getResponseString(matchingLogMessage),
                                 responseTime = matchingLogMessage?.responseTime?.toEpochMillis() ?: 0,
-                                specFileName = test.specification ?: matchingLogMessage?.scenario?.specification ?: "Unknown Spec File",
-                                passed = test.result in successResultSet,
+                                specFileName = getSpecFileName(test, matchingLogMessage),
+                                result = htmlResult,
+                                details = getReportDetail(scenarioName, test, htmlResult)
                             )
                         )
 
@@ -192,24 +179,47 @@ class HtmlReport(report: ReportConfiguration?) {
         return httpLogMessage?.displayName() ?: "Scenario: ${testResult.path} -> ${testResult.responseStatus}"
     }
 
-    private fun getResponseString(httpLogMessage: HttpLogMessage?, result: TestResult): String {
-        if(httpLogMessage == null) {
-            return "No Response"
-        }
-
-        if(httpLogMessage.response == null) {
-            return httpLogMessage.exception?.message ?: "No Response"
-        }
-
-        return httpLogMessage.response?.toLogString() ?: "No Response"
+    private fun getResponseString(httpLogMessage: HttpLogMessage?): String {
+        return httpLogMessage?.response?.toLogString() ?: "No Response"
     }
 
-    private fun getBadgeColor(remark: Remarks): String {
-        return when(remark) {
-            Remarks.Covered -> "green"
-            Remarks.DidNotRun -> "yellow"
-            else -> "red"
+    private fun getReportDetail(scenarioName: String, testResult: TestResultRecord, htmlResult: HtmlResult): String {
+        val details = testResult.scenarioResult?.reportString()
+        val scenarioDetail = "$scenarioName ${htmlResultToDetail(htmlResult)}"
+        return if (details.isNullOrEmpty())
+            scenarioDetail
+        else
+            "$scenarioDetail\n$details"
+    }
+
+    private fun htmlResultToDetail(htmlResult: HtmlResult): String {
+        return when (htmlResult) {
+            HtmlResult.Failed -> "has FAILED"
+            HtmlResult.Error -> "has ERROR-ED"
+            HtmlResult.Skipped -> "has been SKIPPED"
+            else -> "has SUCCEEDED"
         }
+    }
+
+    private fun getRequestString(httpLogMessage: HttpLogMessage?): String {
+        return httpLogMessage?.request?.toLogString() ?: "No Request"
+    }
+
+    private fun getSpecFileName(testResult: TestResultRecord, httpLogMessage: HttpLogMessage?): String {
+        return testResult.specification ?: httpLogMessage?.scenario?.specification ?: "Unknown Spec File"
+    }
+
+    private fun getBadgeColor(coverageRow: OpenApiCoverageConsoleRow): String {
+        val testScenarios = groupedScenarios[coverageRow.path]?.get(coverageRow.method)?.get(coverageRow.responseStatus.toInt()) ?: emptyList()
+
+        testScenarios.forEach {
+            when (it.result) {
+                HtmlResult.Failed, HtmlResult.Error -> return "red"
+                HtmlResult.Skipped -> return "yellow"
+                else -> {}
+            }
+        }
+        return "green"
     }
 
     private fun dumpTestData(testData: MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<ScenarioData>>>>): String {
@@ -219,28 +229,44 @@ class HtmlReport(report: ReportConfiguration?) {
         writeToFileToAssets(outputDirectory, "test_data.json", mapper.writeValueAsString(testData))
         return json
     }
+
+    private fun categorizeResult(testResult: TestResult): HtmlResult {
+        return when(testResult) {
+            TestResult.Success, TestResult.Covered -> HtmlResult.Success
+            TestResult.Error -> HtmlResult.Error
+            TestResult.Skipped, TestResult.DidNotRun, TestResult.Wip -> HtmlResult.Skipped
+            else -> HtmlResult.Failed
+        }
+    }
 }
 
 data class ScenarioData(
     val name: String,
     val url: String,
     val duration: Long,
-    val result: String,
+    val remark: String,
     val valid: Boolean,
     val request: String,
     val requestTime: Long,
     val response: String,
     val responseTime: Long,
     val specFileName: String,
-    val passed: Boolean
+    val result: HtmlResult,
+    val details: String
 )
 
 data class TableRow(
     val pathRowSpan: Int,
     val methodRowSpan: Int,
-    val showPathInfo: Boolean,
-    val showMethodInfo: Boolean,
+    val showPath: Boolean,
+    val showMethod: Boolean,
     val coverageRow: OpenApiCoverageConsoleRow,
     val badgeColor: String
 )
 
+enum class HtmlResult {
+    Success,
+    Failed,
+    Error,
+    Skipped
+}

@@ -47,6 +47,7 @@ class OpenApiCoverageReportInput(
         val testResultsWithNotImplementedEndpoints = identifyFailedTestsDueToUnimplementedEndpointsAddMissingTests(testResults)
         var allTests = addTestResultsForMissingEndpoints(testResultsWithNotImplementedEndpoints)
         allTests = addTestResultsForTestsNotGeneratedBySpecmatic(allTests, allEndpoints)
+        allTests = identifyWipTestsAndUpdateResult(allTests)
         allTests = checkForInvalidTestsAndUpdateResult(allTests)
         allTests = sortByPathMethodResponseStatus(allTests)
 
@@ -251,6 +252,12 @@ class OpenApiCoverageReportInput(
             404 -> false
             else -> true
         }
+    }
+
+    private fun identifyWipTestsAndUpdateResult(testResults: List<TestResultRecord>): List<TestResultRecord> {
+        val wipTestResults = testResults.filter { it.scenarioResult?.scenario?.ignoreFailure == true }
+        val updatedWipTestResults = wipTestResults.map { it.copy(result = TestResult.Wip) }
+        return testResults.minus(wipTestResults.toSet()).plus(updatedWipTestResults)
     }
 }
 

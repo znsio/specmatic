@@ -18,7 +18,7 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageConsoleReport> {
         val tableHeader =
             "| ${statusFormat.format("coverage")} | ${pathFormat.format("path")} | ${methodFormat.format("method")} | ${responseStatus.format("response")} | ${
                 countFormat.format("# exercised")
-            } | ${remarksFormat.format("remarks")} |"
+            } | ${remarksFormat.format("result")} |"
         val headerSeparator =
             "|-${"-".repeat(longestCoveragePercentageValue.length)}-|-${"-".repeat(maxPathSize)}-|-${methodFormat.format("------")}-|-${responseStatus.format("--------")}-|-${
                 countFormat.format("-----------")

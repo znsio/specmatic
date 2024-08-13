@@ -242,9 +242,9 @@ function createReqResDetailsContainer(scenario) {
 	additionalInfoDiv.appendChild(document.createElement("p")).textContent = `Specifications File: ${scenario.specFileName}`;
 	reqResDetailsDiv.appendChild(additionalInfoDiv);
 
+    reqResDetailsDiv.appendChild(createReqResDetailDiv("Details", scenario.details))
     reqResDetailsDiv.appendChild(createReqResDetailDiv("Request", scenario.request))
     reqResDetailsDiv.appendChild(createReqResDetailDiv("Response", scenario.response))
-    reqResDetailsDiv.appendChild(createReqResDetailDiv("Details", scenario.details))
 
     return reqResDetailsDiv;
 }

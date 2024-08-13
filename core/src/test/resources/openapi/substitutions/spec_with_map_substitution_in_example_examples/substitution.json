@@ -1,0 +1,29 @@
+{
+  "data": {
+    "@department": {
+      "engineering": {
+        "manager": "Jack"
+      },
+      "sales": {
+        "manager": "Jill",
+        "location": "San Francisco"
+      }
+    }
+  },
+  "http-request": {
+    "method": "POST",
+    "path": "/person",
+    "body": {
+      "name": "Jane",
+      "department": "(string)"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": 10,
+      "name": "{{REQUEST.BODY.name}}",
+      "manager": "{{@department}}"
+    }
+  }
+}

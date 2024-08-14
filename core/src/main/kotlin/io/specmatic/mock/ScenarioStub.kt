@@ -55,10 +55,10 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
                 it.value as? JSONObjectValue ?: throw ContractException("Invalid structure of data in the example file")
 
             json.jsonObject.mapValues {
-                val json =
+                val innerJSON =
                     it.value as? JSONObjectValue ?: throw ContractException("Invalid structure of data in the example file")
 
-                json.jsonObject.mapValues {
+                innerJSON.jsonObject.mapValues {
                     it.value
                 }
             }
@@ -186,7 +186,7 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
     val mockRequest: HttpRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
     val mockResponse: HttpResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
 
-    val data = getJSONObjectValue("data", mockSpec)
+    val data = getJSONObjectValueOrNull("data", mockSpec)?.let { JSONObjectValue(it) } ?: JSONObjectValue()
 
     val delayInSeconds: Int? = getIntOrNull(DELAY_IN_SECONDS, mockSpec)
     val delayInMilliseconds: Long? = getLongOrNull(DELAY_IN_MILLISECONDS, mockSpec)
@@ -195,7 +195,7 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
     val stubToken: String? = getStringOrNull(TRANSIENT_MOCK_ID, mockSpec)
     val requestBodyRegex: String? = getRequestBodyRegexOrNull(mockSpec)
 
-    return ScenarioStub(request = mockRequest, response = mockResponse, delayInMilliseconds = delayInMs, stubToken = stubToken, requestBodyRegex = requestBodyRegex, data = JSONObjectValue(data))
+    return ScenarioStub(request = mockRequest, response = mockResponse, delayInMilliseconds = delayInMs, stubToken = stubToken, requestBodyRegex = requestBodyRegex, data = data)
 }
 
 fun getRequestBodyRegexOrNull(mockSpec: Map<String, Value>): String? {
@@ -210,6 +210,12 @@ fun getJSONObjectValue(keys: List<String>, mapData: Map<String, Value>): Map<Str
 
 fun getJSONObjectValue(key: String, mapData: Map<String, Value>): Map<String, Value> {
     val data = mapData.getValue(key)
+    if(data !is JSONObjectValue) throw ContractException("$key should be a json object")
+    return data.jsonObject
+}
+
+fun getJSONObjectValueOrNull(key: String, mapData: Map<String, Value>): Map<String, Value>? {
+    val data = mapData[key] ?: return null
     if(data !is JSONObjectValue) throw ContractException("$key should be a json object")
     return data.jsonObject
 }

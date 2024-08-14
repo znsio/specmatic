@@ -1,74 +1,17 @@
 package io.specmatic.core
 
+import io.ktor.http.*
 import io.specmatic.conversions.guessType
 import io.specmatic.core.GherkinSection.Then
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.value.*
-import io.ktor.http.*
 
 private const val SPECMATIC_HEADER_PREFIX = "X-$APPLICATION_NAME-"
 const val SPECMATIC_RESULT_HEADER = "${SPECMATIC_HEADER_PREFIX}Result"
 internal const val SPECMATIC_EMPTY_HEADER = "${SPECMATIC_HEADER_PREFIX}Empty"
 internal const val SPECMATIC_TYPE_HEADER = "${SPECMATIC_HEADER_PREFIX}Type"
-
-class Substitution(val request: HttpRequest) {
-    fun resolveSubstitutions(value: Value): Value {
-        return when(value) {
-            is JSONObjectValue -> resolveSubstitutions(value)
-            is JSONArrayValue -> resolveSubstitutions(value)
-            is StringValue -> {
-                if(value.string.startsWith("{{") && value.string.endsWith("}}"))
-                    StringValue(substitute(value.string))
-                else
-                    value
-            }
-            else -> value
-        }
-    }
-
-    private fun substitute(string: String): String {
-        val expressionPath = string.removeSurrounding("{{", "}}")
-
-        val parts = expressionPath.split(".")
-
-        val area = parts.firstOrNull() ?: throw ContractException("The expression $expressionPath was empty")
-
-        return if(area.uppercase() == "REQUEST") {
-            val requestPath = parts.drop(1)
-
-            val requestPart = requestPath.firstOrNull() ?: throw ContractException("The expression $expressionPath does not include anything after REQUEST to say what has to be substituted")
-            val jsonBodyPath = requestPath.drop(1)
-
-            when(requestPart.uppercase()) {
-                "BODY" -> {
-                    val requestJSONBody = request.body as? JSONObjectValue ?: throw ContractException("Substitution $string cannot be resolved as the request body is not an object")
-                    requestJSONBody.findFirstChildByPath(jsonBodyPath)?.toStringLiteral() ?: throw ContractException("Could not find $string in the request body")
-                }
-                else -> string
-            }
-        }
-        else
-            string
-    }
-
-    fun resolveSubstitutions(value: JSONObjectValue): Value {
-        return value.copy(
-            value.jsonObject.mapValues { entry ->
-                resolveSubstitutions(entry.value)
-            }
-        )
-    }
-
-    fun resolveSubstitutions(value: JSONArrayValue): Value {
-        return value.copy(
-            value.list.map {
-                resolveSubstitutions(it)
-            }
-        )
-    }
-}
 
 data class HttpResponse(
     val status: Int = 0,
@@ -226,8 +169,10 @@ data class HttpResponse(
     private fun headersHasOnlyTextPlainContentTypeHeader() = headers.size == 1 && headers[CONTENT_TYPE] == "text/plain"
 
     fun resolveSubstitutions(request: HttpRequest): HttpResponse {
-        val newBody = Substitution(request).resolveSubstitutions(this.body)
-        return this.copy(body = newBody)
+        val substitution = Substitution(request)
+        val newBody = substitution.resolveSubstitutions(this.body)
+        val newHeaders = substitution.resolveSubstitutions(this.headers)
+        return this.copy(body = newBody, headers = newHeaders)
     }
 
 }

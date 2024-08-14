@@ -1835,8 +1835,8 @@ components:
     }
 
     @Test
-    fun `stub example with substitution`() {
-        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_substitution_in_example.yaml")
+    fun `stub example with substitution in response body`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_substitution_in_response_body.yaml")
 
         createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
             val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Jane"}"""))
@@ -1848,10 +1848,58 @@ components:
         }
     }
 
+    @Test
+    fun `stub example with substitution in response header`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /person:
+                post:
+                  summary: Add person
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - name
+                          properties:
+                            name:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+                      headers:
+                        X-Name:
+                          description: ID in the header
+                          schema:
+                            type: string
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent()
+
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_substitution_in_response_header.yaml")
+
+        createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Jane"}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val responseHeaders = response.headers
+            assertThat(responseHeaders["X-Name"]).isEqualTo("Jane")
+        }
+    }
+
     @ParameterizedTest
     @CsvSource("engineering,Bangalore", "sales,Mumbai")
     fun `stub example with data substitution`(department: String, location: String) {
-        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_map_substitution_in_example.yaml")
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_map_substitution_in_response_body.yaml")
 
         createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
             val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"department": "$department"}"""))

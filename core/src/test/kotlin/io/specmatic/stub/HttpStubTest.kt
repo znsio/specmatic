@@ -1893,8 +1893,6 @@ components:
                             type: string
         """.trimIndent()
 
-        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_substitution_in_response_header.yaml")
-
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
         val exampleRequest = HttpRequest("GET", "/data", headers = mapOf("X-Trace" to "abc123"))
         val exampleResponse = HttpResponse(200, mapOf("X-Trace" to "{{REQUEST.HEADERS.X-Trace}}"))
@@ -1908,6 +1906,52 @@ components:
             assertThat(responseHeaders["X-Trace"]).isEqualTo("abc123")
         }
     }
+
+    @Test
+    fun `stub example with substitution in response using request query params`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /data:
+                get:
+                  summary: Get data
+                  parameters:
+                    - in: query
+                      name: X-Trace
+                      schema:
+                        type: string
+                      required: true
+                  responses:
+                    '200':
+                      description: OK
+                      headers:
+                        X-Trace:
+                          description: Trace id
+                          schema:
+                            type: string
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val exampleRequest = HttpRequest("GET", "/data", queryParametersMap = mapOf("X-Trace" to "abc123"))
+        val exampleResponse = HttpResponse(200, mapOf("X-Trace" to "{{REQUEST.QUERY-PARAMS.X-Trace}}"))
+
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+            val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("X-Trace" to "abc123"))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val responseHeaders = response.headers
+            assertThat(responseHeaders["X-Trace"]).isEqualTo("abc123")
+        }
+    }
+
 
     @ParameterizedTest
     @CsvSource("engineering,Bangalore", "sales,Mumbai")

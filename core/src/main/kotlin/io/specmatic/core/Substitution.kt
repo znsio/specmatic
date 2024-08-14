@@ -46,6 +46,14 @@ class Substitution(val request: HttpRequest) {
                     requestHeaders[requestHeaderName]
                         ?: throw ContractException("Substitution $string cannot be resolved as the request header $requestHeaderName cannot be found")
                 }
+                "QUERY-PARAMS" -> {
+                    val requestQueryParams = request.queryParams
+                    val requestQueryParamName = payloadPath.joinToString(".")
+                    val queryParamPair = requestQueryParams.paramPairs.find { it.first == requestQueryParamName }
+                        ?: throw ContractException("Substitution $string cannot be resolved as the request query param $requestQueryParamName cannot be found")
+
+                    queryParamPair.second
+                }
                 else -> string
             }
         }

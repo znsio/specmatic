@@ -85,64 +85,8 @@ class HttpStub(
         requestHandlers.add(requestHandler)
     }
 
-    private fun transform(httpStubData: HttpStubData): List<HttpStubData> {
-        return listOf(httpStubData)
-
-//        val data: Map<String, Map<String, Map<String, Value>>> = httpStubData.data
-//
-//        val combinations: List<Map<String, Map<String, Map<String, Value>>>> = combinations(data)
-//
-//        return combinations.map { combination: Map<String, Map<String, Map<String, Value>>> ->
-//            transform(httpStubData, combination)
-//        }
-    }
-
-//    private fun transform(httpStubData: HttpStubData, combination: Map<String, Map<String, Map<String, Value>>>): HttpStubData {
-//        val requestBodyPattern = httpStubData.requestType.body
-//    }
-
-    fun combinations(data: Map<String, Map<String, Map<String, Value>>>): List<Map<String, Map<String, Map<String, Value>>>> {
-        // Helper function to calculate the Cartesian product of a list of maps
-        fun <K, V> cartesianProduct(maps: List<Map<K, V>>): List<Map<K, V>> {
-            if (maps.isEmpty()) return listOf(emptyMap())
-
-            val result = mutableListOf<Map<K, V>>()
-            val first = maps[0]
-            val rest = cartesianProduct(maps.drop(1))
-
-            for ((key, value) in first) {
-                for (restMap in rest) {
-                    result.add(mapOf(key to value) + restMap)
-                }
-            }
-
-            return result
-        }
-
-        // Creating individual combinations for each top-level key in the input map
-        val individualCombinations = data.map { entry ->
-            entry.key to cartesianProduct(entry.value.map { mapOf(it.key to it.value) })
-        }
-
-        // Combine the individual combinations across the different top-level keys
-        val result = cartesianProduct(individualCombinations.map { mapOf(it.first to it.second) })
-
-        // Transforming the result to match the expected return type
-        return result.flatMap { combination ->
-            val flattened = combination.mapValues { (_, listOfMaps) ->
-                listOfMaps.associate { it.entries.first().toPair() }
-            }
-            flattened.values.first().map { flattenedKey ->
-                mapOf(
-                    flattenedKey.key to flattenedKey.value
-                )
-            }.map { mapOf(flattened.entries.first().key to it) }
-        }
-    }
-
-
     private fun staticHttpStubData(rawHttpStubs: List<HttpStubData>): MutableList<HttpStubData> {
-        val staticStubs = rawHttpStubs.filter { it.stubToken == null }.flatMap { transform(it) }
+        val staticStubs = rawHttpStubs.filter { it.stubToken == null }
 
         val stubsFromSpecificationExamples: List<HttpStubData> = features.map { feature ->
             feature.stubsFromExamples.entries.map { (exampleName, examples) ->

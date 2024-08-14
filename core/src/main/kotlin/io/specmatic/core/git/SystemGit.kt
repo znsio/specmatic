@@ -58,6 +58,14 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         }
     }
 
+    override fun stash(): Boolean {
+        val stashListSizeBefore = getStashListSize()
+        execute(Configuration.gitCommand, "stash", "push", "-m", "tmp")
+        return getStashListSize() > stashListSizeBefore
+    }
+
+    override fun stashPop(): SystemGit = this.also { execute(Configuration.gitCommand, "stash", "pop") }
+
     override fun getCurrentBranch(): String {
         return execute(Configuration.gitCommand, "git", "diff", "--name-only", "master")
     }
@@ -82,17 +90,21 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         }
     }
 
-    override fun getFilesChangeInCurrentBranch(): List<String> {
-        val defaultBranch = defaultBranch()
+    override fun getFilesChangedInCurrentBranch(baseBranch: String): List<String> {
+        val committedLocalChanges = execute(Configuration.gitCommand, "diff", baseBranch, "HEAD", "--name-only")
+            .split(System.lineSeparator())
+            .filter { it.isNotBlank() }
 
-        val result = execute(Configuration.gitCommand, "diff", defaultBranch, "HEAD", "--name-only")
+        val uncommittedChanges = execute(Configuration.gitCommand, "diff", "--name-only")
+            .split(System.lineSeparator())
+            .filter { it.isNotBlank() }
 
-        return result.split(System.lineSeparator()).filter { it.isNotBlank() }
+        return (committedLocalChanges + uncommittedChanges).distinct()
     }
 
-    override fun getFileInTheDefaultBranch(fileName: String, currentBranch: String): File? {
+    override fun getFileInTheBaseBranch(fileName: String, currentBranch: String, baseBranch: String): File? {
         try {
-            checkout(defaultBranch())
+            if(baseBranch != currentBranch) checkout(baseBranch)
 
             if (!File(fileName).exists()) return null
             return File(fileName)
@@ -156,6 +168,15 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         return execute(Configuration.gitCommand, "rev-parse", "--abbrev-ref", "HEAD").trim()
     }
 
+    override fun currentRemoteBranch(): String {
+        val branchStatus = execute(Configuration.gitCommand, "status", "-b", "--porcelain=2").trim()
+        val hasUpstream = branchStatus.lines().any { it.startsWith("# branch.upstream") }
+        if (hasUpstream) {
+            return execute(Configuration.gitCommand, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}").trim()
+        }
+        return currentBranch()
+    }
+
     override fun defaultBranch(): String {
         System.getenv("LOCAL_GIT_BRANCH")?.let {
             return it
@@ -172,6 +193,10 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
             throw ContractException("Could not understand symbolic-ref value $symbolicRef, expected it to be of the format remote/branch name.")
 
         return symbolicRef.split("/")[1].trim()
+    }
+
+    private fun getStashListSize(): Int {
+        return execute(Configuration.gitCommand, "stash", "list").trim().lines().size
     }
 
     override fun detachedHEAD(): String {

@@ -16,6 +16,18 @@ abstract class FakeGit: GitCommand {
         TODO("Not yet implemented")
     }
 
+    override fun stash(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun stashPop(): SystemGit {
+        TODO("Not yet implemented")
+    }
+
+    override fun currentRemoteBranch(): String {
+        TODO("Not yet implemented")
+    }
+
     override fun add(relativePath: String): SystemGit {
         TODO("Not yet implemented")
     }

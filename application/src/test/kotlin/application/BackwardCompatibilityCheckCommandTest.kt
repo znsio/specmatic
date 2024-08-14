@@ -1,5 +1,6 @@
 package application
 
+import application.backwardCompatibility.BackwardCompatibilityCheckCommand
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -13,7 +14,7 @@ class BackwardCompatibilityCheckCommandTest {
 
     @Test
     fun `filesReferringToChangedSchemaFiles returns empty set when input is empty`() {
-        val command = BackwardCompatibilityCheckCommand(mockk())
+        val command = BackwardCompatibilityCheckCommand()
         val result = command.filesReferringToChangedSchemaFiles(emptySet())
         assertTrue(result.isEmpty())
     }

@@ -66,7 +66,7 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         return substitutions
     }
 
-    fun replaceInRequestBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+    private fun replaceInRequestBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
         return value.copy(
             value.jsonObject.mapValues {
                 replaceInRequestBody(it.value, substitutions)
@@ -74,7 +74,7 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         )
     }
 
-    fun replaceInRequestBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+    private fun replaceInRequestBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
         return value.copy(
             value.list.map {
                 replaceInRequestBody(value, substitutions)
@@ -82,7 +82,7 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         )
     }
 
-    fun replaceInRequestBody(value: Value, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+    private fun replaceInRequestBody(value: Value, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
         return when(value) {
             is StringValue -> {
                 if(value.string.startsWith("{{@") && value.string.endsWith("}}")) {
@@ -105,7 +105,7 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         }
     }
 
-    fun replaceInExample(substitutions: Map<String, Map<String, Map<String, Value>>>): ScenarioStub {
+    private fun replaceInExample(substitutions: Map<String, Map<String, Map<String, Value>>>): ScenarioStub {
         val newRequestBody = replaceInRequestBody(request.body, substitutions)
         val newRequest = request.copy(body = newRequestBody)
 
@@ -118,7 +118,7 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         )
     }
 
-    fun replaceInResponseBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+    private fun replaceInResponseBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
         return value.copy(
             value.jsonObject.mapValues {
                 replaceInResponseBody(it.value, substitutions, it.key)
@@ -126,7 +126,7 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         )
     }
 
-    fun replaceInResponseBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+    private fun replaceInResponseBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
         return value.copy(
             value.list.map {
                 replaceInResponseBody(value, substitutions)
@@ -134,7 +134,7 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         )
     }
 
-    fun replaceInResponseBody(value: Value, substitutions: Map<String, Map<String, Map<String, Value>>>, key: String): Value {
+    private fun replaceInResponseBody(value: Value, substitutions: Map<String, Map<String, Map<String, Value>>>, key: String): Value {
         return when(value) {
             is StringValue -> {
                 if(value.string.startsWith("{{@") && value.string.endsWith("}}")) {

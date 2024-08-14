@@ -31,7 +31,7 @@ repositories {
 }
 
 def ktor_version = "2.3.12"
-def junit_version = "5.10.3"
+def junit_version = "5.11.0"
 def jgit_version = "6.10.0.202406032230-r"
 
 dependencies {
@@ -44,7 +44,7 @@ dependencies {
     testImplementation 'com.arakelian:java-jq:2.0.0'
 
     implementation 'org.assertj:assertj-core:3.26.3'
-    implementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.11.0'
 
     implementation('info.picocli:picocli-spring-boot-starter:4.7.6') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'

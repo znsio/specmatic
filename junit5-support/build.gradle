@@ -12,7 +12,7 @@ repositories {
 }
 
 def ktor_version = "2.3.12"
-def junit_version = "5.10.3"
+def junit_version = "5.11.0"
 
 dependencies {
     // TODO Fix to eliminate vulnerabilities, remove when the enclosing library supports it
@@ -23,7 +23,7 @@ dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-maven-serialization'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
     implementation 'org.assertj:assertj-core:3.26.3'
-    implementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.11.0'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.2'
     implementation 'org.thymeleaf:thymeleaf:3.1.2.RELEASE'
 

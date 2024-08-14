@@ -106,7 +106,7 @@ data class Feature(
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
     val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig)
-) {
+): IFeature {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         val updatedSpecmaticConfig = specmaticConfig.copy(
             test = specmaticConfig.test?.copy(

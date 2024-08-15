@@ -18,6 +18,9 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     @Option(names = ["--base-branch"], description = ["Base branch to compare the changes against"], required = false)
     var baseBranch: String? = null
 
+    @Option(names = ["--target-path"], description = ["Specification file or folder to run the check against"], required = false)
+    var targetPath: String? = null
+
     abstract fun checkBackwardCompatibility(oldFeature: IFeature, newFeature: IFeature): Results
     abstract fun File.isValidSpec(): Boolean
     abstract fun getFeatureFromSpecPath(path: String): IFeature
@@ -48,9 +51,15 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
                     filesReferringToChangedSchemaFiles +
                     specificationsOfChangedExternalisedExamples
 
+        val filteredSpecs = if(targetPath.isNullOrBlank()) {
+            specificationsToCheck
+        } else {
+            specificationsToCheck.filter { it.contains(targetPath!!) }.toSet()
+        }
+
         val result = try {
             runBackwardCompatibilityCheckFor(
-                files = specificationsToCheck,
+                files = filteredSpecs,
                 baseBranch = baseBranch()
             )
         } catch(e: Throwable) {

@@ -12,6 +12,9 @@ import java.util.*
 
 data class Base64StringPattern(override val typeAlias: String? = null) : Pattern, ScalarType {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
+        if (sampleData?.hasTemplate() == true)
+            return Result.Success()
+
         return when (sampleData) {
             is StringValue -> {
                 return if (Base64.isBase64(sampleData.string)) Result.Success() else mismatchResult("string of bytes (base64)", sampleData, resolver.mismatchMessages)

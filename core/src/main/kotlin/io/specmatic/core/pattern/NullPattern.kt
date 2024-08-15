@@ -12,12 +12,16 @@ import io.specmatic.core.value.Value
 const val NULL_TYPE = "(null)"
 
 object NullPattern : Pattern, ScalarType {
-    override fun matches(sampleData: Value?, resolver: Resolver): Result =
-            when {
-                sampleData is NullValue -> Result.Success()
-                sampleData is StringValue && sampleData.string.isEmpty() -> Result.Success()
-                else -> mismatchResult("null", sampleData, resolver.mismatchMessages)
-            }
+    override fun matches(sampleData: Value?, resolver: Resolver): Result {
+        if (sampleData?.hasTemplate() == true)
+            return Result.Success()
+
+        return when {
+            sampleData is NullValue -> Result.Success()
+            sampleData is StringValue && sampleData.string.isEmpty() -> Result.Success()
+            else -> mismatchResult("null", sampleData, resolver.mismatchMessages)
+        }
+    }
 
     override fun generate(resolver: Resolver): Value = NullValue
 

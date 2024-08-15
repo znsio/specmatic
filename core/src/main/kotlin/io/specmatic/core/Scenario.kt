@@ -578,6 +578,11 @@ data class Scenario(
                     && operationId.responseStatus == status
                     && httpRequestPattern.matchesPath(operationId.requestPath, resolver).isSuccess()
         }
+
+    fun resolveSubtitutions(request: HttpRequest, response: HttpResponse): HttpResponse {
+        val substitution = httpRequestPattern.getSubstitution(request, resolver)
+        return httpResponsePattern.resolveSubstitutions(substitution, response)
+    }
 }
 
 fun newExpectedServerStateBasedOn(

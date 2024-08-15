@@ -1,7 +1,9 @@
 package io.specmatic.core.pattern
 
+import io.specmatic.core.HttpResponse
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
+import io.specmatic.core.Substitution
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
@@ -64,6 +66,10 @@ interface Pattern {
 
     fun toNullable(defaultValue: String?): Pattern {
         return AnyPattern(listOf(NullPattern, this), example = defaultValue)
+    }
+
+    fun resolveSubstitutions(substitution: Substitution, value: Value, resolver: Resolver): ReturnValue<Value> {
+        return substitution.substitute(value, this)
     }
 
     val typeAlias: String?

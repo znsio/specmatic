@@ -2,6 +2,7 @@ package io.specmatic.core.pattern
 
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
+import io.specmatic.core.Substitution
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.Value
@@ -50,6 +51,10 @@ data class DeferredPattern(override val pattern: String, val key: String? = null
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value {
         return resolver.getPattern(pattern).listOf(valueList, resolver)
+    }
+
+    override fun resolveSubstitutions(substitution: Substitution, value: Value, resolver: Resolver): ReturnValue<Value> {
+        return resolvePattern(resolver).resolveSubstitutions(substitution, value, resolver)
     }
 
     override val typeAlias: String = pattern

@@ -1,5 +1,6 @@
 package io.specmatic.stub
 
+import io.ktor.http.*
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.pattern.*
@@ -1920,7 +1921,7 @@ components:
                   summary: Get data
                   parameters:
                     - in: query
-                      name: X-Trace
+                      name: traceId
                       schema:
                         type: string
                       required: true
@@ -1939,11 +1940,11 @@ components:
         """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        val exampleRequest = HttpRequest("GET", "/data", queryParametersMap = mapOf("X-Trace" to "abc123"))
-        val exampleResponse = HttpResponse(200, mapOf("X-Trace" to "{{REQUEST.QUERY-PARAMS.X-Trace}}"))
+        val exampleRequest = HttpRequest("GET", "/data", queryParametersMap = mapOf("traceId" to "abc123"))
+        val exampleResponse = HttpResponse(200, mapOf("X-Trace" to "{{REQUEST.QUERY-PARAMS.traceId}}"))
 
         HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
-            val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("X-Trace" to "abc123"))
+            val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("traceId" to "abc123"))
             val response = stub.client.execute(request)
 
             assertThat(response.status).isEqualTo(200)
@@ -1952,6 +1953,244 @@ components:
         }
     }
 
+    @Test
+    fun `stub example with substitution in response using request path param`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /data/{id}:
+                get:
+                  summary: Get data
+                  parameters:
+                    - in: path
+                      name: id
+                      schema:
+                        type: string
+                      required: true
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val exampleRequest = HttpRequest("GET", "/data/abc123")
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "{{REQUEST.PATH.id}}"}"""))
+
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+            val request = HttpRequest("GET", "/data/abc123")
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val jsonResponseBody = response.body as JSONObjectValue
+            assertThat(jsonResponseBody.findFirstChildByPath("id")).isEqualTo(StringValue("abc123"))
+        }
+    }
+
+    @Test
+    fun `type coersion when a stringly request param and the response value are different`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /data/{id}:
+                get:
+                  summary: Get data
+                  parameters:
+                    - in: path
+                      name: id
+                      schema:
+                        type: string
+                      required: true
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val exampleRequest = HttpRequest("GET", "/data/123")
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "{{REQUEST.PATH.id}}"}"""))
+
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+            val request = HttpRequest("GET", "/data/123")
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val jsonResponseBody = response.body as JSONObjectValue
+            assertThat(jsonResponseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(123))
+        }
+    }
+
+    @Test
+    fun `type coersion when a request object field value and the response object field value are different`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /data:
+                post:
+                  summary: Get data
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "123"}"""))
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "{{REQUEST.BODY.id}}"}"""))
+
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+            val response = stub.client.execute(exampleRequest)
+
+            assertThat(response.status).isEqualTo(200)
+            val jsonResponseBody = response.body as JSONObjectValue
+            assertThat(jsonResponseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(123))
+        }
+    }
+
+    @Test
+    fun `throw an error when the value in the request body cannot be used in the body due to schema mismatch`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /data:
+                post:
+                  summary: Get data
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "abc"}"""))
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "{{REQUEST.BODY.id}}"}"""))
+
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+            val response = stub.client.execute(exampleRequest)
+
+            assertThat(response.status).isEqualTo(400)
+            assertThat(response.body.toStringLiteral()).contains("RESPONSE.BODY.id")
+        }
+    }
+
+    @Test
+    fun `throw an error when the value in the request header cannot be used in the body due to schema mismatch`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /data:
+                post:
+                  summary: Get data
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+                      headers:
+                        X-Id:
+                          description: id from the body
+                          schema:
+                            type: integer
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "abc"}"""))
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "text/plain", "X-Id" to "{{REQUEST.BODY.id}}"), body = StringValue("success"))
+
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+            val response = stub.client.execute(exampleRequest)
+
+            assertThat(response.status).isEqualTo(400)
+            assertThat(response.body.toStringLiteral()).contains("RESPONSE.HEADERS.X-Id")
+        }
+    }
 
     @ParameterizedTest
     @CsvSource("engineering,Bangalore", "sales,Mumbai")

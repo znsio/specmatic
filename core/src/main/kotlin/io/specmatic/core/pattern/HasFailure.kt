@@ -3,6 +3,7 @@ package io.specmatic.core.pattern
 import io.specmatic.core.Result
 
 data class HasFailure<T>(val failure: Result.Failure, val message: String = "") : ReturnValue<T>, ReturnFailure {
+
     override fun <U> withDefault(default: U, fn: (T) -> U): U {
         return default
     }

@@ -167,14 +167,6 @@ data class HttpResponse(
     }
 
     private fun headersHasOnlyTextPlainContentTypeHeader() = headers.size == 1 && headers[CONTENT_TYPE] == "text/plain"
-
-    fun resolveSubstitutions(request: HttpRequest): HttpResponse {
-        val substitution = Substitution(request)
-        val newBody = substitution.resolveSubstitutions(this.body)
-        val newHeaders = substitution.resolveSubstitutions(this.headers)
-        return this.copy(body = newBody, headers = newHeaders)
-    }
-
 }
 
 fun nativeInteger(json: Map<String, Value>, key: String): Int? {

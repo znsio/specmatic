@@ -1,6 +1,17 @@
 package io.specmatic.core.pattern
 
+import io.specmatic.core.Result
+import io.specmatic.core.utilities.exceptionCauseMessage
+
 data class HasException<T>(val t: Throwable, val message: String = "", val breadCrumb: String? = null) : ReturnValue<T>, ReturnFailure {
+    fun toHasFailure(): HasFailure<T> {
+        val failure: Result.Failure = Result.Failure(
+            message = exceptionCauseMessage(t),
+            breadCrumb = breadCrumb ?: ""
+        )
+        return HasFailure<T>(failure, message)
+    }
+
     override fun <U> withDefault(default: U, fn: (T) -> U): U {
         return default
     }

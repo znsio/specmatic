@@ -34,6 +34,18 @@ data class JSONObjectPattern(
         else -> false
     }
 
+    override fun resolveSubstitutions(substitution: Substitution, value: Value, resolver: Resolver): ReturnValue<Value> {
+        if(value !is JSONObjectValue)
+            return HasFailure(Result.Failure("Cannot resolve substitutions, expected object but got ${value.displayableType()}"))
+
+        val updatedMap = value.jsonObject.mapValues { (key, value) ->
+            val pattern = pattern.get(key) ?: pattern.getValue("$key?")
+            pattern.resolveSubstitutions(substitution, value, resolver).breadCrumb(key)
+        }
+
+        return updatedMap.mapFold().ifValue { value.copy(it) }
+    }
+
     override fun encompasses(
         otherPattern: Pattern,
         thisResolver: Resolver,

@@ -157,6 +157,16 @@ data class HttpResponsePattern(
             response.body.exactMatchElseType()
         )
     }
+
+    fun resolveSubstitutions(substitution: Substitution, response: HttpResponse): HttpResponse {
+        val substitutedHeaders = substitution.resolveHeaderSubstitutions(response.headers, headersPattern.pattern).breadCrumb("RESPONSE.HEADERS").value
+        val substitutedBody = body.resolveSubstitutions(substitution, response.body, substitution.resolver).breadCrumb("RESPONSE.BODY").value
+
+        return response.copy(
+            headers = substitutedHeaders,
+            body = substitutedBody
+        )
+    }
 }
 
 private val valueMismatchMessages = object : MismatchMessages {

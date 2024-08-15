@@ -2,6 +2,7 @@ package io.specmatic.core.pattern
 
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
+import io.specmatic.core.Substitution
 import io.specmatic.core.mismatchResult
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.JSONArrayValue
@@ -10,6 +11,21 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
 data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern, override val typeAlias: String? = null) : Pattern {
+    override fun resolveSubstitutions(
+        substitution: Substitution,
+        value: Value,
+        resolver: Resolver
+    ): ReturnValue<Value> {
+        if(value !is JSONObjectValue)
+            return HasFailure(Result.Failure("Cannot resolve substitutions, expected object but got ${value.displayableType()}"))
+
+        val updatedMap = value.jsonObject.mapValues { (key, value) ->
+            valuePattern.resolveSubstitutions(substitution, value, resolver)
+        }
+
+        return updatedMap.mapFold().ifValue { value.copy(it) }
+    }
+
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData, resolver.mismatchMessages)

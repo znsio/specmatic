@@ -47,6 +47,16 @@ fun <K, ValueType> Map<K, ReturnValue<ValueType>>.mapFold(): ReturnValue<Map<K, 
     }
 }
 
+fun <ValueType> List<ReturnValue<ValueType>>.listFold(): ReturnValue<List<ValueType>> {
+    val initial: ReturnValue<List<ValueType>> = HasValue<List<ValueType>>(emptyList())
+
+    return this.fold(initial) { accR: ReturnValue<List<ValueType>>, valueR: ReturnValue<ValueType> ->
+        accR.assimilate(valueR) { acc, value ->
+            acc.plus(value)
+        }
+    }
+}
+
 fun <T> Sequence<List<ReturnValue<out T>>>.sequenceListFold(): Sequence<ReturnValue<List<T>>> {
     val data: Sequence<List<ReturnValue<out T>>> = this
 

@@ -2223,7 +2223,7 @@ components:
 
     @Test
     fun `data substitution involving all GET request parts and response parts`() {
-        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_map_substitution_in_all_sections.yaml")
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_map_substitution_in_all_get_sections.yaml")
 
         createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
             val request = HttpRequest("GET", "/data/abc", headers = mapOf("X-Routing-Token" to "AB"), queryParametersMap = mapOf("location" to "IN"))

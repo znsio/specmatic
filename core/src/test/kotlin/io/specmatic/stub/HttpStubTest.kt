@@ -2220,4 +2220,23 @@ components:
             assertThat(jsonResponse.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo("$location")
         }
     }
+
+    @Test
+    fun `data substitution involving all GET request parts and response parts`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_map_substitution_in_all_sections.yaml")
+
+        createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("GET", "/data/abc", headers = mapOf("X-Routing-Token" to "AB"), queryParametersMap = mapOf("location" to "IN"))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+
+            assertThat(response.headers["X-Region"]).isEqualTo("IN")
+
+            val jsonResponse = response.body as JSONObjectValue
+            assertThat(jsonResponse.findFirstChildByPath("city")?.toStringLiteral()).isEqualTo("Mumbai")
+            assertThat(jsonResponse.findFirstChildByPath("currency")?.toStringLiteral()).isEqualTo("INR")
+
+        }
+    }
 }

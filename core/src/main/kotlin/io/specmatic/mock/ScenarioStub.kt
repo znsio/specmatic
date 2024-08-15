@@ -121,11 +121,13 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
     private fun replaceInExample(substitutions: Map<String, Map<String, Map<String, Value>>>, requestBody: Pattern, resolver: Resolver): ScenarioStub {
         val requestTemplatePatterns = requestBody.getTemplateTypes("", request.body, resolver).value
 
-        val newRequestBody = replaceInRequestBody("", request.body, substitutions, requestTemplatePatterns, resolver)
+        val newPath = replaceInPath(request.path ?: "", substitutions)
         val newRequestHeaders = replaceInRequestHeaders(request.headers, substitutions)
         val newQueryParams: Map<String, String> = replaceInRequestQueryParams(request.queryParams, substitutions)
+        val newRequestBody = replaceInRequestBody("", request.body, substitutions, requestTemplatePatterns, resolver)
 
         val newRequest = request.copy(
+            path = newPath,
             headers = newRequestHeaders,
             queryParams = QueryParameters(newQueryParams),
             body = newRequestBody)
@@ -141,6 +143,15 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
             request = newRequest,
             response = newResponse
         )
+    }
+
+    private fun replaceInPath(path: String, substitutions: Map<String, Map<String, Map<String, Value>>>): String {
+        val rawPathSegments = path.split("/")
+        val pathSegments = rawPathSegments.let { if(it.firstOrNull() == "") it.drop(1) else it }
+        val updatedSegments = pathSegments.map { if(it.hasDataTemplate()) substituteStringInRequest(it, substitutions) else it }
+        val prefix = if(pathSegments.size != rawPathSegments.size) listOf("") else emptyList()
+
+        return (prefix + updatedSegments).joinToString("/")
     }
 
     private fun replaceInResponseHeaders(

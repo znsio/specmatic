@@ -32,4 +32,12 @@ interface Value {
                 && this.string.startsWith("{{")
                 && this.string.endsWith("}}")
     }
+
+    fun hasDataTemplate(): Boolean {
+        return this is StringValue && this.string.hasDataTemplate()
+    }
+}
+
+fun String.hasDataTemplate(): Boolean {
+    return this.startsWith("{{@") && this.endsWith("}}")
 }

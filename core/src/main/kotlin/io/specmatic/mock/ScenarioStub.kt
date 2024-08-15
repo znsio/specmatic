@@ -3,7 +3,6 @@ package io.specmatic.mock
 import io.specmatic.core.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
-import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
 
@@ -51,19 +50,6 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         }
     }
 
-    fun resolveDataSubstitutions(): List<ScenarioStub> {
-        if(data.jsonObject.isEmpty())
-            return listOf(this)
-
-        val substitutions = unwrapSubstitutions(data)
-
-        val combinations = combinations(substitutions)
-
-        return combinations.map { combination ->
-            replaceInExample(combination, StringPattern(""), Resolver())
-        }
-    }
-
     private fun unwrapSubstitutions(rawSubstitutions: JSONObjectValue): Map<String, Map<String, Map<String, Value>>> {
         val substitutions = rawSubstitutions.jsonObject.mapValues {
             val json =
@@ -97,10 +83,20 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         )
     }
 
+    private fun substituteStringInRequest(value: String, substitutions: Map<String, Map<String, Map<String, Value>>>): String {
+        return if(value.hasDataTemplate()) {
+            val substitutionSetName = value.removeSurrounding("{{", "}}")
+            val substitutionSet = substitutions[substitutionSetName] ?: throw ContractException("$substitutionSetName does not exist in the data")
+
+            substitutionSet.keys.firstOrNull() ?: throw ContractException("$substitutionSetName in data is empty")
+        } else
+            value
+    }
+
     private fun replaceInRequestBody(key: String, value: Value, substitutions: Map<String, Map<String, Map<String, Value>>>, requestTemplatePatterns: Map<String, Pattern>, resolver: Resolver): Value {
         return when(value) {
             is StringValue -> {
-                if(value.string.startsWith("{{@") && value.string.endsWith("}}")) {
+                if(value.hasDataTemplate()) {
                     val substitutionSetName = value.string.removeSurrounding("{{", "}}")
                     val substitutionSet = substitutions[substitutionSetName] ?: throw ContractException("$substitutionSetName does not exist in the data")
 
@@ -126,15 +122,49 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         val requestTemplatePatterns = requestBody.getTemplateTypes("", request.body, resolver).value
 
         val newRequestBody = replaceInRequestBody("", request.body, substitutions, requestTemplatePatterns, resolver)
-        val newRequest = request.copy(body = newRequestBody)
+        val newRequestHeaders = replaceInRequestHeaders(request.headers, substitutions)
+        val newQueryParams: Map<String, String> = replaceInRequestQueryParams(request.queryParams, substitutions)
+
+        val newRequest = request.copy(
+            headers = newRequestHeaders,
+            queryParams = QueryParameters(newQueryParams),
+            body = newRequestBody)
 
         val newResponseBody = replaceInResponseBody(response.body, substitutions, "")
-        val newResponse = response.copy(body = newResponseBody)
+        val newResponseHeaders = replaceInResponseHeaders(response.headers, substitutions)
+        val newResponse = response.copy(
+            headers = newResponseHeaders,
+            body = newResponseBody
+        )
 
         return copy(
             request = newRequest,
             response = newResponse
         )
+    }
+
+    private fun replaceInResponseHeaders(
+        headers: Map<String, String>,
+        substitutions: Map<String, Map<String, Map<String, Value>>>
+    ): Map<String, String> {
+        return headers.mapValues { (key, value) ->
+            substituteStringInResponse(value, substitutions, key)
+        }
+    }
+
+    private fun replaceInRequestQueryParams(
+        queryParams: QueryParameters,
+        substitutions: Map<String, Map<String, Map<String, Value>>>
+    ): Map<String, String> {
+        return queryParams.asMap().mapValues { (key, value) ->
+            substituteStringInRequest(value, substitutions)
+        }
+    }
+
+    private fun replaceInRequestHeaders(headers: Map<String, String>, substitutions: Map<String, Map<String, Map<String, Value>>>): Map<String, String> {
+        return headers.mapValues { (key, value) ->
+            substituteStringInRequest(value, substitutions)
+        }
     }
 
     private fun replaceInResponseBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
@@ -153,10 +183,22 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         )
     }
 
+    private fun substituteStringInResponse(value: String, substitutions: Map<String, Map<String, Map<String, Value>>>, key: String): String {
+        return if(value.hasDataTemplate()) {
+            val substitutionSetName = value.removeSurrounding("{{", "}}")
+            val substitutionSet = substitutions[substitutionSetName] ?: throw ContractException("$substitutionSetName does not exist in the data")
+
+            val substitutionValue = substitutionSet.values.first()[key] ?: throw ContractException("$substitutionSetName does not contain a value for $key")
+
+            substitutionValue.toStringLiteral()
+        } else
+            value
+    }
+
     private fun replaceInResponseBody(value: Value, substitutions: Map<String, Map<String, Map<String, Value>>>, key: String): Value {
         return when(value) {
             is StringValue -> {
-                if(value.string.startsWith("{{@") && value.string.endsWith("}}")) {
+                if(value.hasDataTemplate()) {
                     val substitutionSetName = value.string.removeSurrounding("{{", "}}")
                     val substitutionSet = substitutions[substitutionSetName] ?: throw ContractException("$substitutionSetName does not exist in the data")
 

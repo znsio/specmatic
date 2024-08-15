@@ -1008,16 +1008,6 @@ fun stubResponse(
     }
 }
 
-fun contractInfoToHttpExpectationsOld(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): List<HttpStubData> {
-    return contractInfo.flatMap { (feature, examples) ->
-        examples.flatMap {
-            it.resolveDataSubstitutions()
-        }.map { example ->
-            feature.matchingStub(example, ContractAndStubMismatchMessages)
-        }
-    }
-}
-
 fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): List<HttpStubData> {
     return contractInfo.flatMap { (feature, examples) ->
         examples.map { example ->

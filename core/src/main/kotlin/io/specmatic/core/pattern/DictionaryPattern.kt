@@ -26,6 +26,19 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
         return updatedMap.mapFold().ifValue { value.copy(it) }
     }
 
+    override fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {
+        if(value !is JSONObjectValue)
+            return HasFailure(Result.Failure("Cannot resolve substitutions, expected object but got ${value.displayableType()}"))
+
+        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap<String, Pattern>())
+
+        return value.jsonObject.entries.fold(initialValue) { acc, (key, value) ->
+            val patternMap = valuePattern.getTemplateTypes(key, value, resolver)
+
+            acc.assimilate(patternMap) { data, additional -> data + additional }
+        }
+    }
+
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is JSONObjectValue)
             return mismatchResult("JSON object", sampleData, resolver.mismatchMessages)

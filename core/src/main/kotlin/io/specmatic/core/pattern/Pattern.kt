@@ -72,6 +72,13 @@ interface Pattern {
         return substitution.substitute(value, this)
     }
 
+    fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {
+        return if(value is StringValue && value.string.startsWith("{{@") && value.string.endsWith("}}"))
+            HasValue(mapOf(key to this))
+        else
+            HasValue(emptyMap())
+    }
+
     val typeAlias: String?
     val typeName: String
     val pattern: Any

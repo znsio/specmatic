@@ -2,6 +2,8 @@ package io.specmatic.mock
 
 import io.specmatic.core.*
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.Pattern
+import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
 
@@ -36,6 +38,19 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         }
     }
 
+    fun resolveDataSubstitutions(scenario: Scenario): List<ScenarioStub> {
+        if(data.jsonObject.isEmpty())
+            return listOf(this)
+
+        val substitutions = unwrapSubstitutions(data)
+
+        val combinations = combinations(substitutions)
+
+        return combinations.map { combination ->
+            replaceInExample(combination, scenario.httpRequestPattern.body, scenario.resolver)
+        }
+    }
+
     fun resolveDataSubstitutions(): List<ScenarioStub> {
         if(data.jsonObject.isEmpty())
             return listOf(this)
@@ -45,7 +60,7 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         val combinations = combinations(substitutions)
 
         return combinations.map { combination ->
-            replaceInExample(combination)
+            replaceInExample(combination, StringPattern(""), Resolver())
         }
     }
 
@@ -66,23 +81,23 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         return substitutions
     }
 
-    private fun replaceInRequestBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+    private fun replaceInRequestBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>, requestTemplatePatterns: Map<String, Pattern>, resolver: Resolver): Value {
         return value.copy(
             value.jsonObject.mapValues {
-                replaceInRequestBody(it.value, substitutions)
+                replaceInRequestBody(it.key, it.value, substitutions, requestTemplatePatterns, resolver)
             }
         )
     }
 
-    private fun replaceInRequestBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+    private fun replaceInRequestBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>, requestTemplatePatterns: Map<String, Pattern>, resolver: Resolver): Value {
         return value.copy(
             value.list.map {
-                replaceInRequestBody(value, substitutions)
+                replaceInRequestBody(value, substitutions, requestTemplatePatterns, resolver)
             }
         )
     }
 
-    private fun replaceInRequestBody(value: Value, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
+    private fun replaceInRequestBody(key: String, value: Value, substitutions: Map<String, Map<String, Map<String, Value>>>, requestTemplatePatterns: Map<String, Pattern>, resolver: Resolver): Value {
         return when(value) {
             is StringValue -> {
                 if(value.string.startsWith("{{@") && value.string.endsWith("}}")) {
@@ -91,22 +106,26 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
 
                     val substitutionKey = substitutionSet.keys.firstOrNull() ?: throw ContractException("$substitutionSetName in data is empty")
 
-                    StringValue(substitutionKey)
+                    val pattern = requestTemplatePatterns.getValue(key)
+
+                    pattern.parse(substitutionKey, resolver)
                 } else
                     value
             }
             is JSONObjectValue -> {
-                replaceInRequestBody(value, substitutions)
+                replaceInRequestBody(value, substitutions, requestTemplatePatterns, resolver)
             }
             is JSONArrayValue -> {
-                replaceInRequestBody(value, substitutions)
+                replaceInRequestBody(value, substitutions, requestTemplatePatterns, resolver)
             }
             else -> value
         }
     }
 
-    private fun replaceInExample(substitutions: Map<String, Map<String, Map<String, Value>>>): ScenarioStub {
-        val newRequestBody = replaceInRequestBody(request.body, substitutions)
+    private fun replaceInExample(substitutions: Map<String, Map<String, Map<String, Value>>>, requestBody: Pattern, resolver: Resolver): ScenarioStub {
+        val requestTemplatePatterns = requestBody.getTemplateTypes("", request.body, resolver).value
+
+        val newRequestBody = replaceInRequestBody("", request.body, substitutions, requestTemplatePatterns, resolver)
         val newRequest = request.copy(body = newRequestBody)
 
         val newResponseBody = replaceInResponseBody(response.body, substitutions, "")

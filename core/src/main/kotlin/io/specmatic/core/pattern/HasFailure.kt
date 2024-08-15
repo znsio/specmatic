@@ -16,11 +16,11 @@ data class HasFailure<T>(val failure: Result.Failure, val message: String = "") 
         return this
     }
 
-    override fun <U> assimilate(valueResult: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T> {
+    override fun <U> assimilate(acc: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T> {
         return cast<T>()
     }
 
-    override fun <U, V> combine(valueResult: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
+    override fun <U, V> combine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
         return cast<V>()
     }
 

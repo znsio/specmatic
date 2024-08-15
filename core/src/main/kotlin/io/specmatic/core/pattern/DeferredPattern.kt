@@ -57,6 +57,10 @@ data class DeferredPattern(override val pattern: String, val key: String? = null
         return resolvePattern(resolver).resolveSubstitutions(substitution, value, resolver)
     }
 
+    override fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {
+        return resolvePattern(resolver).getTemplateTypes(key, value, resolver)
+    }
+
     override val typeAlias: String = pattern
 
     override fun parse(value: String, resolver: Resolver): Value =

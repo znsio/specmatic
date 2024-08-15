@@ -29,6 +29,18 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         return updatedList.ifValue { value.copy(list = it) }
     }
 
+    override fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {
+        if(value !is JSONArrayValue)
+            return HasFailure(Result.Failure("Cannot resolve data substitutions, expected list but got ${value.displayableType()}"))
+
+        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap<String, Pattern>())
+        return value.list.fold(initialValue) { acc, valuePattern ->
+            val patterns = pattern.getTemplateTypes("", valuePattern, resolver)
+
+            acc.assimilate(patterns) { data, additional -> data + additional }
+        }
+    }
+
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is ListValue)
             return when {

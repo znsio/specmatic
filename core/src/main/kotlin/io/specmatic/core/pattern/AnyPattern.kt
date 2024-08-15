@@ -37,13 +37,22 @@ data class AnyPattern(
             it.realise(
                 hasValue = { _, _ ->
                     throw NotImplementedError()
-               },
+                },
                 orFailure = { failure -> failure.failure },
                 orException = { exception -> exception.toHasFailure().failure }
             )
         }
 
         return HasFailure<Value>(Result.Failure.fromFailures(failures))
+    }
+
+    override fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {
+        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap<String, Pattern>())
+
+        return pattern.fold(initialValue) { acc, pattern ->
+            val templateTypes = pattern.getTemplateTypes("", value, resolver)
+            acc.assimilate(templateTypes) { data, additional -> data + additional }
+        }
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {

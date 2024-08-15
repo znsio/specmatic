@@ -1,6 +1,5 @@
 package io.specmatic.stub
 
-import io.ktor.http.*
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.pattern.*
@@ -2199,6 +2198,21 @@ components:
 
         createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
             val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"department": "$department"}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val jsonResponse = response.body as JSONObjectValue
+            assertThat(jsonResponse.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo("$location")
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource("1,Bangalore", "2,Mumbai")
+    fun `stub example with data substitution having integer in request`(id: String, location: String) {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_map_substitution_with_int_in_request.yaml")
+
+        createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": $id}"""))
             val response = stub.client.execute(request)
 
             assertThat(response.status).isEqualTo(200)

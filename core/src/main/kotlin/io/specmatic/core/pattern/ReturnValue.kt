@@ -17,8 +17,8 @@ sealed interface ReturnValue<T> {
     abstract fun <U> ifValue(fn: (T) -> U): ReturnValue<U>
     abstract fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U>
     fun update(fn: (T) -> T): ReturnValue<T>
-    fun <U> assimilate(valueResult: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T>
-    fun <U, V> combine(valueResult: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V>
+    fun <U> assimilate(acc: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T>
+    fun <U, V> combine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V>
     fun <U> realise(hasValue: (T, String?) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U
     fun addDetails(message: String, breadCrumb: String): ReturnValue<T>
 }

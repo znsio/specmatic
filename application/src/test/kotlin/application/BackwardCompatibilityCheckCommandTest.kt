@@ -1,6 +1,6 @@
 package application
 
-import application.backwardCompatibility.BackwardCompatibilityCheckCommandV1
+import application.backwardCompatibility.BackwardCompatibilityCheckCommand
 import io.mockk.every
 import io.mockk.spyk
 import org.junit.jupiter.api.AfterEach
@@ -9,46 +9,46 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
 
-class BackwardCompatibilityCheckCommandV1Test {
+class BackwardCompatibilityCheckCommandTest {
 
     @Test
-    fun `filesReferringToChangedSchemaFiles returns empty set when input is empty`() {
-        val command = BackwardCompatibilityCheckCommandV1()
-        val result = command.filesReferringToChangedSchemaFiles(emptySet())
+    fun `getSpecsReferringTo returns empty set when input is empty`() {
+        val command = BackwardCompatibilityCheckCommand()
+        val result = command.getSpecsReferringTo(emptySet())
         assertTrue(result.isEmpty())
     }
 
     @Test
-    fun `filesReferringToChangedSchemaFiles returns empty set when no files refer to changed schema files`() {
-        val command = spyk<BackwardCompatibilityCheckCommandV1>()
-        every { command.allOpenApiSpecFiles() } returns listOf(
+    fun `getSpecsReferringTo returns empty set when no files refer to changed schema files`() {
+        val command = spyk<BackwardCompatibilityCheckCommand>()
+        every { command.allSpecFiles() } returns listOf(
             File("file1.yaml").apply { writeText("content1") },
             File("file2.yaml").apply { writeText("content2") }
         )
-        val result = command.filesReferringToChangedSchemaFiles(setOf("file3.yaml"))
+        val result = command.getSpecsReferringTo(setOf("file3.yaml"))
         assertTrue(result.isEmpty())
     }
 
     @Test
-    fun `filesReferringToChangedSchemaFiles returns set of files that refer to changed schema files`() {
-        val command = spyk<BackwardCompatibilityCheckCommandV1>()
-        every { command.allOpenApiSpecFiles() } returns listOf(
+    fun `getSpecsReferringTo returns set of files that refer to changed schema files`() {
+        val command = spyk<BackwardCompatibilityCheckCommand>()
+        every { command.allSpecFiles() } returns listOf(
             File("file1.yaml").apply { writeText("file3.yaml") },
             File("file2.yaml").apply { writeText("file4.yaml") }
         )
-        val result = command.filesReferringToChangedSchemaFiles(setOf("file3.yaml"))
+        val result = command.getSpecsReferringTo(setOf("file3.yaml"))
         assertEquals(setOf("file1.yaml"), result)
     }
 
     @Test
-    fun `filesReferringToChangedSchemaFiles returns set of files which are referring to a changed schema that is one level down`() {
-        val command = spyk<BackwardCompatibilityCheckCommandV1>()
-        every { command.allOpenApiSpecFiles() } returns listOf(
+    fun `getSpecsReferringTo returns set of files which are referring to a changed schema that is one level down`() {
+        val command = spyk<BackwardCompatibilityCheckCommand>()
+        every { command.allSpecFiles() } returns listOf(
             File("file1.yaml").apply { referTo("schema_file1.yaml") },
             File("schema_file2.yaml").apply { referTo("schema_file1.yaml") }, // schema within a schema
             File("file2.yaml").apply { referTo("schema_file2.yaml") }
         )
-        val result = command.filesReferringToChangedSchemaFiles(setOf("schema_file1.yaml"))
+        val result = command.getSpecsReferringTo(setOf("schema_file1.yaml"))
         assertEquals(setOf("file1.yaml", "file2.yaml"), result)
     }
 

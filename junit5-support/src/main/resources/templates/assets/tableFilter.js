@@ -1,6 +1,7 @@
 /* DOM Elements */
 const resultsList = document.querySelector("ol#results");
 const overlay = document.getElementById("overlay");
+const allTests = document.querySelector("#all");
 
 /* VARIABLES */
 const tableRows = Array.from(document.querySelectorAll("table#reports tbody tr"));
@@ -9,19 +10,23 @@ const groupedRows = groupRowsByPathAndMethod(tableRows);
 /* Event Listeners */
 resultsList.addEventListener("click", (event) => {
   const target = event.target;
-  const nearestListItem = target.closest("li");
+  let nearestListItem = target.closest("li");
 
   if (nearestListItem?.getAttribute("data-type")) {
+    if (reportTable.getAttribute("data-filter") === nearestListItem.getAttribute("data-type")) {
+      nearestListItem = allTests;
+    }
+
     const resultType = nearestListItem.getAttribute("data-type");
+    updateTable(groupedRows[resultType]);
+    reportTable.setAttribute("data-filter", resultType);
     animateOverlay(nearestListItem);
-    updateTable(groupedRows[resultType])
-    reportTable.scrollIntoView();
     event.stopPropagation();
   }
 });
 
 /* INIT */
-animateOverlay(document.querySelector("#all"));
+animateOverlay(allTests);
 
 /* Utils */
 function animateOverlay(summaryLiElem, offset = 1.25) {
@@ -42,11 +47,11 @@ function colorToResultType(color) {
 }
 
 function groupRowsByPathAndMethod(tableRows) {
-  const categories = { Success: {}, Error: {}, Failed: {}, Skipped: {}, All: {}};
+  const categories = { Success: {}, Error: {}, Failed: {}, Skipped: {}, All: {} };
 
   for (const row of tableRows) {
     const rowValues = extractValuesFromTableRow(row);
-    const {path, method, color, response} = rowValues;
+    const { path, method, color, response } = rowValues;
     const type = colorToResultType(color);
 
     if (!(type in categories)) {
@@ -68,19 +73,19 @@ function groupRowsByPathAndMethod(tableRows) {
 }
 
 function updateTable(groupedRows) {
-    for(const row of tableRows) {
-        const children = Array.from(row.children)
-        const [coverageTd, pathTd, methodTd, ...rest] = children;
-        const {path, method, response} = extractValuesFromTableRow(row);
+  for (const row of tableRows) {
+    const children = Array.from(row.children);
+    const [coverageTd, pathTd, methodTd, ...rest] = children;
+    const { path, method, response } = extractValuesFromTableRow(row);
 
-        const pathExists = path in groupedRows;
-        const methodExists = pathExists && method in groupedRows[path]
+    const pathExists = path in groupedRows;
+    const methodExists = pathExists && method in groupedRows[path];
 
-        row.classList.toggle("hide", !pathExists);
+    row.classList.toggle("hidden", !pathExists);
 
-        for (const row of rest) {
-            const responseExists = pathExists && methodExists && response in groupedRows[path][method]
-            row.classList.toggle("hide", !responseExists);
-        }
+    for (const row of rest) {
+      const responseExists = pathExists && methodExists && response in groupedRows[path][method];
+      row.classList.toggle("hidden", !responseExists);
     }
+  }
 }

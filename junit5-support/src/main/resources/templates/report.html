@@ -26,11 +26,8 @@
         <div id="summary" class="flex justify-between gap-5 p-1 border-2" th:classappend="'bg-' + ${summaryResult}">
             <ol id="results" class="relative flex items-center flex-1 px-2 print:flex-wrap gap-x-5 *:w-44 print:*:w-fit">
                 <li class="flex flex-col" id="totalCoverage">
-                    <div class="flex gap-2">
-                        <img src="assets/trend-up.svg" alt="total-coverage" class="size-6" th:classappend="${summaryResult}" >
-                        <p class="text-black/50">Coverage</p>
-                    </div>
-                    <span class="text-3xl font-bold ml-7">[[${totalCoverage}]]%</span>
+                    <p class="text-black/50">API Coverage</p>
+                    <span class="text-3xl font-bold ml-6" th:classappend="${summaryResult}">[[${totalCoverage}]]%</span>
                 </li>
                 <li class="invisible h-12"></li>
                 <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="success" data-type="Success" data-index="2">
@@ -75,15 +72,18 @@
             </div>
         </div>
         <div id="additional-info" class="p-2 text-sm">
-            <ol>
+            <ol class="flex justify-between">
                 <li>
                     <p>Actuator: <span class="font-semibold">[[${actuatorEnabled == true ? 'Enabled' : 'Disabled'}]]</span></p>
+                </li>
+                <li th:if="${successCriteriaPassed == false}">
+                    <p>Success Criteria Failed: <span class="font-semibold">Minimum API Coverage of [[${minimumCoverage}]]% was not met.</span></p>
                 </li>
             </ol>
         </div>
     </header>
     <main class="flex items-start flex-1 overflow-hidden border-t-2 shadow-md group print:shadow-none print:overflow-visible" data-item="table">
-        <table id="reports" class="font-mono transition-transform -translate-x-full group-data-[item=table]:translate-x-0 duration-700 min-w-full">
+        <table id="reports" class="font-mono transition-transform -translate-x-full group-data-[item=table]:translate-x-0 duration-700 min-w-full" data-filter="All">
             <thead>
                 <tr class="font-bold">
                     <td>Coverage</td>

@@ -20,7 +20,7 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.math.roundToInt
 
-class HtmlReport(htmlReportFormat: ReportFormatter){
+class HtmlReport(htmlReportFormat: ReportFormatter, openApiSuccessCriteria: SuccessCriteria){
 
     private val groupedHttpLogMessages = TestInteractionsLog.testHttpLogMessages.groupBy { it.scenario?.method }
     private val groupedTestResultRecords = SpecmaticJUnitSupport.openApiCoverageReportInput.groupedTestResultRecords
@@ -33,6 +33,7 @@ class HtmlReport(htmlReportFormat: ReportFormatter){
     private val outputDirectory = htmlReportFormat.outputDirectory
     private val pageTitle = htmlReportFormat.title
     private val reportHeading = htmlReportFormat.heading
+    private val ApiSuccessCriteria = openApiSuccessCriteria
 
     private var totalTests = 0
     private var totalErrors = 0
@@ -52,6 +53,9 @@ class HtmlReport(htmlReportFormat: ReportFormatter){
     }
 
     private fun generateHtmlReportText(): String {
+        val testCriteria = testCriteriaPassed()
+        val successCriteria = successCriteriaPassed()
+
         val templateVariables = mapOf(
             "pageTitle" to pageTitle,
             "reportHeading" to reportHeading,
@@ -66,7 +70,10 @@ class HtmlReport(htmlReportFormat: ReportFormatter){
             "generatedOn" to generatedOnTimestamp(),
             "tableRows" to tableRows,
             "specmaticVersion" to "[${getSpecmaticVersion()}]",
-            "summaryResult" to summaryResult(),
+            "summaryResult" to if(testCriteria && successCriteria) "approved" else "rejected",
+            "testCriteriaPassed" to testCriteria,
+            "successCriteriaPassed" to successCriteria,
+            "minimumCoverage" to ApiSuccessCriteria.minThresholdPercentage,
             "jsonTestData" to dumpTestData(groupedScenarios)
         )
 
@@ -85,8 +92,12 @@ class HtmlReport(htmlReportFormat: ReportFormatter){
         return ((totalCoveredCount * 100) / totalCount).toDouble().roundToInt()
     }
 
-    private fun summaryResult(): String {
-        return if (totalFailures > 0 || totalErrors > 0) "rejected" else "approved"
+    private fun testCriteriaPassed(): Boolean {
+        return totalFailures == 0 && totalErrors == 0
+    }
+
+    private fun successCriteriaPassed(): Boolean {
+        return totalCoverage() >= ApiSuccessCriteria.minThresholdPercentage || !ApiSuccessCriteria.enforce
     }
 
     private fun tableRows(): List<TableRow> {

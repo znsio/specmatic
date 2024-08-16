@@ -8,7 +8,8 @@ import io.specmatic.test.reports.renderers.ReportRenderer
 class CoverageReportHtmlRenderer: ReportRenderer<OpenAPICoverageConsoleReport> {
     override fun render(report: OpenAPICoverageConsoleReport, reportConfiguration: ReportConfiguration): String {
         val htmlReportConfiguration = reportConfiguration.formatters!!.first { it.type == ReportFormatterType.HTML }
-        HtmlReport(htmlReportConfiguration).generate()
+        val openApiSuccessCriteria = reportConfiguration.types.apiCoverage.openAPI.successCriteria;
+        HtmlReport(htmlReportConfiguration, openApiSuccessCriteria).generate()
         return "Successfully generated HTML report in ${htmlReportConfiguration.outputDirectory}"
     }
 }

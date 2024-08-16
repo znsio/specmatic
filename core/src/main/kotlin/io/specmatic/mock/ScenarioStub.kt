@@ -38,7 +38,26 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         }
     }
 
+    fun findPatterns(input: String): Set<String> {
+        val pattern = """\{\{(@\w+)\}\}""".toRegex()
+        return pattern.findAll(input).map { it.groupValues[1] }.toSet()
+    }
+
+    fun requestDataTemplates(): Set<String> {
+        return findPatterns(request.toLogString())
+    }
+
+    fun responseDataTemplates(): Set<String> {
+        return findPatterns(response.toLogString())
+    }
+
     fun resolveDataSubstitutions(scenario: Scenario): List<ScenarioStub> {
+        val dataTemplates = requestDataTemplates() + responseDataTemplates()
+
+        val missingDataTemplates = dataTemplates.filter { it !in data.jsonObject }
+        if(missingDataTemplates.isNotEmpty())
+            throw ContractException("Could not find the following data templates defined: ${missingDataTemplates.joinToString(", ")}")
+
         if(data.jsonObject.isEmpty())
             return listOf(this)
 

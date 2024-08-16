@@ -2415,9 +2415,26 @@ paths:
             }
         }
 
+        println(output)
+
         assertThat(output)
             .contains("Error resolving template data for example")
             .contains("spec_with_non_existent_data_key_examples/substitution.json")
+            .contains("@id")
+    }
+
+    @Test
+    fun `should flag an error when data substitution keys are not found in @data`() {
+        val (output, _) = captureStandardOutput {
+            try {
+                val stub = createStubFromContracts(listOf("src/test/resources/openapi/substitutions/spec_with_example_missing_the_data_section.yaml"), timeoutMillis = 0)
+                stub.close()
+            } catch(e: Throwable) {
+
+            }
+        }
+
+        assertThat(output)
             .contains("@id")
     }
 

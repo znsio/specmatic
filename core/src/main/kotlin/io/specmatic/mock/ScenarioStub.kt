@@ -43,12 +43,16 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
         return pattern.findAll(input).map { it.groupValues[1] }.toSet()
     }
 
+    fun dataTemplateNameOnly(wholeDataTemplateName: String): String {
+        return wholeDataTemplateName.split(".").first()
+    }
+
     fun requestDataTemplates(): Set<String> {
-        return findPatterns(request.toLogString())
+        return findPatterns(request.toLogString()).map(this::dataTemplateNameOnly).toSet()
     }
 
     fun responseDataTemplates(): Set<String> {
-        return findPatterns(response.toLogString())
+        return findPatterns(response.toLogString()).map(this::dataTemplateNameOnly).toSet()
     }
 
     fun resolveDataSubstitutions(scenario: Scenario): List<ScenarioStub> {
@@ -216,24 +220,38 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
 
     private fun substituteStringInResponse(value: String, substitutions: Map<String, Map<String, Map<String, Value>>>, key: String): String {
         return if(value.hasDataTemplate()) {
-            val substitutionSetName = value.removeSurrounding("{{", "}}")
-            val substitutionSet = substitutions[substitutionSetName] ?: throw ContractException("$substitutionSetName does not exist in the data")
+            val dataSetIdentifiers = DataSetIdentifiers(value, key)
 
-            val substitutionValue = substitutionSet.values.first()[key] ?: throw ContractException("$substitutionSetName does not contain a value for $key")
+            val substitutionSet = substitutions[dataSetIdentifiers.name] ?: throw ContractException("${dataSetIdentifiers.name} does not exist in the data")
+
+            val substitutionValue = substitutionSet.values.first()[dataSetIdentifiers.key] ?: throw ContractException("${dataSetIdentifiers.name} does not contain a value for ${dataSetIdentifiers.key}")
 
             substitutionValue.toStringLiteral()
         } else
             value
     }
 
+    class DataSetIdentifiers(rawSetName: String, objectKey: String) {
+        val name: String
+        val key: String
+
+        init {
+            val substitutionSetPieces = rawSetName.removeSurrounding("{{", "}}").split(".")
+
+            name = substitutionSetPieces.getOrNull(0) ?: throw ContractException("Substitution set name {{}} was empty")
+            key = substitutionSetPieces.getOrNull(1) ?: objectKey
+        }
+    }
+
     private fun replaceInResponseBody(value: Value, substitutions: Map<String, Map<String, Map<String, Value>>>, key: String): Value {
         return when(value) {
             is StringValue -> {
                 if(value.hasDataTemplate()) {
-                    val substitutionSetName = value.string.removeSurrounding("{{", "}}")
-                    val substitutionSet = substitutions[substitutionSetName] ?: throw ContractException("$substitutionSetName does not exist in the data")
+                    val dataSetIdentifiers = DataSetIdentifiers(value.string, key)
 
-                    val substitutionValue = substitutionSet.values.first()[key] ?: throw ContractException("$substitutionSetName does not contain a value for $key")
+                    val substitutionSet = substitutions[dataSetIdentifiers.name] ?: throw ContractException("${dataSetIdentifiers.name} does not exist in the data")
+
+                    val substitutionValue = substitutionSet.values.first()[dataSetIdentifiers.key] ?: throw ContractException("${dataSetIdentifiers.name} does not contain a value for ${dataSetIdentifiers.key}")
 
                     substitutionValue
                 } else

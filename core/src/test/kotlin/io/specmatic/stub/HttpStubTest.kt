@@ -2239,4 +2239,35 @@ components:
 
         }
     }
+
+    @Test
+    fun `data substitution with explicitly referenced data key in response body`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_map_substitution_with_different_lookup_key_in_response_body.yaml")
+
+        createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"department": "engineering"}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+
+            val jsonResponse = response.body as JSONObjectValue
+            assertThat(jsonResponse.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo("Mumbai")
+
+        }
+    }
+
+    @Test
+    fun `data substitution with explicitly referenced data key in response header`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_map_substitution_with_different_lookup_key_in_response_header.yaml")
+
+        createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"department": "engineering"}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+
+            assertThat(response.headers["X-Location"]).isEqualTo("Mumbai")
+
+        }
+    }
 }

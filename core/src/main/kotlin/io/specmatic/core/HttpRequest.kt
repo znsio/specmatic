@@ -68,9 +68,13 @@ data class HttpRequest(
             val urlParam = URI(path)
             updateWith(urlParam)
         } catch (e: URISyntaxException) {
-            copy(path = path)
+            val pieces = path.split("?", limit = 2)
+            updateWithPathAndQuery(pieces.get(0), pieces.getOrNull(1))
+//            copy(path = path)
         } catch (e: UnsupportedEncodingException) {
-            copy(path = path)
+            val pieces = path.split("?", limit = 2)
+            updateWithPathAndQuery(pieces.get(0), pieces.getOrNull(1))
+//            copy(path = path)
         }
     }
 
@@ -81,8 +85,15 @@ data class HttpRequest(
     fun updateBody(body: String?): HttpRequest = copy(body = parsedValue(body))
 
     fun updateWith(url: URI): HttpRequest {
-        val path = url.path
-        val queryParams = parseQuery(url.query)
+//        val path = url.path
+//        val queryParams = parseQuery(url.query)
+//        return copy(path = path, queryParams = QueryParameters(queryParams))
+
+        return updateWithPathAndQuery(url.path, url.query)
+    }
+
+    fun updateWithPathAndQuery(path: String, query: String?): HttpRequest {
+        val queryParams = parseQuery(query)
         return copy(path = path, queryParams = QueryParameters(queryParams))
     }
 

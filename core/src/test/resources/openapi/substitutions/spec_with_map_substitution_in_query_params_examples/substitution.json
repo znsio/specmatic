@@ -18,9 +18,12 @@
   },
   "http-request": {
     "method": "GET",
-    "path": "/data/{{@id}}?location={{@location}}",
+    "path": "/data/{{@id}}",
     "headers": {
       "X-Routing-Token": "{{@token}}"
+    },
+    "query": {
+      "location": "{{@location}}"
     }
   },
   "http-response": {

@@ -2435,7 +2435,7 @@ paths:
         }
 
         assertThat(output)
-            .contains("@id")
+            .contains("@department")
     }
 
     companion object {

@@ -1,6 +1,6 @@
 {
   "http-request": {
-    "method": "GET",
+    "method": "POST",
     "path": "/person",
     "body": {
       "department": "{{@department}}"
@@ -9,8 +9,7 @@
   "http-response": {
     "status": 200,
     "body": {
-      "city": "{{@id}}",
-      "currency": "{{@department}}"
+      "location": "{{@department}}"
     }
   }
 }

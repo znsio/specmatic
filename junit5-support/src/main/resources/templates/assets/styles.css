@@ -840,11 +840,17 @@ tbody > tr:hover {
   .print\:hidden {
     display: none;
   }
+  .print\:flex-row {
+    flex-direction: row;
+  }
   .print\:flex-col {
     flex-direction: column;
   }
   .print\:flex-wrap {
     flex-wrap: wrap;
+  }
+  .print\:items-center {
+    align-items: center;
   }
   .print\:justify-center {
     justify-content: center;

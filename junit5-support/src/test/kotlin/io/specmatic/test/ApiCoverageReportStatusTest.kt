@@ -92,13 +92,13 @@ class ApiCoverageReportStatusTest {
         assertThat(apiCoverageReport.rows).isEqualTo(
             listOf(
                 OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
-                OpenApiCoverageConsoleRow("GET", "/route1", 400, 1, 50, Remarks.Missed, showPath = false, showMethod = false)
+                OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
             )
         )
     }
 
     @Test
-    fun `identifies endpoint as 'not covered' when contract test fails and actuator is not available`() {
+    fun `identifies endpoint as 'covered' when contract test fails and actuator is not available`() {
         val endpointsInSpec = mutableListOf(
             Endpoint("/route1", "GET", 200)
         )
@@ -118,8 +118,8 @@ class ApiCoverageReportStatusTest {
         ).generate()
         assertThat(apiCoverageReport.rows).isEqualTo(
             listOf(
-                OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 0, Remarks.NotCovered),
-                OpenApiCoverageConsoleRow("GET", "/route1", 400, 1, 0, Remarks.Missed, showPath = false, showMethod = false)
+                OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
+                OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
             )
         )
     }
@@ -150,8 +150,8 @@ class ApiCoverageReportStatusTest {
         assertThat(apiCoverageReport.rows).isEqualTo(
             listOf(
                 OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
-                OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 0, Remarks.NotImplemented),
-                OpenApiCoverageConsoleRow("GET", "/route2", 404, 1, 0, Remarks.Missed, showPath = false, showMethod = false)
+                OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 50, Remarks.NotImplemented),
+                OpenApiCoverageConsoleRow("GET", "/route2", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
             )
         )
     }
@@ -187,7 +187,7 @@ class ApiCoverageReportStatusTest {
     }
 
     @Test
-    fun `identifies endpoint as 'did not run' when contract test is not generated for an endpoint present in the spec`() {
+    fun `identifies endpoint as 'Not Covered' when contract test is not generated for an endpoint present in the spec`() {
         val endpointsInSpec = mutableListOf(
             Endpoint("/route1", "GET", 200),
             Endpoint("/route1", "GET", 400),
@@ -211,7 +211,7 @@ class ApiCoverageReportStatusTest {
         assertThat(apiCoverageReport.rows).isEqualTo(
             listOf(
                 OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
-                OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.DidNotRun, showPath = false, showMethod = false)
+                OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false)
             )
         )
     }

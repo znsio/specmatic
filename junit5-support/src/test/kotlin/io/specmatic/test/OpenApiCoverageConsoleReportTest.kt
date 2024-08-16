@@ -14,10 +14,10 @@ class OpenApiCoverageConsoleReportTest {
             OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
             OpenApiCoverageConsoleRow("POST", "/route1", 200, 0, 0, Remarks.Missed),
             OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 25, Remarks.Covered),
-            OpenApiCoverageConsoleRow("POST", "/route2", 200, 0, 0, Remarks.DidNotRun),
-            OpenApiCoverageConsoleRow("POST", "/route2", 400, 0, 0, Remarks.DidNotRun),
-            OpenApiCoverageConsoleRow("POST", "/route2", 500, 0, 0, Remarks.DidNotRun),
-            OpenApiCoverageConsoleRow("GET", "/route3", 200, 0, 0, Remarks.DidNotRun),
+            OpenApiCoverageConsoleRow("POST", "/route2", 200, 0, 0, Remarks.NotCovered),
+            OpenApiCoverageConsoleRow("POST", "/route2", 400, 0, 0, Remarks.NotCovered),
+            OpenApiCoverageConsoleRow("POST", "/route2", 500, 0, 0, Remarks.NotCovered),
+            OpenApiCoverageConsoleRow("GET", "/route3", 200, 0, 0, Remarks.NotCovered),
         )
 
         val coverageReport = OpenAPICoverageConsoleReport(rows, totalEndpointsCount = 3, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0)

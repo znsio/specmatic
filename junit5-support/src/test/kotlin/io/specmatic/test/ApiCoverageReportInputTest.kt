@@ -223,10 +223,10 @@ class ApiCoverageReportInputTest {
                 listOf(
                     OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
                     OpenApiCoverageConsoleRow("POST", "/route1", 200, 1, 100, Remarks.Covered, showPath = false),
-                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 0, Remarks.NotImplemented),
-                    OpenApiCoverageConsoleRow("GET", "/route2", 404, 1, 0, Remarks.Missed, showPath = false, showMethod = false),
-                    OpenApiCoverageConsoleRow("POST", "/route2", 200, 1, 0, Remarks.NotImplemented, showPath = false),
-                    OpenApiCoverageConsoleRow("POST", "/route2", 404, 1, 0, Remarks.Missed, showPath = false, showMethod = false)
+                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 50, Remarks.NotImplemented),
+                    OpenApiCoverageConsoleRow("GET", "/route2", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
+                    OpenApiCoverageConsoleRow("POST", "/route2", 200, 1, 50, Remarks.NotImplemented, showPath = false),
+                    OpenApiCoverageConsoleRow("POST", "/route2", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
                 ),
                 totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
             )
@@ -264,9 +264,9 @@ class ApiCoverageReportInputTest {
                 listOf(
                     OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
                     OpenApiCoverageConsoleRow("POST", "/route1", 200, 1, 100, Remarks.Covered, showPath = false),
-                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 33, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("POST", "/route2", 200, 1, 33, Remarks.NotImplemented, showPath = false),
-                    OpenApiCoverageConsoleRow("POST", "/route2", 404, 1, 33, Remarks.Missed, showPath = false, showMethod = false),
+                    OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 67, Remarks.Covered),
+                    OpenApiCoverageConsoleRow("POST", "/route2", 200, 1, 67, Remarks.NotImplemented, showPath = false),
+                    OpenApiCoverageConsoleRow("POST", "/route2", 404, 0, 67, Remarks.Missed, showPath = false, showMethod = false),
                     OpenApiCoverageConsoleRow("GET", "/route3/{route_id}", 0, 0, 0, Remarks.Missed),
                     OpenApiCoverageConsoleRow("POST", "/route3/{route_id}", 0, 0, 0, Remarks.Missed, showPath = false)
                 ),
@@ -305,7 +305,7 @@ class ApiCoverageReportInputTest {
         }
         val reportJson = json.encodeToString(openApiCoverageJsonReport)
         assertThat(reportJson.trimIndent()).isEqualTo(
-            """{"specmaticConfigPath":"./specmatic.json","apiCoverage":[{"type":"git","repository":"https://github.com/znsio/specmatic-order-contracts.git","branch":"main","specification":"in/specmatic/examples/store/route1.yaml","serviceType":"HTTP","operations":[{"path":"/route1","method":"GET","responseCode":200,"count":1,"coverageStatus":"covered"},{"path":"/route1","method":"POST","responseCode":200,"count":1,"coverageStatus":"covered"}]},{"type":"git","repository":"https://github.com/znsio/specmatic-order-contracts.git","branch":"main","specification":"in/specmatic/examples/store/route2.yaml","serviceType":"HTTP","operations":[{"path":"/route2","method":"GET","responseCode":200,"count":1,"coverageStatus":"covered"},{"path":"/route2","method":"POST","responseCode":404,"count":1,"coverageStatus":"missing in spec"},{"path":"/route2","method":"POST","responseCode":200,"count":1,"coverageStatus":"not implemented"}]},{"type":null,"repository":null,"branch":null,"specification":null,"serviceType":"HTTP","operations":[{"path":"/route3/{route_id}","method":"GET","coverageStatus":"missing in spec"},{"path":"/route3/{route_id}","method":"POST","coverageStatus":"missing in spec"}]}]}"""
+            """{"specmaticConfigPath":"./specmatic.json","apiCoverage":[{"type":"git","repository":"https://github.com/znsio/specmatic-order-contracts.git","branch":"main","specification":"in/specmatic/examples/store/route1.yaml","serviceType":"HTTP","operations":[{"path":"/route1","method":"GET","responseCode":200,"count":1,"coverageStatus":"covered"},{"path":"/route1","method":"POST","responseCode":200,"count":1,"coverageStatus":"covered"}]},{"type":"git","repository":"https://github.com/znsio/specmatic-order-contracts.git","branch":"main","specification":"in/specmatic/examples/store/route2.yaml","serviceType":"HTTP","operations":[{"path":"/route2","method":"GET","responseCode":200,"count":1,"coverageStatus":"covered"},{"path":"/route2","method":"POST","responseCode":404,"coverageStatus":"missing in spec"},{"path":"/route2","method":"POST","responseCode":200,"count":1,"coverageStatus":"not implemented"}]},{"type":null,"repository":null,"branch":null,"specification":null,"serviceType":"HTTP","operations":[{"path":"/route3/{route_id}","method":"GET","coverageStatus":"missing in spec"},{"path":"/route3/{route_id}","method":"POST","coverageStatus":"missing in spec"}]}]}"""
         )
     }
 
@@ -342,11 +342,11 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("POST", "/route1", "200", "1", 100, Remarks.Covered, showPath = false),
                     OpenApiCoverageConsoleRow("POST", "/route1", "401", "1", 100, Remarks.Covered, showPath = false, showMethod = false),
                     OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 75, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/route2", 400, 0, 75, Remarks.DidNotRun, showPath = false, showMethod = false),
+                    OpenApiCoverageConsoleRow("GET", "/route2", 400, 0, 75, Remarks.NotCovered, showPath = false, showMethod = false),
                     OpenApiCoverageConsoleRow("GET", "/route2", 404, 1, 75, Remarks.Invalid, showPath = false, showMethod = false),
                     OpenApiCoverageConsoleRow("POST", "/route2", 500, 1, 75, Remarks.Covered, showPath = false)
                 ),
-                totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+                totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
             )
         )
     }

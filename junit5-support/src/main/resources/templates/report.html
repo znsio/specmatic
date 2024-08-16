@@ -25,7 +25,7 @@
         </div>
         <div id="summary" class="flex justify-between gap-5 p-1 border-2" th:classappend="'bg-' + ${summaryResult}">
             <ol id="results" class="relative flex items-center flex-1 px-2 print:flex-wrap gap-x-5 *:w-44 print:*:w-fit">
-                <li class="flex flex-col" id="totalCoverage">
+                <li class="flex flex-col print:flex-row print:items-center print:gap-2" id="totalCoverage">
                     <p class="text-black/50">API Coverage</p>
                     <span class="text-3xl font-bold ml-6" th:classappend="${summaryResult}">[[${totalCoverage}]]%</span>
                 </li>

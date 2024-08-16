@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test
 class TestResultRecordTest {
 
     @Test
-    fun `should not be considered exercised when result is Skipped or DidNotRun`() {
-        listOf(TestResult.Skipped, TestResult.DidNotRun).forEach {
+    fun `should not be considered exercised when result is MissingInSpec or NotCovered`() {
+        listOf(TestResult.MissingInSpec, TestResult.NotCovered).forEach {
             val record = TestResultRecord(
                 path = "/example/path",
                 method = "GET",
@@ -22,7 +22,7 @@ class TestResultRecordTest {
 
     @Test
     fun `should be considered exercised for other results`() {
-        TestResult.entries.filterNot { it in listOf(TestResult.Skipped, TestResult.DidNotRun) }.forEach {
+        TestResult.entries.filterNot { it in listOf(TestResult.MissingInSpec, TestResult.NotCovered) }.forEach {
             val record = TestResultRecord(
                 path = "/example/path",
                 method = "GET",
@@ -34,8 +34,8 @@ class TestResultRecordTest {
     }
 
     @Test
-    fun `should be considered covered when results Success, Error, Failed or Covered`() {
-        listOf(TestResult.Success, TestResult.Error, TestResult.Failed, TestResult.Covered).forEach {
+    fun `should be considered covered when results Success, Error, Failed, and NotImplemented`() {
+        listOf(TestResult.Success, TestResult.Error, TestResult.Failed, TestResult.NotImplemented).forEach {
             val record = TestResultRecord(
                 path = "/example/path",
                 method = "GET",
@@ -48,7 +48,7 @@ class TestResultRecordTest {
 
     @Test
     fun `should not be considered covered for other results`() {
-        TestResult.entries.filterNot { it in listOf(TestResult.Success, TestResult.Error, TestResult.Failed, TestResult.Covered) }.forEach {
+        TestResult.entries.filterNot { it in listOf(TestResult.Success, TestResult.Error, TestResult.Failed, TestResult.NotImplemented) }.forEach {
             val record = TestResultRecord(
                 path = "/example/path",
                 method = "GET",

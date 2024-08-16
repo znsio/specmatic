@@ -5,8 +5,9 @@ import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
+import java.io.File
 
-data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val delayInMilliseconds: Long? = null, val stubToken: String? = null, val requestBodyRegex: String? = null, val data: JSONObjectValue = JSONObjectValue()) {
+data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val delayInMilliseconds: Long? = null, val stubToken: String? = null, val requestBodyRegex: String? = null, val data: JSONObjectValue = JSONObjectValue(), val filePath: String? = null) {
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
 
@@ -232,6 +233,10 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
     companion object {
         fun parse(text: String): ScenarioStub {
             return stringToMockScenario(StringValue(text))
+        }
+
+        fun readFromFile(file: File): ScenarioStub {
+            return stringToMockScenario(StringValue(file.readText(Charsets.UTF_8))).copy(filePath = file.path)
         }
     }
 }

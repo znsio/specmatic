@@ -1,0 +1,22 @@
+{
+  "data": {
+    "id": {
+      "@data": {
+        "test": "test"
+      }
+    }
+  },
+  "http-request": {
+    "method": "POST",
+    "path": "/person",
+    "body": {
+      "department": "{{@id}}"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "location": "{{@id}}"
+    }
+  }
+}

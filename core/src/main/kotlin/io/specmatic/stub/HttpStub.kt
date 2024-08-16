@@ -1013,7 +1013,16 @@ fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<Scenari
         examples.map { example ->
             feature.matchingStub(example, ContractAndStubMismatchMessages) to example
         }.flatMap { (stubData, example) ->
-            example.resolveDataSubstitutions(stubData.scenario!!).map {
+            val examplesWithDataSubstitutionsResolved = try {
+                example.resolveDataSubstitutions(stubData.scenario!!)
+            } catch(e: Throwable) {
+                println()
+                logger.log("    Error resolving template data for example ${example.filePath}")
+                logger.log("    " + exceptionCauseMessage(e))
+                throw e
+            }
+
+            examplesWithDataSubstitutionsResolved.map {
                 feature.matchingStub(it, ContractAndStubMismatchMessages)
             }
         }

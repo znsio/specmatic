@@ -2404,6 +2404,23 @@ paths:
         }
     }
 
+    @Test
+    fun `should log the file in which a substitution error has occurred`() {
+        val (output, _) = captureStandardOutput {
+            try {
+                val stub = createStubFromContracts(listOf("src/test/resources/openapi/substitutions/spec_with_non_existent_data_key.yaml"), timeoutMillis = 0)
+                stub.close()
+            } catch(e: Throwable) {
+
+            }
+        }
+
+        assertThat(output)
+            .contains("Error resolving template data for example")
+            .contains("spec_with_non_existent_data_key_examples/substitution.json")
+            .contains("@id")
+    }
+
     companion object {
         @JvmStatic
         fun singleFeatureContractSource(): Stream<Arguments> {

@@ -8,7 +8,6 @@ enum class Remarks(val value: String) {
     Covered("covered"),
     Missed("missing in spec"),
     NotImplemented("not implemented"),
-    DidNotRun("did not run"),
     NotCovered("not covered"),
     Wip("WIP"),
     Invalid("invalid");
@@ -33,15 +32,13 @@ enum class Remarks(val value: String) {
             if (testResultRecords.any { it.isExercised }) {
                 return when (testResultRecords.first().result) {
                     TestResult.NotImplemented -> NotImplemented
-                    TestResult.MissingInSpec -> Missed
-                    TestResult.NotCovered -> NotCovered
                     else -> Covered
                 }
             }
 
             return when (val result = testResultRecords.first().result) {
-                TestResult.Skipped -> Missed
-                TestResult.DidNotRun -> DidNotRun
+                TestResult.NotCovered -> NotCovered
+                TestResult.MissingInSpec -> Missed
                 else -> throw ContractException("Cannot determine remarks for unknown test result: $result")
             }
         }

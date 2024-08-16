@@ -11,12 +11,14 @@ import io.specmatic.test.TestInteractionsLog.displayName
 import io.specmatic.test.TestInteractionsLog.duration
 import io.specmatic.test.TestResultRecord
 import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
+import io.specmatic.test.reports.coverage.console.Remarks
 import io.specmatic.test.reports.coverage.html.HtmlTemplateConfiguration.Companion.configureTemplateEngine
 import org.thymeleaf.context.Context
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
+import kotlin.math.roundToInt
 
 class HtmlReport(htmlReportFormat: ReportFormatter){
 
@@ -25,6 +27,7 @@ class HtmlReport(htmlReportFormat: ReportFormatter){
     private val groupedApiCoverageRows = SpecmaticJUnitSupport.openApiCoverageReportInput.apiCoverageRows
         .groupBy { it.path }.mapValues { pathGroup -> pathGroup.value.groupBy { it.method } }
     private val groupedScenarios = groupScenarios()
+    private val tableRows = tableRows()
 
 
     private val outputDirectory = htmlReportFormat.outputDirectory
@@ -52,7 +55,8 @@ class HtmlReport(htmlReportFormat: ReportFormatter){
         val templateVariables = mapOf(
             "pageTitle" to pageTitle,
             "reportHeading" to reportHeading,
-            "successRate" to successRate(),
+            "totalCoverage" to totalCoverage(),
+            "actuatorEnabled" to SpecmaticJUnitSupport.openApiCoverageReportInput.endpointsAPISet,
             "totalSuccess" to totalSuccess,
             "totalFailures" to totalFailures,
             "totalErrors" to totalErrors,
@@ -60,7 +64,7 @@ class HtmlReport(htmlReportFormat: ReportFormatter){
             "totalTests" to totalTests,
             "totalDuration" to getTotalDuration(),
             "generatedOn" to generatedOnTimestamp(),
-            "tableRows" to tableRows(),
+            "tableRows" to tableRows,
             "specmaticVersion" to "[${getSpecmaticVersion()}]",
             "summaryResult" to summaryResult(),
             "jsonTestData" to dumpTestData(groupedScenarios)
@@ -72,7 +76,14 @@ class HtmlReport(htmlReportFormat: ReportFormatter){
         )
     }
 
-    private fun successRate() = if (totalTests > 0) (totalSuccess * 100 / totalTests) else 100
+    private fun totalCoverage(): Int {
+        if (totalTests == 0) return 0
+
+        val rows = SpecmaticJUnitSupport.openApiCoverageReportInput.apiCoverageRows
+        val totalCount = rows.count()
+        val totalCoveredCount = rows.count { it.remarks == Remarks.Covered }
+        return ((totalCoveredCount * 100) / totalCount).toDouble().roundToInt()
+    }
 
     private fun summaryResult(): String {
         return if (totalFailures > 0 || totalErrors > 0) "rejected" else "approved"
@@ -101,8 +112,8 @@ class HtmlReport(htmlReportFormat: ReportFormatter){
                 methodGroup.value.forEach { responseGroup ->
                     responseGroup.value.forEach {
                         when (it.result) {
-                            TestResult.Skipped, TestResult.DidNotRun -> totalSkipped++
-                            TestResult.Success, TestResult.Covered  -> totalSuccess++
+                            TestResult.NotCovered -> totalSkipped++
+                            TestResult.Success  -> totalSuccess++
                             TestResult.Error -> if (it.isWip) totalSkipped++ else totalErrors++
                             else -> if(it.isWip) totalSkipped++ else totalFailures++
                         }
@@ -231,8 +242,8 @@ class HtmlReport(htmlReportFormat: ReportFormatter){
 
     private fun categorizeResult(testResult: TestResultRecord): HtmlResult {
         return when(testResult.result) {
-            TestResult.Success, TestResult.Covered -> HtmlResult.Success
-            TestResult.Skipped, TestResult.DidNotRun-> HtmlResult.Skipped
+            TestResult.Success -> HtmlResult.Success
+            TestResult.NotCovered-> HtmlResult.Skipped
             TestResult.Error -> if(testResult.isWip) HtmlResult.Skipped else HtmlResult.Error
             else -> if(testResult.isWip) HtmlResult.Skipped else HtmlResult.Failed
         }

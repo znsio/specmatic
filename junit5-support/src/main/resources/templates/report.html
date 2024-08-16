@@ -12,61 +12,77 @@
     <link rel="stylesheet" href="assets/styles.css">
 </head>
 
-<body class="flex flex-col min-h-screen gap-3 p-4 font-mono">
+<body class="flex flex-col min-h-screen gap-3 p-4 pb-0 font-mono">
     <header class="border-2 shadow-md print:shadow-none">
         <div class="flex items-center justify-between p-4" id="banner">
-            <img src="assets/specmatic-logo.svg" alt="Specmatic" class="w-1/5 h-14">
+            <img src="assets/specmatic-logo.svg" alt="Specmatic" class="w-64 h-14">
             <h2 class="text-3xl font-medium font-roboto">[[${reportHeading}]]</h2>
-            <button class="p-2 duration-100 border-2 active:scale-105 hover:border-blue-500" id="downloadButton">
-                <img src="assets/download.svg" alt="Download Button" class="size-8">
-            </button>
+            <div class="w-64 text-right print:hidden">
+                <button class="p-2 duration-100 border-2 active:scale-105 hover:border-blue-500" id="downloadButton">
+                    <img src="assets/download.svg" alt="Download Button" class="size-8">
+                </button>
+            </div>
         </div>
         <div id="summary" class="flex justify-between gap-5 p-1 border-2" th:classappend="'bg-' + ${summaryResult}">
-            <ol id="results" class="flex flex-wrap items-center justify-between flex-1 px-2 gap-x-5">
-                <li class="flex items-center gap-2" id="successRate">
-                    <img src="assets/trend-up.svg" alt="success rate" class="size-8" th:classappend="${summaryResult}">
-                    <p>Success Rate: [[${successRate}]]%</p>
+            <ol id="results" class="relative flex items-center flex-1 px-2 print:flex-wrap gap-x-5 *:w-44 print:*:w-fit">
+                <li class="flex flex-col" id="totalCoverage">
+                    <div class="flex gap-2">
+                        <img src="assets/trend-up.svg" alt="total-coverage" class="size-6" th:classappend="${summaryResult}" >
+                        <p class="text-black/50">Coverage</p>
+                    </div>
+                    <span class="text-3xl font-bold ml-7">[[${totalCoverage}]]%</span>
                 </li>
-                <li class="flex items-center gap-2 group cursor-pointer" id="success" data-type="Success">
+                <li class="invisible h-12"></li>
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="success" data-type="Success" data-index="2">
                     <img src="assets/check-badge.svg" alt="success" class="size-8">
                     <p class="group-hover:text-green-500">Success: [[${totalSuccess}]]
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-green-500"></span>
                     </p>
                 </li>
-                <li class="flex items-center gap-2 group cursor-pointer" id="failed" data-type="Failed">
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="failed" data-type="Failed" data-index="3">
                     <img src="assets/x-circle.svg" alt="failed" class="size-8">
                     <p class="group-hover:text-red-500">Failed: [[${totalFailures}]]
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-red-500"></span>
                     </p>
                 </li>
-                <li class="flex items-center gap-2 group cursor-pointer" id="errors" data-type="Error">
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="errors" data-type="Error" data-index="4">
                     <img src="assets/exclamation-triangle.svg" alt="errors" class="size-8">
                     <p class="group-hover:text-red-500">Errors: [[${totalErrors}]]
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-red-500"></span>
                     </p>
                 </li>
-                <li class="flex items-center gap-2 group cursor-pointer" id="skipped" data-type="Skipped">
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="skipped" data-type="Skipped" data-index="5">
                     <img src="assets/blocked.svg" alt="skipped" class="size-8">
                     <p class="group-hover:text-yellow-500">Skipped: [[${totalSkipped}]]
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-yellow-500"></span>
                     </p>
                 </li>
-                <li class="flex items-center gap-2 group" id="total-tests">
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="all" data-type="All" data-index="6">
                     <img src="assets/clipboard-document-list.svg" alt="total-tests" class="size-8">
-                    <p>Total Tests: [[${totalTests}]]</p>
+                    <p class="group-hover:text-blue-500">Total: [[${totalTests}]]
+                        <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-blue-500"></span>
+                    </p>
                 </li>
-                <li class="flex items-center gap-2" id="total-time">
+                <!-- <li class="flex items-center justify-center gap-2" id="total-time">
                     <img src="assets/clock.svg" alt="total-time" class="size-8">
-                    <p>Total Time: [[${totalDuration}]]ms</p>
-                </li>
+                    <p>Time: [[${totalDuration}]]ms</p>
+                </li> -->
+                <li id="overlay" class="absolute h-12 duration-1000 bg-white rounded-md print:hidden w-44"></li>
             </ol>
-            <div id="badge" class="relative">
+            <div id="badge" class="relative flex items-center justify-center">
                 <img src="assets/badge.svg" class="size-18" th:classappend="${summaryResult}" alt="badge">
                 <img th:src="'assets/mark-' + ${summaryResult} + '.svg'" alt="mark" class="absolute inset-0 z-10 mx-auto my-auto size-14">
             </div>
         </div>
+        <div id="additional-info" class="p-2 text-sm">
+            <ol>
+                <li>
+                    <p>Actuator: <span class="font-semibold">[[${actuatorEnabled == true ? 'Enabled' : 'Disabled'}]]</span></p>
+                </li>
+            </ol>
+        </div>
     </header>
-    <main class="flex items-start overflow-hidden border-t-2 shadow-md group print:shadow-none print:overflow-visible" data-item="table">
+    <main class="flex items-start flex-1 overflow-hidden border-t-2 shadow-md group print:shadow-none print:overflow-visible" data-item="table">
         <table id="reports" class="font-mono transition-transform -translate-x-full group-data-[item=table]:translate-x-0 duration-700 min-w-full">
             <thead>
                 <tr class="font-bold">
@@ -105,28 +121,30 @@
                     <span class="text-lg">&larr;</span>
                     <span>Go Back</span>
                 </button>
-                <ul id="response-summary" class="flex items-center justify-between flex-1 px-10 gap-10 border-2 border-red-300 rounded-md font-roboto">
+                <ul id="response-summary" class="flex items-center justify-between flex-1 px-10 gap-10 px-10 border-2 border-red-300 rounded-md font-roboto">
                 </ul>
             </div>
             <ul id="scenarios" class="flex flex-col gap-3 py-2 mt-3">
             </ul>
         </div>
     </main>
-    <footer class="flex items-center justify-between p-2 print:flex-col print:gap-2 mt-auto">
-        <p>Generated On: <span class="font-mono">[[${generatedOn}]]</span></p>
+    <footer class="flex items-center justify-between p-2 text-center print:flex-col print:gap-2">
+        <p class="w-96 text-left print:text-center">Generated On: <span class="font-mono">Wed, Aug 14 2024 1:38PM</span></p>
         <div class="flex items-center gap-2">
             <span class="whitespace-nowrap">Powered By</span>
-            <img src="assets/specmatic-logo.svg" alt="Specmatic" class="mb-2 w-44">
-            <p>[[${specmaticVersion}]]</p>
+            <img src="assets/specmatic-logo.svg" alt="Specmatic" class="w-48 mb-2">
+            <p>[2.0.10]</p>
         </div>
-        <div class="flex items-center gap-1">
+        <div class="flex items-center justify-end gap-1 w-96 print:justify-center">
             <p>Copyright</p>
             <p class="text-3xl">&copy;</p>
             <p>All Rights Reserved</p>
         </div>
     </footer>
     <script type="application/json" id="json-data" th:utext="${jsonTestData}"></script>
+    <script defer type="text/javascript" src="assets/utils.js"></script>
     <script defer type="text/javascript" src="assets/main.js"></script>
+    <script defer type="text/javascript" src="assets/tableFilter.js"></script>
 </body>
 
 </html>

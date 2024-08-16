@@ -18,7 +18,7 @@ data class TestResultRecord(
     val isValid: Boolean = true,
     val isWip: Boolean = false
 ) {
-    val isExercised = result !in setOf(TestResult.Skipped, TestResult.DidNotRun)
-    val isCovered = result in setOf(TestResult.Success, TestResult.Error, TestResult.Failed, TestResult.Covered)
+    val isExercised = result != TestResult.NotCovered
+    val isCovered = result !in setOf(TestResult.MissingInSpec, TestResult.NotCovered)
     fun isConnectionRefused() = actualResponseStatus == 0
 }

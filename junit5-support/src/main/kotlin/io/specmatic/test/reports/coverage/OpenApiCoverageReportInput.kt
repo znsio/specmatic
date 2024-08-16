@@ -18,7 +18,7 @@ class OpenApiCoverageReportInput(
     private val applicationAPIs: MutableList<API> = mutableListOf(),
     private val excludedAPIs: MutableList<String> = mutableListOf(),
     private val allEndpoints: MutableList<Endpoint> = mutableListOf(),
-    private var endpointsAPISet: Boolean = false,
+    internal var endpointsAPISet: Boolean = false,
     internal var groupedTestResultRecords: MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>> = mutableMapOf(),
     internal var apiCoverageRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf()
 ) {
@@ -79,7 +79,7 @@ class OpenApiCoverageReportInput(
 
         val totalAPICount = groupedTestResultRecords.keys.size
         val testsGroupedByPath = allTests.groupBy { it.path }
-        val skippedAndMissingInSpecTestResults = setOf(TestResult.Skipped, TestResult.MissingInSpec)
+        val skippedAndMissingInSpecTestResults = setOf(TestResult.NotCovered, TestResult.MissingInSpec)
 
         val missedAPICount = testsGroupedByPath.count { (_, tests) ->
             tests.all { it.result in skippedAndMissingInSpecTestResults }
@@ -111,7 +111,7 @@ class OpenApiCoverageReportInput(
                 endpoint.path,
                 endpoint.method,
                 endpoint.responseStatus,
-                TestResult.DidNotRun,
+                TestResult.NotCovered,
                 endpoint.sourceProvider,
                 endpoint.sourceRepository,
                 endpoint.sourceRepositoryBranch,
@@ -164,7 +164,7 @@ class OpenApiCoverageReportInput(
                             api.path,
                             api.method,
                             0,
-                            TestResult.Skipped,
+                            TestResult.MissingInSpec,
                             serviceType = SERVICE_TYPE_HTTP
                         )
                     )
@@ -214,18 +214,18 @@ class OpenApiCoverageReportInput(
                 it.path == failedTestResult.path && it.method == failedTestResult.method && it.responseStatus == failedTestResult.actualResponseStatus
             }
 
-            if(!failedTestResult.isConnectionRefused()) {
+            if (!failedTestResult.isConnectionRefused() && !pathHasErrorResponse) {
                 notImplementedAndMissingTests.add(
                     failedTestResult.copy(
                         responseStatus = failedTestResult.actualResponseStatus,
-                        result = if (pathHasErrorResponse) TestResult.Covered else TestResult.MissingInSpec,
+                        result = TestResult.MissingInSpec,
                         actualResponseStatus = failedTestResult.actualResponseStatus
                     )
                 )
             }
 
             if (!endpointsAPISet) {
-                notImplementedAndMissingTests.add(failedTestResult.copy(result = TestResult.NotCovered))
+                notImplementedAndMissingTests.add(failedTestResult)
                 continue
             }
 

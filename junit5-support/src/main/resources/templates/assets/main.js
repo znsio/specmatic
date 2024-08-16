@@ -18,7 +18,6 @@ const mainElement = document.querySelector("main");
 const responseSummary = document.querySelector("ul#response-summary");
 const scenariosList = document.querySelector("ul#scenarios");
 const reportTable = document.querySelector("table#reports");
-const summary = document.querySelector("div#summary");
 
 /* Functions */
 function readJsonData() {
@@ -26,11 +25,6 @@ function readJsonData() {
   return JSON.parse(jsonData.textContent);
 }
 
-/**
- * Adds scenarios to the DOM
- * @param {Object[]} scenarios
- * @returns {void}
- */
 function addScenarios(scenarios) {
   try {
     if (scenarios.length === 0) throw "No scenarios found";
@@ -73,7 +67,6 @@ reportTable.addEventListener("click", (event) => {
     responseSummary.replaceChildren(responseElement);
     const borderColor = `border-${selectedResponse.color}-300`;
     responseSummary.className = responseSummary.className.replace(/border-\w{3,}-300/, borderColor);
-    responseSummary.classList.add("px-10");
     const scenarios = SCENARIOS[selectedResponse.path]?.[selectedResponse.method]?.[selectedResponse.response] ?? [];
     addScenarios(scenarios);
   }
@@ -85,24 +78,6 @@ scenariosList.addEventListener("click", (event) => {
   if (nearestListItem && !target.matches("#req-res *")) {
     const dataShow = nearestListItem.getAttribute("data-show");
     nearestListItem.setAttribute("data-show", dataShow === "true" ? "false" : "true");
-    event.stopPropagation();
-  }
-});
-
-summary.addEventListener("click", (event) => {
-  const target = event.target;
-  const nearestListItem = target.closest("li");
-  if (nearestListItem?.getAttribute("data-type")) {
-    const resultType = nearestListItem.getAttribute("data-type");
-    const scenarios = filterScenariosByResult(SCENARIOS, resultType);
-    const summary = createSummaryForFilteredScenariosByResult(resultType, scenarios);
-    responseSummary.className = responseSummary.className.replace(
-      /border-\w{3,}-300/,
-      `border-${getColor(resultType)}-300`
-    );
-    responseSummary.classList.remove("px-10");
-    responseSummary.replaceChildren(summary);
-    addScenarios(scenarios);
     event.stopPropagation();
   }
 });
@@ -122,29 +97,6 @@ const REQ_RES_DETAILS_CONTAINER_CSS = [
 ];
 const PILL_CSS = ["py-2", "text-center", "rounded-xl", "font-medium"];
 
-/**
- * Extract values from table row
- * @param {HTMLTableRowElement} tableRow
- * @returns {string[]}
- */
-function extractValuesFromTableRow(tableRow) {
-  const values = [...tableRow.children].map((child) => child.textContent);
-  return {
-    coverage: Number(values[0].trim().slice(0, -1)),
-    path: values[1].trim(),
-    method: values[2].trim(),
-    response: Number(values[3]),
-    exercised: Number(values[4]),
-    result: values[5].trim(),
-    color: tableRow.lastElementChild.getAttribute("data-color"),
-  };
-}
-
-/**
- * Create response summary details
- * @param {Object} response
- * @returns {DocumentFragment}
- */
 function createResponseSummaryDetails(response) {
   const documentFragment = document.createDocumentFragment();
 
@@ -178,11 +130,6 @@ function createResponseSummaryDetails(response) {
   return documentFragment;
 }
 
-/**
- * Create scenario item
- * @param {Object} scenario
- * @returns {DocumentFragment}
- */
 function createScenarioItem(scenario) {
   const scenarioItem = document.createElement("li");
   scenarioItem.classList.add("p-2", "border-2", "cursor-pointer", "group", "rounded-md");
@@ -196,11 +143,6 @@ function createScenarioItem(scenario) {
   return scenarioItem;
 }
 
-/**
- * Create scenario information
- * @param {Object} scenario
- * @returns {HTMLDivElement}
- */
 function createScenarioInformation(scenario) {
   const scenarioInfoDiv = document.createElement("div");
   scenarioInfoDiv.classList.add("flex", "items-center", "justify-between");
@@ -214,8 +156,8 @@ function createScenarioInformation(scenario) {
 
   const scenarioResult = document.createElement("span");
   const pillColor = scenario.wip && scenario.result !== "Success" ? "yellow" : getColor(scenario.result);
-  const pillText = scenario.wip ? "WIP" : scenario.valid ? scenario.result : "Invalid";
-  scenarioResult.classList.add(...PILL_CSS, `bg-${pillColor}-300`, "w-32");
+  const pillText = scenario.wip ? "WIP" : scenario.valid ? scenario.remark : "Invalid";
+  scenarioResult.classList.add(...PILL_CSS, `bg-${pillColor}-300`, "w-36");
   scenarioResult.textContent = pillText;
 
   const badgeDiv = document.createElement("div");
@@ -228,11 +170,6 @@ function createScenarioInformation(scenario) {
   return scenarioInfoDiv;
 }
 
-/**
- * Create Request, Response and Details container
- * @param {Object} scenario
- * @returns {HTMLDivElement}
- */
 function createReqResDetailsContainer(scenario) {
   const reqResDetailsDiv = document.createElement("div");
   reqResDetailsDiv.id = "req-res";
@@ -259,12 +196,6 @@ function createReqResDetailsContainer(scenario) {
   return reqResDetailsDiv;
 }
 
-/**
- * Creates Request, Response and Details container
- * @param {string} title
- * @param {string} content
- * @returns {HTMLDivElement}
- */
 function createReqResDetailDiv(title, content) {
   const elementDiv = document.createElement("div");
   elementDiv.classList.add(...REQ_RES_DETAIL_CSS);
@@ -275,31 +206,17 @@ function createReqResDetailDiv(title, content) {
   return elementDiv;
 }
 
-/**
- * Li element when np scenarios are found
- * @returns {HTMLLIElement}
- */
 function noScenarioFoundMessage() {
   const messageElement = document.createElement("li");
-  messageElement.textContent = "No scenarios found for this fiter.";
+  messageElement.textContent = "No scenarios found for this filter.";
   return messageElement;
 }
 
-/**
- * Convert epoch to date time
- * @param {number} epoch
- * @returns {string}
- */
 function epochToDateTime(epoch) {
   if (epoch === 0) return "N/A";
   return new Date(epoch).toISOString();
 }
 
-/**
- * Get background color for result
- * @param {string} result
- * @returns {string}
- */
 function getColor(result) {
   switch (result) {
     case "Success":
@@ -309,51 +226,4 @@ function getColor(result) {
     default:
       return "red";
   }
-}
-
-/**
- * Filter scenarios based on result
- * @param {Object} scenarios
- * @param {string} result
- * @returns {Object[]}
- */
-function filterScenariosByResult(scenarios, result) {
-  const filteredScenarios = [];
-
-  for (const methodGroup of Object.values(scenarios)) {
-    for (const responseGroup of Object.values(methodGroup)) {
-      for (const scenarios of Object.values(responseGroup)) {
-        const failed = scenarios.filter((scenario) => scenario.result === result);
-        filteredScenarios.push(...failed);
-      }
-    }
-  }
-
-  return filteredScenarios;
-}
-
-/**
- * Create Summary For Filtered Scenarios by Result
- * @param {string} result
- * @param {Object[]} scenarios
- * @returns {HTMLLIElement}
- */
-function createSummaryForFilteredScenariosByResult(result, scenarios) {
-  const liElement = document.createElement("li");
-  liElement.classList.add(
-    "flex",
-    "items-center",
-    "justify-center",
-    "text-white",
-    "tracking-widest",
-    "font-bold",
-    "text-center",
-    "w-full",
-    "h-full",
-    `bg-${getColor(result)}-500`,
-    "uppercase",
-    "text-lg"
-  );
-  liElement.textContent = `${result}: ${scenarios.length}`;
-  return liElement;
 }

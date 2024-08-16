@@ -1,0 +1,15 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/person",
+    "body": {
+      "department": "{{@department}}"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "location": "{{@department}}"
+    }
+  }
+}

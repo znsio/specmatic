@@ -1,0 +1,25 @@
+{
+  "data": {
+    "@id": {
+      "1": {
+        "location": "Bangalore"
+      },
+      "2": {
+        "location": "Mumbai"
+      }
+    }
+  },
+  "http-request": {
+    "method": "POST",
+    "path": "/person",
+    "body": {
+      "id": "{{@id}}"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "location": "{{@id}}"
+    }
+  }
+}

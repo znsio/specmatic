@@ -26,4 +26,18 @@ interface Value {
     fun typeDeclarationWithoutKey(exampleKey: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations>
     fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations>
     fun listOf(valueList: List<Value>): Value
+
+    fun hasTemplate(): Boolean {
+        return this is StringValue
+                && this.string.startsWith("{{")
+                && this.string.endsWith("}}")
+    }
+
+    fun hasDataTemplate(): Boolean {
+        return this is StringValue && this.string.hasDataTemplate()
+    }
+}
+
+fun String.hasDataTemplate(): Boolean {
+    return this.startsWith("{{@") && this.endsWith("}}")
 }

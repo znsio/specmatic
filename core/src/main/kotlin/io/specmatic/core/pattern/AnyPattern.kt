@@ -1,9 +1,6 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.core.MismatchMessages
-import io.specmatic.core.Resolver
-import io.specmatic.core.Result
-import io.specmatic.core.mismatchResult
+import io.specmatic.core.*
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.NullValue
@@ -21,6 +18,42 @@ data class AnyPattern(
     override fun hashCode(): Int = pattern.hashCode()
 
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
+
+    override fun resolveSubstitutions(
+        substitution: Substitution,
+        value: Value,
+        resolver: Resolver
+    ): ReturnValue<Value> {
+        val options = pattern.map {
+            it.resolveSubstitutions(substitution, value, resolver)
+        }
+
+        val hasValue = options.find { it is HasValue }
+
+        if(hasValue != null)
+            return hasValue
+
+        val failures = options.map {
+            it.realise(
+                hasValue = { _, _ ->
+                    throw NotImplementedError()
+                },
+                orFailure = { failure -> failure.failure },
+                orException = { exception -> exception.toHasFailure().failure }
+            )
+        }
+
+        return HasFailure<Value>(Result.Failure.fromFailures(failures))
+    }
+
+    override fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {
+        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap<String, Pattern>())
+
+        return pattern.fold(initialValue) { acc, pattern ->
+            val templateTypes = pattern.getTemplateTypes("", value, resolver)
+            acc.assimilate(templateTypes) { data, additional -> data + additional }
+        }
+    }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         val matchResults = pattern.map {

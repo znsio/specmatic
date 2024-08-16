@@ -9,12 +9,18 @@ import io.specmatic.core.value.Value
 
 
 object DateTimePattern : Pattern, ScalarType {
-    override fun matches(sampleData: Value?, resolver: Resolver): Result = when (sampleData) {
-        is StringValue -> resultOf {
-            parse(sampleData.string, resolver)
-            Result.Success()
+    override fun matches(sampleData: Value?, resolver: Resolver): Result {
+        if (sampleData?.hasTemplate() == true)
+            return Result.Success()
+
+        return when (sampleData) {
+            is StringValue -> resultOf {
+                parse(sampleData.string, resolver)
+                Result.Success()
+            }
+
+            else -> Result.Failure("DateTime types can only be represented using strings")
         }
-        else -> Result.Failure("DateTime types can only be represented using strings")
     }
 
     override fun generate(resolver: Resolver): StringValue = StringValue(RFC3339.currentDateTime())

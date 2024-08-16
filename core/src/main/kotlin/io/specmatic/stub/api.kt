@@ -25,7 +25,7 @@ fun createStubFromContractAndData(contractGherkin: String, dataDirectory: String
     val mocks = (File(dataDirectory).listFiles()?.filter { it.name.endsWith(".json") } ?: emptyList()).map { file ->
         consoleLog(StringLog("Loading data from ${file.name}"))
 
-        stringToMockScenario(StringValue(file.readText(Charsets.UTF_8)))
+        ScenarioStub.readFromFile(file)
                 .also {
                     contractBehaviour.matchingStub(it, ContractAndStubMismatchMessages)
                 }
@@ -203,7 +203,7 @@ fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathDa
 
                                 stubDataFiles.mapNotNull {
                                     try {
-                                        Pair(it.path, stringToMockScenario(StringValue(it.readText())))
+                                        Pair(it.path, ScenarioStub.readFromFile(it))
                                     } catch (e: Throwable) {
                                         logger.log(e, "Could not load stub file ${it.canonicalPath}...")
                                         null
@@ -276,7 +276,7 @@ fun loadExpectationsForFeatures(
 
     val mockData = dataFiles.mapNotNull {
         try {
-            Pair(it.path, stringToMockScenario(StringValue(it.readText())))
+            Pair(it.path, ScenarioStub.readFromFile(it))
         } catch (e: Throwable) {
             logger.log(e, "    Could not load stub file ${it.canonicalPath}")
             null

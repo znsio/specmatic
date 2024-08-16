@@ -1,6 +1,17 @@
 package io.specmatic.core.pattern
 
+import io.specmatic.core.Result
+import io.specmatic.core.utilities.exceptionCauseMessage
+
 data class HasException<T>(val t: Throwable, val message: String = "", val breadCrumb: String? = null) : ReturnValue<T>, ReturnFailure {
+    fun toHasFailure(): HasFailure<T> {
+        val failure: Result.Failure = Result.Failure(
+            message = exceptionCauseMessage(t),
+            breadCrumb = breadCrumb ?: ""
+        )
+        return HasFailure<T>(failure, message)
+    }
+
     override fun <U> withDefault(default: U, fn: (T) -> U): U {
         return default
     }
@@ -14,11 +25,11 @@ data class HasException<T>(val t: Throwable, val message: String = "", val bread
         return this
     }
 
-    override fun <U> assimilate(valueResult: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T> {
+    override fun <U> assimilate(acc: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T> {
         return cast<T>()
     }
 
-    override fun <U, V> combine(valueResult: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
+    override fun <U, V> combine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
         return cast<V>()
     }
 

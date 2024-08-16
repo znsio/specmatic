@@ -1,0 +1,43 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /data/{id}:
+    get:
+      summary: Fetch data
+      parameters:
+        - in: path
+          required: true
+          name: id
+          schema:
+            type: string
+        - in: query
+          name: location
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: X-Routing-Token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Region:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - name
+                  - currency
+                properties:
+                  city:
+                    type: string
+                  currency:
+                    type: string

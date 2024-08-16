@@ -1,0 +1,22 @@
+{
+  "data": {
+    "@dept": {
+      "engineering": {
+        "city": "Mumbai"
+      }
+    }
+  },
+  "http-request": {
+    "method": "POST",
+    "path": "/person",
+    "body": {
+      "department": "{{@dept}}"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "location": "{{@dept.city}}"
+    }
+  }
+}

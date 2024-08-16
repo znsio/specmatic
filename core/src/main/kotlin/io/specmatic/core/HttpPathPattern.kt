@@ -9,6 +9,8 @@ import java.net.URI
 
 val OMIT = listOf("(OMIT)", "(omit)")
 
+val EMPTY_PATH= HttpPathPattern(emptyList(), "")
+
 data class HttpPathPattern(
     val pathSegmentPatterns: List<URLPathSegmentPattern>,
     val path: String

@@ -12,11 +12,11 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
 import io.specmatic.core.*
-import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
-import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.utilities.*
 import io.specmatic.core.value.*
 import io.specmatic.mock.*
@@ -35,14 +35,6 @@ import java.io.Writer
 import java.nio.charset.Charset
 import java.util.*
 import kotlin.text.toCharArray
-
-data class HttpStubResponse(
-    val response: HttpResponse,
-    val delayInMilliSeconds: Long? = null,
-    val contractPath: String = "",
-    val feature: Feature? = null,
-    val scenario: Scenario? = null
-)
 
 class HttpStub(
     private val features: List<Feature>,
@@ -94,7 +86,8 @@ class HttpStub(
     }
 
     private fun staticHttpStubData(rawHttpStubs: List<HttpStubData>): MutableList<HttpStubData> {
-        val staticStubs = rawHttpStubs.filter { it.stubToken == null }.toMutableList()
+        val staticStubs = rawHttpStubs.filter { it.stubToken == null }
+
         val stubsFromSpecificationExamples: List<HttpStubData> = features.map { feature ->
             feature.stubsFromExamples.entries.map { (exampleName, examples) ->
                 examples.mapNotNull { (request, response) ->
@@ -730,7 +723,7 @@ fun getHttpResponse(
         val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
 
         if(matchingStubResponse != null)
-            FoundStubbedResponse(matchingStubResponse)
+            FoundStubbedResponse(matchingStubResponse.resolveSubstitutions(httpRequest))
         else if (httpClientFactory != null && passThroughTargetBase.isNotBlank())
             NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
         else if (strictMode) {
@@ -1016,9 +1009,22 @@ fun stubResponse(
 }
 
 fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): List<HttpStubData> {
-    return contractInfo.flatMap { (feature, mocks) ->
-        mocks.map { mock ->
-            feature.matchingStub(mock, ContractAndStubMismatchMessages)
+    return contractInfo.flatMap { (feature, examples) ->
+        examples.map { example ->
+            feature.matchingStub(example, ContractAndStubMismatchMessages) to example
+        }.flatMap { (stubData, example) ->
+            val examplesWithDataSubstitutionsResolved = try {
+                example.resolveDataSubstitutions(stubData.scenario!!)
+            } catch(e: Throwable) {
+                println()
+                logger.log("    Error resolving template data for example ${example.filePath}")
+                logger.log("    " + exceptionCauseMessage(e))
+                throw e
+            }
+
+            examplesWithDataSubstitutionsResolved.map {
+                feature.matchingStub(it, ContractAndStubMismatchMessages)
+            }
         }
     }
 }

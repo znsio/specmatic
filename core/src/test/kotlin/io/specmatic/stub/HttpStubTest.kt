@@ -14,7 +14,6 @@ import io.specmatic.test.HttpClient
 import io.specmatic.test.TestExecutor
 import io.mockk.every
 import io.mockk.mockk
-import io.specmatic.stub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.RepeatedTest
@@ -22,6 +21,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.fail
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
@@ -1831,5 +1832,476 @@ components:
             val responseBody = response.body as JSONObjectValue
             assertThat(responseBody.jsonObject["message"]).isInstanceOf(NumberValue::class.java)
         }
+    }
+
+    @Test
+    fun `stub example with substitution in response body`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_substitution_in_response_body.yaml")
+
+        createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Jane"}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val jsonResponse = response.body as JSONObjectValue
+            assertThat(jsonResponse.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo("Jane")
+        }
+    }
+
+    @Test
+    fun `stub example with substitution in response header`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_substitution_in_response_header.yaml")
+
+        createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Jane"}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val responseHeaders = response.headers
+            assertThat(responseHeaders["X-Name"]).isEqualTo("Jane")
+        }
+    }
+
+    @Test
+    fun `stub example with substitution in response using request headers`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /data:
+                get:
+                  summary: Get data
+                  parameters:
+                    - in: header
+                      name: X-Trace
+                      schema:
+                        type: string
+                      required: true
+                  responses:
+                    '200':
+                      description: OK
+                      headers:
+                        X-Trace:
+                          description: Trace id
+                          schema:
+                            type: string
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val exampleRequest = HttpRequest("GET", "/data", headers = mapOf("X-Trace" to "abc123"))
+        val exampleResponse = HttpResponse(200, mapOf("X-Trace" to "{{REQUEST.HEADERS.X-Trace}}"))
+
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+            val request = HttpRequest("GET", "/data", headers = mapOf("X-Trace" to "abc123"))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val responseHeaders = response.headers
+            assertThat(responseHeaders["X-Trace"]).isEqualTo("abc123")
+        }
+    }
+
+    @Test
+    fun `stub example with substitution in response using request query params`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /data:
+                get:
+                  summary: Get data
+                  parameters:
+                    - in: query
+                      name: traceId
+                      schema:
+                        type: string
+                      required: true
+                  responses:
+                    '200':
+                      description: OK
+                      headers:
+                        X-Trace:
+                          description: Trace id
+                          schema:
+                            type: string
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val exampleRequest = HttpRequest("GET", "/data", queryParametersMap = mapOf("traceId" to "abc123"))
+        val exampleResponse = HttpResponse(200, mapOf("X-Trace" to "{{REQUEST.QUERY-PARAMS.traceId}}"))
+
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+            val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("traceId" to "abc123"))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val responseHeaders = response.headers
+            assertThat(responseHeaders["X-Trace"]).isEqualTo("abc123")
+        }
+    }
+
+    @Test
+    fun `stub example with substitution in response using request path param`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /data/{id}:
+                get:
+                  summary: Get data
+                  parameters:
+                    - in: path
+                      name: id
+                      schema:
+                        type: string
+                      required: true
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val exampleRequest = HttpRequest("GET", "/data/abc123")
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "{{REQUEST.PATH.id}}"}"""))
+
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+            val request = HttpRequest("GET", "/data/abc123")
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val jsonResponseBody = response.body as JSONObjectValue
+            assertThat(jsonResponseBody.findFirstChildByPath("id")).isEqualTo(StringValue("abc123"))
+        }
+    }
+
+    @Test
+    fun `type coersion when a stringly request param and the response value are different`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /data/{id}:
+                get:
+                  summary: Get data
+                  parameters:
+                    - in: path
+                      name: id
+                      schema:
+                        type: string
+                      required: true
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val exampleRequest = HttpRequest("GET", "/data/123")
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "{{REQUEST.PATH.id}}"}"""))
+
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+            val request = HttpRequest("GET", "/data/123")
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val jsonResponseBody = response.body as JSONObjectValue
+            assertThat(jsonResponseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(123))
+        }
+    }
+
+    @Test
+    fun `type coersion when a request object field value and the response object field value are different`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /data:
+                post:
+                  summary: Get data
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "123"}"""))
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "{{REQUEST.BODY.id}}"}"""))
+
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+            val response = stub.client.execute(exampleRequest)
+
+            assertThat(response.status).isEqualTo(200)
+            val jsonResponseBody = response.body as JSONObjectValue
+            assertThat(jsonResponseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(123))
+        }
+    }
+
+    @Test
+    fun `throw an error when the value in the request body cannot be used in the body due to schema mismatch`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /data:
+                post:
+                  summary: Get data
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: integer
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "abc"}"""))
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "{{REQUEST.BODY.id}}"}"""))
+
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+            val response = stub.client.execute(exampleRequest)
+
+            assertThat(response.status).isEqualTo(400)
+            assertThat(response.body.toStringLiteral()).contains("RESPONSE.BODY.id")
+        }
+    }
+
+    @Test
+    fun `throw an error when the value in the request header cannot be used in the body due to schema mismatch`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /data:
+                post:
+                  summary: Get data
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+                      headers:
+                        X-Id:
+                          description: id from the body
+                          schema:
+                            type: integer
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "abc"}"""))
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "text/plain", "X-Id" to "{{REQUEST.BODY.id}}"), body = StringValue("success"))
+
+        HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
+            val response = stub.client.execute(exampleRequest)
+
+            assertThat(response.status).isEqualTo(400)
+            assertThat(response.body.toStringLiteral()).contains("RESPONSE.HEADERS.X-Id")
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource("engineering,Bangalore", "sales,Mumbai")
+    fun `stub example with data substitution`(department: String, location: String) {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_map_substitution_in_response_body.yaml")
+
+        createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"department": "$department"}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val jsonResponse = response.body as JSONObjectValue
+            assertThat(jsonResponse.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo("$location")
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource("1,Bangalore", "2,Mumbai")
+    fun `stub example with data substitution having integer in request`(id: String, location: String) {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_map_substitution_with_int_in_request.yaml")
+
+        createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"id": $id}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val jsonResponse = response.body as JSONObjectValue
+            assertThat(jsonResponse.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo("$location")
+        }
+    }
+
+    @Test
+    fun `data substitution involving all GET request parts and response parts`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_map_substitution_in_all_get_sections.yaml")
+
+        createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("GET", "/data/abc", headers = mapOf("X-Routing-Token" to "AB"), queryParametersMap = mapOf("location" to "IN"))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+
+            assertThat(response.headers["X-Region"]).isEqualTo("IN")
+
+            val jsonResponse = response.body as JSONObjectValue
+            assertThat(jsonResponse.findFirstChildByPath("city")?.toStringLiteral()).isEqualTo("Mumbai")
+            assertThat(jsonResponse.findFirstChildByPath("currency")?.toStringLiteral()).isEqualTo("INR")
+
+        }
+    }
+
+    @Test
+    fun `data substitution with explicitly referenced data key in response body`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_map_substitution_with_different_lookup_key_in_response_body.yaml")
+
+        createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"department": "engineering"}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+
+            val jsonResponse = response.body as JSONObjectValue
+            assertThat(jsonResponse.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo("Mumbai")
+
+        }
+    }
+
+    @Test
+    fun `data substitution with explicitly referenced data key in response header`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_map_substitution_with_different_lookup_key_in_response_header.yaml")
+
+        createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"department": "engineering"}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+
+            assertThat(response.headers["X-Location"]).isEqualTo("Mumbai")
+
+        }
+    }
+
+    @Test
+    fun `should log the file in which a substitution error has occurred`() {
+        val (output, _) = captureStandardOutput {
+            try {
+                val stub = createStubFromContracts(listOf(osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_non_existent_data_key.yaml")), timeoutMillis = 0)
+                stub.close()
+            } catch(e: Throwable) {
+
+            }
+        }
+
+        println(output)
+
+        assertThat(output)
+            .contains("Error resolving template data for example")
+            .contains(osAgnosticPath("spec_with_non_existent_data_key_examples/substitution.json"))
+            .contains("@id")
+    }
+
+    @Test
+    fun `should flag an error when data substitution keys are not found in @data`() {
+        val (output, _) = captureStandardOutput {
+            try {
+                val stub = createStubFromContracts(listOf(("src/test/resources/openapi/substitutions/spec_with_example_missing_the_data_section.yaml")), timeoutMillis = 0)
+                stub.close()
+            } catch(e: Throwable) {
+
+            }
+        }
+
+        assertThat(output)
+            .contains("@department")
     }
 }

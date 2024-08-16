@@ -731,6 +731,10 @@ data class HttpRequestPattern(
         } ?: row
     }
 
+    fun getSubstitution(request: HttpRequest, resolver: Resolver): Substitution {
+        return Substitution(request, httpPathPattern ?: HttpPathPattern(emptyList(), ""), headersPattern, httpQueryParamPattern, body, resolver)
+    }
+
 }
 
 fun missingParam(missingValue: String): ContractException {

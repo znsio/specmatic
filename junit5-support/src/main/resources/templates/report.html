@@ -99,10 +99,10 @@
                     <td th:classappend="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathRowSpan}">
                         [[${row.coverageRow.coveragePercentage}]]%
                     </td>
-                    <td colspan="2" th:classappend="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathRowSpan}">
+                    <td colspan="2" th:classappend="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathRowSpan}, data-main=${row.showPath}">
                         [[${row.coverageRow.path}]]
                     </td>
-                    <td th:classappend="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodRowSpan}">
+                    <td th:classappend="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodRowSpan}, data-main=${row.showMethod}">
                         [[${row.coverageRow.method}]]
                     </td>
                     <td>[[${row.coverageRow.responseStatus}]]</td>

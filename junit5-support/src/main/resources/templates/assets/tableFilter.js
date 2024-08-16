@@ -83,6 +83,10 @@ function updateTable(groupedRows) {
 
     row.classList.toggle("hidden", !pathExists);
 
+    if(methodTd.getAttribute("data-main") === "true") {
+      methodTd.classList.toggle("hidden", !methodExists);
+    }
+
     for (const row of rest) {
       const responseExists = pathExists && methodExists && response in groupedRows[path][method];
       row.classList.toggle("hidden", !responseExists);

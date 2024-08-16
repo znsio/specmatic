@@ -7,6 +7,8 @@ import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
 import io.specmatic.stub.captureStandardOutput
+import io.specmatic.stub.createStub
+import io.specmatic.stub.createStubFromContracts
 import io.specmatic.test.ScenarioTestGenerationException
 import io.specmatic.test.ScenarioTestGenerationFailure
 import io.specmatic.test.TestExecutor
@@ -2375,6 +2377,18 @@ paths:
         })
 
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `should be able to stub out enum with string type`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_empoyee_enum.yaml"), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("GET", "/person", queryParametersMap = mapOf("type" to "employee"))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.findFirstChildByPath("type")?.toStringLiteral()).isEqualTo("employee")
+        }
     }
 
     companion object {

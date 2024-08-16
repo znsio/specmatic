@@ -1,0 +1,35 @@
+openapi: 3.0.3
+info:
+  title: Person API
+  description: A simple API to fetch person details.
+  version: 1.0.0
+
+paths:
+  /person:
+    get:
+      summary: Fetch person details
+      description: Retrieve details of a person using their ID.
+      parameters:
+        - in: query
+          name: type
+          required: true
+          schema:
+            $ref: '#/components/schemas/PersonType'
+          description: The ID of the person to fetch.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    $ref: '#/components/schemas/PersonType'
+components:
+  schemas:
+    PersonType:
+      type: string
+      enum:
+        - employee
+        - manager

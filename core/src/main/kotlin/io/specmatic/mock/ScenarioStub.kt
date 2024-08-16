@@ -188,8 +188,8 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
 
     private fun replaceInResponseBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
         return value.copy(
-            value.list.map {
-                replaceInResponseBody(value, substitutions)
+            value.list.map { item: Value ->
+                replaceInResponseBody(item, substitutions, "")
             }
         )
     }

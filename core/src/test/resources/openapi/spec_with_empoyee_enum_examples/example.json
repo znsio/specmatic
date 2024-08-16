@@ -6,6 +6,7 @@
   "http-response": {
     "status": 200,
     "body": {
+      "name": "Jill",
       "type": "{{REQUEST.QUERY-PARAMS.type}}"
     }
   }

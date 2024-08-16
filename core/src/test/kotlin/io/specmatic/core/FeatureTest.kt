@@ -2380,7 +2380,7 @@ paths:
     }
 
     @Test
-    fun `should be able to stub out enum with string type`() {
+    fun `should be able to stub out enum with string type using substitution`() {
         createStubFromContracts(listOf("src/test/resources/openapi/spec_with_empoyee_enum.yaml"), timeoutMillis = 0).use { stub ->
             val request = HttpRequest("GET", "/person", queryParametersMap = mapOf("type" to "employee"))
             val response = stub.client.execute(request)
@@ -2388,6 +2388,19 @@ paths:
             assertThat(response.status).isEqualTo(200)
             val responseBody = response.body as JSONObjectValue
             assertThat(responseBody.findFirstChildByPath("type")?.toStringLiteral()).isEqualTo("employee")
+        }
+    }
+
+    @Test
+    fun `should be able to stub out enum with string type using data substitution`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/spec_with_empoyee_enum2.yaml"), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("GET", "/person", queryParametersMap = mapOf("type" to "manager"))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.findFirstChildByPath("type")?.toStringLiteral()).isEqualTo("manager")
+            assertThat(responseBody.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo("Justin")
         }
     }
 

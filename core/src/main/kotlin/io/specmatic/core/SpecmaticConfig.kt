@@ -282,6 +282,7 @@ fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
         logger.log(e, "A dependency version conflict has been detected. If you are using Spring in a maven project, a common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.")
         throw e
     } catch (e: Throwable) {
+        logger.log(e, "Your configuration file may have some missing configuration sections. Please ensure that the $configFileName file adheres to the schema described at: https://specmatic.io/documentation/specmatic_json.html")
         throw Exception("Your configuration file may have some missing configuration sections. Please ensure that the $configFileName file adheres to the schema described at: https://specmatic.io/documentation/specmatic_json.html", e)
     }
 }

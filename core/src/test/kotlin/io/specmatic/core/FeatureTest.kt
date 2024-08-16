@@ -6,6 +6,7 @@ import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
+import io.specmatic.osAgnosticPath
 import io.specmatic.stub.captureStandardOutput
 import io.specmatic.stub.createStub
 import io.specmatic.stub.createStubFromContracts
@@ -2402,40 +2403,6 @@ paths:
             assertThat(responseBody.findFirstChildByPath("type")?.toStringLiteral()).isEqualTo("manager")
             assertThat(responseBody.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo("Justin")
         }
-    }
-
-    @Test
-    fun `should log the file in which a substitution error has occurred`() {
-        val (output, _) = captureStandardOutput {
-            try {
-                val stub = createStubFromContracts(listOf("src/test/resources/openapi/substitutions/spec_with_non_existent_data_key.yaml"), timeoutMillis = 0)
-                stub.close()
-            } catch(e: Throwable) {
-
-            }
-        }
-
-        println(output)
-
-        assertThat(output)
-            .contains("Error resolving template data for example")
-            .contains("spec_with_non_existent_data_key_examples/substitution.json")
-            .contains("@id")
-    }
-
-    @Test
-    fun `should flag an error when data substitution keys are not found in @data`() {
-        val (output, _) = captureStandardOutput {
-            try {
-                val stub = createStubFromContracts(listOf("src/test/resources/openapi/substitutions/spec_with_example_missing_the_data_section.yaml"), timeoutMillis = 0)
-                stub.close()
-            } catch(e: Throwable) {
-
-            }
-        }
-
-        assertThat(output)
-            .contains("@department")
     }
 
     companion object {

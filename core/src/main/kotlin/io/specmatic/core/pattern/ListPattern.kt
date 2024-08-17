@@ -2,6 +2,7 @@ package io.specmatic.core.pattern
 
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
+import io.specmatic.core.Substitution
 import io.specmatic.core.mismatchResult
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.JSONArrayValue
@@ -12,6 +13,33 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
+
+    override fun resolveSubstitutions(
+        substitution: Substitution,
+        value: Value,
+        resolver: Resolver
+    ): ReturnValue<Value> {
+        if(value !is JSONArrayValue)
+            return HasFailure(Result.Failure("Cannot resolve substitutions, expected list but got ${value.displayableType()}"))
+
+        val updatedList = value.list.mapIndexed { index, listItem ->
+            pattern.resolveSubstitutions(substitution, listItem, resolver).breadCrumb("[$index]")
+        }.listFold()
+
+        return updatedList.ifValue { value.copy(list = it) }
+    }
+
+    override fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {
+        if(value !is JSONArrayValue)
+            return HasFailure(Result.Failure("Cannot resolve data substitutions, expected list but got ${value.displayableType()}"))
+
+        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap<String, Pattern>())
+        return value.list.fold(initialValue) { acc, valuePattern ->
+            val patterns = pattern.getTemplateTypes("", valuePattern, resolver)
+
+            acc.assimilate(patterns) { data, additional -> data + additional }
+        }
+    }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if(sampleData !is ListValue)

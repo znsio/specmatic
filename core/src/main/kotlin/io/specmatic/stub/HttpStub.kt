@@ -12,11 +12,11 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
 import io.specmatic.core.*
-import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
-import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
+import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.utilities.*
 import io.specmatic.core.value.*
 import io.specmatic.mock.*
@@ -35,14 +35,6 @@ import java.io.Writer
 import java.nio.charset.Charset
 import java.util.*
 import kotlin.text.toCharArray
-
-data class HttpStubResponse(
-    val response: HttpResponse,
-    val delayInMilliSeconds: Long? = null,
-    val contractPath: String = "",
-    val feature: Feature? = null,
-    val scenario: Scenario? = null
-)
 
 class HttpStub(
     private val features: List<Feature>,
@@ -94,7 +86,8 @@ class HttpStub(
     }
 
     private fun staticHttpStubData(rawHttpStubs: List<HttpStubData>): MutableList<HttpStubData> {
-        val staticStubs = rawHttpStubs.filter { it.stubToken == null }.toMutableList()
+        val staticStubs = rawHttpStubs.filter { it.stubToken == null }
+
         val stubsFromSpecificationExamples: List<HttpStubData> = features.map { feature ->
             feature.stubsFromExamples.entries.map { (exampleName, examples) ->
                 examples.mapNotNull { (request, response) ->
@@ -392,7 +385,7 @@ class HttpStub(
                 throw ContractException("Expectation payload was empty")
 
             val mock: ScenarioStub = stringToMockScenario(httpRequest.body)
-            val stub: HttpStubData = setExpectation(mock)
+            val stub: HttpStubData = setExpectation(mock).first()
 
             HttpStubResponse(HttpResponse.OK, contractPath = stub.contractPath)
         } catch (e: ContractException) {
@@ -465,24 +458,35 @@ class HttpStub(
         setExpectation(mock)
     }
 
-    fun setExpectation(stub: ScenarioStub): HttpStubData {
+    fun setExpectation(stub: ScenarioStub): List<HttpStubData> {
         val results = features.asSequence().map { feature ->
             try {
-                val stubData: HttpStubData = softCastResponseToXML(
-                    feature.matchingStub(
-                        stub.request,
-                        stub.response,
-                        ContractAndStubMismatchMessages
-                    )
+                val tier1Match = feature.matchingStub(
+                    stub.request,
+                    stub.response,
+                    ContractAndStubMismatchMessages
                 )
+
+                val matchedScenario = tier1Match.scenario ?: throw ContractException("Expected scenario after stub matched for:${System.lineSeparator()}${stub.toJSON()}")
+
+                val stubWithSubstitutionsResolved = stub.resolveDataSubstitutions(matchedScenario).map { scenarioStub ->
+                    feature.matchingStub(scenarioStub.request, scenarioStub.response, ContractAndStubMismatchMessages)
+                }
+
+                val stubData: List<HttpStubData> = stubWithSubstitutionsResolved.map {
+                    softCastResponseToXML(
+                        it
+                    )
+                }
+
                 Pair(Pair(Result.Success(), stubData), null)
             } catch (e: NoMatchingScenario) {
                 Pair(null, e)
             }
         }
 
-        val result: Pair<Pair<Result.Success, HttpStubData>?, NoMatchingScenario?>? = results.find { it.first != null }
-        val firstResult: Pair<Result.Success, HttpStubData>? = result?.first
+        val result: Pair<Pair<Result.Success, List<HttpStubData>>?, NoMatchingScenario?>? = results.find { it.first != null }
+        val firstResult: Pair<Result.Success, List<HttpStubData>>? = result?.first
 
         when (firstResult) {
             null -> {
@@ -496,13 +500,18 @@ class HttpStub(
 
             else -> {
                 val requestBodyRegex = parseRegex(stub.requestBodyRegex)
-                val stubData = firstResult.second.copy(requestBodyRegex = requestBodyRegex)
-                val resultWithRequestBodyRegex = Pair(firstResult.first, stubData)
+                val stubData = firstResult.second.map { it.copy(requestBodyRegex = requestBodyRegex) }
+                val resultWithRequestBodyRegex = stubData.map { Pair(firstResult.first, it) }
 
                 if (stub.stubToken != null) {
-                    threadSafeHttpStubQueue.addToStub(resultWithRequestBodyRegex, stub)
+                    resultWithRequestBodyRegex.forEach {
+                        threadSafeHttpStubQueue.addToStub(it, stub)
+                    }
+
                 } else {
-                    threadSafeHttpStubs.addToStub(resultWithRequestBodyRegex, stub)
+                    resultWithRequestBodyRegex.forEach {
+                        threadSafeHttpStubs.addToStub(it, stub)
+                    }
                 }
             }
         }
@@ -730,7 +739,7 @@ fun getHttpResponse(
         val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
 
         if(matchingStubResponse != null)
-            FoundStubbedResponse(matchingStubResponse)
+            FoundStubbedResponse(matchingStubResponse.resolveSubstitutions(httpRequest))
         else if (httpClientFactory != null && passThroughTargetBase.isNotBlank())
             NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
         else if (strictMode) {
@@ -1016,9 +1025,22 @@ fun stubResponse(
 }
 
 fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<ScenarioStub>>>): List<HttpStubData> {
-    return contractInfo.flatMap { (feature, mocks) ->
-        mocks.map { mock ->
-            feature.matchingStub(mock, ContractAndStubMismatchMessages)
+    return contractInfo.flatMap { (feature, examples) ->
+        examples.map { example ->
+            feature.matchingStub(example, ContractAndStubMismatchMessages) to example
+        }.flatMap { (stubData, example) ->
+            val examplesWithDataSubstitutionsResolved = try {
+                example.resolveDataSubstitutions(stubData.scenario!!)
+            } catch(e: Throwable) {
+                println()
+                logger.log("    Error resolving template data for example ${example.filePath}")
+                logger.log("    " + exceptionCauseMessage(e))
+                throw e
+            }
+
+            examplesWithDataSubstitutionsResolved.map {
+                feature.matchingStub(it, ContractAndStubMismatchMessages)
+            }
         }
     }
 }

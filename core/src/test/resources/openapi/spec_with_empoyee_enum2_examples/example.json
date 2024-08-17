@@ -1,0 +1,23 @@
+{
+  "data": {
+    "@personType": {
+      "manager": {
+        "name": "Justin"
+      }
+    }
+  },
+  "http-request": {
+    "method": "GET",
+    "path": "/person",
+    "query": {
+      "type": "{{@personType}}"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "name": "{{@personType}}",
+      "type": "manager"
+    }
+  }
+}

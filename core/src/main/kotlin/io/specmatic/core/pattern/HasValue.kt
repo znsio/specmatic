@@ -39,17 +39,17 @@ data class HasValue<T>(override val value: T, val valueDetails: List<ValueDetail
         }
     }
 
-    override fun <U> assimilate(valueResult: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T> {
-        if(valueResult is ReturnFailure)
-            return valueResult.cast<T>()
-        else if(valueResult is HasException)
-            return valueResult.cast<T>()
+    override fun <U> assimilate(acc: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T> {
+        if(acc is ReturnFailure)
+            return acc.cast<T>()
+        else if(acc is HasException)
+            return acc.cast<T>()
 
-        valueResult as HasValue<U>
+        acc as HasValue<U>
 
         return try {
-            val newValue = fn(value, valueResult.value)
-            HasValue(newValue, valueDetails.plus(valueResult.valueDetails))
+            val newValue = fn(value, acc.value)
+            HasValue(newValue, valueDetails.plus(acc.valueDetails))
         } catch(t: Throwable) {
             HasException(t)
         }
@@ -76,15 +76,15 @@ data class HasValue<T>(override val value: T, val valueDetails: List<ValueDetail
         return fn(this)
     }
 
-    override fun <U, V> combine(valueResult: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
-        if(valueResult is ReturnFailure)
-            return valueResult.cast<V>()
+    override fun <U, V> combine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
+        if(acc is ReturnFailure)
+            return acc.cast<V>()
 
-        valueResult as HasValue<U>
+        acc as HasValue<U>
 
         return try {
-            val newValue = fn(value, valueResult.value)
-            HasValue(newValue, valueDetails.plus(valueResult.valueDetails))
+            val newValue = fn(value, acc.value)
+            HasValue(newValue, valueDetails.plus(acc.valueDetails))
         } catch(t: Throwable) {
             HasException(t)
         }

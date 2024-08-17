@@ -9,6 +9,8 @@ import java.net.URI
 
 val OMIT = listOf("(OMIT)", "(omit)")
 
+val EMPTY_PATH= HttpPathPattern(emptyList(), "")
+
 data class HttpPathPattern(
     val pathSegmentPatterns: List<URLPathSegmentPattern>,
     val path: String
@@ -52,6 +54,7 @@ data class HttpPathPattern(
 
         val results = pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
             try {
+
                 val parsedValue = urlPathPattern.tryParse(token, resolver)
                 val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, parsedValue)
                 if (result is Failure) {
@@ -113,10 +116,21 @@ data class HttpPathPattern(
                     val rowValue = row.getField(key)
                     when {
                         isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathParamPattern.key}\"") {
-                            val rowPattern = resolver.getPattern(rowValue)
-                            when (val result = urlPathParamPattern.encompasses(rowPattern, resolver, resolver)) {
-                                is Success -> urlPathParamPattern.copy(pattern = rowPattern)
-                                is Failure -> throw ContractException(result.toFailureReport())
+                            val rowValueWithoutWithoutIdentifier = withoutPatternDelimiters(rowValue).split(':').let {
+                                it.getOrNull(1) ?: it.getOrNull(0) ?: throw ContractException("Invalid pattern token $rowValue in example")
+                            }.let {
+                                withPatternDelimiters(it)
+                            }
+                            val rowPattern = resolvedHop(resolver.getPattern(rowValueWithoutWithoutIdentifier), resolver)
+                            val pathSegmentPattern = resolvedHop(urlPathParamPattern.pattern, resolver)
+
+                            if(pathSegmentPattern.javaClass == rowPattern.javaClass) {
+                                urlPathParamPattern
+                            } else {
+                                when (val result = urlPathParamPattern.encompasses(rowPattern, resolver, resolver)) {
+                                    is Success -> urlPathParamPattern.copy(pattern = rowPattern)
+                                    is Failure -> throw ContractException(result.toFailureReport())
+                                }
                             }
                         }
 

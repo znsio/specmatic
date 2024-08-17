@@ -23,6 +23,9 @@ class EmailPattern (private val stringPatternDelegate: StringPattern) :
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
+        if (sampleData?.hasTemplate() == true)
+            return Result.Success()
+
         if (sampleData !is StringValue) return mismatchResult("email string", sampleData, resolver.mismatchMessages)
         val email = sampleData.toStringLiteral()
         return if (emailRegex.matches(email)) {

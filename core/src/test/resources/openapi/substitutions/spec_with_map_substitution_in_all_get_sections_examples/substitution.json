@@ -1,0 +1,36 @@
+{
+  "data": {
+    "@token": {
+      "AB": {
+        "X-Region": "IN"
+      }
+    },
+    "@location": {
+      "IN": {
+        "currency": "INR"
+      }
+    },
+    "@id": {
+      "abc": {
+        "city": "Mumbai"
+      }
+    }
+  },
+  "http-request": {
+    "method": "GET",
+    "path": "/data/{{@id}}?location={{@location}}",
+    "headers": {
+      "X-Routing-Token": "{{@token}}"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "headers": {
+      "X-Region": "{{@token}}"
+    },
+    "body": {
+      "city": "{{@id}}",
+      "currency": "{{@location}}"
+    }
+  }
+}

@@ -10,11 +10,15 @@ import io.specmatic.core.value.Value
 import java.util.*
 
 data class BooleanPattern(override val example: String? = null) : Pattern, ScalarType, HasDefaultExample {
-    override fun matches(sampleData: Value?, resolver: Resolver): Result =
-        when(sampleData) {
+    override fun matches(sampleData: Value?, resolver: Resolver): Result {
+        if (sampleData?.hasTemplate() == true)
+            return Result.Success()
+
+        return when (sampleData) {
             is BooleanValue -> Result.Success()
             else -> mismatchResult("boolean", sampleData, resolver.mismatchMessages)
         }
+    }
 
     override fun generate(resolver: Resolver): Value =
         resolver.resolveExample(example, this) ?: randomBoolean()

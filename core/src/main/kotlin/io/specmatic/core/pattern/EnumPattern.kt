@@ -1,8 +1,10 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.core.Resolver
+import io.specmatic.core.Result
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.NullValue
+import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
 private fun validEnumValues(values: List<Value>, key: String?, typeAlias: String?, example: String?, nullable: Boolean): AnyPattern {
@@ -38,6 +40,14 @@ data class EnumPattern(
                 example: String? = null,
                 nullable: Boolean = false
     ) : this(validEnumValues(values, key, typeAlias, example, nullable), nullable)
+
+    override fun matches(sampleData: Value?, resolver: Resolver): Result {
+        if(sampleData is StringValue && (sampleData.hasTemplate() || sampleData.hasDataTemplate())) {
+            return Result.Success()
+        }
+
+        return pattern.matches(sampleData, resolver)
+    }
 
     fun withExample(example: String?): EnumPattern {
         return this.copy(pattern = pattern.copy(example = example))

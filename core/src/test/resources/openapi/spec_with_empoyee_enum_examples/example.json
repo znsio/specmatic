@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/person?type=(PersonType)"
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "name": "Jill",
+      "type": "{{REQUEST.QUERY-PARAMS.type}}"
+    }
+  }
+}

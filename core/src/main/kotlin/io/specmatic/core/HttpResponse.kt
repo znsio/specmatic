@@ -1,12 +1,12 @@
 package io.specmatic.core
 
+import io.ktor.http.*
 import io.specmatic.conversions.guessType
 import io.specmatic.core.GherkinSection.Then
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.value.*
-import io.ktor.http.*
 
 private const val SPECMATIC_HEADER_PREFIX = "X-$APPLICATION_NAME-"
 const val SPECMATIC_RESULT_HEADER = "${SPECMATIC_HEADER_PREFIX}Result"

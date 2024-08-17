@@ -25,6 +25,9 @@ data class StringPattern (
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
+        if (sampleData?.hasTemplate() == true)
+            return Result.Success()
+
         return when (sampleData) {
             is StringValue -> {
                 if (minLength != null && sampleData.toStringLiteral().length < minLength) return mismatchResult(

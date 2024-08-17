@@ -34,6 +34,34 @@ data class JSONObjectPattern(
         else -> false
     }
 
+    override fun resolveSubstitutions(substitution: Substitution, value: Value, resolver: Resolver): ReturnValue<Value> {
+        if(value !is JSONObjectValue)
+            return HasFailure(Result.Failure("Cannot resolve substitutions, expected object but got ${value.displayableType()}"))
+
+        val updatedMap = value.jsonObject.mapValues { (key, value) ->
+            val pattern = pattern.get(key) ?: pattern.getValue("$key?")
+            pattern.resolveSubstitutions(substitution, value, resolver).breadCrumb(key)
+        }
+
+        return updatedMap.mapFold().ifValue { value.copy(it) }
+    }
+
+    override fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {
+        if(value !is JSONObjectValue)
+            return HasFailure(Result.Failure("Cannot resolve data substitutions, expected object but got ${value.displayableType()}"))
+
+        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap<String, Pattern>())
+
+        return pattern.mapKeys {
+            withoutOptionality(it.key)
+        }.entries.fold(initialValue) { acc, (key, valuePattern) ->
+            value.jsonObject.get(key)?.let { valueInObject ->
+                val additionalTemplateTypes = valuePattern.getTemplateTypes(key, valueInObject, resolver)
+                acc.assimilate(additionalTemplateTypes) { data, additional -> data + additional }
+            } ?: acc
+        }
+    }
+
     override fun encompasses(
         otherPattern: Pattern,
         thisResolver: Resolver,

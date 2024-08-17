@@ -2304,4 +2304,21 @@ components:
         assertThat(output)
             .contains("@department")
     }
+
+    @Test
+    fun `should stub out a template`() {
+        createStubFromContracts(listOf(("src/test/resources/openapi/substitutions/spec_with_template_in_response_body.yaml")), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest(
+                "POST",
+                "/person",
+                body = parsedJSONObject("""{"name": "Jodie", "department": "engineering"}""")
+            )
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo("Mumbai")
+        }
+    }
 }

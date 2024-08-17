@@ -1104,6 +1104,12 @@ fun stringToMockScenario(text: Value): ScenarioStub {
             validateMock(it)
         }
 
+    if(TEMPLATE in mockSpec) {
+        val template = mockSpec.getValue(TEMPLATE) as? JSONObjectValue ?: throw ContractException("template key must be an object")
+
+        return ScenarioStub(template = mockFromJSON(template.jsonObject))
+    }
+
     return mockFromJSON(mockSpec)
 }
 

@@ -2306,6 +2306,193 @@ components:
     }
 
     @Test
+    fun `stub should load an example for a spec with pattern as a path param`() {
+        createStubFromContracts(listOf(("src/test/resources/openapi/spec_with_path_param.yaml")), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("GET", "/users/abc123", queryParametersMap = mapOf("item" to "10"))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(10))
+        }
+    }
+
+    @Test
+    fun `stub should flag an error when a path param in an external example has an invalid type`() {
+        val (output, _) = captureStandardOutput {
+            val stub = createStubFromContracts(listOf(("src/test/resources/openapi/spec_with_invalid_path_param_example.yaml")), timeoutMillis = 0)
+            stub.close()
+        }
+
+        assertThat(output).contains(">> REQUEST.PATH.userId")
+    }
+
+    @Test
+    fun `stub should load an example for a spec with constrained path param`() {
+        createStubFromContracts(listOf(("src/test/resources/openapi/spec_with_path_param_with_constraint.yaml")), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("GET", "/users/100")
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(10))
+        }
+    }
+
+    @Test
+    fun `dynamic stub example with substitution in response body`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /person:
+                post:
+                  summary: Add person
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - department
+                          properties:
+                            department:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - department
+                            properties:
+                              department:
+                                type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        HttpStub(feature).use { stub ->
+            val example = """
+                {
+                  "http-request": {
+                    "method": "POST",
+                    "path": "/person",
+                    "body": {
+                      "department": "(string)"
+                    }
+                  },
+                  "http-response": {
+                    "status": 200,
+                    "body": {
+                      "department": "{{REQUEST.BODY.department}}"
+                    }
+                  }
+                }
+            """.trimIndent()
+
+            val exampleRequest = HttpRequest("POST", "/_specmatic/expectations", body = parsedJSONObject(example))
+            stub.client.execute(exampleRequest).also { response ->
+                assertThat(response.status).isEqualTo(200)
+            }
+
+            val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"department": "engineering"}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.findFirstChildByPath("department")?.toStringLiteral()).isEqualTo("engineering")
+
+        }
+    }
+
+    @Test
+    fun `dynamic stub example with data substitution`() {
+        val spec = """
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /person:
+                post:
+                  summary: Add person
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - department
+                          properties:
+                            department:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - location
+                            properties:
+                              location:
+                                type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        HttpStub(feature).use { stub ->
+            val example = """
+                {
+                  "data": {
+                    "@dept": {
+                      "engineering": {
+                        "city": "Mumbai"
+                      }
+                    }
+                  },
+                  "http-request": {
+                    "method": "POST",
+                    "path": "/person",
+                    "body": {
+                      "department": "{{@dept}}"
+                    }
+                  },
+                  "http-response": {
+                    "status": 200,
+                    "body": {
+                      "location": "{{@dept.city}}"
+                    }
+                  }
+                }
+            """.trimIndent()
+
+            val exampleRequest = HttpRequest("POST", "/_specmatic/expectations", body = parsedJSONObject(example))
+            stub.client.execute(exampleRequest).also { response ->
+                assertThat(response.status).isEqualTo(200)
+            }
+
+            val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"department": "engineering"}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo("Mumbai")
+
+        }
+    }
+
+    @Test
     fun `should stub out a template`() {
         createStubFromContracts(listOf(("src/test/resources/openapi/substitutions/spec_with_template_in_response_body.yaml")), timeoutMillis = 0).use { stub ->
             val request = HttpRequest(

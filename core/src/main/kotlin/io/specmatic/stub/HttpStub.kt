@@ -385,7 +385,7 @@ class HttpStub(
                 throw ContractException("Expectation payload was empty")
 
             val mock: ScenarioStub = stringToMockScenario(httpRequest.body)
-            val stub: HttpStubData = setExpectation(mock)
+            val stub: HttpStubData = setExpectation(mock).first()
 
             HttpStubResponse(HttpResponse.OK, contractPath = stub.contractPath)
         } catch (e: ContractException) {
@@ -458,24 +458,35 @@ class HttpStub(
         setExpectation(mock)
     }
 
-    fun setExpectation(stub: ScenarioStub): HttpStubData {
+    fun setExpectation(stub: ScenarioStub): List<HttpStubData> {
         val results = features.asSequence().map { feature ->
             try {
-                val stubData: HttpStubData = softCastResponseToXML(
-                    feature.matchingStub(
-                        stub.request,
-                        stub.response,
-                        ContractAndStubMismatchMessages
-                    )
+                val tier1Match = feature.matchingStub(
+                    stub.request,
+                    stub.response,
+                    ContractAndStubMismatchMessages
                 )
+
+                val matchedScenario = tier1Match.scenario ?: throw ContractException("Expected scenario after stub matched for:${System.lineSeparator()}${stub.toJSON()}")
+
+                val stubWithSubstitutionsResolved = stub.resolveDataSubstitutions(matchedScenario).map { scenarioStub ->
+                    feature.matchingStub(scenarioStub.request, scenarioStub.response, ContractAndStubMismatchMessages)
+                }
+
+                val stubData: List<HttpStubData> = stubWithSubstitutionsResolved.map {
+                    softCastResponseToXML(
+                        it
+                    )
+                }
+
                 Pair(Pair(Result.Success(), stubData), null)
             } catch (e: NoMatchingScenario) {
                 Pair(null, e)
             }
         }
 
-        val result: Pair<Pair<Result.Success, HttpStubData>?, NoMatchingScenario?>? = results.find { it.first != null }
-        val firstResult: Pair<Result.Success, HttpStubData>? = result?.first
+        val result: Pair<Pair<Result.Success, List<HttpStubData>>?, NoMatchingScenario?>? = results.find { it.first != null }
+        val firstResult: Pair<Result.Success, List<HttpStubData>>? = result?.first
 
         when (firstResult) {
             null -> {
@@ -489,13 +500,18 @@ class HttpStub(
 
             else -> {
                 val requestBodyRegex = parseRegex(stub.requestBodyRegex)
-                val stubData = firstResult.second.copy(requestBodyRegex = requestBodyRegex)
-                val resultWithRequestBodyRegex = Pair(firstResult.first, stubData)
+                val stubData = firstResult.second.map { it.copy(requestBodyRegex = requestBodyRegex) }
+                val resultWithRequestBodyRegex = stubData.map { Pair(firstResult.first, it) }
 
                 if (stub.stubToken != null) {
-                    threadSafeHttpStubQueue.addToStub(resultWithRequestBodyRegex, stub)
+                    resultWithRequestBodyRegex.forEach {
+                        threadSafeHttpStubQueue.addToStub(it, stub)
+                    }
+
                 } else {
-                    threadSafeHttpStubs.addToStub(resultWithRequestBodyRegex, stub)
+                    resultWithRequestBodyRegex.forEach {
+                        threadSafeHttpStubs.addToStub(it, stub)
+                    }
                 }
             }
         }

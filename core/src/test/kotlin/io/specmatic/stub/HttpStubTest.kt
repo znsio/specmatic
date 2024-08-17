@@ -2317,7 +2317,6 @@ components:
         }
     }
 
-
     @Test
     fun `stub should flag an error when a path param in an external example has an invalid type`() {
         val (output, _) = captureStandardOutput {
@@ -2326,5 +2325,17 @@ components:
         }
 
         assertThat(output).contains(">> REQUEST.PATH.userId")
+    }
+
+    @Test
+    fun `stub should load an example for a spec with constrained path param`() {
+        createStubFromContracts(listOf(("src/test/resources/openapi/spec_with_path_param_with_constraint.yaml")), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("GET", "/users/100")
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(10))
+        }
     }
 }

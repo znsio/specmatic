@@ -54,6 +54,7 @@ data class HttpPathPattern(
 
         val results = pathSegmentPatterns.zip(pathSegments).map { (urlPathPattern, token) ->
             try {
+
                 val parsedValue = urlPathPattern.tryParse(token, resolver)
                 val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, parsedValue)
                 if (result is Failure) {

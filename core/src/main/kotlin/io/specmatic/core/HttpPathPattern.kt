@@ -120,10 +120,16 @@ data class HttpPathPattern(
                             }.let {
                                 withPatternDelimiters(it)
                             }
-                            val rowPattern = resolver.getPattern(rowValueWithoutWithoutIdentifier)
-                            when (val result = urlPathParamPattern.encompasses(rowPattern, resolver, resolver)) {
-                                is Success -> urlPathParamPattern.copy(pattern = rowPattern)
-                                is Failure -> throw ContractException(result.toFailureReport())
+                            val rowPattern = resolvedHop(resolver.getPattern(rowValueWithoutWithoutIdentifier), resolver)
+                            val pathSegmentPattern = resolvedHop(urlPathParamPattern.pattern, resolver)
+
+                            if(pathSegmentPattern.javaClass == rowPattern.javaClass) {
+                                urlPathParamPattern
+                            } else {
+                                when (val result = urlPathParamPattern.encompasses(rowPattern, resolver, resolver)) {
+                                    is Success -> urlPathParamPattern.copy(pattern = rowPattern)
+                                    is Failure -> throw ContractException(result.toFailureReport())
+                                }
                             }
                         }
 

@@ -11,12 +11,7 @@ paths:
           in: path
           required: true
           schema:
-            type: string
-        - name: item
-          in: query
-          required: true
-          schema:
-            type: string
+            type: integer
       responses:
         '200':
           description: User created successfully

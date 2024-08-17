@@ -2316,4 +2316,15 @@ components:
             assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(10))
         }
     }
+
+
+    @Test
+    fun `stub should flag an error when a path param in an external example has an invalid type`() {
+        val (output, _) = captureStandardOutput {
+            val stub = createStubFromContracts(listOf(("src/test/resources/openapi/spec_with_invalid_path_param_example.yaml")), timeoutMillis = 0)
+            stub.close()
+        }
+
+        assertThat(output).contains(">> REQUEST.PATH.userId")
+    }
 }

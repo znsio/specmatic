@@ -54,7 +54,7 @@ data class URLPathSegmentPattern(override val pattern: Pattern, override val key
 
     override fun encompasses(otherPattern: Pattern, thisResolver: Resolver, otherResolver: Resolver, typeStack: TypeStack): Result {
         if(otherPattern !is URLPathSegmentPattern)
-            return Result.Failure("Expected url type, got ${otherPattern.typeName}")
+            return this.pattern.encompasses(otherPattern, thisResolver, otherResolver, typeStack)
 
         return otherPattern.pattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver, typeStack)
     }

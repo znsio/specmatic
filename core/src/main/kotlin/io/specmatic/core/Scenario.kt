@@ -572,12 +572,15 @@ data class Scenario(
         return this.copy(examples = this.examples + newExamples)
     }
 
-    private fun matchingRows(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>) =
-        externalisedJSONExamples.filter { (operationId, rows) ->
+    private fun matchingRows(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Map<OpenApiSpecification.OperationIdentifier, List<Row>> {
+        val patternMatchingResolver = resolver.copy(mockMode = true)
+
+        return externalisedJSONExamples.filter { (operationId, rows) ->
             operationId.requestMethod.equals(method, ignoreCase = true)
                     && operationId.responseStatus == status
-                    && httpRequestPattern.matchesPath(operationId.requestPath, resolver).isSuccess()
+                    && httpRequestPattern.matchesPath(operationId.requestPath, patternMatchingResolver).isSuccess()
         }
+    }
 
     fun resolveSubtitutions(request: HttpRequest, response: HttpResponse): HttpResponse {
         val substitution = httpRequestPattern.getSubstitution(request, resolver)

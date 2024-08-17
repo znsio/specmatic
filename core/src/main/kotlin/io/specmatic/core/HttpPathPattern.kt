@@ -115,7 +115,12 @@ data class HttpPathPattern(
                     val rowValue = row.getField(key)
                     when {
                         isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathParamPattern.key}\"") {
-                            val rowPattern = resolver.getPattern(rowValue)
+                            val rowValueWithoutWithoutIdentifier = withoutPatternDelimiters(rowValue).split(':').let {
+                                it.getOrNull(1) ?: it.getOrNull(0) ?: throw ContractException("Invalid pattern token $rowValue in example")
+                            }.let {
+                                withPatternDelimiters(it)
+                            }
+                            val rowPattern = resolver.getPattern(rowValueWithoutWithoutIdentifier)
                             when (val result = urlPathParamPattern.encompasses(rowPattern, resolver, resolver)) {
                                 is Success -> urlPathParamPattern.copy(pattern = rowPattern)
                                 is Failure -> throw ContractException(result.toFailureReport())

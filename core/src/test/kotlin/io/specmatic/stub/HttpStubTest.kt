@@ -2304,4 +2304,16 @@ components:
         assertThat(output)
             .contains("@department")
     }
+
+    @Test
+    fun `stub should load an example for a spec with pattern as a path param`() {
+        createStubFromContracts(listOf(("src/test/resources/openapi/spec_with_path_param.yaml")), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("GET", "/users/abc123", queryParametersMap = mapOf("item" to "10"))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(10))
+        }
+    }
 }

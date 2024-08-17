@@ -17,6 +17,9 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
+import io.specmatic.stub.createStubFromContracts
+import io.specmatic.stub.httpRequestLog
+import io.specmatic.stub.httpResponseLog
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.fail
 
@@ -1095,6 +1098,26 @@ Examples:
 
         assertThat(results.success()).isTrue()
         assertThat(results.failureCount).isZero()
+    }
+
+    @Test
+    fun `test should load an example for a spec with pattern as a path param`() {
+        val feature: Feature = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_path_param.yaml").toFeature().loadExternalisedExamples()
+
+        var itemSeen: String = ""
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                itemSeen = request.queryParams.asMap().getValue("item")
+                return HttpResponse.ok(parsedJSONObject("""{"id": 10}""")).also {
+                    println(request.toLogString())
+                    println()
+                    println(it.toLogString())
+                }
+            }
+        })
+
+        assertThat(itemSeen).withFailMessage(results.report()).isEqualTo("10")
     }
 }
 

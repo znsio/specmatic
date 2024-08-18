@@ -1,0 +1,21 @@
+openapi: 3.0.0
+info:
+  title: Simple Product API
+  version: 1.0.0
+paths:
+  /products/{id}:
+    get:
+      summary: Get product by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Product found
+          content:
+            text/plain:
+              schema:
+                type: string

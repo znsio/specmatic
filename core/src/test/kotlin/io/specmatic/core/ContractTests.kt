@@ -1119,6 +1119,30 @@ Examples:
 
         assertThat(itemSeen).withFailMessage(results.report()).isEqualTo("10")
     }
+
+    @Test
+    fun `test should load an example for a spec with integer type path param`() {
+        val feature: Feature = OpenApiSpecification.fromFile("src/test/resources/openapi/simple_products_spec.yaml").toFeature().loadExternalisedExamples()
+
+        var pathParam = ""
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.ok("Success").also {
+                    pathParam = request.path!!.split('/').last()
+                    println(request.toLogString())
+                    println()
+                    println(it.toLogString())
+                }
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+
+        assertDoesNotThrow {
+            pathParam.toInt()
+        }
+    }
 }
 
 fun flagsContain(haystack: List<String>, needles: List<String>) {

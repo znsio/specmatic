@@ -162,6 +162,27 @@ internal class HttpPathPatternTest {
     }
 
     @Test
+    fun `should generate negative patterns for path containing params between fixed segments`() {
+        val pattern = buildHttpPathPattern("/products/(id:number)/image")
+        val negativePatterns = pattern.negativeBasedOn(Row(), Resolver()).toList()
+        assertThat(negativePatterns).hasSize(2)
+        assertThat(negativePatterns[0].value).isEqualTo(
+            listOf(
+                URLPathSegmentPattern(ExactValuePattern(StringValue("products"))),
+                URLPathSegmentPattern(StringPattern(), "id"),
+                URLPathSegmentPattern(ExactValuePattern(StringValue("image"))),
+            )
+        )
+        assertThat(negativePatterns[1].value).isEqualTo(
+            listOf(
+                URLPathSegmentPattern(ExactValuePattern(StringValue("products"))),
+                URLPathSegmentPattern(BooleanPattern(), "id"),
+                URLPathSegmentPattern(ExactValuePattern(StringValue("image"))),
+            )
+        )
+    }
+
+    @Test
     fun `should return all path param errors together`() {
         val pattern = buildHttpPathPattern("/pets/(petid:number)/file/(fileid:number)")
         val mismatchResult = pattern.matches(URI("/pets/abc/file/def")) as Result.Failure

@@ -64,7 +64,7 @@
                     <img src="assets/clock.svg" alt="total-time" class="size-8">
                     <p>Time: [[${totalDuration}]]ms</p>
                 </li> -->
-                <li id="overlay" class="absolute h-12 duration-1000 bg-white rounded-md print:hidden w-44"></li>
+                <li id="overlay" class="absolute h-12 duration-500 bg-white rounded-md print:hidden w-44"></li>
             </ol>
             <div id="badge" class="relative flex items-center justify-center">
                 <img src="assets/badge.svg" class="size-18" th:classappend="${summaryResult}" alt="badge">
@@ -77,7 +77,7 @@
                     <p>Actuator: <span class="font-semibold">[[${actuatorEnabled == true ? 'Enabled' : 'Disabled'}]]</span></p>
                 </li>
                 <li th:if="${successCriteriaPassed == false}">
-                    <p>Success Criteria Failed: <span class="font-semibold">Minimum API Coverage of [[${minimumCoverage}]]% was not met.</span></p>
+                    <p>Success Criteria Failed: <span class="font-semibold text-red-500">Minimum API Coverage of [[${minimumCoverage}]]% was not met.</span></p>
                 </li>
             </ol>
         </div>
@@ -95,7 +95,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr th:each="row : ${tableRows}">
+                <tr th:each="row : ${tableRows}" th:attr="data-type=${row.resultType}">
                     <td th:classappend="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathRowSpan}">
                         [[${row.coverageRow.coveragePercentage}]]%
                     </td>

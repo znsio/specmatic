@@ -46,13 +46,7 @@ function addScenarios(scenarios) {
 
 /* Event Listeners */
 
-backBtn.addEventListener("click", () => {
-  setTimeout(() => {
-    scenariosList.replaceChildren();
-  }, 300);
-  mainElement.setAttribute("data-item", "table");
-  scrollTo(0, scrollYPosition);
-});
+backBtn.addEventListener("click", goBackToTable);
 
 downloadBtn.addEventListener("click", () => {
   window.print();
@@ -119,6 +113,7 @@ function createResponseSummaryDetails(response) {
         valueSpan.textContent = `${value}%`;
         break;
       case "color":
+      case "type":
         continue;
     }
 
@@ -155,8 +150,9 @@ function createScenarioInformation(scenario) {
   scenarioDuration.textContent = `${scenario.duration}ms`;
 
   const scenarioResult = document.createElement("span");
-  const pillColor = scenario.wip && scenario.result !== "Success" ? "yellow" : getColor(scenario.result);
-  const pillText = scenario.wip ? "WIP" : scenario.valid ? scenario.remark : "Invalid";
+  const pillColor = getColor(scenario.result);
+  const pillText = scenario.wip ? "WIP" :
+    scenario.valid || scenario.remark === "MissingInSpec" ? scenario.remark : "Invalid";
   scenarioResult.classList.add(...PILL_CSS, `bg-${pillColor}-300`, "w-36");
   scenarioResult.textContent = pillText;
 
@@ -222,6 +218,7 @@ function getColor(result) {
     case "Success":
       return "green";
     case "Skipped":
+    case "Error":
       return "yellow";
     default:
       return "red";

@@ -33,13 +33,14 @@ class HtmlReport(htmlReportFormat: ReportFormatter, openApiSuccessCriteria: Succ
     private val outputDirectory = htmlReportFormat.outputDirectory
     private val pageTitle = htmlReportFormat.title
     private val reportHeading = htmlReportFormat.heading
-    private val ApiSuccessCriteria = openApiSuccessCriteria
+    private val apiSuccessCriteria = openApiSuccessCriteria
 
     private var totalTests = 0
     private var totalErrors = 0
     private var totalFailures = 0
     private var totalSkipped = 0
     private var totalSuccess = 0
+    private var totalMissing = 0
 
     fun generate() {
         logger.log("Generating HTML report...")
@@ -73,7 +74,7 @@ class HtmlReport(htmlReportFormat: ReportFormatter, openApiSuccessCriteria: Succ
             "summaryResult" to if(testCriteria && successCriteria) "approved" else "rejected",
             "testCriteriaPassed" to testCriteria,
             "successCriteriaPassed" to successCriteria,
-            "minimumCoverage" to ApiSuccessCriteria.minThresholdPercentage,
+            "minimumCoverage" to apiSuccessCriteria.minThresholdPercentage,
             "jsonTestData" to dumpTestData(groupedScenarios)
         )
 
@@ -93,24 +94,27 @@ class HtmlReport(htmlReportFormat: ReportFormatter, openApiSuccessCriteria: Succ
     }
 
     private fun testCriteriaPassed(): Boolean {
-        return totalFailures == 0 && totalErrors == 0
+        // NOTE: Ignoring Errors, they'll only contain failing WIP Tests
+        return totalFailures == 0
     }
 
     private fun successCriteriaPassed(): Boolean {
-        return totalCoverage() >= ApiSuccessCriteria.minThresholdPercentage || !ApiSuccessCriteria.enforce
+        return totalCoverage() >= apiSuccessCriteria.minThresholdPercentage || !apiSuccessCriteria.enforce
     }
 
     private fun tableRows(): List<TableRow> {
         return groupedApiCoverageRows.flatMap { (_, methodGroup) ->
             methodGroup.flatMap { (_, coverageRows) ->
                 coverageRows.map {
+                    val resultColorAndType = getBadgeColorAndType(it)
                     TableRow(
                         pathRowSpan = methodGroup.values.sumOf { rows ->  rows.size },
                         methodRowSpan = coverageRows.size,
                         showPath = it.showPath,
                         showMethod = it.showMethod,
                         coverageRow = it,
-                        badgeColor = getBadgeColor(it)
+                        resultType = resultColorAndType.first,
+                        badgeColor = resultColorAndType.second
                     )
                 }
             }
@@ -123,16 +127,17 @@ class HtmlReport(htmlReportFormat: ReportFormatter, openApiSuccessCriteria: Succ
                 methodGroup.value.forEach { responseGroup ->
                     responseGroup.value.forEach {
                         when (it.result) {
+                            TestResult.MissingInSpec -> totalMissing++
                             TestResult.NotCovered -> totalSkipped++
                             TestResult.Success  -> totalSuccess++
-                            TestResult.Error -> if (it.isWip) totalSkipped++ else totalErrors++
-                            else -> if(it.isWip) totalSkipped++ else totalFailures++
+                            TestResult.Error -> totalErrors++
+                            else -> if(it.isWip) totalErrors++ else totalFailures++
                         }
-                        totalTests++
                     }
                 }
             }
         }
+        totalTests = totalSuccess + totalFailures + totalErrors
     }
 
     private fun generatedOnTimestamp(): String {
@@ -230,17 +235,18 @@ class HtmlReport(htmlReportFormat: ReportFormatter, openApiSuccessCriteria: Succ
         return testResult.specification ?: httpLogMessage?.scenario?.specification ?: "Unknown Spec File"
     }
 
-    private fun getBadgeColor(coverageRow: OpenApiCoverageConsoleRow): String {
+    private fun getBadgeColorAndType(coverageRow: OpenApiCoverageConsoleRow): Pair<HtmlResult, String> {
         val testScenarios = groupedScenarios[coverageRow.path]?.get(coverageRow.method)?.get(coverageRow.responseStatus.toInt()) ?: emptyList()
 
         testScenarios.forEach {
             when (it.result) {
-                HtmlResult.Failed, HtmlResult.Error -> return if(it.wip) "yellow" else "red"
-                HtmlResult.Skipped -> return "yellow"
+                HtmlResult.Failed -> return Pair(HtmlResult.Failed, "red")
+                HtmlResult.Error -> return Pair(HtmlResult.Error, "yellow")
+                HtmlResult.Skipped -> return Pair(HtmlResult.Skipped, "yellow")
                 else -> {}
             }
         }
-        return "green"
+        return Pair(HtmlResult.Success, "green")
     }
 
     private fun dumpTestData(testData: MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<ScenarioData>>>>): String {
@@ -255,8 +261,8 @@ class HtmlReport(htmlReportFormat: ReportFormatter, openApiSuccessCriteria: Succ
         return when(testResult.result) {
             TestResult.Success -> HtmlResult.Success
             TestResult.NotCovered-> HtmlResult.Skipped
-            TestResult.Error -> if(testResult.isWip) HtmlResult.Skipped else HtmlResult.Error
-            else -> if(testResult.isWip) HtmlResult.Skipped else HtmlResult.Failed
+            TestResult.Error -> HtmlResult.Error
+            else -> if(testResult.isWip) HtmlResult.Error else HtmlResult.Failed
         }
     }
 }
@@ -283,7 +289,8 @@ data class TableRow(
     val showPath: Boolean,
     val showMethod: Boolean,
     val coverageRow: OpenApiCoverageConsoleRow,
-    val badgeColor: String
+    val badgeColor: String,
+    val resultType: HtmlResult
 )
 
 enum class HtmlResult {

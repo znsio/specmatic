@@ -20,6 +20,7 @@ resultsList.addEventListener("click", (event) => {
     const resultType = nearestListItem.getAttribute("data-type");
     updateTable(groupedRows[resultType]);
     reportTable.setAttribute("data-filter", resultType);
+    goBackToTable(false);
     animateOverlay(nearestListItem);
     event.stopPropagation();
   }
@@ -35,24 +36,12 @@ function animateOverlay(summaryLiElem, offset = 1.25) {
   overlay.style.transform = `translateX(${translateX})`;
 }
 
-function colorToResultType(color) {
-  switch (color) {
-    case "green":
-      return "Success";
-    case "yellow":
-      return "Skipped";
-    default:
-      return "Failed";
-  }
-}
-
 function groupRowsByPathAndMethod(tableRows) {
   const categories = { Success: {}, Error: {}, Failed: {}, Skipped: {}, All: {} };
 
   for (const row of tableRows) {
     const rowValues = extractValuesFromTableRow(row);
-    const { path, method, color, response } = rowValues;
-    const type = colorToResultType(color);
+    const { path, method, color, response, type } = rowValues;
 
     if (!(type in categories)) {
       throw new Error(`Unknown type: ${row.type}`);
@@ -83,7 +72,7 @@ function updateTable(groupedRows) {
 
     row.classList.toggle("hidden", !pathExists);
 
-    if(methodTd.getAttribute("data-main") === "true") {
+    if (methodTd.getAttribute("data-main") === "true") {
       methodTd.classList.toggle("hidden", !methodExists);
     }
 

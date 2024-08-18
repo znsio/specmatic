@@ -166,18 +166,58 @@ internal class HttpPathPatternTest {
         val pattern = buildHttpPathPattern("/products/(id:number)/image")
         val negativePatterns = pattern.negativeBasedOn(Row(), Resolver()).toList()
         assertThat(negativePatterns).hasSize(2)
-        assertThat(negativePatterns[0].value).isEqualTo(
+        assertThat(negativePatterns[0].value).containsExactlyElementsOf(
             listOf(
                 URLPathSegmentPattern(ExactValuePattern(StringValue("products"))),
                 URLPathSegmentPattern(BooleanPattern(), "id"),
                 URLPathSegmentPattern(ExactValuePattern(StringValue("image"))),
             )
         )
-        assertThat(negativePatterns[1].value).isEqualTo(
+        assertThat(negativePatterns[1].value).containsExactlyElementsOf(
             listOf(
                 URLPathSegmentPattern(ExactValuePattern(StringValue("products"))),
                 URLPathSegmentPattern(StringPattern(), "id"),
                 URLPathSegmentPattern(ExactValuePattern(StringValue("image"))),
+            )
+        )
+    }
+
+    @Test
+    fun `should generate negative patterns for path containing alternating fixed segments and params`() {
+        assertThat(listOf(URLPathSegmentPattern(NumberPattern(), "orgId"))).isEqualTo(listOf(URLPathSegmentPattern(NumberPattern(), "orgId")))
+        val pattern = buildHttpPathPattern("/organizations/(orgId:number)/employees/(empId:number)")
+        val negativePatterns = pattern.negativeBasedOn(Row(), Resolver()).toList()
+        assertThat(negativePatterns).hasSize(4)
+        assertThat(negativePatterns[0].value).containsExactlyElementsOf(
+            listOf(
+                URLPathSegmentPattern(ExactValuePattern(StringValue("organizations"))),
+                URLPathSegmentPattern(BooleanPattern(), "orgId"),
+                URLPathSegmentPattern(ExactValuePattern(StringValue("employees"))),
+                URLPathSegmentPattern(DeferredPattern("(number)"), "empId"),
+            )
+        )
+        assertThat(negativePatterns[1].value).containsExactlyElementsOf(
+            listOf(
+                URLPathSegmentPattern(ExactValuePattern(StringValue("organizations"))),
+                URLPathSegmentPattern(StringPattern(), "orgId"),
+                URLPathSegmentPattern(ExactValuePattern(StringValue("employees"))),
+                URLPathSegmentPattern(DeferredPattern("(number)"), "empId"),
+            )
+        )
+        assertThat(negativePatterns[2].value).containsExactlyElementsOf(
+            listOf(
+                URLPathSegmentPattern(ExactValuePattern(StringValue("organizations"))),
+                URLPathSegmentPattern(DeferredPattern("(number)"), "orgId"),
+                URLPathSegmentPattern(ExactValuePattern(StringValue("employees"))),
+                URLPathSegmentPattern(BooleanPattern(), "empId"),
+            )
+        )
+        assertThat(negativePatterns[3].value).containsExactlyElementsOf(
+            listOf(
+                URLPathSegmentPattern(ExactValuePattern(StringValue("organizations"))),
+                URLPathSegmentPattern(DeferredPattern("(number)"), "orgId"),
+                URLPathSegmentPattern(ExactValuePattern(StringValue("employees"))),
+                URLPathSegmentPattern(StringPattern(), "empId"),
             )
         )
     }

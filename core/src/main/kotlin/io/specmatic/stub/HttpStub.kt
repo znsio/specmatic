@@ -462,15 +462,14 @@ class HttpStub(
         val results = features.asSequence().map { feature ->
             try {
                 val tier1Match = feature.matchingStub(
-                    stub.request,
-                    stub.response,
+                    stub,
                     ContractAndStubMismatchMessages
                 )
 
                 val matchedScenario = tier1Match.scenario ?: throw ContractException("Expected scenario after stub matched for:${System.lineSeparator()}${stub.toJSON()}")
 
                 val stubWithSubstitutionsResolved = stub.resolveDataSubstitutions(matchedScenario).map { scenarioStub ->
-                    feature.matchingStub(scenarioStub.request, scenarioStub.response, ContractAndStubMismatchMessages)
+                    feature.matchingStub(scenarioStub, ContractAndStubMismatchMessages)
                 }
 
                 val stubData: List<HttpStubData> = stubWithSubstitutionsResolved.map {
@@ -738,8 +737,10 @@ fun getHttpResponse(
     return try {
         val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
 
-        if(matchingStubResponse != null)
-            FoundStubbedResponse(matchingStubResponse.resolveSubstitutions(httpRequest))
+        if(matchingStubResponse != null) {
+            val (httpStubResponse, httpStubData) = matchingStubResponse
+            FoundStubbedResponse(httpStubResponse.resolveSubstitutions(httpRequest, httpStubData.originalRequest ?: httpRequest, httpStubData.data))
+        }
         else if (httpClientFactory != null && passThroughTargetBase.isNotBlank())
             NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
         else if (strictMode) {
@@ -783,7 +784,7 @@ private fun stubbedResponse(
     threadSafeStubs: ThreadSafeListOfStubs,
     threadSafeStubQueue: ThreadSafeListOfStubs,
     httpRequest: HttpRequest
-): Pair<List<Pair<Result, HttpStubData>>, HttpStubResponse?> {
+): Pair<List<Pair<Result, HttpStubData>>, Pair<HttpStubResponse, HttpStubData>?> {
 
     val (mock, matchResults) = stubThatMatchesRequest(threadSafeStubQueue, threadSafeStubs, httpRequest)
 
@@ -795,7 +796,7 @@ private fun stubbedResponse(
             it.contractPath,
             scenario = mock.scenario,
             feature = mock.feature
-        )
+        ) to it
     }
 
     return Pair(matchResults, stubResponse)
@@ -840,9 +841,41 @@ private fun stubThatMatchesRequest(
         }
     }
 
-    val mock = listMatchResults.find { (result, _) -> result is Result.Success }
+    val mock = listMatchResults.map {
+        val (result, stubdata) = it
+
+        if(result is Result.Success) {
+            val stubResponse = HttpStubResponse(
+                stubdata.response,
+                stubdata.delayInMilliseconds,
+                stubdata.contractPath,
+                scenario = stubdata.scenario,
+                feature = stubdata.feature,
+            )
+
+            try {
+                stubResponse.resolveSubstitutions(httpRequest, it.second.originalRequest ?: httpRequest, it.second.data)
+                it
+            } catch(e: ContractException) {
+                if(isMissingData(e))
+                    Pair(e.failure(), stubdata)
+                else
+                    throw e
+            }
+        } else
+            it
+    }.find { (result, _) -> result is Result.Success }
 
     return Pair(mock?.second, listMatchResults)
+}
+
+fun isMissingData(e: Throwable?): Boolean {
+    return when (e) {
+        null -> false
+        is MissingDataException -> true
+        is ContractException -> isMissingData(e.exceptionCause)
+        else -> false
+    }
 }
 
 object ContractAndRequestsMismatch : MismatchMessages {

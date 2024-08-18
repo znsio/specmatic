@@ -309,7 +309,8 @@ data class Feature(
                                 responsePattern = scenario.httpResponsePattern,
                                 contractPath = this.path,
                                 feature = this,
-                                scenario = scenario
+                                scenario = scenario,
+                                originalRequest = request
                             )
                         }, Result.Success()
                     )
@@ -440,7 +441,12 @@ data class Feature(
             scenarioStub.request,
             scenarioStub.response,
             mismatchMessages
-        ).copy(delayInMilliseconds = scenarioStub.delayInMilliseconds, requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) }, stubToken = scenarioStub.stubToken)
+        ).copy(
+            delayInMilliseconds = scenarioStub.delayInMilliseconds,
+            requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) },
+            stubToken = scenarioStub.stubToken,
+            data = scenarioStub.data
+        )
 
     fun clearServerState() {
         serverState = emptyMap()

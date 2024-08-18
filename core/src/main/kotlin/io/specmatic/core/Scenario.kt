@@ -582,8 +582,8 @@ data class Scenario(
         }
     }
 
-    fun resolveSubtitutions(request: HttpRequest, response: HttpResponse): HttpResponse {
-        val substitution = httpRequestPattern.getSubstitution(request, resolver)
+    fun resolveSubtitutions(request: HttpRequest, originalRequest: HttpRequest, response: HttpResponse, data: JSONObjectValue): HttpResponse {
+        val substitution = httpRequestPattern.getSubstitution(request, originalRequest, resolver, data)
         return httpResponsePattern.resolveSubstitutions(substitution, response)
     }
 }

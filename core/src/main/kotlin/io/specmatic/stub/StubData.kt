@@ -6,6 +6,7 @@ import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.attempt
 import io.specmatic.core.utilities.ExternalCommand
 import io.specmatic.core.utilities.jsonStringToValueMap
+import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 
 data class HttpStubData(
@@ -19,7 +20,8 @@ data class HttpStubData(
     val requestBodyRegex: Regex? = null,
     val feature:Feature? = null,
     val scenario: Scenario? = null,
-    val originalRequest: HttpRequest? = null
+    val originalRequest: HttpRequest? = null,
+    val data: JSONObjectValue = JSONObjectValue()
 ) {
     val matchFailure: Boolean
         get() = response.headers[SPECMATIC_RESULT_HEADER] == "failure"

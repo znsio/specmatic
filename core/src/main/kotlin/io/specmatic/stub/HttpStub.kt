@@ -462,15 +462,14 @@ class HttpStub(
         val results = features.asSequence().map { feature ->
             try {
                 val tier1Match = feature.matchingStub(
-                    stub.request,
-                    stub.response,
+                    stub,
                     ContractAndStubMismatchMessages
                 )
 
                 val matchedScenario = tier1Match.scenario ?: throw ContractException("Expected scenario after stub matched for:${System.lineSeparator()}${stub.toJSON()}")
 
                 val stubWithSubstitutionsResolved = stub.resolveDataSubstitutions(matchedScenario).map { scenarioStub ->
-                    feature.matchingStub(scenarioStub.request, scenarioStub.response, ContractAndStubMismatchMessages)
+                    feature.matchingStub(scenarioStub, ContractAndStubMismatchMessages)
                 }
 
                 val stubData: List<HttpStubData> = stubWithSubstitutionsResolved.map {
@@ -740,7 +739,7 @@ fun getHttpResponse(
 
         if(matchingStubResponse != null) {
             val (httpStubResponse, httpStubData) = matchingStubResponse
-            FoundStubbedResponse(httpStubResponse.resolveSubstitutions(httpRequest, httpStubData.originalRequest ?: httpRequest))
+            FoundStubbedResponse(httpStubResponse.resolveSubstitutions(httpRequest, httpStubData.originalRequest ?: httpRequest, httpStubData.data))
         }
         else if (httpClientFactory != null && passThroughTargetBase.isNotBlank())
             NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))

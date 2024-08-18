@@ -1,16 +1,16 @@
 {
   "data": {
-    "@token": {
+    "token": {
       "AB": {
-        "X-Region": "IN"
+        "region": "IN"
       }
     },
-    "@location": {
+    "location": {
       "IN": {
         "currency": "INR"
       }
     },
-    "@id": {
+    "id": {
       "abc": {
         "city": "Mumbai"
       }
@@ -18,19 +18,19 @@
   },
   "http-request": {
     "method": "GET",
-    "path": "/data/{{@id}}?location={{@location}}",
+    "path": "/data/(ID:string)?location=(LOCATION:string)",
     "headers": {
-      "X-Routing-Token": "{{@token}}"
+      "X-Routing-Token": "(TOKEN:string)"
     }
   },
   "http-response": {
     "status": 200,
     "headers": {
-      "X-Region": "{{@token}}"
+      "X-Region": "$(data.token[TOKEN].region)"
     },
     "body": {
-      "city": "{{@id}}",
-      "currency": "{{@location}}"
+      "city": "$(data.id[ID].city)",
+      "currency": "$(data.location[LOCATION].currency)"
     }
   }
 }

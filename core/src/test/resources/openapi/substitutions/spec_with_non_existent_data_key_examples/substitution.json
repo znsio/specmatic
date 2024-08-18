@@ -1,7 +1,7 @@
 {
   "data": {
     "id": {
-      "@data": {
+      "data": {
         "test": "test"
       }
     }
@@ -10,13 +10,13 @@
     "method": "POST",
     "path": "/person",
     "body": {
-      "department": "{{@id}}"
+      "department": "(DEPARTMENT:string)"
     }
   },
   "http-response": {
     "status": 200,
     "body": {
-      "location": "{{@id}}"
+      "location": "$(data.id[DEPARTMENT].missing)"
     }
   }
 }

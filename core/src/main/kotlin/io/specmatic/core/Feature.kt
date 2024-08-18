@@ -441,7 +441,12 @@ data class Feature(
             scenarioStub.request,
             scenarioStub.response,
             mismatchMessages
-        ).copy(delayInMilliseconds = scenarioStub.delayInMilliseconds, requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) }, stubToken = scenarioStub.stubToken)
+        ).copy(
+            delayInMilliseconds = scenarioStub.delayInMilliseconds,
+            requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) },
+            stubToken = scenarioStub.stubToken,
+            data = scenarioStub.data
+        )
 
     fun clearServerState() {
         serverState = emptyMap()

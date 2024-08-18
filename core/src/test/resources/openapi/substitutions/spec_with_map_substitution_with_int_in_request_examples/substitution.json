@@ -1,6 +1,6 @@
 {
   "data": {
-    "@id": {
+    "id": {
       "1": {
         "location": "Bangalore"
       },
@@ -13,13 +13,13 @@
     "method": "POST",
     "path": "/person",
     "body": {
-      "id": "{{@id}}"
+      "id": "(ID:number)"
     }
   },
   "http-response": {
     "status": 200,
     "body": {
-      "location": "{{@id}}"
+      "location": "$(data.id[ID].location)"
     }
   }
 }

@@ -13,7 +13,8 @@ class Substitution(
     val headersPattern: HttpHeadersPattern,
     val httpQueryParamPattern: HttpQueryParamPattern,
     val body: Pattern,
-    val resolver: Resolver
+    val resolver: Resolver,
+    val data: JSONObjectValue
 ) {
     val variableValues: Map<String, String>
 
@@ -93,7 +94,7 @@ class Substitution(
             is JSONArrayValue -> resolveSubstitutions(value)
             is StringValue -> {
                 if(value.string.startsWith("{{") && value.string.endsWith("}}"))
-                    StringValue(substitute(value.string))
+                    StringValue(substituteSimpleVariableLookup(value.string))
                 else
                     value
             }
@@ -101,7 +102,7 @@ class Substitution(
         }
     }
 
-    fun substitute(string: String): String {
+    fun substituteSimpleVariableLookup(string: String): String {
         val name = string.trim().removeSurrounding("$(", ")")
         return variableValues[name] ?: throw ContractException("Could not resolve expression $string as no variable by the name $name was found")
     }
@@ -143,26 +144,77 @@ class Substitution(
     }
 
     private fun substituteVariableValues(value: String): String {
-        if(!isVariableLookup(value))
-            return value
-
-        val variableName = value.removeSurrounding("$(", ")")
-
-        return variableValues[variableName] ?: throw ContractException("Could not resolve expression $value as no variable named $variableName was found")
+        return if(isSimpleVariableLookup(value)) {
+            substituteSimpleVariableLookup(value)
+        } else if(isDataLookup(value)) {
+            substituteDataLookupExpression(value)
+        } else value
     }
 
-    private fun isVariableLookup(value: String) =
-        value.startsWith("$(")
-                && value.endsWith(")")
-                && !value.contains('[')
+    private fun substituteDataLookupExpression(value: String): String {
+        val pieces = value.removeSurrounding("$(", ")").split('.')
+
+        val lookupSyntaxErrorMessage =
+            "Could not resolve lookup expression $value. Syntax should be $(lookupData.dictionary[VARIABLE_NAME].key)"
+
+        if (pieces.size != 3) throw ContractException(lookupSyntaxErrorMessage)
+
+        val (lookupStoreName, dictionaryLookup, keyName) = pieces
+
+        val dictionaryPieces = dictionaryLookup.split('[')
+        if (dictionaryPieces.size != 2) throw ContractException(lookupSyntaxErrorMessage)
+
+        val (dictionaryName, dictionaryLookupVariableName) = dictionaryPieces.map { it.removeSuffix("]") }
+
+        val lookupStore = data.findFirstChildByPath(lookupStoreName)
+            ?: throw ContractException("Data store named $dictionaryName not found")
+
+        val lookupStoreDictionary: JSONObjectValue = lookupStore as? JSONObjectValue
+            ?: throw ContractException("Data store named $dictionaryName should be an object")
+
+        val dictionaryValue = lookupStoreDictionary.findFirstChildByPath(dictionaryName)
+            ?: throw ContractException("Could not resolve lookup expression $value because $lookupStoreName.$dictionaryName does not exist")
+
+        val dictionary: JSONObjectValue = dictionaryValue as? JSONObjectValue
+            ?: throw ContractException("Dictionary $lookupStoreName.$dictionaryName should be an object")
+
+        val dictionaryLookupValue = variableValues[dictionaryLookupVariableName]
+            ?: throw ContractException("Cannot resolve lookup expression $value because variable $dictionaryLookupVariableName does not exist")
+
+        val finalObject = dictionary.findFirstChildByPath(dictionaryLookupValue)
+            ?: throw ContractException("Could not resolve lookup expression $value because variable $lookupStoreName.$dictionaryName[$dictionaryLookupVariableName] does not exist")
+
+        val finalObjectDictionary = finalObject as? JSONObjectValue
+            ?: throw ContractException("$lookupStoreName.$dictionaryName[$dictionaryLookupVariableName] should be an object")
+
+        val valueToReturn = finalObjectDictionary.findFirstChildByPath(keyName)
+            ?: throw ContractException("Could not resolve lookup expression $value because value $keyName in $lookupStoreName.$dictionaryName[$dictionaryLookupVariableName] does not exist")
+
+        return valueToReturn.toStringLiteral()
+    }
+
+    private fun isDataLookup(value: String): Boolean {
+        return isLookup(value) && value.contains('[')
+    }
+
+    private fun isSimpleVariableLookup(value: String) =
+        isLookup(value) && !value.contains('[')
+
+    private fun isLookup(value: String) =
+        value.startsWith("$(") && value.endsWith(")")
 
     fun substitute(value: Value, pattern: Pattern): ReturnValue<Value> {
         return try {
-            if(value !is StringValue || !isVariableLookup(value.string))
-                return HasValue(value)
-
-            val updatedString = substitute(value.string)
-            HasValue(pattern.parse(updatedString, resolver))
+            if(value !is StringValue)
+                HasValue(value)
+            else if(isSimpleVariableLookup(value.string)) {
+                val updatedString = substituteSimpleVariableLookup(value.string)
+                HasValue(pattern.parse(updatedString, resolver))
+            } else if (isDataLookup(value.string)) {
+                val updatedString = substituteDataLookupExpression(value.string)
+                HasValue(pattern.parse(updatedString, resolver))
+            } else
+                HasValue(value)
         } catch(e: Throwable) {
             HasException(e)
         }
@@ -174,7 +226,7 @@ class Substitution(
 
     fun substitute(string: String, pattern: Pattern): ReturnValue<Value> {
         return try {
-            val updatedString = substitute(string)
+            val updatedString = substituteSimpleVariableLookup(string)
             HasValue(pattern.parse(updatedString, resolver))
         } catch(e: Throwable) {
             HasException(e)

@@ -4,6 +4,7 @@ import io.specmatic.core.Feature
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.Scenario
+import io.specmatic.core.value.JSONObjectValue
 
 data class HttpStubResponse(
     val response: HttpResponse,
@@ -12,11 +13,11 @@ data class HttpStubResponse(
     val feature: Feature? = null,
     val scenario: Scenario? = null
 ) {
-    fun resolveSubstitutions(request: HttpRequest, originalRequest: HttpRequest): HttpStubResponse {
+    fun resolveSubstitutions(request: HttpRequest, originalRequest: HttpRequest, data: JSONObjectValue): HttpStubResponse {
         if(scenario == null)
             return this
 
-        val updatedResponse = scenario.resolveSubtitutions(request, originalRequest, response)
+        val updatedResponse = scenario.resolveSubtitutions(request, originalRequest, response, data)
 
         return this.copy(response = updatedResponse)
     }

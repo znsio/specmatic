@@ -422,6 +422,9 @@ tbody > tr:hover {
 .mb-2 {
   margin-bottom: 0.5rem;
 }
+.ml-2 {
+  margin-left: 0.5rem;
+}
 .ml-7 {
   margin-left: 1.75rem;
 }

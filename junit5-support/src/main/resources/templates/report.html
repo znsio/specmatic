@@ -23,38 +23,37 @@
                 </button>
             </div>
         </div>
-        <div id="summary" class="flex justify-between gap-5 p-1 border-2" th:classappend="'bg-' + ${summaryResult}">
-            <ol id="results" class="relative flex items-center flex-1 px-2 print:flex-wrap gap-x-5 *:w-44 print:*:w-fit">
-                <li class="flex flex-col print:flex-row print:items-center print:gap-2" id="totalCoverage">
-                    <p class="text-black/50">API Coverage</p>
-                    <span class="text-3xl font-bold ml-6" th:classappend="${summaryResult}">[[${totalCoverage}]]%</span>
-                </li>
-                <li class="invisible h-12"></li>
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="success" data-type="Success" data-index="2">
+        <div id="summary" class="flex items-center justify-between gap-5 p-1 border-2" th:classappend="'bg-' + ${summaryResult}">
+            <div class="flex flex-col ml-2 print:items-center print:gap-2" id="totalCoverage">
+                <p class="text-black/50 whitespace-nowrap">API Coverage</p>
+                <span class="text-center text-3xl font-bold" th:classappend="${summaryResult}">[[${totalCoverage}]]%</span>
+            </div>
+            <ol id="results" class="relative flex items-center justify-center flex-1 px-2 print:flex-wrap gap-x-5 *:w-44 print:*:w-fit">
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="success" data-type="Success" data-index="-2">
                     <img src="assets/check-badge.svg" alt="success" class="size-8">
                     <p class="group-hover:text-green-500">Success: [[${totalSuccess}]]
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-green-500"></span>
                     </p>
                 </li>
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="failed" data-type="Failed" data-index="3">
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="failed" data-type="Failed" data-index="-1">
                     <img src="assets/x-circle.svg" alt="failed" class="size-8">
                     <p class="group-hover:text-red-500">Failed: [[${totalFailures}]]
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-red-500"></span>
                     </p>
                 </li>
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="errors" data-type="Error" data-index="4">
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="errors" data-type="Error" data-index="0">
                     <img src="assets/exclamation-triangle.svg" alt="errors" class="size-8">
                     <p class="group-hover:text-red-500">Errors: [[${totalErrors}]]
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-red-500"></span>
                     </p>
                 </li>
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="skipped" data-type="Skipped" data-index="5">
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="skipped" data-type="Skipped" data-index="1">
                     <img src="assets/blocked.svg" alt="skipped" class="size-8">
                     <p class="group-hover:text-yellow-500">Skipped: [[${totalSkipped}]]
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-yellow-500"></span>
                     </p>
                 </li>
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="all" data-type="All" data-index="6">
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="all" data-type="All" data-index="2">
                     <img src="assets/clipboard-document-list.svg" alt="total-tests" class="size-8">
                     <p class="group-hover:text-blue-500">Total: [[${totalTests}]]
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-blue-500"></span>
@@ -64,7 +63,7 @@
                     <img src="assets/clock.svg" alt="total-time" class="size-8">
                     <p>Time: [[${totalDuration}]]ms</p>
                 </li> -->
-                <li id="overlay" class="absolute h-12 duration-500 bg-white rounded-md print:hidden w-44"></li>
+                <li id="overlay" class="absolute h-12 duration-500 bg-white rounded-md print:hidden"></li>
             </ol>
             <div id="badge" class="relative flex items-center justify-center">
                 <img src="assets/badge.svg" class="size-18" th:classappend="${summaryResult}" alt="badge">

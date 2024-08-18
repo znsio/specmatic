@@ -309,7 +309,8 @@ data class Feature(
                                 responsePattern = scenario.httpResponsePattern,
                                 contractPath = this.path,
                                 feature = this,
-                                scenario = scenario
+                                scenario = scenario,
+                                originalRequest = request
                             )
                         }, Result.Success()
                     )

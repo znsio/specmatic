@@ -18,7 +18,8 @@ data class HttpStubData(
     val stubToken: String? = null,
     val requestBodyRegex: Regex? = null,
     val feature:Feature? = null,
-    val scenario: Scenario? = null
+    val scenario: Scenario? = null,
+    val originalRequest: HttpRequest? = null
 ) {
     val matchFailure: Boolean
         get() = response.headers[SPECMATIC_RESULT_HEADER] == "failure"

@@ -738,8 +738,10 @@ fun getHttpResponse(
     return try {
         val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
 
-        if(matchingStubResponse != null)
-            FoundStubbedResponse(matchingStubResponse.resolveSubstitutions(httpRequest))
+        if(matchingStubResponse != null) {
+            val (httpStubResponse, httpStubData) = matchingStubResponse
+            FoundStubbedResponse(httpStubResponse.resolveSubstitutions(httpRequest, httpStubData.originalRequest ?: httpRequest))
+        }
         else if (httpClientFactory != null && passThroughTargetBase.isNotBlank())
             NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
         else if (strictMode) {
@@ -783,7 +785,7 @@ private fun stubbedResponse(
     threadSafeStubs: ThreadSafeListOfStubs,
     threadSafeStubQueue: ThreadSafeListOfStubs,
     httpRequest: HttpRequest
-): Pair<List<Pair<Result, HttpStubData>>, HttpStubResponse?> {
+): Pair<List<Pair<Result, HttpStubData>>, Pair<HttpStubResponse, HttpStubData>?> {
 
     val (mock, matchResults) = stubThatMatchesRequest(threadSafeStubQueue, threadSafeStubs, httpRequest)
 
@@ -795,7 +797,7 @@ private fun stubbedResponse(
             it.contractPath,
             scenario = mock.scenario,
             feature = mock.feature
-        )
+        ) to it
     }
 
     return Pair(matchResults, stubResponse)

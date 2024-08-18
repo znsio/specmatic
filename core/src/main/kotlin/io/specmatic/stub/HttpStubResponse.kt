@@ -12,10 +12,11 @@ data class HttpStubResponse(
     val feature: Feature? = null,
     val scenario: Scenario? = null
 ) {
-    fun resolveSubstitutions(request: HttpRequest): HttpStubResponse {
-        val updatedResponse = scenario?.let {
-            it.resolveSubtitutions(request, response)
-        } ?: response
+    fun resolveSubstitutions(request: HttpRequest, originalRequest: HttpRequest): HttpStubResponse {
+        if(scenario == null)
+            return this
+
+        val updatedResponse = scenario.resolveSubtitutions(request, originalRequest, response)
 
         return this.copy(response = updatedResponse)
     }

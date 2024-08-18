@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
-class StubSubstitution {
+class StubSubstitutionTest {
     @Test
     fun `stub example with substitution in response body`() {
         val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_substitution_in_response_body.yaml")
@@ -78,8 +78,8 @@ class StubSubstitution {
         """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        val exampleRequest = HttpRequest("GET", "/data", headers = mapOf("X-Trace" to "abc123"))
-        val exampleResponse = HttpResponse(200, mapOf("X-Trace" to "{{REQUEST.HEADERS.X-Trace}}"))
+        val exampleRequest = HttpRequest("GET", "/data", headers = mapOf("X-Trace" to "(TRACE:string)"))
+        val exampleResponse = HttpResponse(200, mapOf("X-Trace" to "$(TRACE)"))
 
         HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
             val request = HttpRequest("GET", "/data", headers = mapOf("X-Trace" to "abc123"))
@@ -123,8 +123,8 @@ class StubSubstitution {
         """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        val exampleRequest = HttpRequest("GET", "/data", queryParametersMap = mapOf("traceId" to "abc123"))
-        val exampleResponse = HttpResponse(200, mapOf("X-Trace" to "{{REQUEST.QUERY-PARAMS.traceId}}"))
+        val exampleRequest = HttpRequest("GET", "/data", queryParametersMap = mapOf("traceId" to "(TRACE_ID:string)"))
+        val exampleResponse = HttpResponse(200, mapOf("X-Trace" to "$(TRACE_ID)"))
 
         HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
             val request = HttpRequest("GET", "/data", queryParametersMap = mapOf("traceId" to "abc123"))
@@ -169,8 +169,8 @@ class StubSubstitution {
         """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        val exampleRequest = HttpRequest("GET", "/data/abc123")
-        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "{{REQUEST.PATH.id}}"}"""))
+        val exampleRequest = HttpRequest("GET", "/data/(ID:string)")
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "$(ID)"}"""))
 
         HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
             val request = HttpRequest("GET", "/data/abc123")
@@ -215,8 +215,8 @@ class StubSubstitution {
         """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        val exampleRequest = HttpRequest("GET", "/data/123")
-        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "{{REQUEST.PATH.id}}"}"""))
+        val exampleRequest = HttpRequest("GET", "/data/(ID:string)")
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "$(ID)"}"""))
 
         HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
             val request = HttpRequest("GET", "/data/123")
@@ -266,11 +266,11 @@ class StubSubstitution {
         """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "123"}"""))
-        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "{{REQUEST.BODY.id}}"}"""))
+        val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "(ID:string)"}"""))
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "$(ID)"}"""))
 
         HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
-            val response = stub.client.execute(exampleRequest)
+            val response = stub.client.execute(HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "123"}""")))
 
             assertThat(response.status).isEqualTo(200)
             val jsonResponseBody = response.body as JSONObjectValue
@@ -316,8 +316,8 @@ class StubSubstitution {
         """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "abc"}"""))
-        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "{{REQUEST.BODY.id}}"}"""))
+        val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "(ID:string)"}"""))
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "$(ID)"}"""))
 
         HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
             val response = stub.client.execute(exampleRequest)
@@ -364,8 +364,8 @@ class StubSubstitution {
         """.trimIndent()
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
-        val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "abc"}"""))
-        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "text/plain", "X-Id" to "{{REQUEST.BODY.id}}"), body = StringValue("success"))
+        val exampleRequest = HttpRequest("POST", "/data", body = parsedJSONObject("""{"id": "(ID:string)"}"""))
+        val exampleResponse = HttpResponse(200, headers = mapOf("Content-Type" to "text/plain", "X-Id" to "$(ID)"), body = StringValue("success"))
 
         HttpStub(feature, listOf(ScenarioStub(exampleRequest, exampleResponse))).use { stub ->
             val response = stub.client.execute(exampleRequest)

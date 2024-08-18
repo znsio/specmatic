@@ -731,8 +731,8 @@ data class HttpRequestPattern(
         } ?: row
     }
 
-    fun getSubstitution(request: HttpRequest, resolver: Resolver): Substitution {
-        return Substitution(request, httpPathPattern ?: HttpPathPattern(emptyList(), ""), headersPattern, httpQueryParamPattern, body, resolver)
+    fun getSubstitution(runningRequest: HttpRequest, originalRequest: HttpRequest, resolver: Resolver): Substitution {
+        return Substitution(runningRequest, originalRequest, httpPathPattern ?: HttpPathPattern(emptyList(), ""), headersPattern, httpQueryParamPattern, body, resolver)
     }
 
 }

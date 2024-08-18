@@ -841,9 +841,41 @@ private fun stubThatMatchesRequest(
         }
     }
 
-    val mock = listMatchResults.find { (result, _) -> result is Result.Success }
+    val mock = listMatchResults.map {
+        val (result, stubdata) = it
+
+        if(result is Result.Success) {
+            val stubResponse = HttpStubResponse(
+                stubdata.response,
+                stubdata.delayInMilliseconds,
+                stubdata.contractPath,
+                scenario = stubdata.scenario,
+                feature = stubdata.feature,
+            )
+
+            try {
+                stubResponse.resolveSubstitutions(httpRequest, it.second.originalRequest ?: httpRequest, it.second.data)
+                it
+            } catch(e: ContractException) {
+                if(isMissingData(e))
+                    Pair(e.failure(), stubdata)
+                else
+                    throw e
+            }
+        } else
+            it
+    }.find { (result, _) -> result is Result.Success }
 
     return Pair(mock?.second, listMatchResults)
+}
+
+fun isMissingData(e: Throwable?): Boolean {
+    return when (e) {
+        null -> false
+        is MissingDataException -> true
+        is ContractException -> isMissingData(e.exceptionCause)
+        else -> false
+    }
 }
 
 object ContractAndRequestsMismatch : MismatchMessages {

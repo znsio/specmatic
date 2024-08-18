@@ -179,10 +179,10 @@ class Substitution(
             ?: throw ContractException("Dictionary $lookupStoreName.$dictionaryName should be an object")
 
         val dictionaryLookupValue = variableValues[dictionaryLookupVariableName]
-            ?: throw ContractException("Cannot resolve lookup expression $value because variable $dictionaryLookupVariableName does not exist")
+            ?: throw MissingDataException("Cannot resolve lookup expression $value because variable $dictionaryLookupVariableName does not exist")
 
         val finalObject = dictionary.findFirstChildByPath(dictionaryLookupValue)
-            ?: throw ContractException("Could not resolve lookup expression $value because variable $lookupStoreName.$dictionaryName[$dictionaryLookupVariableName] does not exist")
+            ?: throw MissingDataException("Could not resolve lookup expression $value because variable $lookupStoreName.$dictionaryName[$dictionaryLookupVariableName] does not exist")
 
         val finalObjectDictionary = finalObject as? JSONObjectValue
             ?: throw ContractException("$lookupStoreName.$dictionaryName[$dictionaryLookupVariableName] should be an object")
@@ -192,6 +192,8 @@ class Substitution(
 
         return valueToReturn.toStringLiteral()
     }
+
+    class Not
 
     private fun isDataLookup(value: String): Boolean {
         return isLookup(value) && value.contains('[')
@@ -233,3 +235,5 @@ class Substitution(
         }
     }
 }
+
+class MissingDataException(override val message: String) : Throwable(message)

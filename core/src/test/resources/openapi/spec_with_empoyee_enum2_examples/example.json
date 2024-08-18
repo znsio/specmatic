@@ -1,6 +1,6 @@
 {
   "data": {
-    "@personType": {
+    "personType": {
       "manager": {
         "name": "Justin"
       }
@@ -10,13 +10,13 @@
     "method": "GET",
     "path": "/person",
     "query": {
-      "type": "{{@personType}}"
+      "type": "(PERSON_TYPE:string)"
     }
   },
   "http-response": {
     "status": 200,
     "body": {
-      "name": "{{@personType}}",
+      "name": "$(data.personType[PERSON_TYPE].name",
       "type": "manager"
     }
   }

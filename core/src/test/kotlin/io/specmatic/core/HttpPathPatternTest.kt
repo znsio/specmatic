@@ -169,14 +169,14 @@ internal class HttpPathPatternTest {
         assertThat(negativePatterns[0].value).isEqualTo(
             listOf(
                 URLPathSegmentPattern(ExactValuePattern(StringValue("products"))),
-                URLPathSegmentPattern(StringPattern(), "id"),
+                URLPathSegmentPattern(BooleanPattern(), "id"),
                 URLPathSegmentPattern(ExactValuePattern(StringValue("image"))),
             )
         )
         assertThat(negativePatterns[1].value).isEqualTo(
             listOf(
                 URLPathSegmentPattern(ExactValuePattern(StringValue("products"))),
-                URLPathSegmentPattern(BooleanPattern(), "id"),
+                URLPathSegmentPattern(StringPattern(), "id"),
                 URLPathSegmentPattern(ExactValuePattern(StringValue("image"))),
             )
         )

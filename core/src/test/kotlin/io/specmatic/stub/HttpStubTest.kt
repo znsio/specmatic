@@ -2488,12 +2488,11 @@ components:
 
             val responseBody = response.body as JSONObjectValue
             assertThat(responseBody.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo("Mumbai")
-
         }
     }
 
     @Test
-    fun `should stub out a template`() {
+    fun `should stub out a template with only templated request`() {
         createStubFromContracts(listOf(("src/test/resources/openapi/substitutions/spec_with_template_in_response_body.yaml")), timeoutMillis = 0).use { stub ->
             val request = HttpRequest(
                 "POST",

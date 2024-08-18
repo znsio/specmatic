@@ -16,7 +16,6 @@ import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
 import io.specmatic.core.utilities.*
-import io.specmatic.stub.stringToMockScenario
 import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.info.Info
@@ -435,12 +434,36 @@ data class Feature(
     fun matchingStub(
         scenarioStub: ScenarioStub,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
-    ): HttpStubData =
-        matchingStub(
-            scenarioStub.request,
-            scenarioStub.response,
-            mismatchMessages
-        ).copy(delayInMilliseconds = scenarioStub.delayInMilliseconds, requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) }, stubToken = scenarioStub.stubToken)
+    ): HttpStubData {
+        return if(scenarioStub.template != null) {
+            val matchingScenario = scenarios.find { scenario ->
+                scenario.matchesTemplate(scenarioStub.template)
+            }
+
+            if(matchingScenario != null) {
+                HttpStubData(
+                    HttpRequestPattern(),
+                    HttpResponse(),
+                    matchingScenario.resolver,
+                    responsePattern = HttpResponsePattern(),
+                    scenario = matchingScenario,
+                    template = scenarioStub.template
+                )
+            }
+            else
+                throw NoMatchingScenario(Results(listOf(Result.Failure("Template did not match"))))
+        } else {
+            matchingStub(
+                scenarioStub.request,
+                scenarioStub.response,
+                mismatchMessages
+            ).copy(
+                delayInMilliseconds = scenarioStub.delayInMilliseconds,
+                requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) },
+                stubToken = scenarioStub.stubToken
+            )
+        }
+    }
 
     fun clearServerState() {
         serverState = emptyMap()

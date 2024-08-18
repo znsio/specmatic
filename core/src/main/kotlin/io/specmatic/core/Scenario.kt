@@ -7,6 +7,7 @@ import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.mapZip
 import io.specmatic.core.utilities.nullOrExceptionString
 import io.specmatic.core.value.*
+import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.RequestContext
 
 object ContractAndStubMismatchMessages : MismatchMessages {
@@ -585,6 +586,11 @@ data class Scenario(
     fun resolveSubtitutions(request: HttpRequest, response: HttpResponse): HttpResponse {
         val substitution = httpRequestPattern.getSubstitution(request, resolver)
         return httpResponsePattern.resolveSubstitutions(substitution, response)
+    }
+
+    fun matchesTemplate(template: ScenarioStub): Boolean {
+        val requestResult = httpRequestPattern.httpPathPattern?.matches(template.request.path!!, resolver)
+        return requestResult is Result.Success && (template.response.status == httpResponsePattern.status || httpResponsePattern.status == DEFAULT_RESPONSE_CODE)
     }
 }
 

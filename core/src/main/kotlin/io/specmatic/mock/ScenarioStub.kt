@@ -293,8 +293,8 @@ const val TEMPLATE = "template"
 
 fun validateMock(mockSpec: Map<String, Any?>) {
     if(mockSpec.containsKey(TEMPLATE)) {
-        val template = mockSpec.getValue("template")
-        return validateMock(template as? Map<String, Any?> ?: throw ContractException("template should be an object"))
+        val template = mockSpec.getValue("template") as? JSONObjectValue ?: throw ContractException("template should be an object")
+        return validateMock(template.jsonObject)
     }
 
     if (MOCK_HTTP_REQUEST_ALL_KEYS.none { mockSpec.containsKey(it) })

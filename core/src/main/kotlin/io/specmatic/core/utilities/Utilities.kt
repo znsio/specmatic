@@ -360,3 +360,13 @@ fun nullOrExceptionString(fn: () -> Result): String? {
         logger.exceptionString(t)
     }
 }
+
+fun uniqueNameForApiOperation(httpRequest: HttpRequest, baseURL: String, responseStatus: Int): String {
+    val (method, path) = httpRequest
+    val formattedPath = path?.replace(baseURL, "")
+        ?.replace("/", "_")
+        ?.drop(1)
+        .orEmpty()
+    if (formattedPath.isEmpty()) return "${method}_${responseStatus}"
+    return "${formattedPath}_${method}_${responseStatus}"
+}

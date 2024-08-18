@@ -2,10 +2,10 @@ package application
 
 import io.specmatic.core.*
 import io.specmatic.core.log.*
+import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
 import picocli.CommandLine.*
-import io.specmatic.stub.HttpStub
 import io.specmatic.test.TestExecutor
 import java.io.File
 import java.util.concurrent.Callable
@@ -36,11 +36,16 @@ class ExamplesCommand : Callable<Unit> {
 
                         val response = feature.lookupResponse(request).cleanup()
 
-                        val stubJSON = ScenarioStub(request, response).toJSON()
+                        val scenarioStub = ScenarioStub(request, response)
+
+                        val stubJSON = scenarioStub.toJSON()
 
                         val stubString = stubJSON.toStringLiteral()
 
-                        val filename = "example-$ctr.json"
+                        val uniqueNameForApiOperation =
+                            uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
+
+                        val filename = "${uniqueNameForApiOperation}_${ctr}.json"
 
                         val file = examplesDir.resolve(filename)
                         val loggablePath = "Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}"

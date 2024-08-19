@@ -1,0 +1,17 @@
+{
+  "partial": {
+    "http-request": {
+      "method": "POST",
+      "path": "/person",
+      "body": {
+        "name": "Joan"
+      }
+    },
+    "http-response": {
+      "status": 200,
+      "body": {
+        "employeename": "Joan"
+      }
+    }
+  }
+}

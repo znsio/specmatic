@@ -1,0 +1,44 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /person:
+    post:
+      summary: Add person
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required:
+                      - employeeid
+                      - employeename
+                    properties:
+                      employeeid:
+                        type: number
+                      employeename:
+                        type: string
+                  - type: object
+                    required:
+                      - customerid
+                      - customername
+                    properties:
+                      customerid:
+                        type: number
+                      customername:
+                        type: string

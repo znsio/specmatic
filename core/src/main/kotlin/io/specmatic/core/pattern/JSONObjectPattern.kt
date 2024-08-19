@@ -64,7 +64,7 @@ data class JSONObjectPattern(
             return HasFailure(Result.Failure("Cannot resolve substitutions, expected object but got ${value.displayableType()}"))
 
         val updatedMap = value.jsonObject.mapValues { (key, value) ->
-            val pattern = pattern.get(key) ?: pattern.getValue("$key?")
+            val pattern = attempt("Could not find key in json object", key) { pattern.get(key) ?: pattern.get("$key?") ?: throw MissingDataException("Could not find key $key") }
             pattern.resolveSubstitutions(substitution, value, resolver).breadCrumb(key)
         }
 

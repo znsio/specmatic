@@ -19,13 +19,32 @@ data class AnyPattern(
 
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
 
+    override fun generatePartial(value: Value, resolver: Resolver): ReturnValue<Value> {
+        val results = pattern.asSequence().map {
+            it.generatePartial(value, resolver)
+        }
+
+        val successfulGeneration = results.firstOrNull { it is HasValue }
+
+        if(successfulGeneration != null)
+            return successfulGeneration
+
+        val failures = results.toList().filterIsInstance<Result.Failure>()
+
+        return HasFailure(Result.Failure.fromFailures(failures))
+    }
+
     override fun resolveSubstitutions(
         substitution: Substitution,
         value: Value,
         resolver: Resolver
     ): ReturnValue<Value> {
         val options = pattern.map {
-            it.resolveSubstitutions(substitution, value, resolver)
+            try {
+                it.resolveSubstitutions(substitution, value, resolver)
+            } catch(e: Throwable) {
+                HasException(e)
+            }
         }
 
         val hasValue = options.find { it is HasValue }

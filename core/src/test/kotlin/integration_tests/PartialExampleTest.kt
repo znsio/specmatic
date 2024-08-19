@@ -219,7 +219,6 @@ class PartialExampleTest {
             val expectationRequest = HttpRequest("POST", path = "/_specmatic/expectations", body = parsedJSONObject(partialExample))
             stub.client.execute(expectationRequest).also { response ->
                 assertThat(response.status).isEqualTo(200)
-
             }
 
             val response = stub.client.execute(
@@ -234,6 +233,25 @@ class PartialExampleTest {
             val jsonResponseBody = response.body as JSONObjectValue
             assertThat(jsonResponseBody.jsonObject).containsKey("id")
             assertThat(jsonResponseBody.jsonObject).containsEntry("name", StringValue("Juste"))
+        }
+    }
+
+    @Test
+    fun `partial match of AnyPattern in response`() {
+        createStubFromContracts(listOf("src/test/resources/openapi/substitutions/spec_with_oneOf_in_response.yaml"), timeoutMillis = 0).use { stub ->
+            stub.client.execute(HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Jane"}"""))).also { response ->
+                assertThat(response.status).isEqualTo(200)
+
+                val jsonResponseBody = response.body as JSONObjectValue
+                assertThat(jsonResponseBody.findFirstChildByPath("customername")?.toStringLiteral()).isEqualTo("Jane")
+            }
+
+            stub.client.execute(HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Joan"}"""))).also { response ->
+                assertThat(response.status).isEqualTo(200)
+
+                val jsonResponseBody = response.body as JSONObjectValue
+                assertThat(jsonResponseBody.findFirstChildByPath("employeename")?.toStringLiteral()).isEqualTo("Joan")
+            }
         }
     }
 }

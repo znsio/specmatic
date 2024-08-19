@@ -589,29 +589,7 @@ data class Scenario(
     }
 
     fun matchesTemplate(template: ScenarioStub): Result {
-        val noPatternKeyCheck = object : KeyErrorCheck {
-            override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError? {
-                return null
-            }
-
-            override fun validateList(pattern: Map<String, Any>, actual: Map<String, Any>): List<KeyError> {
-                return emptyList()
-            }
-
-            override fun validateListCaseInsensitive(
-                pattern: Map<String, Pattern>,
-                actual: Map<String, StringValue>
-            ): List<KeyError> {
-                return emptyList()
-            }
-        }
-
-        val partialKeyCheck = KeyCheck(
-            patternKeyCheck = noPatternKeyCheck,
-            unexpectedKeyCheck = ValidateUnexpectedKeys
-        )
-
-        val updatedResolver = resolver.copy(findKeyErrorCheck = partialKeyCheck, mockMode = true)
+        val updatedResolver = resolver.copy(findKeyErrorCheck = PARTIAL_KEYCHECK, mockMode = true)
 
         val requestMatch = httpRequestPattern.matches(template.request, updatedResolver, updatedResolver)
         val responseMatch = httpResponsePattern.matchesMock(template.response, updatedResolver)
@@ -662,3 +640,25 @@ object ContractAndResponseMismatch : MismatchMessages {
         } named $keyName in the specification was not found in the response"
     }
 }
+
+val noPatternKeyCheck = object : KeyErrorCheck {
+    override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError? {
+        return null
+    }
+
+    override fun validateList(pattern: Map<String, Any>, actual: Map<String, Any>): List<KeyError> {
+        return emptyList()
+    }
+
+    override fun validateListCaseInsensitive(
+        pattern: Map<String, Pattern>,
+        actual: Map<String, StringValue>
+    ): List<KeyError> {
+        return emptyList()
+    }
+}
+
+val PARTIAL_KEYCHECK = KeyCheck(
+    patternKeyCheck = noPatternKeyCheck,
+    unexpectedKeyCheck = ValidateUnexpectedKeys
+)

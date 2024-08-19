@@ -853,7 +853,7 @@ private fun stubThatMatchesRequest(
                     findKeyErrorCheck = KeyCheck(unexpectedKeyCheck = IgnoreUnexpectedKeys)
                 )
 
-                val partialResult = partialRequest.matches(partial.request, partialResolver, partialResolver)
+                val partialResult = partialRequest.matches(httpRequest, partialResolver, partialResolver)
 
                 if(!partialResult.isSuccess())
                     partialResult to stubData

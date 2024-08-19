@@ -237,6 +237,135 @@ class PartialExampleTest {
     }
 
     @Test
+    fun `non-transient expectations should be honored in order of last-in first-out`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /person:
+                post:
+                  summary: Add person
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - name
+                            - department
+                          properties:
+                            name:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: number
+                              name:
+                                type: string
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(feature).use { stub ->
+            val partialExample1 = """
+                {
+                    "partial": {
+                        "http-request": {
+                            "method": "POST",
+                            "path": "/person",
+                            "body": {
+                                "name": "(NAME:string)"
+                            }
+                        },
+                        "http-response": {
+                            "status": 200,
+                            "body": {
+                                "name": "$(NAME)"
+                            }
+                        }
+                    }
+                }
+            """.trimIndent()
+
+            val partialExample2 = """
+                {
+                    "partial": {
+                        "http-request": {
+                            "method": "POST",
+                            "path": "/person",
+                            "body": {
+                                "name": "John"
+                            }
+                        },
+                        "http-response": {
+                            "status": 200,
+                            "body": {
+                                "name": "Nocke"
+                            }
+                        }
+                    }
+                }
+            """.trimIndent()
+
+            stub.client.execute(
+                HttpRequest(
+                    "POST",
+                    path = "/_specmatic/expectations",
+                    body = parsedJSONObject(partialExample1)
+                )
+            ).also { response ->
+                assertThat(response.status).isEqualTo(200)
+            }
+
+            stub.client.execute(
+                HttpRequest(
+                    "POST",
+                    path = "/_specmatic/expectations",
+                    body = parsedJSONObject(partialExample2)
+                )
+            ).also { response ->
+                assertThat(response.status).isEqualTo(200)
+            }
+
+            stub.client.execute(
+                HttpRequest(
+                    "POST",
+                    path = "/person",
+                    body = parsedJSONObject("""{"name": "Juste"}""")
+                )
+            ).also { response ->
+                assertThat(response.status).isEqualTo(200)
+                val jsonResponseBody = response.body as JSONObjectValue
+                assertThat(jsonResponseBody.jsonObject).containsKey("id")
+                assertThat(jsonResponseBody.jsonObject).containsEntry("name", StringValue("Juste"))
+            }
+
+            stub.client.execute(
+                HttpRequest(
+                    "POST",
+                    path = "/person",
+                    body = parsedJSONObject("""{"name": "John"}""")
+                )
+            ).also { response ->
+                assertThat(response.status).isEqualTo(200)
+                val jsonResponseBody = response.body as JSONObjectValue
+                assertThat(jsonResponseBody.jsonObject).containsKey("id")
+                assertThat(jsonResponseBody.jsonObject).containsEntry("name", StringValue("Nocke"))
+            }
+        }
+    }
+
+    @Test
     fun `partial match of AnyPattern in response`() {
         createStubFromContracts(listOf("src/test/resources/openapi/substitutions/spec_with_oneOf_in_response.yaml"), timeoutMillis = 0).use { stub ->
             stub.client.execute(HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Jane"}"""))).also { response ->

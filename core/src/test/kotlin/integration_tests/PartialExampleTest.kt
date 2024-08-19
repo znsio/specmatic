@@ -1,14 +1,14 @@
 package integration_tests
 
+import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
+import io.specmatic.stub.HttpStub
 import io.specmatic.stub.captureStandardOutput
 import io.specmatic.stub.createStubFromContracts
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 class PartialExampleTest {
@@ -154,5 +154,86 @@ class PartialExampleTest {
         assertThat(output).contains(">> REQUEST.QUERY-PARAMS.data")
         assertThat(output).contains(">> RESPONSE.HEADERS.data")
         assertThat(output).contains(">> RESPONSE.BODY.location")
+    }
+
+    @Test
+    fun `ability to set dynamic expectations using partial examples`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.0
+            info:
+              title: Sample API
+              version: 0.1.9
+            paths:
+              /person:
+                post:
+                  summary: Add person
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - name
+                          properties:
+                            name:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                              - name
+                            properties:
+                              id:
+                                type: number
+                              name:
+                                type: string
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(feature).use { stub ->
+            val partialExample = """
+                {
+                    "partial": {
+                        "http-request": {
+                            "method": "POST",
+                            "path": "/person",
+                            "body": {
+                                "name": "(NAME:string)"
+                            }
+                        },
+                        "http-response": {
+                            "status": 200,
+                            "body": {
+                                "name": "$(NAME)"
+                            }
+                        }
+                    }
+                }
+            """.trimIndent()
+
+            val expectationRequest = HttpRequest("POST", path = "/_specmatic/expectations", body = parsedJSONObject(partialExample))
+            stub.client.execute(expectationRequest).also { response ->
+                assertThat(response.status).isEqualTo(200)
+
+            }
+
+            val response = stub.client.execute(
+                HttpRequest(
+                    "POST",
+                    path = "/person",
+                    body = parsedJSONObject("""{"name": "Juste"}""")
+                )
+            )
+
+            assertThat(response.status).isEqualTo(200)
+            val jsonResponseBody = response.body as JSONObjectValue
+            assertThat(jsonResponseBody.jsonObject).containsKey("id")
+            assertThat(jsonResponseBody.jsonObject).containsEntry("name", StringValue("Juste"))
+        }
     }
 }

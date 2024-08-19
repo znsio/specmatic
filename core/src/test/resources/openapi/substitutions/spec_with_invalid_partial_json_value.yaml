@@ -1,0 +1,54 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /person/{personId}:
+    parameters:
+      - in: path
+        name: personId
+        schema:
+          type: number
+      - in: header
+        name: id
+        schema:
+          type: number
+      - in: query
+        name: data
+        schema:
+          type: number
+    post:
+      summary: Add person
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - department
+              properties:
+                name:
+                  type: string
+                department:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          headers:
+            data:
+              schema:
+                type: number
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - location
+                properties:
+                  id:
+                    type: number
+                  location:
+                    type: string

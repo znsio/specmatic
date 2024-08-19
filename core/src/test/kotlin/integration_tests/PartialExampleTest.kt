@@ -5,8 +5,10 @@ import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
+import io.specmatic.stub.captureStandardOutput
 import io.specmatic.stub.createStubFromContracts
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 class PartialExampleTest {
@@ -135,5 +137,22 @@ class PartialExampleTest {
             assertThat(responseBody.jsonObject).containsKeys("id")
             assertThat(responseBody.jsonObject).containsEntry("location", StringValue("Mumbai"))
         }
+    }
+
+    @Test
+    fun `partial with invalid json value should get rejected` () {
+        val (output, _) = captureStandardOutput {
+            val stub = createStubFromContracts(listOf(("src/test/resources/openapi/substitutions/spec_with_invalid_partial_json_value.yaml")), timeoutMillis = 0)
+            stub.close()
+        }
+
+        println(output)
+
+        assertThat(output).contains(">> REQUEST.BODY.department")
+        assertThat(output).contains(">> REQUEST.PATH.personId")
+        assertThat(output).contains(">> REQUEST.HEADERS.id")
+        assertThat(output).contains(">> REQUEST.QUERY-PARAMS.data")
+        assertThat(output).contains(">> RESPONSE.HEADERS.data")
+        assertThat(output).contains(">> RESPONSE.BODY.location")
     }
 }

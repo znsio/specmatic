@@ -436,11 +436,15 @@ data class Feature(
         scenarioStub: ScenarioStub,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): HttpStubData {
+        if(scenarios.isEmpty())
+            throw ContractException("No scenarios found in feature $name ($path)")
+
         return if(scenarioStub.partial != null) {
-            val matchingScenario = scenarios.find { scenario ->
-                scenario.matchesTemplate(scenarioStub.partial)
+            val results = scenarios.asSequence().map { scenario ->
+                scenario.matchesTemplate(scenarioStub.partial) to scenario
             }
 
+            val matchingScenario = results.filter { it.first is Result.Success }.map { it.second }.firstOrNull()
 
             if(matchingScenario != null) {
                 val requestTypeWithAncestors =
@@ -467,8 +471,11 @@ data class Feature(
                     data = scenarioStub.data
                 )
             }
-            else
-                throw NoMatchingScenario(Results(listOf(Result.Failure("Template did not match"))))
+            else {
+                val failures = Results(results.map { it.first }.filterIsInstance<Result.Failure>().toList()).withoutFluff()
+
+                throw NoMatchingScenario(failures, msg = "Could not load partial example ${scenarioStub.filePath}")
+            }
         } else {
             matchingStub(
                 scenarioStub.request,

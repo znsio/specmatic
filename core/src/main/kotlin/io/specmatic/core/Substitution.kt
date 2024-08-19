@@ -7,20 +7,94 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
 class Substitution(
-    val request: HttpRequest,
+    val runningRequest: HttpRequest,
+    val originalRequest: HttpRequest,
     val httpPathPattern: HttpPathPattern,
     val headersPattern: HttpHeadersPattern,
     val httpQueryParamPattern: HttpQueryParamPattern,
     val body: Pattern,
-    val resolver: Resolver
+    val resolver: Resolver,
+    val data: JSONObjectValue
 ) {
+    val variableValues: Map<String, String>
+
+    init {
+        val variableValuesFromHeaders = variablesFromMap(runningRequest.headers.filter { it.key in originalRequest.headers }, originalRequest.headers)
+        val variableValuesFromQueryParams = variablesFromMap(runningRequest.queryParams.asMap(), originalRequest.queryParams.asMap())
+
+        val runningPathPieces = runningRequest.path!!.split('/').filterNot { it.isBlank() }
+        val originalPathPieces = originalRequest.path!!.split('/').filterNot { it.isBlank() }
+
+        val variableValuesFromPath = runningPathPieces.zip(originalPathPieces).map { (runningPiece, originalPiece) ->
+            if (!isPatternToken(originalPiece))
+                null
+            else {
+                val pieces = withoutPatternDelimiters(originalPiece).split(':')
+                val name = pieces.getOrNull(0)
+                    ?: throw ContractException("Could not interpret substituion expression $originalPiece")
+
+                name to runningPiece
+            }
+        }.filterNotNull().toMap()
+
+        val variableValuesFromRequestBody: Map<String, String> = getVariableValuesFromValue(runningRequest.body, originalRequest.body)
+
+        variableValues = variableValuesFromHeaders + variableValuesFromRequestBody + variableValuesFromQueryParams + variableValuesFromPath
+    }
+
+    private fun variableFromString(value: String, originalValue: String): Pair<String, String>? {
+        if(!isPatternToken(originalValue))
+            return null
+
+        val pieces = withoutPatternDelimiters(originalValue).split(":")
+
+        val name = pieces.getOrNull(0) ?: return null
+
+        return Pair(name, value)
+    }
+
+    private fun variablesFromMap(map: Map<String, String>, originalMap: Map<String, String>) = map.entries.map { (key, value) ->
+        val originalValue = originalMap.getValue(key)
+        variableFromString(value, originalValue)
+    }.filterNotNull().toMap()
+
+    private fun getVariableValuesFromValue(value: JSONObjectValue, originalValue: JSONObjectValue): Map<String, String> {
+        return originalValue.jsonObject.entries.fold(emptyMap()) { acc, entry ->
+            val runningValue = value.jsonObject.getValue(entry.key)
+            acc + getVariableValuesFromValue(runningValue, entry.value)
+        }
+    }
+
+    private fun getVariableValuesFromValue(value: JSONArrayValue, originalValue: JSONArrayValue): Map<String, String> {
+        return originalValue.list.foldRightIndexed(emptyMap()) { index: Int, item: Value, acc: Map<String, String> ->
+            val runningItem = value.list.get(index)
+            acc + getVariableValuesFromValue(runningItem, item)
+        }
+    }
+
+    private fun getVariableValuesFromValue(value: Value, originalValue: Value): Map<String, String> {
+        return when (originalValue) {
+            is StringValue -> {
+                if(isPatternToken(originalValue.string)) {
+                    val pieces = withoutPatternDelimiters(originalValue.string).split(":")
+                    val name = pieces.getOrNull(0) ?: return emptyMap()
+
+                    mapOf(name to value.toStringLiteral())
+                } else emptyMap()
+            }
+            is JSONObjectValue -> getVariableValuesFromValue(value as JSONObjectValue, originalValue)
+            is JSONArrayValue -> getVariableValuesFromValue(value as JSONArrayValue, originalValue)
+            else -> emptyMap()
+        }
+    }
+
     fun resolveSubstitutions(value: Value): Value {
         return when(value) {
             is JSONObjectValue -> resolveSubstitutions(value)
             is JSONArrayValue -> resolveSubstitutions(value)
             is StringValue -> {
                 if(value.string.startsWith("{{") && value.string.endsWith("}}"))
-                    StringValue(substitute(value.string))
+                    StringValue(substituteSimpleVariableLookup(value.string))
                 else
                     value
             }
@@ -28,63 +102,9 @@ class Substitution(
         }
     }
 
-    fun substitute(string: String): String {
-        val expressionPath = string.removeSurrounding("{{", "}}")
-
-        val parts = expressionPath.split(".")
-
-        val area = parts.firstOrNull() ?: throw ContractException("The expression $expressionPath was empty")
-
-        return if(area.uppercase() == "REQUEST") {
-            val requestPath = parts.drop(1)
-
-            val requestPart = requestPath.firstOrNull() ?: throw ContractException("The expression $expressionPath does not include anything after REQUEST to say what has to be substituted")
-            val payloadPath = requestPath.drop(1)
-
-            val payloadKey = payloadPath.joinToString(".")
-
-            when (requestPart.uppercase()) {
-                "BODY" -> {
-                    val requestJSONBody = request.body as? JSONObjectValue
-                        ?: throw ContractException("Substitution $string cannot be resolved as the request body is not an object")
-                    requestJSONBody.findFirstChildByPath(payloadPath)?.toStringLiteral()
-                        ?: throw ContractException("Could not find $string in the request body")
-                }
-
-                "HEADERS" -> {
-                    val requestHeaders = request.headers
-                    val requestHeaderName = payloadKey
-                    requestHeaders[requestHeaderName]
-                        ?: throw ContractException("Substitution $string cannot be resolved as the request header $requestHeaderName cannot be found")
-                }
-
-                "QUERY-PARAMS" -> {
-                    val requestQueryParams = request.queryParams
-                    val requestQueryParamName = payloadKey
-                    val queryParamPair = requestQueryParams.paramPairs.find { it.first == requestQueryParamName }
-                        ?: throw ContractException("Substitution $string cannot be resolved as the request query param $requestQueryParamName cannot be found")
-
-                    queryParamPair.second
-                }
-
-                "PATH" -> {
-                    val indexOfPathParam = httpPathPattern.pathSegmentPatterns.indexOfFirst { it.key == payloadKey }
-
-                    if (indexOfPathParam < 0) throw ContractException("Could not find path param named $string")
-
-                    (request.path ?: "").split("/").let {
-                        if (it.firstOrNull() == "")
-                            it.drop(1)
-                        else
-                            it
-                    }.get(indexOfPathParam)
-                }
-
-                else -> string
-            }
-        }
-        else
-            string
+    fun substituteSimpleVariableLookup(string: String): String {
+        val name = string.trim().removeSurrounding("$(", ")")
+        return variableValues[name] ?: throw ContractException("Could not resolve expression $string as no variable by the name $name was found")
     }
 
     private fun resolveSubstitutions(value: JSONObjectValue): Value {
@@ -103,29 +123,100 @@ class Substitution(
         )
     }
 
-    fun resolveHeaderSubstitutions(map: Map<String, String>, patternMap: Map<String, Pattern>): ReturnValue<Map<String, String>> {
-        return map.mapValues { (key, value) ->
-            val string = substitute(value)
+    fun resolveHeaderSubstitutions(headers: Map<String, String>, patternMap: Map<String, Pattern>): ReturnValue<Map<String, String>> {
+        return headers.mapValues { (key, value) ->
+            val returnValue = if(key !in patternMap && "$key?" !in patternMap)
+                HasValue(value)
+            else {
+                val substituteValue = substituteVariableValues(value.trim())
 
-            val returnValue = (patternMap.get(key) ?: patternMap.get("$key?"))?.let { pattern ->
-                try {
-                    HasValue(pattern.parse(string, resolver).toStringLiteral())
-                } catch(e: Throwable) {
-                    HasException(e)
-                }
-            } ?: HasValue(value)
+                (patternMap.get(key) ?: patternMap.get("$key?"))?.let { pattern ->
+                    try {
+                        HasValue(pattern.parse(substituteValue, resolver).toStringLiteral())
+                    } catch (e: Throwable) {
+                        HasException(e)
+                    }
+                } ?: HasValue(value)
+            }
 
             returnValue.breadCrumb(key)
         }.mapFold()
     }
 
+    private fun substituteVariableValues(value: String): String {
+        return if(isSimpleVariableLookup(value)) {
+            substituteSimpleVariableLookup(value)
+        } else if(isDataLookup(value)) {
+            substituteDataLookupExpression(value)
+        } else value
+    }
+
+    private fun substituteDataLookupExpression(value: String): String {
+        val pieces = value.removeSurrounding("$(", ")").split('.')
+
+        val lookupSyntaxErrorMessage =
+            "Could not resolve lookup expression $value. Syntax should be $(lookupData.dictionary[VARIABLE_NAME].key)"
+
+        if (pieces.size != 3) throw ContractException(lookupSyntaxErrorMessage)
+
+        val (lookupStoreName, dictionaryLookup, keyName) = pieces
+
+        val dictionaryPieces = dictionaryLookup.split('[')
+        if (dictionaryPieces.size != 2) throw ContractException(lookupSyntaxErrorMessage)
+
+        val (dictionaryName, dictionaryLookupVariableName) = dictionaryPieces.map { it.removeSuffix("]") }
+
+        val lookupStore = data.findFirstChildByPath(lookupStoreName)
+            ?: throw ContractException("Data store named $dictionaryName not found")
+
+        val lookupStoreDictionary: JSONObjectValue = lookupStore as? JSONObjectValue
+            ?: throw ContractException("Data store named $dictionaryName should be an object")
+
+        val dictionaryValue = lookupStoreDictionary.findFirstChildByPath(dictionaryName)
+            ?: throw ContractException("Could not resolve lookup expression $value because $lookupStoreName.$dictionaryName does not exist")
+
+        val dictionary: JSONObjectValue = dictionaryValue as? JSONObjectValue
+            ?: throw ContractException("Dictionary $lookupStoreName.$dictionaryName should be an object")
+
+        val dictionaryLookupValue = variableValues[dictionaryLookupVariableName]
+            ?: throw MissingDataException("Cannot resolve lookup expression $value because variable $dictionaryLookupVariableName does not exist")
+
+        val finalObject = dictionary.findFirstChildByPath(dictionaryLookupValue)
+            ?: throw MissingDataException("Could not resolve lookup expression $value because variable $lookupStoreName.$dictionaryName[$dictionaryLookupVariableName] does not exist")
+
+        val finalObjectDictionary = finalObject as? JSONObjectValue
+            ?: throw ContractException("$lookupStoreName.$dictionaryName[$dictionaryLookupVariableName] should be an object")
+
+        val valueToReturn = finalObjectDictionary.findFirstChildByPath(keyName)
+            ?: throw ContractException("Could not resolve lookup expression $value because value $keyName in $lookupStoreName.$dictionaryName[$dictionaryLookupVariableName] does not exist")
+
+        return valueToReturn.toStringLiteral()
+    }
+
+    class Not
+
+    private fun isDataLookup(value: String): Boolean {
+        return isLookup(value) && value.contains('[')
+    }
+
+    private fun isSimpleVariableLookup(value: String) =
+        isLookup(value) && !value.contains('[')
+
+    private fun isLookup(value: String) =
+        value.startsWith("$(") && value.endsWith(")")
+
     fun substitute(value: Value, pattern: Pattern): ReturnValue<Value> {
         return try {
-            if(value !is StringValue || !hasTemplate(value.string))
-                return HasValue(value)
-
-            val updatedString = substitute(value.string)
-            HasValue(pattern.parse(updatedString, resolver))
+            if(value !is StringValue)
+                HasValue(value)
+            else if(isSimpleVariableLookup(value.string)) {
+                val updatedString = substituteSimpleVariableLookup(value.string)
+                HasValue(pattern.parse(updatedString, resolver))
+            } else if (isDataLookup(value.string)) {
+                val updatedString = substituteDataLookupExpression(value.string)
+                HasValue(pattern.parse(updatedString, resolver))
+            } else
+                HasValue(value)
         } catch(e: Throwable) {
             HasException(e)
         }
@@ -137,10 +228,12 @@ class Substitution(
 
     fun substitute(string: String, pattern: Pattern): ReturnValue<Value> {
         return try {
-            val updatedString = substitute(string)
+            val updatedString = substituteSimpleVariableLookup(string)
             HasValue(pattern.parse(updatedString, resolver))
         } catch(e: Throwable) {
             HasException(e)
         }
     }
 }
+
+class MissingDataException(override val message: String) : Throwable(message)

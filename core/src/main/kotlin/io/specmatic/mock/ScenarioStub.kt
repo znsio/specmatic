@@ -56,22 +56,7 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
     }
 
     fun resolveDataSubstitutions(scenario: Scenario): List<ScenarioStub> {
-        val dataTemplates = requestDataTemplates() + responseDataTemplates()
-
-        val missingDataTemplates = dataTemplates.filter { it !in data.jsonObject }
-        if(missingDataTemplates.isNotEmpty())
-            throw ContractException("Could not find the following data templates defined: ${missingDataTemplates.joinToString(", ")}")
-
-        if(data.jsonObject.isEmpty())
-            return listOf(this)
-
-        val substitutions = unwrapSubstitutions(data)
-
-        val combinations = combinations(substitutions)
-
-        return combinations.map { combination ->
-            replaceInExample(combination, scenario.httpRequestPattern.body, scenario.resolver)
-        }
+        return listOf(this)
     }
 
     private fun unwrapSubstitutions(rawSubstitutions: JSONObjectValue): Map<String, Map<String, Map<String, Value>>> {
@@ -307,7 +292,7 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
     val mockRequest: HttpRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
     val mockResponse: HttpResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
 
-    val data = getJSONObjectValueOrNull("data", mockSpec)?.let { JSONObjectValue(it) } ?: JSONObjectValue()
+    val data = JSONObjectValue(mockSpec.filterKeys { it !in (MOCK_HTTP_REQUEST_ALL_KEYS + MOCK_HTTP_RESPONSE_ALL_KEYS) })
 
     val delayInSeconds: Int? = getIntOrNull(DELAY_IN_SECONDS, mockSpec)
     val delayInMilliseconds: Long? = getLongOrNull(DELAY_IN_MILLISECONDS, mockSpec)

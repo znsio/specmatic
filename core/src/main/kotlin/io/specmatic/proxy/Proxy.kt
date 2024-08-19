@@ -8,6 +8,7 @@ import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHeal
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.httpRequestLog
 import io.specmatic.stub.httpResponseLog
@@ -64,7 +65,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                             stubs.add(
                                 NamedStub(
                                     name,
-                                    getShortNameForNamedStub(httpRequest, baseURL, httpResponse.status),
+                                    uniqueNameForApiOperation(httpRequest, baseURL, httpResponse.status),
                                     ScenarioStub(
                                         httpRequest.withoutDynamicHeaders(),
                                         httpResponse.withoutDynamicHeaders()
@@ -118,16 +119,6 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
         }}
     }
 
-    private fun getShortNameForNamedStub(httpRequest: HttpRequest, baseURL: String, responseStatus: Int): String {
-        val (method, path) = httpRequest
-        val formattedPath = path?.replace(baseURL, "")
-            ?.replace("/", ".")
-            ?.drop(1)
-            .orEmpty()
-        if (formattedPath.isEmpty()) return "$method-$responseStatus"
-        return "$formattedPath-$method-$responseStatus"
-    }
-
     private fun withoutContentEncodingGzip(httpResponse: HttpResponse): HttpResponse {
         val contentEncodingKey = httpResponse.headers.keys.find { it.lowercase() == "content-encoding" } ?: "Content-Encoding"
         return when {
@@ -176,8 +167,8 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
             val stubDataDirectory = outputDirectory.subDirectory("${base}$EXAMPLES_DIR_SUFFIX")
             stubDataDirectory.createDirectory()
 
-            stubs.mapIndexed { index, namedStub ->
-                val fileName = "${namedStub.shortName}-${index.inc()}.json"
+            stubs.mapIndexed { index, namedStub: NamedStub ->
+                val fileName = "${namedStub.shortName}_${index.inc()}.json"
                 println("Writing stub data to $fileName")
                 stubDataDirectory.writeText(fileName, namedStub.stub.toJSON().toStringLiteral())
             }

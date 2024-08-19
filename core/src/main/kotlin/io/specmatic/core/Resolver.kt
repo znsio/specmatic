@@ -68,7 +68,7 @@ data class Resolver(
         if (mockMode
                 && sampleValue is StringValue
                 && isPatternToken(sampleValue.string)
-                && pattern.encompasses(getPattern(sampleValue.string), this, this).isSuccess())
+                && pattern.encompasses(getPattern(sampleValue.string).let { if(it is LookupRowPattern) resolvedHop(it.pattern, this) else it }, this, this).isSuccess())
             return Result.Success()
 
         return pattern.matches(sampleValue, this).ifSuccess {

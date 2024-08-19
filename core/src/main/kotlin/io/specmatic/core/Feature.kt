@@ -308,7 +308,8 @@ data class Feature(
                                 responsePattern = scenario.httpResponsePattern,
                                 contractPath = this.path,
                                 feature = this,
-                                scenario = scenario
+                                scenario = scenario,
+                                originalRequest = request
                             )
                         }, Result.Success()
                     )
@@ -447,7 +448,8 @@ data class Feature(
                     matchingScenario.resolver,
                     responsePattern = HttpResponsePattern(),
                     scenario = matchingScenario,
-                    template = scenarioStub.template
+                    template = scenarioStub.template,
+                    data = scenarioStub.data
                 )
             }
             else
@@ -460,7 +462,8 @@ data class Feature(
             ).copy(
                 delayInMilliseconds = scenarioStub.delayInMilliseconds,
                 requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) },
-                stubToken = scenarioStub.stubToken
+                stubToken = scenarioStub.stubToken,
+                data = scenarioStub.data
             )
         }
     }

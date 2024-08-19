@@ -3,14 +3,14 @@
     "method": "POST",
     "path": "/person",
     "body": {
-      "name": "Jane"
+      "name": "(NAME:string)"
     }
   },
   "http-response": {
     "status": 200,
     "body": {
       "id": 10,
-      "name": "{{REQUEST.BODY.name}}"
+      "name": "$(NAME)"
     }
   }
 }

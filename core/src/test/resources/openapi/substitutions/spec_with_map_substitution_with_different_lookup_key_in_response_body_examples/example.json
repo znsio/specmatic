@@ -1,6 +1,6 @@
 {
-  "data": {
-    "@dept": {
+  "dataLookup": {
+    "dept": {
       "engineering": {
         "city": "Mumbai"
       }
@@ -10,13 +10,13 @@
     "method": "POST",
     "path": "/person",
     "body": {
-      "department": "{{@dept}}"
+      "department": "(DEPARTMENT:string)"
     }
   },
   "http-response": {
     "status": 200,
     "body": {
-      "location": "{{@dept.city}}"
+      "location": "$(dataLookup.dept[DEPARTMENT].city)"
     }
   }
 }

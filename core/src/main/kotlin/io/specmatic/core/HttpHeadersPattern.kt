@@ -51,7 +51,6 @@ data class HttpHeadersPattern(
                 )
         }
 
-
         val headersWithRelevantKeys = when {
             ancestorHeaders != null -> withoutIgnorableHeaders(headers, ancestorHeaders)
             else -> withoutContentTypeGeneratedBySpecmatic(headers, pattern)
@@ -285,6 +284,30 @@ data class HttpHeadersPattern(
         }.map {
             HttpHeadersPattern(it, contentType = contentType)
 
+        }
+    }
+
+    fun fillIn(headers: Map<String, String>, resolver: Resolver): ReturnValue<Map<String, String>> {
+        val filteredHeaders = ancestorHeaders?.let {
+            headers.filterKeys { key -> key in it }
+        } ?: headers
+
+        val headersInPartialR = filteredHeaders.mapValues { (headerName, headerValue) ->
+            val headerPattern = pattern.get(headerName) ?: pattern.get("$headerName?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
+
+            exception { headerPattern.parse(headerValue, resolver) }?.let { return@mapValues HasException(it) }
+
+            HasValue(headerValue)
+        }.mapFold()
+
+        val missingHeadersR = headers.filterKeys { !it.endsWith("?") && it !in headers }.mapValues { (headerName, headerValue) ->
+            val headerPattern = pattern.get(headerName) ?: pattern.get("$headerName?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
+
+            HasValue(headerPattern.generate(resolver).toStringLiteral())
+        }.mapFold()
+
+        return headersInPartialR.combine(missingHeadersR) { headersInPartial, missingHeaders ->
+            headersInPartial + missingHeaders
         }
     }
 }

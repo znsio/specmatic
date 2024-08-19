@@ -7,7 +7,7 @@ import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
 import java.io.File
 
-data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val delayInMilliseconds: Long? = null, val stubToken: String? = null, val requestBodyRegex: String? = null, val data: JSONObjectValue = JSONObjectValue(), val filePath: String? = null, val template: ScenarioStub? = null) {
+data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val delayInMilliseconds: Long? = null, val stubToken: String? = null, val requestBodyRegex: String? = null, val data: JSONObjectValue = JSONObjectValue(), val filePath: String? = null, val partial: ScenarioStub? = null) {
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
 
@@ -274,11 +274,11 @@ const val REQUEST_BODY_REGEX = "bodyRegex"
 val MOCK_HTTP_REQUEST_ALL_KEYS = listOf("mock-http-request", MOCK_HTTP_REQUEST)
 val MOCK_HTTP_RESPONSE_ALL_KEYS = listOf("mock-http-response", MOCK_HTTP_RESPONSE)
 
-const val TEMPLATE = "template"
+const val PARTIAL = "partial"
 
 fun validateMock(mockSpec: Map<String, Any?>) {
-    if(mockSpec.containsKey(TEMPLATE)) {
-        val template = mockSpec.getValue("template") as? JSONObjectValue ?: throw ContractException("template should be an object")
+    if(mockSpec.containsKey(PARTIAL)) {
+        val template = mockSpec.getValue(PARTIAL) as? JSONObjectValue ?: throw ContractException("template should be an object")
         return validateMock(template.jsonObject)
     }
 

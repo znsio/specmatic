@@ -29,6 +29,33 @@ data class JSONObjectPattern(
     val minProperties: Int? = null,
     val maxProperties: Int? = null
 ) : Pattern {
+    override fun generatePartial(value: Value, resolver: Resolver): ReturnValue<Value> {
+        val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
+
+        val headersInPartialR = jsonObject.jsonObject.mapValues { (headerName, headerValue) ->
+            val headerPattern = pattern.get(headerName) ?: pattern.get("$headerName?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
+
+            val matchResult = headerPattern.matches(headerValue, resolver)
+
+            if(matchResult is Result.Failure)
+                HasFailure(matchResult)
+            else
+                HasValue(headerValue)
+        }.mapFold()
+
+        val missingHeadersR = jsonObject.jsonObject.filterKeys {
+            !it.endsWith("?") && it !in jsonObject.jsonObject
+        }.mapValues { (headerName, headerValue) ->
+            val headerPattern = pattern.get(headerName) ?: pattern.get("$headerName?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
+
+            HasValue(headerPattern.generate(resolver))
+        }.mapFold()
+
+        return headersInPartialR.combine(missingHeadersR) { headersInPartial, missingHeaders ->
+            jsonObject.copy(headersInPartial + missingHeaders)
+        }
+    }
+
     override fun equals(other: Any?): Boolean = when (other) {
         is JSONObjectPattern -> this.pattern == other.pattern
         else -> false

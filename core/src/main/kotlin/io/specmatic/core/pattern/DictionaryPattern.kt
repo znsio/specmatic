@@ -11,6 +11,21 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
 data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern, override val typeAlias: String? = null) : Pattern {
+    override fun generatePartial(value: Value, resolver: Resolver): ReturnValue<Value> {
+        val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
+
+        val returnValue = jsonObject.jsonObject.mapValues { (key, value) ->
+            val matchResult = valuePattern.matches(value, resolver)
+
+            if(matchResult is Result.Failure)
+                HasFailure(matchResult)
+            else
+                HasValue(value)
+        }.mapFold()
+
+        return returnValue.ifValue { jsonObject.copy(it) }
+    }
+
     override fun resolveSubstitutions(
         substitution: Substitution,
         value: Value,

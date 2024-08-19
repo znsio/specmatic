@@ -8,6 +8,10 @@ import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.Value
 
 data class DeferredPattern(override val pattern: String, val key: String? = null) : Pattern {
+    override fun generatePartial(value: Value, resolver: Resolver): ReturnValue<Value> {
+        return resolvePattern(resolver).generatePartial(value, resolver)
+    }
+
     override fun equals(other: Any?): Boolean = when(other) {
         is DeferredPattern -> other.pattern == pattern
         else -> false

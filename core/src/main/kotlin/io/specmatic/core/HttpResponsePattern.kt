@@ -2,6 +2,7 @@ package io.specmatic.core
 
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
 import io.specmatic.stub.softCastValueToXML
 
 const val DEFAULT_RESPONSE_CODE = 1000
@@ -166,6 +167,18 @@ data class HttpResponsePattern(
             headers = substitutedHeaders,
             body = substitutedBody
         )
+    }
+
+    fun generateResponse(partial: HttpResponse, resolver: Resolver): HttpResponse {
+        val headers = headersPattern.fillIn(partial.headers, resolver)
+        val body: ReturnValue<Value> = body.generatePartial(partial.body, resolver)
+
+        return headers.combine(body) { fullHeaders, fullBody ->
+            partial.copy(
+                headers = fullHeaders,
+                body = fullBody
+            )
+        }.value
     }
 }
 

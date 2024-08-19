@@ -79,6 +79,12 @@ interface Pattern {
             HasValue(emptyMap())
     }
 
+    fun generatePartial(value: Value, resolver: Resolver): ReturnValue<Value> {
+        exception { parse(value.toStringLiteral(), resolver) }?.let { return HasException(it) }
+
+        return HasValue(value)
+    }
+
     val typeAlias: String?
     val typeName: String
     val pattern: Any

@@ -14,6 +14,13 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
 
+    override fun generatePartial(value: Value, resolver: Resolver): ReturnValue<Value> {
+        val listValue = value as? JSONArrayValue ?: return HasFailure("Cannot generate a list from partial of type ${value.displayableType()}")
+        val newList = listValue.list.map { pattern.generatePartial(it, resolver) }.listFold()
+
+        return newList.ifValue { listValue.copy(list = it) }
+    }
+
     override fun resolveSubstitutions(
         substitution: Substitution,
         value: Value,

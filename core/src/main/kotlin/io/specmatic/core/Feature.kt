@@ -436,19 +436,34 @@ data class Feature(
         scenarioStub: ScenarioStub,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): HttpStubData {
-        return if(scenarioStub.template != null) {
+        return if(scenarioStub.partial != null) {
             val matchingScenario = scenarios.find { scenario ->
-                scenario.matchesTemplate(scenarioStub.template)
+                scenario.matchesTemplate(scenarioStub.partial)
             }
 
+
             if(matchingScenario != null) {
+                val requestTypeWithAncestors =
+                    matchingScenario.httpRequestPattern.copy(
+                        headersPattern = matchingScenario.httpRequestPattern.headersPattern.copy(
+                            ancestorHeaders = matchingScenario.httpRequestPattern.headersPattern.pattern
+                        )
+                    )
+
+                val responseTypeWithAncestors =
+                    matchingScenario.httpResponsePattern.copy(
+                        headersPattern = matchingScenario.httpResponsePattern.headersPattern.copy(
+                            ancestorHeaders = matchingScenario.httpResponsePattern.headersPattern.pattern
+                        )
+                    )
+
                 HttpStubData(
-                    HttpRequestPattern(),
+                    requestTypeWithAncestors,
                     HttpResponse(),
                     matchingScenario.resolver,
-                    responsePattern = HttpResponsePattern(),
+                    responsePattern = responseTypeWithAncestors,
                     scenario = matchingScenario,
-                    template = scenarioStub.template,
+                    partial = scenarioStub.partial,
                     data = scenarioStub.data
                 )
             }

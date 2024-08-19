@@ -1,5 +1,5 @@
 {
-  "template": {
+  "partial": {
     "http-request": {
       "method": "POST",
       "path": "/person",

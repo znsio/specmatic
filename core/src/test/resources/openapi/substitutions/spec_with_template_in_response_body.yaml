@@ -17,7 +17,7 @@ paths:
                 - department
               properties:
                 name:
-                  type: integer
+                  type: string
                 department:
                   type: string
       responses:

@@ -14,6 +14,7 @@ import io.ktor.util.*
 import io.specmatic.core.*
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
@@ -827,8 +828,8 @@ private fun stubThatMatchesRequest(
         return Pair(queueMock.second, queueMatchResults)
     }
 
-    val listMatchResults: List<Pair<Result, HttpStubData>> = nonTransientStubs.matchResults { stubs ->
-        stubs.map {
+    val listMatchResults: List<Pair<Result, HttpStubData>> = nonTransientStubs.matchResults { httpStubData ->
+        val nonPartialMatchResults = httpStubData.filter { it.partial == null }.map {
             val (requestPattern, _, resolver) = it
             Pair(
                 requestPattern.matches(
@@ -839,14 +840,48 @@ private fun stubThatMatchesRequest(
                 ), it
             )
         }
+
+        val partialMatchResults = httpStubData
+            .map { it.partial?.let { partial -> it to partial } }
+            .filterNotNull()
+            .map { (stubData, partial) ->
+                val (requestPattern, _, resolver) = stubData
+
+                val partialRequest = requestPattern.generate(partial.request, resolver)
+
+                val partialResolver = resolver.copy(
+                    findKeyErrorCheck = KeyCheck(unexpectedKeyCheck = IgnoreUnexpectedKeys)
+                )
+
+                val partialResult = partialRequest.matches(partial.request, partialResolver, partialResolver)
+
+                if(!partialResult.isSuccess())
+                    partialResult to stubData
+                else
+                    Pair(
+                        requestPattern.matches(
+                            httpRequest,
+                            resolver.disableOverrideUnexpectedKeycheck()
+                                .copy(mismatchMessages = StubAndRequestMismatchMessages),
+                            requestBodyReqex = stubData.requestBodyRegex
+                        ), stubData
+                    )
+            }
+
+        partialMatchResults + nonPartialMatchResults
     }
 
     val mock = listMatchResults.map {
         val (result, stubdata) = it
 
         if(result is Result.Success) {
+            val response = if(stubdata.partial != null)
+                stubdata.responsePattern.generateResponse(stubdata.partial.response, stubdata.resolver)
+            else
+                stubdata.response
+
             val stubResponse = HttpStubResponse(
-                stubdata.response,
+                response,
                 stubdata.delayInMilliseconds,
                 stubdata.contractPath,
                 scenario = stubdata.scenario,
@@ -855,7 +890,7 @@ private fun stubThatMatchesRequest(
 
             try {
                 stubResponse.resolveSubstitutions(httpRequest, it.second.originalRequest ?: httpRequest, it.second.data)
-                it
+                result to stubdata.copy(response = response)
             } catch(e: ContractException) {
                 if(isMissingData(e))
                     Pair(e.failure(), stubdata)
@@ -1153,10 +1188,10 @@ fun stringToMockScenario(text: Value): ScenarioStub {
             validateMock(it)
         }
 
-    if(TEMPLATE in mockSpec) {
-        val template = mockSpec.getValue(TEMPLATE) as? JSONObjectValue ?: throw ContractException("template key must be an object")
+    if(PARTIAL in mockSpec) {
+        val template = mockSpec.getValue(PARTIAL) as? JSONObjectValue ?: throw ContractException("template key must be an object")
 
-        return ScenarioStub(template = mockFromJSON(template.jsonObject))
+        return ScenarioStub(partial = mockFromJSON(template.jsonObject))
     }
 
     return mockFromJSON(mockSpec)

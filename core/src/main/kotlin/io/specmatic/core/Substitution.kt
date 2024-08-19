@@ -54,7 +54,7 @@ class Substitution(
     }
 
     private fun variablesFromMap(map: Map<String, String>, originalMap: Map<String, String>) = map.entries.map { (key, value) ->
-        val originalValue = originalMap.getValue(key)
+        val originalValue = originalMap.get(key) ?: return@map null
         variableFromString(value, originalValue)
     }.filterNotNull().toMap()
 

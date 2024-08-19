@@ -289,10 +289,16 @@ fun validateMock(mockSpec: Map<String, Any?>) {
 }
 
 fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
+    val data = JSONObjectValue(mockSpec.filterKeys { it !in (MOCK_HTTP_REQUEST_ALL_KEYS + MOCK_HTTP_RESPONSE_ALL_KEYS).plus(PARTIAL) })
+
+    if(PARTIAL in mockSpec) {
+        val template = mockSpec.getValue(PARTIAL) as? JSONObjectValue ?: throw ContractException("template key must be an object")
+
+        return ScenarioStub(partial = mockFromJSON(template.jsonObject), data = data)
+    }
+
     val mockRequest: HttpRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
     val mockResponse: HttpResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
-
-    val data = JSONObjectValue(mockSpec.filterKeys { it !in (MOCK_HTTP_REQUEST_ALL_KEYS + MOCK_HTTP_RESPONSE_ALL_KEYS) })
 
     val delayInSeconds: Int? = getIntOrNull(DELAY_IN_SECONDS, mockSpec)
     val delayInMilliseconds: Long? = getLongOrNull(DELAY_IN_MILLISECONDS, mockSpec)

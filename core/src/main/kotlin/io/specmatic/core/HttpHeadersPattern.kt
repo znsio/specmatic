@@ -289,7 +289,7 @@ data class HttpHeadersPattern(
 
     fun fillIn(headers: Map<String, String>, resolver: Resolver): ReturnValue<Map<String, String>> {
         val filteredHeaders = ancestorHeaders?.let {
-            headers.filterKeys { key -> key in it }
+            headers.filterKeys { key -> key in it || "$key?" in it }
         } ?: headers
 
         val headersInPartialR = filteredHeaders.mapValues { (headerName, headerValue) ->
@@ -300,9 +300,7 @@ data class HttpHeadersPattern(
             HasValue(headerValue)
         }.mapFold()
 
-        val missingHeadersR = headers.filterKeys { !it.endsWith("?") && it !in headers }.mapValues { (headerName, headerValue) ->
-            val headerPattern = pattern.get(headerName) ?: pattern.get("$headerName?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
-
+        val missingHeadersR = pattern.filterKeys { !it.endsWith("?") && it !in headers }.mapValues { (headerName, headerPattern) ->
             HasValue(headerPattern.generate(resolver).toStringLiteral())
         }.mapFold()
 

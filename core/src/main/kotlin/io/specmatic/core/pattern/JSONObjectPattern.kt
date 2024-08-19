@@ -43,11 +43,9 @@ data class JSONObjectPattern(
                 HasValue(headerValue)
         }.mapFold()
 
-        val missingHeadersR = jsonObject.jsonObject.filterKeys {
+        val missingHeadersR = pattern.filterKeys {
             !it.endsWith("?") && it !in jsonObject.jsonObject
-        }.mapValues { (headerName, headerValue) ->
-            val headerPattern = pattern.get(headerName) ?: pattern.get("$headerName?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
-
+        }.mapValues { (headerName, headerPattern) ->
             HasValue(headerPattern.generate(resolver))
         }.mapFold()
 

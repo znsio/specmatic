@@ -1,0 +1,32 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /person:
+    get:
+      summary: Add person
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: words
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: number
+                  location:
+                    type: string

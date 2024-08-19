@@ -740,7 +740,7 @@ fun getHttpResponse(
 
         if(matchingStubResponse != null) {
             val (httpStubResponse, httpStubData) = matchingStubResponse
-            FoundStubbedResponse(httpStubResponse.resolveSubstitutions(httpRequest, httpStubData.originalRequest ?: httpRequest, httpStubData.data))
+            FoundStubbedResponse(httpStubResponse.resolveSubstitutions(httpRequest, if(httpStubData.partial != null) httpStubData.partial.request else httpStubData.originalRequest ?: httpRequest, httpStubData.data))
         }
         else if (httpClientFactory != null && passThroughTargetBase.isNotBlank())
             NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
@@ -889,7 +889,14 @@ private fun stubThatMatchesRequest(
             )
 
             try {
-                stubResponse.resolveSubstitutions(httpRequest, it.second.originalRequest ?: httpRequest, it.second.data)
+                val originalRequest =
+                    if(stubdata.partial != null)
+                        stubdata.partial.request
+                    else
+                        stubdata.originalRequest
+
+                    stubResponse.resolveSubstitutions(httpRequest, originalRequest ?: httpRequest, it.second.data)
+
                 result to stubdata.copy(response = response)
             } catch(e: ContractException) {
                 if(isMissingData(e))
@@ -1187,12 +1194,6 @@ fun stringToMockScenario(text: Value): ScenarioStub {
         jsonStringToValueMap(text.toStringLiteral()).also {
             validateMock(it)
         }
-
-    if(PARTIAL in mockSpec) {
-        val template = mockSpec.getValue(PARTIAL) as? JSONObjectValue ?: throw ContractException("template key must be an object")
-
-        return ScenarioStub(partial = mockFromJSON(template.jsonObject))
-    }
 
     return mockFromJSON(mockSpec)
 }

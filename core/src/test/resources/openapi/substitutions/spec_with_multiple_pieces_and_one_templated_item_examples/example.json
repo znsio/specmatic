@@ -1,0 +1,21 @@
+{
+  "partial": {
+    "http-request": {
+      "method": "POST",
+      "path": "/person",
+      "headers": {
+        "X-Trace-ID": "(TRACE_ID:string)"
+      },
+      "body": {}
+    },
+    "http-response": {
+      "status": 200,
+      "headers": {
+        "X-Trace-ID": "$(TRACE_ID)"
+      },
+      "body": {
+        "location": "Mumbai"
+      }
+    }
+  }
+}

@@ -468,7 +468,7 @@ data class Feature(
                     matchingScenario.resolver,
                     responsePattern = responseTypeWithAncestors,
                     scenario = matchingScenario,
-                    partial = scenarioStub.partial,
+                    partial = scenarioStub.partial.copy(response = scenarioStub.partial.response.substituteDictionaryValues(scenarioStub.dictionary)),
                     data = scenarioStub.data,
                     dictionary = scenarioStub.dictionary
                 )

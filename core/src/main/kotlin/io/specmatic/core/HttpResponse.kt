@@ -211,8 +211,9 @@ data class HttpResponse(
         return this.copy(headers = updatedHeaders, body= updatedBody)
     }
 
-    private fun isVanillaPatternToken(headerValue: String) = isPatternToken(headerValue) && headerValue.indexOf(':') < 0
 }
+
+fun isVanillaPatternToken(token: String) = isPatternToken(token) && token.indexOf(':') < 0
 
 fun nativeInteger(json: Map<String, Value>, key: String): Int? {
     val keyValue = json[key] ?: return null

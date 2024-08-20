@@ -14,6 +14,7 @@ import io.specmatic.test.HttpClient
 import io.specmatic.test.TestExecutor
 import io.mockk.every
 import io.mockk.mockk
+import io.specmatic.mock.SPECMATIC_STUB_DICTIONARY
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.RepeatedTest
@@ -1868,6 +1869,43 @@ components:
             assertThat(response.status).isEqualTo(200)
             val responseBody = response.body as JSONObjectValue
             assertThat(responseBody.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo("Mumbai")
+        }
+    }
+
+    @Test
+    fun `example using invalid dictionary value should throw an error`() {
+        try {
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, "src/test/resources/openapi/substitutions/dictionary.json")
+
+            val (output, _) = captureStandardOutput {
+                val stub = createStubFromContracts(
+                    listOf("src/test/resources/openapi/substitutions/spec_with_invalid_dictionary_value.yaml"),
+                    timeoutMillis = 0
+                )
+
+                stub.close()
+            }
+
+            assertThat(output).contains(">> RESPONSE.BODY.id")
+        } finally {
+            System.clearProperty(SPECMATIC_STUB_DICTIONARY)
+        }
+    }
+
+    @Test
+    fun `example should favour concrete value over dictionary value`() {
+        createStubFromContracts(listOf(("src/test/resources/openapi/substitutions/spec_with_dictionary_conflict.yaml")), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest(
+                "POST",
+                "/person",
+                body = parsedJSONObject("""{"name": "Jodie"}""")
+            )
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(20))
         }
     }
 }

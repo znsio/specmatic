@@ -673,6 +673,7 @@ class StubSubstitutionTest {
                 val responseBody = response.body as JSONObjectValue
 
                 assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(10))
+                assertThat(responseBody.findFirstChildByPath("name")).isEqualTo(StringValue("George"))
             }
         } finally {
             System.clearProperty(SPECMATIC_STUB_DICTIONARY)

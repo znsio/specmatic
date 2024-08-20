@@ -4,7 +4,9 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
+import io.specmatic.mock.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.captureStandardOutput
 import io.specmatic.stub.createStubFromContracts
@@ -381,6 +383,101 @@ class PartialExampleTest {
                 val jsonResponseBody = response.body as JSONObjectValue
                 assertThat(jsonResponseBody.findFirstChildByPath("employeename")?.toStringLiteral()).isEqualTo("Joan")
             }
+        }
+    }
+
+    @Test
+    fun `partial example using dictionary populates mandatory key and header but not non-mandatory missing ones`() {
+        try {
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, "src/test/resources/openapi/substitutions/dictionary.json")
+
+            createStubFromContracts(
+                listOf("src/test/resources/openapi/substitutions/partial_using_dictionary.yaml"),
+                timeoutMillis = 0
+            ).use { stub ->
+                stub.client.execute(HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Jane"}""")))
+                    .also { response ->
+                        assertThat(response.status).isEqualTo(200)
+
+                        assertThat(response.headers["X-Region"]).isEqualTo("Asia")
+                        assertThat(response.headers).doesNotContainKey("X-Data-Token")
+
+                        val jsonResponseBody = response.body as JSONObjectValue
+                        assertThat(jsonResponseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(10))
+                        assertThat(jsonResponseBody.jsonObject).doesNotContainKeys("name")
+                    }
+            }
+        } finally {
+            System.clearProperty(SPECMATIC_STUB_DICTIONARY)
+        }
+    }
+
+    @Test
+    fun `partial example using dictionary populates missing mandatory key from the dictionary`() {
+        try {
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, "src/test/resources/openapi/substitutions/dictionary.json")
+
+            createStubFromContracts(
+                listOf("src/test/resources/openapi/substitutions/partial_using_dictionary_testing_mandarory_key_generation.yaml"),
+                timeoutMillis = 0
+            ).use { stub ->
+                stub.client.execute(HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Jane"}""")))
+                    .also { response ->
+                        assertThat(response.status).isEqualTo(200)
+
+                        assertThat(response.headers["X-Region"]).isEqualTo("Asia")
+                        assertThat(response.headers["X-Data-Token"]).isEqualTo("pqr")
+
+                        val jsonResponseBody = response.body as JSONObjectValue
+                        assertThat(jsonResponseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(10))
+                        assertThat(jsonResponseBody.findFirstChildByPath("name")).isEqualTo(StringValue("George"))
+                    }
+            }
+        } finally {
+            System.clearProperty(SPECMATIC_STUB_DICTIONARY)
+        }
+    }
+
+
+    @Test
+    fun `partial example using invalid dictionary should throw an error at runtime`() {
+        try {
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, "src/test/resources/openapi/substitutions/dictionary.json")
+
+            createStubFromContracts(
+                listOf("src/test/resources/openapi/substitutions/partial_with_invalid_dictionary_value.yaml"),
+                timeoutMillis = 0
+            ).use { stub ->
+                val response = stub.client.execute(
+                    HttpRequest(
+                        "POST",
+                        "/person",
+                        body = parsedJSONObject("""{"name": "Jason"}""")
+                    )
+                )
+
+                assertThat(response.status).isEqualTo(400)
+                assertThat(response.body.toStringLiteral()).contains(">> RESPONSE.BODY.id")
+            }
+        } finally {
+            System.clearProperty(SPECMATIC_STUB_DICTIONARY)
+        }
+    }
+
+    @Test
+    fun `partial example should favour concrete value over dictionary value`() {
+        createStubFromContracts(listOf(("src/test/resources/openapi/substitutions/partial_with_dictionary_conflict.yaml")), timeoutMillis = 0).use { stub ->
+            val request = HttpRequest(
+                "POST",
+                "/person",
+                body = parsedJSONObject("""{"name": "Jodie"}""")
+            )
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+            val responseBody = response.body as JSONObjectValue
+            assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(20))
         }
     }
 }

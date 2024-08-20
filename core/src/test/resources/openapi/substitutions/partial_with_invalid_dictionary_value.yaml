@@ -13,9 +13,9 @@ paths:
             schema:
               type: object
               required:
-                - department
+                - name
               properties:
-                department:
+                name:
                   type: string
       responses:
         '200':
@@ -25,7 +25,7 @@ paths:
               schema:
                 type: object
                 required:
-                  - location
+                  - id
                 properties:
-                  location:
+                  id:
                     type: string

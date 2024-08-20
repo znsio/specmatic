@@ -5,9 +5,7 @@ import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.utilities.mapZip
 import io.specmatic.core.utilities.stringToPatternMap
 import io.specmatic.core.utilities.withNullPattern
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 import java.util.Optional
 
 fun toJSONObjectPattern(jsonContent: String, typeAlias: String?): JSONObjectPattern =
@@ -32,25 +30,37 @@ data class JSONObjectPattern(
     override fun fillInTheBlanks(value: Value, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Value> {
         val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
 
-        val headersInPartialR = jsonObject.jsonObject.mapValues { (headerName, headerValue) ->
-            val headerPattern = pattern.get(headerName) ?: pattern.get("$headerName?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
+        val mapWithKeysInPartial = jsonObject.jsonObject.mapValues { (name, value) ->
+            val headerPattern = pattern.get(name) ?: pattern.get("$name?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", name)))
 
-            val matchResult = headerPattern.matches(headerValue, resolver)
+            if(value is StringValue && isPatternToken(value.string))
+                HasValue(resolver.getPattern(value.string).generate(resolver))
+            else {
+                val matchResult = headerPattern.matches(value, resolver)
 
-            if(matchResult is Result.Failure)
-                HasFailure(matchResult)
-            else
-                HasValue(headerValue)
+                if(matchResult is Result.Failure)
+                    HasFailure(matchResult)
+                else
+                    HasValue(value)
+            }.breadCrumb(name)
         }.mapFold()
 
-        val missingHeadersR = pattern.filterKeys {
+        val mapWithMissingKeysGenerated = pattern.filterKeys {
             !it.endsWith("?") && it !in jsonObject.jsonObject
-        }.mapValues { (headerName, headerPattern) ->
-            HasValue(headerPattern.generate(resolver))
+        }.mapValues { (name, valuePattern) ->
+            val generatedValue = dictionary[name]?.let { dictionaryValue ->
+                val matchResult = valuePattern.matches(dictionaryValue, resolver)
+                if(matchResult is Result.Failure)
+                    HasFailure(matchResult)
+                else
+                    HasValue(dictionaryValue)
+            } ?: HasValue(valuePattern.generate(resolver))
+
+            generatedValue.breadCrumb(name)
         }.mapFold()
 
-        return headersInPartialR.combine(missingHeadersR) { headersInPartial, missingHeaders ->
-            jsonObject.copy(headersInPartial + missingHeaders)
+        return mapWithKeysInPartial.combine(mapWithMissingKeysGenerated) { entriesInPartial, missingEntries ->
+            jsonObject.copy(entriesInPartial + missingEntries)
         }
     }
 

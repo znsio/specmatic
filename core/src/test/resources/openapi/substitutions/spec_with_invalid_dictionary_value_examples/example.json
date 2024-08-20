@@ -3,13 +3,13 @@
     "method": "POST",
     "path": "/person",
     "body": {
-      "department": "{{@department}}"
+      "name": "(string)"
     }
   },
   "http-response": {
     "status": 200,
     "body": {
-      "location": "{{@department}}"
+      "id": "(string)"
     }
   }
 }

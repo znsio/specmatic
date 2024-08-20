@@ -59,7 +59,7 @@ data class HttpResponse(
 
         val firstPart = listOf(statusLine, headerString).joinToString("\n").trim()
 
-        val formattedBody = body.toStringLiteral()
+        val formattedBody = body.toStringLiteral().let { singleLineJsonIfFlagSet(it) }
 
         val responseString = listOf(firstPart, "", formattedBody).joinToString("\n")
         return startLinesWith(responseString, prefix)

@@ -402,13 +402,16 @@ data class Feature(
             val negativeTestScenarios =
                 negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs).map { negativeScenarioResult ->
                     negativeScenarioResult.ifHasValue { result: HasValue<Scenario> ->
+                        val descriptionFromPlugin = result.value.descriptionFromPlugin?.takeIf {
+                            it.isNotBlank()
+                        }?.plus(" ") ?: ""
                         val description = result.valueDetails.singleLineDescription()
 
                         val tag = if(description.isNotBlank())
                             " [${description}]"
                         else
                             ""
-                        HasValue(result.value.copy(descriptionFromPlugin = "${result.value.apiDescription}$tag"))
+                        HasValue(result.value.copy(descriptionFromPlugin = "$descriptionFromPlugin${result.value.apiDescription}$tag"))
                     }
                 }
 

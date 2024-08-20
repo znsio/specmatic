@@ -266,10 +266,11 @@ data class Feature(
     fun matchingStub(
         request: HttpRequest,
         response: HttpResponse,
-        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages,
+        dictionary: Map<String, Value> = emptyMap()
     ): HttpStubData {
         try {
-            val results = stubMatchResult(request, response, mismatchMessages)
+            val results = stubMatchResult(request, response.substituteDictionaryValues(dictionary), mismatchMessages)
 
             return results.find {
                 it.first != null
@@ -468,7 +469,8 @@ data class Feature(
                     responsePattern = responseTypeWithAncestors,
                     scenario = matchingScenario,
                     partial = scenarioStub.partial,
-                    data = scenarioStub.data
+                    data = scenarioStub.data,
+                    dictionary = scenarioStub.dictionary
                 )
             }
             else {
@@ -480,12 +482,14 @@ data class Feature(
             matchingStub(
                 scenarioStub.request,
                 scenarioStub.response,
-                mismatchMessages
+                mismatchMessages,
+                scenarioStub.dictionary
             ).copy(
                 delayInMilliseconds = scenarioStub.delayInMilliseconds,
                 requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) },
                 stubToken = scenarioStub.stubToken,
-                data = scenarioStub.data
+                data = scenarioStub.data,
+                dictionary = scenarioStub.dictionary
             )
         }
     }

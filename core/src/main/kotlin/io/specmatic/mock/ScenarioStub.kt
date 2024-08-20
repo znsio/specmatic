@@ -3,11 +3,30 @@ package io.specmatic.mock
 import io.specmatic.core.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
+import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
 import java.io.File
 
-data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val delayInMilliseconds: Long? = null, val stubToken: String? = null, val requestBodyRegex: String? = null, val data: JSONObjectValue = JSONObjectValue(), val filePath: String? = null, val partial: ScenarioStub? = null) {
+const val SPECMATIC_STUB_DICTIONARY = "SPECMATIC_STUB_DICTIONARY"
+
+fun loadDictionary(): Map<String,Value> {
+    val fileName = Flags.getStringValue(SPECMATIC_STUB_DICTIONARY) ?: return emptyMap()
+    return parsedJSONObject(File(fileName).readText()).jsonObject
+}
+
+data class ScenarioStub(
+    val request: HttpRequest = HttpRequest(),
+    val response: HttpResponse = HttpResponse(0, emptyMap()),
+    val delayInMilliseconds: Long? = null,
+    val stubToken: String? = null,
+    val requestBodyRegex: String? = null,
+    val data: JSONObjectValue = JSONObjectValue(),
+    val filePath: String? = null,
+    val partial: ScenarioStub? = null,
+    val dictionary: Map<String, Value> = emptyMap()
+) {
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
 
@@ -294,7 +313,7 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
     if(PARTIAL in mockSpec) {
         val template = mockSpec.getValue(PARTIAL) as? JSONObjectValue ?: throw ContractException("template key must be an object")
 
-        return ScenarioStub(partial = mockFromJSON(template.jsonObject), data = data)
+        return ScenarioStub(partial = mockFromJSON(template.jsonObject), data = data, dictionary = loadDictionary())
     }
 
     val mockRequest: HttpRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
@@ -307,7 +326,15 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
     val stubToken: String? = getStringOrNull(TRANSIENT_MOCK_ID, mockSpec)
     val requestBodyRegex: String? = getRequestBodyRegexOrNull(mockSpec)
 
-    return ScenarioStub(request = mockRequest, response = mockResponse, delayInMilliseconds = delayInMs, stubToken = stubToken, requestBodyRegex = requestBodyRegex, data = data)
+    return ScenarioStub(
+        request = mockRequest,
+        response = mockResponse,
+        delayInMilliseconds = delayInMs,
+        stubToken = stubToken,
+        requestBodyRegex = requestBodyRegex,
+        data = data,
+        dictionary = loadDictionary()
+    )
 }
 
 fun getRequestBodyRegexOrNull(mockSpec: Map<String, Value>): String? {

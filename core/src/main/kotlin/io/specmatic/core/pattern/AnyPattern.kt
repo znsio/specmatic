@@ -19,9 +19,9 @@ data class AnyPattern(
 
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
 
-    override fun generatePartial(value: Value, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Value> {
         val results = pattern.asSequence().map {
-            it.generatePartial(value, resolver)
+            it.fillInTheBlanks(value, dictionary, resolver)
         }
 
         val successfulGeneration = results.firstOrNull { it is HasValue }
@@ -37,11 +37,12 @@ data class AnyPattern(
     override fun resolveSubstitutions(
         substitution: Substitution,
         value: Value,
-        resolver: Resolver
+        resolver: Resolver,
+        key: String?
     ): ReturnValue<Value> {
         val options = pattern.map {
             try {
-                it.resolveSubstitutions(substitution, value, resolver)
+                it.resolveSubstitutions(substitution, value, resolver, key)
             } catch(e: Throwable) {
                 HasException(e)
             }

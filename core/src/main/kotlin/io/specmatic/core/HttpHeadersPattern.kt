@@ -287,18 +287,30 @@ data class HttpHeadersPattern(
         }
     }
 
-    fun fillIn(headers: Map<String, String>, resolver: Resolver): ReturnValue<Map<String, String>> {
+    fun fillInTheBlanks(headers: Map<String, String>, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Map<String, String>> {
         val filteredHeaders = ancestorHeaders?.let {
             headers.filterKeys { key -> key in it || "$key?" in it }
         } ?: headers
 
-        val headersInPartialR = filteredHeaders.mapValues { (headerName, headerValue) ->
+        val map: Map<String, ReturnValue<String>> = filteredHeaders.mapValues { (headerName, headerValue) ->
             val headerPattern = pattern.get(headerName) ?: pattern.get("$headerName?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
 
-            exception { headerPattern.parse(headerValue, resolver) }?.let { return@mapValues HasException(it) }
+            if(headerName in dictionary) {
+                val dictionaryValue = dictionary.getValue(headerName)
+                val matchResult = headerPattern.matches(dictionaryValue, resolver)
 
-            HasValue(headerValue)
-        }.mapFold()
+                if(matchResult is Result.Failure)
+                    HasFailure(matchResult)
+                else
+                    HasValue(dictionaryValue.toStringLiteral())
+            } else {
+                exception { headerPattern.parse(headerValue, resolver) }?.let { return@mapValues HasException(it) }
+
+                HasValue(headerValue)
+            }
+        }
+
+        val headersInPartialR = map.mapFold()
 
         val missingHeadersR = pattern.filterKeys { !it.endsWith("?") && it !in headers }.mapValues { (headerName, headerPattern) ->
             HasValue(headerPattern.generate(resolver).toStringLiteral())

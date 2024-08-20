@@ -7,6 +7,7 @@ import io.specmatic.core.pattern.attempt
 import io.specmatic.core.utilities.ExternalCommand
 import io.specmatic.core.utilities.jsonStringToValueMap
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
 
 data class HttpStubData(
@@ -22,7 +23,8 @@ data class HttpStubData(
     val scenario: Scenario? = null,
     val originalRequest: HttpRequest? = null,
     val data: JSONObjectValue = JSONObjectValue(),
-    val partial: ScenarioStub? = null
+    val partial: ScenarioStub? = null,
+    val dictionary: Map<String, Value> = emptyMap()
 ) {
     val matchFailure: Boolean
         get() = response.headers[SPECMATIC_RESULT_HEADER] == "failure"

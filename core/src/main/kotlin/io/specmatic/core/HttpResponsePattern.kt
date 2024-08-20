@@ -169,9 +169,9 @@ data class HttpResponsePattern(
         )
     }
 
-    fun generateResponse(partial: HttpResponse, resolver: Resolver): HttpResponse {
-        val headers = headersPattern.fillIn(partial.headers, resolver)
-        val body: ReturnValue<Value> = body.generatePartial(partial.body, resolver)
+    fun generateResponse(partial: HttpResponse, dictionary: Map<String, Value>, resolver: Resolver): HttpResponse {
+        val headers = headersPattern.fillInTheBlanks(partial.headers, dictionary, resolver)
+        val body: ReturnValue<Value> = body.fillInTheBlanks(partial.body, dictionary, resolver)
 
         return headers.combine(body) { fullHeaders, fullBody ->
             partial.copy(

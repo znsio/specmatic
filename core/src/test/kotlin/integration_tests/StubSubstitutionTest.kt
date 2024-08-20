@@ -7,6 +7,7 @@ import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
+import io.specmatic.mock.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.osAgnosticPath
 import io.specmatic.stub.HttpStub
@@ -652,6 +653,29 @@ class StubSubstitutionTest {
             val responseBody = response.body as JSONObjectValue
             assertThat(responseBody.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo("Mumbai")
 
+        }
+    }
+
+    @Test
+    fun `data substitution in response body using dictionary`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_no_substitutions.yaml")
+
+        try {
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, "src/test/resources/openapi/substitutions/dictionary.json")
+
+            createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+                val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Charles"}"""))
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.headers["X-Region"]).isEqualTo("Asia")
+
+                val responseBody = response.body as JSONObjectValue
+
+                assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(10))
+            }
+        } finally {
+            System.clearProperty(SPECMATIC_STUB_DICTIONARY)
         }
     }
 }

@@ -583,8 +583,14 @@ data class Scenario(
         }
     }
 
-    fun resolveSubtitutions(request: HttpRequest, originalRequest: HttpRequest, response: HttpResponse, data: JSONObjectValue): HttpResponse {
-        val substitution = httpRequestPattern.getSubstitution(request, originalRequest, resolver, data)
+    fun resolveSubtitutions(
+        request: HttpRequest,
+        originalRequest: HttpRequest,
+        response: HttpResponse,
+        data: JSONObjectValue,
+        dictionary: Map<String, Value>
+    ): HttpResponse {
+        val substitution = httpRequestPattern.getSubstitution(request, originalRequest, resolver, data, dictionary)
         return httpResponsePattern.resolveSubstitutions(substitution, response)
     }
 
@@ -592,6 +598,7 @@ data class Scenario(
         val updatedResolver = resolver.copy(findKeyErrorCheck = PARTIAL_KEYCHECK, mockMode = true)
 
         val requestMatch = httpRequestPattern.matches(template.request, updatedResolver, updatedResolver)
+
         val responseMatch = httpResponsePattern.matchesMock(template.response, updatedResolver)
 
         return Result.fromResults(listOf(requestMatch, responseMatch))

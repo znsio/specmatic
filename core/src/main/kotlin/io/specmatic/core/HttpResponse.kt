@@ -5,6 +5,7 @@ import io.specmatic.conversions.guessType
 import io.specmatic.core.GherkinSection.Then
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
+import io.specmatic.core.pattern.isPatternToken
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.value.*
 
@@ -167,6 +168,50 @@ data class HttpResponse(
     }
 
     private fun headersHasOnlyTextPlainContentTypeHeader() = headers.size == 1 && headers[CONTENT_TYPE] == "text/plain"
+
+    fun substituteDictionaryValues(value: JSONArrayValue, dictionary: Map<String, Value>): Value {
+        val newList = value.list.map { value ->
+            substituteDictionaryValues(value, dictionary)
+        }
+
+        return value.copy(newList)
+    }
+
+    fun substituteDictionaryValues(value: JSONObjectValue, dictionary: Map<String, Value>): Value {
+        val newMap = value.jsonObject.mapValues { (key, value) ->
+            if(value is StringValue && isVanillaPatternToken(value.string) && key in dictionary) {
+                dictionary.getValue(key)
+            } else value
+        }
+
+        return value.copy(newMap)
+    }
+
+    fun substituteDictionaryValues(value: Value, dictionary: Map<String, Value>): Value {
+        return when (value) {
+            is JSONObjectValue -> {
+                substituteDictionaryValues(value, dictionary)
+            }
+            is JSONArrayValue -> {
+                substituteDictionaryValues(value, dictionary)
+            }
+            else -> value
+        }
+    }
+
+    fun substituteDictionaryValues(dictionary: Map<String, Value>): HttpResponse {
+        val updatedHeaders = headers.mapValues { (headerName, headerValue) ->
+            if(isVanillaPatternToken(headerValue) && headerName in dictionary) {
+                dictionary.getValue(headerName).toStringLiteral()
+            } else headerValue
+        }
+
+        val updatedBody = substituteDictionaryValues(body, dictionary)
+
+        return this.copy(headers = updatedHeaders, body= updatedBody)
+    }
+
+    private fun isVanillaPatternToken(headerValue: String) = isPatternToken(headerValue) && headerValue.indexOf(':') < 0
 }
 
 fun nativeInteger(json: Map<String, Value>, key: String): Int? {

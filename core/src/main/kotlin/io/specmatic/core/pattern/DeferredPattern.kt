@@ -8,8 +8,8 @@ import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.Value
 
 data class DeferredPattern(override val pattern: String, val key: String? = null) : Pattern {
-    override fun generatePartial(value: Value, resolver: Resolver): ReturnValue<Value> {
-        return resolvePattern(resolver).generatePartial(value, resolver)
+    override fun fillInTheBlanks(value: Value, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Value> {
+        return resolvePattern(resolver).fillInTheBlanks(value, dictionary, resolver)
     }
 
     override fun equals(other: Any?): Boolean = when(other) {
@@ -57,8 +57,13 @@ data class DeferredPattern(override val pattern: String, val key: String? = null
         return resolver.getPattern(pattern).listOf(valueList, resolver)
     }
 
-    override fun resolveSubstitutions(substitution: Substitution, value: Value, resolver: Resolver): ReturnValue<Value> {
-        return resolvePattern(resolver).resolveSubstitutions(substitution, value, resolver)
+    override fun resolveSubstitutions(
+        substitution: Substitution,
+        value: Value,
+        resolver: Resolver,
+        key: String?
+    ): ReturnValue<Value> {
+        return resolvePattern(resolver).resolveSubstitutions(substitution, value, resolver, key)
     }
 
     override fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {

@@ -29,7 +29,7 @@ data class JSONObjectPattern(
     val minProperties: Int? = null,
     val maxProperties: Int? = null
 ) : Pattern {
-    override fun generatePartial(value: Value, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Value> {
         val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
 
         val headersInPartialR = jsonObject.jsonObject.mapValues { (headerName, headerValue) ->
@@ -59,13 +59,18 @@ data class JSONObjectPattern(
         else -> false
     }
 
-    override fun resolveSubstitutions(substitution: Substitution, value: Value, resolver: Resolver): ReturnValue<Value> {
+    override fun resolveSubstitutions(
+        substitution: Substitution,
+        value: Value,
+        resolver: Resolver,
+        key: String?
+    ): ReturnValue<Value> {
         if(value !is JSONObjectValue)
             return HasFailure(Result.Failure("Cannot resolve substitutions, expected object but got ${value.displayableType()}"))
 
         val updatedMap = value.jsonObject.mapValues { (key, value) ->
             val pattern = attempt("Could not find key in json object", key) { pattern.get(key) ?: pattern.get("$key?") ?: throw MissingDataException("Could not find key $key") }
-            pattern.resolveSubstitutions(substitution, value, resolver).breadCrumb(key)
+            pattern.resolveSubstitutions(substitution, value, resolver, key).breadCrumb(key)
         }
 
         return updatedMap.mapFold().ifValue { value.copy(it) }

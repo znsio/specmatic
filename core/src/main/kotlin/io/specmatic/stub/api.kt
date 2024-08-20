@@ -353,10 +353,10 @@ fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair
     val contractInfoFromStubs: List<Pair<Feature, List<ScenarioStub>>> = stubData.mapNotNull { (stubFile, stub) ->
         val matchResults = features.map { (specFile, feature) ->
             try {
-                feature.matchingStub(stub.request, stub.response, ContractAndStubMismatchMessages)
+                feature.matchingStub(stub, ContractAndStubMismatchMessages)
                 StubMatchResults(feature, null)
             } catch (e: NoMatchingScenario) {
-                StubMatchResults(null, StubMatchErrorReport(StubMatchExceptionReport(stub.request, e), specFile))
+                StubMatchResults(null, StubMatchErrorReport(StubMatchExceptionReport(stub.partial?.let { it.request } ?: stub.request, e), specFile))
             }
         }
 

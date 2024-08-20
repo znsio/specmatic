@@ -1,0 +1,47 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /person:
+    post:
+      summary: Add person
+      parameters:
+        - in: header
+          name: X-Trace-ID
+          schema:
+            type: string
+          required: true
+        - in: header
+          name: X-Client-Secret
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - department
+              properties:
+                department:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Trace-ID:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: number
+                  location:
+                    type: string

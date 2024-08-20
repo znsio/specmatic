@@ -1,0 +1,23 @@
+{
+  "partial": {
+    "http-request": {
+      "method": "POST",
+      "path": "/person/abc123?data=abc123",
+      "headers": {
+        "id": "abc123"
+      },
+      "body": {
+        "department": 10
+      }
+    },
+    "http-response": {
+      "status": 200,
+      "headers": {
+        "data": "abc123"
+      },
+      "body": {
+        "location": 10
+      }
+    }
+  }
+}

@@ -7,6 +7,7 @@ import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.mapZip
 import io.specmatic.core.utilities.nullOrExceptionString
 import io.specmatic.core.value.*
+import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.RequestContext
 
 object ContractAndStubMismatchMessages : MismatchMessages {
@@ -582,9 +583,25 @@ data class Scenario(
         }
     }
 
-    fun resolveSubtitutions(request: HttpRequest, originalRequest: HttpRequest, response: HttpResponse, data: JSONObjectValue): HttpResponse {
-        val substitution = httpRequestPattern.getSubstitution(request, originalRequest, resolver, data)
+    fun resolveSubtitutions(
+        request: HttpRequest,
+        originalRequest: HttpRequest,
+        response: HttpResponse,
+        data: JSONObjectValue,
+        dictionary: Map<String, Value>
+    ): HttpResponse {
+        val substitution = httpRequestPattern.getSubstitution(request, originalRequest, resolver, data, dictionary)
         return httpResponsePattern.resolveSubstitutions(substitution, response)
+    }
+
+    fun matchesTemplate(template: ScenarioStub): Result {
+        val updatedResolver = resolver.copy(findKeyErrorCheck = PARTIAL_KEYCHECK, mockMode = true)
+
+        val requestMatch = httpRequestPattern.matches(template.request, updatedResolver, updatedResolver)
+
+        val responseMatch = httpResponsePattern.matchesMock(template.response, updatedResolver)
+
+        return Result.fromResults(listOf(requestMatch, responseMatch))
     }
 }
 
@@ -630,3 +647,25 @@ object ContractAndResponseMismatch : MismatchMessages {
         } named $keyName in the specification was not found in the response"
     }
 }
+
+val noPatternKeyCheck = object : KeyErrorCheck {
+    override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError? {
+        return null
+    }
+
+    override fun validateList(pattern: Map<String, Any>, actual: Map<String, Any>): List<KeyError> {
+        return emptyList()
+    }
+
+    override fun validateListCaseInsensitive(
+        pattern: Map<String, Pattern>,
+        actual: Map<String, StringValue>
+    ): List<KeyError> {
+        return emptyList()
+    }
+}
+
+val PARTIAL_KEYCHECK = KeyCheck(
+    patternKeyCheck = noPatternKeyCheck,
+    unexpectedKeyCheck = ValidateUnexpectedKeys
+)

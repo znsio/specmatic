@@ -1,0 +1,21 @@
+{
+  "partial": {
+    "http-request": {
+      "method": "GET",
+      "path": "/person?category=(CATEGORY:string)"
+    },
+    "http-response": {
+      "status": 200,
+      "body": {
+        "location": "$(data.category[CATEGORY].city)"
+      }
+    }
+  },
+  "data": {
+    "category": {
+      "technology": {
+        "city": "Chennai"
+      }
+    }
+  }
+}

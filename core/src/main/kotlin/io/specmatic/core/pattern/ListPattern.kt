@@ -14,10 +14,18 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
 
+    override fun fillInTheBlanks(value: Value, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Value> {
+        val listValue = value as? JSONArrayValue ?: return HasFailure("Cannot generate a list from partial of type ${value.displayableType()}")
+        val newList = listValue.list.map { pattern.fillInTheBlanks(it, dictionary, resolver) }.listFold()
+
+        return newList.ifValue { listValue.copy(list = it) }
+    }
+
     override fun resolveSubstitutions(
         substitution: Substitution,
         value: Value,
-        resolver: Resolver
+        resolver: Resolver,
+        key: String?
     ): ReturnValue<Value> {
         if(value !is JSONArrayValue)
             return HasFailure(Result.Failure("Cannot resolve substitutions, expected list but got ${value.displayableType()}"))

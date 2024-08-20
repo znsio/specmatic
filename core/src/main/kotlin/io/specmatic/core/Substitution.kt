@@ -14,7 +14,8 @@ class Substitution(
     val httpQueryParamPattern: HttpQueryParamPattern,
     val body: Pattern,
     val resolver: Resolver,
-    val data: JSONObjectValue
+    val data: JSONObjectValue,
+    val dictionary: Map<String, Value>
 ) {
     val variableValues: Map<String, String>
 
@@ -54,7 +55,7 @@ class Substitution(
     }
 
     private fun variablesFromMap(map: Map<String, String>, originalMap: Map<String, String>) = map.entries.map { (key, value) ->
-        val originalValue = originalMap.getValue(key)
+        val originalValue = originalMap.get(key) ?: return@map null
         variableFromString(value, originalValue)
     }.filterNotNull().toMap()
 
@@ -102,9 +103,11 @@ class Substitution(
         }
     }
 
-    fun substituteSimpleVariableLookup(string: String): String {
+    fun substituteSimpleVariableLookup(string: String, key: String? = null): String {
         val name = string.trim().removeSurrounding("$(", ")")
-        return variableValues[name] ?: throw ContractException("Could not resolve expression $string as no variable by the name $name was found")
+        return variableValues[name]
+                ?: key?.let { dictionary[key]?.toStringLiteral() }
+                ?: throw ContractException("Could not resolve expression $string as no variable by the name $name was found")
     }
 
     private fun resolveSubstitutions(value: JSONObjectValue): Value {
@@ -128,7 +131,7 @@ class Substitution(
             val returnValue = if(key !in patternMap && "$key?" !in patternMap)
                 HasValue(value)
             else {
-                val substituteValue = substituteVariableValues(value.trim())
+                val substituteValue = substituteVariableValues(value.trim(), key)
 
                 (patternMap.get(key) ?: patternMap.get("$key?"))?.let { pattern ->
                     try {
@@ -143,9 +146,9 @@ class Substitution(
         }.mapFold()
     }
 
-    private fun substituteVariableValues(value: String): String {
+    private fun substituteVariableValues(value: String, key: String): String {
         return if(isSimpleVariableLookup(value)) {
-            substituteSimpleVariableLookup(value)
+            substituteSimpleVariableLookup(value, key)
         } else if(isDataLookup(value)) {
             substituteDataLookupExpression(value)
         } else value
@@ -205,12 +208,12 @@ class Substitution(
     private fun isLookup(value: String) =
         value.startsWith("$(") && value.endsWith(")")
 
-    fun substitute(value: Value, pattern: Pattern): ReturnValue<Value> {
+    fun substitute(value: Value, pattern: Pattern, key: String? = null): ReturnValue<Value> {
         return try {
             if(value !is StringValue)
                 HasValue(value)
             else if(isSimpleVariableLookup(value.string)) {
-                val updatedString = substituteSimpleVariableLookup(value.string)
+                val updatedString = substituteSimpleVariableLookup(value.string, key)
                 HasValue(pattern.parse(updatedString, resolver))
             } else if (isDataLookup(value.string)) {
                 val updatedString = substituteDataLookupExpression(value.string)

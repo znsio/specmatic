@@ -120,3 +120,12 @@ fun Sequence<ReturnValue<List<List<Pattern>>>>.foldToSequenceOfReturnValueList()
     }
 
 }
+
+fun <T> exception(fn: () -> T): Throwable? {
+    return try {
+        fn()
+        null
+    } catch(t: Throwable) {
+        t
+    }
+}

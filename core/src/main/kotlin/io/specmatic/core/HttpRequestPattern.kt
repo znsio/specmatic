@@ -8,6 +8,7 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
 import io.ktor.util.*
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.Value
 
 private const val MULTIPART_FORMDATA_BREADCRUMB = "MULTIPART-FORMDATA"
 private const val FORM_FIELDS_BREADCRUMB = "FORM-FIELDS"
@@ -250,7 +251,7 @@ data class HttpRequestPattern(
                     resolver
                 )
 
-                requestPattern.copy(headersPattern = HttpHeadersPattern(headersFromRequest))
+                requestPattern.copy(headersPattern = HttpHeadersPattern(headersFromRequest, ancestorHeaders = this.headersPattern.pattern))
             }
 
             requestPattern = attempt(breadCrumb = "BODY") {
@@ -736,9 +737,10 @@ data class HttpRequestPattern(
         runningRequest: HttpRequest,
         originalRequest: HttpRequest,
         resolver: Resolver,
-        data: JSONObjectValue
+        data: JSONObjectValue,
+        dictionary: Map<String, Value>
     ): Substitution {
-        return Substitution(runningRequest, originalRequest, httpPathPattern ?: HttpPathPattern(emptyList(), ""), headersPattern, httpQueryParamPattern, body, resolver, data)
+        return Substitution(runningRequest, originalRequest, httpPathPattern ?: HttpPathPattern(emptyList(), ""), headersPattern, httpQueryParamPattern, body, resolver, data, dictionary)
     }
 
 }

@@ -1,0 +1,15 @@
+{
+  "http-request": {
+    "method": "POST",
+    "path": "/person",
+    "body": {
+      "name": "(string)"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": 20
+    }
+  }
+}

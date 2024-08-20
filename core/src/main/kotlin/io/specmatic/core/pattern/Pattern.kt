@@ -1,6 +1,5 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.core.HttpResponse
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.Substitution
@@ -68,8 +67,8 @@ interface Pattern {
         return AnyPattern(listOf(NullPattern, this), example = defaultValue)
     }
 
-    fun resolveSubstitutions(substitution: Substitution, value: Value, resolver: Resolver): ReturnValue<Value> {
-        return substitution.substitute(value, this)
+    fun resolveSubstitutions(substitution: Substitution, value: Value, resolver: Resolver, key: String? = null): ReturnValue<Value> {
+        return substitution.substitute(value, this, key)
     }
 
     fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {
@@ -77,6 +76,12 @@ interface Pattern {
             HasValue(mapOf(key to this))
         else
             HasValue(emptyMap())
+    }
+
+    fun fillInTheBlanks(value: Value, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Value> {
+        exception { parse(value.toStringLiteral(), resolver) }?.let { return HasException(it) }
+
+        return HasValue(value)
     }
 
     val typeAlias: String?

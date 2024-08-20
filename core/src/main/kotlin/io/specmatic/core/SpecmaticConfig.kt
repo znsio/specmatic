@@ -38,6 +38,8 @@ const val EXAMPLES_DIR_SUFFIX = "_examples"
 const val SPECMATIC_GITHUB_ISSUES = "https://github.com/znsio/specmatic/issues"
 const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
 
+const val SPECMATIC_STUB_DICTIONARY = "SPECMATIC_STUB_DICTIONARY"
+
 class WorkingDirectory(private val filePath: File) {
     constructor(path: String = DEFAULT_WORKING_DIRECTORY): this(File(path))
 
@@ -64,7 +66,8 @@ fun String.loadContract(): Feature {
 
 data class StubConfiguration(
     val generative: Boolean? = false,
-    val delayInMilliseconds: Long? = getLongValue(SPECMATIC_STUB_DELAY)
+    val delayInMilliseconds: Long? = getLongValue(SPECMATIC_STUB_DELAY),
+    val dictionary: String? = getStringValue(SPECMATIC_STUB_DICTIONARY)
 )
 
 data class WorkflowIDOperation(

@@ -9,10 +9,9 @@ import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
 import java.io.File
 
-const val SPECMATIC_STUB_DICTIONARY = "SPECMATIC_STUB_DICTIONARY"
-
 fun loadDictionary(): Map<String,Value> {
-    val fileName = Flags.getStringValue(SPECMATIC_STUB_DICTIONARY) ?: return emptyMap()
+    val specmaticConfig = loadSpecmaticConfig(getConfigFileName())
+    val fileName = specmaticConfig.stub.dictionary ?: return emptyMap()
     return parsedJSONObject(File(fileName).readText()).jsonObject
 }
 

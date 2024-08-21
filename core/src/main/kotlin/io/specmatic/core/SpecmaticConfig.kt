@@ -20,6 +20,7 @@ import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
+import io.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
 
 const val APPLICATION_NAME = "Specmatic"
@@ -273,6 +274,18 @@ data class APIKeySecuritySchemeConfiguration(
     override val type: String = "apiKey",
     val value: String = ""
 ) : SecuritySchemeConfiguration()
+
+fun loadSpecmaticConfigOrDefault(configFileName: String? = null): SpecmaticConfig {
+    return if(configFileName == null)
+        SpecmaticConfig()
+    else try {
+        loadSpecmaticConfig(configFileName)
+    }
+    catch (e: ContractException) {
+        logger.log(exceptionCauseMessage(e))
+        SpecmaticConfig()
+    }
+}
 
 fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
     val configFile = File(configFileName ?: globalConfigFileName)

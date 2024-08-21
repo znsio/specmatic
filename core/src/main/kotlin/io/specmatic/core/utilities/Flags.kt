@@ -16,7 +16,7 @@ class Flags {
 
         fun getStringValue(flagName: String): String? = System.getenv(flagName) ?: System.getProperty(flagName)
 
-        fun getBooleanValue(flagName: String) = ( getStringValue(flagName) ?: "false").toBoolean()
+        fun getBooleanValue(flagName: String, default: Boolean = false) = getStringValue(flagName)?.toBoolean() ?: default
 
         fun getLongValue(flagName: String): Long? = ( getStringValue(flagName))?.toLong()
     }

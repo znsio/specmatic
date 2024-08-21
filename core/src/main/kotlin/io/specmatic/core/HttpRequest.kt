@@ -9,6 +9,7 @@ import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.http.content.*
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_PRETTY_PRINT
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import org.apache.http.client.utils.URLEncodedUtils
 import org.apache.http.message.BasicNameValuePair
@@ -628,7 +629,7 @@ fun singleLineJson(json: String): String {
 }
 
 fun formatJson(json: String): String {
-    return if (getBooleanValue("SPECMATIC_PRETTY_PRINT", true))
+    return if (getBooleanValue(SPECMATIC_PRETTY_PRINT, true))
         json
     else
         singleLineJson(json)

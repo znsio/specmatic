@@ -12,6 +12,7 @@ class Flags {
         const val SPECMATIC_STUB_DELAY = "SPECMATIC_STUB_DELAY"
         const val SPECMATIC_TEST_TIMEOUT = "SPECMATIC_TEST_TIMEOUT"
 
+        const val SPECMATIC_PRETTY_PRINT = "SPECMATIC_PRETTY_PRINT"
         const val EXAMPLE_DIRECTORIES = "EXAMPLE_DIRECTORIES"
 
         fun getStringValue(flagName: String): String? = System.getenv(flagName) ?: System.getProperty(flagName)

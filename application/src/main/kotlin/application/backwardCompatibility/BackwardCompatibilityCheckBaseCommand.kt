@@ -115,19 +115,19 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         specificationsOfChangedExternalisedExamples: Set<String>
     ) {
 
-        println("Checking backward compatibility of the following files: $newLine")
-        println("${ONE_INDENT}Files that have changed:")
+        println("Checking backward compatibility of the following specs: $newLine")
+        println("${ONE_INDENT}Specs that have changed:")
         changedFiles.forEach { println(it.prependIndent(TWO_INDENTS)) }
         println()
 
         if(filesReferringToChangedFiles.isNotEmpty()) {
-            println("${ONE_INDENT}Files referring to the changed files - ")
+            println("${ONE_INDENT}Specs referring to the changed specs - ")
             filesReferringToChangedFiles.forEach { println(it.prependIndent(TWO_INDENTS)) }
             println()
         }
 
         if(specificationsOfChangedExternalisedExamples.isNotEmpty()) {
-            println("${ONE_INDENT}Specifications whose externalised examples were changed - ")
+            println("${ONE_INDENT}Specs whose externalised examples were changed - ")
             filesReferringToChangedFiles.forEach { println(it.prependIndent(TWO_INDENTS)) }
             println()
         }
@@ -167,49 +167,12 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
 
                     val backwardCompatibilityResult = checkBackwardCompatibility(older, newer)
 
-                    if (backwardCompatibilityResult.success()) {
-                        println(
-                            "$newLine The file $specFilePath is backward compatible.$newLine".prependIndent(
-                                MARGIN_SPACE
-                            )
-                        )
-                        println()
-                        var errorsFound = false
-
-                        if(!areExamplesValid(newer, "newer")) {
-                            println(
-                                "$newLine *** Examples in $specFilePath are not valid. ***$newLine".prependIndent(
-                                    MARGIN_SPACE
-                                )
-                            )
-                            println()
-                            errorsFound = true
-                        }
-
-                        if(unusedExamples.isNotEmpty()) {
-                            println(
-                                "$newLine *** Some examples for $specFilePath could not be loaded. ***$newLine".prependIndent(
-                                    MARGIN_SPACE
-                                )
-                            )
-                            println()
-                            errorsFound = true
-                        }
-
-                        if(errorsFound) CompatibilityResult.FAILED
-                        else CompatibilityResult.PASSED
-                    } else {
-                        println("$newLine ${backwardCompatibilityResult.report().prependIndent(
-                            MARGIN_SPACE
-                        )}")
-                        println(
-                            "$newLine *** The file $specFilePath is NOT backward compatible. ***$newLine".prependIndent(
-                                MARGIN_SPACE
-                            )
-                        )
-                        println()
-                        CompatibilityResult.FAILED
-                    }
+                    return@mapIndexed getCompatibilityResult(
+                        backwardCompatibilityResult,
+                        specFilePath,
+                        newer,
+                        unusedExamples
+                    )
                 } finally {
                     gitCommand.checkout(treeishWithChanges)
                     if (areLocalChangesStashed) gitCommand.stashPop()
@@ -223,6 +186,57 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     }
 
     private fun baseBranch() = baseBranch ?: gitCommand.currentRemoteBranch()
+
+    private fun getCompatibilityResult(
+        backwardCompatibilityResult: Results,
+        specFilePath: String,
+        newer: IFeature,
+        unusedExamples: Set<String>
+    ): CompatibilityResult {
+        if (backwardCompatibilityResult.success()) {
+            println(
+                "$newLine The spec $specFilePath is backward compatible with the corresponding spec from ${baseBranch()}$newLine".prependIndent(
+                    MARGIN_SPACE
+                )
+            )
+            println()
+            var errorsFound = false
+
+            if(!areExamplesValid(newer, "newer")) {
+                println(
+                    "$newLine *** Examples in $specFilePath are not valid. ***$newLine".prependIndent(
+                        MARGIN_SPACE
+                    )
+                )
+                println()
+                errorsFound = true
+            }
+
+            if(unusedExamples.isNotEmpty()) {
+                println(
+                    "$newLine *** Some examples for $specFilePath could not be loaded. ***$newLine".prependIndent(
+                        MARGIN_SPACE
+                    )
+                )
+                println()
+                errorsFound = true
+            }
+
+            return if(errorsFound) CompatibilityResult.FAILED
+            else CompatibilityResult.PASSED
+        } else {
+            println("$newLine ${backwardCompatibilityResult.report().prependIndent(
+                MARGIN_SPACE
+            )}")
+            println(
+                "$newLine *** The changes to the spec $specFilePath are NOT backward compatible with the corresponding spec from ${baseBranch()}***$newLine".prependIndent(
+                    MARGIN_SPACE
+                )
+            )
+            println()
+            return CompatibilityResult.FAILED
+        }
+    }
 
     companion object {
         private const val HEAD = "HEAD"

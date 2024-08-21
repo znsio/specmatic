@@ -54,7 +54,9 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     }
 
     fun getChangedSpecs(logSpecs: Boolean = false): Set<String> {
-        val filesChangedInCurrentBranch = getChangedSpecsInCurrentBranch()
+        val filesChangedInCurrentBranch = getChangedSpecsInCurrentBranch().filter {
+            it.contains(targetPath)
+        }.toSet()
         val filesReferringToChangedSchemaFiles = getSpecsReferringTo(filesChangedInCurrentBranch)
         val specificationsOfChangedExternalisedExamples =
             getSpecsOfChangedExternalisedExamples(filesChangedInCurrentBranch)
@@ -67,14 +69,9 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
             )
         }
 
-        val specificationsToCheck: Set<String> =
-            filesChangedInCurrentBranch +
-                    filesReferringToChangedSchemaFiles +
-                    specificationsOfChangedExternalisedExamples
-
-        val filteredSpecs = specificationsToCheck.filter { it.contains(targetPath) }.toSet()
-
-        return filteredSpecs
+        return filesChangedInCurrentBranch +
+                filesReferringToChangedSchemaFiles +
+                specificationsOfChangedExternalisedExamples
     }
 
     private fun getChangedSpecsInCurrentBranch(): Set<String> {

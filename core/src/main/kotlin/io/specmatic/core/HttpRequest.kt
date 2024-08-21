@@ -9,7 +9,7 @@ import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.http.content.*
-import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import org.apache.http.client.utils.URLEncodedUtils
 import org.apache.http.message.BasicNameValuePair
 import java.io.File
@@ -158,7 +158,7 @@ data class HttpRequest(
             }
 
             else -> body.toString()
-        }.let { singleLineJsonIfFlagSet(it) }
+        }.let { formatJson(it) }
 
         val firstPart = listOf(firstLine, headerString).joinToString("\n").trim()
         val requestString = listOf(firstPart, "", bodyString).joinToString("\n")
@@ -627,9 +627,9 @@ fun singleLineJson(json: String): String {
         .replace(Regex("\\s+"), " ") // Replace any remaining sequences of whitespace with a single space
 }
 
-fun singleLineJsonIfFlagSet(json: String): String {
-    return if(Flags.getBooleanValue("SPECMATIC_PRETTY_PRINT") == false)
-        singleLineJson(json)
-    else
+fun formatJson(json: String): String {
+    return if (getBooleanValue("SPECMATIC_PRETTY_PRINT"))
         json
+    else
+        singleLineJson(json)
 }

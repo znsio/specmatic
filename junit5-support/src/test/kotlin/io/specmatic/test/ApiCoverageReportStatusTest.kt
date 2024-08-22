@@ -35,7 +35,7 @@ class ApiCoverageReportStatusTest {
             allEndpoints = endpointsInSpec,
             endpointsAPISet = true
         ).generate()
-        assertThat(apiCoverageReport.rows).isEqualTo(
+        assertThat(apiCoverageReport.coverageRows).isEqualTo(
             listOf(
                 OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered)
             )
@@ -61,7 +61,7 @@ class ApiCoverageReportStatusTest {
             allEndpoints = endpointsInSpec,
             endpointsAPISet = true
         ).generate()
-        assertThat(apiCoverageReport.rows).isEqualTo(
+        assertThat(apiCoverageReport.coverageRows).isEqualTo(
             listOf(
                 OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered)
             )
@@ -89,7 +89,7 @@ class ApiCoverageReportStatusTest {
             allEndpoints = endpointsInSpec,
             endpointsAPISet = true
         ).generate()
-        assertThat(apiCoverageReport.rows).isEqualTo(
+        assertThat(apiCoverageReport.coverageRows).isEqualTo(
             listOf(
                 OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
                 OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
@@ -116,7 +116,7 @@ class ApiCoverageReportStatusTest {
             allEndpoints = endpointsInSpec,
             endpointsAPISet = false
         ).generate()
-        assertThat(apiCoverageReport.rows).isEqualTo(
+        assertThat(apiCoverageReport.coverageRows).isEqualTo(
             listOf(
                 OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
                 OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
@@ -147,7 +147,7 @@ class ApiCoverageReportStatusTest {
             allEndpoints = endpointsInSpec,
             endpointsAPISet = true
         ).generate()
-        assertThat(apiCoverageReport.rows).isEqualTo(
+        assertThat(apiCoverageReport.coverageRows).isEqualTo(
             listOf(
                 OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
                 OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 50, Remarks.NotImplemented),
@@ -178,7 +178,7 @@ class ApiCoverageReportStatusTest {
             allEndpoints = endpointsInSpec,
             endpointsAPISet = true
         ).generate()
-        assertThat(apiCoverageReport.rows).isEqualTo(
+        assertThat(apiCoverageReport.coverageRows).isEqualTo(
             listOf(
                 OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
                 OpenApiCoverageConsoleRow("GET", "/route2", 0, 0, 0, Remarks.Missed)
@@ -208,7 +208,7 @@ class ApiCoverageReportStatusTest {
             allEndpoints = endpointsInSpec,
             endpointsAPISet = true
         ).generate()
-        assertThat(apiCoverageReport.rows).isEqualTo(
+        assertThat(apiCoverageReport.coverageRows).isEqualTo(
             listOf(
                 OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
                 OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false)

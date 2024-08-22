@@ -1,6 +1,6 @@
 package io.specmatic.test
 
-import io.specmatic.core.ReportConfiguration
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.TestResult
 import io.specmatic.test.reports.coverage.Endpoint
 import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test
 class ApiCoverageReportInputTest {
     companion object {
         const val CONFIG_FILE_PATH = "./specmatic.json"
-        val reportConfiguration = ReportConfiguration()
+        val specmaticConfig = SpecmaticConfig()
     }
 
     @Test
@@ -41,7 +41,7 @@ class ApiCoverageReportInputTest {
         )
 
         val apiCoverageReport = OpenApiCoverageReportInput(CONFIG_FILE_PATH, testReportRecords, applicationAPIs, allEndpoints = endpointsInSpec, endpointsAPISet = true).generate()
-        println(CoverageReportTextRenderer().render(apiCoverageReport, reportConfiguration))
+        println(CoverageReportTextRenderer().render(apiCoverageReport, specmaticConfig))
         assertThat(apiCoverageReport).isEqualTo(
             OpenAPICoverageConsoleReport(
                 listOf(
@@ -50,6 +50,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("POST", "/route1", "401", "1", 100, Remarks.Covered, showPath = false, showMethod = false),
                     OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 100, Remarks.Covered)
                 ),
+                apiCoverageReport.testResultRecords,
                 totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
@@ -81,7 +82,7 @@ class ApiCoverageReportInputTest {
         )
 
         val apiCoverageReport = OpenApiCoverageReportInput(CONFIG_FILE_PATH, testReportRecords, applicationAPIs, allEndpoints = endpointsInSpec, endpointsAPISet = true).generate()
-        println(CoverageReportTextRenderer().render(apiCoverageReport, reportConfiguration))
+        println(CoverageReportTextRenderer().render(apiCoverageReport, specmaticConfig))
         assertThat(apiCoverageReport).isEqualTo(
             OpenAPICoverageConsoleReport(
                 listOf(
@@ -93,6 +94,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("GET", "/route3", 0, 0, 0, Remarks.Missed),
                     OpenApiCoverageConsoleRow("POST", "/route3", 0, 0, 0, Remarks.Missed, showPath = false)
                 ),
+                apiCoverageReport.testResultRecords,
                 totalEndpointsCount = 3, missedEndpointsCount = 1, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
             )
         )
@@ -131,7 +133,7 @@ class ApiCoverageReportInputTest {
 
 
         val apiCoverageReport = OpenApiCoverageReportInput(CONFIG_FILE_PATH, testReportRecords, applicationAPIs, excludedAPIs, endpointsInSpec,true).generate()
-        println(CoverageReportTextRenderer().render(apiCoverageReport, reportConfiguration))
+        println(CoverageReportTextRenderer().render(apiCoverageReport, specmaticConfig))
         assertThat(apiCoverageReport).isEqualTo(
             OpenAPICoverageConsoleReport(
                 listOf(
@@ -141,6 +143,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 100,  Remarks.Covered),
                     OpenApiCoverageConsoleRow("POST", "/route2", 200, 1, 100,  Remarks.Covered, showPath = false)
                 ),
+                apiCoverageReport.testResultRecords,
                 totalEndpointsCount = 2,  missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
@@ -180,7 +183,7 @@ class ApiCoverageReportInputTest {
         )
 
         val apiCoverageReport = OpenApiCoverageReportInput(CONFIG_FILE_PATH, testReportRecords, applicationAPIs, excludedAPIs, endpointsInSpec,true).generate()
-        assertThat(apiCoverageReport.rows).isEmpty()
+        assertThat(apiCoverageReport.coverageRows).isEmpty()
         assertThat(apiCoverageReport.totalCoveragePercentage).isEqualTo(0)
     }
 
@@ -192,7 +195,7 @@ class ApiCoverageReportInputTest {
         val specEndpoints = mutableListOf<Endpoint>()
 
         val apiCoverageReport = OpenApiCoverageReportInput(CONFIG_FILE_PATH, testReportRecords, applicationAPIs, excludedAPIs, specEndpoints, false).generate()
-        assertThat(apiCoverageReport.rows).isEmpty()
+        assertThat(apiCoverageReport.coverageRows).isEmpty()
     }
 
     @Test
@@ -217,7 +220,7 @@ class ApiCoverageReportInputTest {
         )
 
         val apiCoverageReport = OpenApiCoverageReportInput(CONFIG_FILE_PATH, testReportRecords, applicationAPIs, allEndpoints = endpointsInSpec, endpointsAPISet = true).generate()
-        println(CoverageReportTextRenderer().render(apiCoverageReport,reportConfiguration))
+        println(CoverageReportTextRenderer().render(apiCoverageReport,specmaticConfig))
         assertThat(apiCoverageReport).isEqualTo(
             OpenAPICoverageConsoleReport(
                 listOf(
@@ -228,6 +231,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("POST", "/route2", 200, 1, 50, Remarks.NotImplemented, showPath = false),
                     OpenApiCoverageConsoleRow("POST", "/route2", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
                 ),
+                apiCoverageReport.testResultRecords,
                 totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
             )
         )
@@ -258,7 +262,7 @@ class ApiCoverageReportInputTest {
         )
 
         val apiCoverageReport = OpenApiCoverageReportInput(CONFIG_FILE_PATH, testReportRecords, applicationAPIs, allEndpoints = endpointsInSpec, endpointsAPISet = true).generate()
-        println(CoverageReportTextRenderer().render(apiCoverageReport, reportConfiguration))
+        println(CoverageReportTextRenderer().render(apiCoverageReport, specmaticConfig))
         assertThat(apiCoverageReport).isEqualTo(
             OpenAPICoverageConsoleReport(
                 listOf(
@@ -270,6 +274,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("GET", "/route3/{route_id}", 0, 0, 0, Remarks.Missed),
                     OpenApiCoverageConsoleRow("POST", "/route3/{route_id}", 0, 0, 0, Remarks.Missed, showPath = false)
                 ),
+                apiCoverageReport.testResultRecords,
                 totalEndpointsCount = 3, missedEndpointsCount = 1, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
             )
         )
@@ -334,7 +339,7 @@ class ApiCoverageReportInputTest {
         )
 
         val apiCoverageReport = OpenApiCoverageReportInput(CONFIG_FILE_PATH, testReportRecords, applicationAPIs, allEndpoints = allEndpoints, endpointsAPISet = true).generate()
-        println(CoverageReportTextRenderer().render(apiCoverageReport, reportConfiguration))
+        println(CoverageReportTextRenderer().render(apiCoverageReport, specmaticConfig))
         assertThat(apiCoverageReport).isEqualTo(
             OpenAPICoverageConsoleReport(
                 listOf(
@@ -346,6 +351,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("GET", "/route2", 404, 1, 75, Remarks.Invalid, showPath = false, showMethod = false),
                     OpenApiCoverageConsoleRow("POST", "/route2", 500, 1, 75, Remarks.Covered, showPath = false)
                 ),
+                apiCoverageReport.testResultRecords,
                 totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
             )
         )

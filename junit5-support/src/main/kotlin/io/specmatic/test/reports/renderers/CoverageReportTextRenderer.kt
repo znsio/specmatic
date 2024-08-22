@@ -1,47 +1,14 @@
 package io.specmatic.test.reports.renderers
 
-import io.specmatic.core.ReportConfiguration
+import io.specmatic.core.SpecmaticConfig
+import io.specmatic.test.reports.coverage.console.ConsoleReport
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
+import io.specmatic.test.reports.coverage.console.ReportColumn
 
 class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageConsoleReport> {
-    override fun render(report: OpenAPICoverageConsoleReport, reportConfiguration: ReportConfiguration): String {
-        val maxPathSize: Int = report.rows.maxOf { it.path.length }
-        val maxRemarksSize = report.rows.maxOf { it.remarks.toString().length }
-
-        val longestCoveragePercentageValue = "coverage"
-        val statusFormat = "%${longestCoveragePercentageValue.length}s"
-        val pathFormat = "%-${maxPathSize}s"
-        val methodFormat = "%-${"method".length}s"
-        val responseStatus = "%${"response".length}s"
-        val countFormat = "%${"# exercised".length}s"
-        val remarksFormat = "%-${maxRemarksSize}s"
-
-        val tableHeader =
-            "| ${statusFormat.format("coverage")} | ${pathFormat.format("path")} | ${methodFormat.format("method")} | ${responseStatus.format("response")} | ${
-                countFormat.format("# exercised")
-            } | ${remarksFormat.format("result")} |"
-        val headerSeparator =
-            "|-${"-".repeat(longestCoveragePercentageValue.length)}-|-${"-".repeat(maxPathSize)}-|-${methodFormat.format("------")}-|-${responseStatus.format("--------")}-|-${
-                countFormat.format("-----------")
-            }-|-${"-".repeat(maxRemarksSize)}-|"
-
-        val headerTitleSize = tableHeader.length - 4
-        val tableTitle = "| ${"%-${headerTitleSize}s".format("API COVERAGE SUMMARY")} |"
-        val titleSeparator = "|-${"-".repeat(headerTitleSize)}-|"
-
-        val totalCoveragePercentage = report.totalCoveragePercentage
-
-        val totalPaths = pluralisePath(report.totalEndpointsCount)
-
-        val summary = "$totalCoveragePercentage% API Coverage reported from $totalPaths"
-        val summaryRowFormatter = "%-${headerTitleSize}s"
-        val summaryRow = "| ${summaryRowFormatter.format(summary)} |"
-
-        val header: List<String> = listOf(titleSeparator, tableTitle, titleSeparator, tableHeader, headerSeparator)
-        val body: List<String> = report.rows.map { it.toRowString(maxPathSize, maxRemarksSize) }
-        val footer: List<String> = listOf(titleSeparator, summaryRow, titleSeparator)
-
-        val coveredAPIsTable =  (header + body + footer).joinToString(System.lineSeparator())
+    override fun render(report: OpenAPICoverageConsoleReport, specmaticConfig: SpecmaticConfig): String {
+        val textReportGenerator = ConsoleReport(report.coverageRows, makeReportColumns(report), makeFooter(report))
+        val coveredAPIsTable = "${System.lineSeparator()}${textReportGenerator.generate()}"
 
         val missingAndNotImplementedAPIsMessageRows:MutableList<String> = mutableListOf()
 
@@ -71,7 +38,28 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageConsoleReport> {
     private fun pluralisePath(count: Int): String =
         "$count path${if (count == 1) "" else "s"}"
 
-
     private fun isOrAre(count: Int): String = if (count > 1) "are" else "is"
+
+    private fun makeReportColumns(report: OpenAPICoverageConsoleReport): List<ReportColumn> {
+        val maxCoveragePercentageLength = "coverage".length
+        val maxPathLength = report.coverageRows.maxOf { it.path.length }
+        val maxMethodLength = report.coverageRows.maxOf { it.method.length }
+        val maxStatusLength = report.coverageRows.maxOf { it.responseStatus.length }
+        val maxExercisedLength = "#exercised".length
+        val maxRemarkLength = report.coverageRows.maxOf { it.remarks.toString().length }
+
+        return listOf(
+            ReportColumn("coverage", maxCoveragePercentageLength),
+            ReportColumn("path", maxPathLength),
+            ReportColumn("method", maxMethodLength),
+            ReportColumn("response", maxStatusLength),
+            ReportColumn("#exercised", maxExercisedLength),
+            ReportColumn("result", maxRemarkLength)
+        )
+    }
+
+    private fun makeFooter(report: OpenAPICoverageConsoleReport): String {
+        return "${report.totalCoveragePercentage}% API Coverage reported from ${report.totalEndpointsCount} Paths"
+    }
 
 }

@@ -9,7 +9,7 @@ data class OpenApiCoverageConsoleRow(
     val remarks: Remarks,
     val showPath: Boolean = true,
     val showMethod: Boolean = true,
-) {
+): CoverageRow {
     constructor(
         method: String,
         path: String,
@@ -21,28 +21,28 @@ data class OpenApiCoverageConsoleRow(
         showMethod: Boolean = true,
     ) : this(method, path, responseStatus.toString(), count.toString(), coveragePercentage, remarks, showPath, showMethod)
 
-    fun toRowString(maxPathSize: Int, maxRemarksSize: Int): String {
-        val longestStatus = "coverage"
-        val responseCellWidthMarkerString = "response"
-        val statusFormat = "%${longestStatus.length}s"
+    private val formattedCoveragePercentage: String
+        get() = if (showPath) "$coveragePercentage%" else ""
 
-        val pathFormat = "%-${maxPathSize}s"
-        val methodFormat = "%-${"method".length}s"
-        val responseFormat = if (responseStatus != "0") "%${responseCellWidthMarkerString.length}s" else " ".repeat(
-            responseCellWidthMarkerString.length
-        )
-        val countFormat = "%${"# exercised".length}s"
-        val remarksFormat = "%-${maxRemarksSize}s"
+    private val formattedPathName: String
+        get() = if (showPath) path else ""
 
-        val pathText = if (showPath) path else ""
-        val methodText = if (showMethod) method else ""
-        val coveragePercentage = if (showPath) "$coveragePercentage%" else ""
+    private val formattedMethodName: String
+        get() = if (showMethod) method else ""
 
-        return "| ${statusFormat.format(coveragePercentage)} | ${pathFormat.format(pathText)} | ${methodFormat.format(methodText)} | ${
-            responseFormat.format(
-                responseStatus
-            )
-        } | ${countFormat.format(count)} | ${remarksFormat.format(remarks.toString())} |"
+    override fun toRowString(tableColumns: List<ReportColumn>): String {
+        return tableColumns.joinToString(separator = " | ", postfix = " |", prefix = "| ") { column ->
+            val value = when (column.name) {
+                "coverage" -> formattedCoveragePercentage
+                "path" -> formattedPathName
+                "method" -> formattedMethodName
+                "response" -> responseStatus
+                "#exercised" -> count
+                "result" -> remarks.toString()
+                else -> throw Exception("Unknown column name: ${column.name}")
+            }
+            column.columnFormat.format(value)
+        }
     }
 }
 

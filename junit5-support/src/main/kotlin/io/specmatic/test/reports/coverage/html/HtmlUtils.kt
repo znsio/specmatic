@@ -33,6 +33,7 @@ fun createAssetsDir(reportsDir: String) {
         "main.js",
         "utils.js",
         "tableFilter.js",
+        "summaryUpdater.js",
         "mark-approved.svg",
         "mark-rejected.svg",
         "specmatic-logo.svg",

@@ -1,61 +1,58 @@
 /* DOM Elements */
 const resultsList = document.querySelector("ol#results");
-const overlay = document.getElementById("overlay");
+const resultsLi = document.querySelectorAll("ol#results > li");
 const allTests = document.querySelector("#all");
 
 /* VARIABLES */
-const tableRows = Array.from(document.querySelectorAll("table#reports tbody tr"));
-const groupedRows = groupRowsByPathAndMethod(tableRows);
+const tableRows = document.querySelectorAll("table#reports tbody tr");
+const groupedRows = groupRowsByFirstAndSecondGroups(tableRows);
 
 /* Event Listeners */
 resultsList.addEventListener("click", (event) => {
   const target = event.target;
-  let nearestListItem = target.closest("li");
+  const nearestListItem = target.closest("li");
+  let nearestLiType = nearestListItem?.getAttribute("data-type");
 
-  if (nearestListItem?.getAttribute("data-type")) {
-    if (reportTable.getAttribute("data-filter") === nearestListItem.getAttribute("data-type")) {
-      nearestListItem = allTests;
+  if (nearestLiType) {
+
+    if (reportTable.getAttribute("data-filter") === nearestLiType) {
+      nearestLiType = "All";
     }
 
-    const resultType = nearestListItem.getAttribute("data-type");
-    updateTable(groupedRows[resultType]);
-    reportTable.setAttribute("data-filter", resultType);
-    goBackToTable(false);
-    animateOverlay(nearestListItem);
+    if(headerSummary.getAttribute("data-panel") !== "details") {
+      updateTable(groupedRows[nearestLiType]);
+      goBackToTable(false);
+    } else {
+      updateScenarios(nearestLiType);
+    }
+
+    updateLiStyle(nearestLiType);
+    reportTable.setAttribute("data-filter", nearestLiType);
     event.stopPropagation();
   }
 });
 
-/* INIT */
-animateOverlay(allTests);
-
 /* Utils */
-function animateOverlay(summaryLiElem, offset = 1.25) {
-  const index = summaryLiElem.getAttribute("data-index");
-  const translateX = `calc(${index}00% + ${offset * index}rem)`;
-  overlay.style.transform = `translateX(${translateX})`;
-}
-
-function groupRowsByPathAndMethod(tableRows) {
+function groupRowsByFirstAndSecondGroups(tableRows) {
   const categories = { Success: {}, Error: {}, Failed: {}, Skipped: {}, All: {} };
 
   for (const row of tableRows) {
     const rowValues = extractValuesFromTableRow(row);
-    const { path, method, color, response, type } = rowValues;
+    const { firstGroup, secondGroup, thirdGroup, type } = rowValues;
 
     if (!(type in categories)) {
       throw new Error(`Unknown type: ${row.type}`);
     }
 
-    if (!categories[type][path]) categories[type][path] = {};
-    if (!categories[type][path][method]) categories[type][path][method] = {};
-    if (!categories[type][path][method][response]) categories[type][path][method][response] = [];
-    categories[type][path][method][response].push(rowValues);
+    if (!categories[type][firstGroup]) categories[type][firstGroup] = {};
+    if (!categories[type][firstGroup][secondGroup]) categories[type][firstGroup][secondGroup] = {};
+    if (!categories[type][firstGroup][secondGroup][thirdGroup]) categories[type][firstGroup][secondGroup][thirdGroup] = [];
+    categories[type][firstGroup][secondGroup][thirdGroup].push(rowValues);
 
-    if (!categories.All[path]) categories.All[path] = {};
-    if (!categories.All[path][method]) categories.All[path][method] = {};
-    if (!categories.All[path][method][response]) categories.All[path][method][response] = [];
-    categories.All[path][method][response].push(rowValues);
+    if (!categories.All[firstGroup]) categories.All[firstGroup] = {};
+    if (!categories.All[firstGroup][secondGroup]) categories.All[firstGroup][secondGroup] = {};
+    if (!categories.All[firstGroup][secondGroup][thirdGroup]) categories.All[firstGroup][secondGroup][thirdGroup] = [];
+    categories.All[firstGroup][secondGroup][thirdGroup].push(rowValues);
   }
 
   return categories;
@@ -63,22 +60,35 @@ function groupRowsByPathAndMethod(tableRows) {
 
 function updateTable(groupedRows) {
   for (const row of tableRows) {
-    const children = Array.from(row.children);
-    const [coverageTd, pathTd, methodTd, ...rest] = children;
-    const { path, method, response } = extractValuesFromTableRow(row);
+    const [coverageTd, firstGroupTd, secondGroupTd, ...rest] = Array.from(row.children);
+    const { firstGroup, secondGroup, thirdGroup } = extractValuesFromTableRow(row);
 
-    const pathExists = path in groupedRows;
-    const methodExists = pathExists && method in groupedRows[path];
+    const firstGroupExists = firstGroup in groupedRows;
+    const secondGroupExists = firstGroupExists && secondGroup in groupedRows[firstGroup];
 
-    row.classList.toggle("hidden", !pathExists);
+    row.classList.toggle("hidden", !firstGroupExists);
 
-    if (methodTd.getAttribute("data-main") === "true") {
-      methodTd.classList.toggle("hidden", !methodExists);
+    if (secondGroupTd.getAttribute("data-main") === "true") {
+      secondGroupTd.classList.toggle("hidden", !secondGroupExists);
     }
 
     for (const row of rest) {
-      const responseExists = pathExists && methodExists && response in groupedRows[path][method];
-      row.classList.toggle("hidden", !responseExists);
+      const thirdGroupExists = firstGroupExists && secondGroupExists && thirdGroup in groupedRows[firstGroup][secondGroup];
+      row.classList.toggle("hidden", !thirdGroupExists);
     }
+  }
+}
+
+function updateScenarios(resultType) {
+  const scenarios = document.querySelectorAll("ul#scenarios > li");
+  for (const scenario of scenarios) {
+    const matchesResultType = scenario.getAttribute("data-type") === resultType;
+    scenario.classList.toggle("hidden", !matchesResultType && resultType !== "All");
+  }
+}
+
+function updateLiStyle(nearestLiType) {
+  for (const li of resultsLi) {
+    li.classList.toggle("button-pressed", li.getAttribute("data-type") === nearestLiType);
   }
 }

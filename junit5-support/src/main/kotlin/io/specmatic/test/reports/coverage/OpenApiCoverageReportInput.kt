@@ -97,7 +97,7 @@ class OpenApiCoverageReportInput(
             tests.any { it.result == TestResult.NotImplemented } && tests.any { it.result != TestResult.NotImplemented }
         }
 
-        return OpenAPICoverageConsoleReport(apiCoverageRows, totalAPICount, missedAPICount, notImplementedAPICount, partiallyMissedAPICount, partiallyNotImplementedAPICount)
+        return OpenAPICoverageConsoleReport(apiCoverageRows, allTests, totalAPICount, missedAPICount, notImplementedAPICount, partiallyMissedAPICount, partiallyNotImplementedAPICount)
     }
 
     private fun addTestResultsForTestsNotGeneratedBySpecmatic(allTests: List<TestResultRecord>, allEndpoints: List<Endpoint>): List<TestResultRecord> {

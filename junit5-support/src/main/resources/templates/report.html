@@ -23,39 +23,39 @@
                 </button>
             </div>
         </div>
-        <div id="summary" class="flex items-center justify-between gap-5 p-1 border-2" th:classappend="'bg-' + ${summaryResult}">
+        <div id="summary" class="flex items-center justify-between gap-5 p-1 border-2" th:classappend="'bg-' + ${summaryResult}" data-panel="table">
             <div class="flex flex-col ml-2 print:items-center print:gap-2" id="totalCoverage">
                 <p class="text-black/50 whitespace-nowrap">API Coverage</p>
                 <span class="text-center text-3xl font-bold" th:classappend="${summaryResult}">[[${totalCoverage}]]%</span>
             </div>
-            <ol id="results" class="relative flex items-center justify-center flex-1 px-2 print:flex-wrap gap-x-5 *:w-44 print:*:w-fit">
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="success" data-type="Success" data-index="-2">
+            <ol id="results" class="relative flex items-center justify-center flex-1 px-2 print:flex-wrap gap-x-5 *:min-w-44 print:*:min-w-0">
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" data-type="Success">
                     <img src="assets/check-badge.svg" alt="success" class="size-8">
-                    <p class="group-hover:text-green-500">Success: [[${totalSuccess}]]
+                    <p class="group-hover:text-green-500">Success: <span>[[${totalSuccess}]]</span>
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-green-500"></span>
                     </p>
                 </li>
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="failed" data-type="Failed" data-index="-1">
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" data-type="Failed">
                     <img src="assets/x-circle.svg" alt="failed" class="size-8">
-                    <p class="group-hover:text-red-500">Failed: [[${totalFailures}]]
+                    <p class="group-hover:text-red-500">Failed: <span>[[${totalFailures}]]</span>
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-red-500"></span>
                     </p>
                 </li>
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="errors" data-type="Error" data-index="0">
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" data-type="Error">
                     <img src="assets/exclamation-triangle.svg" alt="errors" class="size-8">
-                    <p class="group-hover:text-red-500">Errors: [[${totalErrors}]]
+                    <p class="group-hover:text-red-500">Errors: <span>[[${totalErrors}]]</span>
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-red-500"></span>
                     </p>
                 </li>
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="skipped" data-type="Skipped" data-index="1">
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" data-type="Skipped">
                     <img src="assets/blocked.svg" alt="skipped" class="size-8">
-                    <p class="group-hover:text-yellow-500">Skipped: [[${totalSkipped}]]
+                    <p class="group-hover:text-yellow-500">Skipped: <span>[[${totalSkipped}]]</span>
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-yellow-500"></span>
                     </p>
                 </li>
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" id="all" data-type="All" data-index="2">
+                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12 button-pressed" id="all" data-type="All">
                     <img src="assets/clipboard-document-list.svg" alt="total-tests" class="size-8">
-                    <p class="group-hover:text-blue-500">Total: [[${totalTests}]]
+                    <p class="group-hover:text-blue-500">Total: <span>[[${totalTests}]]</span>
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-blue-500"></span>
                     </p>
                 </li>
@@ -63,7 +63,6 @@
                     <img src="assets/clock.svg" alt="total-time" class="size-8">
                     <p>Time: [[${totalDuration}]]ms</p>
                 </li> -->
-                <li id="overlay" class="absolute h-12 duration-500 bg-white rounded-md print:hidden"></li>
             </ol>
             <div id="badge" class="relative flex items-center justify-center">
                 <img src="assets/badge.svg" class="size-18" th:classappend="${summaryResult}" alt="badge">
@@ -86,29 +85,29 @@
             <thead>
                 <tr class="font-bold">
                     <td>Coverage</td>
-                    <td colspan="2">Path</td>
-                    <td>Method</td>
-                    <td>Response</td>
+                    <td th:attr="colspan=${tableConfig.firstGroupColSpan}" th:text="${tableConfig.firstGroupName}"></td>
+                    <td th:attr="colspan=${tableConfig.secondGroupColSpan}" th:text="${tableConfig.secondGroupName}"></td>
+                    <td th:attr="colspan=${tableConfig.thirdGroupColSpan}" th:text="${tableConfig.thirdGroupName}"></td>
                     <td>Exercised</td>
                     <td>Result</td>
                 </tr>
             </thead>
             <tbody>
-                <tr th:each="row : ${tableRows}" th:attr="data-type=${row.resultType}">
-                    <td th:classappend="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathRowSpan}">
-                        [[${row.coverageRow.coveragePercentage}]]%
+                <tr th:each="row : ${tableRows}" th:attr="data-type=${row.htmlResult}">
+                    <td th:classappend="${row.showFirstGroup ? '' : 'hidden'}" th:attr="rowspan=${row.firstGroupRowSpan}">
+                        [[${row.coveragePercentage}]]%
                     </td>
-                    <td colspan="2" th:classappend="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathRowSpan}, data-main=${row.showPath}">
-                        [[${row.coverageRow.path}]]
+                    <td th:classappend="${row.showFirstGroup ? '' : 'hidden'}" th:attr="rowspan=${row.firstGroupRowSpan}, data-main=${row.showFirstGroup}, colspan=${tableConfig.firstGroupColSpan}">
+                        [[${row.firstGroupValue}]]
                     </td>
-                    <td th:classappend="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodRowSpan}, data-main=${row.showMethod}">
-                        [[${row.coverageRow.method}]]
+                    <td th:classappend="${row.showSecondGroup ? '' : 'hidden'}" th:attr="rowspan=${row.secondGroupRowSpan}, data-main=${row.showSecondGroup}, colspan=${tableConfig.secondGroupColSpan}">
+                        [[${row.secondGroupValue}]]
                     </td>
-                    <td>[[${row.coverageRow.responseStatus}]]</td>
-                    <td>[[${row.coverageRow.count}]]</td>
+                    <td th:attr="colspan=${tableConfig.thirdGroupColSpan}">[[${row.response}]]</td>
+                    <td>[[${row.exercised}]]</td>
                     <td th:attr="data-color=${row.badgeColor}">
-                        <span class="capitalize px-4 py-1.5 font-medium rounded-lg" th:classappend="'bg-' + ${row.badgeColor} + '-300'">
-                            [[${row.coverageRow.remarks}]]
+                        <span class="capitalize px-4 py-1.5 font-medium rounded-lg whitespace-nowrap" th:classappend="'bg-' + ${row.badgeColor} + '-300'">
+                            [[${row.result}]]
                         </span>
                     </td>
                 </tr>
@@ -128,11 +127,11 @@
         </div>
     </main>
     <footer class="flex items-center justify-between p-2 text-center print:flex-col print:gap-2">
-        <p class="w-96 text-left print:text-center">Generated On: <span class="font-mono">Wed, Aug 14 2024 1:38PM</span></p>
+        <p class="w-96 text-left print:text-center">Generated On: <span class="font-mono" th:text="${generatedOn}"></span></p>
         <div class="flex items-center gap-2">
             <span class="whitespace-nowrap">Powered By</span>
             <img src="assets/specmatic-logo.svg" alt="Specmatic" class="w-48 mb-2">
-            <p>[2.0.10]</p>
+            <p class="font-light font-roboto" th:text="'[' + ${specmaticVersion} + ']'"></p>
         </div>
         <div class="flex items-center justify-end gap-1 w-96 print:justify-center">
             <p>Copyright</p>
@@ -140,8 +139,11 @@
             <p>All Rights Reserved</p>
         </div>
     </footer>
-    <script type="application/json" id="json-data" th:utext="${jsonTestData}"></script>
+    <script id="json-data"  type="application/json">
+        [(${jsonTestData})]
+    </script>
     <script defer type="text/javascript" src="assets/utils.js"></script>
+    <script defer type="text/javascript" src="assets/summaryUpdater.js"></script>
     <script defer type="text/javascript" src="assets/main.js"></script>
     <script defer type="text/javascript" src="assets/tableFilter.js"></script>
 </body>

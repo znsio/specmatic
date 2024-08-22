@@ -2,9 +2,9 @@
 const SCENARIOS = readJsonData();
 let selectedResponse = {
   coverage: 0,
-  path: "",
-  method: "",
-  response: 0,
+  firstGroup: "",
+  secondGroup: "",
+  thirdGroup: 0,
   exercised: 0,
   result: "",
   color: "",
@@ -18,6 +18,7 @@ const mainElement = document.querySelector("main");
 const responseSummary = document.querySelector("ul#response-summary");
 const scenariosList = document.querySelector("ul#scenarios");
 const reportTable = document.querySelector("table#reports");
+const [coverageTh, firstGroupTh, secondGroupTh, thirdGroupTh, ...rest] = Array.from(document.querySelector("table > thead > tr").children);
 
 /* Functions */
 function readJsonData() {
@@ -37,10 +38,10 @@ function addScenarios(scenarios) {
   } catch {
     scenariosList.replaceChildren(noScenarioFoundMessage());
   } finally {
+    updateSummaryHeader(scenarios, selectedResponse);
     scrollYPosition = window.scrollY;
     mainElement.setAttribute("data-item", "details");
     scrollTo(0, 0);
-    event.stopPropagation();
   }
 }
 
@@ -49,6 +50,8 @@ function addScenarios(scenarios) {
 backBtn.addEventListener("click", goBackToTable);
 
 downloadBtn.addEventListener("click", () => {
+  goBackToTable(false)
+  document.querySelector("#all").click();
   window.print();
 });
 
@@ -61,8 +64,9 @@ reportTable.addEventListener("click", (event) => {
     responseSummary.replaceChildren(responseElement);
     const borderColor = `border-${selectedResponse.color}-300`;
     responseSummary.className = responseSummary.className.replace(/border-\w{3,}-300/, borderColor);
-    const scenarios = SCENARIOS[selectedResponse.path]?.[selectedResponse.method]?.[selectedResponse.response] ?? [];
+    const scenarios = SCENARIOS[selectedResponse.firstGroup]?.[selectedResponse.secondGroup]?.[selectedResponse.thirdGroup] ?? [];
     addScenarios(scenarios);
+    event.stopPropagation();
   }
 });
 
@@ -106,12 +110,21 @@ function createResponseSummaryDetails(response) {
     valueSpan.textContent = value;
 
     switch (key) {
-      case "path":
+      case "firstGroup":
+        keySpan.textContent = `${firstGroupTh.textContent}: `;
         li.classList.replace("flex-shrink-0", "break-all");
         break;
-      case "coverage":
-        valueSpan.textContent = `${value}%`;
+      case "secondGroup":
+        keySpan.textContent = `${secondGroupTh.textContent}: `;
         break;
+      case "thirdGroup":
+        keySpan.textContent = `${thirdGroupTh.textContent}: `;
+        break;
+      case "result":
+        valueSpan.classList.add("capitalize");
+        break;
+      case "coverage":
+      case "exercised":
       case "color":
       case "type":
         continue;
@@ -127,8 +140,9 @@ function createResponseSummaryDetails(response) {
 
 function createScenarioItem(scenario) {
   const scenarioItem = document.createElement("li");
-  scenarioItem.classList.add("p-2", "border-2", "cursor-pointer", "group", "rounded-md");
+  scenarioItem.classList.add("p-2", "border-2", "group", "rounded-md");
   scenarioItem.setAttribute("data-show", "false");
+  scenarioItem.setAttribute("data-type", scenario.htmlResult);
 
   const scenarioInformation = createScenarioInformation(scenario);
   const reqRes = createReqResDetailsContainer(scenario);
@@ -140,26 +154,26 @@ function createScenarioItem(scenario) {
 
 function createScenarioInformation(scenario) {
   const scenarioInfoDiv = document.createElement("div");
-  scenarioInfoDiv.classList.add("flex", "items-center", "justify-between");
+  scenarioInfoDiv.classList.add("flex", "items-center", "justify-between", "cursor-pointer");
 
   const scenarioName = document.createElement("p");
   scenarioName.textContent = `${scenario.name}`;
+  scenarioName.classList.add("w-9/12");
 
   const scenarioDuration = document.createElement("span");
-  scenarioDuration.classList.add(...PILL_CSS, "w-28", "bg-blue-200");
+  scenarioDuration.classList.add("flex", "items-center", "gap-1", "font-roboto", "font-light", "text-sm", "min-w-10");
   scenarioDuration.textContent = `${scenario.duration}ms`;
 
   const scenarioResult = document.createElement("span");
-  const pillColor = getColor(scenario.result);
-  const pillText = scenario.wip ? "WIP" :
-    scenario.valid || scenario.remark === "MissingInSpec" ? scenario.remark : "Invalid";
+  const pillColor = getColor(scenario.htmlResult);
+  const pillText = scenario.wip ? "WIP" : scenario.valid || scenario.testResult === "MissingInSpec" ? scenario.testResult : "Invalid";
   scenarioResult.classList.add(...PILL_CSS, `bg-${pillColor}-300`, "w-36");
   scenarioResult.textContent = pillText;
 
   const badgeDiv = document.createElement("div");
-  badgeDiv.classList.add("flex", "items-center", "gap-2");
-  badgeDiv.appendChild(scenarioResult);
+  badgeDiv.classList.add("flex", "items-center", "gap-4");
   badgeDiv.appendChild(scenarioDuration);
+  badgeDiv.appendChild(scenarioResult);
 
   scenarioInfoDiv.appendChild(scenarioName);
   scenarioInfoDiv.appendChild(badgeDiv);
@@ -173,16 +187,10 @@ function createReqResDetailsContainer(scenario) {
 
   const additionalInfoDiv = document.createElement("div");
   additionalInfoDiv.classList.add("text-sm");
-  additionalInfoDiv.appendChild(document.createElement("p")).textContent = `Request URL: ${scenario.url}`;
-  additionalInfoDiv.appendChild(document.createElement("p")).textContent = `Request Time: ${epochToDateTime(
-    scenario.requestTime
-  )}`;
-  additionalInfoDiv.appendChild(document.createElement("p")).textContent = `Response Time: ${epochToDateTime(
-    scenario.responseTime
-  )}`;
-  additionalInfoDiv.appendChild(
-    document.createElement("p")
-  ).textContent = `Specifications File: ${scenario.specFileName}`;
+  additionalInfoDiv.appendChild(document.createElement("p")).textContent = `Request URL: ${scenario.baseUrl}`;
+  additionalInfoDiv.appendChild(document.createElement("p")).textContent = `Request Time: ${epochToDateTime(scenario.requestTime)}`;
+  additionalInfoDiv.appendChild(document.createElement("p")).textContent = `Response Time: ${epochToDateTime(scenario.responseTime)}`;
+  additionalInfoDiv.appendChild(document.createElement("p")).textContent = `Specifications File: ${scenario.specFileName}`;
   reqResDetailsDiv.appendChild(additionalInfoDiv);
 
   reqResDetailsDiv.appendChild(createReqResDetailDiv("Details", scenario.details));

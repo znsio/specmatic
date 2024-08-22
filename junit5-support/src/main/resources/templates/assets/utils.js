@@ -2,9 +2,9 @@ const extractValuesFromTableRow = (tableRow) => {
   const values = [...tableRow.children].map((child) => child.textContent);
   return {
     coverage: Number(values[0].trim().slice(0, -1)),
-    path: values[1].trim(),
-    method: values[2].trim(),
-    response: Number(values[3]),
+    firstGroup: values[1].trim(),
+    secondGroup: values[2].trim(),
+    thirdGroup: values[3],
     exercised: Number(values[4]),
     result: values[5].trim(),
     color: tableRow.lastElementChild.getAttribute("data-color"),
@@ -17,7 +17,23 @@ const goBackToTable = (scrollBack = true) => {
     scenariosList.replaceChildren();
   }, 300);
   mainElement.setAttribute("data-item", "table");
-  if(scrollBack) {
+  if(headerSummary.getAttribute("data-panel") === "details") {
+    resetSummaryHeader();
+    headerSummary.setAttribute("data-panel", "table");
+  }
+  if (scrollBack) {
     scrollTo(0, scrollYPosition);
   }
-}
+};
+
+const calculateTestGroups = (scenarios) => {
+  const groups = scenarios.reduce(
+    (acc, scenario) => {
+      acc[scenario.htmlResult] += 1;
+      acc.Total += 1
+      return acc;
+    },
+    { Success: 0, Failed: 0, Error: 0, Skipped: 0, Total: 0 }
+  );
+  return groups;
+};

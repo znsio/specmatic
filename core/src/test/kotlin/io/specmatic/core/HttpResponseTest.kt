@@ -3,7 +3,9 @@ package io.specmatic.core
 import io.specmatic.core.GherkinSection.Then
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSON
+import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
@@ -189,6 +191,31 @@ internal class HttpResponseTest {
             )
 
             assertThat(httpResponse.isNotEmpty()).isEqualTo(true)
+        }
+
+        @Test
+        fun `should pretty print by default`() {
+
+        }
+    }
+
+    @Test
+    fun `should pretty-print response body by default`() {
+        val request = HttpResponse(200, body = parsedJSONObject("""{"id": 10}"""))
+        assertThat(request.toLogString())
+            .contains(""" "id": 10""")
+            .doesNotContain("""{"id":10}""")
+    }
+
+    @Test
+    fun `should print response body in one line when flag is set to false`() {
+        try {
+            System.setProperty(Flags.SPECMATIC_PRETTY_PRINT, "false")
+            val request = HttpResponse(200, body = parsedJSONObject("""{"id": 10}"""))
+            assertThat(request.toLogString())
+                .contains("""{"id":10}""")
+        } finally {
+            System.clearProperty(Flags.SPECMATIC_PRETTY_PRINT)
         }
     }
 }

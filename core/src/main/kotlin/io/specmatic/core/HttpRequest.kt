@@ -9,6 +9,8 @@ import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.http.content.*
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_PRETTY_PRINT
+import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import org.apache.http.client.utils.URLEncodedUtils
 import org.apache.http.message.BasicNameValuePair
 import java.io.File
@@ -157,7 +159,7 @@ data class HttpRequest(
             }
 
             else -> body.toString()
-        }
+        }.let { formatJson(it) }
 
         val firstPart = listOf(firstLine, headerString).joinToString("\n").trim()
         val requestString = listOf(firstPart, "", bodyString).joinToString("\n")
@@ -618,4 +620,17 @@ fun decodePath(path: String): String {
     return path.split("/").joinToString("/") { segment ->
         URLDecoder.decode(segment, StandardCharsets.UTF_8.toString())
     }
+}
+
+fun singleLineJson(json: String): String {
+    return json
+        .replace(Regex("\\s*([{}\\[\\]:,])\\s*"), "$1") // Remove spaces around structural characters
+        .replace(Regex("\\s+"), " ") // Replace any remaining sequences of whitespace with a single space
+}
+
+fun formatJson(json: String): String {
+    return if (getBooleanValue(SPECMATIC_PRETTY_PRINT, true))
+        json
+    else
+        singleLineJson(json)
 }

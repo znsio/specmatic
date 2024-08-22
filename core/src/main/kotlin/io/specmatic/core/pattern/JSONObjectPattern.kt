@@ -5,9 +5,7 @@ import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.utilities.mapZip
 import io.specmatic.core.utilities.stringToPatternMap
 import io.specmatic.core.utilities.withNullPattern
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 import java.util.Optional
 
 fun toJSONObjectPattern(jsonContent: String, typeAlias: String?): JSONObjectPattern =
@@ -29,18 +27,60 @@ data class JSONObjectPattern(
     val minProperties: Int? = null,
     val maxProperties: Int? = null
 ) : Pattern {
+    override fun fillInTheBlanks(value: Value, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Value> {
+        val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
+
+        val mapWithKeysInPartial = jsonObject.jsonObject.mapValues { (name, value) ->
+            val headerPattern = pattern.get(name) ?: pattern.get("$name?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", name)))
+
+            if(value is StringValue && isPatternToken(value.string))
+                HasValue(resolver.getPattern(value.string).generate(resolver))
+            else {
+                val matchResult = headerPattern.matches(value, resolver)
+
+                if(matchResult is Result.Failure)
+                    HasFailure(matchResult)
+                else
+                    HasValue(value)
+            }.breadCrumb(name)
+        }.mapFold()
+
+        val mapWithMissingKeysGenerated = pattern.filterKeys {
+            !it.endsWith("?") && it !in jsonObject.jsonObject
+        }.mapValues { (name, valuePattern) ->
+            val generatedValue = dictionary[name]?.let { dictionaryValue ->
+                val matchResult = valuePattern.matches(dictionaryValue, resolver)
+                if(matchResult is Result.Failure)
+                    HasFailure(matchResult)
+                else
+                    HasValue(dictionaryValue)
+            } ?: HasValue(valuePattern.generate(resolver))
+
+            generatedValue.breadCrumb(name)
+        }.mapFold()
+
+        return mapWithKeysInPartial.combine(mapWithMissingKeysGenerated) { entriesInPartial, missingEntries ->
+            jsonObject.copy(entriesInPartial + missingEntries)
+        }
+    }
+
     override fun equals(other: Any?): Boolean = when (other) {
         is JSONObjectPattern -> this.pattern == other.pattern
         else -> false
     }
 
-    override fun resolveSubstitutions(substitution: Substitution, value: Value, resolver: Resolver): ReturnValue<Value> {
+    override fun resolveSubstitutions(
+        substitution: Substitution,
+        value: Value,
+        resolver: Resolver,
+        key: String?
+    ): ReturnValue<Value> {
         if(value !is JSONObjectValue)
             return HasFailure(Result.Failure("Cannot resolve substitutions, expected object but got ${value.displayableType()}"))
 
         val updatedMap = value.jsonObject.mapValues { (key, value) ->
-            val pattern = pattern.get(key) ?: pattern.getValue("$key?")
-            pattern.resolveSubstitutions(substitution, value, resolver).breadCrumb(key)
+            val pattern = attempt("Could not find key in json object", key) { pattern.get(key) ?: pattern.get("$key?") ?: throw MissingDataException("Could not find key $key") }
+            pattern.resolveSubstitutions(substitution, value, resolver, key).breadCrumb(key)
         }
 
         return updatedMap.mapFold().ifValue { value.copy(it) }

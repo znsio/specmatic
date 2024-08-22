@@ -14,6 +14,7 @@ import io.ktor.util.*
 import io.specmatic.core.*
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
@@ -462,15 +463,14 @@ class HttpStub(
         val results = features.asSequence().map { feature ->
             try {
                 val tier1Match = feature.matchingStub(
-                    stub.request,
-                    stub.response,
+                    stub,
                     ContractAndStubMismatchMessages
                 )
 
                 val matchedScenario = tier1Match.scenario ?: throw ContractException("Expected scenario after stub matched for:${System.lineSeparator()}${stub.toJSON()}")
 
                 val stubWithSubstitutionsResolved = stub.resolveDataSubstitutions(matchedScenario).map { scenarioStub ->
-                    feature.matchingStub(scenarioStub.request, scenarioStub.response, ContractAndStubMismatchMessages)
+                    feature.matchingStub(scenarioStub, ContractAndStubMismatchMessages)
                 }
 
                 val stubData: List<HttpStubData> = stubWithSubstitutionsResolved.map {
@@ -738,8 +738,14 @@ fun getHttpResponse(
     return try {
         val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
 
-        if(matchingStubResponse != null)
-            FoundStubbedResponse(matchingStubResponse.resolveSubstitutions(httpRequest))
+        if(matchingStubResponse != null) {
+            val (httpStubResponse, httpStubData) = matchingStubResponse
+            FoundStubbedResponse(httpStubResponse.resolveSubstitutions(
+                httpRequest,
+                if(httpStubData.partial != null) httpStubData.partial.request else httpStubData.originalRequest ?: httpRequest,
+                httpStubData.data,
+            ))
+        }
         else if (httpClientFactory != null && passThroughTargetBase.isNotBlank())
             NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
         else if (strictMode) {
@@ -783,7 +789,7 @@ private fun stubbedResponse(
     threadSafeStubs: ThreadSafeListOfStubs,
     threadSafeStubQueue: ThreadSafeListOfStubs,
     httpRequest: HttpRequest
-): Pair<List<Pair<Result, HttpStubData>>, HttpStubResponse?> {
+): Pair<List<Pair<Result, HttpStubData>>, Pair<HttpStubResponse, HttpStubData>?> {
 
     val (mock, matchResults) = stubThatMatchesRequest(threadSafeStubQueue, threadSafeStubs, httpRequest)
 
@@ -795,7 +801,7 @@ private fun stubbedResponse(
             it.contractPath,
             scenario = mock.scenario,
             feature = mock.feature
-        )
+        ) to it
     }
 
     return Pair(matchResults, stubResponse)
@@ -826,8 +832,8 @@ private fun stubThatMatchesRequest(
         return Pair(queueMock.second, queueMatchResults)
     }
 
-    val listMatchResults: List<Pair<Result, HttpStubData>> = nonTransientStubs.matchResults { stubs ->
-        stubs.map {
+    val listMatchResults: List<Pair<Result, HttpStubData>> = nonTransientStubs.matchResults { httpStubData ->
+        val nonPartialMatchResults = httpStubData.filter { it.partial == null }.map {
             val (requestPattern, _, resolver) = it
             Pair(
                 requestPattern.matches(
@@ -838,11 +844,85 @@ private fun stubThatMatchesRequest(
                 ), it
             )
         }
+
+        val partialMatchResults = httpStubData
+            .map { it.partial?.let { partial -> it to partial } }
+            .filterNotNull()
+            .map { (stubData, partial) ->
+                val (requestPattern, _, resolver) = stubData
+
+                val partialRequest = requestPattern.generate(partial.request, resolver)
+
+                val partialResolver = resolver.copy(
+                    findKeyErrorCheck = KeyCheck(unexpectedKeyCheck = IgnoreUnexpectedKeys)
+                )
+
+                val partialResult = partialRequest.matches(httpRequest, partialResolver, partialResolver)
+
+                if(!partialResult.isSuccess())
+                    partialResult to stubData
+                else
+                    Pair(
+                        requestPattern.matches(
+                            httpRequest,
+                            resolver.disableOverrideUnexpectedKeycheck()
+                                .copy(mismatchMessages = StubAndRequestMismatchMessages),
+                            requestBodyReqex = stubData.requestBodyRegex
+                        ), stubData
+                    )
+            }
+
+        partialMatchResults + nonPartialMatchResults
     }
 
-    val mock = listMatchResults.find { (result, _) -> result is Result.Success }
+    val mock = listMatchResults.map {
+        val (result, stubData) = it
+
+        if(result is Result.Success) {
+            val response = if(stubData.partial != null)
+                stubData.responsePattern.generateResponse(stubData.partial.response, stubData.dictionary, stubData.resolver)
+            else
+                stubData.response
+
+            val stubResponse = HttpStubResponse(
+                response,
+                stubData.delayInMilliseconds,
+                stubData.contractPath,
+                scenario = stubData.scenario,
+                feature = stubData.feature,
+                dictionary = stubData.dictionary
+            )
+
+            try {
+                val originalRequest =
+                    if(stubData.partial != null)
+                        stubData.partial.request
+                    else
+                        stubData.originalRequest
+
+                    stubResponse.resolveSubstitutions(httpRequest, originalRequest ?: httpRequest, it.second.data)
+
+                result to stubData.copy(response = response)
+            } catch(e: ContractException) {
+                if(isMissingData(e))
+                    Pair(e.failure(), stubData)
+                else
+                    throw e
+            }
+        } else
+            it
+    }.find { (result, _) -> result is Result.Success }
 
     return Pair(mock?.second, listMatchResults)
+}
+
+fun isMissingData(e: Throwable?): Boolean {
+    return when (e) {
+        null -> false
+        is MissingDataException -> true
+        is ContractException -> isMissingData(e.exceptionCause)
+        else -> false
+    }
 }
 
 object ContractAndRequestsMismatch : MismatchMessages {

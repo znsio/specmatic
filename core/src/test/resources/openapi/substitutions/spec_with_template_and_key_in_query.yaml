@@ -4,19 +4,18 @@ info:
   version: 0.1.9
 paths:
   /person:
-    post:
+    get:
       summary: Add person
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - department
-              properties:
-                department:
-                  type: string
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: words
+          schema:
+            type: string
       responses:
         '200':
           description: OK
@@ -25,7 +24,9 @@ paths:
               schema:
                 type: object
                 required:
-                  - location
+                  - id
                 properties:
+                  id:
+                    type: number
                   location:
                     type: string

@@ -1,11 +1,11 @@
 {
-  "data": {
-    "@department": {
+  "dataLookup": {
+    "dept": {
       "engineering": {
-        "location": "Bangalore"
+        "city": "Bangalore"
       },
       "sales": {
-        "location": "Mumbai"
+        "city": "Mumbai"
       }
     }
   },
@@ -13,13 +13,13 @@
     "method": "POST",
     "path": "/person",
     "body": {
-      "department": "{{@department}}"
+      "department": "(DEPARTMENT:string)"
     }
   },
   "http-response": {
     "status": 200,
     "body": {
-      "location": "{{@department}}"
+      "location": "$(dataLookup.dept[DEPARTMENT].city)"
     }
   }
 }

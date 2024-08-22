@@ -29,8 +29,8 @@ interface Value {
 
     fun hasTemplate(): Boolean {
         return this is StringValue
-                && this.string.startsWith("{{")
-                && this.string.endsWith("}}")
+                && this.string.startsWith("$(")
+                && this.string.endsWith(")")
     }
 
     fun hasDataTemplate(): Boolean {
@@ -39,5 +39,5 @@ interface Value {
 }
 
 fun String.hasDataTemplate(): Boolean {
-    return this.startsWith("{{@") && this.endsWith("}}")
+    return this.startsWith("$(") && this.endsWith(")")
 }

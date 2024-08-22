@@ -1,0 +1,15 @@
+{
+  "partial": {
+    "http-request": {
+      "method": "GET",
+      "path": "/person"
+    },
+    "http-response": {
+      "status": 200,
+      "headers": {
+        "X-Trace-ID": "abc123"
+      },
+      "body": {}
+    }
+  }
+}

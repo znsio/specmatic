@@ -16,7 +16,6 @@ import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
 import io.specmatic.core.utilities.*
-import io.specmatic.stub.stringToMockScenario
 import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.info.Info
@@ -267,10 +266,11 @@ data class Feature(
     fun matchingStub(
         request: HttpRequest,
         response: HttpResponse,
-        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages,
+        dictionary: Map<String, Value> = emptyMap()
     ): HttpStubData {
         try {
-            val results = stubMatchResult(request, response, mismatchMessages)
+            val results = stubMatchResult(request, response.substituteDictionaryValues(dictionary), mismatchMessages)
 
             return results.find {
                 it.first != null
@@ -309,7 +309,8 @@ data class Feature(
                                 responsePattern = scenario.httpResponsePattern,
                                 contractPath = this.path,
                                 feature = this,
-                                scenario = scenario
+                                scenario = scenario,
+                                originalRequest = request
                             )
                         }, Result.Success()
                     )
@@ -401,13 +402,16 @@ data class Feature(
             val negativeTestScenarios =
                 negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs).map { negativeScenarioResult ->
                     negativeScenarioResult.ifHasValue { result: HasValue<Scenario> ->
+                        val descriptionFromPlugin = result.value.descriptionFromPlugin?.takeIf {
+                            it.isNotBlank()
+                        }?.plus(" ") ?: ""
                         val description = result.valueDetails.singleLineDescription()
 
                         val tag = if(description.isNotBlank())
                             " [${description}]"
                         else
                             ""
-                        HasValue(result.value.copy(descriptionFromPlugin = "${result.value.apiDescription}$tag"))
+                        HasValue(result.value.copy(descriptionFromPlugin = "$descriptionFromPlugin${result.value.apiDescription}$tag"))
                     }
                 }
 
@@ -435,12 +439,67 @@ data class Feature(
     fun matchingStub(
         scenarioStub: ScenarioStub,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
-    ): HttpStubData =
-        matchingStub(
-            scenarioStub.request,
-            scenarioStub.response,
-            mismatchMessages
-        ).copy(delayInMilliseconds = scenarioStub.delayInMilliseconds, requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) }, stubToken = scenarioStub.stubToken)
+    ): HttpStubData {
+        val dictionary = specmaticConfig.stub.dictionary?.let { parsedJSONObject(File(it).readText()).jsonObject } ?: emptyMap()
+
+        val scenarioStub = scenarioStub.copy(dictionary = dictionary)
+
+        if(scenarios.isEmpty())
+            throw ContractException("No scenarios found in feature $name ($path)")
+
+        return if(scenarioStub.partial != null) {
+            val results = scenarios.asSequence().map { scenario ->
+                scenario.matchesTemplate(scenarioStub.partial) to scenario
+            }
+
+            val matchingScenario = results.filter { it.first is Result.Success }.map { it.second }.firstOrNull()
+
+            if(matchingScenario != null) {
+                val requestTypeWithAncestors =
+                    matchingScenario.httpRequestPattern.copy(
+                        headersPattern = matchingScenario.httpRequestPattern.headersPattern.copy(
+                            ancestorHeaders = matchingScenario.httpRequestPattern.headersPattern.pattern
+                        )
+                    )
+
+                val responseTypeWithAncestors =
+                    matchingScenario.httpResponsePattern.copy(
+                        headersPattern = matchingScenario.httpResponsePattern.headersPattern.copy(
+                            ancestorHeaders = matchingScenario.httpResponsePattern.headersPattern.pattern
+                        )
+                    )
+
+                HttpStubData(
+                    requestTypeWithAncestors,
+                    HttpResponse(),
+                    matchingScenario.resolver,
+                    responsePattern = responseTypeWithAncestors,
+                    scenario = matchingScenario,
+                    partial = scenarioStub.partial.copy(response = scenarioStub.partial.response.substituteDictionaryValues(scenarioStub.dictionary)),
+                    data = scenarioStub.data,
+                    dictionary = scenarioStub.dictionary
+                )
+            }
+            else {
+                val failures = Results(results.map { it.first }.filterIsInstance<Result.Failure>().toList()).withoutFluff()
+
+                throw NoMatchingScenario(failures, msg = "Could not load partial example ${scenarioStub.filePath}")
+            }
+        } else {
+            matchingStub(
+                scenarioStub.request,
+                scenarioStub.response,
+                mismatchMessages,
+                scenarioStub.dictionary
+            ).copy(
+                delayInMilliseconds = scenarioStub.delayInMilliseconds,
+                requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) },
+                stubToken = scenarioStub.stubToken,
+                data = scenarioStub.data,
+                dictionary = scenarioStub.dictionary
+            )
+        }
+    }
 
     fun clearServerState() {
         serverState = emptyMap()

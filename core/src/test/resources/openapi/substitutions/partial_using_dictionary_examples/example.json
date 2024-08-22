@@ -1,0 +1,19 @@
+{
+  "partial": {
+    "http-request": {
+      "method": "POST",
+      "path": "/person",
+      "body": {
+      }
+    },
+    "http-response": {
+      "status": 200,
+      "headers": {
+        "X-Region": "(string)"
+      },
+      "body": {
+        "id": "(number)"
+      }
+    }
+  }
+}

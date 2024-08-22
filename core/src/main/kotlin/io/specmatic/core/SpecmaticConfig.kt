@@ -20,6 +20,7 @@ import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
+import io.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
 
 const val APPLICATION_NAME = "Specmatic"
@@ -37,6 +38,8 @@ const val TEST_DIR_SUFFIX = "_tests"
 const val EXAMPLES_DIR_SUFFIX = "_examples"
 const val SPECMATIC_GITHUB_ISSUES = "https://github.com/znsio/specmatic/issues"
 const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
+
+const val SPECMATIC_STUB_DICTIONARY = "SPECMATIC_STUB_DICTIONARY"
 
 class WorkingDirectory(private val filePath: File) {
     constructor(path: String = DEFAULT_WORKING_DIRECTORY): this(File(path))
@@ -64,7 +67,8 @@ fun String.loadContract(): Feature {
 
 data class StubConfiguration(
     val generative: Boolean? = false,
-    val delayInMilliseconds: Long? = getLongValue(SPECMATIC_STUB_DELAY)
+    val delayInMilliseconds: Long? = getLongValue(SPECMATIC_STUB_DELAY),
+    val dictionary: String? = getStringValue(SPECMATIC_STUB_DICTIONARY)
 )
 
 data class WorkflowIDOperation(
@@ -270,6 +274,18 @@ data class APIKeySecuritySchemeConfiguration(
     override val type: String = "apiKey",
     val value: String = ""
 ) : SecuritySchemeConfiguration()
+
+fun loadSpecmaticConfigOrDefault(configFileName: String? = null): SpecmaticConfig {
+    return if(configFileName == null)
+        SpecmaticConfig()
+    else try {
+        loadSpecmaticConfig(configFileName)
+    }
+    catch (e: ContractException) {
+        logger.log(exceptionCauseMessage(e))
+        SpecmaticConfig()
+    }
+}
 
 fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
     val configFile = File(configFileName ?: globalConfigFileName)

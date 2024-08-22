@@ -179,7 +179,7 @@ class StubCommand : Callable<Unit> {
 
     private fun startServer() {
         val workingDirectory = WorkingDirectory()
-        val stubData = stubLoaderEngine.loadStubs(contractSources, exampleDirs)
+        val stubData = stubLoaderEngine.loadStubs(contractSources, exampleDirs, specmaticConfigPath)
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 

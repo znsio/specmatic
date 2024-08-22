@@ -51,7 +51,6 @@ data class HttpHeadersPattern(
                 )
         }
 
-
         val headersWithRelevantKeys = when {
             ancestorHeaders != null -> withoutIgnorableHeaders(headers, ancestorHeaders)
             else -> withoutContentTypeGeneratedBySpecmatic(headers, pattern)
@@ -285,6 +284,48 @@ data class HttpHeadersPattern(
         }.map {
             HttpHeadersPattern(it, contentType = contentType)
 
+        }
+    }
+
+    fun fillInTheBlanks(headers: Map<String, String>, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Map<String, String>> {
+        val headersToConsider = ancestorHeaders?.let {
+            headers.filterKeys { key -> key in it || "$key?" in it }
+        } ?: headers
+
+        val map: Map<String, ReturnValue<String>> = headersToConsider.mapValues { (headerName, headerValue) ->
+            val headerPattern = pattern.get(headerName) ?: pattern.get("$headerName?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
+
+            if(headerName in dictionary) {
+                val dictionaryValue = dictionary.getValue(headerName)
+                val matchResult = headerPattern.matches(dictionaryValue, resolver)
+
+                if(matchResult is Result.Failure)
+                    HasFailure(matchResult)
+                else
+                    HasValue(dictionaryValue.toStringLiteral())
+            } else {
+                exception { headerPattern.parse(headerValue, resolver) }?.let { return@mapValues HasException(it) }
+
+                HasValue(headerValue)
+            }.breadCrumb(headerName)
+        }
+
+        val headersInPartialR = map.mapFold()
+
+        val missingHeadersR = pattern.filterKeys { !it.endsWith("?") && it !in headers }.mapValues { (headerName, headerPattern) ->
+            val generatedValue = dictionary[headerName]?.let { dictionaryValue ->
+                val matchResult = headerPattern.matches(dictionaryValue, resolver)
+                if(matchResult is Result.Failure)
+                    HasFailure(matchResult)
+                else
+                    HasValue(dictionaryValue.toStringLiteral())
+            } ?: HasValue(headerPattern.generate(resolver).toStringLiteral())
+
+            generatedValue.breadCrumb(headerName)
+        }.mapFold()
+
+        return headersInPartialR.combine(missingHeadersR) { headersInPartial, missingHeaders ->
+            headersInPartial + missingHeaders
         }
     }
 }

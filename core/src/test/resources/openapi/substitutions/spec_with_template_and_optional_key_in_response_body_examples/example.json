@@ -1,0 +1,25 @@
+{
+  "partial": {
+    "http-request": {
+      "method": "POST",
+      "path": "/person",
+      "body": {
+        "department": "(DEPARTMENT:string)"
+      }
+    },
+    "http-response": {
+      "status": 200,
+      "body": {
+        "department": "$(DEPARTMENT)",
+        "location": "$(data.location[DEPARTMENT].city)"
+      }
+    }
+  },
+  "data": {
+    "location": {
+      "engineering": {
+        "city": "Mumbai"
+      }
+    }
+  }
+}

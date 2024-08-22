@@ -12,11 +12,12 @@ class Flags {
         const val SPECMATIC_STUB_DELAY = "SPECMATIC_STUB_DELAY"
         const val SPECMATIC_TEST_TIMEOUT = "SPECMATIC_TEST_TIMEOUT"
 
+        const val SPECMATIC_PRETTY_PRINT = "SPECMATIC_PRETTY_PRINT"
         const val EXAMPLE_DIRECTORIES = "EXAMPLE_DIRECTORIES"
 
         fun getStringValue(flagName: String): String? = System.getenv(flagName) ?: System.getProperty(flagName)
 
-        fun getBooleanValue(flagName: String) = ( getStringValue(flagName) ?: "false").toBoolean()
+        fun getBooleanValue(flagName: String, default: Boolean = false) = getStringValue(flagName)?.toBoolean() ?: default
 
         fun getLongValue(flagName: String): Long? = ( getStringValue(flagName))?.toLong()
     }

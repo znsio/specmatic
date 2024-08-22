@@ -3,11 +3,31 @@ package io.specmatic.mock
 import io.specmatic.core.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
+import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
 import java.io.File
 
-data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: HttpResponse = HttpResponse(0, emptyMap()), val delayInMilliseconds: Long? = null, val stubToken: String? = null, val requestBodyRegex: String? = null, val data: JSONObjectValue = JSONObjectValue(), val filePath: String? = null) {
+fun loadDictionary(): Map<String,Value> {
+    val configFileName = getConfigFileName()
+    val configuredDictionary = if(File(configFileName).exists()) loadSpecmaticConfig(configFileName).stub.dictionary else null
+
+    val fileName = Flags.getStringValue(SPECMATIC_STUB_DICTIONARY) ?: configuredDictionary ?: return emptyMap()
+    return parsedJSONObject(File(fileName).readText()).jsonObject
+}
+
+data class ScenarioStub(
+    val request: HttpRequest = HttpRequest(),
+    val response: HttpResponse = HttpResponse(0, emptyMap()),
+    val delayInMilliseconds: Long? = null,
+    val stubToken: String? = null,
+    val requestBodyRegex: String? = null,
+    val data: JSONObjectValue = JSONObjectValue(),
+    val filePath: String? = null,
+    val partial: ScenarioStub? = null,
+    val dictionary: Map<String, Value> = emptyMap()
+) {
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
 
@@ -56,22 +76,7 @@ data class ScenarioStub(val request: HttpRequest = HttpRequest(), val response: 
     }
 
     fun resolveDataSubstitutions(scenario: Scenario): List<ScenarioStub> {
-        val dataTemplates = requestDataTemplates() + responseDataTemplates()
-
-        val missingDataTemplates = dataTemplates.filter { it !in data.jsonObject }
-        if(missingDataTemplates.isNotEmpty())
-            throw ContractException("Could not find the following data templates defined: ${missingDataTemplates.joinToString(", ")}")
-
-        if(data.jsonObject.isEmpty())
-            return listOf(this)
-
-        val substitutions = unwrapSubstitutions(data)
-
-        val combinations = combinations(substitutions)
-
-        return combinations.map { combination ->
-            replaceInExample(combination, scenario.httpRequestPattern.body, scenario.resolver)
-        }
+        return listOf(this)
     }
 
     private fun unwrapSubstitutions(rawSubstitutions: JSONObjectValue): Map<String, Map<String, Map<String, Value>>> {
@@ -289,7 +294,14 @@ const val REQUEST_BODY_REGEX = "bodyRegex"
 val MOCK_HTTP_REQUEST_ALL_KEYS = listOf("mock-http-request", MOCK_HTTP_REQUEST)
 val MOCK_HTTP_RESPONSE_ALL_KEYS = listOf("mock-http-response", MOCK_HTTP_RESPONSE)
 
+const val PARTIAL = "partial"
+
 fun validateMock(mockSpec: Map<String, Any?>) {
+    if(mockSpec.containsKey(PARTIAL)) {
+        val template = mockSpec.getValue(PARTIAL) as? JSONObjectValue ?: throw ContractException("template should be an object")
+        return validateMock(template.jsonObject)
+    }
+
     if (MOCK_HTTP_REQUEST_ALL_KEYS.none { mockSpec.containsKey(it) })
         throw ContractException(errorMessage = "Stub does not contain http-request/mock-http-request as a top level key.")
     if (MOCK_HTTP_RESPONSE_ALL_KEYS.none { mockSpec.containsKey(it) })
@@ -297,10 +309,16 @@ fun validateMock(mockSpec: Map<String, Any?>) {
 }
 
 fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
+    val data = JSONObjectValue(mockSpec.filterKeys { it !in (MOCK_HTTP_REQUEST_ALL_KEYS + MOCK_HTTP_RESPONSE_ALL_KEYS).plus(PARTIAL) })
+
+    if(PARTIAL in mockSpec) {
+        val template = mockSpec.getValue(PARTIAL) as? JSONObjectValue ?: throw ContractException("template key must be an object")
+
+        return ScenarioStub(partial = mockFromJSON(template.jsonObject), data = data)
+    }
+
     val mockRequest: HttpRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
     val mockResponse: HttpResponse = HttpResponse.fromJSON(getJSONObjectValue(MOCK_HTTP_RESPONSE_ALL_KEYS, mockSpec))
-
-    val data = getJSONObjectValueOrNull("data", mockSpec)?.let { JSONObjectValue(it) } ?: JSONObjectValue()
 
     val delayInSeconds: Int? = getIntOrNull(DELAY_IN_SECONDS, mockSpec)
     val delayInMilliseconds: Long? = getLongOrNull(DELAY_IN_MILLISECONDS, mockSpec)
@@ -309,7 +327,14 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
     val stubToken: String? = getStringOrNull(TRANSIENT_MOCK_ID, mockSpec)
     val requestBodyRegex: String? = getRequestBodyRegexOrNull(mockSpec)
 
-    return ScenarioStub(request = mockRequest, response = mockResponse, delayInMilliseconds = delayInMs, stubToken = stubToken, requestBodyRegex = requestBodyRegex, data = data)
+    return ScenarioStub(
+        request = mockRequest,
+        response = mockResponse,
+        delayInMilliseconds = delayInMs,
+        stubToken = stubToken,
+        requestBodyRegex = requestBodyRegex,
+        data = data
+    )
 }
 
 fun getRequestBodyRegexOrNull(mockSpec: Map<String, Value>): String? {

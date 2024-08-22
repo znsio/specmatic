@@ -13,7 +13,7 @@ class OpenApiCoverageConsoleRowTest {
             ReportColumn("coverage", 8),
             ReportColumn("path", 7),
             ReportColumn("method", 3),
-            ReportColumn("responseStatus", 3),
+            ReportColumn("response", 3),
             ReportColumn("#exercised", 10),
             ReportColumn("result", 7)
         )
@@ -26,7 +26,7 @@ class OpenApiCoverageConsoleRowTest {
             reportColumns
         )
         println(coverageRowString)
-        assertThat(coverageRowString).isEqualTo("| 100%     | /route1 | GET    | 200            | 1          | covered |")
+        assertThat(coverageRowString).isEqualTo("| 100%     | /route1 | GET    | 200      | 1          | covered |")
     }
 
     @Test
@@ -36,7 +36,7 @@ class OpenApiCoverageConsoleRowTest {
             reportColumns
         )
         println(coverageRowString)
-        assertThat(coverageRowString).isEqualTo("|          |         | POST   | 200            | 1          | missing in spec |")
+        assertThat(coverageRowString).isEqualTo("|          |         | POST   | 200      | 1          | missing in spec |")
     }
 
     @Test
@@ -46,7 +46,7 @@ class OpenApiCoverageConsoleRowTest {
             reportColumns
         )
         println(coverageRowString)
-        assertThat(coverageRowString).isEqualTo("| 0%       | /route1 | GET    | 0              | 0          | missing in spec |")
+        assertThat(coverageRowString).isEqualTo("| 0%       | /route1 | GET    | 0        | 0          | missing in spec |")
     }
 
 
@@ -57,7 +57,7 @@ class OpenApiCoverageConsoleRowTest {
             reportColumns
         )
         println(coverageRowString)
-        assertThat(coverageRowString).isEqualTo("|          |         | POST   | 0              | 1          | missing in spec |")
+        assertThat(coverageRowString).isEqualTo("|          |         | POST   | 0        | 1          | missing in spec |")
     }
 
     @Test
@@ -67,7 +67,7 @@ class OpenApiCoverageConsoleRowTest {
             reportColumns
         )
         println(coverageRowString)
-        assertThat(coverageRowString).isEqualTo("| 0%       | /route1 | GET    | 0              | 0          | not implemented |")
+        assertThat(coverageRowString).isEqualTo("| 0%       | /route1 | GET    | 0        | 0          | not implemented |")
     }
 
     @Test
@@ -77,6 +77,6 @@ class OpenApiCoverageConsoleRowTest {
             reportColumns
         )
         println(coverageRowString)
-        assertThat(coverageRowString).isEqualTo("|          |         | GET    | 200            | 0          | not implemented |")
+        assertThat(coverageRowString).isEqualTo("|          |         | GET    | 200      | 0          | not implemented |")
     }
 }

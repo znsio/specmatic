@@ -833,4 +833,7 @@ tbody > tr:hover {
   .print\:\*\:min-w-0 > * {
     min-width: 0px;
   }
+  .button-pressed {
+      box-shadow: none !important;
+  }
 }

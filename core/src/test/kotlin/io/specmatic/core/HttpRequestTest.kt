@@ -20,6 +20,7 @@ import io.ktor.http.*
 import io.mockk.every
 import io.mockk.spyk
 import io.mockk.verify
+import io.specmatic.core.utilities.Flags
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 
@@ -342,5 +343,25 @@ internal class HttpRequestTest {
     fun `should percent-encode spaces within path segments`() {
         val request = HttpRequest("GET", "/test path")
         assertThat(request.getURL("http://localhost")).isEqualTo("http://localhost/test%20path")
+    }
+
+    @Test
+    fun `should pretty-print request body by default`() {
+        val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"id": 10}"""))
+        assertThat(request.toLogString())
+            .contains(""" "id": 10""")
+            .doesNotContain("""{"id":10}""")
+    }
+
+    @Test
+    fun `should print request body in one line when flag is set to false`() {
+        try {
+            System.setProperty(Flags.SPECMATIC_PRETTY_PRINT, "false")
+            val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"id": 10}"""))
+            assertThat(request.toLogString())
+                .contains("""{"id":10}""")
+        } finally {
+            System.clearProperty(Flags.SPECMATIC_PRETTY_PRINT)
+        }
     }
 }

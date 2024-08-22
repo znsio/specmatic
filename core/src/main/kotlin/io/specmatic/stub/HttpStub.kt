@@ -89,8 +89,6 @@ class HttpStub(
     private fun staticHttpStubData(rawHttpStubs: List<HttpStubData>): MutableList<HttpStubData> {
         val staticStubs = rawHttpStubs.filter { it.stubToken == null }
 
-        val dictionary = loadDictionary()
-
         val stubsFromSpecificationExamples: List<HttpStubData> = features.map { feature ->
             feature.stubsFromExamples.entries.map { (exampleName, examples) ->
                 examples.mapNotNull { (request, response) ->

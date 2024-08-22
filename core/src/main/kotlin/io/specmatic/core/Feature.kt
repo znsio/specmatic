@@ -440,6 +440,10 @@ data class Feature(
         scenarioStub: ScenarioStub,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): HttpStubData {
+        val dictionary = specmaticConfig.stub.dictionary?.let { parsedJSONObject(File(it).readText()).jsonObject } ?: emptyMap()
+
+        val scenarioStub = scenarioStub.copy(dictionary = dictionary)
+
         if(scenarios.isEmpty())
             throw ContractException("No scenarios found in feature $name ($path)")
 

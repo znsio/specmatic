@@ -9,10 +9,11 @@ import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
 import java.io.File
 
-const val SPECMATIC_STUB_DICTIONARY = "SPECMATIC_STUB_DICTIONARY"
-
 fun loadDictionary(): Map<String,Value> {
-    val fileName = Flags.getStringValue(SPECMATIC_STUB_DICTIONARY) ?: return emptyMap()
+    val configFileName = getConfigFileName()
+    val configuredDictionary = if(File(configFileName).exists()) loadSpecmaticConfig(configFileName).stub.dictionary else null
+
+    val fileName = Flags.getStringValue(SPECMATIC_STUB_DICTIONARY) ?: configuredDictionary ?: return emptyMap()
     return parsedJSONObject(File(fileName).readText()).jsonObject
 }
 
@@ -313,7 +314,7 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
     if(PARTIAL in mockSpec) {
         val template = mockSpec.getValue(PARTIAL) as? JSONObjectValue ?: throw ContractException("template key must be an object")
 
-        return ScenarioStub(partial = mockFromJSON(template.jsonObject), data = data, dictionary = loadDictionary())
+        return ScenarioStub(partial = mockFromJSON(template.jsonObject), data = data)
     }
 
     val mockRequest: HttpRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))
@@ -332,8 +333,7 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
         delayInMilliseconds = delayInMs,
         stubToken = stubToken,
         requestBodyRegex = requestBodyRegex,
-        data = data,
-        dictionary = loadDictionary()
+        data = data
     )
 }
 

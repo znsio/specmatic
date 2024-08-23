@@ -79,10 +79,9 @@ class OpenApiCoverageReportInput(
 
         val totalAPICount = groupedTestResultRecords.keys.size
         val testsGroupedByPath = allTests.groupBy { it.path }
-        val skippedAndMissingInSpecTestResults = setOf(TestResult.NotCovered, TestResult.MissingInSpec)
 
         val missedAPICount = testsGroupedByPath.count { (_, tests) ->
-            tests.all { it.result in skippedAndMissingInSpecTestResults }
+            tests.all { it.result == TestResult.MissingInSpec }
         }
 
         val notImplementedAPICount = testsGroupedByPath.count { (_, tests) ->
@@ -90,7 +89,7 @@ class OpenApiCoverageReportInput(
         }
 
         val partiallyMissedAPICount = testsGroupedByPath.count { (_, tests) ->
-            tests.any { it.result in skippedAndMissingInSpecTestResults } && tests.any { it.result !in skippedAndMissingInSpecTestResults }
+            tests.any {it.result == TestResult.MissingInSpec } && tests.any { it.result != TestResult.MissingInSpec }
         }
 
         val partiallyNotImplementedAPICount = testsGroupedByPath.count { (_, tests) ->

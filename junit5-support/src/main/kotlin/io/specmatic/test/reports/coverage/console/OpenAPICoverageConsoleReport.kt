@@ -20,7 +20,7 @@ data class OpenAPICoverageConsoleReport(
         if (totalEndpointsCount == 0) return 0
 
         val totalCountOfEndpointsWithResponseStatuses = coverageRows.count()
-        val totalCountOfCoveredEndpointsWithResponseStatuses = coverageRows.count { it.remarks == Remarks.Covered }
+        val totalCountOfCoveredEndpointsWithResponseStatuses = coverageRows.count { it.count.toInt() > 0 }
 
         return ((totalCountOfCoveredEndpointsWithResponseStatuses * 100) / totalCountOfEndpointsWithResponseStatuses).toDouble().roundToInt()
     }

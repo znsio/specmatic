@@ -16,7 +16,6 @@ import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.*
 import io.specmatic.test.reports.OpenApiCoverageReportProcessor
 import io.specmatic.test.reports.coverage.Endpoint
 import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
-import io.specmatic.test.reports.coverage.html.HtmlReport
 import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DynamicTest
@@ -77,11 +76,10 @@ open class SpecmaticJUnitSupport {
         @JvmStatic
         fun report() {
             val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
-            try {
-                reportProcessors.forEach { it.process(getReportConfiguration()) }
-            } finally {
-                HtmlReport(specmaticConfig?.report).generate()
-            }
+            val reportConfiguration = getReportConfiguration()
+            val config = specmaticConfig?.copy(report = reportConfiguration) ?: SpecmaticConfig(report = reportConfiguration)
+
+            reportProcessors.forEach { it.process(config) }
 
             threads.distinct().let {
                 if(it.size > 1) {
@@ -92,15 +90,30 @@ open class SpecmaticJUnitSupport {
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
-            val defaultFormatters = listOf(ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE))
+            val defaultFormatters = listOf(
+                ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE),
+                ReportFormatter(ReportFormatterType.HTML)
+            )
             val defaultReportTypes = ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
+
             return when (val reportConfiguration = specmaticConfig?.report) {
                 null -> {
                     logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
                     ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
                 }
+
                 else -> {
-                    reportConfiguration.copy(formatters = reportConfiguration.formatters ?: defaultFormatters)
+                    reportConfiguration.copy(
+                        formatters = defaultFormatters.map { defaultFormatter ->
+                            val existingFormatter = reportConfiguration.formatters?.firstOrNull { it.type == defaultFormatter.type }
+                            defaultFormatter.copy(
+                                layout = existingFormatter?.layout ?: defaultFormatter.layout,
+                                title = existingFormatter?.title ?: defaultFormatter.title,
+                                heading = existingFormatter?.heading ?: defaultFormatter.heading,
+                                outputDirectory = existingFormatter?.outputDirectory ?: defaultFormatter.outputDirectory
+                            )
+                        }
+                    )
                 }
             }
         }

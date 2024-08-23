@@ -2,15 +2,10 @@ package io.specmatic.test.reports.coverage.html
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
-import io.specmatic.core.*
-import io.specmatic.core.log.HttpLogMessage
-import io.specmatic.core.log.logger
-import io.specmatic.test.SpecmaticJUnitSupport
-import io.specmatic.test.TestInteractionsLog
-import io.specmatic.test.TestInteractionsLog.displayName
-import io.specmatic.test.TestInteractionsLog.duration
-import io.specmatic.test.TestResultRecord
-import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
+import io.specmatic.core.ReportFormatter
+import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.SuccessCriteria
+import io.specmatic.core.TestResult
 import io.specmatic.test.reports.coverage.console.Remarks
 import io.specmatic.test.reports.coverage.html.HtmlTemplateConfiguration.Companion.configureTemplateEngine
 import org.thymeleaf.context.Context
@@ -19,30 +14,22 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 
-class HtmlReport(report: ReportConfiguration?) {
+class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
+    private val outputDirectory = htmlReportInformation.reportFormat.outputDirectory
+    private val apiSuccessCriteria = htmlReportInformation.successCriteria
+    private val reportFormat = htmlReportInformation.reportFormat
+    private val reportData = htmlReportInformation.reportData
 
-    private val groupedTestResultRecords = SpecmaticJUnitSupport.openApiCoverageReportInput.groupedTestResultRecords
-    private val groupedHttpLogMessages = TestInteractionsLog.testHttpLogMessages.groupBy { it.scenario?.method }
-    private val groupedApiCoverageRows = SpecmaticJUnitSupport.openApiCoverageReportInput.apiCoverageRows
-        .groupBy { it.path }.mapValues { pathGroup -> pathGroup.value.groupBy { it.method } }
-
-
-    private val htmlConfig = report?.formatters?.firstOrNull { it.type == ReportFormatterType.HTML }
-    private val outputDirectory = htmlConfig?.outputDirectory ?: "build/reports/specmatic/html"
-    private val pageTitle = htmlConfig?.title ?: "Specmatic Report"
-    private val reportHeading = htmlConfig?.heading ?: "Contract Test Results"
-
-    private val successResultSet = setOf(TestResult.Success, TestResult.DidNotRun, TestResult.Covered)
-    private var totalTests: Int = 0
+    private var totalTests = 0
     private var totalErrors = 0
     private var totalFailures = 0
     private var totalSkipped = 0
     private var totalSuccess = 0
+    private var totalMissing = 0
 
     fun generate() {
-        logger.log("Generating HTML report in $outputDirectory...")
         createAssetsDir(outputDirectory)
-        calculateTestGroupCounts()
+        calculateTestGroupCounts(htmlReportInformation.reportData.scenarioData)
 
         val outFile = File(outputDirectory, "index.html")
         val htmlText = generateHtmlReportText()
@@ -51,27 +38,33 @@ class HtmlReport(report: ReportConfiguration?) {
     }
 
     private fun generateHtmlReportText(): String {
-        val jsonTestDataScript = """
-            <script id="json-data" type="application/json">
-                ${dumpTestData(groupScenarios())}
-            </script>
-        """.trimIndent()
+        val testCriteria = testCriteriaPassed()
+        val successCriteria = successCriteriaPassed(reportData.totalCoveragePercentage)
+        // NOTE: Scenarios should be updated before updating TableRows
+        val updatedScenarios = updateScenarioData(reportData.scenarioData)
+        val updatedTableRows = updateTableRows(reportData.tableRows)
 
         val templateVariables = mapOf(
-            "pageTitle" to pageTitle,
-            "reportHeading" to reportHeading,
-            "successRate" to successRate(),
+            "pageTitle" to reportFormat.title,
+            "reportHeading" to reportFormat.heading,
+            "summaryResult" to if (testCriteria && successCriteria) "approved" else "rejected",
+            "totalCoverage" to reportData.totalCoveragePercentage,
             "totalSuccess" to totalSuccess,
             "totalFailures" to totalFailures,
             "totalErrors" to totalErrors,
             "totalSkipped" to totalSkipped,
             "totalTests" to totalTests,
-            "totalDuration" to getTotalDuration(),
+            "totalDuration" to reportData.totalTestDuration,
+            "actuatorEnabled" to reportData.actuatorEnabled,
+            "minimumCoverage" to apiSuccessCriteria.minThresholdPercentage,
+            "successCriteriaPassed" to successCriteria,
+            "testCriteriaPassed" to testCriteria,
+            "tableConfig" to htmlReportInformation.tableConfig,
+            "tableRows" to updatedTableRows,
+            "specmaticImplementation" to htmlReportInformation.specmaticImplementation,
+            "specmaticVersion" to htmlReportInformation.specmaticVersion,
             "generatedOn" to generatedOnTimestamp(),
-            "tableRows" to tableRows(),
-            "specmaticVersion" to "[${getSpecmaticVersion()}]",
-            "summaryResult" to summaryResult(),
-            "jsonTestDataScript" to jsonTestDataScript
+            "jsonTestData" to dumpTestData(updatedScenarios)
         )
 
         return configureTemplateEngine().process(
@@ -80,54 +73,60 @@ class HtmlReport(report: ReportConfiguration?) {
         )
     }
 
-    private fun successRate() = if (totalTests > 0) (totalSuccess * 100 / totalTests) else 100
-
-    private fun summaryResult(): String {
-        return if (totalFailures > 0 || totalErrors > 0) "rejected" else "approved"
-    }
-
-    private fun tableRows(): List<TableRow> {
-        return groupedApiCoverageRows.flatMap { (_, methodGroup) ->
-            val pathRowSpan = methodGroup.values.sumOf { it.size }
-
-            methodGroup.entries.flatMapIndexed { methodIndex, entry ->
-                val coverageRowList = entry.value
-
-                coverageRowList.mapIndexed { testIndex, coverageRow ->
-                    TableRow(
-                        pathRowSpan,
-                        coverageRowList.size,
-                        methodIndex == 0 && testIndex == 0,
-                        testIndex == 0,
-                        coverageRow,
-                        getBadgeColor(coverageRow.remarks)
-                    )
-                }
-            }
+    private fun updateTableRows(tableRows: List<TableRow>): List<TableRow> {
+        tableRows.forEach {
+            val (htmlResult, badgeColor) = getHtmlResultAndBadgeColor(it)
+            it.htmlResult = htmlResult
+            it.badgeColor = badgeColor
         }
+
+        return tableRows
     }
 
-    private fun calculateTestGroupCounts() {
-        groupedTestResultRecords.forEach { pathGroup ->
-            pathGroup.value.forEach { methodGroup ->
-                methodGroup.value.forEach { responseGroup ->
-                    responseGroup.value.forEach {
-                        when (it.result) {
-                            TestResult.Error -> totalErrors++
-                            TestResult.Failed -> totalFailures++
-                            TestResult.Skipped -> totalSkipped++
-                            TestResult.Success -> totalSuccess++
-                            TestResult.NotImplemented -> totalFailures++
-                            TestResult.DidNotRun -> totalSkipped++
-                            TestResult.MissingInSpec -> totalFailures++
-                            TestResult.NotCovered -> totalFailures++
-                            TestResult.Covered -> totalSuccess++
-                        }
-                        totalTests++
+    private fun updateScenarioData(scenarioData: Map<String, Map<String, Map<String, List<ScenarioData>>>>): Map<String, Map<String, Map<String, List<ScenarioData>>>> {
+        scenarioData.forEach { (_, firstGroup) ->
+            firstGroup.forEach { (_, secondGroup) ->
+                secondGroup.forEach { (_, scenariosList) ->
+                    scenariosList.forEach {
+                        val htmlResult = categorizeResult(it.testResult, it.wip)
+                        val scenarioDetail = "${it.name} ${htmlResultToDetailPostFix(htmlResult)}"
+
+                        it.htmlResult = htmlResult
+                        it.details = if (it.details.isBlank()) scenarioDetail else "$scenarioDetail\n${it.details}"
                     }
                 }
             }
         }
+
+        return scenarioData
+    }
+
+    private fun testCriteriaPassed(): Boolean {
+        // NOTE: Ignoring Errors, they'll only contain failing WIP Tests
+        return totalFailures == 0
+    }
+
+    private fun successCriteriaPassed(totalCoveragePercentage: Int): Boolean {
+        return totalCoveragePercentage >= apiSuccessCriteria.minThresholdPercentage || !apiSuccessCriteria.enforce
+    }
+
+    private fun calculateTestGroupCounts(scenarioData: Map<String, Map<String, Map<String, List<ScenarioData>>>>) {
+        scenarioData.forEach { (_, firstGroup) ->
+            firstGroup.forEach { (_, secondGroup) ->
+                secondGroup.forEach { (_, scenariosList) ->
+                    scenariosList.forEach {
+                        when (it.testResult) {
+                            TestResult.MissingInSpec -> totalMissing++
+                            TestResult.NotCovered -> totalSkipped++
+                            TestResult.Success -> totalSuccess++
+                            TestResult.Error -> totalErrors++
+                            else -> if (it.wip) totalErrors++ else totalFailures++
+                        }
+                    }
+                }
+            }
+        }
+        totalTests = totalSuccess + totalFailures + totalErrors + totalSkipped
     }
 
     private fun generatedOnTimestamp(): String {
@@ -136,83 +135,41 @@ class HtmlReport(report: ReportConfiguration?) {
         return currentDateTime.format(formatter)
     }
 
-    private fun getSpecmaticVersion(): String {
-        val props = Properties()
-        HtmlReport::class.java.classLoader.getResourceAsStream("version.properties").use {
-            props.load(it)
-        }
-        return props.getProperty("version")
-    }
+    private fun getHtmlResultAndBadgeColor(tableRow: TableRow): Pair<HtmlResult, String> {
+        val scenarioList =
+            reportData.scenarioData[tableRow.firstGroupValue]?.get(tableRow.secondGroupValue)?.get(tableRow.response)
+                ?: emptyList()
 
-    private fun getTotalDuration(): Long {
-        return TestInteractionsLog.testHttpLogMessages.sumOf { it.duration() }
-    }
-
-    private fun groupScenarios(): MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<ScenarioData>>>> {
-        val testData: MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<ScenarioData>>>> = mutableMapOf()
-
-        for ((path, methodGroup) in groupedTestResultRecords) {
-            for ((method, statusGroup) in methodGroup) {
-                val methodMap = testData.getOrPut(path) { mutableMapOf() }
-
-                for ((status, testResults) in statusGroup) {
-                    val statusMap = methodMap.getOrPut(method) { mutableMapOf() }
-                    val scenarioDataList = statusMap.getOrPut(status) { mutableListOf() }
-
-                    for (test in testResults) {
-                        val matchingLogMessage = groupedHttpLogMessages[method]?.firstOrNull {
-                            it.scenario == test.scenario
-                        }
-
-                        scenarioDataList.add(
-                            ScenarioData(
-                                name = getTestName(test, matchingLogMessage),
-                                url = matchingLogMessage?.targetServer ?: "Unknown URL",
-                                duration = matchingLogMessage?.duration() ?: 0,
-                                result = test.result.toString(),
-                                valid = test.isValid,
-                                request = matchingLogMessage?.request?.toLogString() ?: "No Request",
-                                requestTime = matchingLogMessage?.requestTime?.toEpochMillis() ?: 0,
-                                response = getResponseString(matchingLogMessage, test.result),
-                                responseTime = matchingLogMessage?.responseTime?.toEpochMillis() ?: 0,
-                                specFileName = test.specification ?: matchingLogMessage?.scenario?.specification ?: "Unknown Spec File",
-                                passed = test.result in successResultSet,
-                            )
-                        )
-
-                    }
-                }
+        scenarioList.forEach {
+            when (it.htmlResult) {
+                HtmlResult.Failed -> return Pair(HtmlResult.Failed, "red")
+                HtmlResult.Error -> return Pair(HtmlResult.Error, "yellow")
+                HtmlResult.Skipped -> return Pair(HtmlResult.Skipped, "yellow")
+                else -> {}
             }
         }
-
-        return testData
+        return Pair(HtmlResult.Success, "green")
     }
 
-    private fun getTestName(testResult: TestResultRecord, httpLogMessage: HttpLogMessage?): String {
-        return httpLogMessage?.displayName() ?: "Scenario: ${testResult.path} -> ${testResult.responseStatus}"
-    }
-
-    private fun getResponseString(httpLogMessage: HttpLogMessage?, result: TestResult): String {
-        if(httpLogMessage == null) {
-            return "No Response"
-        }
-
-        if(httpLogMessage.response == null) {
-            return httpLogMessage.exception?.message ?: "No Response"
-        }
-
-        return httpLogMessage.response?.toLogString() ?: "No Response"
-    }
-
-    private fun getBadgeColor(remark: Remarks): String {
-        return when(remark) {
-            Remarks.Covered -> "green"
-            Remarks.DidNotRun -> "yellow"
-            else -> "red"
+    private fun htmlResultToDetailPostFix(htmlResult: HtmlResult): String {
+        return when (htmlResult) {
+            HtmlResult.Skipped -> "has been SKIPPED"
+            HtmlResult.Error -> "has ERROR-ED"
+            HtmlResult.Success -> "has SUCCEEDED"
+            else -> "has FAILED"
         }
     }
 
-    private fun dumpTestData(testData: MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<ScenarioData>>>>): String {
+    private fun categorizeResult(testResult: TestResult, isWip: Boolean): HtmlResult {
+        return when (testResult) {
+            TestResult.Success -> HtmlResult.Success
+            TestResult.NotCovered -> HtmlResult.Skipped
+            TestResult.Error -> HtmlResult.Error
+            else -> if (isWip) HtmlResult.Error else HtmlResult.Failed
+        }
+    }
+
+    private fun dumpTestData(testData: Map<String, Map<String, Map<String, List<ScenarioData>>>>): String {
         val mapper = ObjectMapper()
         val json = mapper.writeValueAsString(testData)
         mapper.enable(SerializationFeature.INDENT_OUTPUT)
@@ -221,26 +178,67 @@ class HtmlReport(report: ReportConfiguration?) {
     }
 }
 
+data class HtmlReportInformation(
+    val reportFormat: ReportFormatter,
+    val specmaticConfig: SpecmaticConfig,
+    val successCriteria: SuccessCriteria,
+    val specmaticImplementation: String,
+    val specmaticVersion: String,
+    val tableConfig: HtmlTableConfig,
+    val reportData: HtmlReportData
+)
+
+data class HtmlReportData(
+    val totalCoveragePercentage: Int,
+    val actuatorEnabled: Boolean,
+    val totalTestDuration: Long,
+    val tableRows: List<TableRow>,
+    val scenarioData: Map<String, Map<String, Map<String, List<ScenarioData>>>>
+)
+
+data class HtmlTableConfig(
+    val firstGroupName: String,
+    val firstGroupColSpan: Int,
+    val secondGroupName: String,
+    val secondGroupColSpan: Int,
+    val thirdGroupName: String,
+    val thirdGroupColSpan: Int
+)
+
 data class ScenarioData(
     val name: String,
-    val url: String,
+    val baseUrl: String,
     val duration: Long,
-    val result: String,
+    val testResult: TestResult,
     val valid: Boolean,
+    val wip: Boolean,
     val request: String,
     val requestTime: Long,
     val response: String,
     val responseTime: Long,
     val specFileName: String,
-    val passed: Boolean
+    var details: String,
+    var htmlResult: HtmlResult? = null
 )
 
 data class TableRow(
-    val pathRowSpan: Int,
-    val methodRowSpan: Int,
-    val showPathInfo: Boolean,
-    val showMethodInfo: Boolean,
-    val coverageRow: OpenApiCoverageConsoleRow,
-    val badgeColor: String
+    val coveragePercentage: Int,
+    val firstGroupValue: String,
+    val showFirstGroup: Boolean,
+    val firstGroupRowSpan: Int,
+    val secondGroupValue: String,
+    val showSecondGroup: Boolean,
+    val secondGroupRowSpan: Int,
+    val response: String,
+    val exercised: Int,
+    val result: Remarks,
+    var htmlResult: HtmlResult? = null,
+    var badgeColor: String? = null
 )
 
+enum class HtmlResult {
+    Success,
+    Failed,
+    Error,
+    Skipped
+}

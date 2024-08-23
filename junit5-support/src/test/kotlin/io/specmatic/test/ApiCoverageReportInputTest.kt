@@ -352,7 +352,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("POST", "/route2", 500, 1, 75, Remarks.Covered, showPath = false)
                 ),
                 apiCoverageReport.testResultRecords,
-                totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
+                totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
     }

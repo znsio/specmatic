@@ -503,4 +503,26 @@ class PartialExampleTest {
             System.clearProperty(SPECMATIC_STUB_DICTIONARY)
         }
     }
+
+    @Test
+    fun `data substitution in response body at second level within array using dictionary`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/dictionary_value_at_second_level_with_array.yaml")
+
+        try {
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, "src/test/resources/openapi/substitutions/dictionary.json")
+
+            createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+                val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Janet"}"""))
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                val responseBody = response.body as JSONObjectValue
+
+                assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(10))
+                assertThat(responseBody.findFirstChildByPath("addresses.[0].street")).isEqualTo(StringValue("Baker Street"))
+            }
+        } finally {
+            System.clearProperty(SPECMATIC_STUB_DICTIONARY)
+        }
+    }
 }

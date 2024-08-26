@@ -701,4 +701,28 @@ class StubSubstitutionTest {
             System.clearProperty(SPECMATIC_STUB_DICTIONARY)
         }
     }
+
+    @Test
+    fun `broken dictionary should be mentioned in an error message at stub load time`() {
+        try {
+            val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/dictionary_value_at_second_level.yaml")
+            val brokenDictionaryPath = "src/test/resources/openapi/substitutions/broken-dictionary.json"
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, brokenDictionaryPath)
+
+            val (output, _) = captureStandardOutput {
+                try {
+                    val stub = createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0)
+                    stub.close()
+                } catch(e: Throwable) {
+                    println(e)
+                }
+            }
+
+            println(output)
+
+            assertThat(output).contains(brokenDictionaryPath)
+        } finally {
+            System.clearProperty(SPECMATIC_STUB_DICTIONARY)
+        }
+    }
 }

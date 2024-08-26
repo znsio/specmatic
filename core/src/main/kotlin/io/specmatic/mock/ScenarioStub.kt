@@ -1,20 +1,22 @@
 package io.specmatic.mock
 
 import io.specmatic.core.*
+import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
 import java.io.File
 
-fun loadDictionary(): Map<String,Value> {
-    val configFileName = getConfigFileName()
-    val configuredDictionary = if(File(configFileName).exists()) loadSpecmaticConfig(configFileName).stub.dictionary else null
-
-    val fileName = Flags.getStringValue(SPECMATIC_STUB_DICTIONARY) ?: configuredDictionary ?: return emptyMap()
-    return parsedJSONObject(File(fileName).readText()).jsonObject
+fun loadDictionary(fileName: String): Map<String,Value> {
+    return try {
+        parsedJSONObject(File(fileName).readText()).jsonObject
+    } catch(e: Throwable) {
+        throw ContractException("Error loading default value dictionary $fileName: ${exceptionCauseMessage(e)}")
+    }
 }
 
 data class ScenarioStub(

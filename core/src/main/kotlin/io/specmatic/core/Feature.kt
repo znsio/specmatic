@@ -108,10 +108,20 @@ data class Feature(
     val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig)
 ) {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
+        val updatedSpecmaticConfig = specmaticConfig.copy(
+            test = specmaticConfig.test?.copy(
+                resiliencyTests = specmaticConfig.test.resiliencyTests?.copy(
+                    enable = if(onlyPositive) ResiliencyTestSuite.positiveOnly else ResiliencyTestSuite.all
+                )
+            )
+        )
+
         return this.copy(flagsBased = this.flagsBased.copy(
             generation = GenerativeTestsEnabled(onlyPositive),
             positivePrefix = POSITIVE_TEST_DESCRIPTION_PREFIX,
-            negativePrefix = NEGATIVE_TEST_DESCRIPTION_PREFIX))
+            negativePrefix = NEGATIVE_TEST_DESCRIPTION_PREFIX),
+            specmaticConfig = updatedSpecmaticConfig
+        )
     }
 
     fun enableSchemaExampleDefault(): Feature {
@@ -329,10 +339,10 @@ data class Feature(
     private fun failureResults(results: List<Pair<HttpStubData?, Result>>): Results =
         Results(results.map { it.second }.filterIsInstance<Result.Failure>().toMutableList())
 
-    fun generateContractTests(suggestions: List<Scenario>): Sequence<ContractTest> {
+    fun generateContractTests(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<ContractTest> {
         val workflow = Workflow(specmaticConfig.workflow ?: WorkflowConfiguration())
 
-        return generateContractTestScenarios(suggestions).map { (originalScenario, returnValue) ->
+        return generateContractTestScenarios(suggestions, fn).map { (originalScenario, returnValue) ->
             returnValue.realise(
                 hasValue = { concreteTestScenario, comment ->
                     ScenarioAsTest(
@@ -375,13 +385,16 @@ data class Feature(
         return BadRequestOrDefault(badRequestResponses, defaultResponse)
     }
 
-    fun generateContractTestScenarios(suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
-        return flagsBased.generation.let {
-            it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
-        }
+    fun generateContractTestScenarios(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
+        val positiveTestScenarios = positiveTestScenarios(suggestions, fn)
+
+        return if (!specmaticConfig.isResiliencyTestingEnabled() || specmaticConfig.isOnlyPositiveTestingEnabled())
+            positiveTestScenarios
+        else
+            positiveTestScenarios + negativeTestScenarios()
     }
 
-    fun positiveTestScenarios(suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =
+    fun positiveTestScenarios(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =
         scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
         }.flatMap { originalScenario ->
@@ -390,7 +403,7 @@ data class Feature(
             else
                 flagsBased.withoutGenerativeTests()
 
-            originalScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs).map { Pair(originalScenario.copy(generativePrefix = flagsBased.positivePrefix), it) }
+            originalScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs, fn).map { Pair(originalScenario.copy(generativePrefix = flagsBased.positivePrefix), it) }
         }
 
     fun negativeTestScenarios(): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {

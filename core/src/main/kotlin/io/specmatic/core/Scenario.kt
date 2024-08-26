@@ -422,6 +422,7 @@ data class Scenario(
         flagsBased: FlagsBased,
         variables: Map<String, String> = emptyMap(),
         testBaseURLs: Map<String, String> = emptyMap(),
+        fn: (Scenario, Row) -> Scenario = { s, _ -> s }
     ): Sequence<ReturnValue<Scenario>> {
         val referencesWithBaseURLs = references.mapValues { (_, reference) ->
             reference.copy(variables = variables, baseURLs = testBaseURLs)
@@ -436,7 +437,11 @@ data class Scenario(
                     }
                 }
             }.flatMap { row ->
-                newBasedOn(row, flagsBased)
+                newBasedOn(row, flagsBased).map { scenarioR ->
+                    scenarioR.ifValue { scenario ->
+                        fn(scenario, row)
+                    }
+                }
             }
         }
     }

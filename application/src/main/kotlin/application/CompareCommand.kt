@@ -12,7 +12,12 @@ import kotlin.system.exitProcess
 
 @Command(name = "compare",
         mixinStandardHelpOptions = true,
-        description = ["Checks if two contracts are equivalent"])
+        description = [
+"""
+Checks if two contracts are equivalent.
+DEPRECATED: This command will be removed in the next major release. Use 'backward-compatibility-check' command instead.
+"""
+        ])
 class CompareCommand : Callable<Unit> {
     @Parameters(index = "0", description = ["Older contract file path"])
     lateinit var olderContractFilePath: String

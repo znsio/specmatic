@@ -1,6 +1,6 @@
 package application
 
-import application.backwardCompatibility.BackwardCompatibilityCheckCommand
+import application.backwardCompatibility.BackwardCompatibilityCheckCommandV2
 import io.mockk.every
 import io.mockk.spyk
 import org.junit.jupiter.api.AfterEach
@@ -9,18 +9,18 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
 
-class BackwardCompatibilityCheckCommandTest {
+class BackwardCompatibilityCheckCommandV2Test {
 
     @Test
     fun `getSpecsReferringTo returns empty set when input is empty`() {
-        val command = BackwardCompatibilityCheckCommand()
+        val command = BackwardCompatibilityCheckCommandV2()
         val result = command.getSpecsReferringTo(emptySet())
         assertTrue(result.isEmpty())
     }
 
     @Test
     fun `getSpecsReferringTo returns empty set when no files refer to changed schema files`() {
-        val command = spyk<BackwardCompatibilityCheckCommand>()
+        val command = spyk<BackwardCompatibilityCheckCommandV2>()
         every { command.allSpecFiles() } returns listOf(
             File("file1.yaml").apply { writeText("content1") },
             File("file2.yaml").apply { writeText("content2") }
@@ -31,7 +31,7 @@ class BackwardCompatibilityCheckCommandTest {
 
     @Test
     fun `getSpecsReferringTo returns set of files that refer to changed schema files`() {
-        val command = spyk<BackwardCompatibilityCheckCommand>()
+        val command = spyk<BackwardCompatibilityCheckCommandV2>()
         every { command.allSpecFiles() } returns listOf(
             File("file1.yaml").apply { writeText("file3.yaml") },
             File("file2.yaml").apply { writeText("file4.yaml") }
@@ -42,7 +42,7 @@ class BackwardCompatibilityCheckCommandTest {
 
     @Test
     fun `getSpecsReferringTo returns set of files which are referring to a changed schema that is one level down`() {
-        val command = spyk<BackwardCompatibilityCheckCommand>()
+        val command = spyk<BackwardCompatibilityCheckCommandV2>()
         every { command.allSpecFiles() } returns listOf(
             File("file1.yaml").apply { referTo("schema_file1.yaml") },
             File("schema_file2.yaml").apply { referTo("schema_file1.yaml") }, // schema within a schema

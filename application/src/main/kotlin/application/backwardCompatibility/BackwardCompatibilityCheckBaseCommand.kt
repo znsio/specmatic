@@ -16,7 +16,14 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     private val gitCommand: GitCommand = SystemGit()
     private val newLine = System.lineSeparator()
 
-    @Option(names = ["--base-branch"], description = ["Base branch to compare the changes against"], required = false)
+    @Option(
+        names = ["--base-branch"],
+        description = [
+            "Base branch to compare the changes against",
+            "Default value is the local origin HEAD of the current branch"
+        ],
+        required = false
+    )
     var baseBranch: String? = null
 
     @Option(names = ["--target-path"], description = ["Specification file or folder to run the check against"], required = false)

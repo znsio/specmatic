@@ -15,7 +15,7 @@ fun loadDictionary(fileName: String): Map<String,Value> {
     return try {
         parsedJSONObject(File(fileName).readText()).jsonObject
     } catch(e: Throwable) {
-        throw ContractException("Error loading default value dictionary $fileName: ${exceptionCauseMessage(e)}")
+        throw ContractException("Error loading $fileName: ${exceptionCauseMessage(e)}")
     }
 }
 

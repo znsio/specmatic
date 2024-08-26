@@ -1,5 +1,6 @@
 package io.specmatic.test.listeners
 
+import io.specmatic.core.log.logger
 import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestIdentifier
 
@@ -11,7 +12,7 @@ class MonochromePrinter: ContractExecutionPrinter {
     }
 
     override fun printTestSummary(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
-        println(testStatusMessage(testIdentifier, testExecutionResult))
+        logger.debug(testStatusMessage(testIdentifier, testExecutionResult) + System.lineSeparator())
     }
 
     override fun printFailureTitle(failures: String) {

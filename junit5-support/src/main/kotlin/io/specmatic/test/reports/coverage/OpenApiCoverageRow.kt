@@ -36,8 +36,8 @@ data class OpenApiCoverageRow (
     private val formattedMethodName: String
         get() = if (showMethod) method else ""
 
-    private val formattedResponseStatus: String
-        get() = if (responseStatus.toInt() != 0) responseStatus else ""
+    private val formattedStatus: String
+        get() = if (responseStatus != "0") responseStatus else ""
 
     override fun toRowString(tableColumns: List<ReportColumn>): String {
         return tableColumns.joinToString(separator = " | ", postfix = " |", prefix = "| ") { column ->
@@ -45,6 +45,9 @@ data class OpenApiCoverageRow (
                 "coverage" -> formattedCoveragePercentage
                 "path" -> formattedPathName
                 "method" -> formattedMethodName
+                "response" -> formattedStatus
+                "#exercised" -> count
+                "result" -> remarks.toString()
                 "response" -> formattedResponseStatus
                 "#exercised" -> exercisedCount
                 "result" -> remark.toString()

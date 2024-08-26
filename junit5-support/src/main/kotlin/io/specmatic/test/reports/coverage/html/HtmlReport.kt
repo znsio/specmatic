@@ -2,6 +2,12 @@ package io.specmatic.test.reports.coverage.html
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
+import io.specmatic.core.ReportFormatter
+import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.SuccessCriteria
+import io.specmatic.core.TestResult
+import io.specmatic.core.log.logger
+import io.specmatic.test.reports.coverage.console.Remarks
 import io.specmatic.core.*
 import io.specmatic.core.log.logger
 import io.specmatic.test.reports.coverage.html.HtmlTemplateConfiguration.Companion.configureTemplateEngine
@@ -35,7 +41,7 @@ class HtmlReport(private val htmlReportInput: HtmlReportInput) {
         val htmlText = generateHtmlReportText()
         if (!outFile.parentFile.exists()) outFile.mkdirs()
         outFile.writer().use { it.write(htmlText) }
-        if (launchBrowser) {
+        if(launchBrowser) {
             openFileBasedOnOS(outFile.absolutePath)
         }
         return outFile

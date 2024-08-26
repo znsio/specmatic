@@ -7,6 +7,7 @@ import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
+import io.specmatic.osAgnosticPath
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.captureStandardOutput
 import io.specmatic.stub.createStubFromContracts
@@ -478,6 +479,28 @@ class PartialExampleTest {
             assertThat(response.status).isEqualTo(200)
             val responseBody = response.body as JSONObjectValue
             assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(20))
+        }
+    }
+
+    @Test
+    fun `data substitution in response body at second level using dictionary`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/dictionary_value_at_second_level.yaml")
+
+        try {
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, "src/test/resources/openapi/substitutions/dictionary.json")
+
+            createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+                val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Janet"}"""))
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                val responseBody = response.body as JSONObjectValue
+
+                assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(10))
+                assertThat(responseBody.findFirstChildByPath("address.street")).isEqualTo(StringValue("Baker Street"))
+            }
+        } finally {
+            System.clearProperty(SPECMATIC_STUB_DICTIONARY)
         }
     }
 }

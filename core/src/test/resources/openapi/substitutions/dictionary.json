@@ -2,5 +2,6 @@
   "id": 10,
   "X-Region": "Asia",
   "name": "George",
-  "X-Data-Token": "pqr"
+  "X-Data-Token": "pqr",
+  "street": "Baker Street"
 }

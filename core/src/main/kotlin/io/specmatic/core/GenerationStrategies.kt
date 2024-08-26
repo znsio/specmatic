@@ -12,8 +12,6 @@ interface GenerationStrategies {
     fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row): Sequence<ReturnValue<Pattern>>
     fun resolveRow(row: Row): Row
     fun generateKeySubLists(key: String, subList: List<String>): Sequence<List<String>>
-    fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>>
-    fun negativeTestScenarios(feature: Feature): Sequence<Pair<Scenario, ReturnValue<Scenario>>>
     fun fillInTheMissingMapPatterns(
         newQueryParamsList: Sequence<Map<String, Pattern>>,
         queryPatterns: Map<String, Pattern>,

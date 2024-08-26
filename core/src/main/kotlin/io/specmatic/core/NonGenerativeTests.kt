@@ -41,14 +41,6 @@ object NonGenerativeTests : GenerationStrategies {
         return sequenceOf(subList + key)
     }
 
-    override fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
-        return feature.positiveTestScenarios(suggestions)
-    }
-
-    override fun negativeTestScenarios(feature: Feature): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
-        return sequenceOf()
-    }
-
     override fun fillInTheMissingMapPatterns(
         newQueryParamsList: Sequence<Map<String, Pattern>>,
         queryPatterns: Map<String, Pattern>,

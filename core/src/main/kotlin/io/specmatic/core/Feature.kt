@@ -108,10 +108,20 @@ data class Feature(
     val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig)
 ) {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
+        val updatedSpecmaticConfig = specmaticConfig.copy(
+            test = specmaticConfig.test?.copy(
+                resiliencyTests = specmaticConfig.test.resiliencyTests?.copy(
+                    enable = if(onlyPositive) ResiliencyTestSuite.positiveOnly else ResiliencyTestSuite.all
+                )
+            )
+        )
+
         return this.copy(flagsBased = this.flagsBased.copy(
             generation = GenerativeTestsEnabled(onlyPositive),
             positivePrefix = POSITIVE_TEST_DESCRIPTION_PREFIX,
-            negativePrefix = NEGATIVE_TEST_DESCRIPTION_PREFIX))
+            negativePrefix = NEGATIVE_TEST_DESCRIPTION_PREFIX),
+            specmaticConfig = updatedSpecmaticConfig
+        )
     }
 
     fun enableSchemaExampleDefault(): Feature {
@@ -376,9 +386,12 @@ data class Feature(
     }
 
     fun generateContractTestScenarios(suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
-        return flagsBased.generation.let {
-            it.positiveTestScenarios(this, suggestions) + it.negativeTestScenarios(this)
-        }
+        val positiveTestScenarios = positiveTestScenarios(suggestions)
+
+        return if (!specmaticConfig.isResiliencyTestingEnabled() || specmaticConfig.isOnlyPositiveTestingEnabled())
+            positiveTestScenarios
+        else
+            positiveTestScenarios + negativeTestScenarios()
     }
 
     fun positiveTestScenarios(suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =

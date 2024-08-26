@@ -93,17 +93,6 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean) : Generatio
             sequenceOf(subList + key)
     }
 
-    override fun positiveTestScenarios(feature: Feature, suggestions: List<Scenario>): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
-        return feature.positiveTestScenarios(suggestions)
-    }
-
-    override fun negativeTestScenarios(feature: Feature): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
-        return if(positiveOnly)
-            emptySequence()
-        else
-            feature.negativeTestScenarios()
-    }
-
     override fun fillInTheMissingMapPatterns(
         newQueryParamsList: Sequence<Map<String, Pattern>>,
         queryPatterns: Map<String, Pattern>,

@@ -4,10 +4,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.Scenario
-import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.*
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.test.TestExecutor
@@ -140,9 +137,7 @@ paths:
 
     @Test
     fun `with extensible schema and generative tests enabled both positive and negative generated tests should appear`() {
-        val specmaticConfig = mockk<SpecmaticConfig>(relaxed = true) {
-            every { isExtensibleSchemaEnabled() } returns true
-        }
+        val specmaticConfig = SpecmaticConfig(test = TestConfiguration(allowExtensibleSchema = true))
         val feature =
             OpenApiSpecification.fromYAML(
                 """

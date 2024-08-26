@@ -26,7 +26,12 @@ const val TWO_INDENTS = "${ONE_INDENT}${ONE_INDENT}"
 @Command(
     name = "backwardCompatibilityCheck",
     mixinStandardHelpOptions = true,
-    description = ["Checks backward compatibility of a directory across the current HEAD and the main branch"]
+    description = [
+"""
+Checks backward compatibility of a directory across the current HEAD and the main branch.
+DEPRECATED: This command will be removed in the next major release. Use 'backward-compatibility-check' command instead.
+"""
+    ]
 )
 class BackwardCompatibilityCheckCommand(
     private val gitCommand: GitCommand = SystemGit(),
@@ -42,10 +47,7 @@ class BackwardCompatibilityCheckCommand(
     override fun call() {
         val filesChangedInCurrentBranch: Set<String> = getOpenAPISpecFilesChangedInCurrentBranch()
 
-        if (filesChangedInCurrentBranch.isEmpty()) {
-            logger.log("${newLine}No OpenAPI spec files were changed, skipping the check.$newLine")
-            exitProcess(0)
-        }
+        if (filesChangedInCurrentBranch.isEmpty()) exitWithMessage("${newLine}No OpenAPI spec files were changed, skipping the check.$newLine")
 
         val filesReferringToChangedSchemaFiles = filesReferringToChangedSchemaFiles(filesChangedInCurrentBranch)
 
@@ -149,7 +151,11 @@ class BackwardCompatibilityCheckCommand(
                     // newer => the file with changes on the branch
                     val (newer, unusedExamples) = OpenApiSpecification.fromFile(specFilePath).toFeature().loadExternalisedExamplesAndListUnloadableExamples()
 
-                    val olderFile = gitCommand.getFileInTheDefaultBranch(specFilePath, treeishWithChanges)
+                    val olderFile = gitCommand.getFileInTheBaseBranch(
+                        specFilePath,
+                        treeishWithChanges,
+                        gitCommand.defaultBranch()
+                    )
                     if (olderFile == null) {
                         println("$specFilePath is a new file.$newLine")
                         return@mapIndexed PASSED
@@ -289,7 +295,9 @@ class BackwardCompatibilityCheckCommand(
     }
 
     private fun getOpenAPISpecFilesChangedInCurrentBranch(): Set<String> {
-        return gitCommand.getFilesChangeInCurrentBranch().filter {
+        return gitCommand.getFilesChangedInCurrentBranch(
+            gitCommand.defaultBranch()
+        ).filter {
             File(it).exists() && File(it).isOpenApiSpec()
         }.toSet()
     }

@@ -1,5 +1,6 @@
 package io.specmatic.test.listeners
 
+import io.specmatic.core.log.logger
 import org.fusesource.jansi.Ansi
 import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.launcher.TestIdentifier
@@ -27,7 +28,7 @@ class ColorPrinter: ContractExecutionPrinter {
             else -> Ansi.ansi()
         }
 
-        println(color.a(testStatusMessage(testIdentifier, testExecutionResult)).reset())
+        logger.debug(color.a(testStatusMessage(testIdentifier, testExecutionResult)).reset().toString() + System.lineSeparator())
     }
 
     override fun printFailureTitle(failures: String) {

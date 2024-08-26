@@ -6,10 +6,12 @@ import io.specmatic.core.ReportFormatter
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.SuccessCriteria
 import io.specmatic.core.TestResult
+import io.specmatic.core.log.logger
 import io.specmatic.test.reports.coverage.console.Remarks
 import io.specmatic.test.reports.coverage.html.HtmlTemplateConfiguration.Companion.configureTemplateEngine
 import org.thymeleaf.context.Context
 import java.io.File
+import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -27,7 +29,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
     private var totalSuccess = 0
     private var totalMissing = 0
 
-    fun generate() {
+    fun generate(launchBrowser: Boolean = true): File {
         createAssetsDir(outputDirectory)
         calculateTestGroupCounts(htmlReportInformation.reportData.scenarioData)
 
@@ -35,6 +37,10 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         val htmlText = generateHtmlReportText()
         if (!outFile.parentFile.exists()) outFile.mkdirs()
         outFile.writer().use { it.write(htmlText) }
+        if(launchBrowser) {
+            openFileBasedOnOS(outFile.absolutePath)
+        }
+        return outFile
     }
 
     private fun generateHtmlReportText(): String {
@@ -175,6 +181,32 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         mapper.enable(SerializationFeature.INDENT_OUTPUT)
         writeToFileToAssets(outputDirectory, "test_data.json", mapper.writeValueAsString(testData))
         return json
+    }
+
+    private fun openFileBasedOnOS(fileAbsPath: String) {
+        val os = System.getProperty("os.name").lowercase()
+
+        try {
+            when {
+                os.contains("win") -> {
+                    val command = listOf("rundll32", "url.dll,FileProtocolHandler", fileAbsPath)
+                    ProcessBuilder(command).start()
+                }
+                os.contains("mac") -> {
+                    val command = listOf("open", fileAbsPath)
+                    ProcessBuilder(command).start()
+                }
+                os.contains("nux") || os.contains("nix") -> {
+                    val command = listOf("xdg-open", fileAbsPath)
+                    ProcessBuilder(command).start()
+                }
+                else -> {
+                    logger.log("Could not launch browser. Unsupported OS: $os")
+                }
+            }
+        } catch (e: IOException) {
+            logger.log("Could not launch browser. Exception: $e")
+        }
     }
 }
 

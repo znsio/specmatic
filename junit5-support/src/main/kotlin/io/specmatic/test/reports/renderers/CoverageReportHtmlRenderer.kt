@@ -44,8 +44,8 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
             tableConfig = tableConfig, reportData = reportData, specmaticConfig = specmaticConfig
         )
 
-        HtmlReport(htmlReportInformation).generate()
-        return "Successfully generated HTML report in ${htmlReportConfiguration.outputDirectory}"
+        val htmlFile = HtmlReport(htmlReportInformation).generate(launchBrowser = true)
+        return "Successfully generated HTML report at file:///${htmlFile.toURI().path.replace("./", "")}"
     }
 
     private fun getSpecmaticVersion(): String {

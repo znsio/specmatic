@@ -52,7 +52,7 @@ data class ScenarioAsTest(
 
     override fun runTest(testBaseURL: String, timeoutInMilliseconds: Long): Pair<Result, HttpResponse?> {
         val log: (LogMessage) -> Unit = { logMessage ->
-            logger.log(logMessage.withComment(this.annotations))
+            logger.debug(logMessage.withComment(this.annotations))
         }
 
         val httpClient = HttpClient(testBaseURL, log = log, timeoutInMilliseconds = timeoutInMilliseconds)

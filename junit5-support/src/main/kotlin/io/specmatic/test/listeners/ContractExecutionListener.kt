@@ -64,7 +64,6 @@ class ContractExecutionListener : TestExecutionListener {
         when(testExecutionResult?.status) {
             TestExecutionResult.Status.SUCCESSFUL ->  {
                 success++
-                println()
             }
             TestExecutionResult.Status.ABORTED -> {
                 aborted++
@@ -88,7 +87,7 @@ class ContractExecutionListener : TestExecutionListener {
             ?: ""
 
         val reason = "Reason: $message"
-        println("$reason\n\n")
+        logger.debug("$reason\n\n")
 
         val log = """"${testIdentifier?.displayName} ${testExecutionResult.status}"
     ${reason.prependIndent("  ")}"""
@@ -98,14 +97,14 @@ class ContractExecutionListener : TestExecutionListener {
 
     override fun testPlanExecutionFinished(testPlan: TestPlan?) {
         org.fusesource.jansi.AnsiConsole.systemInstall()
-
         println()
 
-        exceptionsThrown.map { exceptionThrown ->
-            logger.log(exceptionThrown)
+        if(exceptionsThrown.isNotEmpty()) {
+            exceptionsThrown.forEach { exceptionThrown ->
+                logger.log(exceptionThrown)
+            }
+            println()
         }
-
-        println()
 
         if(SpecmaticJUnitSupport.partialSuccesses.isNotEmpty()) {
             println()
@@ -122,7 +121,6 @@ class ContractExecutionListener : TestExecutionListener {
         }
 
         if (failedLog.isNotEmpty()) {
-            println()
             printer.printFailureTitle("Unsuccessful Scenarios:")
             println(failedLog.joinToString(System.lineSeparator() + System.lineSeparator()) { it.prependIndent("  ") })
             println()

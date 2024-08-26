@@ -16,6 +16,7 @@ import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
 import io.specmatic.core.utilities.*
+import io.specmatic.mock.loadDictionary
 import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.info.Info
@@ -453,7 +454,7 @@ data class Feature(
         scenarioStub: ScenarioStub,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): HttpStubData {
-        val dictionary = specmaticConfig.stub.dictionary?.let { parsedJSONObject(File(it).readText()).jsonObject } ?: emptyMap()
+        val dictionary = specmaticConfig.stub.dictionary?.let { loadDictionary(it) } ?: emptyMap()
 
         val scenarioStub = scenarioStub.copy(dictionary = dictionary)
 

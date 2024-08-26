@@ -181,7 +181,7 @@ data class HttpResponse(
         val newMap = value.jsonObject.mapValues { (key, value) ->
             if(value is StringValue && isVanillaPatternToken(value.string) && key in dictionary) {
                 dictionary.getValue(key)
-            } else value
+            } else substituteDictionaryValues(value, dictionary)
         }
 
         return value.copy(newMap)

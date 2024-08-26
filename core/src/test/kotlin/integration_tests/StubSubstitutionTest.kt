@@ -679,4 +679,72 @@ class StubSubstitutionTest {
             System.clearProperty(SPECMATIC_STUB_DICTIONARY)
         }
     }
+
+    @Test
+    fun `data substitution in response body at second level using dictionary`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/dictionary_value_at_second_level.yaml")
+
+        try {
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, "src/test/resources/openapi/substitutions/dictionary.json")
+
+            createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+                val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Charles"}"""))
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                val responseBody = response.body as JSONObjectValue
+
+                assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(100))
+                assertThat(responseBody.findFirstChildByPath("address.street")).isEqualTo(StringValue("Baker Street"))
+            }
+        } finally {
+            System.clearProperty(SPECMATIC_STUB_DICTIONARY)
+        }
+    }
+
+    @Test
+    fun `data substitution in response body at second level within array using dictionary`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/dictionary_value_at_second_level_with_array.yaml")
+
+        try {
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, "src/test/resources/openapi/substitutions/dictionary.json")
+
+            createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+                val request = HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Charles"}"""))
+                val response = stub.client.execute(request)
+
+                assertThat(response.status).isEqualTo(200)
+                val responseBody = response.body as JSONObjectValue
+
+                assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(100))
+                assertThat(responseBody.findFirstChildByPath("addresses.[0].street")).isEqualTo(StringValue("Baker Street"))
+            }
+        } finally {
+            System.clearProperty(SPECMATIC_STUB_DICTIONARY)
+        }
+    }
+
+    @Test
+    fun `broken dictionary should be mentioned in an error message at stub load time`() {
+        try {
+            val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/dictionary_value_at_second_level.yaml")
+            val brokenDictionaryPath = "src/test/resources/openapi/substitutions/broken-dictionary.json"
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, brokenDictionaryPath)
+
+            val (output, _) = captureStandardOutput {
+                try {
+                    val stub = createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0)
+                    stub.close()
+                } catch(e: Throwable) {
+                    println(e)
+                }
+            }
+
+            println(output)
+
+            assertThat(output).contains(brokenDictionaryPath)
+        } finally {
+            System.clearProperty(SPECMATIC_STUB_DICTIONARY)
+        }
+    }
 }

@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
 import java.util.*
 import java.util.function.Consumer
 
-internal class ScenarioAsTest {
+internal class RunContractTestsUsingScenario {
     @Test
     fun `should generate one test scenario when there are no examples`() {
         val scenario = Scenario(

@@ -17,9 +17,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
-import io.specmatic.stub.createStubFromContracts
-import io.specmatic.stub.httpRequestLog
-import io.specmatic.stub.httpResponseLog
+import io.specmatic.test.ScenarioAsTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.fail
 
@@ -1142,6 +1140,50 @@ Examples:
         assertDoesNotThrow {
             pathParam.toInt()
         }
+    }
+
+    @Test
+    fun `should be able to modify the test using a hook`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                openapi: 3.0.0
+                info:
+                  title: Simple API
+                  version: 1.0.0
+                paths:
+                  /:
+                    get:
+                      summary: Simple GET endpoint
+                      responses:
+                        '200':
+                          description: A simple string response
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+            """.trimIndent(), ""
+        ).toFeature()
+
+        val scenarioNames = mutableListOf<String>()
+
+        feature.generateContractTests(emptyList(), { scenario, row ->
+            scenario.copy(
+                name = "Name added in hook"
+            )
+        }).forEach {
+            it.runTest(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    return HttpResponse.ok("ok")
+                }
+
+                override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                    scenarioNames.add(scenario.name)
+                }
+            })
+        }
+
+        assertThat(scenarioNames.single()).isEqualTo("Name added in hook")
+
     }
 }
 

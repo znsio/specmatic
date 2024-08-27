@@ -1,5 +1,6 @@
 package io.specmatic.core
 
+import integration_tests.testCount
 import io.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -17,6 +18,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
+import io.specmatic.core.log.logger
 import io.specmatic.test.ScenarioAsTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.fail
@@ -1183,7 +1185,128 @@ Examples:
         }
 
         assertThat(scenarioNames.single()).isEqualTo("Name added in hook")
+    }
 
+    @Test
+    fun `should be able to run a test for a 204 with no headers`() {
+        val feature: Feature = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.3
+            info:
+              title: Simple API
+              version: 1.0.0
+            paths:
+              /:
+                post:
+                  summary: Simple POST endpoint
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - field
+                          properties:
+                            field:
+                              type: string
+                        examples:
+                          SUCCESS:
+                            value:
+                              field: "abc123"
+                          FAILED:
+                            value:
+                              field: "xyz789"
+                  responses:
+                    '204':
+                      description: A simple string response
+                    '500':
+                      description: An internal server error occurred
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            FAILED:
+                              value: "Internal server error"
+            """.trimIndent(), ""
+        ).toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonRequestBody = request.body as JSONObjectValue
+
+                val fieldValue = jsonRequestBody.findFirstChildByPath("field")?.toStringLiteral()
+
+                val response = when (fieldValue) {
+                    "abc123" -> HttpResponse(204)
+                    "xyz789" -> HttpResponse(500, body = StringValue("Internal server error"))
+                    else -> fail("Expected field value to be either abc123 or xyz789")
+                }
+
+                println(request.toLogString())
+                println()
+                println(response.toLogString())
+
+                return response
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        assertThat(results.testCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `an orphan request example for a 204 that has headers should not run as a test`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.3
+            info:
+              title: Simple API
+              version: 1.0.0
+            paths:
+              /:
+                post:
+                  summary: Simple POST endpoint
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - field
+                          properties:
+                            field:
+                              type: string
+                        examples:
+                          SUCCESS:
+                            value:
+                              field: "abc123"
+                  responses:
+                    '204':
+                      description: A simple string response
+                      headers:
+                        X-Header-Value:
+                          description: A header for the 204 response
+                          schema:
+                            type: string
+            """.trimIndent(), ""
+        ).toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonRequestBody = request.body as JSONObjectValue
+
+                assertThat(jsonRequestBody.findFirstChildByPath("field")?.toStringLiteral()).isNotEqualTo("abc123")
+
+                return HttpResponse(204).also { response ->
+                    println(request.toLogString())
+                    println()
+                    println(response.toLogString())
+                }
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 }
 

@@ -369,7 +369,57 @@ class OpenApiSpecification(
 
                     val requestExampleNames = requestExamples.keys
 
-                    Triple(scenarioInfos, examples, requestExampleNames)
+                    val usedExamples = examples.keys
+
+                    val unusedRequestExampleNames = requestExampleNames - usedExamples
+
+                    val responseThatReturnsNoValues = httpResponsePatterns.find { responsePatternData ->
+                        responsePatternData.let {
+                            it.responsePattern.status == 204 && it.responsePattern.headersPattern.isEmpty()
+                        }
+                    }
+
+                    val (additionalExamples, updatedScenarios) = if(responseThatReturnsNoValues != null && unusedRequestExampleNames.isNotEmpty()) {
+                        val empty204Response = HttpResponse(204)
+                        val examplesOfResponseThatReturnsNoValues: Map<String, List<Pair<HttpRequest, HttpResponse>>> = requestExamples.filterKeys { it in unusedRequestExampleNames }.mapValues { (key, examples) ->
+                            examples.map { it to empty204Response }
+                        }
+
+                        val updatedScenarioInfos = scenarioInfos.map { scenarioInfo ->
+                            if(scenarioInfo.httpResponsePattern.status == 204) {
+                                val unusedRequestExample = requestExamples.filter { it.key in unusedRequestExampleNames }
+
+                                val rows = unusedRequestExample.flatMap { (key, requests) ->
+                                    requests.map { request ->
+                                        val paramExamples = (request.headers + request.queryParams.asMap()).toList()
+
+                                        val allExamples = if(scenarioInfo.httpRequestPattern.body is NoBodyPattern) {
+                                            paramExamples
+                                        } else
+                                            listOf("(REQUEST-BODY)" to request.body.toStringLiteral()) + paramExamples
+
+                                        Row(
+                                            name = key,
+                                            columnNames = allExamples.map { it.first },
+                                            values = allExamples.map { it.second }
+                                        )
+                                    }
+                                }
+
+                                val updatedExamples: List<Examples> = listOf(Examples(rows.first().columnNames, scenarioInfo.examples.firstOrNull()?.rows.orEmpty() + rows))
+
+                                scenarioInfo.copy(
+                                    examples = updatedExamples
+                                )
+                            } else
+                                scenarioInfo
+                        }
+
+                        examplesOfResponseThatReturnsNoValues to updatedScenarioInfos
+                    } else
+                        emptyMap<String, List<Pair<HttpRequest, HttpResponse>>>() to scenarioInfos
+
+                    Triple(updatedScenarios, examples + additionalExamples, requestExampleNames)
                 }
 
                 val requestExampleNames = scenariosAndExamples.flatMap { it.third }.toSet()

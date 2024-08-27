@@ -20,6 +20,10 @@ data class HttpHeadersPattern(
         }
     }
 
+    fun isEmpty(): Boolean {
+        return pattern.isEmpty()
+    }
+
     fun matches(headers: Map<String, String>, resolver: Resolver): Result {
         val result = headers to resolver to
                 ::matchEach otherwise

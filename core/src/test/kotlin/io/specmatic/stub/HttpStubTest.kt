@@ -1,5 +1,6 @@
 package io.specmatic.stub
 
+import integration_tests.testCount
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.pattern.*
@@ -21,6 +22,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.fail
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
@@ -1905,6 +1908,111 @@ components:
             assertThat(response.status).isEqualTo(200)
             val responseBody = response.body as JSONObjectValue
             assertThat(responseBody.findFirstChildByPath("id")).isEqualTo(NumberValue(20))
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "Expected, Actual, Status",
+        "abc123, abc123, 204",
+        "abc123, pqrxyz, 400",
+        useHeadersInDisplayName = true
+    )
+    fun `should be able to stub out a 204 with no response headers in strict mode when an example is provided`(expectedFieldValue: String, fieldValue: String, status: Int) {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.3
+            info:
+              title: Simple API
+              version: 1.0.0
+            paths:
+              /:
+                post:
+                  summary: Simple POST endpoint
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - field
+                          properties:
+                            field:
+                              type: string
+                        examples:
+                          SUCCESS:
+                            value:
+                              field: "$expectedFieldValue"
+                  responses:
+                    '204':
+                      description: A simple string response
+            """.trimIndent(), ""
+        ).toFeature()
+
+        HttpStub(listOf(feature), strictMode = true).use { stub ->
+            val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"field": "$fieldValue"}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(status)
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "Field value, Expected Status",
+        "abc123, 204",
+        "xyz789, 500",
+        "pqr123, 400",
+        useHeadersInDisplayName = true
+    )
+    fun `should be able to stub out a 204 with no headers in the presence of a 500 in strict mode`(fieldValue: String, expectedStatus: Int) {
+        val feature: Feature = OpenApiSpecification.fromYAML(
+            """
+            openapi: 3.0.3
+            info:
+              title: Simple API
+              version: 1.0.0
+            paths:
+              /:
+                post:
+                  summary: Simple POST endpoint
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - field
+                          properties:
+                            field:
+                              type: string
+                        examples:
+                          SUCCESS:
+                            value:
+                              field: "abc123"
+                          FAILED:
+                            value:
+                              field: "xyz789"
+                  responses:
+                    '204':
+                      description: A simple string response
+                    '500':
+                      description: An internal server error occurred
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            FAILED:
+                              value: "Internal server error"
+            """.trimIndent(), ""
+        ).toFeature()
+
+        HttpStub(listOf(feature), strictMode = true).use { stub ->
+            val request = HttpRequest("POST", "/", body = parsedJSONObject("""{"field": "$fieldValue"}"""))
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(expectedStatus)
         }
     }
 }

@@ -1,5 +1,5 @@
-sources:
-  - provider: git
+contract_repositories:
+  - type: git
     repository: https://contracts
     provides:
       - com/petstore/1.yaml

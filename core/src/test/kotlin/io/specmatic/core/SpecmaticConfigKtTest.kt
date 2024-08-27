@@ -108,7 +108,7 @@ internal class SpecmaticConfigKtTest {
         "./src/test/resources/specmaticConfigFiles/specmatic_alias.json",
     )
     @ParameterizedTest
-    fun `parse specmatic config file with aliases provides and consumes`(configFile: String) {
+    fun `parse specmatic config file with aliases`(configFile: String) {
         val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
 
         assertThat(config.sources).isNotEmpty

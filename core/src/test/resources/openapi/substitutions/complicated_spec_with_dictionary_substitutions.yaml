@@ -1,0 +1,65 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 0.1.9
+paths:
+  /person:
+    post:
+      summary: Add person
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - person
+                properties:
+                  id:
+                    type: integer
+                  person:
+                    type: object
+                    required:
+                      - name
+                    properties:
+                      name:
+                        type: string
+                      addresses:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - street
+                            - building
+                          properties:
+                            building:
+                              type: string
+                            street:
+                              type: string
+                      past_companies:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - name
+                            - year
+                          properties:
+                            name:
+                              type: string
+                            year:
+                              type: integer
+                            duration:
+                              type: string

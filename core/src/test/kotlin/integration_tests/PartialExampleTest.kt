@@ -525,4 +525,31 @@ class PartialExampleTest {
             System.clearProperty(SPECMATIC_STUB_DICTIONARY)
         }
     }
+
+    @Test
+    fun `more complicated data substitutions in response body with 3 level deep partial generation`() {
+        val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/complicated_spec_with_dictionary_substitutions.yaml")
+
+        try {
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, "src/test/resources/openapi/substitutions/complicated_dictionary.json")
+
+            createStubFromContracts(listOf(specWithSubstitution), timeoutMillis = 0).use { stub ->
+                stub.client.execute(
+                    HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Charles"}"""))).let { response ->
+
+                    assertThat(response.status).isEqualTo(200)
+                    val responseBody = response.body as JSONObjectValue
+
+                    assertThat(responseBody.findFirstChildByPath("person.name")).isEqualTo(StringValue("Jackie"))
+                    assertThat(responseBody.findFirstChildByPath("person.addresses.[0].street")).isEqualTo(StringValue("Baker Street"))
+                    assertThat(responseBody.findFirstChildByPath("person.addresses.[1].street")).isEqualTo(StringValue("Baker Street"))
+                    assertThat(responseBody.findFirstChildByPath("person.past_companies.[0].name")).isEqualTo(StringValue("Acme Inc"))
+                    assertThat(responseBody.findFirstChildByPath("person.past_companies.[1].name")).isEqualTo(StringValue("Paint Inc"))
+                }
+
+            }
+        } finally {
+            System.clearProperty(SPECMATIC_STUB_DICTIONARY)
+        }
+    }
 }

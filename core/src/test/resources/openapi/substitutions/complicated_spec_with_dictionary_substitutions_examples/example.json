@@ -1,0 +1,33 @@
+{
+  "partial": {
+    "http-request": {
+      "method": "POST",
+      "path": "/person",
+      "body": {}
+    },
+    "http-response": {
+      "status": 200,
+      "body": {
+        "person": {
+          "name": "(string)",
+          "addresses": [
+            {
+              "street": "(string)"
+            },
+            {
+              "street": "(string)"
+            }
+          ],
+          "past_companies": [
+            {
+              "name": "(string)"
+            },
+            {
+              "name": "(string)"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

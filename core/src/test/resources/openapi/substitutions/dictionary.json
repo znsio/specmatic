@@ -3,5 +3,7 @@
   "X-Region": "Asia",
   "name": "George",
   "X-Data-Token": "pqr",
-  "street": "Baker Street"
+  "street": "Baker Street",
+  "addresses[0].street": "Baker Street",
+  "address.street": "Baker Street"
 }

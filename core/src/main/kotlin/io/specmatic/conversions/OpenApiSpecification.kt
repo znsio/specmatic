@@ -381,7 +381,7 @@ class OpenApiSpecification(
 
                     val (additionalExamples, updatedScenarios) = if(responseThatReturnsNoValues != null && unusedRequestExampleNames.isNotEmpty()) {
                         val empty204Response = HttpResponse(204)
-                        val examplesOfResponseThatReturnsNoValues: Map<String, List<Pair<HttpRequest, HttpResponse>>> = requestExamples.mapValues { (key, examples) ->
+                        val examplesOfResponseThatReturnsNoValues: Map<String, List<Pair<HttpRequest, HttpResponse>>> = requestExamples.filterKeys { it in unusedRequestExampleNames }.mapValues { (key, examples) ->
                             examples.map { it to empty204Response }
                         }
 
@@ -418,15 +418,6 @@ class OpenApiSpecification(
                         examplesOfResponseThatReturnsNoValues to updatedScenarioInfos
                     } else
                         emptyMap<String, List<Pair<HttpRequest, HttpResponse>>>() to scenarioInfos
-
-//                    val examplesOfResponseThatReturnsNoValues =
-//                        if(responseThatReturnsNoValues != null && unusedRequestExampleNames.isNotEmpty()) {
-//                            val empty204Response = HttpResponse(204)
-//                            requestExamples.mapValues { (key, examples) ->
-//                                examples.map { it to empty204Response }
-//                            }
-//                        } else
-//                            emptyMap()
 
                     Triple(updatedScenarios, examples + additionalExamples, requestExampleNames)
                 }

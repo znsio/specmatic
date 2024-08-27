@@ -1,5 +1,6 @@
 package io.specmatic.core
 
+import integration_tests.testCount
 import io.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -1188,7 +1189,7 @@ Examples:
 
     @Test
     fun `should be able to run a test for a 204 with no headers`() {
-        val feature = OpenApiSpecification.fromYAML(
+        val feature: Feature = OpenApiSpecification.fromYAML(
             """
             openapi: 3.0.3
             info:
@@ -1212,9 +1213,21 @@ Examples:
                           SUCCESS:
                             value:
                               field: "abc123"
+                          FAILED:
+                            value:
+                              field: "xyz789"
                   responses:
                     '204':
                       description: A simple string response
+                    '500':
+                      description: An internal server error occurred
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            FAILED:
+                              value: "Internal server error"
             """.trimIndent(), ""
         ).toFeature()
 
@@ -1222,17 +1235,24 @@ Examples:
             override fun execute(request: HttpRequest): HttpResponse {
                 val jsonRequestBody = request.body as JSONObjectValue
 
-                assertThat(jsonRequestBody.findFirstChildByPath("field")?.toStringLiteral()).isEqualTo("abc123")
+                val fieldValue = jsonRequestBody.findFirstChildByPath("field")?.toStringLiteral()
 
-                return HttpResponse(204).also { response ->
-                    println(request.toLogString())
-                    println()
-                    println(response.toLogString())
+                val response = when (fieldValue) {
+                    "abc123" -> HttpResponse(204)
+                    "xyz789" -> HttpResponse(500, body = StringValue("Internal server error"))
+                    else -> fail("Expected field value to be either abc123 or xyz789")
                 }
+
+                println(request.toLogString())
+                println()
+                println(response.toLogString())
+
+                return response
             }
         })
 
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        assertThat(results.testCount).isEqualTo(2)
     }
 
     @Test

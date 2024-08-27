@@ -43,6 +43,7 @@ paths:
                           type: object
                           required:
                             - street
+                            - building
                           properties:
                             building:
                               type: string
@@ -54,6 +55,7 @@ paths:
                           type: object
                           required:
                             - name
+                            - year
                           properties:
                             name:
                               type: string

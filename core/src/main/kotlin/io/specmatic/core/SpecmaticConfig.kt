@@ -81,6 +81,7 @@ data class WorkflowConfiguration(
 )
 
 data class SpecmaticConfig(
+    @field:JsonAlias("contract_repositories")
     val sources: List<Source> = emptyList(),
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
@@ -165,6 +166,7 @@ data class Environment(
 enum class SourceProvider { git, filesystem, web }
 
 data class Source(
+    @field:JsonAlias("type")
     val provider: SourceProvider = SourceProvider.filesystem,
     val repository: String? = null,
     val branch: String? = null,

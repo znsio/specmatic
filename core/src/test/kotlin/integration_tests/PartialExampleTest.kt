@@ -527,7 +527,7 @@ class PartialExampleTest {
     }
 
     @Test
-    fun `more complicated data substitutions in response body`() {
+    fun `more complicated data substitutions in response body with 3 level deep partial generation`() {
         val specWithSubstitution = osAgnosticPath("src/test/resources/openapi/substitutions/complicated_spec_with_dictionary_substitutions.yaml")
 
         try {

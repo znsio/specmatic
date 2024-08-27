@@ -60,6 +60,6 @@ paths:
                             name:
                               type: string
                             year:
-                              type: string
+                              type: integer
                             duration:
                               type: string

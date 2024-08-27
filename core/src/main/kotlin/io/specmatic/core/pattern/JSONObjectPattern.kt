@@ -31,18 +31,24 @@ data class JSONObjectPattern(
         val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
 
         val mapWithKeysInPartial = jsonObject.jsonObject.mapValues { (name, value) ->
-            val headerPattern = pattern.get(name) ?: pattern.get("$name?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", name)))
+            val valuePattern = pattern.get(name) ?: pattern.get("$name?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", name)))
 
-            if(value is StringValue && isPatternToken(value.string))
+            val returnValue = if(value is StringValue && isPatternToken(value.string))
                 HasValue(resolver.getPattern(value.string).generate(resolver))
-            else {
-                val matchResult = headerPattern.matches(value, resolver)
+            else if (value is ScalarValue) {
+                val matchResult = valuePattern.matches(value, resolver)
 
-                if(matchResult is Result.Failure)
+                val returnValue: ReturnValue<Value> = if(matchResult is Result.Failure)
                     HasFailure(matchResult)
                 else
                     HasValue(value)
-            }.breadCrumb(name)
+
+                returnValue
+            } else {
+                valuePattern.fillInTheBlanks(value, dictionary, resolver)
+            }
+
+            returnValue.breadCrumb(name)
         }.mapFold()
 
         val mapWithMissingKeysGenerated = pattern.filterKeys {

@@ -17,6 +17,7 @@ data class HttpStubData(
     val delayInMilliseconds: Long? = null,
     val responsePattern: HttpResponsePattern,
     val contractPath: String = "",
+    val examplePath: String? = null,
     val stubToken: String? = null,
     val requestBodyRegex: Regex? = null,
     val feature:Feature? = null,

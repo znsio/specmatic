@@ -14,6 +14,7 @@ data class HttpLogMessage(
     var responseTime: CurrentDate? = null,
     var response: HttpResponse? = null,
     var contractPath: String = "",
+    var examplePath: String? = null,
     val targetServer: String = "",
     val comment: String? = null,
     var scenario: Scenario? = null,
@@ -60,10 +61,13 @@ data class HttpLogMessage(
         }
 
         val contractPathLines = if(contractPath.isNotBlank()) {
+            val exampleLine = examplePath?.let { "${linePrefix}Example matched: $examplePath" }
+
             listOf(
                 "${linePrefix}Contract matched: $contractPath",
+                exampleLine,
                 ""
-            )
+            ).filterNotNull()
         } else {
             emptyList()
         }
@@ -95,6 +99,7 @@ data class HttpLogMessage(
     fun addResponse(stubResponse: HttpStubResponse) {
         addResponse(stubResponse.response)
         contractPath = stubResponse.contractPath
+        examplePath = stubResponse.examplePath
     }
 
     fun logStartRequestTime() {

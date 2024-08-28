@@ -15,13 +15,10 @@ import java.util.*
 class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> {
 
     companion object {
-        private val tableConfig = HtmlTableConfig(
-            firstGroupName = "Path",
-            firstGroupColSpan = 2,
-            secondGroupName = "Method",
-            secondGroupColSpan = 1,
-            thirdGroupName = "Response",
-            thirdGroupColSpan = 1
+        private val tableColumns = listOf(
+            TableColumn(name = "Path", colSpan = 2),
+            TableColumn(name = "Method", colSpan = 1),
+            TableColumn(name = "Status", colSpan = 1),
         )
         val actuatorEnabled = SpecmaticJUnitSupport.openApiCoverageReportInput.endpointsAPISet
     }
@@ -41,11 +38,11 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
         val htmlReportInformation = HtmlReportInformation(
             reportFormat = htmlReportConfiguration, successCriteria = openApiSuccessCriteria,
             specmaticImplementation = "OpenAPI", specmaticVersion = getSpecmaticVersion(),
-            tableConfig = tableConfig, reportData = reportData, specmaticConfig = specmaticConfig
+            tableColumns = tableColumns, reportData = reportData, specmaticConfig = specmaticConfig
         )
 
-        HtmlReport(htmlReportInformation).generate()
-        return "Successfully generated HTML report in ${htmlReportConfiguration.outputDirectory}"
+        val htmlFile = HtmlReport(htmlReportInformation).generate()
+        return "Successfully generated HTML report at file:///${htmlFile.toURI().path.replace("./", "")}"
     }
 
     private fun getSpecmaticVersion(): String {
@@ -63,13 +60,21 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
                     coverageRows.map {
                         TableRow(
                             coveragePercentage = it.coveragePercentage,
-                            firstGroupValue = it.path,
-                            showFirstGroup = it.showPath,
-                            firstGroupRowSpan = methodGroup.values.sumOf { rows -> rows.size },
-                            secondGroupValue = it.method,
-                            showSecondGroup = it.showMethod,
-                            secondGroupRowSpan = statusGroup.values.sumOf { status -> status.size },
-                            response = it.responseStatus,
+                            groups = listOf(
+                                TableRowGroup(
+                                    columnName = "Path",
+                                    value = it.path,
+                                    rowSpan = methodGroup.values.sumOf { rows -> rows.size },
+                                    showRow = it.showPath
+                                    ),
+                                TableRowGroup(
+                                    columnName = "Method",
+                                    value = it.method,
+                                    rowSpan = statusGroup.values.sumOf { rows -> rows.size },
+                                    showRow = it.showMethod
+                                ),
+                                TableRowGroup(columnName = "Status", value = it.responseStatus, rowSpan = 1, showRow = true)
+                            ),
                             exercised = it.count.toInt(),
                             result = it.remarks
                         )
@@ -83,47 +88,42 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
         return report.httpLogMessages.sumOf { it.duration() }
     }
 
-    private fun makeScenarioData(report: OpenAPICoverageConsoleReport): Map<String, Map<String, Map<String, List<ScenarioData>>>> {
-        val testData: MutableMap<String, MutableMap<String, MutableMap<String, MutableList<ScenarioData>>>> = mutableMapOf()
+    private fun makeScenarioData(report: OpenAPICoverageConsoleReport): ScenarioDataGroup {
+        val groupedTestResultRecords = report.getGroupedTestResultRecords()
+        val scenarioData = ScenarioDataGroup()
 
-        for ((path, methodGroup) in report.getGroupedTestResultRecords()) {
+        for ((path, methodGroup) in groupedTestResultRecords) {
+            scenarioData.subGroup[path] = ScenarioDataGroup()
             for ((method, statusGroup) in methodGroup) {
-                val methodMap = testData.getOrPut(path) { mutableMapOf() }
-
-                for ((status, testResults) in statusGroup) {
-                    val statusMap = methodMap.getOrPut(method) { mutableMapOf() }
-                    val scenarioDataList = statusMap.getOrPut(status) { mutableListOf() }
-
-                    for (test in testResults) {
-                        val matchingLogMessage = report.httpLogMessages.firstOrNull {
-                            it.scenario == test.scenarioResult?.scenario
-                        }
+                scenarioData.subGroup[path]!!.subGroup[method] = ScenarioDataGroup()
+                for ((status, testResultRecords) in statusGroup) {
+                    scenarioData.subGroup[path]!!.subGroup[method]!!.subGroup[status] = ScenarioDataGroup()
+                    val scenarioDataList = testResultRecords.map { test ->
+                        val matchingLogMessage = report.httpLogMessages.firstOrNull { it.scenario == test.scenarioResult?.scenario }
                         val scenarioName = getTestName(test, matchingLogMessage)
                         val (requestString, requestTime) = getRequestString(matchingLogMessage)
                         val (responseString, responseTime) = getResponseString(matchingLogMessage)
 
-                        scenarioDataList.add(
-                            ScenarioData(
-                                name = scenarioName,
-                                baseUrl = getBaseUrl(matchingLogMessage),
-                                duration = matchingLogMessage?.duration() ?: 0,
-                                testResult = test.result,
-                                valid = test.isValid,
-                                wip = test.isWip,
-                                request = requestString,
-                                requestTime = requestTime,
-                                response = responseString,
-                                responseTime = responseTime,
-                                specFileName = getSpecFileName(test, matchingLogMessage),
-                                details = getReportDetail(test)
-                            )
+                        ScenarioData(
+                            name = scenarioName,
+                            baseUrl = getBaseUrl(matchingLogMessage),
+                            duration = matchingLogMessage?.duration() ?: 0,
+                            testResult = test.result,
+                            valid = test.isValid,
+                            wip = test.isWip,
+                            request = requestString,
+                            requestTime = requestTime,
+                            response = responseString,
+                            responseTime = responseTime,
+                            specFileName = getSpecFileName(test, matchingLogMessage),
+                            details = getReportDetail(test)
                         )
                     }
+                    scenarioData.subGroup[path]!!.subGroup[method]!!.subGroup[status]!!.data = scenarioDataList
                 }
             }
         }
-
-        return testData
+        return scenarioData
     }
 
     private fun getTestName(testResult: TestResultRecord, httpLogMessage: HttpLogMessage?): String {

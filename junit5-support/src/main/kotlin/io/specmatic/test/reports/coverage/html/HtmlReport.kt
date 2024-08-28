@@ -6,10 +6,12 @@ import io.specmatic.core.ReportFormatter
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.SuccessCriteria
 import io.specmatic.core.TestResult
+import io.specmatic.core.log.logger
 import io.specmatic.test.reports.coverage.console.Remarks
 import io.specmatic.test.reports.coverage.html.HtmlTemplateConfiguration.Companion.configureTemplateEngine
 import org.thymeleaf.context.Context
 import java.io.File
+import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -27,7 +29,8 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
     private var totalSuccess = 0
     private var totalMissing = 0
 
-    fun generate() {
+    fun generate(launchBrowser: Boolean = true): File {
+        validateData()
         createAssetsDir(outputDirectory)
         calculateTestGroupCounts(htmlReportInformation.reportData.scenarioData)
 
@@ -35,6 +38,10 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         val htmlText = generateHtmlReportText()
         if (!outFile.parentFile.exists()) outFile.mkdirs()
         outFile.writer().use { it.write(htmlText) }
+        if (launchBrowser) {
+            openFileBasedOnOS(outFile.absolutePath)
+        }
+        return outFile
     }
 
     private fun generateHtmlReportText(): String {
@@ -59,7 +66,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
             "minimumCoverage" to apiSuccessCriteria.minThresholdPercentage,
             "successCriteriaPassed" to successCriteria,
             "testCriteriaPassed" to testCriteria,
-            "tableConfig" to htmlReportInformation.tableConfig,
+            "tableColumns" to htmlReportInformation.tableColumns,
             "tableRows" to updatedTableRows,
             "specmaticImplementation" to htmlReportInformation.specmaticImplementation,
             "specmaticVersion" to htmlReportInformation.specmaticVersion,
@@ -83,21 +90,20 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         return tableRows
     }
 
-    private fun updateScenarioData(scenarioData: Map<String, Map<String, Map<String, List<ScenarioData>>>>): Map<String, Map<String, Map<String, List<ScenarioData>>>> {
-        scenarioData.forEach { (_, firstGroup) ->
-            firstGroup.forEach { (_, secondGroup) ->
-                secondGroup.forEach { (_, scenariosList) ->
-                    scenariosList.forEach {
-                        val htmlResult = categorizeResult(it.testResult, it.wip)
-                        val scenarioDetail = "${it.name} ${htmlResultToDetailPostFix(htmlResult)}"
+    private fun updateScenarioData(scenarioData: ScenarioDataGroup): ScenarioDataGroup {
+        scenarioData.subGroup.forEach { (_, group) ->
+            if (group.subGroup.isNotEmpty()) {
+                updateScenarioData(group)
+            } else {
+                group.data.forEach {
+                    val htmlResult = categorizeResult(it.testResult, it.wip)
+                    val scenarioDetail = "${it.name} ${htmlResultToDetailPostFix(htmlResult)}"
 
-                        it.htmlResult = htmlResult
-                        it.details = if (it.details.isBlank()) scenarioDetail else "$scenarioDetail\n${it.details}"
-                    }
+                    it.htmlResult = htmlResult
+                    it.details = if (it.details.isBlank()) scenarioDetail else "$scenarioDetail\n${it.details}"
                 }
             }
         }
-
         return scenarioData
     }
 
@@ -110,18 +116,18 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         return totalCoveragePercentage >= apiSuccessCriteria.minThresholdPercentage || !apiSuccessCriteria.enforce
     }
 
-    private fun calculateTestGroupCounts(scenarioData: Map<String, Map<String, Map<String, List<ScenarioData>>>>) {
-        scenarioData.forEach { (_, firstGroup) ->
-            firstGroup.forEach { (_, secondGroup) ->
-                secondGroup.forEach { (_, scenariosList) ->
-                    scenariosList.forEach {
-                        when (it.testResult) {
-                            TestResult.MissingInSpec -> totalMissing++
-                            TestResult.NotCovered -> totalSkipped++
-                            TestResult.Success -> totalSuccess++
-                            TestResult.Error -> totalErrors++
-                            else -> if (it.wip) totalErrors++ else totalFailures++
-                        }
+    private fun calculateTestGroupCounts(scenarioDataGroup: ScenarioDataGroup) {
+        scenarioDataGroup.subGroup.mapValues { (_, group) ->
+            if (group.subGroup.isNotEmpty()) {
+                calculateTestGroupCounts(group)
+            } else {
+                group.data.map {
+                    when (it.testResult) {
+                        TestResult.MissingInSpec -> totalMissing++
+                        TestResult.NotCovered -> totalSkipped++
+                        TestResult.Success -> totalSuccess++
+                        TestResult.Error -> totalErrors++
+                        else -> if (it.wip) totalErrors++ else totalFailures++
                     }
                 }
             }
@@ -136,25 +142,28 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
     }
 
     private fun getHtmlResultAndBadgeColor(tableRow: TableRow): Pair<HtmlResult, String> {
-        val scenarioList =
-            reportData.scenarioData[tableRow.firstGroupValue]?.get(tableRow.secondGroupValue)?.get(tableRow.response)
-                ?: emptyList()
+        var scenarioDataGroup = reportData.scenarioData
 
-        scenarioList.forEach {
-            when (it.htmlResult) {
+        tableRow.groups.forEach {
+            scenarioDataGroup = scenarioDataGroup.subGroup[it.value]!!
+        }
+
+        scenarioDataGroup.data.forEach { scenario ->
+            when (scenario.htmlResult) {
                 HtmlResult.Failed -> return Pair(HtmlResult.Failed, "red")
                 HtmlResult.Error -> return Pair(HtmlResult.Error, "yellow")
                 HtmlResult.Skipped -> return Pair(HtmlResult.Skipped, "yellow")
                 else -> {}
             }
         }
+
         return Pair(HtmlResult.Success, "green")
     }
 
     private fun htmlResultToDetailPostFix(htmlResult: HtmlResult): String {
         return when (htmlResult) {
             HtmlResult.Skipped -> "has been SKIPPED"
-            HtmlResult.Error -> "has ERROR-ED"
+            HtmlResult.Error -> "has ERROR"
             HtmlResult.Success -> "has SUCCEEDED"
             else -> "has FAILED"
         }
@@ -169,12 +178,82 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         }
     }
 
-    private fun dumpTestData(testData: Map<String, Map<String, Map<String, List<ScenarioData>>>>): String {
+    private fun dumpTestData(testData: ScenarioDataGroup): String {
         val mapper = ObjectMapper()
         val json = mapper.writeValueAsString(testData)
         mapper.enable(SerializationFeature.INDENT_OUTPUT)
         writeToFileToAssets(outputDirectory, "test_data.json", mapper.writeValueAsString(testData))
         return json
+    }
+
+    private fun openFileBasedOnOS(fileAbsPath: String) {
+        val os = System.getProperty("os.name").lowercase()
+
+        try {
+            when {
+                os.contains("win") -> {
+                    val command = listOf("rundll32", "url.dll,FileProtocolHandler", fileAbsPath)
+                    ProcessBuilder(command).start()
+                }
+
+                os.contains("mac") -> {
+                    val command = listOf("open", fileAbsPath)
+                    ProcessBuilder(command).start()
+                }
+
+                os.contains("nux") || os.contains("nix") -> {
+                    val command = listOf("xdg-open", fileAbsPath)
+                    ProcessBuilder(command).start()
+                }
+
+                else -> {
+                    logger.log("Could not launch browser. Unsupported OS: $os")
+                }
+            }
+        } catch (e: IOException) {
+            logger.log("Could not launch browser. Exception: $e")
+        }
+    }
+
+    private fun validateData() {
+        val tableColumns = htmlReportInformation.tableColumns
+        val scenarioDataGroup = reportData.scenarioData
+
+        if (tableColumns.isEmpty()) {
+            throw IllegalArgumentException("Table columns cannot be empty.")
+        }
+
+        if (scenarioDataGroup.subGroup.isEmpty()) {
+            throw IllegalArgumentException("Scenario data group cannot be empty.")
+        }
+
+        reportData.tableRows.forEach { rowGroup ->
+            if (rowGroup.groups.size != tableColumns.size) {
+                throw RowGroupSizeMismatchException("Row groups length ${rowGroup.groups.size} does not match table columns size ${tableColumns.size} in rowGroup: $rowGroup")
+            }
+            rowGroup.groups.mapIndexed { index, row ->
+                if (row.columnName != tableColumns[index].name) {
+                    throw TableOrderMismatchException("Table groups must be in order. Expected ${tableColumns[index].name} but got ${row.columnName} in row $row")
+                }
+            }
+        }
+
+        val maxScenarioDataDepth = findMaxDepth(scenarioDataGroup)
+        if (maxScenarioDataDepth != tableColumns.size) {
+            throw DepthMismatchException("Scenario data group depth $maxScenarioDataDepth does not match table columns size ${tableColumns.size}")
+        }
+    }
+
+    private fun findMaxDepth(group: ScenarioDataGroup, currentDepth: Int = 0): Int {
+        if (group.subGroup.isEmpty()) {
+            return currentDepth
+        }
+
+        val subGroupDepths = group.subGroup.map { subGroup ->
+            findMaxDepth(subGroup.value, currentDepth + 1)
+        }
+
+        return subGroupDepths.maxOrNull() ?: currentDepth
     }
 }
 
@@ -184,7 +263,7 @@ data class HtmlReportInformation(
     val successCriteria: SuccessCriteria,
     val specmaticImplementation: String,
     val specmaticVersion: String,
-    val tableConfig: HtmlTableConfig,
+    val tableColumns: List<TableColumn>,
     val reportData: HtmlReportData
 )
 
@@ -193,16 +272,12 @@ data class HtmlReportData(
     val actuatorEnabled: Boolean,
     val totalTestDuration: Long,
     val tableRows: List<TableRow>,
-    val scenarioData: Map<String, Map<String, Map<String, List<ScenarioData>>>>
+    val scenarioData: ScenarioDataGroup
 )
 
-data class HtmlTableConfig(
-    val firstGroupName: String,
-    val firstGroupColSpan: Int,
-    val secondGroupName: String,
-    val secondGroupColSpan: Int,
-    val thirdGroupName: String,
-    val thirdGroupColSpan: Int
+data class ScenarioDataGroup(
+    var data: List<ScenarioData> = emptyList(),
+    var subGroup: MutableMap<String, ScenarioDataGroup> = mutableMapOf(),
 )
 
 data class ScenarioData(
@@ -221,15 +296,21 @@ data class ScenarioData(
     var htmlResult: HtmlResult? = null
 )
 
+data class TableColumn(
+    val name: String,
+    val colSpan: Int
+)
+
+data class TableRowGroup(
+    val columnName: String,
+    val value: String,
+    val rowSpan: Int,
+    val showRow: Boolean
+)
+
 data class TableRow(
     val coveragePercentage: Int,
-    val firstGroupValue: String,
-    val showFirstGroup: Boolean,
-    val firstGroupRowSpan: Int,
-    val secondGroupValue: String,
-    val showSecondGroup: Boolean,
-    val secondGroupRowSpan: Int,
-    val response: String,
+    val groups: List<TableRowGroup>,
     val exercised: Int,
     val result: Remarks,
     var htmlResult: HtmlResult? = null,
@@ -242,3 +323,7 @@ enum class HtmlResult {
     Error,
     Skipped
 }
+
+class DepthMismatchException(message: String) : Exception(message)
+class RowGroupSizeMismatchException(message: String) : Exception(message)
+class TableOrderMismatchException(message: String) : Exception(message)

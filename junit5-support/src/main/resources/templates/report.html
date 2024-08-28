@@ -1,151 +1,116 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth" xmlns:th="http://www.w3.org/1999/xhtml">
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
 
 <head>
-    <meta charset="UTF-8"/>
-    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
-    <title>[[${pageTitle}]]</title>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="assets/preflight.css">
     <link rel="stylesheet" href="assets/styles.css">
+    <title>[[${pageTitle}]]</title>
 </head>
 
-<body class="flex flex-col min-h-screen gap-3 p-4 pb-0 font-mono">
-    <header class="border-2 shadow-md print:shadow-none">
-        <div class="flex items-center justify-between p-4" id="banner">
-            <img src="assets/specmatic-logo.svg" alt="Specmatic" class="w-64 h-14">
-            <h2 class="text-3xl font-medium font-roboto">[[${reportHeading}]]</h2>
-            <div class="w-64 text-right print:hidden">
-                <button class="p-2 duration-100 border-2 active:scale-105 hover:border-blue-500" id="downloadButton">
-                    <img src="assets/download.svg" alt="Download Button" class="size-8">
-                </button>
-            </div>
+<body>
+    <header>
+        <div id="branding">
+            <img src="assets/specmatic-logo.svg" alt="Specmatic Logo" />
+            <h1>[[${reportHeading}]]</h1>
+            <button id="print">
+                <img src="assets/download.svg" alt="Print Button" />
+            </button>
         </div>
-        <div id="summary" class="flex items-center justify-between gap-5 p-1 border-2" th:classappend="'bg-' + ${summaryResult}" data-panel="table">
-            <div class="flex flex-col ml-2 print:items-center print:gap-2" id="totalCoverage">
-                <p class="text-black/50 whitespace-nowrap">API Coverage</p>
-                <span class="text-center text-3xl font-bold" th:classappend="${summaryResult}">[[${totalCoverage}]]%</span>
+        <div id="summary" th:class="'bg-' + ${summaryResult}" data-panel="table">
+            <div id="coverage">
+                <span>API Coverage</span>
+                <span th:class="${summaryResult}">[[${totalCoverage}]]%</span>
             </div>
-            <ol id="results" class="relative flex items-center justify-center flex-1 px-2 print:flex-wrap gap-x-5 *:min-w-44 print:*:min-w-0">
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" data-type="Success">
-                    <img src="assets/check-badge.svg" alt="success" class="size-8">
-                    <p class="group-hover:text-green-500">Success: <span>[[${totalSuccess}]]</span>
-                        <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-green-500"></span>
-                    </p>
+            <ol id="test-counts" data-filter="All">
+                <li id="Success">
+                    <img src="assets/check-badge.svg" alt="success-count" />
+                    <span>Success: </span>
+                    <span>[[${totalSuccess}]]</span>
                 </li>
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" data-type="Failed">
-                    <img src="assets/x-circle.svg" alt="failed" class="size-8">
-                    <p class="group-hover:text-red-500">Failed: <span>[[${totalFailures}]]</span>
-                        <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-red-500"></span>
-                    </p>
+                <li id="Failed">
+                    <img src="assets/x-circle.svg" alt="failed-count" />
+                    <span>Failed: </span>
+                    <span>[[${totalFailures}]]</span>
                 </li>
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" data-type="Error">
-                    <img src="assets/exclamation-triangle.svg" alt="errors" class="size-8">
-                    <p class="group-hover:text-red-500">Errors: <span>[[${totalErrors}]]</span>
-                        <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-red-500"></span>
-                    </p>
+                <li id="Error">
+                    <img src="assets/exclamation-triangle.svg" alt="success-count" />
+                    <span>Errors: </span>
+                    <span>[[${totalErrors}]]</span>
                 </li>
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" data-type="Skipped">
-                    <img src="assets/blocked.svg" alt="skipped" class="size-8">
-                    <p class="group-hover:text-yellow-500">Skipped: <span>[[${totalSkipped}]]</span>
-                        <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-yellow-500"></span>
-                    </p>
+                <li id="Skipped">
+                    <img src="assets/blocked.svg" alt="success-count" />
+                    <span>Skipped: </span>
+                    <span>[[${totalSkipped}]]</span>
                 </li>
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12 button-pressed" id="all" data-type="All">
-                    <img src="assets/clipboard-document-list.svg" alt="total-tests" class="size-8">
-                    <p class="group-hover:text-blue-500">Total: <span>[[${totalTests}]]</span>
-                        <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-blue-500"></span>
-                    </p>
-                </li>
-                <!-- <li class="flex items-center justify-center gap-2" id="total-time">
-                    <img src="assets/clock.svg" alt="total-time" class="size-8">
-                    <p>Time: [[${totalDuration}]]ms</p>
-                </li> -->
-            </ol>
-            <div id="badge" class="relative flex items-center justify-center">
-                <img src="assets/badge.svg" class="size-18" th:classappend="${summaryResult}" alt="badge">
-                <img th:src="'assets/mark-' + ${summaryResult} + '.svg'" alt="mark" class="absolute inset-0 z-10 mx-auto my-auto size-14">
-            </div>
-        </div>
-        <div id="additional-info" class="p-2 text-sm">
-            <ol class="flex justify-between">
-                <li>
-                    <p>Actuator: <span class="font-semibold">[[${actuatorEnabled == true ? 'Enabled' : 'Disabled'}]]</span></p>
-                </li>
-                <li th:if="${successCriteriaPassed == false}">
-                    <p>Success Criteria Failed: <span class="font-semibold text-red-500">Minimum API Coverage of [[${minimumCoverage}]]% was not met.</span></p>
+                <li class="active" id="All">
+                    <img src="assets/clipboard.svg" alt="success-count" />
+                    <span>Total: </span>
+                    <span>[[${totalTests}]]</span>
                 </li>
             </ol>
+            <div id="badge">
+                <img src="assets/badge.svg" alt="Result Badge" th:class="${summaryResult}" />
+                <img th:src="'assets/mark-' + ${summaryResult} + '.svg'" alt="Result Mark" id="mark" />
+            </div>
         </div>
+        <ul id="additional-info">
+            <li>
+                <p>Generated On <span>[[${generatedOn}]]</span></p>
+            </li>
+            <li>
+                <p>Actuator <span>[[${actuatorEnabled == true ? 'Enabled' : 'Disabled'}]]</span></p>
+            </li>
+            <li th:if="${successCriteriaPassed == false}">
+                <p>Success Criteria Failed: <span class="rejected">Minimum API Coverage of [[${minimumCoverage}]]% was not met.</span></p>
+            </li>
+        </ul>
     </header>
-    <main class="flex items-start flex-1 overflow-hidden border-t-2 shadow-md group print:shadow-none print:overflow-visible" data-item="table">
-        <table id="reports" class="font-mono transition-transform -translate-x-full group-data-[item=table]:translate-x-0 duration-700 min-w-full" data-filter="All">
+    <main class="group" data-panel="table">
+        <table id="reports" data-filter="All">
             <thead>
-                <tr class="font-bold">
+                <tr>
                     <td>Coverage</td>
-                    <td th:attr="colspan=${tableConfig.firstGroupColSpan}" th:text="${tableConfig.firstGroupName}"></td>
-                    <td th:attr="colspan=${tableConfig.secondGroupColSpan}" th:text="${tableConfig.secondGroupName}"></td>
-                    <td th:attr="colspan=${tableConfig.thirdGroupColSpan}" th:text="${tableConfig.thirdGroupName}"></td>
+                    <td th:each="column: ${tableColumns}" th:attr="colspan=${column.colSpan}" th:text="${column.name}"></td>
                     <td>Exercised</td>
                     <td>Result</td>
                 </tr>
             </thead>
             <tbody>
-                <tr th:each="row : ${tableRows}" th:attr="data-type=${row.htmlResult}">
-                    <td th:classappend="${row.showFirstGroup ? '' : 'hidden'}" th:attr="rowspan=${row.firstGroupRowSpan}">
-                        [[${row.coveragePercentage}]]%
+                <tr th:each="row : ${tableRows}" th:attr="data-type=${row.htmlResult}, data-color=${row.badgeColor}">
+                    <td th:text="${row.coveragePercentage} + '%'" th:classappend="${row.groups[0].showRow} ? '' : 'hidden'"
+                        th:attr="rowspan=${row.groups[0].rowSpan}, data-main=${row.groups[0].showRow}"></td>
+                    <td th:each="group,iter: ${row.groups}" th:classappend="${group.showRow} ? '' : 'hidden'"
+                        th:attr="rowspan=${group.rowSpan}, colspan=${tableColumns[iter.index].colSpan}, data-main=${group.showRow}, data-colName=${group.columnName}"
+                        th:text="${group.value}">
                     </td>
-                    <td th:classappend="${row.showFirstGroup ? '' : 'hidden'}" th:attr="rowspan=${row.firstGroupRowSpan}, data-main=${row.showFirstGroup}, colspan=${tableConfig.firstGroupColSpan}">
-                        [[${row.firstGroupValue}]]
-                    </td>
-                    <td th:classappend="${row.showSecondGroup ? '' : 'hidden'}" th:attr="rowspan=${row.secondGroupRowSpan}, data-main=${row.showSecondGroup}, colspan=${tableConfig.secondGroupColSpan}">
-                        [[${row.secondGroupValue}]]
-                    </td>
-                    <td th:attr="colspan=${tableConfig.thirdGroupColSpan}">[[${row.response}]]</td>
-                    <td>[[${row.exercised}]]</td>
-                    <td th:attr="data-color=${row.badgeColor}">
-                        <span class="capitalize px-4 py-1.5 font-medium rounded-lg whitespace-nowrap" th:classappend="'bg-' + ${row.badgeColor} + '-300'">
-                            [[${row.result}]]
-                        </span>
-                    </td>
+                    <td th:text="${row.exercised}"></td>
+                    <td><span class="pill" th:classappend="${row.badgeColor}" th:text="${row.result}"></span></td>
                 </tr>
             </tbody>
         </table>
-        <div id="details" class="transition-transform translate-x-full group-data-[item=details]:-translate-x-full duration-700 min-w-full p-2 print:hidden">
-            <div class="flex gap-3 top-2" id="response-details">
-                <button id="go-back" class="px-6 py-2 text-white duration-500 bg-blue-500 rounded-md hover:bg-blue-700 group">
-                    <span class="text-lg">&larr;</span>
+        <div id="details">
+            <div id="group-details">
+                <button id="back">
+                    <span>&larr;</span>
                     <span>Go Back</span>
                 </button>
-                <ul id="response-summary" class="flex items-center justify-between flex-1 px-10 gap-10 px-10 border-2 border-red-300 rounded-md font-roboto">
+                <ul id="group-summary">
                 </ul>
             </div>
-            <ul id="scenarios" class="flex flex-col gap-3 py-2 mt-3">
-            </ul>
+            <ol id="scenarios">
+            </ol>
         </div>
     </main>
-    <footer class="flex items-center justify-between p-2 text-center print:flex-col print:gap-2">
-        <p class="w-96 text-left print:text-center">Generated On: <span class="font-mono" th:text="${generatedOn}"></span></p>
-        <div class="flex items-center gap-2">
-            <span class="whitespace-nowrap">Powered By</span>
-            <img src="assets/specmatic-logo.svg" alt="Specmatic" class="w-48 mb-2">
-            <p class="font-light font-roboto" th:text="'[' + ${specmaticVersion} + ']'"></p>
-        </div>
-        <div class="flex items-center justify-end gap-1 w-96 print:justify-center">
-            <p>Copyright</p>
-            <p class="text-3xl">&copy;</p>
-            <p>All Rights Reserved</p>
-        </div>
-    </footer>
     <script id="json-data"  type="application/json">
         [(${jsonTestData})]
     </script>
-    <script defer type="text/javascript" src="assets/utils.js"></script>
-    <script defer type="text/javascript" src="assets/summaryUpdater.js"></script>
-    <script defer type="text/javascript" src="assets/main.js"></script>
-    <script defer type="text/javascript" src="assets/tableFilter.js"></script>
+    <script defer src="assets/utils.js" type="text/javascript"></script>
+    <script defer src="assets/index.js" type="text/javascript"></script>
+    <script defer src="assets/tableFilter.js" type="text/javascript"></script>
+    <script defer src="assets/summaryUpdater.js" type="text/javascript"></script>
 </body>
 
 </html>

@@ -11,6 +11,7 @@ data class HttpStubResponse(
     val response: HttpResponse,
     val delayInMilliSeconds: Long? = null,
     val contractPath: String = "",
+    val examplePath: String? = null,
     val feature: Feature? = null,
     val scenario: Scenario? = null,
     val dictionary: Map<String, Value> = emptyMap()

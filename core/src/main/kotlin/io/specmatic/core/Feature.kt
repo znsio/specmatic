@@ -491,7 +491,8 @@ data class Feature(
                     scenario = matchingScenario,
                     partial = scenarioStub.partial.copy(response = scenarioStub.partial.response.substituteDictionaryValues(scenarioStub.dictionary)),
                     data = scenarioStub.data,
-                    dictionary = scenarioStub.dictionary
+                    dictionary = scenarioStub.dictionary,
+                    examplePath = scenarioStub.filePath
                 )
             }
             else {
@@ -510,7 +511,8 @@ data class Feature(
                 requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) },
                 stubToken = scenarioStub.stubToken,
                 data = scenarioStub.data,
-                dictionary = scenarioStub.dictionary
+                dictionary = scenarioStub.dictionary,
+                examplePath = scenarioStub.filePath
             )
         }
     }

@@ -800,7 +800,8 @@ private fun stubbedResponse(
             it.delayInMilliseconds,
             it.contractPath,
             scenario = mock.scenario,
-            feature = mock.feature
+            feature = mock.feature,
+            examplePath = it.examplePath
         ) to it
     }
 

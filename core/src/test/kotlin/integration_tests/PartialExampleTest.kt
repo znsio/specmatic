@@ -552,4 +552,18 @@ class PartialExampleTest {
             System.clearProperty(SPECMATIC_STUB_DICTIONARY)
         }
     }
+
+    @Test
+    fun `object to object recursions should be detected and should not overflow the stack`() {
+        val specWithPartial = osAgnosticPath("src/test/resources/openapi/substitutions/recursion_object_to_object.yaml")
+
+        createStubFromContracts(listOf(specWithPartial), timeoutMillis = 0).use { stub ->
+            stub.client.execute(
+                HttpRequest("POST", "/person", body = parsedJSONObject("""{"name": "Charles"}"""))).let { response ->
+
+                assertThat(response.status).isEqualTo(400)
+                assertThat(response.body.toStringLiteral()).contains("Invalid pattern cycle")
+            }
+        }
+    }
 }

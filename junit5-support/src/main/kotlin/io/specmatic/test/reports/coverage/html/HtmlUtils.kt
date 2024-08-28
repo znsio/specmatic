@@ -22,24 +22,29 @@ fun loadFileFromClasspathAndSaveIt(fileName: String, outputPath: String = ".", o
 
 fun createAssetsDir(reportsDir: String) {
     val fileNames = listOf(
+        // Icon Files
         "badge.svg",
         "blocked.svg",
         "check-badge.svg",
-        "clipboard-document-list.svg",
+        "clipboard.svg",
         "clock.svg",
         "download.svg",
         "exclamation-triangle.svg",
         "favicon.svg",
-        "main.js",
-        "utils.js",
-        "tableFilter.js",
-        "summaryUpdater.js",
         "mark-approved.svg",
         "mark-rejected.svg",
         "specmatic-logo.svg",
         "styles.css",
         "trend-up.svg",
-        "x-circle.svg"
+        "x-circle.svg",
+        // JS Files
+        "index.js",
+        "tableFilter.js",
+        "summaryUpdater.js",
+        "utils.js",
+        // CSS Files
+        "preflight.css",
+        "styles.css"
     )
 
     fileNames.forEach { fileName ->

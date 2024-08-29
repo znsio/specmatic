@@ -43,7 +43,10 @@ class BackwardCompatibilityCheckCommand(
     override fun call() {
         val filesChangedInCurrentBranch: Set<String> = getOpenAPISpecFilesChangedInCurrentBranch()
 
-        if (filesChangedInCurrentBranch.isEmpty()) exitWithMessage("${newLine}No OpenAPI spec files were changed, skipping the check.$newLine")
+        if (filesChangedInCurrentBranch.isEmpty()) {
+            logger.log("${newLine}No OpenAPI spec files were changed, skipping the check.$newLine")
+            exitProcess(0)
+        }
 
         val filesReferringToChangedSchemaFiles = filesReferringToChangedSchemaFiles(filesChangedInCurrentBranch)
 

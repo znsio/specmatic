@@ -18,6 +18,12 @@ const groupSummaryList = document.querySelector("ul#group-summary");
 /** @type {HTMLOListElement} */
 // @ts-ignore Element Exists
 const scenariosList = document.querySelector("ol#scenarios");
+/** @type {HTMLDivElement} */
+// @ts-ignore Element Exists
+const sortBtnDiv = document.querySelector("div#sort");
+/** @type {Array<HTMLLIElement>} */
+// @ts-ignore Element Exists
+const sortOpts = sortBtnDiv.querySelectorAll("ol > li");
 
 /* VARIABLES */
 
@@ -48,6 +54,31 @@ backBtn.addEventListener("click", () => {
 
 printBtn.addEventListener("click", () => {
     window.print();
+});
+
+sortBtnDiv.addEventListener("click", (event) => {
+    const dataExpand = sortBtnDiv.getAttribute("data-expand");
+    sortBtnDiv.setAttribute("data-expand", dataExpand === "true" ? "false" : "true");
+
+    if (dataExpand === "true") {
+        const orderBy = sortBtnDiv.getAttribute("data-order");
+        /** @type {HTMLLIElement | null} */
+        // @ts-ignore Is an HTML Element or Null
+        const targetSort = event.target.closest("li");
+
+        if (targetSort) {
+            const newSortBy = targetSort.getAttribute("data-sort")
+            const newOrderBy = orderBy === "desc" ? "asc" : "desc";
+
+            // @ts-ignore Func in utils
+            scenariosList.replaceChildren(...sortScenarios(Array.from(scenariosList.children), newSortBy, newOrderBy === "asc"));
+
+            sortBtnDiv.setAttribute("data-sort", newSortBy);
+            sortBtnDiv.setAttribute("data-order", newOrderBy);
+            // @ts-ignore HTML Paragraph Element will exist
+            sortBtnDiv.querySelector("p").textContent = newSortBy;
+        }
+    }
 });
 
 reportTable.addEventListener("click", (event) => {
@@ -112,6 +143,8 @@ function createScenarioLi(scenario) {
     const scenarioLi = document.createElement("li");
     scenarioLi.classList.add("scenario");
     scenarioLi.setAttribute("data-type", scenario.htmlResult);
+    scenarioLi.setAttribute("data-duration", scenario.duration.toString());
+    scenarioLi.setAttribute("data-scenario-type", scenario.name.includes("-ve") ? "neg" : "pos");
     scenarioLi.setAttribute("data-expand", "false");
 
     const scenarioSummary = createScenarioInformation(scenario);

@@ -17,6 +17,10 @@ function goBackToTable(timeoutToEmpty = 500, scrollBack = true) {
     setTimeout(() => {
         // @ts-ignore DOM Element in index
         scenariosList.replaceChildren();
+        // @ts-ignore DOM Element in index
+        sortBtnDiv.setAttribute("data-sort", "scenario type");
+        // @ts-ignore DOM Element in index
+        sortBtnDiv.querySelector("p").textContent = "Scenario Type";
     }, timeoutToEmpty);
 
     // @ts-ignore DOM Element in index
@@ -57,8 +61,6 @@ function extractRowValues(row) {
         type: row.getAttribute("data-type"),
     };
 }
-
-
 
 /**
  * Create a span with key and value, to be used in a details element
@@ -141,18 +143,83 @@ function getColor(result) {
  * @param {Array<import("./types").ScenarioData>} scenarios - List of ScenarioData objects
  * @returns {Object} - Object with the number of tests in each group: Success, Failed, Error, Skipped and Total
  */
-const calculateTestGroups = (scenarios) => {
+function calculateTestGroups(scenarios) {
     const groups = scenarios.reduce(
-      (acc, scenario) => {
-        // @ts-ignore
-        acc[scenario.htmlResult] += 1;
-        acc.All += 1
-        return acc;
-      },
-      { Success: 0, Failed: 0, Error: 0, Skipped: 0, All: 0 }
+        (acc, scenario) => {
+            // @ts-ignore
+            acc[scenario.htmlResult] += 1;
+            acc.All += 1;
+            return acc;
+        },
+        { Success: 0, Failed: 0, Error: 0, Skipped: 0, All: 0 }
     );
     return groups;
-  };
+}
+
+
+/**
+ * Sorts the list of scenarios by the given criteria
+ * @param {Array<HTMLLIElement>} scenariosLi - List of ScenarioData objects
+ * @param {string} sortBy - Criteria to sort by
+ * @param {boolean} orderByAsc - Whether to sort in ascending order
+ * @returns {Array<HTMLLIElement>}
+ */
+function sortScenarios(scenariosLi, sortBy, orderByAsc) {
+    return scenariosLi.sort((a, b) => {
+        let aValue = "";
+        let bValue = "";
+
+        switch (sortBy) {
+            case "scenario type":
+                // @ts-ignore data-scenario-type will be a string
+                aValue = a.getAttribute("data-scenario-type");
+                // @ts-ignore data-scenario-type will be a string
+                bValue = b.getAttribute("data-scenario-type");
+                return compareStrings(aValue, bValue, orderByAsc);
+            case "result":
+                // @ts-ignore data-type will be a string
+                aValue = a.getAttribute("data-type");
+                // @ts-ignore data-type will be a string
+                bValue = b.getAttribute("data-type");
+                return compareStrings(aValue, bValue, orderByAsc);
+            case "duration":
+                // @ts-ignore data-duration will be present
+                aValue = Number.parseFloat(a.getAttribute("data-duration"));
+                // @ts-ignore data-duration will be present
+                bValue = Number.parseFloat(b.getAttribute("data-duration"));
+                // @ts-ignore both will be Floats
+                return compareNumbers(aValue, bValue, orderByAsc);
+            default:
+                return 0;
+        }
+    })
+}
+
+/**
+ * Compares two strings considering the order (ascending/descending)
+ * @param {string} a - First string to compare
+ * @param {string} b - Second string to compare
+ * @param {boolean} ascending - Whether to sort in ascending order
+ * @returns {number}
+ */
+function compareStrings(a, b, ascending) {
+    if (a < b) return ascending ? -1 : 1;
+    if (a > b) return ascending ? 1 : -1;
+    return 0;
+}
+
+/**
+ * Compares two numbers considering the order (ascending/descending)
+ * @param {number} a - First number to compare
+ * @param {number} b - Second number to compare
+ * @param {boolean} ascending - Whether to sort in ascending order
+ * @returns {number}
+ */
+function compareNumbers(a, b, ascending) {
+    if (a < b) return ascending ? -1 : 1;
+    if (a > b) return ascending ? 1 : -1;
+    return 0;
+}
 
 /* CUSTOM EXCEPTIONS */
 class NoScenariosFound extends Error {

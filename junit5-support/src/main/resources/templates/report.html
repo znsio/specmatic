@@ -14,7 +14,7 @@
     <header>
         <div id="branding">
             <img src="assets/specmatic-logo.svg" alt="Specmatic Logo" />
-            <h1>[[${reportHeading}]]</h1>
+            <h1 th:text="${reportHeading}"></h1>
             <button id="print">
                 <img src="assets/download.svg" alt="Print Button" />
             </button>
@@ -56,18 +56,160 @@
                 <img th:src="'assets/mark-' + ${summaryResult} + '.svg'" alt="Result Mark" id="mark" />
             </div>
         </div>
-        <ul id="additional-info">
-            <li>
-                <p>Generated On <span>[[${generatedOn}]]</span></p>
-            </li>
-            <li>
-                <p>Actuator <span>[[${actuatorEnabled == true ? 'Enabled' : 'Disabled'}]]</span></p>
-            </li>
-            <li th:if="${successCriteriaPassed == false}">
-                <p>Success Criteria Failed: <span class="rejected">Minimum API Coverage of [[${minimumCoverage}]]% was not met.</span></p>
-            </li>
-        </ul>
     </header>
+
+    <section id="additional-info" data-expand="false">
+        <div id="header">
+            <p th:if="${successCriteriaPassed == false}">
+                Success Criteria Failed: <span class="rejected">Minimum API Coverage of [[${thresholdInfo.minThresholdPercentage}]]% was not met.</span>
+            </p>
+            <div id="dropdown">
+                <p>Additional Info</p>
+                <img src="assets/chevron-double-down.svg" alt="expand" />
+            </div>
+        </div>
+        <ol id="info-grid">
+            <li id="SUT" class="info">
+                <p>System Under Test</p>
+                <ul>
+                    <li>
+                        <span>Host</span>
+                        <span th:text="${sutInfo.host}"></span>
+                    </li>
+                    <li>
+                        <span>Port</span>
+                        <span th:text="${sutInfo.port}"></span>
+                    </li>
+                    <li>
+                        <span>Actuator</span>
+                        <span th:text="${sutInfo.actuatorEnabled ? 'Enabled' : 'Disabled'}"></span>
+                    </li>
+                    <li>
+                        <span>Total [[${sutInfo.mainGroupName}]]s</span>
+                        <span th:text="${sutInfo.mainGroupCount}"></span>
+                    </li>
+                </ul>
+            </li>
+            <li id="REPORT" class="info">
+                <p>Report</p>
+                <ul>
+                    <li>
+                        <span>Generated On</span>
+                        <span th:text="${generatedOn}"></span>
+                    </li>
+                    <li>
+                        <span>Total Time</span>
+                        <span th:text="${totalDuration}"></span>
+                    </li>
+                    <li>
+                        <span>Specmatic Implementation</span>
+                        <span th:text="${specmaticImplementation}"></span>
+                    </li>
+                    <li>
+                        <span>Specmatic Version</span>
+                        <span th:text="${specmaticVersion}"></span>
+                    </li>
+                </ul>
+            </li>
+            <li id="THRESHOLDS" class="info">
+                <p>Threshold</p>
+                <ul>
+                    <li>
+                        <span>Min Coverage Percentage</span>
+                        <span>[[${thresholdInfo.minThresholdPercentage}]]%</span>
+                    </li>
+                    <li>
+                        <span>Max Missed Endpoints</span>
+                        <span th:text="${thresholdInfo.maxMissedEndpointsInSpec}"></span>
+                    </li>
+                    <li>
+                        <span>Excluded Endpoints</span>
+                        <span th:text="${#lists.size(excludedEndpoints)}"></span>
+                    </li>
+                    <li>
+                        <span>Enforcing</span>
+                        <span th:text="${thresholdInfo.enforce ? 'Yes' : 'No'}"></span>
+                    </li>
+                </ul>
+            </li>
+            <li id="SOURCES" class="info">
+                <p>Contract Sources</p>
+                <ol class="info">
+                    <li class="info sub-info" th:each="contractSource : ${contractSources}">
+                        <p>Source</p>
+                        <ul class="provider">
+                            <li>
+                                <span>Provider</span>
+                                <span th:text="${contractSource.provider}"></span>
+                            </li>
+                            <li>
+                                <span>URI</span>
+                                <span th:text="${contractSource.getUri()}"></span>
+                            </li>
+                            <li th:if="${contractSource.provider.toString() == 'git'}">
+                                <span>Branch</span>
+                                <span th:text="${contractSource.getBranchAndCommit().first}"></span>
+                            </li>
+                            <li>
+                                <span>Commit</span>
+                                <span th:text="${contractSource.getBranchAndCommit().second}"></span>
+                            </li>
+                        </ul>
+                        <ol>
+                            <li class="info sub-info">
+                                <p>Provides</p>
+                                <ul class="provides">
+                                    <li th:each="specFile : ${contractSource.test}">
+                                        [[${specFile}]]
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="info sub-info" th:if="${contractSource.stub}">
+                                <p>Consumes</p>
+                                <ul class="consumes">
+                                    <li th:each="specFile : ${contractSource.stub}">
+                                        [[${specFile}]]
+                                    </li>
+                                </ul>
+                            </li>
+                        </ol>
+                    </li>
+                </ol>
+                <ol th:if="${#lists.size(exampleDirs) > 0}">
+                    <li class="info sub-info">
+                        <p>Example Directories</p>
+                        <ul>
+                            <Li th:each="exampleDirectory : ${exampleDirs}">
+                                [[${exampleDirectory}]]
+                            </Li>
+                        </ul>
+                    </li>
+                </ol>
+            </li>
+            <lI id="CONFIG" class="info">
+                <p>Test Configuration</p>
+                <ul>
+                    <li>
+                        <span>Resiliency Testing</span>
+                        <span th:text="${testConfig.resiliencyTests.enable}"></span>
+                    </li>
+                    <li>
+                        <span>Validate Response Values</span>
+                        <span th:text="${testConfig.validateResponseValues ? 'Enabled' : 'Disabled'}"></span>
+                    </li>
+                    <li>
+                        <span>Allow Extensible Schema</span>
+                        <span th:text="${testConfig.allowExtensibleSchema ? 'Enabled' : 'Disabled'}"></span>
+                    </li>
+                    <li>
+                        <span>Test Timeout</span>
+                        <span>[[${testConfig.timeoutInMilliseconds}]]ms</span>
+                    </li>
+                </ul>
+            </li>
+        </ol>
+    </section>
+
     <main class="group" data-panel="table">
         <table id="reports" data-filter="All">
             <thead>
@@ -93,7 +235,7 @@
         </table>
         <div id="details">
             <div id="group-details">
-                <button id="back">
+                <button id="back" tabindex="-1">
                     <span>&larr;</span>
                     <span>Go Back</span>
                 </button>

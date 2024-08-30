@@ -2,10 +2,7 @@ package io.specmatic.test.reports.coverage.html
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
-import io.specmatic.core.ReportFormatter
-import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.SuccessCriteria
-import io.specmatic.core.TestResult
+import io.specmatic.core.*
 import io.specmatic.core.log.logger
 import io.specmatic.test.reports.coverage.console.Remarks
 import io.specmatic.test.reports.coverage.html.HtmlTemplateConfiguration.Companion.configureTemplateEngine
@@ -21,6 +18,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
     private val apiSuccessCriteria = htmlReportInformation.successCriteria
     private val reportFormat = htmlReportInformation.reportFormat
     private val reportData = htmlReportInformation.reportData
+    private val specmaticConfig = htmlReportInformation.specmaticConfig
 
     private var totalTests = 0
     private var totalErrors = 0
@@ -61,9 +59,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
             "totalErrors" to totalErrors,
             "totalSkipped" to totalSkipped,
             "totalTests" to totalTests,
-            "totalDuration" to reportData.totalTestDuration,
-            "actuatorEnabled" to reportData.actuatorEnabled,
-            "minimumCoverage" to apiSuccessCriteria.minThresholdPercentage,
+            "totalDuration" to formatDuration(reportData.totalTestDuration),
             "successCriteriaPassed" to successCriteria,
             "testCriteriaPassed" to testCriteria,
             "tableColumns" to htmlReportInformation.tableColumns,
@@ -71,7 +67,16 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
             "specmaticImplementation" to htmlReportInformation.specmaticImplementation,
             "specmaticVersion" to htmlReportInformation.specmaticVersion,
             "generatedOn" to generatedOnTimestamp(),
-            "jsonTestData" to dumpTestData(updatedScenarios)
+            "jsonTestData" to dumpTestData(updatedScenarios),
+            "thresholdInfo" to htmlReportInformation.successCriteria,
+            "excludedEndpoints" to specmaticConfig.report!!.types.apiCoverage.openAPI.excludedEndpoints,
+            "testConfig" to specmaticConfig.test,
+            "contractSources" to specmaticConfig.sources,
+            "exampleDirs" to specmaticConfig.examples,
+            "sutInfo" to htmlReportInformation.sutInfo.let {
+                val mainGroupName = it.mainGroupName.ifBlank { updatedTableRows.first().groups.first().columnName }
+                it.copy(mainGroupName = mainGroupName)
+            }
         )
 
         return configureTemplateEngine().process(
@@ -255,6 +260,14 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
 
         return subGroupDepths.maxOrNull() ?: currentDepth
     }
+
+    private fun formatDuration(durationInMilliseconds: Long): String {
+        val minutes = (durationInMilliseconds / 60000).toInt()
+        val seconds = ((durationInMilliseconds % 60000) / 1000).toInt()
+        val milliseconds = (durationInMilliseconds % 1000).toInt()
+
+        return "%02d:%02d.%03d".format(minutes, seconds, milliseconds)
+    }
 }
 
 data class HtmlReportInformation(
@@ -264,12 +277,12 @@ data class HtmlReportInformation(
     val specmaticImplementation: String,
     val specmaticVersion: String,
     val tableColumns: List<TableColumn>,
-    val reportData: HtmlReportData
+    val reportData: HtmlReportData,
+    val sutInfo: SutInfo
 )
 
 data class HtmlReportData(
     val totalCoveragePercentage: Int,
-    val actuatorEnabled: Boolean,
     val totalTestDuration: Long,
     val tableRows: List<TableRow>,
     val scenarioData: ScenarioDataGroup
@@ -278,6 +291,14 @@ data class HtmlReportData(
 data class ScenarioDataGroup(
     var data: List<ScenarioData> = emptyList(),
     var subGroup: MutableMap<String, ScenarioDataGroup> = mutableMapOf(),
+)
+
+data class SutInfo(
+    val host: String,
+    val port: String,
+    val actuatorEnabled: Boolean,
+    val mainGroupCount: Int,
+    val mainGroupName: String = ""
 )
 
 data class ScenarioData(

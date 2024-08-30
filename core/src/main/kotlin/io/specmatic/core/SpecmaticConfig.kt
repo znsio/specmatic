@@ -22,6 +22,7 @@ import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.specmatic.core.utilities.exceptionCauseMessage
 import java.io.File
+import java.net.URL
 
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
@@ -118,7 +119,7 @@ data class TestConfiguration(
     ),
     val validateResponseValues: Boolean? = getBooleanValue(VALIDATE_RESPONSE_VALUE),
     val allowExtensibleSchema: Boolean? = getBooleanValue(EXTENSIBLE_SCHEMA),
-    val timeoutInMilliseconds: Long? = getLongValue(SPECMATIC_TEST_TIMEOUT)
+    val timeoutInMilliseconds: Long? = getLongValue(SPECMATIC_TEST_TIMEOUT, DEFAULT_TIMEOUT_IN_MILLISECONDS)
 )
 
 enum class ResiliencyTestSuite {
@@ -173,7 +174,21 @@ data class Source(
     @field:JsonAlias("consumes")
     val stub: List<String>? = null,
     val directory: String? = null,
-)
+) {
+    @Suppress("unused") // Used in HTML Report Generation
+    fun getUri(): String {
+        return when (this.provider) {
+            SourceProvider.git -> this.repository ?: "Unknown"
+            SourceProvider.filesystem -> this.directory ?: "."
+            SourceProvider.web -> this.test?.first().let { URL(it).host } ?: "Unknown"
+        }
+    }
+
+    @Suppress("unused") // Used in HTML Report Generation
+    fun getBranchAndCommit(): Pair<String, String> {
+        return Pair(this.branch ?: "default", "Unknown")
+    }
+}
 
 data class RepositoryInfo(
     val provider: String,

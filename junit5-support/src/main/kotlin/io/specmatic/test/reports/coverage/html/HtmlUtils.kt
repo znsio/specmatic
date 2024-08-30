@@ -39,6 +39,7 @@ fun createAssetsDir(reportsDir: String) {
         "x-circle.svg",
         "chevron-down.svg",
         "sort.svg",
+        "chevron-double-down.svg",
         // JS Files
         "index.js",
         "tableFilter.js",

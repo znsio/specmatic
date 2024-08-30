@@ -51,6 +51,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 100, Remarks.Covered)
                 ),
                 apiCoverageReport.testResultRecords,
+                apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime,
                 totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
@@ -95,6 +96,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("POST", "/route3", 0, 0, 0, Remarks.Missed, showPath = false)
                 ),
                 apiCoverageReport.testResultRecords,
+                apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime,
                 totalEndpointsCount = 3, missedEndpointsCount = 1, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
             )
         )
@@ -144,6 +146,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("POST", "/route2", 200, 1, 100,  Remarks.Covered, showPath = false)
                 ),
                 apiCoverageReport.testResultRecords,
+                apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime,
                 totalEndpointsCount = 2,  missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
@@ -232,6 +235,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("POST", "/route2", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
                 ),
                 apiCoverageReport.testResultRecords,
+                apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime,
                 totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
             )
         )
@@ -275,6 +279,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("POST", "/route3/{route_id}", 0, 0, 0, Remarks.Missed, showPath = false)
                 ),
                 apiCoverageReport.testResultRecords,
+                apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime,
                 totalEndpointsCount = 3, missedEndpointsCount = 1, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
             )
         )
@@ -352,6 +357,7 @@ class ApiCoverageReportInputTest {
                     OpenApiCoverageConsoleRow("POST", "/route2", 500, 1, 75, Remarks.Covered, showPath = false)
                 ),
                 apiCoverageReport.testResultRecords,
+                apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime,
                 totalEndpointsCount = 2, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )

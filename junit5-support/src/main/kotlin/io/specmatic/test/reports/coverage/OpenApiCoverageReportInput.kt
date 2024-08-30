@@ -3,6 +3,7 @@ package io.specmatic.test.reports.coverage
 import io.specmatic.conversions.SERVICE_TYPE_HTTP
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.TestResult
+import io.specmatic.core.log.CurrentDate
 import io.specmatic.test.API
 import io.specmatic.test.TestResultRecord
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
@@ -19,8 +20,9 @@ class OpenApiCoverageReportInput(
     private val excludedAPIs: MutableList<String> = mutableListOf(),
     private val allEndpoints: MutableList<Endpoint> = mutableListOf(),
     internal var endpointsAPISet: Boolean = false,
-    internal var groupedTestResultRecords: MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>> = mutableMapOf(),
-    internal var apiCoverageRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf()
+    private var groupedTestResultRecords: MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>> = mutableMapOf(),
+    private var apiCoverageRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf(),
+    private val testStartTime: CurrentDate = CurrentDate(),
 ) {
     fun addTestReportRecords(testResultRecord: TestResultRecord) {
         testResultRecords.add(testResultRecord)
@@ -96,7 +98,7 @@ class OpenApiCoverageReportInput(
             tests.any { it.result == TestResult.NotImplemented } && tests.any { it.result != TestResult.NotImplemented }
         }
 
-        return OpenAPICoverageConsoleReport(apiCoverageRows, allTests, totalAPICount, missedAPICount, notImplementedAPICount, partiallyMissedAPICount, partiallyNotImplementedAPICount)
+        return OpenAPICoverageConsoleReport(apiCoverageRows, allTests, testStartTime, CurrentDate(), totalAPICount, missedAPICount, notImplementedAPICount, partiallyMissedAPICount, partiallyNotImplementedAPICount)
     }
 
     private fun addTestResultsForTestsNotGeneratedBySpecmatic(allTests: List<TestResultRecord>, allEndpoints: List<Endpoint>): List<TestResultRecord> {

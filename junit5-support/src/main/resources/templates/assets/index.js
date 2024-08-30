@@ -24,6 +24,12 @@ const sortBtnDiv = document.querySelector("div#sort");
 /** @type {Array<HTMLLIElement>} */
 // @ts-ignore Element Exists
 const sortOpts = sortBtnDiv.querySelectorAll("ol > li");
+/** @type {HTMLElement} */
+// @ts-ignore Element Exists
+const additionalInfoSection = document.querySelector("section#additional-info");
+/** @type {HTMLDivElement} */
+// @ts-ignore Element Exists
+const infoHeader = additionalInfoSection.querySelector("div#header");
 
 /* VARIABLES */
 
@@ -55,6 +61,11 @@ backBtn.addEventListener("click", () => {
 printBtn.addEventListener("click", () => {
     window.print();
 });
+
+infoHeader.addEventListener("click", (event) => {
+    const expand = additionalInfoSection.getAttribute("data-expand");
+    additionalInfoSection.setAttribute("data-expand", expand === "true" ? "false" : "true");
+})
 
 sortBtnDiv.addEventListener("click", (event) => {
     const dataExpand = sortBtnDiv.getAttribute("data-expand");

@@ -51,6 +51,7 @@ class ApiCoverageReportTest {
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
                 ),
                 apiCoverageReport.testResultRecords,
+                apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime,
                 totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
             )
         )
@@ -76,6 +77,7 @@ class ApiCoverageReportTest {
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.Missed, showPath = false, showMethod = false)
                 ),
                 apiCoverageReport.testResultRecords,
+                apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime,
                 totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
             )
         )
@@ -96,6 +98,7 @@ class ApiCoverageReportTest {
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
                 ),
                 apiCoverageReport.testResultRecords,
+                apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime,
                 totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
             )
         )
@@ -118,7 +121,7 @@ class ApiCoverageReportTest {
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.Missed, showPath = false, showMethod = false)
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
+                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
             )
         )
     }
@@ -139,7 +142,7 @@ class ApiCoverageReportTest {
                 listOf(
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.NotImplemented),
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 1
+                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 1
             )
         )
     }
@@ -165,7 +168,7 @@ class ApiCoverageReportTest {
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.NotImplemented),
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.NotImplemented, showPath = false, showMethod = false),
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 1
+                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 1
             )
         )
     }
@@ -185,7 +188,7 @@ class ApiCoverageReportTest {
                 listOf(
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount =  0, notImplementedAPICount =  0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount =  0
+                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount =  0, notImplementedAPICount =  0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount =  0
             )
         )
     }
@@ -209,7 +212,7 @@ class ApiCoverageReportTest {
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount =  0
+                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount =  0
             )
         )
     }
@@ -233,7 +236,7 @@ class ApiCoverageReportTest {
                 listOf(
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+                ), apiCoverageReport.testResultRecords,apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
     }
@@ -260,7 +263,7 @@ class ApiCoverageReportTest {
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
 
@@ -281,7 +284,7 @@ class ApiCoverageReportTest {
                 listOf(
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 400, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+                ), apiCoverageReport.testResultRecords,apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
     }
@@ -305,7 +308,7 @@ class ApiCoverageReportTest {
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
                     OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
     }
@@ -330,7 +333,7 @@ class ApiCoverageReportTest {
                 listOf(
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
+                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
             )
         )
     }
@@ -350,7 +353,7 @@ class ApiCoverageReportTest {
                 listOf(
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
+                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
             )
         )
     }
@@ -373,7 +376,7 @@ class ApiCoverageReportTest {
                 listOf(
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
     }
@@ -393,7 +396,7 @@ class ApiCoverageReportTest {
                 listOf(
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
                     OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
     }
@@ -417,7 +420,7 @@ class ApiCoverageReportTest {
                 listOf(
                     OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 50, Remarks.NotImplemented),
                     OpenApiCoverageConsoleRow("GET", "/orders", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
+                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
             )
         )
     }
@@ -440,7 +443,7 @@ class ApiCoverageReportTest {
                 listOf(
                     OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 50, Remarks.Covered),
                     OpenApiCoverageConsoleRow("GET", "/orders", 404, 0, 50, Remarks.Invalid, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
     }
@@ -466,7 +469,7 @@ class ApiCoverageReportTest {
                 listOf(
                     OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 50, Remarks.Covered),
                     OpenApiCoverageConsoleRow("GET", "/orders", 404, 0, 50, Remarks.Invalid, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
             )
         )
     }

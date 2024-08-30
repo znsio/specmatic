@@ -1,6 +1,5 @@
 package io.specmatic.test.reports.renderers
 
-import io.specmatic.core.ReportFormatter
 import io.specmatic.core.ReportFormatterType
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
@@ -30,17 +29,18 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
         val reportConfiguration = specmaticConfig.report!!
         val htmlReportConfiguration = reportConfiguration.formatters!!.first { it.type == ReportFormatterType.HTML }
         val openApiSuccessCriteria = reportConfiguration.types.apiCoverage.openAPI.successCriteria
+        val (host, port) = report.getHostAndPort()
 
         val reportData = HtmlReportData(
-            totalCoveragePercentage = report.totalCoveragePercentage, actuatorEnabled = actuatorEnabled,
-            tableRows = makeTableRows(report, htmlReportConfiguration),
-            scenarioData = makeScenarioData(report), totalTestDuration = getTotalDuration(report)
+            totalCoveragePercentage = report.totalCoveragePercentage, tableRows = makeTableRows(report, htmlReportConfiguration),
+            scenarioData = makeScenarioData(report), totalTestDuration = report.totalTestDuration()
         )
 
         val htmlReportInformation = HtmlReportInformation(
             reportFormat = htmlReportConfiguration, successCriteria = openApiSuccessCriteria,
             specmaticImplementation = "OpenAPI", specmaticVersion = getSpecmaticVersion(),
-            tableColumns = tableColumns, reportData = reportData, specmaticConfig = specmaticConfig
+            tableColumns = tableColumns, reportData = reportData, specmaticConfig = specmaticConfig,
+            sutInfo = SutInfo(host = host, port = port, actuatorEnabled = actuatorEnabled, mainGroupCount = report.totalPaths())
         )
 
         val htmlFile = HtmlReport(htmlReportInformation).generate()

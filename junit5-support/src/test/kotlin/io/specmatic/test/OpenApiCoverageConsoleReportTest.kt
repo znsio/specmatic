@@ -1,5 +1,6 @@
 package io.specmatic.test
 
+import io.specmatic.core.log.CurrentDate
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
 import io.specmatic.test.reports.coverage.console.Remarks
@@ -20,7 +21,7 @@ class OpenApiCoverageConsoleReportTest {
             OpenApiCoverageConsoleRow("GET", "/route3", 200, 0, 0, Remarks.NotCovered),
         )
 
-        val coverageReport = OpenAPICoverageConsoleReport(rows, emptyList(), totalEndpointsCount = 3, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0)
+        val coverageReport = OpenAPICoverageConsoleReport(rows, emptyList(), CurrentDate(), CurrentDate(), totalEndpointsCount = 3, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0)
 
         assertThat(coverageReport.totalCoveragePercentage).isEqualTo(28)
     }
@@ -41,7 +42,7 @@ class OpenApiCoverageConsoleReportTest {
             OpenApiCoverageConsoleRow("POST", "/route3", 503, 0, 67, Remarks.NotCovered),
         )
 
-        val coverageReport = OpenAPICoverageConsoleReport(rows, emptyList(), totalEndpointsCount = 3, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0)
+        val coverageReport = OpenAPICoverageConsoleReport(rows, emptyList(), CurrentDate(), CurrentDate(), totalEndpointsCount = 3, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0)
 
         assertThat(coverageReport.totalCoveragePercentage).isEqualTo(81)
     }

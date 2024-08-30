@@ -409,18 +409,23 @@ class OpenApiSpecification(
 
                     val responseThatReturnsNoValues = httpResponsePatterns.find { responsePatternData ->
                         responsePatternData.let {
-                            it.responsePattern.status == 204 && it.responsePattern.headersPattern.isEmpty()
+                            it.responsePattern.body == NoBodyPattern && it.responsePattern.headersPattern.isEmpty()
                         }
                     }
 
                     val (additionalExamples, updatedScenarios) = if(responseThatReturnsNoValues != null && unusedRequestExampleNames.isNotEmpty()) {
-                        val empty204Response = HttpResponse(204)
-                        val examplesOfResponseThatReturnsNoValues: Map<String, List<Pair<HttpRequest, HttpResponse>>> = requestExamples.filterKeys { it in unusedRequestExampleNames }.mapValues { (key, examples) ->
-                            examples.map { it to empty204Response }
+                        val emptyResponse = HttpResponse(
+                            status = responseThatReturnsNoValues.responsePattern.status,
+                            headers = emptyMap(),
+                            body = NoBodyValue
+                        )
+                        val examplesOfResponseThatReturnsNoValues: Map<String, List<Pair<HttpRequest, HttpResponse>>> =
+                            requestExamples.filterKeys { it in unusedRequestExampleNames }.mapValues { (key, examples) ->
+                            examples.map { it to emptyResponse }
                         }
 
                         val updatedScenarioInfos = scenarioInfos.map { scenarioInfo ->
-                            if(scenarioInfo.httpResponsePattern.status == 204) {
+                            if(scenarioInfo.httpResponsePattern.body == NoBodyPattern) {
                                 val unusedRequestExample = requestExamples.filter { it.key in unusedRequestExampleNames }
 
                                 val rows = unusedRequestExample.flatMap { (key, requests) ->
@@ -479,7 +484,6 @@ class OpenApiSpecification(
             }
 
         logger.newLine()
-
         return scenarioInfos to examples
     }
 
@@ -709,6 +713,7 @@ class OpenApiSpecification(
         if (response.content == null || response.content.isEmpty()) {
             val responsePattern = HttpResponsePattern(
                 headersPattern = HttpHeadersPattern(headersMap),
+                body = NoBodyPattern,
                 status = status.toIntOrNull() ?: DEFAULT_RESPONSE_CODE
             )
 

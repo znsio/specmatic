@@ -2,6 +2,7 @@ package io.specmatic.conversions
 
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.NoBodyValue
 import io.specmatic.core.QueryParameters
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.logger
@@ -59,10 +60,14 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
 
     val expectationFilePath: String = file.canonicalPath
 
-    val response: HttpResponse?
+    val response: HttpResponse
         get() {
             if(responseBody == null && responseHeaders == null)
-                return null
+                return HttpResponse(
+                    responseStatus,
+                    body = NoBodyValue,
+                    headers = emptyMap()
+                )
 
             val body = responseBody ?: EmptyString
             val headers = responseHeaders ?: JSONObjectValue()
@@ -76,7 +81,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
                 method = requestMethod,
                 path = requestPath,
                 headers = headers,
-                body = requestBody ?: EmptyString,
+                body = requestBody ?: NoBodyValue,
                 queryParams = QueryParameters(queryParams),
             )
         }

@@ -19,10 +19,9 @@ data class HttpResponsePattern(
         return attempt(breadCrumb = "RESPONSE") {
             val value = softCastValueToXML(resolver.withCyclePrevention(body, body::generate))
             val headers = headersPattern.generate(resolver).plus(SPECMATIC_RESULT_HEADER to "success").let { headers ->
-                when {
-                    !headers.containsKey("Content-Type") -> headers.plus("Content-Type" to value.httpContentType)
-                    else -> headers
-                }
+                if ((headers.containsKey("Content-Type").not() && value.httpContentType.isBlank().not()))
+                    headers.plus("Content-Type" to value.httpContentType)
+                else headers
             }
             HttpResponse(status, headers, value)
         }

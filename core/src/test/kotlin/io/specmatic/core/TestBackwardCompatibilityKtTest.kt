@@ -2726,6 +2726,7 @@ paths:
         """.trimIndent().openAPIToContract()
 
         val results: Results = testBackwardCompatibility(olderContract, newerContract)
+        println(results.report())
         assertThat(results.success()).isFalse
     }
 
@@ -2781,10 +2782,10 @@ paths:
         """.trimIndent().openAPIToContract()
 
         val results: Results = testBackwardCompatibility(olderContract, newerContract)
+        println(results.report())
         assertThat(results.success()).isFalse
     }
 
-    @Disabled // disabled since this will fail as no handling added to support this. Enable if you want to run.
     @Test
     fun `should pass when request is changed from no-body to some body`() {
         val olderContract: Feature =
@@ -2836,6 +2837,7 @@ paths:
         """.trimIndent().openAPIToContract()
 
         val results: Results = testBackwardCompatibility(olderContract, newerContract)
+        println(results.report())
         assertThat(results.success()).isTrue
     }
 }

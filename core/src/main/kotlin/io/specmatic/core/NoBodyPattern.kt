@@ -15,9 +15,10 @@ import io.specmatic.core.value.Value
 */
 object NoBodyPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        // TODO - request changed from body to no-body -> backward incompatible [in theory] (?)
-        // so in this case for b/w comp : noBodyPattern.matches(someBody) should fail.
-        // that's why the logic is as follows.
+        return Result.Success()
+    }
+
+    fun strictMatches(sampleData: Value?): Result {
         if(sampleData is NoBodyValue || sampleData == null)
             return Result.Success()
 

@@ -2210,7 +2210,7 @@ paths:
         ).toFeature()
 
         val result = testBackwardCompatibility(oldContract, newContract)
-        assertThat(result.success()).withFailMessage(result.report()).isFalse()
+        assertThat(result.success()).isTrue()
     }
 
     @Test
@@ -2731,7 +2731,7 @@ paths:
     }
 
     @Test
-    fun `should fail when request is changed from some body to no-body`() {
+    fun `should pass when request is changed from some body to no-body`() {
         val olderContract: Feature =
             """
                 openapi: 3.0.0
@@ -2783,11 +2783,11 @@ paths:
 
         val results: Results = testBackwardCompatibility(olderContract, newerContract)
         println(results.report())
-        assertThat(results.success()).isFalse
+        assertThat(results.success()).isTrue()
     }
 
     @Test
-    fun `should pass when request is changed from no-body to some body`() {
+    fun `should fail when request is changed from no-body to some body`() {
         val olderContract: Feature =
             """
                 openapi: 3.0.0
@@ -2838,7 +2838,8 @@ paths:
 
         val results: Results = testBackwardCompatibility(olderContract, newerContract)
         println(results.report())
-        assertThat(results.success()).isTrue
+        assertThat(results.success()).isFalse()
+        assertThat(results.report()).contains("an empty string or no body value")
     }
 }
 

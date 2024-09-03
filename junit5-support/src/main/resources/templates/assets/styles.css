@@ -431,7 +431,18 @@ section#additional-info {
         border: 1px solid rgba(var(--smoky-black), 0.25);
         font-weight: 400;
 
-        & > span:last-of-type {
+        & > abbr {
+            font-weight: 500;
+            max-width: 70%;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 1;
+            line-clamp: 1;
+            word-break: break-all;
+        }
+
+        & > span:nth-child(2) {
             font-weight: 500;
         }
     }

@@ -154,6 +154,8 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         }
 
         scenarioDataGroup.data.forEach { scenario ->
+            if (!scenario.valid) return Pair(HtmlResult.Error, "red")
+
             when (scenario.htmlResult) {
                 HtmlResult.Failed -> return Pair(HtmlResult.Failed, "red")
                 HtmlResult.Error -> return Pair(HtmlResult.Error, "yellow")

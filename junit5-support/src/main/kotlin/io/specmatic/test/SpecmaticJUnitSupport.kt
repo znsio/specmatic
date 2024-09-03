@@ -3,6 +3,8 @@ package io.specmatic.test
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
+import io.specmatic.core.log.LogStrategy
+import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.ignoreLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
@@ -71,6 +73,7 @@ open class SpecmaticJUnitSupport {
         val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
 
         private val threads: Vector<String> = Vector<String>()
+        private var defaultLogger: LogStrategy = Verbose()
 
         @AfterAll
         @JvmStatic
@@ -165,6 +168,10 @@ open class SpecmaticJUnitSupport {
         val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: getConfigFileName()
 
         private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
+
+        fun setDefaultLogger(logger: LogStrategy) {
+            defaultLogger = logger
+        }
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -194,6 +201,7 @@ open class SpecmaticJUnitSupport {
 
     @TestFactory
     fun contractTest(): Stream<DynamicTest> {
+        logger = defaultLogger
         val statistics = ContractTestStatistics()
         var name = ObjectName("io.specmatic:type=ContractTestStatistics")
 

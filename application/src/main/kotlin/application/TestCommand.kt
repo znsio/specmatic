@@ -3,7 +3,7 @@ package application
 import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.Configuration
 import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
-import io.specmatic.core.log.Verbose
+import io.specmatic.core.log.NonVerbose
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
@@ -112,8 +112,8 @@ class TestCommand : Callable<Unit> {
     override fun call() = try {
         setParallelism()
 
-        if(verboseMode) {
-            logger = Verbose()
+        if(!verboseMode) {
+            SpecmaticJUnitSupport.setDefaultLogger(NonVerbose())
         }
 
         configFileName?.let {

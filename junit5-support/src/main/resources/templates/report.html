@@ -74,11 +74,11 @@
                 <ul>
                     <li>
                         <span>Host</span>
-                        <span th:text="${sutInfo.host}"></span>
+                        <abbr th:attr="title=${sutInfo.host}" th:text="${sutInfo.host}"></abbr>
                     </li>
                     <li>
                         <span>Port</span>
-                        <span th:text="${sutInfo.port}"></span>
+                        <abbr th:attr="title=${sutInfo.port}" th:text="${sutInfo.port}"></abbr>
                     </li>
                     <li>
                         <span>Actuator</span>

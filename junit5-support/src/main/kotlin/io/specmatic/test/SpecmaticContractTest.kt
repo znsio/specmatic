@@ -1,7 +1,5 @@
 package io.specmatic.test
 
-import io.specmatic.core.log.Verbose
-import io.specmatic.core.log.logger
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback
@@ -14,7 +12,6 @@ interface SpecmaticContractTest {
 
     @TestFactory
     fun contractTest(): Stream<DynamicTest> {
-        logger = Verbose()
         return SpecmaticJUnitSupport().contractTest()
     }
 }

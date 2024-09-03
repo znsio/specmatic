@@ -3,6 +3,8 @@ package io.specmatic.test
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
+import io.specmatic.core.log.LogStrategy
+import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.CurrentDate
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
@@ -90,6 +92,7 @@ open class SpecmaticJUnitSupport {
         private val testStartTime: CurrentDate = CurrentDate()
 
         private val threads: Vector<String> = Vector<String>()
+        private var defaultLogger: LogStrategy = Verbose()
 
         @AfterAll
         @JvmStatic
@@ -182,6 +185,12 @@ open class SpecmaticJUnitSupport {
         } ?: emptyList()
 
         fun getTotalTestCount(): Int = testResultRecords.size
+
+        private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
+
+        fun setDefaultLogger(logger: LogStrategy) {
+            defaultLogger = logger
+        }
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -211,6 +220,7 @@ open class SpecmaticJUnitSupport {
 
     @TestFactory
     fun contractTest(): Stream<DynamicTest> {
+        logger = defaultLogger
         val statistics = ContractTestStatistics()
         val name = ObjectName("io.specmatic:type=ContractTestStatistics")
 

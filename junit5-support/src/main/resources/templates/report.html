@@ -47,7 +47,7 @@
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-red-500"></span>
                     </p>
                 </li>
-                <li class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" data-type="Skipped">
+                 <li th:classappend="${lite == true} ? 'hidden' : ''" class="flex items-center justify-center gap-2 cursor-pointer group shadow-md print:shadow-none h-12" data-type="Skipped">
                     <img src="assets/blocked.svg" alt="skipped" class="size-8">
                     <p class="group-hover:text-yellow-500">Skipped: <span>[[${totalSkipped}]]</span>
                         <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-yellow-500"></span>
@@ -93,7 +93,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr th:each="row : ${tableRows}" th:attr="data-type=${row.htmlResult}">
+                <tr th:each="row : ${tableRows}" th:attr="data-type=${row.htmlResult}, data-color=${row.badgeColor}, data-result=${row.result}">
                     <td th:classappend="${row.showFirstGroup ? '' : 'hidden'}" th:attr="rowspan=${row.firstGroupRowSpan}">
                         [[${row.coveragePercentage}]]%
                     </td>
@@ -105,7 +105,7 @@
                     </td>
                     <td th:attr="colspan=${tableConfig.thirdGroupColSpan}">[[${row.response}]]</td>
                     <td>[[${row.exercised}]]</td>
-                    <td th:if="${lite == false}" th:attr="data-color=${row.badgeColor}">
+                    <td th:if="${lite == false}">
                         <span class="capitalize px-4 py-1.5 font-medium rounded-lg whitespace-nowrap" th:classappend="'bg-' + ${row.badgeColor} + '-300'">
                             [[${row.result}]]
                         </span>

@@ -6,8 +6,8 @@ const extractValuesFromTableRow = (tableRow) => {
     secondGroup: values[2].trim(),
     thirdGroup: values[3],
     exercised: Number(values[4]),
-    result: values[5].trim(),
-    color: tableRow.lastElementChild.getAttribute("data-color"),
+    result: values[5]?.trim() || tableRow.getAttribute("data-result") || "Unknown",
+    color: tableRow.getAttribute("data-color"),
     type: tableRow.getAttribute("data-type"),
   };
 };

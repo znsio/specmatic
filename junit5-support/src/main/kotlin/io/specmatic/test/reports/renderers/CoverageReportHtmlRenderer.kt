@@ -1,5 +1,6 @@
 package io.specmatic.test.reports.renderers
 
+import io.specmatic.core.ReportFormatter
 import io.specmatic.core.ReportFormatterType
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
@@ -34,7 +35,7 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
 
         val reportData = HtmlReportData(
             totalCoveragePercentage = report.totalCoveragePercentage, actuatorEnabled = actuatorEnabled,
-            tableRows = makeTableRows(report),
+            tableRows = makeTableRows(report, htmlReportConfiguration),
             scenarioData = makeScenarioData(report), totalTestDuration = getTotalDuration(report)
         )
 
@@ -56,8 +57,13 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
         return props.getProperty("version")
     }
 
-    private fun makeTableRows(report: OpenAPICoverageConsoleReport): List<TableRow> {
-        return report.getGroupedCoverageRows().flatMap { (_, methodGroup) ->
+    private fun makeTableRows(report: OpenAPICoverageConsoleReport, htmlReportConfiguration: ReportFormatter): List<TableRow> {
+        val updatedCoverageRows = when(htmlReportConfiguration.lite) {
+            true -> report.coverageRows.filter { it.count.toInt() > 0 }
+            else -> report.coverageRows
+        }
+
+        return report.getGroupedCoverageRows(updatedCoverageRows).flatMap { (_, methodGroup) ->
             methodGroup.flatMap { (_, statusGroup) ->
                 statusGroup.flatMap { (_, coverageRows) ->
                     coverageRows.map {
@@ -86,7 +92,7 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
     private fun makeScenarioData(report: OpenAPICoverageConsoleReport): Map<String, Map<String, Map<String, List<ScenarioData>>>> {
         val testData: MutableMap<String, MutableMap<String, MutableMap<String, MutableList<ScenarioData>>>> = mutableMapOf()
 
-        for ((path, methodGroup) in report.getGroupedTestResultRecords()) {
+        for ((path, methodGroup) in report.getGroupedTestResultRecords(report.testResultRecords)) {
             for ((method, statusGroup) in methodGroup) {
                 val methodMap = testData.getOrPut(path) { mutableMapOf() }
 

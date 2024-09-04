@@ -47,6 +47,8 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         val templateVariables = mapOf(
             "pageTitle" to reportFormat.title,
             "reportHeading" to reportFormat.heading,
+            "logo" to reportFormat.logo,
+            "logoAltText" to reportFormat.logoAltText,
             "summaryResult" to if (testCriteria && successCriteria) "approved" else "rejected",
             "totalCoverage" to reportData.totalCoveragePercentage,
             "totalSuccess" to totalSuccess,

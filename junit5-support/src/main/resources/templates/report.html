@@ -15,7 +15,7 @@
 <body class="flex flex-col min-h-screen gap-3 p-4 pb-0 font-mono">
     <header class="border-2 shadow-md print:shadow-none">
         <div class="flex items-center justify-between p-4" id="banner">
-            <img src="assets/specmatic-logo.svg" alt="Specmatic" class="w-64 h-14">
+            <img th:attr="src=${logo},alt=${logoAltText}" class="w-64 h-14">
             <h2 class="text-3xl font-medium font-roboto">[[${reportHeading}]]</h2>
             <div class="w-64 text-right print:hidden">
                 <button class="p-2 duration-100 border-2 active:scale-105 hover:border-blue-500" id="downloadButton">

@@ -24,7 +24,7 @@
             </div>
         </div>
         <div id="summary" class="flex items-center justify-between gap-5 p-1 border-2" th:classappend="'bg-' + ${summaryResult}" data-panel="table">
-            <div class="flex flex-col ml-2 print:items-center print:gap-2" id="totalCoverage">
+            <div th:if="${lite == false}" class="flex flex-col ml-2 print:items-center print:gap-2" id="totalCoverage">
                 <p class="text-black/50 whitespace-nowrap">API Coverage</p>
                 <span class="text-center text-3xl font-bold" th:classappend="${summaryResult}">[[${totalCoverage}]]%</span>
             </div>
@@ -89,7 +89,7 @@
                     <td th:attr="colspan=${tableConfig.secondGroupColSpan}" th:text="${tableConfig.secondGroupName}"></td>
                     <td th:attr="colspan=${tableConfig.thirdGroupColSpan}" th:text="${tableConfig.thirdGroupName}"></td>
                     <td>Exercised</td>
-                    <td>Result</td>
+                    <td th:if="${lite == false}">Result</td>
                 </tr>
             </thead>
             <tbody>
@@ -105,7 +105,7 @@
                     </td>
                     <td th:attr="colspan=${tableConfig.thirdGroupColSpan}">[[${row.response}]]</td>
                     <td>[[${row.exercised}]]</td>
-                    <td th:attr="data-color=${row.badgeColor}">
+                    <td th:if="${lite == false}" th:attr="data-color=${row.badgeColor}">
                         <span class="capitalize px-4 py-1.5 font-medium rounded-lg whitespace-nowrap" th:classappend="'bg-' + ${row.badgeColor} + '-300'">
                             [[${row.result}]]
                         </span>

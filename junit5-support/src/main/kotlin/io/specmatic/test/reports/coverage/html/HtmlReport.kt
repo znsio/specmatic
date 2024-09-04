@@ -45,6 +45,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         val updatedTableRows = updateTableRows(reportData.tableRows)
 
         val templateVariables = mapOf(
+            "lite" to reportFormat.lite,
             "pageTitle" to reportFormat.title,
             "reportHeading" to reportFormat.heading,
             "logo" to reportFormat.logo,

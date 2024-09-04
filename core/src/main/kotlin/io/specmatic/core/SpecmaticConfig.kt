@@ -191,6 +191,8 @@ data class ReportFormatter(
     var type: ReportFormatterType = ReportFormatterType.TEXT,
     val layout: ReportFormatterLayout = ReportFormatterLayout.TABLE,
     val title: String = "Specmatic Report",
+    val logo: String = "assets/specmatic-logo.svg",
+    val logoAltText: String = "Specmatic",
     val heading: String = "Contract Test Results",
     val outputDirectory: String = "./build/reports/specmatic/html"
 )

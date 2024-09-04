@@ -261,6 +261,38 @@ internal class ProxyTest {
     }
 
     @Test
+    fun `should dump the examples and spec if the specmatic proxy dump endpoint is hit`() {
+        HttpStub(simpleFeature).use {
+            Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
+                val restProxy = java.net.Proxy(java.net.Proxy.Type.HTTP, InetSocketAddress("localhost", 9001))
+                val requestFactory = SimpleClientHttpRequestFactory()
+                requestFactory.setProxy(restProxy)
+                val client = RestTemplate(requestFactory)
+                client.postForEntity("http://localhost:9000/multiply", "10", String::class.java)
+
+                val response = client.postForEntity<String>("http://localhost:9001/_specmatic/proxy/dump")
+
+                assertThat(response.statusCodeValue).isEqualTo(202)
+                assertThat(response.body).isEqualTo("Dump process of spec and examples has started in the background")
+
+                Thread.sleep(3000)
+                assertThat(fakeFileWriter.receivedContract?.trim()).startsWith("openapi:")
+                assertThatCode {
+                    OpenApiSpecification.fromYAML(
+                        fakeFileWriter.receivedContract!!,
+                        ""
+                    )
+                }.doesNotThrowAnyException()
+                assertThatCode { parsedJSON(fakeFileWriter.receivedStub ?: "") }.doesNotThrowAnyException()
+                assertThat(fakeFileWriter.receivedPaths.toList()).contains(
+                    "proxy_generated.yaml",
+                    "multiply_POST_200_1.json"
+                )
+            }
+        }
+    }
+
+    @Test
     fun `should not timeout if custom timeout is greater than backend service delay`() {
         HttpStub(simpleFeature).use { fake ->
             val expectation = """ {

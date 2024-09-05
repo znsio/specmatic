@@ -1,37 +1,13 @@
 package io.specmatic.test
 
 import io.specmatic.core.TestResult
-import io.specmatic.test.ApiCoverageReportInputTest.Companion.CONFIG_FILE_PATH
 import io.specmatic.test.reports.coverage.Endpoint
-import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
-import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
+import io.specmatic.test.reports.coverage.ResultStatistics
 import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
 import io.specmatic.test.reports.coverage.console.Remarks
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class ApiCoverageReportTest {
-
-    companion object {
-        private fun generateCoverageReport(
-            testResultRecords: MutableList<TestResultRecord>,
-            allEndpoints: MutableList<Endpoint>,
-            applicationAPIS: MutableList<API>? = null,
-        ): OpenAPICoverageConsoleReport {
-            if (applicationAPIS != null) {
-                return OpenApiCoverageReportInput(
-                    CONFIG_FILE_PATH,
-                    testResultRecords,
-                    applicationAPIS,
-                    allEndpoints = allEndpoints,
-                    endpointsAPISet = true
-                ).generate()
-            }
-            return OpenApiCoverageReportInput(
-                CONFIG_FILE_PATH, testResultRecords, allEndpoints = allEndpoints
-            ).generate()
-        }
-    }
 
     @Test
     fun `GET 200 in spec not implemented with actuator`() {
@@ -42,19 +18,18 @@ class ApiCoverageReportTest {
         val testResultRecords = mutableListOf(
             TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.NotImplemented),
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
-                ),
-                apiCoverageReport.testResultRecords,
-                apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime,
-                totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.NotImplemented),
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -67,21 +42,19 @@ class ApiCoverageReportTest {
             TestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
             TestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.NotImplemented),
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.NotImplemented, showPath = false, showMethod = false),
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.Missed, showPath = false, showMethod = false)
-                ),
-                apiCoverageReport.testResultRecords,
-                apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime,
-                totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
-            )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
+        )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.NotImplemented),
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.NotImplemented, showPath = false, showMethod = false),
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.Missed, showPath = false, showMethod = false)
         )
 
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -89,19 +62,18 @@ class ApiCoverageReportTest {
         val endpointsInSpec = mutableListOf(Endpoint("/order/{id}", "GET", 200))
         val testResultRecords =
             mutableListOf(TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404))
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
-                ),
-                apiCoverageReport.testResultRecords,
-                apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime,
-                totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -113,17 +85,19 @@ class ApiCoverageReportTest {
             TestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
             TestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.Missed, showPath = false, showMethod = false)
-                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.Missed, showPath = false, showMethod = false)
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -135,16 +109,18 @@ class ApiCoverageReportTest {
         val testResultRecords = mutableListOf(
             TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.NotImplemented),
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 1
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.NotImplemented),
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false)
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 1
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -159,18 +135,19 @@ class ApiCoverageReportTest {
             TestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
             TestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIS)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIS)
 
-
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.NotImplemented),
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.NotImplemented, showPath = false, showMethod = false),
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 1
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.NotImplemented),
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.NotImplemented, showPath = false, showMethod = false),
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 1
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -181,16 +158,18 @@ class ApiCoverageReportTest {
         val testResultRecords = mutableListOf(
             TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount =  0, notImplementedAPICount =  0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount =  0
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -204,17 +183,19 @@ class ApiCoverageReportTest {
             TestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
             TestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount =  0
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -228,17 +209,18 @@ class ApiCoverageReportTest {
         val testResultRecords = mutableListOf(
             TestResultRecord("/order/{id}", "GET", 200, TestResult.Success, actualResponseStatus = 200)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
-
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords,apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -255,18 +237,19 @@ class ApiCoverageReportTest {
             TestResultRecord("/order/{id}", "POST", 201, TestResult.Success, actualResponseStatus = 201),
             TestResultRecord("/order/{id}", "POST", 400, TestResult.Success, actualResponseStatus = 400)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
+        )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
         )
 
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -277,16 +260,18 @@ class ApiCoverageReportTest {
         val testResultRecords = mutableListOf(
             TestResultRecord("/order/{id}", "GET", 200, TestResult.Success, actualResponseStatus = 200)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 400, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords,apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 400, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -300,17 +285,19 @@ class ApiCoverageReportTest {
             TestResultRecord("/order/{id}", "POST", 201, TestResult.Success, actualResponseStatus = 201),
             TestResultRecord("/order/{id}", "POST", 400, TestResult.Success, actualResponseStatus = 400)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
-                    OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
+            OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     // FOLLOWING TESTS ARE BAD REQUEST TESTS FOR GET ENDPOINT
@@ -326,16 +313,18 @@ class ApiCoverageReportTest {
         val testResultRecords = mutableListOf(
             TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -346,16 +335,18 @@ class ApiCoverageReportTest {
         val testResultRecords = mutableListOf(
             TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 0
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -369,16 +360,18 @@ class ApiCoverageReportTest {
         val testResultRecords = mutableListOf(
             TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -389,16 +382,18 @@ class ApiCoverageReportTest {
         val testResultRecords = mutableListOf(
             TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     // FOLLOWING TESTS ARE FOR INVALID REMARK (Actuator Doesn't Matter)
@@ -413,16 +408,18 @@ class ApiCoverageReportTest {
         val testResultRecords = mutableListOf(
             TestResultRecord("/orders", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
-        assertThat(apiCoverageReport).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 50, Remarks.NotImplemented),
-                    OpenApiCoverageConsoleRow("GET", "/orders", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 50, Remarks.NotImplemented),
+            OpenApiCoverageConsoleRow("GET", "/orders", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -434,18 +431,18 @@ class ApiCoverageReportTest {
         val testResultRecords = mutableListOf(
             TestResultRecord("/orders", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
-        assertThat(
-            apiCoverageReport
-        ).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 50, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/orders", 404, 0, 50, Remarks.Invalid, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageConsoleRow("GET", "/orders", 404, 0, 50, Remarks.Invalid, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 
     @Test
@@ -453,24 +450,24 @@ class ApiCoverageReportTest {
         val endpointsInSpec = mutableListOf(
             Endpoint("/orders", "GET", 200), Endpoint("/orders", "GET", 404)
         )
-        val applicationAPIs = mutableListOf<API>(
+        val applicationAPIs = mutableListOf(
             API("GET", "/orders")
         )
 
         val testResultRecords = mutableListOf(
             TestResultRecord("/orders", "GET", 200, TestResult.Success, actualResponseStatus = 200)
         )
-        val apiCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
+        val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
-        assertThat(
-            apiCoverageReport
-        ).isEqualTo(
-            OpenAPICoverageConsoleReport(
-                listOf(
-                    OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 50, Remarks.Covered),
-                    OpenApiCoverageConsoleRow("GET", "/orders", 404, 0, 50, Remarks.Invalid, showPath = false, showMethod = false),
-                ), apiCoverageReport.testResultRecords, apiCoverageReport.testsStartTime, apiCoverageReport.testsEndTime, totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0, partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
-            )
+        val expectedCoverageRows = listOf(
+            OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageConsoleRow("GET", "/orders", 404, 0, 50, Remarks.Invalid, showPath = false, showMethod = false),
         )
+        val expectedResultStatistics = ResultStatistics(
+            totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
+            partiallyMissedEndpointsCount = 0, partiallyNotImplementedAPICount = 0
+        )
+
+        assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
     }
 }

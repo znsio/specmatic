@@ -14,6 +14,7 @@ class Flags {
 
         const val SPECMATIC_PRETTY_PRINT = "SPECMATIC_PRETTY_PRINT"
         const val EXAMPLE_DIRECTORIES = "EXAMPLE_DIRECTORIES"
+        const val SPECMATIC_EXCLUDED_ENDPOINTS = "SPECMATIC_EXCLUDED_ENDPOINTS"
 
         fun getStringValue(flagName: String): String? = System.getenv(flagName) ?: System.getProperty(flagName)
 

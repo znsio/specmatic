@@ -3,10 +3,14 @@ package io.specmatic.test
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
+import io.specmatic.core.log.CurrentDate
 import io.specmatic.core.log.ignoreLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.*
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_EXCLUDED_ENDPOINTS
+import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
+import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
@@ -40,7 +44,7 @@ interface ContractTestStatisticsMBean {
 }
 
 class ContractTestStatistics : ContractTestStatisticsMBean {
-    override fun testsExecuted(): Int = SpecmaticJUnitSupport.openApiCoverageReportInput.testResultRecords.size
+    override fun testsExecuted(): Int = SpecmaticJUnitSupport.getTotalTestCount()
 }
 
 @Serializable
@@ -68,15 +72,27 @@ open class SpecmaticJUnitSupport {
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfig: SpecmaticConfig? = null
-        val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
+
+        private val testResultRecords: MutableList<TestResultRecord> = mutableListOf()
+        private val endpoints: MutableList<Endpoint> = mutableListOf()
+        private val applicationAPIs: MutableList<API> = mutableListOf()
+        private val testStartTime: CurrentDate = CurrentDate()
 
         private val threads: Vector<String> = Vector<String>()
 
         @AfterAll
         @JvmStatic
         fun report() {
-            val reportProcessors = listOf(OpenApiCoverageReportProcessor(openApiCoverageReportInput))
             val reportConfiguration = getReportConfiguration()
+            val coverageReportInput = OpenApiCoverageReportInput(
+                configFilePath = getConfigFileWithAbsolutePath(),
+                testResultRecords = testResultRecords, applicationAPIs = applicationAPIs,
+                excludedAPIs = reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints.plus(excludedEndpointsFromEnv()),
+                allEndpoints = endpoints, endpointsAPISet = getBooleanValue(ENDPOINTS_API),
+                testStartTime = testStartTime
+            )
+
+            val reportProcessors = listOf(OpenApiCoverageReportProcessor(coverageReportInput))
             val config = specmaticConfig?.copy(report = reportConfiguration) ?: SpecmaticConfig(report = reportConfiguration)
 
             reportProcessors.forEach { it.process(config) }
@@ -118,53 +134,53 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        fun queryActuator() {
+        fun queryActuator(): List<API> {
             val endpointsAPI = System.getProperty(ENDPOINTS_API)
 
-            if(endpointsAPI != null) {
-                val request = HttpRequest("GET")
+            if (endpointsAPI == null) {
+                logger.log("Endpoints API not found, cannot calculate actual coverage")
+                return emptyList()
+            }
 
-                val response = HttpClient(endpointsAPI, log = ignoreLog).execute(request)
+            val request = HttpRequest("GET")
+            val response = HttpClient(endpointsAPI, log = ignoreLog).execute(request)
+            val endpointData = response.body as JSONObjectValue
 
-                logger.debug(response.toLogString())
+            logger.debug(response.toLogString())
+            return endpointData.getJSONObject("contexts").entries.flatMap { entry ->
+                val mappings: JSONArrayValue =
+                    (entry.value as JSONObjectValue).findFirstChildByPath("mappings.dispatcherServlets.dispatcherServlet") as JSONArrayValue
+                mappings.list.map { it as JSONObjectValue }.filter {
+                    it.findFirstChildByPath("details.handlerMethod.className")?.toStringLiteral()
+                        ?.contains("springframework") != true
+                }.flatMap {
+                    val methods: JSONArrayValue? =
+                        it.findFirstChildByPath("details.requestMappingConditions.methods") as JSONArrayValue?
+                    val paths: JSONArrayValue? =
+                        it.findFirstChildByPath("details.requestMappingConditions.patterns") as JSONArrayValue?
 
-                openApiCoverageReportInput.setEndpointsAPIFlag(true)
-
-                val endpointData = response.body as JSONObjectValue
-                val apis: List<API> = endpointData.getJSONObject("contexts").entries.flatMap { entry ->
-                    val mappings: JSONArrayValue =
-                        (entry.value as JSONObjectValue).findFirstChildByPath("mappings.dispatcherServlets.dispatcherServlet") as JSONArrayValue
-                    mappings.list.map { it as JSONObjectValue }.filter {
-                        it.findFirstChildByPath("details.handlerMethod.className")?.toStringLiteral()
-                            ?.contains("springframework") != true
-                    }.flatMap {
-                        val methods: JSONArrayValue? =
-                            it.findFirstChildByPath("details.requestMappingConditions.methods") as JSONArrayValue?
-                        val paths: JSONArrayValue? =
-                            it.findFirstChildByPath("details.requestMappingConditions.patterns") as JSONArrayValue?
-
-                        if(methods != null && paths != null) {
-                            methods.list.flatMap { method ->
-                                paths.list.map { path ->
-                                    API(method.toStringLiteral(), path.toStringLiteral())
-                                }
+                    if(methods != null && paths != null) {
+                        methods.list.flatMap { method ->
+                            paths.list.map { path ->
+                                API(method.toStringLiteral(), path.toStringLiteral())
                             }
-                        } else {
-                            emptyList()
                         }
+                    } else {
+                        emptyList()
                     }
                 }
-
-                openApiCoverageReportInput.addAPIs(apis)
-
-            } else {
-                logger.log("Endpoints API not found, cannot calculate actual coverage")
             }
         }
 
         val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: getConfigFileName()
 
         private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
+
+        private fun excludedEndpointsFromEnv() = getStringValue(SPECMATIC_EXCLUDED_ENDPOINTS)?.let { excludedEndpoints ->
+            excludedEndpoints.split(",").map { it.trim() }
+        } ?: emptyList()
+
+        fun getTotalTestCount(): Int = testResultRecords.size
     }
 
     private fun getEnvConfig(envName: String?): JSONObjectValue {
@@ -279,7 +295,7 @@ open class SpecmaticJUnitSupport {
                     Pair(tests, endpoints)
                 }
             }
-            openApiCoverageReportInput.addEndpoints(allEndpoints)
+            endpoints.addAll(allEndpoints)
             selectTestsToRun(testScenarios, filterName, filterNotName) { it.testDescription() }
         } catch(e: ContractException) {
             return loadExceptionAsTestError(e)
@@ -309,7 +325,8 @@ open class SpecmaticJUnitSupport {
         timeoutInMilliseconds: Long
     ): Stream<DynamicTest> {
         try {
-            queryActuator()
+            val applicationApiList = queryActuator()
+            applicationAPIs.addAll(applicationApiList)
         } catch (exception: Throwable) {
             logger.log(exception, "Failed to query actuator with error")
         }
@@ -347,7 +364,7 @@ open class SpecmaticJUnitSupport {
                 } finally {
                     if (testResult != null) {
                         val (result, response) = testResult
-                        contractTest.testResultRecord(result, response)?.let { testREsultRecord -> openApiCoverageReportInput.addTestReportRecords(testREsultRecord) }
+                        contractTest.testResultRecord(result, response)?.let { testResultRecord -> testResultRecords.add(testResultRecord) }
                     }
                 }
             }

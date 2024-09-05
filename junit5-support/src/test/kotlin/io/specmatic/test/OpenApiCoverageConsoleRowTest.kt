@@ -24,15 +24,15 @@ class OpenApiCoverageConsoleRowTest {
         val path  = "/route1"
         val coverageRowString = OpenApiCoverageConsoleRow("GET", path, 200, 1, 100, Remarks.Covered).toRowString(
             reportColumns
-        )
+)
         println(coverageRowString)
         assertThat(coverageRowString).isEqualTo("| 100%     | /route1 | GET    | 200      | 1          | covered |")
     }
 
     @Test
-    fun `test renders path, method, response, count with coverage percentage blank for sub level row of covered endpoint`() {
+    fun `test renders method, response, count with coverage percentage and path blank for sub level row of covered endpoint`() {
         val path  = "/route1"
-        val coverageRowString = OpenApiCoverageConsoleRow("POST", "", 200, 1, 0, Remarks.Missed, showPath = false).toRowString(
+        val coverageRowString = OpenApiCoverageConsoleRow("POST", path, 200, 1, 0, Remarks.Missed, showPath = false).toRowString(
             reportColumns
         )
         println(coverageRowString)
@@ -42,41 +42,51 @@ class OpenApiCoverageConsoleRowTest {
     @Test
     fun `test renders coverage percentage, path, method, with response, count for top level row of missed endpoint`() {
         val path  = "/route1"
-        val coverageRowString = OpenApiCoverageConsoleRow("GET", path, 0, 0, 0, Remarks.Missed).toRowString(
+        val coverageRowString = OpenApiCoverageConsoleRow("GET", path, 200, 0, 0, Remarks.Missed).toRowString(
             reportColumns
         )
         println(coverageRowString)
-        assertThat(coverageRowString).isEqualTo("| 0%       | /route1 | GET    | 0        | 0          | missing in spec |")
+        assertThat(coverageRowString).isEqualTo("| 0%       | /route1 | GET    | 200      | 0          | missing in spec |")
     }
 
 
     @Test
     fun `test renders coverage percentage, path, method, with response, count for sub level row of missed endpoint`() {
         val path  = "/route1"
-        val coverageRowString = OpenApiCoverageConsoleRow("POST", "/route1", 0, 1, 0, Remarks.Missed, showPath = false).toRowString(
+        val coverageRowString = OpenApiCoverageConsoleRow("POST", path, 200, 1, 0, Remarks.Missed, showPath = false).toRowString(
             reportColumns
         )
         println(coverageRowString)
-        assertThat(coverageRowString).isEqualTo("|          |         | POST   | 0        | 1          | missing in spec |")
+        assertThat(coverageRowString).isEqualTo("|          |         | POST   | 200      | 1          | missing in spec |")
     }
 
     @Test
     fun `test renders coverage percentage, path, method, with response, count for top level row of not implemented endpoint`() {
         val path  = "/route1"
-        val coverageRowString = OpenApiCoverageConsoleRow("GET", path, 0, 0, 0, Remarks.NotImplemented).toRowString(
+        val coverageRowString = OpenApiCoverageConsoleRow("GET", path, 200, 0, 0, Remarks.NotImplemented).toRowString(
             reportColumns
         )
         println(coverageRowString)
-        assertThat(coverageRowString).isEqualTo("| 0%       | /route1 | GET    | 0        | 0          | not implemented |")
+        assertThat(coverageRowString).isEqualTo("| 0%       | /route1 | GET    | 200      | 0          | not implemented |")
     }
 
     @Test
     fun `test renders coverage percentage, path, method, with response, count for sub level row of not implemented endpoint`() {
         val path  = "/route1"
-        val coverageRowString = OpenApiCoverageConsoleRow("GET", "/route1", 200, 0, 0, Remarks.NotImplemented, showPath = false).toRowString(
+        val coverageRowString = OpenApiCoverageConsoleRow("GET", path, 200, 0, 0, Remarks.NotImplemented, showPath = false).toRowString(
             reportColumns
         )
         println(coverageRowString)
         assertThat(coverageRowString).isEqualTo("|          |         | GET    | 200      | 0          | not implemented |")
+    }
+
+    @Test
+    fun `test should render response status of zero as empty string`() {
+        val path = "/route1"
+        val coverageRowString = OpenApiCoverageConsoleRow("GET", path, 0, 0, 0, Remarks.NotImplemented, showPath = false).toRowString(
+            reportColumns
+        )
+        println(coverageRowString)
+        assertThat(coverageRowString).isEqualTo("|          |         | GET    |          | 0          | not implemented |")
     }
 }

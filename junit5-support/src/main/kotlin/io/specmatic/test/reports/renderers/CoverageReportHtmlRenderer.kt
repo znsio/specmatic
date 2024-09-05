@@ -4,7 +4,6 @@ import io.specmatic.core.ReportFormatterType
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger
-import io.specmatic.test.SpecmaticJUnitSupport
 import io.specmatic.test.TestInteractionsLog.displayName
 import io.specmatic.test.TestInteractionsLog.duration
 import io.specmatic.test.TestResultRecord
@@ -33,14 +32,14 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
 
         val reportData = HtmlReportData(
             totalCoveragePercentage = report.totalCoveragePercentage, tableRows = makeTableRows(report, htmlReportConfiguration),
-            scenarioData = makeScenarioData(report), totalTestDuration = report.totalTestDuration()
+            scenarioData = makeScenarioData(report), totalTestDuration = report.getTotalDuration()
         )
 
         val htmlReportInformation = HtmlReportInformation(
             reportFormat = htmlReportConfiguration, successCriteria = openApiSuccessCriteria,
             specmaticImplementation = "OpenAPI", specmaticVersion = getSpecmaticVersion(),
             tableColumns = tableColumns, reportData = reportData, specmaticConfig = specmaticConfig,
-            sutInfo = SutInfo(host = host, port = port, actuatorEnabled = actuatorEnabled, mainGroupCount = report.totalPaths())
+            sutInfo = SutInfo(host = host, port = port, actuatorEnabled = actuatorEnabled, mainGroupCount = report.totalPaths)
         )
 
         val htmlFile = HtmlReport(htmlReportInformation).generate()

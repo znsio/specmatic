@@ -30,13 +30,16 @@ data class OpenApiCoverageConsoleRow(
     private val formattedMethodName: String
         get() = if (showMethod) method else ""
 
+    private val formattedResponseStatus: String
+        get() = if (responseStatus.toInt() != 0) responseStatus else ""
+
     override fun toRowString(tableColumns: List<ReportColumn>): String {
         return tableColumns.joinToString(separator = " | ", postfix = " |", prefix = "| ") { column ->
             val value = when (column.name) {
                 "coverage" -> formattedCoveragePercentage
                 "path" -> formattedPathName
                 "method" -> formattedMethodName
-                "response" -> responseStatus
+                "response" -> formattedResponseStatus
                 "#exercised" -> count
                 "result" -> remarks.toString()
                 else -> throw Exception("Unknown column name: ${column.name}")

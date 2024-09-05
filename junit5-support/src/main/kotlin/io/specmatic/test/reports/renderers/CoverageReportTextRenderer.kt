@@ -10,26 +10,27 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageConsoleReport> {
         val textReportGenerator = ConsoleReport(report.coverageRows, makeReportColumns(report), makeFooter(report))
         val coveredAPIsTable = "${System.lineSeparator()}${textReportGenerator.generate()}"
 
+        val statistics = report.statistics
         val missingAndNotImplementedAPIsMessageRows:MutableList<String> = mutableListOf()
 
-        if(report.missedEndpointsCount > 0) {
-            val missedPaths = pluralisePath(report.missedEndpointsCount)
-            missingAndNotImplementedAPIsMessageRows.add("$missedPaths found in the app ${isOrAre(report.missedEndpointsCount)} not documented in the spec.")
+        if(statistics.missedEndpointsCount > 0) {
+            val missedPaths = pluralisePath(statistics.missedEndpointsCount)
+            missingAndNotImplementedAPIsMessageRows.add("$missedPaths found in the app ${isOrAre(statistics.missedEndpointsCount)} not documented in the spec.")
         }
 
-        if(report.partiallyMissedEndpointsCount > 0) {
-            val partiallyMissedPaths = pluralisePath(report.partiallyMissedEndpointsCount)
-            missingAndNotImplementedAPIsMessageRows.add("$partiallyMissedPaths found in the app ${isOrAre(report.partiallyMissedEndpointsCount)} partially documented in the spec.")
+        if(statistics.partiallyMissedEndpointsCount > 0) {
+            val partiallyMissedPaths = pluralisePath(statistics.partiallyMissedEndpointsCount)
+            missingAndNotImplementedAPIsMessageRows.add("$partiallyMissedPaths found in the app ${isOrAre(statistics.partiallyMissedEndpointsCount)} partially documented in the spec.")
         }
 
-        if(report.notImplementedAPICount > 0) {
-            val notImplementedPaths = pluralisePath(report.notImplementedAPICount)
-            missingAndNotImplementedAPIsMessageRows.add("$notImplementedPaths found in the spec ${isOrAre(report.notImplementedAPICount)} not implemented.")
+        if(statistics.notImplementedAPICount > 0) {
+            val notImplementedPaths = pluralisePath(statistics.notImplementedAPICount)
+            missingAndNotImplementedAPIsMessageRows.add("$notImplementedPaths found in the spec ${isOrAre(statistics.notImplementedAPICount)} not implemented.")
         }
 
-        if(report.partiallyNotImplementedAPICount > 0) {
-            val partiallyNotImplementedPaths = pluralisePath(report.partiallyNotImplementedAPICount)
-            missingAndNotImplementedAPIsMessageRows.add("$partiallyNotImplementedPaths found in the spec ${isOrAre(report.partiallyNotImplementedAPICount)} partially implemented.")
+        if(statistics.partiallyNotImplementedAPICount > 0) {
+            val partiallyNotImplementedPaths = pluralisePath(statistics.partiallyNotImplementedAPICount)
+            missingAndNotImplementedAPIsMessageRows.add("$partiallyNotImplementedPaths found in the spec ${isOrAre(statistics.partiallyNotImplementedAPICount)} partially implemented.")
         }
 
         return coveredAPIsTable + System.lineSeparator()  + missingAndNotImplementedAPIsMessageRows.joinToString(System.lineSeparator()) + System.lineSeparator()
@@ -59,7 +60,7 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageConsoleReport> {
     }
 
     private fun makeFooter(report: OpenAPICoverageConsoleReport): String {
-        return "${report.totalCoveragePercentage}% API Coverage reported from ${report.totalEndpointsCount} Paths"
+        return "${report.totalCoveragePercentage}% API Coverage reported from ${report.statistics.totalEndpointsCount} Paths"
     }
 
 }

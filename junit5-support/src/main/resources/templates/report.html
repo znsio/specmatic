@@ -69,7 +69,7 @@
                 <img th:src="'assets/mark-' + ${summaryResult} + '.svg'" alt="mark" class="absolute inset-0 z-10 mx-auto my-auto size-14">
             </div>
         </div>
-        <div id="additional-info" class="p-2 text-sm">
+        <div th:if="${lite == false}" id="additional-info" class="p-2 text-sm">
             <ol class="flex justify-between">
                 <li>
                     <p>Actuator: <span class="font-semibold">[[${actuatorEnabled == true ? 'Enabled' : 'Disabled'}]]</span></p>
@@ -84,7 +84,7 @@
         <table id="reports" class="font-mono transition-transform -translate-x-full group-data-[item=table]:translate-x-0 duration-700 min-w-full" data-filter="All">
             <thead>
                 <tr class="font-bold">
-                    <td>Coverage</td>
+                    <td th:if="${lite == false}">Coverage</td>
                     <td th:attr="colspan=${tableConfig.firstGroupColSpan}" th:text="${tableConfig.firstGroupName}"></td>
                     <td th:attr="colspan=${tableConfig.secondGroupColSpan}" th:text="${tableConfig.secondGroupName}"></td>
                     <td th:attr="colspan=${tableConfig.thirdGroupColSpan}" th:text="${tableConfig.thirdGroupName}"></td>
@@ -93,8 +93,8 @@
                 </tr>
             </thead>
             <tbody>
-                <tr th:each="row : ${tableRows}" th:attr="data-type=${row.htmlResult}, data-color=${row.badgeColor}, data-result=${row.result}">
-                    <td th:classappend="${row.showFirstGroup ? '' : 'hidden'}" th:attr="rowspan=${row.firstGroupRowSpan}">
+                <tr th:each="row : ${tableRows}" th:attr="data-type=${row.htmlResult}, data-color=${row.badgeColor}, data-result=${row.result}, data-coverage=${row.coveragePercentage}">
+                    <td th:if="${lite == false}" th:classappend="${row.showFirstGroup ? '' : 'hidden'}" th:attr="rowspan=${row.firstGroupRowSpan}">
                         [[${row.coveragePercentage}]]%
                     </td>
                     <td th:classappend="${row.showFirstGroup ? '' : 'hidden'}" th:attr="rowspan=${row.firstGroupRowSpan}, data-main=${row.showFirstGroup}, colspan=${tableConfig.firstGroupColSpan}">

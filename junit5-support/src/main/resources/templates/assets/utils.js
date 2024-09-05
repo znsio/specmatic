@@ -1,14 +1,32 @@
 const extractValuesFromTableRow = (tableRow) => {
+  let firstGroup;
+  let secondGroup;
+  let thirdGroup;
+  let exercised;
+
   const values = [...tableRow.children].map((child) => child.textContent);
+
+  if (values.length === 6) {
+    firstGroup = values[1].trim();
+    secondGroup = values[2].trim();
+    thirdGroup = values[3].trim();
+    exercised = Number(values[4]);
+  } else {
+    firstGroup = values[0].trim();
+    secondGroup = values[1].trim();
+    thirdGroup = values[2].trim();
+    exercised = Number(values[3]);
+  }
+
   return {
-    coverage: Number(values[0].trim().slice(0, -1)),
-    firstGroup: values[1].trim(),
-    secondGroup: values[2].trim(),
-    thirdGroup: values[3],
-    exercised: Number(values[4]),
-    result: values[5]?.trim() || tableRow.getAttribute("data-result") || "Unknown",
-    color: tableRow.getAttribute("data-color"),
-    type: tableRow.getAttribute("data-type"),
+      coverage: Number(tableRow.getAttribute("data-coverage")),
+      firstGroup: firstGroup,
+      secondGroup: secondGroup,
+      thirdGroup: thirdGroup,
+      exercised: exercised,
+      result: tableRow.getAttribute("data-result"),
+      color: tableRow.getAttribute("data-color"),
+      type: tableRow.getAttribute("data-type"),
   };
 };
 

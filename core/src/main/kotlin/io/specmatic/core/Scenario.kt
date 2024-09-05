@@ -585,7 +585,23 @@ data class Scenario(
             operationId.requestMethod.equals(method, ignoreCase = true)
                     && operationId.responseStatus == status
                     && httpRequestPattern.matchesPath(operationId.requestPath, patternMatchingResolver).isSuccess()
+                    && matchesRequestContentType(operationId)
+                    && matchesResponseContentType(operationId)
         }
+    }
+
+    private fun matchesResponseContentType(operationId: OpenApiSpecification.OperationIdentifier): Boolean {
+        val exampleResponseContentType = operationId.responseContentType ?: return true
+        val patternResponseContentType = httpResponsePattern.headersPattern.contentType ?: return true
+
+        return exampleResponseContentType == patternResponseContentType
+    }
+
+    private fun matchesRequestContentType(operationId: OpenApiSpecification.OperationIdentifier): Boolean {
+        val exampleRequestContentType = operationId.requestContentType ?: return true
+        val patternRequestContentType = httpRequestPattern.headersPattern.contentType ?: return true
+
+        return exampleRequestContentType == patternRequestContentType
     }
 
     fun resolveSubtitutions(

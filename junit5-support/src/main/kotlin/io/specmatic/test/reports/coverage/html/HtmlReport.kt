@@ -91,7 +91,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
             firstGroup.forEach { (_, secondGroup) ->
                 secondGroup.forEach { (_, scenariosList) ->
                     scenariosList.forEach {
-                        val htmlResult = categorizeResult(it.testResult, it.wip)
+                        val htmlResult = categorizeResult(it)
                         val scenarioDetail = "${it.name} ${htmlResultToDetailPostFix(htmlResult)}"
 
                         it.htmlResult = htmlResult
@@ -148,6 +148,8 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
                 ?: emptyList()
 
         scenarioList.forEach {
+            if (!it.valid) return Pair(HtmlResult.Error, "red")
+
             when (it.htmlResult) {
                 HtmlResult.Failed -> return Pair(HtmlResult.Failed, "red")
                 HtmlResult.Error -> return Pair(HtmlResult.Error, "yellow")
@@ -167,12 +169,14 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         }
     }
 
-    private fun categorizeResult(testResult: TestResult, isWip: Boolean): HtmlResult {
-        return when (testResult) {
+    private fun categorizeResult(scenarioData: ScenarioData): HtmlResult {
+        if (!scenarioData.valid) return HtmlResult.Error
+
+        return when (scenarioData.testResult) {
             TestResult.Success -> HtmlResult.Success
             TestResult.NotCovered -> HtmlResult.Skipped
             TestResult.Error -> HtmlResult.Error
-            else -> if (isWip) HtmlResult.Error else HtmlResult.Failed
+            else -> if (scenarioData.wip) HtmlResult.Error else HtmlResult.Failed
         }
     }
 

@@ -170,7 +170,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
     }
 
     private fun categorizeResult(scenarioData: ScenarioData): HtmlResult {
-        if (!scenarioData.valid) return HtmlResult.Error
+        if (!scenarioData.valid) return HtmlResult.Failed
 
         return when (scenarioData.testResult) {
             TestResult.Success -> HtmlResult.Success

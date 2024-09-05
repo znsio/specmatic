@@ -129,7 +129,11 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
                 }
             }
         }
-        totalTests = totalSuccess + totalFailures + totalErrors + totalSkipped
+
+        totalTests = when (reportFormat.lite) {
+            true ->  totalSuccess + totalFailures + totalErrors
+            else ->  totalSuccess + totalFailures + totalErrors + totalSkipped
+        }
     }
 
     private fun generatedOnTimestamp(): String {

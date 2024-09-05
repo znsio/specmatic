@@ -10,6 +10,7 @@ import io.specmatic.test.TestInteractionsLog.displayName
 import io.specmatic.test.TestInteractionsLog.duration
 import io.specmatic.test.TestResultRecord
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
+import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
 import io.specmatic.test.reports.coverage.html.*
 import java.util.*
 
@@ -59,7 +60,7 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
 
     private fun makeTableRows(report: OpenAPICoverageConsoleReport, htmlReportConfiguration: ReportFormatter): List<TableRow> {
         val updatedCoverageRows = when(htmlReportConfiguration.lite) {
-            true -> report.coverageRows.filter { it.count.toInt() > 0 }
+            true -> reCreateCoverageRowsForLite(report, report.coverageRows)
             else -> report.coverageRows
         }
 
@@ -160,5 +161,31 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
 
     private fun getReportDetail(testResult: TestResultRecord): String {
         return testResult.scenarioResult?.reportString() ?: ""
+    }
+
+    private fun reCreateCoverageRowsForLite(report: OpenAPICoverageConsoleReport, coverageRows: List<OpenApiCoverageConsoleRow>): List<OpenApiCoverageConsoleRow> {
+        val exercisedRows = coverageRows.filter { it.count.toInt() > 0 }
+        val updatedRows = mutableListOf<OpenApiCoverageConsoleRow>()
+
+        report.getGroupedCoverageRows(exercisedRows).forEach { (_, methodGroup) ->
+            val rowGroup = mutableListOf<OpenApiCoverageConsoleRow>()
+
+            methodGroup.forEach { (method, statusGroup) ->
+                statusGroup.forEach { (_, coverageRows) ->
+                    coverageRows.forEach {
+                        if (rowGroup.isEmpty()) {
+                            rowGroup.add(it.copy(showPath = true, showMethod = true))
+                        } else {
+                            val methodExists = rowGroup.any {row ->  row.method == method }
+                            rowGroup.add(it.copy(showPath = false, showMethod = !methodExists))
+                        }
+                    }
+                }
+            }
+
+            updatedRows.addAll(rowGroup)
+        }
+
+        return updatedRows
     }
 }

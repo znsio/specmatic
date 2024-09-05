@@ -148,7 +148,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
                 ?: emptyList()
 
         scenarioList.forEach {
-            if (!it.valid) return Pair(HtmlResult.Error, "red")
+            if (!it.valid) return Pair(it.htmlResult!!, "red")
 
             when (it.htmlResult) {
                 HtmlResult.Failed -> return Pair(HtmlResult.Failed, "red")
@@ -170,8 +170,6 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
     }
 
     private fun categorizeResult(scenarioData: ScenarioData): HtmlResult {
-        if (!scenarioData.valid) return HtmlResult.Failed
-
         return when (scenarioData.testResult) {
             TestResult.Success -> HtmlResult.Success
             TestResult.NotCovered -> HtmlResult.Skipped

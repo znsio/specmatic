@@ -8136,6 +8136,96 @@ components:
         assertThat(results.success()).isTrue()
     }
 
+    @Test
+    fun `when the content types in header and response code match exactly then map them one to one in scenarios rather than exploding`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: '1.0.0'
+              description: |
+                This API allows you to create a new product. The POST /products endpoint 
+                accepts a product name in both plain text and JSON formats, and responds 
+                with the same formats.
+              contact:
+                name: API Support
+                url: https://api.example.com/support
+                email: support@example.com
+
+            servers:
+              - url: https://api.example.com/v1
+                description: Production server
+              - url: https://staging-api.example.com/v1
+                description: Staging server
+            tags:
+              - name: create
+            paths:
+              /products:
+                post:
+                  summary: Create a new product
+                  description: "temp"
+                  tags:
+                    - create
+                  operationId: create-product
+                  requestBody:
+                    required: true
+                    content:
+                      text/plain:
+                        schema:
+                          type: string
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - product_name
+                          properties:
+                            product_name:
+                              type: string
+                  responses:
+                    '200':
+                      description: Successfully created product
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - product_name
+                            properties:
+                              product_name:
+                                type: string
+                    '202':
+                      description: Successfully created product
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                            properties:
+                              id:
+                                type: string
+        """.trimIndent(), "").toFeature()
+
+        assertThat(feature.scenarios.size).isEqualTo(4)
+
+        val requestResponsePairs = feature.scenarios.map {
+            it.httpRequestPattern.headersPattern.contentType to it.httpResponsePattern.headersPattern.contentType
+        }
+
+        val expected = listOf(
+            "text/plain" to "text/plain",
+            "application/json" to "application/json",
+            "text/plain" to "application/json",
+            "application/json" to "application/json",
+        )
+
+        assertThat(requestResponsePairs).isEqualTo(expected)
+
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

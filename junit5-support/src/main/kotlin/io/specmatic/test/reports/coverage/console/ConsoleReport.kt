@@ -1,6 +1,7 @@
 package io.specmatic.test.reports.coverage.console
 
-import kotlin.math.max
+import io.specmatic.test.report.ReportColumn
+import io.specmatic.test.report.interfaces.CoverageRow
 
 class ConsoleReport(
     private val coverageRows: List<CoverageRow>,
@@ -61,16 +62,4 @@ class ConsoleReport(
         val titleSeparator = getTitleSeparator(headerTitleSize)
         return listOf(titleSeparator, footerRow, titleSeparator).joinToString(System.lineSeparator())
     }
-}
-
-data class ReportColumn(
-    val name: String,
-    val columnFormat: String,
-    val maxSizeOfRowInThisColumn: Int
-) {
-    constructor(name: String, maxSizeInThisColumn: Int) : this(
-        name = name,
-        columnFormat = "%-${max(maxSizeInThisColumn, name.length)}s",
-        maxSizeOfRowInThisColumn = max(maxSizeInThisColumn, name.length)
-    )
 }

@@ -1,7 +1,7 @@
 package io.specmatic.test.reports.coverage.json
 
-import io.specmatic.test.TestResultRecord
-import io.specmatic.test.reports.coverage.console.Remarks
+import io.specmatic.test.OpenApiTestResultRecord
+import io.specmatic.test.report.Remarks
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -19,7 +19,7 @@ class OpenApiCoverageJsonRow {
         branch: String?,
         specification: String?,
         serviceType: String?,
-        testResults: List<TestResultRecord>
+        testResults: List<OpenApiTestResultRecord>
     ) {
         this.type = type
         this.repository = repository
@@ -29,7 +29,7 @@ class OpenApiCoverageJsonRow {
         this.operations = buildOpenApiCoverageOperations(testResults)
     }
 
-    private fun buildOpenApiCoverageOperations(testResults: List<TestResultRecord>): List<OpenApiCoverageOperation> =
+    private fun buildOpenApiCoverageOperations(testResults: List<OpenApiTestResultRecord>): List<OpenApiCoverageOperation> =
         testResults.groupBy {
             Triple(it.path, it.method, it.responseStatus)
         }.map { (operationGroup, operationRows) ->

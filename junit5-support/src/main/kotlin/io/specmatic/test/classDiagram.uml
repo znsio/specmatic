@@ -9,7 +9,7 @@
     <node x="-59.0" y="231.0">io.specmatic.test.reports.renderers.ReportRenderer</node>
     <node x="-167.5" y="372.0">io.specmatic.test.reports.renderers.CoverageReportTextRenderer</node>
     <node x="173.66666666666666" y="231.0">io.specmatic.test.SpecmaticJUnitSupport.Companion</node>
-    <node x="-37.0" y="918.7">io.specmatic.test.reports.coverage.console.Remarks</node>
+    <node x="-37.0" y="918.7">io.specmatic.test.report.Remarks</node>
     <node x="46.0" y="300.0">io.specmatic.test.reports.OpenApiCoverageReportProcessor</node>
     <node x="403.0" y="-14.0">io.specmatic.test.ResultAssert</node>
     <node x="427.33333333333337" y="918.7">io.specmatic.test.reports.coverage.json.OpenApiCoverageOperation</node>
@@ -20,7 +20,7 @@
     <node x="352.0" y="170.0">io.specmatic.test.SpecmaticJUnitSupport</node>
     <node x="133.0" y="372.0">io.specmatic.test.reports.OpenApiCoverageReportProcessor.Companion</node>
     <node x="468.7222222222223" y="678.7">io.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport</node>
-    <node x="303.1666666666667" y="678.7">io.specmatic.test.reports.coverage.console.Remarks.Companion</node>
+    <node x="303.1666666666667" y="678.7">io.specmatic.test.report.Remarks.Companion</node>
     <node x="-148.0" y="678.7">io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport</node>
   </nodes>
   <notes />
@@ -39,7 +39,7 @@
       <point x="603.2222222222223" y="724.2" />
       <point x="0.0" y="14.0" />
     </edge>
-    <edge source="io.specmatic.test.reports.coverage.OpenApiCoverageReportInput" target="io.specmatic.test.reports.coverage.console.Remarks.Companion" relationship="DEPENDENCY">
+    <edge source="io.specmatic.test.reports.coverage.OpenApiCoverageReportInput" target="io.specmatic.test.report.Remarks.Companion" relationship="DEPENDENCY">
       <point x="-90.0" y="14.0" />
       <point x="486.33333333333337" y="564.7666666666667" />
       <point x="371.5" y="564.7666666666667" />
@@ -76,11 +76,11 @@
       <point x="576.333" y="280.0" />
       <point x="-3.3333333340124227E-4" y="-13.999666666666712" />
     </edge>
-    <edge source="io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow" target="io.specmatic.test.reports.coverage.console.Remarks" relationship="TO_ONE">
+    <edge source="io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow" target="io.specmatic.test.report.Remarks" relationship="TO_ONE">
       <point x="-20.0" y="14.0" />
       <point x="0.0" y="-14.0" />
     </edge>
-    <edge source="io.specmatic.test.reports.coverage.console.Remarks.Companion" target="io.specmatic.test.reports.coverage.console.Remarks" relationship="INNER_CLASS">
+    <edge source="io.specmatic.test.report.Remarks.Companion" target="io.specmatic.test.report.Remarks" relationship="INNER_CLASS">
       <point x="0.0" y="14.0" />
       <point x="370.1666666666667" y="932.7" />
       <point x="57.0" y="0.0" />
@@ -93,7 +93,7 @@
       <point x="0.0" y="-14.0" />
       <point x="0.0" y="14.0" />
     </edge>
-    <edge source="io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport" target="io.specmatic.test.reports.coverage.console.Remarks" relationship="DEPENDENCY">
+    <edge source="io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport" target="io.specmatic.test.report.Remarks" relationship="DEPENDENCY">
       <point x="-156.0" y="14.0" />
       <point x="-136.0" y="932.7" />
       <point x="-57.0" y="0.0" />

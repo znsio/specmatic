@@ -2,8 +2,8 @@ package io.specmatic.test
 
 import io.specmatic.core.TestResult
 import io.specmatic.test.reports.coverage.Endpoint
-import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
-import io.specmatic.test.reports.coverage.console.Remarks
+import io.specmatic.test.reports.coverage.OpenApiCoverageRow
+import io.specmatic.test.report.Remarks
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -18,12 +18,12 @@ class ApiCoverageReportStatusTest {
             API("GET", "/route1")
         )
         val contractTestResults = mutableListOf(
-            TestResultRecord("/route1", "GET", 200, TestResult.Success),
+            OpenApiTestResultRecord("/route1", "GET", 200, TestResult.Success),
         )
         val actualCoverageReport = generateCoverageReport(contractTestResults, endpointsInSpec, applicationAPIs)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered)
+            OpenApiCoverageRow("GET", "/route1", 200, 1, 100, Remarks.Covered)
         )
 
         assertThat(actualCoverageReport.coverageRows).isEqualTo(expectedCoverageRows)
@@ -36,13 +36,13 @@ class ApiCoverageReportStatusTest {
         )
         val applicationAPIs = mutableListOf<API>()
         val contractTestResults = mutableListOf(
-            TestResultRecord("/route1", "GET", 200, TestResult.Success),
+            OpenApiTestResultRecord("/route1", "GET", 200, TestResult.Success),
         )
         val actualCoverageReport = generateCoverageReport(contractTestResults, endpointsInSpec, applicationAPIs)
 
         assertThat(actualCoverageReport.coverageRows).isEqualTo(
             listOf(
-                OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered)
+                OpenApiCoverageRow("GET", "/route1", 200, 1, 100, Remarks.Covered)
             )
         )
     }
@@ -56,14 +56,14 @@ class ApiCoverageReportStatusTest {
             API("GET", "/route1")
         )
         val contractTestResults = mutableListOf(
-            TestResultRecord("/route1", "GET", 200, TestResult.Failed, actualResponseStatus = 400)
+            OpenApiTestResultRecord("/route1", "GET", 200, TestResult.Failed, actualResponseStatus = 400)
         )
         val actualCoverageReport = generateCoverageReport(contractTestResults, endpointsInSpec, applicationAPIs)
 
         assertThat(actualCoverageReport.coverageRows).isEqualTo(
             listOf(
-                OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
-                OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
+                OpenApiCoverageRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
+                OpenApiCoverageRow("GET", "/route1", 400, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
             )
         )
     }
@@ -74,14 +74,14 @@ class ApiCoverageReportStatusTest {
             Endpoint("/route1", "GET", 200)
         )
         val contractTestResults = mutableListOf(
-            TestResultRecord("/route1", "GET", 200, TestResult.Failed, actualResponseStatus = 400),
+            OpenApiTestResultRecord("/route1", "GET", 200, TestResult.Failed, actualResponseStatus = 400),
         )
         val actualCoverageReport = generateCoverageReport(contractTestResults, endpointsInSpec)
 
         assertThat(actualCoverageReport.coverageRows).isEqualTo(
             listOf(
-                OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
-                OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
+                OpenApiCoverageRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
+                OpenApiCoverageRow("GET", "/route1", 400, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
             )
         )
     }
@@ -96,16 +96,16 @@ class ApiCoverageReportStatusTest {
             API("GET", "/route1")
         )
         val contractTestResults = mutableListOf(
-            TestResultRecord("/route1", "GET", 200, TestResult.Success, actualResponseStatus = 200),
-            TestResultRecord("/route2", "GET", 200, TestResult.Failed, actualResponseStatus = 404),
+            OpenApiTestResultRecord("/route1", "GET", 200, TestResult.Success, actualResponseStatus = 200),
+            OpenApiTestResultRecord("/route2", "GET", 200, TestResult.Failed, actualResponseStatus = 404),
         )
         val actualCoverageReport = generateCoverageReport(contractTestResults, endpointsInSpec, applicationAPIs)
 
         assertThat(actualCoverageReport.coverageRows).isEqualTo(
             listOf(
-                OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
-                OpenApiCoverageConsoleRow("GET", "/route2", 200, 1, 50, Remarks.NotImplemented),
-                OpenApiCoverageConsoleRow("GET", "/route2", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
+                OpenApiCoverageRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
+                OpenApiCoverageRow("GET", "/route2", 200, 1, 50, Remarks.NotImplemented),
+                OpenApiCoverageRow("GET", "/route2", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
             )
         )
     }
@@ -120,14 +120,14 @@ class ApiCoverageReportStatusTest {
             API("GET", "/route2")
         )
         val contractTestResults = mutableListOf(
-            TestResultRecord("/route1", "GET", 200, TestResult.Success)
+            OpenApiTestResultRecord("/route1", "GET", 200, TestResult.Success)
         )
         val actualCoverageReport = generateCoverageReport(contractTestResults, endpointsInSpec, applicationAPIs)
 
         assertThat(actualCoverageReport.coverageRows).isEqualTo(
             listOf(
-                OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
-                OpenApiCoverageConsoleRow("GET", "/route2", 0, 0, 0, Remarks.Missed)
+                OpenApiCoverageRow("GET", "/route1", 200, 1, 100, Remarks.Covered),
+                OpenApiCoverageRow("GET", "/route2", 0, 0, 0, Remarks.Missed)
             )
         )
     }
@@ -142,14 +142,14 @@ class ApiCoverageReportStatusTest {
             API("GET", "/route1")
         )
         val contractTestResults = mutableListOf(
-            TestResultRecord("/route1", "GET", 200, TestResult.Success)
+            OpenApiTestResultRecord("/route1", "GET", 200, TestResult.Success)
         )
         val actualCoverageReport = generateCoverageReport(contractTestResults, endpointsInSpec, applicationAPIs)
 
         assertThat(actualCoverageReport.coverageRows).isEqualTo(
             listOf(
-                OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
-                OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false)
+                OpenApiCoverageRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
+                OpenApiCoverageRow("GET", "/route1", 400, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false)
             )
         )
     }

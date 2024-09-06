@@ -2,9 +2,10 @@ package io.specmatic.test
 
 import io.specmatic.core.TestResult
 import io.specmatic.test.reports.coverage.Endpoint
-import io.specmatic.test.reports.coverage.ResultStatistics
-import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
-import io.specmatic.test.reports.coverage.console.Remarks
+import io.specmatic.test.report.ResultStatistics
+import io.specmatic.test.reports.coverage.OpenApiCoverageRow
+import io.specmatic.test.report.Remarks
+import io.specmatic.test.reports.coverage.console.ConsoleReport
 import org.junit.jupiter.api.Test
 
 class ApiCoverageReportTest {
@@ -16,13 +17,13 @@ class ApiCoverageReportTest {
         )
         val applicationAPIs = mutableListOf<API>()
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
+            OpenApiTestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.NotImplemented),
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
+            OpenApiCoverageRow("GET", "/order/{id}", 200, 1, 50, Remarks.NotImplemented),
+            OpenApiCoverageRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -39,8 +40,8 @@ class ApiCoverageReportTest {
         )
         val applicationAPIs = mutableListOf<API>()
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
-            TestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
+            OpenApiTestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
+            OpenApiTestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
@@ -49,9 +50,9 @@ class ApiCoverageReportTest {
             partiallyMissedEndpointsCount = 1, partiallyNotImplementedAPICount = 1
         )
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.NotImplemented),
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.NotImplemented, showPath = false, showMethod = false),
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.Missed, showPath = false, showMethod = false)
+            OpenApiCoverageRow("POST", "/order/{id}", 201, 1, 50, Remarks.NotImplemented),
+            OpenApiCoverageRow("POST", "/order/{id}", 400, 1, 50, Remarks.NotImplemented, showPath = false, showMethod = false),
+            OpenApiCoverageRow("POST", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
         )
 
         assertReportEquals(actualCoverageReport, expectedCoverageRows, expectedResultStatistics)
@@ -61,12 +62,12 @@ class ApiCoverageReportTest {
     fun `GET 200 in spec not implemented without actuator`() {
         val endpointsInSpec = mutableListOf(Endpoint("/order/{id}", "GET", 200))
         val testResultRecords =
-            mutableListOf(TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404))
+            mutableListOf(OpenApiTestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404))
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
+            OpenApiCoverageRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -82,15 +83,15 @@ class ApiCoverageReportTest {
             Endpoint("/order/{id}", "POST", 201), Endpoint("/order/{id}", "POST", 400)
         )
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
-            TestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
+            OpenApiTestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
+            OpenApiTestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.Missed, showPath = false, showMethod = false)
+            OpenApiCoverageRow("POST", "/order/{id}", 201, 1, 50, Remarks.Covered),
+            OpenApiCoverageRow("POST", "/order/{id}", 400, 1, 50, Remarks.Covered, showPath = false, showMethod = false),
+            OpenApiCoverageRow("POST", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -107,13 +108,13 @@ class ApiCoverageReportTest {
         )
         val applicationAPIs = mutableListOf<API>()
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
+            OpenApiTestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.NotImplemented),
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false)
+            OpenApiCoverageRow("GET", "/order/{id}", 200, 1, 50, Remarks.NotImplemented),
+            OpenApiCoverageRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false)
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -132,15 +133,15 @@ class ApiCoverageReportTest {
         )
         val applicationAPIS = mutableListOf<API>()
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
-            TestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
+            OpenApiTestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
+            OpenApiTestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIS)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.NotImplemented),
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.NotImplemented, showPath = false, showMethod = false),
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
+            OpenApiCoverageRow("POST", "/order/{id}", 201, 1, 67, Remarks.NotImplemented),
+            OpenApiCoverageRow("POST", "/order/{id}", 400, 1, 67, Remarks.NotImplemented, showPath = false, showMethod = false),
+            OpenApiCoverageRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -156,13 +157,13 @@ class ApiCoverageReportTest {
             Endpoint("/order/{id}", "GET", 200), Endpoint("/order/{id}", "GET", 404)
         )
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
+            OpenApiTestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
+            OpenApiCoverageRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -180,15 +181,15 @@ class ApiCoverageReportTest {
             Endpoint("/order/{id}", "POST", 404)
         )
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
-            TestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
+            OpenApiTestResultRecord("/order/{id}", "POST", 201, TestResult.Failed, actualResponseStatus = 404),
+            OpenApiTestResultRecord("/order/{id}", "POST", 400, TestResult.Failed, actualResponseStatus = 404)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
+            OpenApiCoverageRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
+            OpenApiCoverageRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
+            OpenApiCoverageRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -207,13 +208,13 @@ class ApiCoverageReportTest {
             API("GET", "/order/{id}")
         )
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "GET", 200, TestResult.Success, actualResponseStatus = 200)
+            OpenApiTestResultRecord("/order/{id}", "GET", 200, TestResult.Success, actualResponseStatus = 200)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
+            OpenApiCoverageRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -234,15 +235,15 @@ class ApiCoverageReportTest {
             API("POST", "/order/{id}")
         )
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "POST", 201, TestResult.Success, actualResponseStatus = 201),
-            TestResultRecord("/order/{id}", "POST", 400, TestResult.Success, actualResponseStatus = 400)
+            OpenApiTestResultRecord("/order/{id}", "POST", 201, TestResult.Success, actualResponseStatus = 201),
+            OpenApiTestResultRecord("/order/{id}", "POST", 400, TestResult.Success, actualResponseStatus = 400)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
+            OpenApiCoverageRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
+            OpenApiCoverageRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
+            OpenApiCoverageRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -258,13 +259,13 @@ class ApiCoverageReportTest {
             Endpoint("/order/{id}", "GET", 200), Endpoint("/order/{id}", "GET", 400)
         )
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "GET", 200, TestResult.Success, actualResponseStatus = 200)
+            OpenApiTestResultRecord("/order/{id}", "GET", 200, TestResult.Success, actualResponseStatus = 200)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 400, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
+            OpenApiCoverageRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageRow("GET", "/order/{id}", 400, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -282,15 +283,15 @@ class ApiCoverageReportTest {
             Endpoint("/order/{id}", "POST", 404)
         )
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "POST", 201, TestResult.Success, actualResponseStatus = 201),
-            TestResultRecord("/order/{id}", "POST", 400, TestResult.Success, actualResponseStatus = 400)
+            OpenApiTestResultRecord("/order/{id}", "POST", 201, TestResult.Success, actualResponseStatus = 201),
+            OpenApiTestResultRecord("/order/{id}", "POST", 400, TestResult.Success, actualResponseStatus = 400)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
-            OpenApiCoverageConsoleRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
+            OpenApiCoverageRow("POST", "/order/{id}", 201, 1, 67, Remarks.Covered),
+            OpenApiCoverageRow("POST", "/order/{id}", 400, 1, 67, Remarks.Covered, showPath = false, showMethod = false),
+            OpenApiCoverageRow("POST", "/order/{id}", 404, 0, 67, Remarks.NotCovered, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -311,13 +312,13 @@ class ApiCoverageReportTest {
             API("GET", "/order/{id}")
         )
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
+            OpenApiTestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
+            OpenApiCoverageRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -333,13 +334,13 @@ class ApiCoverageReportTest {
             Endpoint("/order/{id}", "GET", 200)
         )
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
+            OpenApiTestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
+            OpenApiCoverageRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageRow("GET", "/order/{id}", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -358,13 +359,13 @@ class ApiCoverageReportTest {
             API("GET", "/order/{id}")
         )
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
+            OpenApiTestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
+            OpenApiCoverageRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -380,13 +381,13 @@ class ApiCoverageReportTest {
             Endpoint("/order/{id}", "GET", 200), Endpoint("/order/{id}", "GET", 404)
         )
         val testResultRecords = mutableListOf(
-            TestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
+            OpenApiTestResultRecord("/order/{id}", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
-            OpenApiCoverageConsoleRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
+            OpenApiCoverageRow("GET", "/order/{id}", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageRow("GET", "/order/{id}", 404, 0, 50, Remarks.NotCovered, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -406,13 +407,13 @@ class ApiCoverageReportTest {
         val applicationAPIs = mutableListOf<API>()
 
         val testResultRecords = mutableListOf(
-            TestResultRecord("/orders", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
+            OpenApiTestResultRecord("/orders", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 50, Remarks.NotImplemented),
-            OpenApiCoverageConsoleRow("GET", "/orders", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
+            OpenApiCoverageRow("GET", "/orders", 200, 1, 50, Remarks.NotImplemented),
+            OpenApiCoverageRow("GET", "/orders", 404, 0, 50, Remarks.Missed, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -429,13 +430,13 @@ class ApiCoverageReportTest {
         )
 
         val testResultRecords = mutableListOf(
-            TestResultRecord("/orders", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
+            OpenApiTestResultRecord("/orders", "GET", 200, TestResult.Failed, actualResponseStatus = 404)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 50, Remarks.Covered),
-            OpenApiCoverageConsoleRow("GET", "/orders", 404, 0, 50, Remarks.Invalid, showPath = false, showMethod = false),
+            OpenApiCoverageRow("GET", "/orders", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageRow("GET", "/orders", 404, 0, 50, Remarks.Invalid, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,
@@ -455,13 +456,13 @@ class ApiCoverageReportTest {
         )
 
         val testResultRecords = mutableListOf(
-            TestResultRecord("/orders", "GET", 200, TestResult.Success, actualResponseStatus = 200)
+            OpenApiTestResultRecord("/orders", "GET", 200, TestResult.Success, actualResponseStatus = 200)
         )
         val actualCoverageReport = generateCoverageReport(testResultRecords, endpointsInSpec, applicationAPIs)
 
         val expectedCoverageRows = listOf(
-            OpenApiCoverageConsoleRow("GET", "/orders", 200, 1, 50, Remarks.Covered),
-            OpenApiCoverageConsoleRow("GET", "/orders", 404, 0, 50, Remarks.Invalid, showPath = false, showMethod = false),
+            OpenApiCoverageRow("GET", "/orders", 200, 1, 50, Remarks.Covered),
+            OpenApiCoverageRow("GET", "/orders", 404, 0, 50, Remarks.Invalid, showPath = false, showMethod = false),
         )
         val expectedResultStatistics = ResultStatistics(
             totalEndpointsCount = 1, missedEndpointsCount = 0, notImplementedAPICount = 0,

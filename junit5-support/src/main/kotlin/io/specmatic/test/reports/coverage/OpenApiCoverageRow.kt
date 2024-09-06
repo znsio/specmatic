@@ -1,12 +1,18 @@
-package io.specmatic.test.reports.coverage.console
+package io.specmatic.test.reports.coverage
 
-data class OpenApiCoverageConsoleRow(
+import io.specmatic.test.report.Remarks
+import io.specmatic.test.report.ReportColumn
+import io.specmatic.test.report.interfaces.CoverageRow
+
+typealias GroupedCoverageRows = Map<String, Map<String, Map<Int, List<OpenApiCoverageRow>>>>
+
+data class OpenApiCoverageRow (
     val method: String,
     val path: String,
     val responseStatus: String,
-    val count: String,
-    val coveragePercentage: Int = 0,
-    val remarks: Remarks,
+    override val exercisedCount: Int,
+    override val coveragePercentage: Int = 0,
+    override val remark: Remarks,
     val showPath: Boolean = true,
     val showMethod: Boolean = true,
 ): CoverageRow {
@@ -19,7 +25,7 @@ data class OpenApiCoverageConsoleRow(
         remarks: Remarks,
         showPath: Boolean = true,
         showMethod: Boolean = true,
-    ) : this(method, path, responseStatus.toString(), count.toString(), coveragePercentage, remarks, showPath, showMethod)
+    ) : this(method, path, responseStatus.toString(), count, coveragePercentage, remarks, showPath, showMethod)
 
     private val formattedCoveragePercentage: String
         get() = if (showPath) "$coveragePercentage%" else ""
@@ -40,8 +46,8 @@ data class OpenApiCoverageConsoleRow(
                 "path" -> formattedPathName
                 "method" -> formattedMethodName
                 "response" -> formattedResponseStatus
-                "#exercised" -> count
-                "result" -> remarks.toString()
+                "#exercised" -> exercisedCount
+                "result" -> remark.toString()
                 else -> throw Exception("Unknown column name: ${column.name}")
             }
             column.columnFormat.format(value)
@@ -49,3 +55,13 @@ data class OpenApiCoverageConsoleRow(
     }
 }
 
+
+fun List<OpenApiCoverageRow>.groupCoverageRows(): GroupedCoverageRows {
+    return this.groupBy { it.path }
+        .mapValues { (_, rows) ->
+            rows.groupBy { it.method }
+                .mapValues { (_, rows) ->
+                    rows.groupBy { it.responseStatus.toInt() }
+                }
+        }
+}

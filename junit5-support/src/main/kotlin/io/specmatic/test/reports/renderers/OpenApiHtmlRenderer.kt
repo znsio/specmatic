@@ -9,10 +9,15 @@ import io.specmatic.test.TestInteractionsLog.duration
 import io.specmatic.test.TestResultRecord
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
+import io.specmatic.test.OpenApiTestResultRecord
+import io.specmatic.test.groupTestResults
+import io.specmatic.test.report.interfaces.ReportRenderer
+import io.specmatic.test.reports.coverage.OpenApiReportInput
+import io.specmatic.test.reports.coverage.groupCoverageRows
 import io.specmatic.test.reports.coverage.html.*
 import java.util.*
 
-class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> {
+class OpenApiHtmlRenderer : ReportRenderer<OpenApiReportInput> {
 
     companion object {
         private val tableColumns = listOf(
@@ -23,32 +28,39 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
         val actuatorEnabled = SpecmaticJUnitSupport.openApiCoverageReportInput.endpointsAPISet
     }
 
-    override fun render(report: OpenAPICoverageConsoleReport, specmaticConfig: SpecmaticConfig): String {
+    override fun render(reportInput: OpenApiReportInput, specmaticConfig: SpecmaticConfig): String {
         logger.log("Generating HTML report...")
         val reportConfiguration = specmaticConfig.report!!
         val htmlReportConfiguration = reportConfiguration.formatters!!.first { it.type == ReportFormatterType.HTML }
         val openApiSuccessCriteria = reportConfiguration.types.apiCoverage.openAPI.successCriteria
-        val (host, port) = report.getHostAndPort()
+        val (host, port) = reportInput.getHostAndPort()
 
         val reportData = HtmlReportData(
             totalCoveragePercentage = report.totalCoveragePercentage, tableRows = makeTableRows(report, htmlReportConfiguration),
             scenarioData = makeScenarioData(report), totalTestDuration = report.getTotalDuration()
+            totalCoveragePercentage = reportInput.totalCoveragePercentage(), tableRows = makeTableRows(reportInput),
+            scenarioData = makeScenarioData(reportInput), totalTestDuration = reportInput.getTotalDuration()
         )
 
-        val htmlReportInformation = HtmlReportInformation(
+        val sutInfo = SutInfo(
+            host = host, port = port,
+            mainGroupCount = reportInput.statistics.totalEndpointsCount, actuatorEnabled = reportInput.isActuatorEnabled()
+        )
+
+        val htmlReportInput = HtmlReportInput(
             reportFormat = htmlReportConfiguration, successCriteria = openApiSuccessCriteria,
             specmaticImplementation = "OpenAPI", specmaticVersion = getSpecmaticVersion(),
             tableColumns = tableColumns, reportData = reportData, specmaticConfig = specmaticConfig,
-            sutInfo = SutInfo(host = host, port = port, actuatorEnabled = actuatorEnabled, mainGroupCount = report.totalPaths)
+            sutInfo = sutInfo
         )
 
-        val htmlFile = HtmlReport(htmlReportInformation).generate()
+        val htmlFile = HtmlReport(htmlReportInput).generate()
         return "Successfully generated HTML report at file:///${htmlFile.toURI().path.replace("./", "")}"
     }
 
     private fun getSpecmaticVersion(): String {
         val props = Properties()
-        CoverageReportHtmlRenderer::class.java.classLoader.getResourceAsStream("version.properties").use {
+        OpenApiHtmlRenderer::class.java.classLoader.getResourceAsStream("version.properties").use {
             props.load(it)
         }
         return props.getProperty("version")
@@ -67,22 +79,12 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
                         TableRow(
                             coveragePercentage = it.coveragePercentage,
                             groups = listOf(
-                                TableRowGroup(
-                                    columnName = "Path",
-                                    value = it.path,
-                                    rowSpan = methodGroup.values.sumOf { rows -> rows.size },
-                                    showRow = it.showPath
-                                    ),
-                                TableRowGroup(
-                                    columnName = "Method",
-                                    value = it.method,
-                                    rowSpan = statusGroup.values.sumOf { rows -> rows.size },
-                                    showRow = it.showMethod
-                                ),
+                                TableRowGroup(columnName = "Path", value = it.path, rowSpan = methodGroup.values.sumOf { rows -> rows.size }, showRow = it.showPath),
+                                TableRowGroup(columnName = "Method", value = it.method, rowSpan = statusGroup.values.sumOf { rows -> rows.size }, showRow = it.showMethod),
                                 TableRowGroup(columnName = "Status", value = it.responseStatus, rowSpan = 1, showRow = true)
                             ),
-                            exercised = it.count.toInt(),
-                            result = it.remarks
+                            exercised = it.exercisedCount,
+                            result = it.remark
                         )
                     }
                 }
@@ -94,8 +96,8 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
         return report.httpLogMessages.sumOf { it.duration() }
     }
 
-    private fun makeScenarioData(report: OpenAPICoverageConsoleReport): ScenarioDataGroup {
-        val groupedTestResultRecords = report.getGroupedTestResultRecords()
+    private fun makeScenarioData(report: OpenApiReportInput): ScenarioDataGroup {
+        val groupedTestResultRecords = report.testResultRecords.groupTestResults()
         val scenarioData = ScenarioDataGroup()
 
         for ((path, methodGroup) in groupedTestResultRecords) {
@@ -103,7 +105,7 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
             for ((method, statusGroup) in methodGroup) {
                 scenarioData.subGroup[path]!!.subGroup[method] = ScenarioDataGroup()
                 for ((status, testResultRecords) in statusGroup) {
-                    scenarioData.subGroup[path]!!.subGroup[method]!!.subGroup[status] = ScenarioDataGroup()
+                    scenarioData.subGroup[path]!!.subGroup[method]!!.subGroup[status.toString()] = ScenarioDataGroup()
                     val scenarioDataList = testResultRecords.map { test ->
                         val matchingLogMessage = report.httpLogMessages.firstOrNull { it.scenario == test.scenarioResult?.scenario }
                         val scenarioName = getTestName(test, matchingLogMessage)
@@ -114,7 +116,7 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
                             name = scenarioName,
                             baseUrl = getBaseUrl(matchingLogMessage),
                             duration = matchingLogMessage?.duration() ?: 0,
-                            testResult = test.result,
+                            testResult = test.testResult,
                             valid = test.isValid,
                             wip = test.isWip,
                             request = requestString,
@@ -125,14 +127,14 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
                             details = getReportDetail(test)
                         )
                     }
-                    scenarioData.subGroup[path]!!.subGroup[method]!!.subGroup[status]!!.data = scenarioDataList
+                    scenarioData.subGroup[path]!!.subGroup[method]!!.subGroup[status.toString()]!!.data = scenarioDataList
                 }
             }
         }
         return scenarioData
     }
 
-    private fun getTestName(testResult: TestResultRecord, httpLogMessage: HttpLogMessage?): String {
+    private fun getTestName(testResult: OpenApiTestResultRecord, httpLogMessage: HttpLogMessage?): String {
         return httpLogMessage?.displayName() ?: "Scenario: ${testResult.path} -> ${testResult.responseStatus}"
     }
 
@@ -154,11 +156,11 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
         )
     }
 
-    private fun getSpecFileName(testResult: TestResultRecord, httpLogMessage: HttpLogMessage?): String {
+    private fun getSpecFileName(testResult: OpenApiTestResultRecord, httpLogMessage: HttpLogMessage?): String {
         return testResult.specification ?: httpLogMessage?.scenario?.specification ?: "Unknown Spec File"
     }
 
-    private fun getReportDetail(testResult: TestResultRecord): String {
+    private fun getReportDetail(testResult: OpenApiTestResultRecord): String {
         return testResult.scenarioResult?.reportString() ?: ""
     }
 

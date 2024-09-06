@@ -546,7 +546,7 @@ class OpenApiSpecification(
         }
     }
 
-    data class OperationIdentifier(val requestMethod: String, val requestPath: String, val responseStatus: Int)
+    data class OperationIdentifier(val requestMethod: String, val requestPath: String, val responseStatus: Int, val requestContentType: String?, val responseContentType: String?)
 
     private fun requestBodyExampleNames(
         openApiRequest: Pair<String, MediaType>?,

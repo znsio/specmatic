@@ -1473,7 +1473,9 @@ data class Feature(
                     OpenApiSpecification.OperationIdentifier(
                         requestMethod,
                         requestPath,
-                        responseStatus
+                        responseStatus,
+                        exampleFromFile.headers.filter { it.key.lowercase() == "content-type" }.values.firstOrNull(),
+                        exampleFromFile.responseHeaders?.let { it.jsonObject.filter { it.key.lowercase() == "content-type" }.values.firstOrNull()?.toStringLiteral() }
                     ) to exampleFromFile.toRow(specmaticConfig)
                 }
             } catch (e: Throwable) {

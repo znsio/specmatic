@@ -1308,6 +1308,17 @@ Examples:
 
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
+
+    @Test
+    fun `external examples should load only against a scenario with matching request and response content types`() {
+        val feature =
+            OpenApiSpecification
+                .fromFile("src/test/resources/openapi/multiple_requests_and_responses_in_one_status.yaml")
+                .toFeature()
+                .loadExternalisedExamples()
+
+        assertThat(feature.scenarios.filter { it.examples.singleOrNull()?.rows?.size?.let { it > 0 } == true }).hasSize(1)
+    }
 }
 
 fun flagsContain(haystack: List<String>, needles: List<String>) {

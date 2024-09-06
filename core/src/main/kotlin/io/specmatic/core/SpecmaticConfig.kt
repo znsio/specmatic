@@ -179,14 +179,9 @@ data class Source(
     fun getUri(): String {
         return when (this.provider) {
             SourceProvider.git -> this.repository ?: "Unknown"
-            SourceProvider.filesystem -> this.directory ?: "."
+            SourceProvider.filesystem -> this.directory ?: WorkingDirectory().path
             SourceProvider.web -> this.test?.first().let { URL(it).host } ?: "Unknown"
         }
-    }
-
-    @Suppress("unused") // Used in HTML Report Generation
-    fun getBranchAndCommit(): Pair<String, String> {
-        return Pair(this.branch ?: "default", "Unknown")
     }
 }
 

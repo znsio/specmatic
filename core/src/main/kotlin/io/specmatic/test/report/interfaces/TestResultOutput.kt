@@ -2,9 +2,9 @@ package io.specmatic.test.report.interfaces
 
 import io.specmatic.core.log.CurrentDate
 
-interface TestResultOutput<T : TestResultRecord> {
+interface TestResultOutput {
     val configFilePath: String
-    val testResultRecords: List<T>
+    val testResultRecords: List<TestResultRecord>
     val testStartTime: CurrentDate
     val testEndTime: CurrentDate
 }

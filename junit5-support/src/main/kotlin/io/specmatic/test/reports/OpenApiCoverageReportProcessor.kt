@@ -4,6 +4,7 @@ import io.specmatic.core.ReportConfiguration
 import io.specmatic.core.ReportFormatterType
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.logger
+import io.specmatic.test.report.interfaces.ReportInput
 import io.specmatic.test.report.interfaces.ReportProcessor
 import io.specmatic.test.reports.coverage.OpenApiReportInput
 import io.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport
@@ -15,7 +16,7 @@ import kotlinx.serialization.json.Json
 import org.assertj.core.api.Assertions.assertThat
 import java.io.File
 
-class OpenApiCoverageReportProcessor (private val coverageReportInput: OpenApiReportInput): ReportProcessor<OpenApiReportInput> {
+class OpenApiCoverageReportProcessor (private val coverageReportInput: OpenApiReportInput): ReportProcessor {
     companion object {
         const val JSON_REPORT_PATH = "./build/reports/specmatic"
         const val JSON_REPORT_FILE_NAME = "coverage_report.json"
@@ -35,7 +36,7 @@ class OpenApiCoverageReportProcessor (private val coverageReportInput: OpenApiRe
         assertSuccessCriteria(reportConfiguration,coverageReportInput)
     }
 
-    override fun configureReportRenderers(reportConfiguration: ReportConfiguration): List<ReportRenderer<OpenApiReportInput>> {
+    override fun configureReportRenderers(reportConfiguration: ReportConfiguration): List<ReportRenderer> {
         return reportConfiguration.formatters!!.map {
             when (it.type) {
                 ReportFormatterType.TEXT -> OpenApiConsoleRenderer()
@@ -59,7 +60,7 @@ class OpenApiCoverageReportProcessor (private val coverageReportInput: OpenApiRe
 
     override fun assertSuccessCriteria(
         reportConfiguration: ReportConfiguration,
-        report: OpenApiReportInput
+        report: ReportInput
     ) {
         val successCriteria = reportConfiguration.types.apiCoverage.openAPI.successCriteria
         if (successCriteria.enforce) {

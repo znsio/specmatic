@@ -2,6 +2,6 @@ package io.specmatic.test.report.interfaces
 
 import io.specmatic.core.SpecmaticConfig
 
-interface ReportRenderer<T> {
-    fun render(reportInput: T, specmaticConfig: SpecmaticConfig): String
+interface ReportRenderer {
+    fun render(reportInput: ReportInput, specmaticConfig: SpecmaticConfig): String
 }

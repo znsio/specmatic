@@ -146,14 +146,14 @@
                                 <span>URI</span>
                                 <span th:text="${contractSource.getUri()}"></span>
                             </li>
-                            <li th:if="${contractSource.provider.toString() == 'git'}">
+                            <li th:if="${contractSource.branch}">
                                 <span>Branch</span>
-                                <span th:text="${contractSource.getBranchAndCommit().first}"></span>
+                                <span th:text="${contractSource.branch}"></span>
                             </li>
-                            <li>
-                                <span>Commit</span>
-                                <span th:text="${contractSource.getBranchAndCommit().second}"></span>
-                            </li>
+<!--                            <li>-->
+<!--                                <span>Commit</span>-->
+<!--                                <span th:text="${contractSource.getBranchAndCommit().second}"></span>-->
+<!--                            </li>-->
                         </ul>
                         <ol>
                             <li class="info sub-info">

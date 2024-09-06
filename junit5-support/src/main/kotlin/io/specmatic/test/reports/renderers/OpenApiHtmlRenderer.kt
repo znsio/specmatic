@@ -11,13 +11,14 @@ import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
 import io.specmatic.test.OpenApiTestResultRecord
 import io.specmatic.test.groupTestResults
+import io.specmatic.test.report.interfaces.ReportInput
 import io.specmatic.test.report.interfaces.ReportRenderer
 import io.specmatic.test.reports.coverage.OpenApiReportInput
 import io.specmatic.test.reports.coverage.groupCoverageRows
 import io.specmatic.test.reports.coverage.html.*
 import java.util.*
 
-class OpenApiHtmlRenderer : ReportRenderer<OpenApiReportInput> {
+class OpenApiHtmlRenderer : ReportRenderer {
 
     companion object {
         private val tableColumns = listOf(
@@ -28,7 +29,9 @@ class OpenApiHtmlRenderer : ReportRenderer<OpenApiReportInput> {
         val actuatorEnabled = SpecmaticJUnitSupport.openApiCoverageReportInput.endpointsAPISet
     }
 
-    override fun render(reportInput: OpenApiReportInput, specmaticConfig: SpecmaticConfig): String {
+    override fun render(reportInput: ReportInput, specmaticConfig: SpecmaticConfig): String {
+        reportInput as OpenApiReportInput
+
         logger.log("Generating HTML report...")
         val reportConfiguration = specmaticConfig.report!!
         val htmlReportConfiguration = reportConfiguration.formatters!!.first { it.type == ReportFormatterType.HTML }

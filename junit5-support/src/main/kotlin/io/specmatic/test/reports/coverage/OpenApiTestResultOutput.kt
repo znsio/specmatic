@@ -14,7 +14,7 @@ data class OpenApiTestResultOutput (
     val excludedAPIs: List<String>,
     val allEndpoints: List<Endpoint>,
     val endpointsAPISet: Boolean,
-): TestResultOutput<OpenApiTestResultRecord> {
+): TestResultOutput {
 
     fun isPathAndMethodInEndpoints(path: String, method: String, response: Int? = null): Boolean {
         return allEndpoints.any { it.path == path && it.method == method && (response == null || it.responseStatus == response) }

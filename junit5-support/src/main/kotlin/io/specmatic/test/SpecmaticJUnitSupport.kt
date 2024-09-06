@@ -21,10 +21,8 @@ import io.specmatic.core.value.Value
 import io.specmatic.stub.hasOpenApiFileExtension
 import io.specmatic.stub.isOpenAPI
 import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.*
-import io.specmatic.test.reports.OpenApiCoverageReportProcessor
+import io.specmatic.test.reports.OpenApiReportEngine
 import io.specmatic.test.reports.coverage.Endpoint
-import io.specmatic.test.reports.coverage.OpenApiTestResultOutput
-import io.specmatic.test.reports.coverage.OpenApiTestResultTransformer
 import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DynamicTest
@@ -96,20 +94,12 @@ open class SpecmaticJUnitSupport {
         @AfterAll
         @JvmStatic
         fun report() {
-            val reportConfiguration = getReportConfiguration(specmaticConfig)
-            val testResultOutput = OpenApiTestResultOutput(
-                configFilePath = getConfigFileWithAbsolutePath(),
-                testResultRecords = testResultRecords, applicationAPIs = applicationAPIs,
-                excludedAPIs = reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints.plus(excludedEndpointsFromEnv()),
-                allEndpoints = endpoints, endpointsAPISet = getBooleanValue(ENDPOINTS_API),
-                testStartTime = testStartTime, testEndTime = CurrentDate()
-            )
-
-            val reportInput = OpenApiTestResultTransformer(testResultOutput).toReportInput()
-            val reportProcessors = listOf(OpenApiCoverageReportProcessor(reportInput))
-            val config = specmaticConfig?.copy(report = reportConfiguration) ?: SpecmaticConfig(report = reportConfiguration)
-
-            reportProcessors.forEach { it.process(config) }
+            OpenApiReportEngine(
+                specmaticConfig = specmaticConfig ?: SpecmaticConfig(), testResultRecords = testResultRecords,
+                endpoints = endpoints, applicationAPIs = applicationAPIs,
+                testStartTime = testStartTime, actuatorEnabled = getBooleanValue(ENDPOINTS_API),
+                excludedApis = excludedEndpointsFromEnv()
+            ).report()
 
             threads.distinct().let {
                 if(it.size > 1) {
@@ -186,8 +176,6 @@ open class SpecmaticJUnitSupport {
         }
 
         val configFile get() = getConfigFilePath()
-
-        private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
 
         private fun excludedEndpointsFromEnv() = getStringValue(SPECMATIC_EXCLUDED_ENDPOINTS)?.let { excludedEndpoints ->
             excludedEndpoints.split(",").map { it.trim() }

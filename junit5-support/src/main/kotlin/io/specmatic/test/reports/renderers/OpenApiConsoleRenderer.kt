@@ -2,12 +2,15 @@ package io.specmatic.test.reports.renderers
 
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.test.report.ReportColumn
+import io.specmatic.test.report.interfaces.ReportInput
 import io.specmatic.test.report.interfaces.ReportRenderer
 import io.specmatic.test.reports.coverage.console.ConsoleReport
 import io.specmatic.test.reports.coverage.OpenApiReportInput
 
-class OpenApiConsoleRenderer: ReportRenderer<OpenApiReportInput> {
-    override fun render(reportInput: OpenApiReportInput, specmaticConfig: SpecmaticConfig): String {
+class OpenApiConsoleRenderer: ReportRenderer {
+    override fun render(reportInput: ReportInput, specmaticConfig: SpecmaticConfig): String {
+        reportInput as OpenApiReportInput
+
         val textReportGenerator = ConsoleReport(reportInput.coverageRows, makeReportColumns(reportInput), makeFooter(reportInput))
         val coveredAPIsTable = "${System.lineSeparator()}${textReportGenerator.generate()}"
 
@@ -62,5 +65,4 @@ class OpenApiConsoleRenderer: ReportRenderer<OpenApiReportInput> {
     private fun makeFooter(report: OpenApiReportInput): String {
         return "${report.totalCoveragePercentage()}% API Coverage reported from ${report.statistics.totalEndpointsCount} Paths"
     }
-
 }

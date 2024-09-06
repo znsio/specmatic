@@ -5,7 +5,7 @@ import io.specmatic.core.Result
 import io.specmatic.core.TestResult
 import io.specmatic.test.report.interfaces.TestResultRecord
 
-typealias GroupedTestResultRecords = Map<String, Map<String, Map<Int, List<OpenApiTestResultRecord>>>>
+typealias OpenApiGroupedTestResultRecords = Map<String, Map<String, Map<Int, List<OpenApiTestResultRecord>>>>
 
 data class OpenApiTestResultRecord (
     val path: String,
@@ -44,7 +44,7 @@ fun List<OpenApiTestResultRecord>.sortTestResults(): List<OpenApiTestResultRecor
         .toSortedMap().values.flatten()
 }
 
-fun List<OpenApiTestResultRecord>.groupTestResults(): GroupedTestResultRecords {
+fun List<OpenApiTestResultRecord>.groupTestResults(): OpenApiGroupedTestResultRecords {
     return this.groupBy { it.path }.mapValues { pathGroup ->
         pathGroup.value.groupBy { it.method }.mapValues { methodGroup ->
             methodGroup.value.groupBy { it.responseStatus }

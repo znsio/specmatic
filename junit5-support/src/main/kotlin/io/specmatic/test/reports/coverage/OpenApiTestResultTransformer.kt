@@ -2,7 +2,7 @@ package io.specmatic.test.reports.coverage
 
 import io.specmatic.conversions.SERVICE_TYPE_HTTP
 import io.specmatic.core.TestResult
-import io.specmatic.test.GroupedTestResultRecords
+import io.specmatic.test.OpenApiGroupedTestResultRecords
 import io.specmatic.test.OpenApiTestResultRecord
 import io.specmatic.test.groupTestResults
 import io.specmatic.test.report.Remarks
@@ -41,7 +41,7 @@ class OpenApiTestResultTransformer(private val testResultOutput: OpenApiTestResu
         return allTestResults.identifyAndUpdateUnimplementedTests().sortTestResults()
     }
 
-    private fun createCoverageRows(groupedTestResults: GroupedTestResultRecords): List<OpenApiCoverageRow> {
+    private fun createCoverageRows(groupedTestResults: OpenApiGroupedTestResultRecords): List<OpenApiCoverageRow> {
         val coverageRows = mutableListOf<OpenApiCoverageRow>()
 
         groupedTestResults.forEach { (route, methodMap) ->

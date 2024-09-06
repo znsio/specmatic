@@ -4,7 +4,7 @@ import io.specmatic.test.report.Remarks
 import io.specmatic.test.report.ReportColumn
 import io.specmatic.test.report.interfaces.CoverageRow
 
-typealias GroupedCoverageRows = Map<String, Map<String, Map<Int, List<OpenApiCoverageRow>>>>
+typealias OpenApiGroupedCoverageRows = Map<String, Map<String, Map<Int, List<OpenApiCoverageRow>>>>
 
 data class OpenApiCoverageRow (
     val method: String,
@@ -56,7 +56,7 @@ data class OpenApiCoverageRow (
 }
 
 
-fun List<OpenApiCoverageRow>.groupCoverageRows(): GroupedCoverageRows {
+fun List<OpenApiCoverageRow>.groupCoverageRows(): OpenApiGroupedCoverageRows {
     return this.groupBy { it.path }
         .mapValues { (_, rows) ->
             rows.groupBy { it.method }

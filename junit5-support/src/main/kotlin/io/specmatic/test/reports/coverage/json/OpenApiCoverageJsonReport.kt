@@ -1,6 +1,6 @@
 package io.specmatic.test.reports.coverage.json
 
-import io.specmatic.test.TestResultRecord
+import io.specmatic.test.OpenApiTestResultRecord
 import io.specmatic.test.reports.coverage.CoverageGroupKey
 import kotlinx.serialization.Serializable
 
@@ -9,7 +9,7 @@ class OpenApiCoverageJsonReport {
     private val specmaticConfigPath: String
     private val apiCoverage: List<OpenApiCoverageJsonRow>
 
-    constructor(specmaticConfigPath: String, allTests: List<TestResultRecord>) {
+    constructor(specmaticConfigPath: String, allTests: List<OpenApiTestResultRecord>) {
         this.specmaticConfigPath = specmaticConfigPath
 
         val openApiCoverageJsonRows = allTests.groupBy {

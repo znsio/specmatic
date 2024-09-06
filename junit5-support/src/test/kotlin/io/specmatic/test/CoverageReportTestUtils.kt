@@ -2,18 +2,18 @@ package io.specmatic.test
 
 import io.specmatic.core.log.CurrentDate
 import io.specmatic.test.reports.coverage.Endpoint
-import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
-import io.specmatic.test.reports.coverage.ResultStatistics
-import io.specmatic.test.reports.coverage.TestResultsTransformer
-import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
-import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
+import io.specmatic.test.reports.coverage.OpenApiTestResultOutput
+import io.specmatic.test.report.ResultStatistics
+import io.specmatic.test.reports.coverage.OpenApiTestResultTransformer
+import io.specmatic.test.reports.coverage.OpenApiReportInput
+import io.specmatic.test.reports.coverage.OpenApiCoverageRow
 import org.assertj.core.api.Assertions.assertThat
 
 fun generateCoverageReport(
-    testResultRecords: List<TestResultRecord>, allEndpoints: List<Endpoint>,
+    testResultRecords: List<OpenApiTestResultRecord>, allEndpoints: List<Endpoint>,
     applicationAPIS: List<API>? = null, excludedAPIs: List<String> = emptyList()
-): OpenAPICoverageConsoleReport {
-    val coverageReportInput = OpenApiCoverageReportInput(
+): OpenApiReportInput {
+    val coverageReportInput = OpenApiTestResultOutput(
         configFilePath = "", testResultRecords = testResultRecords,
         allEndpoints = allEndpoints, testStartTime = CurrentDate(), testEndTime = CurrentDate(),
         applicationAPIs = emptyList(), endpointsAPISet = false, excludedAPIs = excludedAPIs
@@ -22,22 +22,22 @@ fun generateCoverageReport(
     val updatedCoverageReportInput = when (applicationAPIS) {
         null -> coverageReportInput
         else -> coverageReportInput.copy(applicationAPIs = applicationAPIS, endpointsAPISet = true)
-
     }
 
-    return TestResultsTransformer(updatedCoverageReportInput).toCoverageReport()
+    return OpenApiTestResultTransformer(updatedCoverageReportInput).toReportInput()
 }
 
 fun assertReportEquals(
-    actualCoverageReport: OpenAPICoverageConsoleReport,
-    expectedCoverageRows: List<OpenApiCoverageConsoleRow>,
+    actualCoverageReport: OpenApiReportInput,
+    expectedCoverageRows: List<OpenApiCoverageRow>,
     expectedStatistics: ResultStatistics
 ) {
     assertThat(actualCoverageReport).isEqualTo(
-        OpenAPICoverageConsoleReport(
+        OpenApiReportInput(
             configFilePath = "", coverageRows = expectedCoverageRows,
             testResultRecords = actualCoverageReport.testResultRecords, statistics = expectedStatistics,
-            testsStartTime = actualCoverageReport.testsStartTime, testsEndTime = actualCoverageReport.testsEndTime
+            testsStartTime = actualCoverageReport.testsStartTime, testsEndTime = actualCoverageReport.testsEndTime,
+            actuatorEnabled = actualCoverageReport.actuatorEnabled
         )
     )
 }

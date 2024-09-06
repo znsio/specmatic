@@ -4,19 +4,18 @@ import io.specmatic.core.ReportConfiguration
 import io.specmatic.core.ReportFormatterType
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.logger
-import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
+import io.specmatic.test.report.interfaces.ReportProcessor
+import io.specmatic.test.reports.coverage.OpenApiReportInput
 import io.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport
-import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
-import io.specmatic.test.reports.coverage.TestResultsTransformer
-import io.specmatic.test.reports.renderers.CoverageReportHtmlRenderer
-import io.specmatic.test.reports.renderers.CoverageReportTextRenderer
-import io.specmatic.test.reports.renderers.ReportRenderer
+import io.specmatic.test.reports.renderers.OpenApiHtmlRenderer
+import io.specmatic.test.reports.renderers.OpenApiConsoleRenderer
+import io.specmatic.test.report.interfaces.ReportRenderer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.assertj.core.api.Assertions.assertThat
 import java.io.File
 
-class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: OpenApiCoverageReportInput ): ReportProcessor<OpenAPICoverageConsoleReport> {
+class OpenApiCoverageReportProcessor (private val coverageReportInput: OpenApiReportInput): ReportProcessor<OpenApiReportInput> {
     companion object {
         const val JSON_REPORT_PATH = "./build/reports/specmatic"
         const val JSON_REPORT_FILE_NAME = "coverage_report.json"
@@ -24,24 +23,23 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
 
     override fun process(specmaticConfig: SpecmaticConfig) {
         val reportConfiguration = specmaticConfig.report!!
-        val openAPICoverageReport =  TestResultsTransformer(openApiCoverageReportInput).toCoverageReport()
-        if (openAPICoverageReport.coverageRows.isEmpty()) {
+        if (coverageReportInput.coverageRows.isEmpty()) {
             logger.log("The Open API coverage report generated is blank.\nThis can happen if you have included all the endpoints in the 'excludedEndpoints' array in the report section in specmatic.json, or if your open api specification does not have any paths documented.")
         } else {
             val renderers = configureReportRenderers(reportConfiguration)
             renderers.forEach { renderer ->
-                logger.log(renderer.render(openAPICoverageReport, specmaticConfig))
+                logger.log(renderer.render(coverageReportInput, specmaticConfig))
             }
-            saveAsJson(OpenApiCoverageJsonReport(openAPICoverageReport.configFilePath, openAPICoverageReport.testResultRecords))
+            saveAsJson(OpenApiCoverageJsonReport(coverageReportInput.configFilePath, coverageReportInput.testResultRecords))
         }
-        assertSuccessCriteria(reportConfiguration,openAPICoverageReport)
+        assertSuccessCriteria(reportConfiguration,coverageReportInput)
     }
 
-    override fun configureReportRenderers(reportConfiguration: ReportConfiguration): List<ReportRenderer<OpenAPICoverageConsoleReport>> {
+    override fun configureReportRenderers(reportConfiguration: ReportConfiguration): List<ReportRenderer<OpenApiReportInput>> {
         return reportConfiguration.formatters!!.map {
             when (it.type) {
-                ReportFormatterType.TEXT -> CoverageReportTextRenderer()
-                ReportFormatterType.HTML -> CoverageReportHtmlRenderer()
+                ReportFormatterType.TEXT -> OpenApiConsoleRenderer()
+                ReportFormatterType.HTML -> OpenApiHtmlRenderer()
                 else -> throw Exception("Report formatter type: ${it.type} is not supported")
             }
         }
@@ -61,18 +59,19 @@ class OpenApiCoverageReportProcessor (private val openApiCoverageReportInput: Op
 
     override fun assertSuccessCriteria(
         reportConfiguration: ReportConfiguration,
-        report: OpenAPICoverageConsoleReport
+        report: OpenApiReportInput
     ) {
         val successCriteria = reportConfiguration.types.apiCoverage.openAPI.successCriteria
         if (successCriteria.enforce) {
-            val coverageThresholdNotMetMessage =
-                "Total API coverage: ${report.totalCoveragePercentage}% is less than the specified minimum threshold of ${successCriteria.minThresholdPercentage}%."
-            val missedEndpointsCountExceededMessage =
-                "Total missed endpoints count: ${report.statistics.missedEndpointsCount} is greater than the maximum threshold of ${successCriteria.maxMissedEndpointsInSpec}.\n(Note: Specmatic will consider an endpoint as 'covered' only if it is documented in the open api spec with at least one example for each operation and response code.\nIf it is present in the spec, but does not have an example, Specmatic will still report the particular operation and response code as 'missing in spec'.)"
+            val totalCoveragePercentage = report.totalCoveragePercentage()
 
-            val minCoverageThresholdCriteriaMet = report.totalCoveragePercentage >= successCriteria.minThresholdPercentage
+            val coverageThresholdNotMetMessage = "Total API coverage: ${totalCoveragePercentage}% is less than the specified minimum threshold of ${successCriteria.minThresholdPercentage}%."
+            val missedEndpointsCountExceededMessage = "Total missed endpoints count: ${report.statistics.missedEndpointsCount} is greater than the maximum threshold of ${successCriteria.maxMissedEndpointsInSpec}.\n(Note: Specmatic will consider an endpoint as 'covered' only if it is documented in the open api spec with at least one example for each operation and response code.\nIf it is present in the spec, but does not have an example, Specmatic will still report the particular operation and response code as 'missing in spec'.)"
+
+            val minCoverageThresholdCriteriaMet = totalCoveragePercentage >= successCriteria.minThresholdPercentage
             val maxMissingEndpointsExceededCriteriaMet = report.statistics.missedEndpointsCount <= successCriteria.maxMissedEndpointsInSpec
             val coverageReportSuccessCriteriaMet = minCoverageThresholdCriteriaMet && maxMissingEndpointsExceededCriteriaMet
+
             if(!coverageReportSuccessCriteriaMet){
                 logger.newLine()
                 logger.log("Failed the following API Coverage Report success criteria:")

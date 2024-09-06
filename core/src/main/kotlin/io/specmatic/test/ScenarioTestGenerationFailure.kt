@@ -1,12 +1,11 @@
 package io.specmatic.test
 
-import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.Result
 import io.specmatic.core.Scenario
 
 class ScenarioTestGenerationFailure(val scenario: Scenario, val failure: Result.Failure): ContractTest {
-    override fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord? {
+    override fun testResultRecord(result: Result, response: HttpResponse?): OpenApiTestResultRecord? {
         return null
     }
 

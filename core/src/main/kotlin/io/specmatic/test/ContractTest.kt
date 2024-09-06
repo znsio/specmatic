@@ -9,7 +9,7 @@ interface ResponseValidator {
 }
 
 interface ContractTest {
-    fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord?
+    fun testResultRecord(result: Result, response: HttpResponse?): OpenApiTestResultRecord?
     fun testDescription(): String
     fun runTest(testBaseURL: String, timeoutInMilliseconds: Long): Pair<Result, HttpResponse?>
     fun runTest(testExecutor: TestExecutor): Pair<Result, HttpResponse?>

@@ -1,16 +1,17 @@
 package io.specmatic.test.reports.renderers
 
 import io.specmatic.core.SpecmaticConfig
+import io.specmatic.test.report.ReportColumn
+import io.specmatic.test.report.interfaces.ReportRenderer
 import io.specmatic.test.reports.coverage.console.ConsoleReport
-import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
-import io.specmatic.test.reports.coverage.console.ReportColumn
+import io.specmatic.test.reports.coverage.OpenApiReportInput
 
-class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageConsoleReport> {
-    override fun render(report: OpenAPICoverageConsoleReport, specmaticConfig: SpecmaticConfig): String {
-        val textReportGenerator = ConsoleReport(report.coverageRows, makeReportColumns(report), makeFooter(report))
+class OpenApiConsoleRenderer: ReportRenderer<OpenApiReportInput> {
+    override fun render(reportInput: OpenApiReportInput, specmaticConfig: SpecmaticConfig): String {
+        val textReportGenerator = ConsoleReport(reportInput.coverageRows, makeReportColumns(reportInput), makeFooter(reportInput))
         val coveredAPIsTable = "${System.lineSeparator()}${textReportGenerator.generate()}"
 
-        val statistics = report.statistics
+        val statistics = reportInput.statistics
         val missingAndNotImplementedAPIsMessageRows:MutableList<String> = mutableListOf()
 
         if(statistics.missedEndpointsCount > 0) {
@@ -36,18 +37,17 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageConsoleReport> {
         return coveredAPIsTable + System.lineSeparator()  + missingAndNotImplementedAPIsMessageRows.joinToString(System.lineSeparator()) + System.lineSeparator()
     }
 
-    private fun pluralisePath(count: Int): String =
-        "$count path${if (count == 1) "" else "s"}"
+    private fun pluralisePath(count: Int): String = "$count path${if (count == 1) "" else "s"}"
 
     private fun isOrAre(count: Int): String = if (count > 1) "are" else "is"
 
-    private fun makeReportColumns(report: OpenAPICoverageConsoleReport): List<ReportColumn> {
+    private fun makeReportColumns(report: OpenApiReportInput): List<ReportColumn> {
         val maxCoveragePercentageLength = "coverage".length
         val maxPathLength = report.coverageRows.maxOf { it.path.length }
         val maxMethodLength = report.coverageRows.maxOf { it.method.length }
         val maxStatusLength = report.coverageRows.maxOf { it.responseStatus.length }
         val maxExercisedLength = "#exercised".length
-        val maxRemarkLength = report.coverageRows.maxOf { it.remarks.toString().length }
+        val maxRemarkLength = report.coverageRows.maxOf { it.remark.toString().length }
 
         return listOf(
             ReportColumn("coverage", maxCoveragePercentageLength),
@@ -59,8 +59,8 @@ class CoverageReportTextRenderer: ReportRenderer<OpenAPICoverageConsoleReport> {
         )
     }
 
-    private fun makeFooter(report: OpenAPICoverageConsoleReport): String {
-        return "${report.totalCoveragePercentage}% API Coverage reported from ${report.statistics.totalEndpointsCount} Paths"
+    private fun makeFooter(report: OpenApiReportInput): String {
+        return "${report.totalCoveragePercentage()}% API Coverage reported from ${report.statistics.totalEndpointsCount} Paths"
     }
 
 }

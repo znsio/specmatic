@@ -19,7 +19,8 @@ import io.specmatic.stub.isOpenAPI
 import io.specmatic.test.SpecmaticJUnitSupport.URIValidationResult.*
 import io.specmatic.test.reports.OpenApiCoverageReportProcessor
 import io.specmatic.test.reports.coverage.Endpoint
-import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
+import io.specmatic.test.reports.coverage.OpenApiTestResultOutput
+import io.specmatic.test.reports.coverage.OpenApiTestResultTransformer
 import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DynamicTest
@@ -73,7 +74,7 @@ open class SpecmaticJUnitSupport {
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfig: SpecmaticConfig? = null
 
-        private val testResultRecords: MutableList<TestResultRecord> = mutableListOf()
+        private val testResultRecords: MutableList<OpenApiTestResultRecord> = mutableListOf()
         private val endpoints: MutableList<Endpoint> = mutableListOf()
         private val applicationAPIs: MutableList<API> = mutableListOf()
         private val testStartTime: CurrentDate = CurrentDate()
@@ -83,16 +84,17 @@ open class SpecmaticJUnitSupport {
         @AfterAll
         @JvmStatic
         fun report() {
-            val reportConfiguration = getReportConfiguration()
-            val coverageReportInput = OpenApiCoverageReportInput(
+            val reportConfiguration = getReportConfiguration(specmaticConfig)
+            val testResultOutput = OpenApiTestResultOutput(
                 configFilePath = getConfigFileWithAbsolutePath(),
                 testResultRecords = testResultRecords, applicationAPIs = applicationAPIs,
                 excludedAPIs = reportConfiguration.types.apiCoverage.openAPI.excludedEndpoints.plus(excludedEndpointsFromEnv()),
                 allEndpoints = endpoints, endpointsAPISet = getBooleanValue(ENDPOINTS_API),
-                testStartTime = testStartTime
+                testStartTime = testStartTime, testEndTime = CurrentDate()
             )
 
-            val reportProcessors = listOf(OpenApiCoverageReportProcessor(coverageReportInput))
+            val reportInput = OpenApiTestResultTransformer(testResultOutput).toReportInput()
+            val reportProcessors = listOf(OpenApiCoverageReportProcessor(reportInput))
             val config = specmaticConfig?.copy(report = reportConfiguration) ?: SpecmaticConfig(report = reportConfiguration)
 
             reportProcessors.forEach { it.process(config) }
@@ -105,7 +107,8 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        private fun getReportConfiguration(): ReportConfiguration {
+        @JvmStatic
+        fun getReportConfiguration(specmaticConfig: SpecmaticConfig?): ReportConfiguration {
             val defaultFormatters = listOf(
                 ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE),
                 ReportFormatter(ReportFormatterType.HTML)

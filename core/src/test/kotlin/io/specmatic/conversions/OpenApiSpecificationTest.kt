@@ -5924,6 +5924,114 @@ paths:
     }
 
     @Test
+    fun `allOf with discriminator`() {
+        val openAPIText = """
+            ---
+            openapi: 3.0.3
+            info:
+              title: Vehicle API
+              version: 1.0.0
+            paths:
+              /vehicles:
+                post:
+                  summary: Add a new vehicle
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Vehicle'
+                  responses:
+                    '201':
+                      description: Vehicle created successfully
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                description: Unique identifier for the newly created vehicle
+                              type:
+                                type: string
+                                description: Type of the vehicle (car or bike)
+            
+            components:
+              schemas:
+                Vehicle:
+                  type: object
+                  required:
+                    - type
+                  properties:
+                    type:
+                      type: string
+                  discriminator:
+                    propertyName: type
+                    mapping:
+                      car: '#/components/schemas/Car'
+                      bike: '#/components/schemas/Bike'
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/VehicleBase'
+                    - ${'$'}ref: '#/components/schemas/VehicleType'
+            
+                VehicleBase:
+                  type: object
+                  properties:
+                    make:
+                      type: string
+                    model:
+                      type: string
+                  required:
+                    - make
+                    - model
+            
+                VehicleType:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+            
+                Car:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/VehicleBase'
+                    - type: object
+                      properties:
+                        type:
+                          type: string
+                        seatingCapacity:
+                          type: integer
+                        trunkSize:
+                          type: string
+                      required:
+                        - seatingCapacity
+                        - trunkSize
+            
+                Bike:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/VehicleBase'
+                    - type: object
+                      properties:
+                        type:
+                          type: string
+                        hasCarrier:
+                          type: boolean
+                      required:
+                        - hasCarrier
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(openAPIText, "").toFeature()
+
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/vehicles",
+                    body = parsedJSON("""{"make": "Toyota", "model": "Supra", "type": "car", "seatingCapacity": 4, "trunkSize": "large"}""")
+                ), HttpResponse(201)
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
+    }
+
+    @Test
     fun `should read WIP tag in OpenAPI paths`() {
         val contractString = """
                 openapi: 3.0.3

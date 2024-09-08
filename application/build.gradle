@@ -31,7 +31,7 @@ repositories {
 }
 
 def ktor_version = "2.3.12"
-def junit_version = "5.10.3"
+def junit_version = "5.11.0"
 def jgit_version = "6.10.0.202406032230-r"
 
 dependencies {
@@ -44,7 +44,7 @@ dependencies {
     testImplementation 'com.arakelian:java-jq:2.0.0'
 
     implementation 'org.assertj:assertj-core:3.26.3'
-    implementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.11.0'
 
     implementation('info.picocli:picocli-spring-boot-starter:4.7.6') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
@@ -57,20 +57,20 @@ dependencies {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude group: 'ch.qos.logback', module: 'logback-core'
     }
-    implementation('org.springframework.boot:spring-boot-autoconfigure:3.3.2')
-    implementation('org.springframework:spring-core:6.1.11')
+    implementation('org.springframework.boot:spring-boot-autoconfigure:3.3.3')
+    implementation('org.springframework:spring-core:6.1.12')
     implementation 'info.picocli:picocli:4.7.6'
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
     implementation "io.ktor:ktor-network-tls:$ktor_version"
     implementation "io.ktor:ktor-network-tls-certificates:$ktor_version"
 
-    implementation 'org.junit.platform:junit-platform-launcher:1.10.3'
-    implementation 'org.junit.platform:junit-platform-reporting:1.10.3'
+    implementation 'org.junit.platform:junit-platform-launcher:1.11.0'
+    implementation 'org.junit.platform:junit-platform-reporting:1.11.0'
 
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 
-    implementation 'org.slf4j:slf4j-nop:2.0.13'
+    implementation 'org.slf4j:slf4j-nop:2.0.16'
 
     implementation 'org.apache.ant:ant-junit:1.10.14'
 
@@ -84,7 +84,7 @@ dependencies {
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit_version"
 
-    testImplementation('org.springframework.boot:spring-boot-starter-test:3.3.2') {
+    testImplementation('org.springframework.boot:spring-boot-starter-test:3.3.3') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude module: 'mockito-core'
     }

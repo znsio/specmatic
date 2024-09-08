@@ -14,6 +14,7 @@ import io.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import io.cucumber.messages.internal.com.fasterxml.jackson.databind.ObjectMapper
 import io.cucumber.messages.types.Step
 import io.ktor.util.reflect.*
+import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
@@ -24,7 +25,6 @@ import io.swagger.v3.oas.models.parameters.*
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
 import io.swagger.v3.oas.models.security.SecurityScheme
-import io.swagger.v3.parser.OpenAPIV3Parser
 import io.swagger.v3.parser.core.models.ParseOptions
 import io.swagger.v3.parser.core.models.SwaggerParseResult
 import java.io.File
@@ -83,11 +83,11 @@ class OpenApiSpecification(
         }
 
         fun getParsedOpenApi(openApiFilePath: String): OpenAPI {
-            return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences())
+            return OpenAPIParser().readLocation(openApiFilePath, null, resolveExternalReferences()).openAPI
         }
 
         fun isParsable(openApiFilePath: String): Boolean {
-            return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences()) != null
+            return OpenAPIParser().readLocation(openApiFilePath, null, resolveExternalReferences()) != null
         }
 
         fun fromYAML(
@@ -102,7 +102,7 @@ class OpenApiSpecification(
             specmaticConfig: SpecmaticConfig = SpecmaticConfig()
         ): OpenApiSpecification {
             val parseResult: SwaggerParseResult =
-                OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), openApiFilePath)
+                OpenAPIParser().readContents(yamlContent, null, resolveExternalReferences())
             val parsedOpenApi: OpenAPI? = parseResult.openAPI
 
             if (parsedOpenApi == null) {
@@ -1530,8 +1530,8 @@ class OpenApiSpecification(
                 emptyList()
             else it.split("/")
         }
-        val pathParamMap: Map<String, PathParameter> =
-            parameters.filterIsInstance<PathParameter>().associateBy {
+        val pathParamMap: Map<String, Parameter> =
+            parameters.filterIsInstance<Parameter>().filter { it.`in`?.lowercase() == "path" }.associateBy {
                 it.name
             }
 

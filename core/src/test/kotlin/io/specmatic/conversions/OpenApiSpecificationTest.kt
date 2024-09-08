@@ -5972,7 +5972,8 @@ paths:
                       bike: '#/components/schemas/Bike'
                   allOf:
                     - ${'$'}ref: '#/components/schemas/VehicleBase'
-                    - ${'$'}ref: '#/components/schemas/VehicleType'
+                    - ${'$'}ref: '#/components/schemas/Car'
+                    - ${'$'}ref: '#/components/schemas/Bike'
             
                 VehicleBase:
                   type: object
@@ -6002,9 +6003,6 @@ paths:
                           type: integer
                         trunkSize:
                           type: string
-                      required:
-                        - seatingCapacity
-                        - trunkSize
             
                 Bike:
                   allOf:
@@ -6015,8 +6013,6 @@ paths:
                           type: string
                         hasCarrier:
                           type: boolean
-                      required:
-                        - hasCarrier
         """.trimIndent()
         val feature = OpenApiSpecification.fromYAML(openAPIText, "").toFeature()
 
@@ -6026,9 +6022,29 @@ paths:
                     "POST",
                     "/vehicles",
                     body = parsedJSON("""{"make": "Toyota", "model": "Supra", "type": "car", "seatingCapacity": 4, "trunkSize": "large"}""")
-                ), HttpResponse(201)
+                ), HttpResponse(201, headers = mapOf("Content-Type" to "application/json"), parsedJSONObject("""{"id": "abc123", "type": "car"}"""))
             ).response.headers["X-Specmatic-Result"]
         ).isEqualTo("success")
+
+        assertThat(
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/vehicles",
+                    body = parsedJSON("""{"make": "Toyota", "model": "Supra", "type": "bike", "seatingCapacity": 4, "trunkSize": "large"}""")
+                ), HttpResponse(201, headers = mapOf("Content-Type" to "application/json"), parsedJSONObject("""{"id": "abc123", "type": "car"}"""))
+            ).response.headers["X-Specmatic-Result"]
+        ).isEqualTo("success")
+
+        assertThatThrownBy {
+            feature.matchingStub(
+                HttpRequest(
+                    "POST",
+                    "/vehicles",
+                    body = parsedJSON("""{"make": "Toyota", "model": "Supra", "type": "plane", "seatingCapacity": 4, "trunkSize": "large"}""")
+                ), HttpResponse(201, headers = mapOf("Content-Type" to "application/json"), parsedJSONObject("""{"id": "abc123", "type": "car"}"""))
+            )
+        }.isInstanceOf(NoMatchingScenario::class.java)
     }
 
     @Test

@@ -156,7 +156,13 @@ data class HttpRequestPattern(
         val (httpRequest, headersResolver, defaultResolver, failures) = parameters
         val headers = httpRequest.headers
         return when (val result = this.headersPattern.matches(headers, headersResolver ?: defaultResolver)) {
-            is Failure -> MatchSuccess(Triple(httpRequest, defaultResolver, failures.plus(result)))
+            is Failure -> {
+                val failureReason = result.traverseFailureReason()
+                if(failureReason == FailureReason.ContentTypeMismatch)
+                    MatchFailure(result)
+                else
+                    MatchSuccess(Triple(httpRequest, defaultResolver, failures.plus(result)))
+            }
             else -> MatchSuccess(Triple(httpRequest, defaultResolver, failures))
         }
     }

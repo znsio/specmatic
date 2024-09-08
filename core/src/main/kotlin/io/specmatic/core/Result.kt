@@ -34,7 +34,7 @@ sealed class Result {
     fun isFluffy(acceptableFluffLevel: Int): Boolean {
         return when(this) {
             is Failure ->
-                failureReason?.let { it.fluffLevel > acceptableFluffLevel } == true || cause?.isFluffy() == true
+                failureReason?.let { it.fluffLevel > acceptableFluffLevel } == true || cause?.isFluffy(acceptableFluffLevel) == true
             else -> false
         }
     }
@@ -167,6 +167,12 @@ sealed class Result {
         }
 
         override fun isSuccess() = false
+
+        fun traverseFailureReason(): FailureReason? {
+            return failureReason ?: causes.asSequence().map {
+                it.cause?.traverseFailureReason()
+            }.firstOrNull()
+        }
     }
 
     data class Success(val variables: Map<String, String> = emptyMap(), val partialSuccessMessage: String? = null) : Result() {
@@ -219,10 +225,10 @@ enum class TestResult {
 
 enum class FailureReason(val fluffLevel: Int) {
     PartNameMisMatch(0),
-    StatusMismatch(1),
+    StatusMismatch(2),
     IdentifierMismatch(1),
     MethodMismatch(1),
-    ContentTypeMismatch(0),
+    ContentTypeMismatch(1),
     RequestMismatchButStatusAlsoWrong(1),
     URLPathMisMatch(2),
     SOAPActionMismatch(2)

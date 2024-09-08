@@ -12,16 +12,20 @@ class ExampleRequestBuilder(
     private val httpMethod: String,
     val securitySchemes: Map<String, OpenAPISecurityScheme>
 ) {
-    fun examplesWithRequestBodies(exampleBodies: Map<String, String?>): Map<String, List<HttpRequest>> {
+    fun examplesWithRequestBodies(exampleBodies: Map<String, String?>, contentType: String): Map<String, List<HttpRequest>> {
         val examplesWithBodies: Map<String, List<HttpRequest>> = exampleBodies.mapValues { (exampleName, bodyValue) ->
             val bodies: List<HttpRequest> = if(exampleName in examplesBasedOnParameters) {
                 examplesBasedOnParameters.getValue(exampleName).map { exampleRequest ->
-                    exampleRequest.copy(body = parsedValue(bodyValue))
+                    exampleRequest
+                        .copy(
+                            headers = exampleRequest.headers + mapOf("Content-Type" to contentType),
+                            body = parsedValue(bodyValue))
                 }
             } else {
                 val httpRequest = HttpRequest(
                     method = httpMethod,
                     path = httpPathPattern.path,
+                    headers = mapOf("Content-Type" to contentType),
                     body = parsedValue(bodyValue)
                 )
 

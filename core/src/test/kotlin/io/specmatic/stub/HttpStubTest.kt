@@ -1421,8 +1421,8 @@ paths:
             }
         })
 
-        assertThat(results.success()).isFalse()
-        assertThat(results.report()).contains("Content-Type")
+        assertThat(results.success()).withFailMessage(results.report()).isFalse()
+        assertThat(results.report()).withFailMessage(results.report()).contains("Content-Type")
     }
 
     @Test

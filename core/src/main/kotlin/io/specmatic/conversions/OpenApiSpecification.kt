@@ -383,34 +383,6 @@ class OpenApiSpecification(
                         )
                     }
 
-                    val scenarioInfos2 =
-                        httpResponsePatterns.map { (response, responseMediaType: MediaType, httpResponsePattern, responseExamples: Map<String, HttpResponse>) ->
-
-                            httpRequestPatterns.map { (httpRequestPattern, requestExamples: Map<String, List<HttpRequest>>, openApiRequest) ->
-                                val specmaticExampleRows: List<Row> =
-                                    testRowsFromExamples(responseExamples, requestExamples, operation, openApiRequest)
-                                val scenarioName = scenarioName(operation, response, httpRequestPattern)
-
-                                val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
-
-                                val rowsToBeUsed: List<Row> = specmaticExampleRows
-
-                                ScenarioInfo(
-                                    scenarioName = scenarioName,
-                                    patterns = patterns.toMap(),
-                                    httpRequestPattern = httpRequestPattern,
-                                    httpResponsePattern = httpResponsePattern,
-                                    ignoreFailure = ignoreFailure,
-                                    examples = rowsToExamples(rowsToBeUsed),
-                                    sourceProvider = sourceProvider,
-                                    sourceRepository = sourceRepository,
-                                    sourceRepositoryBranch = sourceRepositoryBranch,
-                                    specification = specificationPath,
-                                    serviceType = SERVICE_TYPE_HTTP
-                                )
-                            }
-                        }.flatten()
-
                     val requestExamples = httpRequestPatterns.map {
                         it.examples
                     }.foldRight(emptyMap<String, List<HttpRequest>>()) { acc, map ->
@@ -892,7 +864,7 @@ class OpenApiSpecification(
                         resolveExample(it.value)?.value?.toString() ?: ""
                     }
 
-                    val allExamples = exampleRequestBuilder.examplesWithRequestBodies(exampleBodies)
+                    val allExamples = exampleRequestBuilder.examplesWithRequestBodies(exampleBodies, contentType)
 
                     val bodyIsRequired: Boolean = requestBody.required ?: true
 

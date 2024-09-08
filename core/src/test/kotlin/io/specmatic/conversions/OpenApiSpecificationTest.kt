@@ -30,6 +30,7 @@ import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
 import java.math.BigDecimal
@@ -5923,8 +5924,8 @@ paths:
         }.isInstanceOf(NoMatchingScenario::class.java)
     }
 
-    @Test
-    fun `allOf with discriminator`() {
+    @Nested
+    inner class Discriminator {
         val openAPIText = """
             ---
             openapi: 3.0.3
@@ -5932,7 +5933,7 @@ paths:
               title: Vehicle API
               version: 1.0.0
             paths:
-              /vehicles:
+              /car:
                 post:
                   summary: Add a new vehicle
                   requestBody:
@@ -5940,7 +5941,7 @@ paths:
                     content:
                       application/json:
                         schema:
-                          ${'$'}ref: '#/components/schemas/Vehicle'
+                          ${'$'}ref: '#/components/schemas/Car'
                   responses:
                     '201':
                       description: Vehicle created successfully
@@ -5955,37 +5956,32 @@ paths:
                               type:
                                 type: string
                                 description: Type of the vehicle (car or bike)
-            
+              /bike:
+                post:
+                  summary: Add a new vehicle
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Bike'
+                  responses:
+                    '201':
+                      description: Vehicle created successfully
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                description: Unique identifier for the newly created vehicle
+                              type:
+                                type: string
+                                description: Type of the vehicle (car or bike)
+
             components:
               schemas:
-                Vehicle:
-                  type: object
-                  required:
-                    - type
-                  properties:
-                    type:
-                      type: string
-                  discriminator:
-                    propertyName: type
-                    mapping:
-                      car: '#/components/schemas/Car'
-                      bike: '#/components/schemas/Bike'
-                  allOf:
-                    - ${'$'}ref: '#/components/schemas/VehicleBase'
-                    - ${'$'}ref: '#/components/schemas/Car'
-                    - ${'$'}ref: '#/components/schemas/Bike'
-            
-                VehicleBase:
-                  type: object
-                  properties:
-                    make:
-                      type: string
-                    model:
-                      type: string
-                  required:
-                    - make
-                    - model
-            
                 VehicleType:
                   type: object
                   properties:
@@ -5994,7 +5990,7 @@ paths:
             
                 Car:
                   allOf:
-                    - ${'$'}ref: '#/components/schemas/VehicleBase'
+                    - ${'$'}ref: '#/components/schemas/VehicleType'
                     - type: object
                       properties:
                         type:
@@ -6003,48 +5999,93 @@ paths:
                           type: integer
                         trunkSize:
                           type: string
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "car": "#/components/schemas/Car"
             
                 Bike:
                   allOf:
-                    - ${'$'}ref: '#/components/schemas/VehicleBase'
+                    - ${'$'}ref: '#/components/schemas/VehicleType'
                     - type: object
                       properties:
                         type:
                           type: string
                         hasCarrier:
                           type: boolean
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "bike": "#/components/schemas/Bike"
         """.trimIndent()
         val feature = OpenApiSpecification.fromYAML(openAPIText, "").toFeature()
 
-        assertThat(
-            feature.matchingStub(
-                HttpRequest(
-                    "POST",
-                    "/vehicles",
-                    body = parsedJSON("""{"make": "Toyota", "model": "Supra", "type": "car", "seatingCapacity": 4, "trunkSize": "large"}""")
-                ), HttpResponse(201, headers = mapOf("Content-Type" to "application/json"), parsedJSONObject("""{"id": "abc123", "type": "car"}"""))
-            ).response.headers["X-Specmatic-Result"]
-        ).isEqualTo("success")
+        @ParameterizedTest
+        @CsvSource(
+            value = [
+                "path, type",
+                "/car, plane",
+                "/bike, plane",
+                "/car, bike",
+                "/bike, car"
+            ],
+            useHeadersInDisplayName = true,
+        )
+        fun `discriminator mismatch`(path: String, type: String) {
+            val body = requestBody(path, type)
 
-        assertThat(
-            feature.matchingStub(
-                HttpRequest(
-                    "POST",
-                    "/vehicles",
-                    body = parsedJSON("""{"make": "Toyota", "model": "Supra", "type": "bike", "seatingCapacity": 4, "trunkSize": "large"}""")
-                ), HttpResponse(201, headers = mapOf("Content-Type" to "application/json"), parsedJSONObject("""{"id": "abc123", "type": "car"}"""))
-            ).response.headers["X-Specmatic-Result"]
-        ).isEqualTo("success")
+            assertThatThrownBy {
+                feature.matchingStub(
+                    HttpRequest(
+                        "POST",
+                        path,
+                        body = body
+                    ),
+                    HttpResponse(
+                        201,
+                        headers = mapOf("Content-Type" to "application/json"),
+                        parsedJSONObject("""{"id": "abc123", "type": "$type"}""")
+                    )
+                )
+            }.isInstanceOf(NoMatchingScenario::class.java)
+        }
 
-        assertThatThrownBy {
-            feature.matchingStub(
-                HttpRequest(
-                    "POST",
-                    "/vehicles",
-                    body = parsedJSON("""{"make": "Toyota", "model": "Supra", "type": "plane", "seatingCapacity": 4, "trunkSize": "large"}""")
-                ), HttpResponse(201, headers = mapOf("Content-Type" to "application/json"), parsedJSONObject("""{"id": "abc123", "type": "car"}"""))
-            )
-        }.isInstanceOf(NoMatchingScenario::class.java)
+        private fun requestBody(path: String, type: String): Value {
+            val body = when (path) {
+                "/car" -> parsedJSON("""{"type": "$type", "seatingCapacity": 4, "trunkSize": "large"}""")
+                "/bike" -> parsedJSON("""{"type": "$type", "hasCarrier": false}""")
+                else -> fail("Path $path not recognized in this test")
+            }
+            return body
+        }
+
+        @ParameterizedTest
+        @CsvSource(
+            value = [
+                "path, type",
+                "/car, car",
+                "/bike, bike"
+            ],
+            useHeadersInDisplayName = true,
+        )
+        fun `happy path tests using discriminator as enum`(path: String, type: String) {
+            val body = requestBody(path, type)
+
+            assertThat(
+                feature.matchingStub(
+                    HttpRequest(
+                        "POST",
+                        path,
+                        body = body
+                    ),
+                    HttpResponse(
+                        201,
+                        headers = mapOf("Content-Type" to "application/json"),
+                        parsedJSONObject("""{"id": "abc123", "type": "$type"}""")
+                    )
+                ).response.headers["X-Specmatic-Result"]
+            ).isEqualTo("success")
+        }
     }
 
     @Test

@@ -20,7 +20,7 @@ repositories {
 
 def ktor_version = "2.3.12"
 def jgit_version = "6.10.0.202406032230-r"
-def junit_version = "5.10.3"
+def junit_version = "5.11.0"
 
 dependencies {
     // TODO Fix to eliminate vulnerabilities, remove when the enclosing library supports it
@@ -54,7 +54,7 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
     testImplementation 'org.json:json:20240303'
-    testImplementation 'org.springframework:spring-web:5.3.37'
+    testImplementation 'org.springframework:spring-web:5.3.39'
     testImplementation 'io.mockk:mockk:1.13.12'
     testImplementation 'org.assertj:assertj-core:3.26.3'
     testImplementation "io.ktor:ktor-client-mock-jvm:$ktor_version"

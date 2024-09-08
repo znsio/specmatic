@@ -4,7 +4,6 @@ import io.specmatic.conversions.OpenApiSpecification
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 
 internal class TestBackwardCompatibilityKtTest {
@@ -2209,8 +2208,8 @@ paths:
 """.trimIndent(), ""
         ).toFeature()
 
-        val result = testBackwardCompatibility(oldContract, newContract)
-        assertThat(result.success()).isTrue()
+        val results = testBackwardCompatibility(oldContract, newContract)
+        assertThat(results.success()).isFalse()
     }
 
     @Test
@@ -2654,7 +2653,7 @@ paths:
         """.trimIndent().openAPIToContract()
 
         val results: Results = testBackwardCompatibility(olderContract, newerContract)
-        assertThat(results.success()).isTrue
+        assertThat(results.success()).isFalse()
     }
 
     @Test
@@ -2772,7 +2771,7 @@ paths:
                   version: 0.2.0
                 paths:
                   /products:
-                    post:
+                    get:
                       summary: Create a product
                       description: Create a new product entry
                       # No requestBody, indicating no body
@@ -2783,7 +2782,7 @@ paths:
 
         val results: Results = testBackwardCompatibility(olderContract, newerContract)
         println(results.report())
-        assertThat(results.success()).isTrue()
+        assertThat(results.success()).isFalse()
     }
 
     @Test

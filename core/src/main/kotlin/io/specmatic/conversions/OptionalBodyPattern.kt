@@ -21,7 +21,7 @@ data class OptionalBodyPattern(override val pattern: AnyPattern, private val bod
         if(bodyPatternMatchResult is Result.Success)
             return bodyPatternMatchResult
 
-        val nobodyPatternMatchResult = NoBodyPattern.strictMatches(sampleData)
+        val nobodyPatternMatchResult = NoBodyPattern.matches(sampleData, resolver)
 
         if(nobodyPatternMatchResult is Result.Success)
             return nobodyPatternMatchResult

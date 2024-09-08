@@ -6,19 +6,8 @@ import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
-/*
-    TODO -
-     request changed from no-body to body -> backward compatible [in theory] (?)
-     -> Unable to come up with a solution.
-        Feels like we will have to return success if sampleData is NoBodyValue in all other kinds of
-        Patterns like StringPattern/JSONObjectPattern etc. But again that won't be correct as per my understanding
-*/
 object NoBodyPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        return Result.Success()
-    }
-
-    fun strictMatches(sampleData: Value?): Result {
         if(sampleData is NoBodyValue || sampleData == null)
             return Result.Success()
 
@@ -46,6 +35,11 @@ object NoBodyPattern : Pattern {
         otherResolver: Resolver,
         typeStack: TypeStack
     ): Result {
+        if(otherPattern is NoBodyPattern)
+            return Result.Success()
+
+        return Result.Failure("Expected no body, but found ${otherPattern.typeName}")
+
 //        TODO -
 //          response changed from no-body to body -> backward compatible
 //          response changed from body to no-body -> backward incompatible

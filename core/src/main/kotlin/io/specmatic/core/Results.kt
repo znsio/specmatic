@@ -8,8 +8,24 @@ data class Results(val results: List<Result> = emptyList()) {
     fun hasFailures(): Boolean = results.any { it is Result.Failure }
     fun success(): Boolean = if(hasResults()) successCount > 0 && failureCount == 0 else true
 
+//    fun withoutFluff(fluffLevel: Int): Results {
+//        val maxFluffLevel = 2
+//
+//        val results =
+//            (fluffLevel..maxFluffLevel)
+//                .asSequence()
+//                .map { index ->
+//                    results.filterNot { it.isFluffy(index) }
+//                }.firstOrNull {
+//                    it.isNotEmpty()
+//                }
+//                    ?: return copy(results = emptyList())
+//
+//        return copy(results = results)
+//    }
     fun withoutFluff(fluffLevel: Int): Results = copy(results = results.filterNot { it.isFluffy(fluffLevel) })
 
+//    fun withoutFluff(): Results = withoutFluff(0)
     fun withoutFluff(): Results = copy(results = minimumFluff())
 
     private fun minimumFluff() = results.filterNot { it.isFluffy() }.ifEmpty { results.filterNot { it.isFluffy(1) } }

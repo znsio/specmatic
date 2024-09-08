@@ -152,8 +152,16 @@ data class Feature(
                 it.matchesStub(httpRequest, localCopyOfServerState, mismatchMessages)
             })
 
-            return matchingScenario(resultList)?.let { Pair(ResponseBuilder(it, serverState), Results()) }
-                ?: Pair(null, Results(resultList.map { it.second }.toMutableList()).withoutFluff())
+            return matchingScenario(resultList)?.let {
+                Pair(ResponseBuilder(it, serverState), Results())
+            }
+                ?: Pair(
+                    null,
+                    Results(resultList.map {
+                            it.second
+                        }.toList())
+                    .withoutFluff()
+                )
         } finally {
             serverState = emptyMap()
         }

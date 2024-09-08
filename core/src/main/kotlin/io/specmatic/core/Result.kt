@@ -167,6 +167,12 @@ sealed class Result {
         }
 
         override fun isSuccess() = false
+
+        fun traverseFailureReason(): FailureReason? {
+            return failureReason ?: causes.asSequence().map {
+                it.cause?.traverseFailureReason()
+            }.firstOrNull()
+        }
     }
 
     data class Success(val variables: Map<String, String> = emptyMap(), val partialSuccessMessage: String? = null) : Result() {
@@ -222,7 +228,7 @@ enum class FailureReason(val fluffLevel: Int) {
     StatusMismatch(1),
     IdentifierMismatch(1),
     MethodMismatch(1),
-    ContentTypeMismatch(0),
+    ContentTypeMismatch(1),
     RequestMismatchButStatusAlsoWrong(1),
     URLPathMisMatch(2),
     SOAPActionMismatch(2)

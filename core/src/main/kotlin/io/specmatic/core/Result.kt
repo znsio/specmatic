@@ -34,7 +34,7 @@ sealed class Result {
     fun isFluffy(acceptableFluffLevel: Int): Boolean {
         return when(this) {
             is Failure ->
-                failureReason?.let { it.fluffLevel > acceptableFluffLevel } == true || cause?.isFluffy() == true
+                failureReason?.let { it.fluffLevel > acceptableFluffLevel } == true || cause?.isFluffy(acceptableFluffLevel) == true
             else -> false
         }
     }
@@ -225,7 +225,7 @@ enum class TestResult {
 
 enum class FailureReason(val fluffLevel: Int) {
     PartNameMisMatch(0),
-    StatusMismatch(1),
+    StatusMismatch(2),
     IdentifierMismatch(1),
     MethodMismatch(1),
     ContentTypeMismatch(1),

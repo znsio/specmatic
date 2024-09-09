@@ -431,12 +431,17 @@ class OpenApiSpecification(
                                 val rows = unusedRequestExample.flatMap { (key, requests) ->
                                     requests.map { request ->
                                         val paramExamples = (request.headers + request.queryParams.asMap()).toList()
+                                        val pathParameterExamples = try {
+                                            parameterExamples(operation, key) as Map<String, String>
+                                        } catch(e: Exception) {
+                                            emptyMap()
+                                        }.entries.map { it.key to it.value }
+
 
                                         val allExamples = if(scenarioInfo.httpRequestPattern.body is NoBodyPattern) {
-                                            paramExamples
+                                            paramExamples + pathParameterExamples
                                         } else
                                             listOf("(REQUEST-BODY)" to request.body.toStringLiteral()) + paramExamples
-
                                         Row(
                                             name = key,
                                             columnNames = allExamples.map { it.first },
@@ -446,7 +451,6 @@ class OpenApiSpecification(
                                 }
 
                                 val updatedExamples: List<Examples> = listOf(Examples(rows.first().columnNames, scenarioInfo.examples.firstOrNull()?.rows.orEmpty() + rows))
-
                                 scenarioInfo.copy(
                                     examples = updatedExamples
                                 )

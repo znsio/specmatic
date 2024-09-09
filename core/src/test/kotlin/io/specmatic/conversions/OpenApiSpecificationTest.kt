@@ -8760,6 +8760,62 @@ components:
         assertThat(testCount).isEqualTo(0)
     }
 
+    @Test
+    fun `should use the path parameter example for a no body response`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.3
+info:
+  title: Example API
+  description: An API with operations that have no response bodies or headers.
+  version: 1.0.0
+  contact:
+    name: Jack
+servers:
+  - url: http://prod
+tags:
+  - name: mod
+  - name: read
+paths:
+  /items/{itemId}:
+    delete:
+      summary: Delete an item
+      operationId: deleteItem
+      description: "Delete an item"
+      tags:
+        - mod
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: ID of the item to delete
+          schema:
+            type: string
+          examples:
+            DELETE_ITEM:
+              value: '123-to-be-deleted'
+      responses:
+        '204':
+          description: No Content - The item was successfully deleted
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val request = HttpRequest(
+            "DELETE",
+            "/items/123-to-be-deleted"
+        )
+        val response = HttpResponse(204, emptyMap())
+
+        val stub: HttpStubData = feature.matchingStub(request, response)
+
+        println(stub.requestType)
+
+        assertThat(stub.requestType.method).isEqualTo("DELETE")
+        assertThat(stub.response.status).isEqualTo(204)
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

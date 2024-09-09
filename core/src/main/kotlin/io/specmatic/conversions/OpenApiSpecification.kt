@@ -390,18 +390,26 @@ class OpenApiSpecification(
                         )
                     }
 
+                    val responseExamplesList = httpResponsePatterns.map { it.examples }
+
                     val requestExamples = httpRequestPatterns.map {
                         it.examples
                     }.foldRight(emptyMap<String, List<HttpRequest>>()) { acc, map ->
                         acc.plus(map)
                     }
+                    val requestExamplesForNoParamNoBodyRequest = getRequestExamplesForRequestWithNoParamsAndBody(
+                        operation,
+                        requestExamples,
+                        responseExamplesList,
+                        httpRequestPatterns
+                    )
 
-                    val responseExamplesList = httpResponsePatterns.map { it.examples }
+                    val allRequestExamples = requestExamples.plus(requestExamplesForNoParamNoBodyRequest)
 
                     val examples =
-                        collateExamplesForExpectations(requestExamples, responseExamplesList)
+                        collateExamplesForExpectations(allRequestExamples, responseExamplesList, httpRequestPatterns)
 
-                    val requestExampleNames = requestExamples.keys
+                    val requestExampleNames = allRequestExamples.keys
 
                     val usedExamples = examples.keys
 
@@ -413,54 +421,28 @@ class OpenApiSpecification(
                         }
                     }
 
-                    val (additionalExamples, updatedScenarios) = if(responseThatReturnsNoValues != null && unusedRequestExampleNames.isNotEmpty()) {
-                        val emptyResponse = HttpResponse(
-                            status = responseThatReturnsNoValues.responsePattern.status,
-                            headers = emptyMap(),
-                            body = NoBodyValue
-                        )
-                        val examplesOfResponseThatReturnsNoValues: Map<String, List<Pair<HttpRequest, HttpResponse>>> =
-                            requestExamples.filterKeys { it in unusedRequestExampleNames }.mapValues { (key, examples) ->
-                            examples.map { it to emptyResponse }
-                        }
-
-                        val updatedScenarioInfos = scenarioInfos.map { scenarioInfo ->
-                            if(scenarioInfo.httpResponsePattern.body == NoBodyPattern) {
-                                val unusedRequestExample = requestExamples.filter { it.key in unusedRequestExampleNames }
-
-                                val rows = unusedRequestExample.flatMap { (key, requests) ->
-                                    requests.map { request ->
-                                        val paramExamples = (request.headers + request.queryParams.asMap()).toList()
-                                        val pathParameterExamples = try {
-                                            parameterExamples(operation, key) as Map<String, String>
-                                        } catch(e: Exception) {
-                                            emptyMap()
-                                        }.entries.map { it.key to it.value }
-
-
-                                        val allExamples = if(scenarioInfo.httpRequestPattern.body is NoBodyPattern) {
-                                            paramExamples + pathParameterExamples
-                                        } else
-                                            listOf("(REQUEST-BODY)" to request.body.toStringLiteral()) + paramExamples
-                                        Row(
-                                            name = key,
-                                            columnNames = allExamples.map { it.first },
-                                            values = allExamples.map { it.second }
-                                        )
-                                    }
+                    val (additionalExamples, updatedScenarios)
+                            = when {
+                                responseThatReturnsNoValues != null && unusedRequestExampleNames.isNotEmpty() -> {
+                                    getUpdatedScenarioInfosWithNoBodyResponseExamples(
+                                        responseThatReturnsNoValues,
+                                        allRequestExamples,
+                                        unusedRequestExampleNames,
+                                        scenarioInfos,
+                                        operation
+                                    )
+                                }
+                                requestExamplesForNoParamNoBodyRequest.isNotEmpty() -> {
+                                    getUpdatedScenarioInfosWithNoBodyNoParamRequestExamples(
+                                        examples,
+                                        requestExamplesForNoParamNoBodyRequest,
+                                        operation,
+                                        scenarioInfos
+                                    )
                                 }
 
-                                val updatedExamples: List<Examples> = listOf(Examples(rows.first().columnNames, scenarioInfo.examples.firstOrNull()?.rows.orEmpty() + rows))
-                                scenarioInfo.copy(
-                                    examples = updatedExamples
-                                )
-                            } else
-                                scenarioInfo
-                        }
-
-                        examplesOfResponseThatReturnsNoValues to updatedScenarioInfos
-                    } else
-                        emptyMap<String, List<Pair<HttpRequest, HttpResponse>>>() to scenarioInfos
+                                else -> emptyMap<String, List<Pair<HttpRequest, HttpResponse>>>() to scenarioInfos
+                            }
 
                     Triple(updatedScenarios, examples + additionalExamples, requestExampleNames)
                 }
@@ -491,6 +473,116 @@ class OpenApiSpecification(
         return scenarioInfos to examples
     }
 
+    private fun getUpdatedScenarioInfosWithNoBodyNoParamRequestExamples(
+        examples: Map<String, List<Pair<HttpRequest, HttpResponse>>>,
+        requestExamplesForNoParamNoBodyRequest: Map<String, List<HttpRequest>>,
+        operation: Operation,
+        scenarioInfos: List<ScenarioInfo>
+    ): Pair<Map<String, List<Pair<HttpRequest, HttpResponse>>>, List<ScenarioInfo>> {
+        return examples to scenarioInfos.map { scenarioInfo ->
+            val rows = getRowsFromRequestExample(
+                requestExamplesForNoParamNoBodyRequest,
+                operation,
+                scenarioInfo
+            )
+            val updatedExamples: List<Examples> = listOf(
+                Examples(
+                    rows.first().columnNames,
+                    scenarioInfo.examples.firstOrNull()?.rows.orEmpty() + rows
+                )
+            )
+            scenarioInfo.copy(
+                examples = updatedExamples
+            )
+        }
+    }
+
+    private fun getUpdatedScenarioInfosWithNoBodyResponseExamples(
+        responseThatReturnsNoValues: ResponsePatternData,
+        requestExamples: Map<String, List<HttpRequest>>,
+        unusedRequestExampleNames: Set<String>,
+        scenarioInfos: List<ScenarioInfo>,
+        operation: Operation
+    ): Pair<Map<String, List<Pair<HttpRequest, HttpResponse>>>, List<ScenarioInfo>> {
+        val emptyResponse = HttpResponse(
+            status = responseThatReturnsNoValues.responsePattern.status,
+            headers = emptyMap(),
+            body = NoBodyValue
+        )
+        val examplesOfResponseThatReturnsNoValues: Map<String, List<Pair<HttpRequest, HttpResponse>>> =
+            requestExamples.filterKeys { it in unusedRequestExampleNames }
+                .mapValues { (key, examples) ->
+                    examples.map { it to emptyResponse }
+                }
+
+        val updatedScenarioInfos = scenarioInfos.map { scenarioInfo ->
+            if (scenarioInfo.httpResponsePattern.body == NoBodyPattern) {
+                val unusedRequestExample =
+                    requestExamples.filter { it.key in unusedRequestExampleNames }
+
+                val rows = getRowsFromRequestExample(unusedRequestExample, operation, scenarioInfo)
+
+                val updatedExamples: List<Examples> = listOf(
+                    Examples(
+                        rows.first().columnNames,
+                        scenarioInfo.examples.firstOrNull()?.rows.orEmpty() + rows
+                    )
+                )
+                scenarioInfo.copy(
+                    examples = updatedExamples
+                )
+            } else
+                scenarioInfo
+        }
+
+        return examplesOfResponseThatReturnsNoValues to updatedScenarioInfos
+    }
+
+    private fun getRowsFromRequestExample(
+        requestExample: Map<String, List<HttpRequest>>,
+        operation: Operation,
+        scenarioInfo: ScenarioInfo
+    ): List<Row> {
+        return requestExample.flatMap { (key, requests) ->
+            requests.map { request ->
+                val paramExamples = (request.headers + request.queryParams.asMap()).toList()
+                val pathParameterExamples = try {
+                    parameterExamples(operation, key) as Map<String, String>
+                } catch (e: Exception) {
+                    emptyMap()
+                }.entries.map { it.key to it.value }
+
+
+                val allExamples = if (scenarioInfo.httpRequestPattern.body is NoBodyPattern) {
+                    paramExamples + pathParameterExamples
+                } else
+                    listOf("(REQUEST-BODY)" to request.body.toStringLiteral()) + paramExamples
+                Row(
+                    name = key,
+                    columnNames = allExamples.map { it.first },
+                    values = allExamples.map { it.second }
+                )
+            }
+        }
+    }
+
+    private fun getRequestExamplesForRequestWithNoParamsAndBody(
+        operation: Operation,
+        requestExamples: Map<String, List<HttpRequest>>,
+        responseExamplesList: List<Map<String, HttpResponse>>,
+        httpRequestPatterns: List<RequestPatternsData>
+    ): Map<String, List<HttpRequest>> {
+        if(operation.requestBody != null || operation.parameters != null || requestExamples.isNotEmpty()) {
+            return emptyMap()
+        }
+
+        return responseExamplesList.flatMap { responseExamples ->
+            responseExamples.map {
+                it.key to httpRequestPatterns.map { it.requestPattern.generate(Resolver()) }
+            }
+        }.toMap()
+    }
+
     private fun validateParameters(parameters: List<Parameter>?) {
         parameters.orEmpty().forEach { parameter ->
             if(parameter.name == null)
@@ -507,7 +599,8 @@ class OpenApiSpecification(
 
     private fun collateExamplesForExpectations(
         requestExamples: Map<String, List<HttpRequest>>,
-        responseExamplesList: List<Map<String, HttpResponse>>
+        responseExamplesList: List<Map<String, HttpResponse>>,
+        httpRequestPatterns: List<RequestPatternsData>
     ): Map<String, List<Pair<HttpRequest, HttpResponse>>> {
         return responseExamplesList.flatMap { responseExamples ->
             responseExamples.filter { (key, _) ->
@@ -559,7 +652,7 @@ class OpenApiSpecification(
             }.toMap().ifEmpty { mapOf(SPECMATIC_TEST_WITH_NO_REQ_EX to "") }
 
             if (requestExamples.containsKey(SPECMATIC_TEST_WITH_NO_REQ_EX) && responseExample.status != first2xxResponseStatus) {
-                logger.log(missingRequestExampleErrorMessageForTest(exampleName))
+                if (responseExamples.isEmpty()) logger.log(missingRequestExampleErrorMessageForTest(exampleName))
                 return@mapNotNull null
             }
 

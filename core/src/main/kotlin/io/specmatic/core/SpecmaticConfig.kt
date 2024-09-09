@@ -198,9 +198,12 @@ data class ReportConfiguration(
 data class ReportFormatter(
     var type: ReportFormatterType = ReportFormatterType.TEXT,
     val layout: ReportFormatterLayout = ReportFormatterLayout.TABLE,
+    val lite: Boolean = false,
     val title: String = "Specmatic Report",
     val heading: String = "Contract Test Results",
-    val outputDirectory: String = "./build/reports/specmatic/html"
+    val outputDirectory: String = "./build/reports/specmatic/html",
+    val logo: String = "assets/specmatic-logo.svg",
+    val logoAltText: String = "Specmatic",
 )
 
 enum class ReportFormatterType {

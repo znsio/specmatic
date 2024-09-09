@@ -49,6 +49,9 @@ class HtmlReport(private val htmlReportInput: HtmlReportInput) {
         val templateVariables = mapOf(
             "pageTitle" to reportFormat.title,
             "reportHeading" to reportFormat.heading,
+            "logo" to reportFormat.logo,
+            "logoAltText" to reportFormat.logoAltText,
+            "liteMode" to reportFormat.lite,
             "summaryResult" to if (testCriteria && successCriteria) "approved" else "rejected",
             "totalCoverage" to reportData.totalCoveragePercentage,
             "totalSuccess" to totalSuccess,
@@ -128,7 +131,11 @@ class HtmlReport(private val htmlReportInput: HtmlReportInput) {
                 }
             }
         }
-        totalTests = totalSuccess + totalFailures + totalErrors + totalSkipped
+
+        totalTests = when (reportFormat.lite) {
+            true ->  totalSuccess + totalFailures + totalErrors
+            else ->  totalSuccess + totalFailures + totalErrors + totalSkipped
+        }
     }
 
     private fun generatedOnTimestamp(): String {

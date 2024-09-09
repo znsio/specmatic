@@ -1,5 +1,6 @@
 package io.specmatic.test.reports.renderers
 
+import io.specmatic.core.ReportFormatter
 import io.specmatic.core.ReportFormatterType
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
@@ -10,6 +11,7 @@ import io.specmatic.test.OpenApiTestResultRecord
 import io.specmatic.test.groupTestResults
 import io.specmatic.test.report.interfaces.ReportInput
 import io.specmatic.test.report.interfaces.ReportRenderer
+import io.specmatic.test.reports.coverage.OpenApiCoverageRow
 import io.specmatic.test.reports.coverage.OpenApiReportInput
 import io.specmatic.test.reports.coverage.groupCoverageRows
 import io.specmatic.test.reports.coverage.html.*
@@ -35,7 +37,7 @@ class OpenApiHtmlRenderer : ReportRenderer {
         val (host, port) = reportInput.getHostAndPort()
 
         val reportData = HtmlReportData(
-            totalCoveragePercentage = reportInput.totalCoveragePercentage(), tableRows = makeTableRows(reportInput),
+            totalCoveragePercentage = reportInput.totalCoveragePercentage(), tableRows = makeTableRows(reportInput, htmlReportConfiguration),
             scenarioData = makeScenarioData(reportInput), totalTestDuration = reportInput.getTotalDuration()
         )
 
@@ -63,8 +65,13 @@ class OpenApiHtmlRenderer : ReportRenderer {
         return props.getProperty("version")
     }
 
-    private fun makeTableRows(report: OpenApiReportInput): List<TableRow> {
-        return report.coverageRows.groupCoverageRows().flatMap { (_, methodGroup) ->
+    private fun makeTableRows(report: OpenApiReportInput, reportFormat: ReportFormatter): List<TableRow> {
+        val updatedCoverageRows = when(reportFormat.lite) {
+            true -> reCreateCoverageRowsForLite(report.coverageRows)
+            else -> report.coverageRows
+        }
+
+        return updatedCoverageRows.groupCoverageRows().flatMap { (_, methodGroup) ->
             methodGroup.flatMap { (_, statusGroup) ->
                 statusGroup.flatMap { (_, coverageRows) ->
                     coverageRows.map {
@@ -150,5 +157,31 @@ class OpenApiHtmlRenderer : ReportRenderer {
 
     private fun getReportDetail(testResult: OpenApiTestResultRecord): String {
         return testResult.scenarioResult?.reportString() ?: ""
+    }
+
+    private fun reCreateCoverageRowsForLite(coverageRows: List<OpenApiCoverageRow>): List<OpenApiCoverageRow> {
+        val exercisedRows = coverageRows.filter { it.exercisedCount > 0 }
+        val updatedRows = mutableListOf<OpenApiCoverageRow>()
+
+        exercisedRows.groupCoverageRows().forEach { (_, methodGroup) ->
+            val methodExists = mutableSetOf<String>()
+            val rowGroup = mutableListOf<OpenApiCoverageRow>()
+
+            methodGroup.forEach { (method, statusGroup) ->
+                statusGroup.forEach { (_, rows) ->
+                    rows.forEach { row ->
+                        val showPath = rowGroup.isEmpty()
+                        val showMethod = !methodExists.contains(method)
+
+                        rowGroup.add(row.copy(showPath = showPath, showMethod = showMethod))
+                        methodExists.add(method)
+                    }
+                }
+            }
+
+            updatedRows.addAll(rowGroup)
+        }
+
+        return updatedRows
     }
 }

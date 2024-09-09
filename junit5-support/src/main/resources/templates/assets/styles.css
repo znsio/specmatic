@@ -212,7 +212,6 @@ header {
         }
 
         &.active {
-            pointer-events: none;
             background-color: rgb(var(--white));
             box-shadow: var(--shadow-inner-md);
 
@@ -844,7 +843,7 @@ button#back {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 .capitalize {

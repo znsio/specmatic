@@ -13,14 +13,14 @@
 <body>
     <header>
         <div id="branding">
-            <img src="assets/specmatic-logo.svg" alt="Specmatic Logo" />
+            <img th:attr="src=${logo}, alt=${logoAltText}" />
             <h1 th:text="${reportHeading}"></h1>
             <button id="print">
                 <img src="assets/download.svg" alt="Print Button" />
             </button>
         </div>
         <div id="summary" th:class="'bg-' + ${summaryResult}" data-panel="table">
-            <div id="coverage">
+            <div th:class="${liteMode} ? 'hidden' : ''" id="coverage">
                 <span>API Coverage</span>
                 <span th:class="${summaryResult}">[[${totalCoverage}]]%</span>
             </div>
@@ -40,7 +40,7 @@
                     <span>Errors: </span>
                     <span>[[${totalErrors}]]</span>
                 </li>
-                <li id="Skipped">
+                <li th:class="${liteMode} ? 'hidden' : ''" id="Skipped">
                     <img src="assets/blocked.svg" alt="success-count" />
                     <span>Skipped: </span>
                     <span>[[${totalSkipped}]]</span>
@@ -58,7 +58,7 @@
         </div>
     </header>
 
-    <section id="additional-info" data-expand="false">
+    <section th:class="${liteMode} ? 'hidden' : ''" id="additional-info" data-expand="false">
         <div id="header">
             <p th:if="${successCriteriaPassed == false}">
                 Success Criteria Failed: <span class="rejected">Minimum API Coverage of [[${thresholdInfo.minThresholdPercentage}]]% was not met.</span>
@@ -214,22 +214,22 @@
         <table id="reports" data-filter="All">
             <thead>
                 <tr>
-                    <td>Coverage</td>
+                    <td th:class="${liteMode} ? 'hidden' : ''">Coverage</td>
                     <td th:each="column: ${tableColumns}" th:attr="colspan=${column.colSpan}" th:text="${column.name}"></td>
                     <td>Exercised</td>
-                    <td>Result</td>
+                    <td th:class="${liteMode} ? 'hidden' : ''">Result</td>
                 </tr>
             </thead>
-            <tbody>
+            <tbody th:attr="data-mode=${liteMode ? 'lite' : 'full'}">
                 <tr th:each="row : ${tableRows}" th:attr="data-type=${row.htmlResult}, data-color=${row.badgeColor}">
-                    <td th:text="${row.coveragePercentage} + '%'" th:classappend="${row.groups[0].showRow} ? '' : 'hidden'"
+                    <td th:text="${row.coveragePercentage} + '%'" th:classappend="${row.groups[0].showRow && liteMode == false} ? '' : 'hidden'"
                         th:attr="rowspan=${row.groups[0].rowSpan}, data-main=${row.groups[0].showRow}"></td>
                     <td th:each="group,iter: ${row.groups}" th:classappend="${group.showRow} ? '' : 'hidden'"
                         th:attr="rowspan=${group.rowSpan}, colspan=${tableColumns[iter.index].colSpan}, data-main=${group.showRow}, data-colName=${group.columnName}"
                         th:text="${group.value}">
                     </td>
                     <td th:text="${row.exercised}"></td>
-                    <td><span class="pill" th:classappend="${row.badgeColor}" th:text="${row.result}"></span></td>
+                    <td th:class="${liteMode} ? 'hidden' : ''"><span class="pill" th:classappend="${row.badgeColor}" th:text="${row.result}"></span></td>
                 </tr>
             </tbody>
         </table>
@@ -262,6 +262,7 @@
             </ol>
         </div>
     </main>
+
     <script id="json-data"  type="application/json">
         [(${jsonTestData})]
     </script>

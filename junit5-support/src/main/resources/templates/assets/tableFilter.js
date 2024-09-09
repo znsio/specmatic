@@ -138,11 +138,12 @@ function getRowTds(row) {
     /** @type {Array<HTMLTableCellElement>} */
     // @ts-ignore will be an array of Tds
     const childrenTds = Array.from(row.children);
+    const isLiteMode = row.parentElement.getAttribute("data-mode") === "lite";
 
     return {
         childrenTds,
         restGroupTds: childrenTds.slice(2, -2),
-        restTds: childrenTds.slice(-2),
+        restTds: childrenTds.slice(-2, isLiteMode ? -1 : undefined),
     };
 }
 

@@ -39,25 +39,6 @@ object NoBodyPattern : Pattern {
             return Result.Success()
 
         return Result.Failure("Expected no body, but found ${otherPattern.typeName}")
-
-//        TODO -
-//          response changed from no-body to body -> backward compatible
-//          response changed from body to no-body -> backward incompatible
-/*
-            When response changes from body to no-body, this function won't get called.
-            The encompasses from SomeBodyPattern associated with the body will get called.
-            That function will return Failure (assumption)
-
-            When response changes from no-body to body, this function gets called:
-            e.g. NobodyPattern.encompasses(SomeBodyPattern)
-            In such case we want to return Success, that's why the logic is as follows.
-*/
-
-        return Result.Success()
-//        if(otherPattern is NoBodyPattern)
-//            return Result.Success()
-//
-//        return Result.Failure("Expected no body, but found ${otherPattern.typeName}")
     }
 
     override fun listOf(valueList: List<Value>, resolver: Resolver): Value = JSONArrayValue(valueList)

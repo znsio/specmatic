@@ -58,6 +58,7 @@ class HtmlReport(private val htmlReportInput: HtmlReportInput) {
             "reportHeading" to reportFormat.heading,
             "logo" to reportFormat.logo,
             "logoAltText" to reportFormat.logoAltText,
+            "liteMode" to reportFormat.lite,
             "summaryResult" to if (testCriteria && successCriteria) "approved" else "rejected",
             "totalCoverage" to reportData.totalCoveragePercentage,
             "totalSuccess" to totalSuccess,

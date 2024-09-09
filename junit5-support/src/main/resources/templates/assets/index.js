@@ -59,6 +59,8 @@ backBtn.addEventListener("click", () => {
 });
 
 printBtn.addEventListener("click", () => {
+    resetSummaryHeader();
+    goBackToTable(500, false);
     window.print();
 });
 
@@ -183,7 +185,7 @@ function createScenarioInformation(scenario) {
 
     const scenarioResult = document.createElement("span");
     // @ts-ignore Func in utils
-    const pillColor = getColor(scenario.htmlResult);
+    const pillColor = scenario.valid ? getColor(scenario.htmlResult) : "red";
     scenarioResult.classList.add("pill", pillColor);
     const pillText = scenario.wip ? "WIP" : scenario.valid || scenario.testResult === "MissingInSpec" ? scenario.testResult : "Invalid";
     scenarioResult.textContent = pillText;

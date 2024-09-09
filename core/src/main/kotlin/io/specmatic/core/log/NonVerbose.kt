@@ -2,7 +2,7 @@ package io.specmatic.core.log
 
 import io.specmatic.core.utilities.exceptionCauseMessage
 
-class NonVerbose(override val printer: CompositePrinter) : LogStrategy {
+class NonVerbose(override val printer: CompositePrinter = CompositePrinter()) : LogStrategy {
     private val readyMessage = ReadyMessage()
 
     override fun keepReady(msg: LogMessage) {

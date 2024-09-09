@@ -45,6 +45,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         val updatedTableRows = updateTableRows(reportData.tableRows)
 
         val templateVariables = mapOf(
+            "lite" to reportFormat.lite,
             "pageTitle" to reportFormat.title,
             "reportHeading" to reportFormat.heading,
             "logo" to reportFormat.logo,
@@ -90,7 +91,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
             firstGroup.forEach { (_, secondGroup) ->
                 secondGroup.forEach { (_, scenariosList) ->
                     scenariosList.forEach {
-                        val htmlResult = categorizeResult(it.testResult, it.wip)
+                        val htmlResult = categorizeResult(it)
                         val scenarioDetail = "${it.name} ${htmlResultToDetailPostFix(htmlResult)}"
 
                         it.htmlResult = htmlResult
@@ -128,7 +129,11 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
                 }
             }
         }
-        totalTests = totalSuccess + totalFailures + totalErrors + totalSkipped
+
+        totalTests = when (reportFormat.lite) {
+            true ->  totalSuccess + totalFailures + totalErrors
+            else ->  totalSuccess + totalFailures + totalErrors + totalSkipped
+        }
     }
 
     private fun generatedOnTimestamp(): String {
@@ -143,6 +148,8 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
                 ?: emptyList()
 
         scenarioList.forEach {
+            if (!it.valid) return Pair(it.htmlResult!!, "red")
+
             when (it.htmlResult) {
                 HtmlResult.Failed -> return Pair(HtmlResult.Failed, "red")
                 HtmlResult.Error -> return Pair(HtmlResult.Error, "yellow")
@@ -162,12 +169,12 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         }
     }
 
-    private fun categorizeResult(testResult: TestResult, isWip: Boolean): HtmlResult {
-        return when (testResult) {
+    private fun categorizeResult(scenarioData: ScenarioData): HtmlResult {
+        return when (scenarioData.testResult) {
             TestResult.Success -> HtmlResult.Success
             TestResult.NotCovered -> HtmlResult.Skipped
             TestResult.Error -> HtmlResult.Error
-            else -> if (isWip) HtmlResult.Error else HtmlResult.Failed
+            else -> if (scenarioData.wip) HtmlResult.Error else HtmlResult.Failed
         }
     }
 

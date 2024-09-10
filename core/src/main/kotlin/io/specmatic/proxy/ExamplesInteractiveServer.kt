@@ -181,36 +181,24 @@ class ExamplesInteractiveServer(
                 contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
             examplesDir.mkdirs()
 
-            var ctr = 0
-            feature.executeTests(object : TestExecutor {
-                override fun execute(request: HttpRequest): HttpResponse {
-                    val response = feature.lookupResponse(request).cleanup()
+            val scenario = feature.scenarios.firstOrNull {
+                it.method == method && it.status == responseStatusCode && it.path == path
+            }
+            if(scenario == null) return generatedExampleFiles
 
-                    val scenarioStub = ScenarioStub(request, response)
+            val request = scenario.generateHttpRequest()
+            val response = feature.lookupResponse(request).cleanup()
+            val scenarioStub = ScenarioStub(request, response)
 
-                    val stubJSON = scenarioStub.toJSON()
+            val stubJSON = scenarioStub.toJSON()
+            val uniqueNameForApiOperation =
+                uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
 
-                    val stubString = stubJSON.toStringLiteral()
+            val file = examplesDir.resolve("${uniqueNameForApiOperation}.json")
+            println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
+            file.writeText(stubJSON.toStringLiteral())
 
-                    val uniqueNameForApiOperation =
-                        uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
-
-                    if(request.path == path && request.method == method && response.status == responseStatusCode) {
-                        ctr += 1
-                        val file = examplesDir.resolve("${uniqueNameForApiOperation}_$ctr.json")
-                        val loggablePath =
-                            "Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}"
-                        println(loggablePath)
-                        file.writeText(stubString)
-                        generatedExampleFiles.add(file.absolutePath)
-                    }
-
-                    return response
-                }
-
-                override fun setServerState(serverState: Map<String, Value>) {
-                }
-            })
+            generatedExampleFiles.add(file.absolutePath)
 
             return generatedExampleFiles
         }

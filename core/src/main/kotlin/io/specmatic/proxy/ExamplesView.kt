@@ -13,6 +13,7 @@ class ExamplesView {
             return feature.scenarios.map {
                 Endpoint(
                     path = convertPathParameterStyle(it.path),
+                    rawPath = it.path,
                     method = it.method,
                     responseStatus = it.httpResponsePattern.status
                 )
@@ -42,6 +43,7 @@ class ExamplesView {
                 methodGroup.flatMap { (method, endpoints) ->
                     endpoints.map {
                         TableRow(
+                            rawPath = it.rawPath,
                             path = it.path,
                             method = it.method,
                             responseStatus = it.responseStatus.toString(),
@@ -58,6 +60,7 @@ class ExamplesView {
 }
 
 data class TableRow(
+    val rawPath: String,
     val path: String,
     val method: String,
     val responseStatus: String,
@@ -69,6 +72,7 @@ data class TableRow(
 
 data class Endpoint(
     val path: String,
+    val rawPath: String,
     val method: String,
     val responseStatus: Int,
 )

@@ -57,12 +57,16 @@ class ExamplesInteractiveServer(
                     val feature = parseContractFileToFeature(contractFile)
                     val endpoints = ExamplesView.getEndpoints(feature)
 
-                    val html = HtmlTemplateConfiguration.process(
-                        templateName = "examples/index.html",
-                        variables = mapOf("endpoints" to endpoints.groupEndpoints().toTableRows())
-                    )
-
-                    call.respondText(html, contentType = ContentType.Text.Html)
+                    try {
+                        val html = HtmlTemplateConfiguration.process(
+                            templateName = "examples/index.html",
+                            variables = mapOf("endpoints" to endpoints.groupEndpoints().toTableRows())
+                        )
+                        call.respondText(html, contentType = ContentType.Text.Html)
+                    } catch (e: Exception) {
+                        println(e)
+                        call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
+                    }
                 }
 
                 post("/_specmatic/examples") {
@@ -91,7 +95,7 @@ class ExamplesInteractiveServer(
                     } catch(e: NoMatchingScenario) {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.msg))
                     } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "An unexpected error occurred: ${e.message}"))
                     }
                 }
             }

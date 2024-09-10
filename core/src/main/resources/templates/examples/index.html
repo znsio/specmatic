@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>a,hr{color:inherit}progress,sub,sup{vertical-align:baseline}blockquote,body,dd,dl,fieldset,figure,h1,h2,h3,h4,h5,h6,hr,menu,ol,p,pre,ul{margin:0}dialog,fieldset,legend,menu,ol,ul{padding:0}*,::after,::before{box-sizing:border-box}:root{line-height:1.5;text-size-adjust:100%;tab-size:4;font-feature-settings:normal;font-variation-settings:normal}body{line-height:inherit}hr{height:0;border-top-width:1px}abbr:where([title]){text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-size:1em;font-family:'Courier New',Courier,monospace}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{appearance:none}::-webkit-file-upload-button{appearance:button;font:inherit}summary{display:list-item}menu,ol,ul{list-style:none}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]{display:none}</style>
+    <style>@import url(https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap);@import url(https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@200;300;400;500;600;700&display=swap);body,thead{font-family:var(--roboto)}tbody,thead{font-weight:500}:root{--smoky-black:23,18,7;--white:2255,255,255;--black:0,0,0;--slate:241,245,249;--blue:52,115,217;--green:34,197,94;--red:239,68,68;--sans:ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";--mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;--roboto:"Roboto",var(--mono),var(--sans)}html{scroll-behavior:smooth;scrollbar-gutter:stable}table{width:100%;table-layout:fixed;text-align:center}thead{background:rgb(var(--slate));border-collapse:collapse}td{--_td-padding:0.75rem;overflow-wrap:break-word;border:1px solid rgba(var(--smoky-black),.2);padding:var(--_td-padding)}tbody{background-color:rgb(var(--white));font-family:var(--mono)}button{--_padding:.5rem 2rem;--_background-color:var(--blue);--_text-color:var(--white);padding:var(--_padding);border-radius:.5rem;color:rgb(var(--_text-color));background-color:rgba(var(--_background-color))}button.validate{--_background-color:var(--green)}.hidden{display:none!important}</style>
+    <title>Interactive Examples</title>
+</head>
+
+<body>
+<main>
+    <table>
+        <thead>
+        <tr>
+            <td colspan="2">Path</td>
+            <td>Method</td>
+            <td>Response</td>
+            <td>Action</td>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="endpoint : ${endpoints}">
+            <td th:text="${endpoint.path}" th:class="${endpoint.showPath ? '' : 'hidden'}" th:attr="rowspan=${endpoint.pathSpan}, colspan=2"></td>
+            <td th:text="${endpoint.method}" th:class="${endpoint.showMethod ? '' : 'hidden'}" th:attr="rowspan=${endpoint.methodSpan}"></td>
+            <td th:text="${endpoint.responseStatus}"></td>
+            <td>
+                <button class="generate">Generate</button>
+                <button class="validate hidden">Validate</button>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+
+</html>

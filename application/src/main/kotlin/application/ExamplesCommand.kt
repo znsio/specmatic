@@ -78,7 +78,7 @@ class ExamplesCommand : Callable<Unit> {
             ).also {
                 addShutdownHook()
             }
-            consoleLog(StringLog("Examples Interactive server is running on http://localhost:9001. Ctrl + C to stop."))
+            consoleLog(StringLog("Examples Interactive server is running on http://localhost:9001/_specmatic/examples. Ctrl + C to stop."))
             while(true) sleep(10000)
         }
 

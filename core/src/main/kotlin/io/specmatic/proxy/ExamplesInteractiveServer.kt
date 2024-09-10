@@ -20,6 +20,8 @@ import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.core.value.Value
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.proxy.ExamplesView.Companion.groupEndpoints
+import io.specmatic.proxy.ExamplesView.Companion.toTableRows
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.HttpStubData
 import io.specmatic.test.TestExecutor
@@ -35,6 +37,18 @@ class ExamplesInteractiveServer(
         module {
             configureHealthCheckModule()
             routing {
+                get("/_specmatic/examples") {
+                    val feature = parseContractFileToFeature(contractFile)
+                    val endpoints = ExamplesView.getEndpoints(feature)
+
+                    val html = HtmlTemplateConfiguration.process(
+                        templateName = "examples/index.html",
+                        variables = mapOf("endpoints" to endpoints.groupEndpoints().toTableRows())
+                    )
+
+                    call.respondText(html, contentType = ContentType.Text.Html)
+                }
+
                 post("/_specmatic/examples") {
                     try {
                         val generatedExamples: List<String> = generate(contractFile)

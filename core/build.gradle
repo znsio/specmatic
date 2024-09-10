@@ -58,6 +58,7 @@ dependencies {
     testImplementation 'io.mockk:mockk:1.13.12'
     testImplementation 'org.assertj:assertj-core:3.26.3'
     testImplementation "io.ktor:ktor-client-mock-jvm:$ktor_version"
+    implementation 'org.thymeleaf:thymeleaf:3.1.2.RELEASE'
 }
 
 test {

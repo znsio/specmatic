@@ -6090,6 +6090,93 @@ paths:
     }
 
     @Test
+    fun `discriminator can extend an allOf`() {
+        val feature = OpenApiSpecification.fromYAML("""
+                        ---
+            openapi: 3.0.3
+            info:
+              title: Vehicle API
+              version: 1.0.0
+            paths:
+              /vehicle:
+                post:
+                  summary: Add a new vehicle
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Vehicle'
+                  responses:
+                    '201':
+                      description: Vehicle created successfully
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+
+            components:
+              schemas:
+                VehicleType:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+
+                Vehicle:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/VehicleType'
+                    - type: object
+                      properties:
+                        seatingCapacity:
+                          type: integer
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "car": "#/components/schemas/Transmission"
+                      "bike": "#/components/schemas/SideCar"
+
+                Transmission:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      requried:
+                        - gearType
+                      properties:
+                        gear_type:
+                          type: string
+
+                SideCar:
+                  allOf
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      requried:
+                        - sidecarAvailable
+                      properties:
+                        sidecarAvailable:
+                          type: boolean
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(feature).use { stub ->
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "MT"}"""))).let {
+                assertThat(it.status).isEqualTo(200)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
+                assertThat(it.status).isEqualTo(200)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
+                assertThat(it.status).isEqualTo(400)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 4, "gearType": "MT"}"""))).let {
+                assertThat(it.status).isEqualTo(200)
+            }
+        }
+    }
+
+    @Test
     fun `should read WIP tag in OpenAPI paths`() {
         val contractString = """
                 openapi: 3.0.3

@@ -93,7 +93,8 @@ data class SpecmaticConfig(
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
-    val workflow: WorkflowConfiguration? = null
+    val workflow: WorkflowConfiguration? = null,
+    val ignoreInlineExamples: Boolean = false
 ) {
     fun isExtensibleSchemaEnabled(): Boolean {
         return (test?.allowExtensibleSchema == true)

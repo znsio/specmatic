@@ -338,6 +338,7 @@ Pet:
         val openApiFile = "src/test/resources/openapi/response_schema_validation_including_optional_spec.yaml"
         val specmaticConfig = mockk<SpecmaticConfig> {
             every { isResponseValueValidationEnabled() } returns true
+            every { ignoreInlineExamples } returns false
         }
         val openApiSpecification = OpenApiSpecification(
             openApiFilePath = openApiFile,
@@ -8389,6 +8390,61 @@ components:
 
         assertThat(requestResponsePairs).isEqualTo(expected)
 
+    }
+
+    @Test
+    fun `should ignore inline examples when ignoreInlineExamples flag is set in specmatic config`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /person:
+                    post:
+                      summary: "Get person by id"
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - age
+                              properties:
+                                age:
+                                  description: age of the person
+                                  type: number
+                            examples:
+                              SUCCESSFUL_API_CALL:
+                                value:
+                                  age: 10
+                      responses:
+                        200:
+                          description: "Get person by id"
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                              examples:
+                                SUCCESSFUL_API_CALL:
+                                  value:
+                                    age: "person data"
+                """.trimIndent(), "",
+            specmaticConfig = SpecmaticConfig(ignoreInlineExamples = true)
+        ).toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonRequestBody = request.body as JSONObjectValue
+
+                assertThat(jsonRequestBody.findFirstChildByPath("age")?.toStringLiteral()).isNotEqualTo("10")
+                return HttpResponse(200, "person data")
+            }
+        })
+
+        assertThat(results.testCount).isPositive()
+        assertThat(results.success()).isTrue()
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

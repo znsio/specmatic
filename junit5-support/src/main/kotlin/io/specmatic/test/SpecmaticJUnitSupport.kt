@@ -233,7 +233,8 @@ open class SpecmaticJUnitSupport {
                             testConfig,
                             specificationPath = it,
                             filterName = filterName,
-                            filterNotName = filterNotName
+                            filterNotName = filterNotName,
+                            specmaticConfig = specmaticConfig
                         )
                     }
                     val tests: Sequence<ContractTest> = testScenariosAndEndpointsPairList.asSequence().flatMap { it.first }

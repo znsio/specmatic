@@ -14,6 +14,7 @@ import io.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import io.cucumber.messages.internal.com.fasterxml.jackson.databind.ObjectMapper
 import io.cucumber.messages.types.Step
 import io.ktor.util.reflect.*
+import io.specmatic.core.utilities.Flags
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
@@ -708,9 +709,12 @@ class OpenApiSpecification(
         }
 
         val headerExamples =
-            response.headers.orEmpty().entries.fold(emptyMap<String, Map<String, String>>()) { acc, (headerName, header) ->
-                extractParameterExamples(header.examples, headerName, acc)
-            }
+            if(specmaticConfig.ignoreInlineExamples)
+                emptyMap()
+            else
+                response.headers.orEmpty().entries.fold(emptyMap<String, Map<String, String>>()) { acc, (headerName, header) ->
+                    extractParameterExamples(header.examples, headerName, acc)
+                }
 
         return response.content.map { (contentType, mediaType) ->
             val responsePattern = HttpResponsePattern(
@@ -722,9 +726,13 @@ class OpenApiSpecification(
                 }
             )
 
-            val exampleBodies: Map<String, String?> = mediaType.examples?.mapValues {
-                resolveExample(it.value)?.value?.toString() ?: ""
-            } ?: emptyMap()
+            val exampleBodies: Map<String, String?> =
+                if(specmaticConfig.ignoreInlineExamples)
+                    emptyMap()
+                else
+                    mediaType.examples?.mapValues {
+                        resolveExample(it.value)?.value?.toString() ?: ""
+                    } ?: emptyMap()
 
             val examples: Map<String, HttpResponse> =
                 when (status.toIntOrNull()) {
@@ -864,7 +872,11 @@ class OpenApiSpecification(
                         resolveExample(it.value)?.value?.toString() ?: ""
                     }
 
-                    val allExamples = exampleRequestBuilder.examplesWithRequestBodies(exampleBodies, contentType)
+                    val allExamples =
+                        if(specmaticConfig.ignoreInlineExamples)
+                            emptyMap()
+                        else
+                            exampleRequestBuilder.examplesWithRequestBodies(exampleBodies, contentType)
 
                     val bodyIsRequired: Boolean = requestBody.required ?: true
 
@@ -896,11 +908,16 @@ class OpenApiSpecification(
     private fun <T : Parameter> namedExampleParams(
         operation: Operation,
         parameterType: Class<T>
-    ): Map<String, Map<String, String>> = operation.parameters.orEmpty()
-        .filterIsInstance(parameterType)
-        .fold(emptyMap()) { acc, parameter ->
-            extractParameterExamples(parameter.examples, parameter.name, acc)
-        }
+    ): Map<String, Map<String, String>> {
+        if(specmaticConfig.ignoreInlineExamples)
+            return emptyMap()
+
+        return operation.parameters.orEmpty()
+            .filterIsInstance(parameterType)
+            .fold(emptyMap()) { acc, parameter ->
+                extractParameterExamples(parameter.examples, parameter.name, acc)
+            }
+    }
 
     private fun extractParameterExamples(
         examplesToAdd: Map<String, Example>?,

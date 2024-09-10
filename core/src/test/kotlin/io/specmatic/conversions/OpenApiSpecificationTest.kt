@@ -338,6 +338,7 @@ Pet:
         val openApiFile = "src/test/resources/openapi/response_schema_validation_including_optional_spec.yaml"
         val specmaticConfig = mockk<SpecmaticConfig> {
             every { isResponseValueValidationEnabled() } returns true
+            every { ignoreInlineExamples } returns false
         }
         val openApiSpecification = OpenApiSpecification(
             openApiFilePath = openApiFile,

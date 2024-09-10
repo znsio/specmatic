@@ -51,7 +51,13 @@ class ExamplesInteractiveServer(
 
                 post("/_specmatic/examples") {
                     try {
-                        val generatedExamples: List<String> = generate(contractFile)
+                        val request = call.receive<GenerateExampleRequest>()
+                        val generatedExamples = generate(
+                            contractFile,
+                            request.method,
+                            request.path,
+                            request.responseStatusCode
+                        )
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExamples))
                     } catch(e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
@@ -98,8 +104,6 @@ class ExamplesInteractiveServer(
     companion object {
         fun generate(contractFile: File): List<String> {
             val generatedExampleFiles = mutableListOf<String>()
-                if(!contractFile.exists())
-                    throw Exception("Could not find file ${contractFile.path}")
 
             try {
                 val feature = parseContractFileToFeature(contractFile)
@@ -149,6 +153,52 @@ class ExamplesInteractiveServer(
             return generatedExampleFiles
         }
 
+        fun generate(
+            contractFile: File,
+            method: String,
+            path: String,
+            responseStatusCode: Int
+        ): MutableList<String> {
+            val generatedExampleFiles = mutableListOf<String>()
+            val feature = parseContractFileToFeature(contractFile)
+            val examplesDir =
+                contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
+            examplesDir.mkdirs()
+
+            var ctr = 0
+            feature.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    val response = feature.lookupResponse(request).cleanup()
+
+                    val scenarioStub = ScenarioStub(request, response)
+
+                    val stubJSON = scenarioStub.toJSON()
+
+                    val stubString = stubJSON.toStringLiteral()
+
+                    val uniqueNameForApiOperation =
+                        uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
+
+                    if(request.path == path && request.method == method && response.status == responseStatusCode) {
+                        ctr += 1
+                        val file = examplesDir.resolve("${uniqueNameForApiOperation}_$ctr.json")
+                        val loggablePath =
+                            "Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}"
+                        println(loggablePath)
+                        file.writeText(stubString)
+                        generatedExampleFiles.add(file.absolutePath)
+                    }
+
+                    return response
+                }
+
+                override fun setServerState(serverState: Map<String, Value>) {
+                }
+            })
+
+            return generatedExampleFiles
+        }
+
         fun validate(contractFile: File, exampleFile: File): List<HttpStubData> {
             val scenarioStub = ScenarioStub.readFromFile(exampleFile)
             val feature = parseContractFileToFeature(contractFile)
@@ -180,6 +230,12 @@ class ExamplesInteractiveServer(
 
 data class ValidateExampleRequest(
     val exampleFile: String
+)
+
+data class GenerateExampleRequest(
+    val method: String,
+    val path: String,
+    val responseStatusCode: Int
 )
 
 data class GenerateExampleResponse(

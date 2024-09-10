@@ -28,6 +28,9 @@ class ExamplesCommand : Callable<Unit> {
             println("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
             return
         }
+        if (!contractFile!!.exists())
+            exitWithMessage("Could not find file ${contractFile!!.path}")
+
         try {
             ExamplesInteractiveServer.generate(contractFile!!)
         } catch (e: Exception) {
@@ -48,6 +51,9 @@ class ExamplesCommand : Callable<Unit> {
         lateinit var exampleFile: File
 
         override fun call() {
+            if (!contractFile!!.exists())
+                exitWithMessage("Could not find file ${contractFile!!.path}")
+
             try {
                 ExamplesInteractiveServer.validate(contractFile, exampleFile)
                 logger.log("The provided example ${exampleFile.name} is valid.")
@@ -71,6 +77,9 @@ class ExamplesCommand : Callable<Unit> {
         var server: ExamplesInteractiveServer? = null
 
         override fun call() {
+            if (!contractFile.exists())
+                exitWithMessage("Could not find file ${contractFile.path}")
+
             server = ExamplesInteractiveServer(
                 serverHost = "localhost",
                 serverPort = 9001,

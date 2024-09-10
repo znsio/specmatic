@@ -1,4 +1,4 @@
-package io.specmatic.proxy
+package io.specmatic.core.examples.server
 
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.Feature

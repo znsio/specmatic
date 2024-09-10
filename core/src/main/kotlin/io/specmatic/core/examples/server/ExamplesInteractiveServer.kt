@@ -1,4 +1,4 @@
-package io.specmatic.proxy
+package io.specmatic.core.examples.server
 
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
@@ -16,6 +16,8 @@ import io.specmatic.core.HttpResponse
 import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.SPECMATIC_RESULT_HEADER
+import io.specmatic.core.examples.server.ExamplesView.Companion.groupEndpoints
+import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.log.logger
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
@@ -23,8 +25,6 @@ import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.core.value.Value
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.proxy.ExamplesView.Companion.groupEndpoints
-import io.specmatic.proxy.ExamplesView.Companion.toTableRows
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.HttpStubData
 import io.specmatic.test.TestExecutor
@@ -178,33 +178,28 @@ class ExamplesInteractiveServer(
             method: String,
             path: String,
             responseStatusCode: Int
-        ): MutableList<String> {
-            val generatedExampleFiles = mutableListOf<String>()
+        ): List<String> {
             val feature = parseContractFileToFeature(contractFile)
             val examplesDir =
                 contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
             examplesDir.mkdirs()
 
-            val scenario = feature.scenarios.firstOrNull {
+            return feature.scenarios.filter {
                 it.method == method && it.status == responseStatusCode && it.path == path
+            }.map { scenario ->
+                val request = scenario.generateHttpRequest()
+                val response = feature.lookupResponse(request).cleanup()
+                val scenarioStub = ScenarioStub(request, response)
+
+                val stubJSON = scenarioStub.toJSON()
+                val uniqueNameForApiOperation =
+                    uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
+
+                val file = examplesDir.resolve("${uniqueNameForApiOperation}.json")
+                println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
+                file.writeText(stubJSON.toStringLiteral())
+                file.absolutePath
             }
-            if(scenario == null) return generatedExampleFiles
-
-            val request = scenario.generateHttpRequest()
-            val response = feature.lookupResponse(request).cleanup()
-            val scenarioStub = ScenarioStub(request, response)
-
-            val stubJSON = scenarioStub.toJSON()
-            val uniqueNameForApiOperation =
-                uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
-
-            val file = examplesDir.resolve("${uniqueNameForApiOperation}.json")
-            println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
-            file.writeText(stubJSON.toStringLiteral())
-
-            generatedExampleFiles.add(file.absolutePath)
-
-            return generatedExampleFiles
         }
 
         fun validate(contractFile: File, exampleFile: File): List<HttpStubData> {

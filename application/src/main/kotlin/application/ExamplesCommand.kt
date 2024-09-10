@@ -1,12 +1,11 @@
 package application
 
+import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.NoMatchingScenario
-import io.specmatic.proxy.ExamplesInteractiveServer
-import io.specmatic.proxy.Proxy
 import picocli.CommandLine.*
 import java.io.File
 import java.lang.Thread.sleep

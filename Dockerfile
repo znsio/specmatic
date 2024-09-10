@@ -1,10 +1,10 @@
-FROM ubuntu:22.04
+FROM openjdk:17-slim
 
 WORKDIR /usr/src/app
 
-# Install OpenJDK 17, git, and curl in a single RUN command
+# Install git and curl, and clean up
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends openjdk-17-jre git curl && \
+    apt-get install -y --no-install-recommends git curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -13,5 +13,3 @@ COPY ./application/build/libs/specmatic.jar /usr/src/app/specmatic.jar
 
 # Set the entrypoint to run the Specmatic JAR
 ENTRYPOINT ["java", "-jar", "/usr/src/app/specmatic.jar"]
-
-CMD []

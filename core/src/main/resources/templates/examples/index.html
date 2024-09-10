@@ -226,6 +226,10 @@ async function validateExample(exampleFileName) {
         },
     });
 
+    if (resp.ok) {
+        return {isValid: true, error: ""};
+    }
+
     const errors = await resp.json()
     return {isValid: resp.ok, error: errors.error};
 }

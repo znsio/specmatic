@@ -183,23 +183,23 @@ class ExamplesInteractiveServer(
             val examplesDir =
                 contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
             examplesDir.mkdirs()
-
-            return feature.scenarios.filter {
+            val scenario = feature.scenarios.firstOrNull {
                 it.method == method && it.status == responseStatusCode && it.path == path
-            }.map { scenario ->
-                val request = scenario.generateHttpRequest()
-                val response = feature.lookupResponse(request).cleanup()
-                val scenarioStub = ScenarioStub(request, response)
-
-                val stubJSON = scenarioStub.toJSON()
-                val uniqueNameForApiOperation =
-                    uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
-
-                val file = examplesDir.resolve("${uniqueNameForApiOperation}.json")
-                println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
-                file.writeText(stubJSON.toStringLiteral())
-                file.absolutePath
             }
+            if(scenario == null) return emptyList()
+
+            val request = scenario.generateHttpRequest()
+            val response = feature.lookupResponse(request).cleanup()
+            val scenarioStub = ScenarioStub(request, response)
+
+            val stubJSON = scenarioStub.toJSON()
+            val uniqueNameForApiOperation =
+                uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
+
+            val file = examplesDir.resolve("${uniqueNameForApiOperation}.json")
+            println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
+            file.writeText(stubJSON.toStringLiteral())
+            return listOf(file.absolutePath)
         }
 
         fun validate(contractFile: File, exampleFile: File): List<HttpStubData> {

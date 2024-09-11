@@ -140,6 +140,14 @@ data class Feature(
         }
     }
 
+    fun lookupResponse(scenario: Scenario): HttpResponse {
+        try {
+            return scenario.generateHttpResponse(serverState)
+        } finally {
+            serverState = emptyMap()
+        }
+    }
+
     fun stubResponse(
         httpRequest: HttpRequest,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages

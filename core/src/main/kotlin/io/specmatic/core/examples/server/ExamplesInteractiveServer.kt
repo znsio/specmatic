@@ -242,7 +242,7 @@ class ExamplesInteractiveServer(
             if(scenario == null) return emptyList()
 
             val request = scenario.generateHttpRequest()
-            val response = feature.lookupResponse(request).cleanup()
+            val response = feature.lookupResponse(scenario).cleanup()
             val scenarioStub = ScenarioStub(request, response)
 
             val stubJSON = scenarioStub.toJSON()

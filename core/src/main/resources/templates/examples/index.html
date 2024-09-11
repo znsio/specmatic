@@ -563,10 +563,11 @@
 
         createAlert("Validations Complete", `${errorsCount} out of ${results.length} are invalid`, errorsCount > 0);
 
+        const exampleRows = selectedRows.filter(row => row.hasAttribute("data-valid"));
         for (let i = 0; i < results.length; i++) {
             const result = results[i];
             const isValid = result.error === null;
-            selectedRows[i].setAttribute("data-valid", isValid);
+            exampleRows[i].setAttribute("data-valid", isValid);
         }
     });
 

@@ -74,6 +74,12 @@ class ExamplesCommand : Callable<Unit> {
         @Option(names = ["--contract-file"], description = ["Contract file path"], required = false)
         var contractFile: File? = null
 
+        @Option(names = ["--filter-name"], description = ["Use only APIs with this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NAME}")
+        var filterName: String = ""
+
+        @Option(names = ["--filter-not-name"], description = ["Use only APIs which do not have this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}")
+        var filterNotName: String = ""
+
         var server: ExamplesInteractiveServer? = null
 
         override fun call() {
@@ -81,7 +87,7 @@ class ExamplesCommand : Callable<Unit> {
                if (contractFile != null && !contractFile!!.exists())
                    exitWithMessage("Could not find file ${contractFile!!.path}")
 
-               server = ExamplesInteractiveServer("0.0.0.0", 9001, contractFile)
+               server = ExamplesInteractiveServer("0.0.0.0", 9001, contractFile, filterName, filterNotName)
                addShutdownHook()
 
                consoleLog(StringLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop."))

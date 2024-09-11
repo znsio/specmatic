@@ -30,7 +30,9 @@ import java.io.FileNotFoundException
 class ExamplesInteractiveServer(
     private val serverHost: String,
     private val serverPort: Int,
-    private val inputContractFile: File? = null
+    private val inputContractFile: File? = null,
+    private val filterName: String,
+    private val filterNotName: String
 ) : Closeable {
     private var contractFileFromRequest: File? = null
 
@@ -153,7 +155,8 @@ class ExamplesInteractiveServer(
     }
 
     private fun getExamplePageHtmlContent(contractFile: File): String {
-        val feature = parseContractFileToFeature(contractFile)
+        val feature = filterScenarios(parseContractFileToFeature(contractFile))
+
         val endpoints = ExamplesView.getEndpoints(feature)
         return HtmlTemplateConfiguration.process(
             templateName = "examples/index.html",
@@ -163,6 +166,28 @@ class ExamplesInteractiveServer(
                 "contractFilePath" to contractFile.absolutePath
             )
         )
+    }
+
+    private fun filterScenarios(feature: Feature): Feature {
+        val filterNameTokens = if(filterName.isNotBlank()) {
+            filterName.trim().split(",").map { it.trim() }
+        } else emptyList()
+
+        val filterNotNameTokens = if(filterNotName.isNotBlank()) {
+            filterNotName.trim().split(",").map { it.trim() }
+        } else emptyList()
+
+        val scenarios = feature.scenarios.filter { scenario ->
+            if(filterNameTokens.isNotEmpty()) {
+                filterNameTokens.any { name -> scenario.testDescription().contains(name) }
+            } else true
+        }.filter { scenario ->
+            if(filterNotNameTokens.isNotEmpty()) {
+                filterNotNameTokens.none { name -> scenario.testDescription().contains(name) }
+            } else true
+        }
+
+        return feature.copy(scenarios = scenarios)
     }
 
     companion object {

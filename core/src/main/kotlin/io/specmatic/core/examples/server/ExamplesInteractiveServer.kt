@@ -112,6 +112,50 @@ class ExamplesInteractiveServer(
                         call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "An unexpected error occurred: ${e.message}"))
                     }
                 }
+
+                post("/_specmatic/v2/examples/validate") {
+                    val request = call.receive<ValidateExampleRequest>()
+                    try {
+                        val contractFile = getContractFile()
+                        val validationResults = request.exampleFiles.map {
+                            try {
+                                validate(contractFile, File(it))
+                                ValidateExampleResponseV2(
+                                    ValidateExampleVerdict.SUCCESS,
+                                    "The provided example is valid",
+                                    it
+                                )
+                            } catch(e: NoMatchingScenario) {
+                                ValidateExampleResponseV2(
+                                    ValidateExampleVerdict.FAILURE,
+                                    e.msg ?: "Something went wrong",
+                                    it
+                                )
+                            } catch(e: Exception) {
+                                ValidateExampleResponseV2(
+                                    ValidateExampleVerdict.FAILURE,
+                                    e.message ?: "An unexpected error occurred",
+                                    it
+                                )
+                            }
+                        }
+                        call.respond(HttpStatusCode.OK, validationResults)
+                    } catch(e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "An unexpected error occurred: ${e.message}"))
+                    }
+                }
+
+                get("/_specmatic/examples/content") {
+                    val fileName = call.request.queryParameters["fileName"]
+                    if(fileName == null) {
+                        call.respond(HttpStatusCode.BadRequest, "Invalid request. Missing required query param named 'fileName'")
+                        return@get
+                    }
+                    call.respond(
+                        HttpStatusCode.OK,
+                        mapOf("content" to File(fileName).readText())
+                    )
+                }
             }
         }
         connector {
@@ -328,6 +372,16 @@ data class ValidateExampleResponse(
     val absPath: String,
     val exampleJson: String,
     val error: String? = null,
+)
+
+enum class ValidateExampleVerdict {
+    SUCCESS,
+    FAILURE
+}
+data class ValidateExampleResponseV2(
+    val verdict: ValidateExampleVerdict,
+    val message: String,
+    val exampleFilePath: String
 )
 
 data class GenerateExampleRequest(

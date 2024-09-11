@@ -20,6 +20,7 @@ import io.specmatic.core.examples.server.ExamplesView.Companion.groupEndpoints
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.log.logger
 import io.specmatic.core.parseContractFileToFeature
+import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.core.value.Value
@@ -34,8 +35,16 @@ import java.io.File
 class ExamplesInteractiveServer(
     private val serverHost: String,
     private val serverPort: Int,
-    private val contractFile: File
+    private val inputContractFile: File? = null
 ) : Closeable {
+    private var contractFileFromRequest: File? = null
+
+    private fun getContractFile(): File {
+        if(inputContractFile != null && inputContractFile.exists()) return inputContractFile
+        if(contractFileFromRequest != null && contractFileFromRequest!!.exists()) return contractFileFromRequest!!
+        throw ContractException("Invalid contract file provided to the examples interactive server")
+    }
+
     private val environment = applicationEngineEnvironment {
         module {
             install(CORS) {
@@ -53,23 +62,18 @@ class ExamplesInteractiveServer(
 
             configureHealthCheckModule()
             routing {
-                get("/_specmatic/examples") {
-                    val feature = parseContractFileToFeature(contractFile)
-                    val endpoints = ExamplesView.getEndpoints(feature)
-
-                    try {
-                        val html = HtmlTemplateConfiguration.process(
-                            templateName = "examples/index.html",
-                            variables = mapOf("endpoints" to endpoints.groupEndpoints().toTableRows())
-                        )
-                        call.respondText(html, contentType = ContentType.Text.Html)
-                    } catch (e: Exception) {
-                        println(e)
-                        call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
-                    }
+                post("/_specmatic/examples") {
+                    val request = call.receive<ExamplePageRequest>()
+                    contractFileFromRequest = File(request.contractFile)
+                    respondWithExamplePageHtmlContent(getContractFile(), call)
                 }
 
-                post("/_specmatic/examples") {
+                get("/_specmatic/examples") {
+                    respondWithExamplePageHtmlContent(getContractFile(), call)
+                }
+
+                post("/_specmatic/examples/generate") {
+                    val contractFile = getContractFile()
                     try {
                         val request = call.receive<GenerateExampleRequest>()
                         val generatedExamples = generate(
@@ -85,6 +89,7 @@ class ExamplesInteractiveServer(
                 }
 
                 post("/_specmatic/examples/validate") {
+                    val contractFile = getContractFile()
                     val request = call.receive<ValidateExampleRequest>()
                     try {
                         validate(
@@ -119,6 +124,25 @@ class ExamplesInteractiveServer(
 
     override fun close() {
         server.stop(0, 0)
+    }
+
+    private suspend fun respondWithExamplePageHtmlContent(contractFile: File, call: ApplicationCall) {
+        try {
+            val html = getExamplePageHtmlContent(contractFile)
+            call.respondText(html, contentType = ContentType.Text.Html)
+        } catch (e: Exception) {
+            println(e)
+            call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
+        }
+    }
+
+    private fun getExamplePageHtmlContent(contractFile: File): String {
+        val feature = parseContractFileToFeature(contractFile)
+        val endpoints = ExamplesView.getEndpoints(feature)
+        return HtmlTemplateConfiguration.process(
+            templateName = "examples/index.html",
+            variables = mapOf("endpoints" to endpoints.groupEndpoints().toTableRows())
+        )
     }
 
     companion object {
@@ -230,6 +254,10 @@ class ExamplesInteractiveServer(
         }
     }
 }
+
+data class ExamplePageRequest(
+    val contractFile: String
+)
 
 data class ValidateExampleRequest(
     val exampleFile: String

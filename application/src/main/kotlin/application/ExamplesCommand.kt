@@ -70,24 +70,24 @@ class ExamplesCommand : Callable<Unit> {
         description = ["Run the example generation interactively"]
     )
     class Interactive : Callable<Unit> {
-        @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
-        lateinit var contractFile: File
+        @Option(names = ["--contract-file"], description = ["Contract file path"], required = false)
+        var contractFile: File? = null
 
         var server: ExamplesInteractiveServer? = null
 
         override fun call() {
-            if (!contractFile.exists())
-                exitWithMessage("Could not find file ${contractFile.path}")
+           try {
+               if (contractFile != null && !contractFile!!.exists())
+                   exitWithMessage("Could not find file ${contractFile!!.path}")
 
-            server = ExamplesInteractiveServer(
-                serverHost = "localhost",
-                serverPort = 9001,
-                contractFile = contractFile
-            ).also {
-                addShutdownHook()
-            }
-            consoleLog(StringLog("Examples Interactive server is running on http://localhost:9001/_specmatic/examples. Ctrl + C to stop."))
-            while(true) sleep(10000)
+               server = ExamplesInteractiveServer("localhost", 9001, contractFile)
+               addShutdownHook()
+
+               consoleLog(StringLog("Examples Interactive server is running on http://localhost:9001/_specmatic/examples. Ctrl + C to stop."))
+               while(true) sleep(10000)
+           } catch(e: Exception) {
+               exitWithMessage(e.message.orEmpty())
+           }
         }
 
         private fun addShutdownHook() {

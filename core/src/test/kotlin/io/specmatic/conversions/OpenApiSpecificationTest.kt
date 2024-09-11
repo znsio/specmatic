@@ -6092,7 +6092,7 @@ paths:
     @Test
     fun `discriminator can extend an allOf`() {
         val feature = OpenApiSpecification.fromYAML("""
-                        ---
+            ---
             openapi: 3.0.3
             info:
               title: Vehicle API
@@ -6143,11 +6143,11 @@ paths:
                       requried:
                         - gearType
                       properties:
-                        gear_type:
+                        gearType:
                           type: string
 
                 SideCar:
-                  allOf
+                  allOf:
                     - ${'$'}ref: '#/components/schemas/Vehicle'
                     - type: object
                       requried:
@@ -6159,11 +6159,11 @@ paths:
 
         HttpStub(feature).use { stub ->
             stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "MT"}"""))).let {
-                assertThat(it.status).isEqualTo(200)
+                assertThat(it.status).isEqualTo(201)
             }
 
             stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
-                assertThat(it.status).isEqualTo(200)
+                assertThat(it.status).isEqualTo(201)
             }
 
             stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
@@ -6171,7 +6171,7 @@ paths:
             }
 
             stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 4, "gearType": "MT"}"""))).let {
-                assertThat(it.status).isEqualTo(200)
+                assertThat(it.status).isEqualTo(400)
             }
         }
     }

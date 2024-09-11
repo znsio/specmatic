@@ -4,6 +4,7 @@ import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
+import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.NoMatchingScenario
 import picocli.CommandLine.*
@@ -80,12 +81,13 @@ class ExamplesCommand : Callable<Unit> {
                if (contractFile != null && !contractFile!!.exists())
                    exitWithMessage("Could not find file ${contractFile!!.path}")
 
-               server = ExamplesInteractiveServer("localhost", 9001, contractFile)
+               server = ExamplesInteractiveServer("0.0.0.0", 9001, contractFile)
                addShutdownHook()
 
-               consoleLog(StringLog("Examples Interactive server is running on http://localhost:9001/_specmatic/examples. Ctrl + C to stop."))
+               consoleLog(StringLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop."))
                while(true) sleep(10000)
            } catch(e: Exception) {
+               logger.log(exceptionCauseMessage(e))
                exitWithMessage(e.message.orEmpty())
            }
         }

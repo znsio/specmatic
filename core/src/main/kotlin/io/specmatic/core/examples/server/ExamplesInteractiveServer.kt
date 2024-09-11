@@ -67,7 +67,11 @@ class ExamplesInteractiveServer(
                     val request = call.receive<ExamplePageRequest>()
                     contractFileFromRequest = File(request.contractFile)
                     val contractFile = getContractFileOrBadRequest(call) ?: return@post
-                    respondWithExamplePageHtmlContent(contractFile, call)
+                    try {
+                        respondWithExamplePageHtmlContent(getContractFile(), call)
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
+                    }
                 }
 
                 get("/_specmatic/examples") {

@@ -363,11 +363,13 @@ fun nullOrExceptionString(fn: () -> Result): String? {
 
 fun uniqueNameForApiOperation(httpRequest: HttpRequest, baseURL: String, responseStatus: Int): String {
     val (method, path, headers) = httpRequest
-    val contentType = headers[CONTENT_TYPE].orEmpty().replace("/", "_")
+    val contentType = if(method == "PATCH")
+        "_" + headers[CONTENT_TYPE].orEmpty().replace("/", "_")
+    else ""
     val formattedPath = path?.replace(baseURL, "")
         ?.replace("/", "_")
         ?.drop(1)
         .orEmpty()
     if (formattedPath.isEmpty()) return "${method}_${responseStatus}"
-    return "${formattedPath}_${method}_${responseStatus}_$contentType"
+    return "${formattedPath}_${method}_${responseStatus}$contentType"
 }

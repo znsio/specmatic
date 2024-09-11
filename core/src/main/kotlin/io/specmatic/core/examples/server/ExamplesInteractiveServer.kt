@@ -32,6 +32,7 @@ import io.specmatic.stub.HttpStubData
 import io.specmatic.test.TestExecutor
 import java.io.Closeable
 import java.io.File
+import java.io.FileNotFoundException
 
 class ExamplesInteractiveServer(
     private val serverHost: String,
@@ -102,17 +103,13 @@ class ExamplesInteractiveServer(
                         val validationResults = request.exampleFiles.map {
                             try {
                                 validate(contractFile, File(it))
-                                ValidateExampleResponse(
-                                    "SUCCESS",
-                                    "The example ${contractFile.nameWithoutExtension} is valid."
-                                )
+                                ValidateExampleResponse(it, File(it).readText())
+                            } catch(e: FileNotFoundException){
+                                ValidateExampleResponse(it, "File not found", e.message)
                             } catch(e: NoMatchingScenario) {
-                                ValidateExampleResponse("FAILURE", e.msg.orEmpty())
+                                ValidateExampleResponse(it, File(it).readText(), e.msg ?: "Something went wrong")
                             } catch(e: Exception) {
-                                ValidateExampleResponse(
-                                    "FAILURE",
-                                    "An unexpected error occurred: ${e.message}"
-                                )
+                                ValidateExampleResponse(it, File(it).readText(), e.message)
                             }
                         }
                         call.respond(HttpStatusCode.OK, validationResults)
@@ -167,7 +164,11 @@ class ExamplesInteractiveServer(
         val endpoints = ExamplesView.getEndpoints(feature)
         return HtmlTemplateConfiguration.process(
             templateName = "examples/index.html",
-            variables = mapOf("endpoints" to endpoints.groupEndpoints().toTableRows())
+            variables = mapOf(
+                "tableRows" to endpoints.groupEndpoints().toTableRows(),
+                "contractFile" to contractFile.name,
+                "contractFilePath" to contractFile.absolutePath
+            )
         )
     }
 
@@ -292,8 +293,9 @@ data class ValidateExampleRequest(
 )
 
 data class ValidateExampleResponse(
-    val verdict: String,
-    val message: String
+    val absPath: String,
+    val exampleJson: String,
+    val error: String? = null,
 )
 
 data class GenerateExampleRequest(

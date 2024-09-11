@@ -15,7 +15,8 @@ class ExamplesView {
                     path = convertPathParameterStyle(it.path),
                     rawPath = it.path,
                     method = it.method,
-                    responseStatus = it.httpResponsePattern.status
+                    responseStatus = it.httpResponsePattern.status,
+                    contentType = it.httpRequestPattern.headersPattern.contentType ?: "application/json"
                 )
             }.filterEndpoints().sortEndpoints()
         }
@@ -50,7 +51,8 @@ class ExamplesView {
                             pathSpan = pathSpan,
                             methodSpan = endpoints.size,
                             showPath = showPath,
-                            showMethod = !methodSet.contains(method)
+                            showMethod = !methodSet.contains(method),
+                            contentType = it.contentType
                         ).also { methodSet.add(method); showPath = false }
                     }
                 }
@@ -64,6 +66,7 @@ data class TableRow(
     val path: String,
     val method: String,
     val responseStatus: String,
+    val contentType: String,
     val pathSpan: Int,
     val methodSpan: Int,
     val showPath: Boolean,
@@ -75,6 +78,7 @@ data class Endpoint(
     val rawPath: String,
     val method: String,
     val responseStatus: Int,
+    val contentType: String
 )
 
 class HtmlTemplateConfiguration {

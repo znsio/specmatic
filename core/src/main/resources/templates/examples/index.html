@@ -6,261 +6,795 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>a,hr{color:inherit}progress,sub,sup{vertical-align:baseline}blockquote,body,dd,dl,fieldset,figure,h1,h2,h3,h4,h5,h6,hr,menu,ol,p,pre,ul{margin:0}dialog,fieldset,legend,menu,ol,ul{padding:0}*,::after,::before{box-sizing:border-box}:root{line-height:1.5;text-size-adjust:100%;tab-size:4;font-feature-settings:normal;font-variation-settings:normal}body{line-height:inherit}hr{height:0;border-top-width:1px}abbr:where([title]){text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-size:1em;font-family:'Courier New',Courier,monospace}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{appearance:none}::-webkit-file-upload-button{appearance:button;font:inherit}summary{display:list-item}menu,ol,ul{list-style:none}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]{display:none}</style>
     <style>
-@import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@200;300;400;500;600;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@200;300;400;500;600;700&display=swap");
 
-:root {
-    /* COLORS */
-    --smoky-black: 23, 18, 7;
-    /* PRIMARY COLORS */
-    --white: 2255, 255, 255;
-    --black: 0, 0, 0;
-    --slate: 241, 245, 249;
-    --blue: 52, 115, 217;
-    --green: 34, 197, 94;
-    --red: 239, 68, 68;
+        :root {
+            /* COLORS */
+            --smoky-black: 23, 18, 7;
+            --alice-blue: 233, 241, 247;
+            /* PRIMARY COLORS */
+            --white: 255, 255, 255;
+            --black: 0, 0, 0;
+            --slate: 241, 245, 249;
+            --blue: 52, 115, 217;
+            --green: 34, 197, 94;
+            --red: 239, 68, 68;
+            --blue-dark: 29, 78, 216;
+            /* PILL COLORS */
+            --pill-green: 134, 239, 172;
+            --pill-red: 252, 165, 165;
 
-    /* Font Families */
-    --sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    --roboto: "Roboto", var(--mono), var(--sans);
-}
+            /* Font Families */
+            --sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            --roboto: "Roboto", var(--mono), var(--sans);
 
-html {
-    scroll-behavior: smooth;
-    scrollbar-gutter: stable;
-}
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
 
-body {
-    font-family: var(--roboto);
-}
+        html {
+            scroll-behavior: smooth;
+            scrollbar-gutter: stable;
+            text-wrap: balance;
+        }
 
-table {
-    width: 100%;
-    table-layout: fixed;
-    text-align: center;
-}
+        body {
+            font-family: var(--roboto);
+        }
 
-thead {
-    background: rgb(var(--slate));
-    font-weight: 500;
-    border-collapse: collapse;
-    font-family: var(--roboto);
-}
+        main {
+            display: flex;
+            align-items: start;
+            overflow: hidden;
+            flex: 1;
+            background-color: rgba(var(--alice-blue));
+        }
 
-td {
-    --_td-padding: 0.75rem;
+        /* HEADER STYLES */
 
-    overflow-wrap: break-word;
-    border: 1px solid rgba(var(--smoky-black), 0.2);
-    padding: var(--_td-padding);
-}
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1rem;
 
-tbody {
-    background-color: rgb(var(--white));
-    font-family: var(--mono);
-    font-weight: 500;
-}
+            & > #main-info {
+                display: flex;
+                flex-direction: column;
 
-button {
-    --_padding: 0.5rem 2rem;
-    --_background-color: var(--blue);
-    --_text-color: var(--white);
+                & > h1 {
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    font-family: var(--roboto);
+                    letter-spacing: 0.025rem;
+                }
 
-    padding: var(--_padding);
-    border-radius: 0.5rem;
-    color: rgb(var(--_text-color));
-    background-color: rgba(var(--_background-color));
+                & > h2 {
+                    font-size: 0.75rem;
+                    font-weight: 400;
+                    font-family: var(--mono);
+                }
+            }
 
-    &:active {
-        scale: 0.9;
-    }
-}
+            & > button {
+                --_padding: 0.5rem 1.5rem;
+                --_radius: 0.25rem;
 
-button.validate {
-    --_background-color: var(--green);
-}
+                color: white;
+                padding: var(--_padding);
+                background-color: rgba(var(--blue));
+                border-radius: var(--_radius);
+            }
 
-/* UTILITIES */
+            & > button[data-selected]::after {
+                content: " (" attr(data-selected) ") ";
+                color: white;
+            }
 
-.hidden {
-    display: none !important;
-}
+            & > button[data-selected="0"] {
+                display: none;
+            }
+        }
 
-#alert-container {
-  z-index: 1;
-  background-color: rgba(var(--white));
-}
+        /* TABLE STYLES */
 
-.alert-msg {
-  background: rgba(var(--white));
-  border: 1px solid rgba(var(--smoky-black), 0.1);
-  box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.1);
-  top: 20px;
-  left: 20px;
-  padding: 1rem;
-  position: fixed;
-  z-index: 99;
-}
+        table {
+            width: 100%;
+            table-layout: auto;
+            text-align: center;
+            font-size: 0.99rem;
+        }
 
-.alert-msg.green {
-  border: 1px solid rgba(var(--green));
+        thead {
+            background: rgb(var(--slate));
+            font-weight: 500;
+            border-collapse: collapse;
+            font-family: var(--roboto);
 
-  & > p::before {
-    content: "✓";
-    font-weight: bold;
-    padding-right: 0.5rem;
-    color: rgba(var(--green));
-  }
-}
+            & > tr > th:not(:first-child) {
+                pointer-events: none;
+            }
+        }
 
-.alert-msg.red {
-  border: 1px solid rgba(var(--red));
+        td,
+        th {
+            --_td-padding: 0.75rem;
 
-  & > p::before {
-    content: "✕";
-    font-weight: bold;
-    padding-right: 0.5rem;
-    color: rgba(var(--red));
-  }
-}
+            overflow-wrap: break-word;
+            border: 1px solid rgba(var(--smoky-black), 0.2);
+            padding: var(--_td-padding);
+        }
 
-.slide-in {
-  animation-name: slideIn;
-  animation-duration: 0.75s;
-}
+        .response-cell {
+            & > span {
+                font-size: 0.75rem;
+            }
+        }
 
-@keyframes slideIn {
-  from {
-      transform: translateX(-100%);
-  }
+        tbody {
+            background-color: rgb(var(--white));
+            font-family: var(--mono);
+            font-weight: 500;
 
-  to {
-      transform: translateX(0);
-  }
-}
+            & > tr {
+                &:hover {
+                    background-color: rgb(var(--slate));
+                }
+
+                & > td:not(:nth-last-child(-n + 2)):not(:first-child) {
+                    background-color: rgb(var(--white));
+                    word-break: break-all;
+                    pointer-events: none;
+                }
+
+                & > td:nth-last-child(-n + 2) {
+                    cursor: pointer;
+                }
+            }
+        }
+
+        tbody > tr {
+            & button {
+                --_padding: 0.5rem 2rem;
+                --_background-color: var(--blue);
+                --_text-color: var(--white);
+
+                padding: var(--_padding);
+                border-radius: 0.5rem;
+                color: rgb(var(--_text-color));
+                background-color: rgba(var(--_background-color));
+
+                &:hover {
+                    --_background-color: var(--blue-dark);
+                }
+            }
+
+            &[data-valid="false"] {
+                & button {
+                    --_background-color: var(--red);
+                }
+            }
+
+            &[data-valid="true"] {
+                & button {
+                    --_background-color: var(--green);
+                }
+            }
+        }
+
+        td:nth-child(2) {
+            text-align: initial;
+        }
+
+        td:nth-child(3) {
+            min-width: 10rem;
+        }
+
+        button {
+            border: none;
+
+            &:active {
+                scale: 0.9;
+            }
+        }
+
+        /* TABLE AND DETAILS TRANSITIONS */
+
+        table,
+        #details {
+            transition: transform 0.5s ease-in-out;
+            min-width: 100%;
+        }
+
+        .group[data-panel="table"] {
+            & > #details {
+                transform: translateX(100%);
+            }
+        }
+
+        .group[data-panel="details"] {
+            & > table {
+                transform: translateX(-100%);
+            }
+
+            & > #details {
+                transform: translateX(-100%);
+            }
+        }
+
+        /* DETAILS STYLES */
+
+        #details {
+            padding: 0.5rem;
+        }
+
+        button#back {
+            --_padding: 0.5rem 1rem;
+            --_radius: 0.25rem;
+
+            color: white;
+            padding: var(--_padding);
+            background-color: rgba(var(--blue));
+            border-radius: var(--_radius);
+
+            &:hover,
+            &:focus {
+                background-color: rgba(var(--blue-dark));
+            }
+        }
+
+        #path-details {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        #path-summary {
+            flex: 1;
+            display: flex;
+            padding: 0.5rem 1rem;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            background-color: rgba(var(--white));
+            border: 1px solid rgba(var(--smoky-black), 0.25);
+            border-radius: 0.25rem;
+
+            & > li > span:first-of-type {
+                font-weight: 300;
+                text-transform: capitalize;
+
+                &::after {
+                    content: ": ";
+                }
+            }
+
+            & > li > span:last-of-type {
+                font-weight: 400;
+            }
+        }
+
+        /* EXAMPLE STYLES */
+
+        ol#examples {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+
+            & > li {
+                background-color: rgba(var(--white));
+                border-radius: 0.25rem;
+                border: 1px solid rgba(var(--smoky-black), 0.25);
+                box-shadow: var(--shadow-md);
+
+                &[data-expand="false"] .dropdown {
+                    height: 0px;
+                }
+
+                &[data-expand="true"] .dropdown {
+                    height: auto;
+                    padding: 0rem 1rem 1rem 1rem;
+                }
+            }
+        }
+
+        div.example {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0.5rem 0.5rem 1rem;
+            cursor: pointer;
+        }
+
+        div.dropdown {
+            --_anim-duration: 0.25s;
+
+            transition: all var(--_anim-duration) ease-in-out;
+            overflow: hidden;
+
+            & > div:nth-child(2) > p {
+                margin: 1rem 0 0.5rem 0;
+            }
+
+            & pre {
+                padding: 0.75rem;
+                font-family: var(--mono);
+                background-color: rgba(var(--slate));
+                border-radius: 0.25rem;
+            }
+        }
+
+        .pill {
+            --_pill-padding: 0.5rem 1.25rem;
+            --_pill-radius: 0.5rem;
+            --_background-color: rgb(var(--pill-green));
+
+            padding: var(--_pill-padding);
+            border-radius: var(--_pill-radius);
+            background-color: var(--_background-color);
+            text-transform: capitalize;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .pill.red {
+            --_background-color: rgb(var(--pill-red));
+        }
+
+        /* ALERT STYLES */
+
+        #alert-container {
+            z-index: 1;
+            background-color: rgba(var(--white));
+        }
+
+        .alert-msg {
+            --_before-content: "⚠";
+            --_text-color: rgba(var(--smoky-black));
+            --_border-color: rgba(var(--smoky-black), 0.1);
+
+            border: 1px solid var(--_border-color);
+            background-color: rgba(var(--white));
+            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.1);
+            top: 20px;
+            left: 20px;
+            padding: 1rem;
+            position: fixed;
+            z-index: 10;
+
+            & > p::before {
+                content: var(--_before-content);
+                font-weight: bold;
+                padding-right: 0.5rem;
+                color: var(--_text-color);
+            }
+        }
+
+        .alert-msg.green {
+            --_before-content: "✓";
+            --_text-color: rgba(var(--green));
+            --_border-color: rgba(var(--green));
+        }
+
+        .alert-msg.red {
+            --_before-content: "✗";
+            --_text-color: rgba(var(--red));
+            --_border-color: rgba(var(--red));
+        }
+
+        .slide-in {
+            animation: slideIn 0.5s;
+        }
+
+        .slide-out {
+            animation: slideOut 0.5s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-200%);
+            }
+
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+            }
+
+            to {
+                transform: translateX(-200%);
+            }
+        }
+
+        /* UTILITIES */
+
+        .hidden {
+            display: none !important;
+        }
     </style>
     <title>Interactive Examples</title>
 </head>
 
 <body>
-<main>
+<header >
+    <div id="main-info">
+        <h1 th:text="${contractFile}"></h1>
+        <h2 th:text="${contractFilePath}"></h2>
+    </div>
+    <button data-selected="0" id="bulk-validate">Validate All</button>
+</header>
+
+<main class="group" data-panel="table">
     <table>
         <thead>
-        <tr>
-            <td colspan="2">Path</td>
-            <td>Method</td>
-            <td>Response</td>
-            <td>Action</td>
-        </tr>
+            <tr>
+                <th>
+                    <label for="select-all">
+                        <input type="checkbox" name="select-all" id="select-all">
+                        <span>Select All</span>
+                    </label>
+                </th>
+                <th colspan="3">Path</th>
+                <th>Method</th>
+                <th>Response</th>
+                <th>Action</th>
+            </tr>
         </thead>
         <tbody>
-        <tr th:each="endpoint : ${endpoints}" th:attr="data-raw-path=${endpoint.rawPath}">
-            <td th:text="${endpoint.path}" th:class="${endpoint.showPath ? '' : 'hidden'}" th:attr="rowspan=${endpoint.pathSpan}, colspan=2"></td>
-            <td th:text="${endpoint.method}" th:class="${endpoint.showMethod ? '' : 'hidden'}" th:attr="rowspan=${endpoint.methodSpan}"></td>
-            <td th:text="${endpoint.responseStatus}"></td>
-            <td>
-                <button class="generate">Generate</button>
-                <button class="validate hidden">Validate</button>
-            </td>
-        </tr>
+            <tr th:each="row, iter : ${tableRows}" th:attr="data-raw-path=${row.rawPath}">
+                <td>
+                    <span th:text="${iter.index + 1} + '.'"></span>
+                    <input type="checkbox" name="path-row" class="path-row">
+                </td>
+                <td th:text="${row.path}" th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=3"></td>
+                <td th:text="${row.method}" th:class="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodSpan}"></td>
+                <td class="response-cell">
+                    <p>[[${row.responseStatus}]]</p>
+                    <span>[[${row.contentType}]]</span>
+                </td>
+                <td>
+                    <button class="generate">Generate</button>
+                    <button class="validate hidden">Validate</button>
+                </td>
+            </tr>
         </tbody>
     </table>
+    <div id="details">
+        <div id="path-details">
+            <button id="back" tabindex="-1">
+                <span>&larr;</span>
+                <span>Go Back</span>
+            </button>
+            <ul id="path-summary"></ul>
+        </div>
+        <ol id="examples"></ol>
+    </div>
 </main>
 <div id="alert-container"></div>
 
 <script>
-const table = document.querySelector("table");
+    const mainElement = document.querySelector("main");
+    const table = document.querySelector("table");
+    const backBtn = document.querySelector("button#back");
+    const pathSummaryUl = document.querySelector("ul#path-summary");
+    const examplesOl = document.querySelector("ol#examples");
+    const alerts = document.getElementById("alert-container");
+    const bulkValidateBtn = document.querySelector("button#bulk-validate");
 
-table.addEventListener("click", async (event) => {
-    const target = event.target;
+    let scrollYPosition = 0;
+    const totalRows = table.querySelectorAll("tr").length;
 
-    if (target.tagName === "BUTTON") {
-        try {
-            const tableRow = target.closest("tr");
-            const values = extractRowValues(tableRow);
-            if (target.classList.contains("generate")) {
-                const exampleFiles = await generateExample(values);
-                const examples = exampleFiles.generatedExamples.join("\n");
-                tableRow.setAttribute("data-examples", examples);
-                createAlert("Examples Generated", examples);
-                toggleButtons(target);
-            } else {
-                const exampleFile = tableRow.getAttribute("data-examples");
-                const {isValid, error} = await validateExample(exampleFile);
-                createAlert(`Validation: ${isValid ? "Success" : "Failure"}`, error, !isValid);
+    document.addEventListener("DOMContentLoaded", () => {
+        for (checkbox of table.querySelectorAll("input[type=checkbox]")) {
+            checkbox.checked = false;
+        }
+        sessionStorage.clear();
+    });
+
+    backBtn.addEventListener("click", () => {
+        mainElement.setAttribute("data-panel", "table");
+        window.scrollTo(0, scrollYPosition);
+    });
+
+    table.addEventListener("click", async (event) => {
+        const target = event.target;
+        const nearestTableRow = target.closest("tr");
+
+        if (nearestTableRow) {
+            const rowValues = extractRowValues(nearestTableRow);
+
+            switch (target.tagName) {
+                case "BUTTON":
+                    if (target.classList.contains("generate")) {
+                        await generateRowExamples(nearestTableRow, rowValues);
+                        break;
+                    }
+                    await validateRowExamples(nearestTableRow, rowValues);
+                    break;
+                case "INPUT": {
+                    const prevSelectCount = Number.parseInt(bulkValidateBtn.getAttribute("data-selected") || 0);
+
+                    if (target.matches("th > label > input")) {
+                        toggleAllSelects(target.checked);
+                        bulkValidateBtn.setAttribute("data-selected", target.checked ? totalRows : 0);
+                        break;
+                    }
+
+                    bulkValidateBtn.setAttribute("data-selected", prevSelectCount + (target.checked ? 1 : -1));
+                    break;
+                }
+                default:
+                    if (target.matches("tr > *:first-child, tr > *:first-child *")) break;
+                    await goToDetails(nearestTableRow, rowValues);
+                    break;
             }
-        } catch (error) {
-            createAlert("Unexpected Error", error.message, true);
+
+            event.stopPropagation();
+        }
+    });
+
+    examplesOl.addEventListener("click", (event) => {
+        const target = event.target;
+        const nearestLi = target.closest("li");
+        const isTargetSummary = target.matches(".example, .example *");
+
+        if (nearestLi && isTargetSummary) {
+            nearestLi.setAttribute("data-expand", nearestLi.getAttribute("data-expand") === "true" ? "false" : "true");
+        }
+    });
+
+    bulkValidateBtn.addEventListener("click", async () => {
+        const selectedRows = Array.from(table.querySelectorAll("input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
+        const examples = selectedRows.map((row) => extractRowValues(row)).map((rowValues) => getExampleData(rowValues)).filter(examples => examples.length).flat();
+        const {results, errorsCount, error} = await validateExample(examples);
+
+        if (error) {
+            createAlert("Something went wrong", error, true);
+        }
+
+        createAlert("Validations Complete", `${errorsCount} out of ${results.length} are invalid`, errorsCount > 0);
+
+        for (let i = 0; i < results.length; i++) {
+            const result = results[i];
+            const isValid = result.error === null;
+            selectedRows[i].setAttribute("data-valid", isValid);
+        }
+    });
+
+    function extractRowValues(tableRow) {
+        const [_checkbox, _path, method, responseAndContentType, ..._] = [...tableRow.children].map((child) => child.textContent.trim());
+        const [responseStatusCode, contentType] = responseAndContentType.split("\n").map((str) => str.trim());
+
+        return { path: tableRow.getAttribute("data-raw-path"), method, responseStatusCode, contentType };
+    }
+
+    function toggleAllSelects(isSelected = true) {
+        const checkboxes = table.querySelectorAll("input[type=checkbox]");
+        for (const checkbox of checkboxes) {
+            checkbox.checked = isSelected;
         }
     }
-});
 
-function extractRowValues(tableRow) {
-    const [path, method, response, ..._] = [...tableRow.children].map((child) => child.textContent.trim());
-    return { path: tableRow.getAttribute("data-raw-path"), method, response };
-}
+    function storeExampleData(rowValues, newExamples) {
+        const dataKey = Object.values(rowValues).join(":");
+        const existingData = localStorage.getItem(dataKey);
 
-async function generateExample({ path, method, response }) {
-    const resp = await fetch("/_specmatic/examples", {
-        method: "POST",
-        body: JSON.stringify({ path, method, responseStatusCode: response }),
-        headers: {
-            "Content-Type": "application/json",
-        },
-    });
+        if (existingData) {
+            const examples = JSON.parse(existingData);
+            examples.push(...newExamples)
+            sessionStorage.setItem(dataKey, JSON.stringify(examples));
+            return examples;
+        }
 
-    if (!resp.ok) {
-        throw new Error(`Something went wrong: ${resp.status}`);
+        sessionStorage.setItem(dataKey, JSON.stringify(newExamples));
+        return newExamples;
     }
 
-    return await resp.json();
-}
-
-async function validateExample(exampleFileName) {
-    const resp = await fetch("/_specmatic/examples/validate", {
-        method: "POST",
-        body: JSON.stringify({ exampleFile: exampleFileName }),
-        headers: {
-            "Content-Type": "application/json",
-        },
-    });
-
-    if (resp.ok) {
-        return {isValid: true, error: ""};
+    function getExampleData(rowValues) {
+        const dataKey = Object.values(rowValues).join(":");
+        const existingData = sessionStorage.getItem(dataKey) || "[]";
+        return JSON.parse(existingData);
     }
 
-    const errors = await resp.json()
-    return {isValid: resp.ok, error: errors.error};
-}
+    async function generateRowExamples(tableRow, rowValues) {
+        const { examples, error } = await generateExample(rowValues);
 
-function toggleButtons(button) {
-    if (button.classList.contains("generate")) {
-        button.nextElementSibling.classList.toggle("hidden");
-        button.classList.toggle("hidden");
+        if (error) {
+            createAlert("Example Generation Failed", error, true);
+            tableRow.setAttribute("data-valid", false);
+            return;
+        }
+
+        storeExampleData(rowValues, examples);
+        tableRow.setAttribute("data-valid", undefined);
+        createAlert("Example Generated", `Example name: ${parseFileName(examples[0])}`, false);
+        toggleValidateBtn(tableRow.querySelector("button.generate"));
     }
-}
 
-function createAlert(heading, message, error) {
-    const alerts = document.getElementById("alert-container");
+    async function validateRowExamples(tableRow, rowValues) {
+        const allExamples = getExampleData(rowValues);
 
-    const alertBox = document.createElement("div");
-    alertBox.classList.add("alert-msg", "slide-in", error ? "red" : "green");
+        if (Object.keys(allExamples).length === 0) {
+            return [];
+        }
 
-    const alertTitle = document.createElement("p");
-    alertTitle.textContent = heading;
+        const { results, errorsCount, error } = await validateExample(Object.values(allExamples));
+        tableRow.setAttribute("data-valid", errorsCount === 0 && !error);
 
-    const alertMsg = document.createElement("pre");
-    alertMsg.textContent = message;
+        if (error) {
+            createAlert("Example Validation Failed", error, true);
+        }
 
-    alertBox.appendChild(alertTitle);
-    alertBox.appendChild(alertMsg);
+        return results;
+    }
 
-    alerts.appendChild(alertBox);
-    setTimeout(() => {
-        alertBox.remove();
-    }, 5000);
-}
+    async function goToDetails(tableRow, rowValues) {
+        const results = await validateRowExamples(tableRow, rowValues);
+        pathSummaryUl.replaceChildren(createPathSummary(rowValues));
+
+        const docFragment = document.createDocumentFragment();
+        for (const example of results) {
+            const exampleLi = document.createElement("li");
+            exampleLi.setAttribute("data-expand", "false");
+
+            exampleLi.appendChild(createExampleSummary(example));
+            exampleLi.appendChild(createExampleDropDown(example));
+            docFragment.appendChild(exampleLi);
+        }
+
+        examplesOl.replaceChildren(docFragment);
+        scrollYPosition = window.scrollY;
+        mainElement.setAttribute("data-panel", "details");
+        window.scrollTo(0, 0);
+    }
+
+    function createPathSummary(rowValues) {
+        const docFragment = document.createDocumentFragment();
+
+        for (const [key, value] of Object.entries(rowValues)) {
+            const li = document.createElement("li");
+            const keySpan = document.createElement("span");
+            const valueSpan = document.createElement("span");
+
+            keySpan.textContent = key;
+            valueSpan.textContent = value;
+            li.appendChild(keySpan);
+            li.appendChild(valueSpan);
+
+            docFragment.appendChild(li);
+        }
+
+        return docFragment;
+    }
+
+    function createExampleSummary(example) {
+        const exampleDiv = document.createElement("div");
+        const exampleName = document.createElement("p");
+        const exampleBadge = document.createElement("span");
+
+        exampleDiv.classList.add("example");
+        exampleBadge.classList.add("pill", example.error && "red");
+
+        exampleName.textContent = example.absPath;
+        exampleBadge.textContent = `${example.error ? "Invalid" : "Valid"} Example`;
+
+        exampleDiv.appendChild(exampleName);
+        exampleDiv.appendChild(exampleBadge);
+        return exampleDiv;
+    }
+
+    function createExampleDropDown(example) {
+        const dropDownDiv = document.createElement("div");
+
+        const examplePara = document.createElement("p");
+        const detailsPara = document.createElement("p");
+
+        const examplePreDiv = document.createElement("div");
+        const examplePre = document.createElement("pre");
+
+        const detailsPreDiv = document.createElement("div");
+        const detailsPre = document.createElement("pre");
+
+        dropDownDiv.classList.add("dropdown");
+
+        examplePara.textContent = "Json: ";
+        detailsPara.textContent = "Details: ";
+
+        examplePre.textContent = example.exampleJson;
+        detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
+
+        detailsPreDiv.appendChild(detailsPara);
+        detailsPreDiv.appendChild(detailsPre);
+
+        examplePreDiv.appendChild(examplePara);
+        examplePreDiv.appendChild(examplePre);
+
+        dropDownDiv.appendChild(detailsPreDiv);
+        dropDownDiv.appendChild(examplePreDiv);
+        return dropDownDiv;
+    }
+
+    async function generateExample(pathInfo) {
+        try {
+            const resp = await fetch("http://localhost:9001/_specmatic/examples/generate", {
+                method: "POST",
+                body: JSON.stringify(pathInfo),
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+            const data = await resp.json();
+
+            if (data.generatedExamples.length === 0) {
+                throw new Error("No examples were generated!");
+            }
+
+            return { examples: data.generatedExamples,error: data.error };
+
+        } catch (error) {
+            return { error: error.message, examples: [] };
+        }
+    }
+
+    async function validateExample(exampleFiles) {
+        try {
+            const resp = await fetch("http://localhost:9001/_specmatic/examples/validate", {
+                method: "POST",
+                body: JSON.stringify({ exampleFiles }),
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            const data = await resp.json();
+            const errorsCount = data.filter((result) => result.error).length;
+
+            return { results: data, errorsCount: errorsCount, error: data.error };
+
+        } catch (error) {
+            return { error: error.message, results: [], errorsCount: 0 };
+        }
+    }
+
+    function parseFileName(absPath) {
+        return absPath.split('\\').pop().split('/').pop();
+    }
+
+    function toggleValidateBtn(generateBtn) {
+        generateBtn.nextElementSibling.classList.toggle("hidden");
+        generateBtn.classList.toggle("hidden");
+    }
+
+    function createAlert(heading, message, error) {
+        const alertBox = document.createElement("div");
+        alertBox.classList.add("alert-msg", "slide-in", error ? "red" : "green");
+
+        const alertTitle = document.createElement("p");
+        alertTitle.textContent = heading;
+
+        const alertMsg = document.createElement("pre");
+        alertMsg.textContent = message;
+
+        alertBox.appendChild(alertTitle);
+        alertBox.appendChild(alertMsg);
+        alerts.replaceChildren(alertBox);
+
+        setTimeout(() => {
+            alertBox.classList.add("slide-out");
+            setTimeout(() => {
+                alertBox.remove();
+            }, 250);
+        }, 3000);
+    }
 </script>
 </body>
 

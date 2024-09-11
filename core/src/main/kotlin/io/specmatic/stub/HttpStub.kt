@@ -73,12 +73,13 @@ class HttpStub(
 
         fun setExpectation(
             stub: ScenarioStub,
-            feature: Feature
+            feature: Feature,
+            mismatchMessages: MismatchMessages = ContractAndStubMismatchMessages
         ): Pair<Pair<Result.Success, List<HttpStubData>>?, NoMatchingScenario?> {
             try {
                 val tier1Match = feature.matchingStub(
                     stub,
-                    ContractAndStubMismatchMessages
+                    mismatchMessages
                 )
 
                 val matchedScenario = tier1Match.scenario ?: throw ContractException("Expected scenario after stub matched for:${System.lineSeparator()}${stub.toJSON()}")

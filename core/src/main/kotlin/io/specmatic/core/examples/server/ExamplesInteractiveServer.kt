@@ -10,17 +10,10 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.specmatic.core.CONTENT_TYPE
-import io.specmatic.core.EXAMPLES_DIR_SUFFIX
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.Result
-import io.specmatic.core.Results
-import io.specmatic.core.SPECMATIC_RESULT_HEADER
+import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesView.Companion.groupEndpoints
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.log.logger
-import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.uniqueNameForApiOperation
@@ -260,7 +253,7 @@ class ExamplesInteractiveServer(
             val feature = parseContractFileToFeature(contractFile)
 
             val result: Pair<Pair<Result.Success, List<HttpStubData>>?, NoMatchingScenario?> =
-                HttpStub.setExpectation(scenarioStub, feature)
+                HttpStub.setExpectation(scenarioStub, feature, InteractiveExamplesMismatchMessages)
             val validationResult = result.first
             val noMatchingScenario = result.second
 
@@ -281,6 +274,20 @@ class ExamplesInteractiveServer(
         private fun HttpResponse.cleanup(): HttpResponse {
             return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
         }
+    }
+}
+
+object InteractiveExamplesMismatchMessages : MismatchMessages {
+    override fun mismatchMessage(expected: String, actual: String): String {
+        return "Specification expected $expected but example contained $actual"
+    }
+
+    override fun unexpectedKey(keyLabel: String, keyName: String): String {
+        return "$keyLabel $keyName in the example is not in the specification"
+    }
+
+    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+        return "$keyLabel $keyName in the specification is missing from the example"
     }
 }
 

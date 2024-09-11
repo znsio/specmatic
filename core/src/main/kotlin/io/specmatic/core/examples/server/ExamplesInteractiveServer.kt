@@ -229,7 +229,7 @@ class ExamplesInteractiveServer(
             method: String,
             path: String,
             responseStatusCode: Int,
-            contentType: String
+            contentType: String? = null
         ): List<String> {
             val feature = parseContractFileToFeature(contractFile)
             val examplesDir =
@@ -237,12 +237,11 @@ class ExamplesInteractiveServer(
             examplesDir.mkdirs()
             val scenario = feature.scenarios.firstOrNull {
                 it.method == method && it.status == responseStatusCode && it.path == path
+                        && (contentType == null || it.httpRequestPattern.headersPattern.contentType == contentType)
             }
             if(scenario == null) return emptyList()
 
             val request = scenario.generateHttpRequest()
-            val contentTypeFromRequest = request.headers[CONTENT_TYPE]
-            if (contentTypeFromRequest != null && contentTypeFromRequest != contentType) return emptyList()
             val response = feature.lookupResponse(request).cleanup()
             val scenarioStub = ScenarioStub(request, response)
 
@@ -303,7 +302,7 @@ data class GenerateExampleRequest(
     val method: String,
     val path: String,
     val responseStatusCode: Int,
-    val contentType: String
+    val contentType: String? = null
 )
 
 data class GenerateExampleResponse(

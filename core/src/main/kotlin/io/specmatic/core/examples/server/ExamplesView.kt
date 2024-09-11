@@ -16,7 +16,7 @@ class ExamplesView {
                     rawPath = it.path,
                     method = it.method,
                     responseStatus = it.httpResponsePattern.status,
-                    contentType = it.httpRequestPattern.headersPattern.contentType ?: "application/json"
+                    contentType = it.httpRequestPattern.headersPattern.contentType
                 )
             }.filterEndpoints().sortEndpoints()
         }
@@ -52,7 +52,7 @@ class ExamplesView {
                             methodSpan = endpoints.size,
                             showPath = showPath,
                             showMethod = !methodSet.contains(method),
-                            contentType = it.contentType
+                            contentType = it.contentType ?: ""
                         ).also { methodSet.add(method); showPath = false }
                     }
                 }
@@ -78,7 +78,7 @@ data class Endpoint(
     val rawPath: String,
     val method: String,
     val responseStatus: Int,
-    val contentType: String
+    val contentType: String? = null
 )
 
 class HtmlTemplateConfiguration {

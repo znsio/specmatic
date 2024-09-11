@@ -338,6 +338,7 @@ Pet:
         val openApiFile = "src/test/resources/openapi/response_schema_validation_including_optional_spec.yaml"
         val specmaticConfig = mockk<SpecmaticConfig> {
             every { isResponseValueValidationEnabled() } returns true
+            every { ignoreInlineExamples } returns false
         }
         val openApiSpecification = OpenApiSpecification(
             openApiFilePath = openApiFile,
@@ -6089,6 +6090,214 @@ paths:
     }
 
     @Test
+    fun `discriminator can extend an allOf`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: 3.0.3
+            info:
+              title: Vehicle API
+              version: 1.0.0
+            paths:
+              /vehicle:
+                post:
+                  summary: Add a new vehicle
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Vehicle'
+                  responses:
+                    '201':
+                      description: Vehicle created successfully
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+
+            components:
+              schemas:
+                VehicleType:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+
+                Vehicle:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/VehicleType'
+                    - type: object
+                      properties:
+                        seatingCapacity:
+                          type: integer
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "car": "#/components/schemas/Transmission"
+                      "bike": "#/components/schemas/SideCar"
+
+                Transmission:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      requried:
+                        - gearType
+                      properties:
+                        gearType:
+                          type: string
+
+                SideCar:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      requried:
+                        - sidecarAvailable
+                      properties:
+                        sidecarAvailable:
+                          type: boolean
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(feature).use { stub ->
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "MT"}"""))).let {
+                assertThat(it.status).isEqualTo(201)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
+                assertThat(it.status).isEqualTo(201)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
+                assertThat(it.status).isEqualTo(400)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 4, "gearType": "MT"}"""))).let {
+                assertThat(it.status).isEqualTo(400)
+            }
+        }
+    }
+
+    @Test
+    @Disabled
+    fun `two discriminator at different levels can extend an allOf`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: 3.0.3
+            info:
+              title: Vehicle API
+              version: 1.0.0
+            paths:
+              /vehicle:
+                post:
+                  summary: Add a new vehicle
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Vehicle'
+                  responses:
+                    '201':
+                      description: Vehicle created successfully
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+
+            components:
+              schemas:
+                VehicleType:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+
+                Vehicle:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/VehicleType'
+                    - type: object
+                      properties:
+                        seatingCapacity:
+                          type: integer
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "car": "#/components/schemas/Transmission"
+                      "bike": "#/components/schemas/SideCar"
+
+                Transmission:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      required:
+                        - gearType
+                      properties:
+                        gearType:
+                          type: string
+                  discriminator:
+                    propertyName: "gearType"
+                    mapping:
+                      "MT": '#/components/schemas/ManualTransmission'
+                      "AT": '#/components/schemas/AutomaticTransmission'
+
+                ManualTransmission:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Transmission'
+                    - type: object
+                      required:
+                        - gearCount
+                      properties:
+                        gearCount:
+                          type: integer
+
+                AutomaticTransmission:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Transmission'
+                    - type: object
+                      required:
+                        - hasSportsMode
+                      properties:
+                        hasSportsMode:
+                          type: boolean
+
+                SideCar:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      requried:
+                        - sidecarAvailable
+                      properties:
+                        sidecarAvailable:
+                          type: boolean
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(feature).use { stub ->
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "MT", "gearCount": 4}"""))).let {
+                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(201)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "AT", "hasSportsMode": true}"""))).let {
+                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(201)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
+                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(201)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
+                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(400)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 4, "gearType": "MT", "gearCount": 4}"""))).let {
+                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(400)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "AT", "gearCount": 4}"""))).let {
+                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(400)
+            }
+        }
+    }
+
+    @Test
     fun `should read WIP tag in OpenAPI paths`() {
         val contractString = """
                 openapi: 3.0.3
@@ -8389,6 +8598,61 @@ components:
 
         assertThat(requestResponsePairs).isEqualTo(expected)
 
+    }
+
+    @Test
+    fun `should ignore inline examples when ignoreInlineExamples flag is set in specmatic config`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /person:
+                    post:
+                      summary: "Get person by id"
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - age
+                              properties:
+                                age:
+                                  description: age of the person
+                                  type: number
+                            examples:
+                              SUCCESSFUL_API_CALL:
+                                value:
+                                  age: 10
+                      responses:
+                        200:
+                          description: "Get person by id"
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                              examples:
+                                SUCCESSFUL_API_CALL:
+                                  value:
+                                    age: "person data"
+                """.trimIndent(), "",
+            specmaticConfig = SpecmaticConfig(ignoreInlineExamples = true)
+        ).toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonRequestBody = request.body as JSONObjectValue
+
+                assertThat(jsonRequestBody.findFirstChildByPath("age")?.toStringLiteral()).isNotEqualTo("10")
+                return HttpResponse(200, "person data")
+            }
+        })
+
+        assertThat(results.testCount).isPositive()
+        assertThat(results.success()).isTrue()
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

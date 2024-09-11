@@ -70,6 +70,35 @@ class HttpStub(
     companion object {
         const val JSON_REPORT_PATH = "./build/reports/specmatic"
         const val JSON_REPORT_FILE_NAME = "stub_usage_report.json"
+
+        fun setExpectation(
+            stub: ScenarioStub,
+            feature: Feature,
+            mismatchMessages: MismatchMessages = ContractAndStubMismatchMessages
+        ): Pair<Pair<Result.Success, List<HttpStubData>>?, NoMatchingScenario?> {
+            try {
+                val tier1Match = feature.matchingStub(
+                    stub,
+                    mismatchMessages
+                )
+
+                val matchedScenario = tier1Match.scenario ?: throw ContractException("Expected scenario after stub matched for:${System.lineSeparator()}${stub.toJSON()}")
+
+                val stubWithSubstitutionsResolved = stub.resolveDataSubstitutions(matchedScenario).map { scenarioStub ->
+                    feature.matchingStub(scenarioStub, ContractAndStubMismatchMessages)
+                }
+
+                val stubData: List<HttpStubData> = stubWithSubstitutionsResolved.map {
+                    softCastResponseToXML(
+                        it
+                    )
+                }
+
+                return Pair(Pair(Result.Success(), stubData), null)
+            } catch (e: NoMatchingScenario) {
+                return Pair(null, e)
+            }
+        }
     }
 
     private val specmaticConfig: SpecmaticConfig =
@@ -460,30 +489,7 @@ class HttpStub(
     }
 
     fun setExpectation(stub: ScenarioStub): List<HttpStubData> {
-        val results = features.asSequence().map { feature ->
-            try {
-                val tier1Match = feature.matchingStub(
-                    stub,
-                    ContractAndStubMismatchMessages
-                )
-
-                val matchedScenario = tier1Match.scenario ?: throw ContractException("Expected scenario after stub matched for:${System.lineSeparator()}${stub.toJSON()}")
-
-                val stubWithSubstitutionsResolved = stub.resolveDataSubstitutions(matchedScenario).map { scenarioStub ->
-                    feature.matchingStub(scenarioStub, ContractAndStubMismatchMessages)
-                }
-
-                val stubData: List<HttpStubData> = stubWithSubstitutionsResolved.map {
-                    softCastResponseToXML(
-                        it
-                    )
-                }
-
-                Pair(Pair(Result.Success(), stubData), null)
-            } catch (e: NoMatchingScenario) {
-                Pair(null, e)
-            }
-        }
+        val results = features.asSequence().map { feature -> setExpectation(stub, feature) }
 
         val result: Pair<Pair<Result.Success, List<HttpStubData>>?, NoMatchingScenario?>? = results.find { it.first != null }
         val firstResult: Pair<Result.Success, List<HttpStubData>>? = result?.first

@@ -91,13 +91,21 @@
                 border-radius: var(--_radius);
             }
 
-            & > button[data-selected]::after {
-                content: " (" attr(data-selected) ") ";
-                color: white;
+            & > button[data-selected="0"][data-panel="table"] {
+                display: none;
             }
 
-            & > button[data-selected="0"] {
-                display: none;
+            & > button[data-panel="table"]::before {
+                content: "Validate Selected";
+            }
+
+            & > button[data-panel="details"]::before {
+                content: "Validate Examples";
+            }
+
+            & > button[data-selected][data-panel="table"]::after {
+                content: " (" attr(data-selected) ") ";
+                color: white;
             }
         }
 
@@ -211,6 +219,13 @@
 
         td:nth-child(3) {
             min-width: 10rem;
+        }
+
+        td:nth-last-child(2) {
+            width: 20rem;
+            word-break: break-word;
+            max-width: 20rem;
+            font-size: .85rem;
         }
 
         button {
@@ -450,7 +465,7 @@
         <h1 th:text="${contractFile}"></h1>
         <h2 th:text="${contractFilePath}"></h2>
     </div>
-    <button data-selected="0" id="bulk-validate">Validate All</button>
+    <button data-selected="0" data-panel="table" id="bulk-validate"></button>
 </header>
 
 <main class="group" data-panel="table">
@@ -466,6 +481,7 @@
                 <th colspan="3">Path</th>
                 <th>Method</th>
                 <th>Response</th>
+                <th>Examples</th>
                 <th>Action</th>
             </tr>
         </thead>
@@ -481,6 +497,7 @@
                     <p>[[${row.responseStatus}]]</p>
                     <span>[[${row.contentType}]]</span>
                 </td>
+                <td>--</td>
                 <td>
                     <button class="generate">Generate</button>
                     <button class="validate hidden">Validate</button>
@@ -512,6 +529,7 @@
     const bulkValidateBtn = document.querySelector("button#bulk-validate");
 
     let scrollYPosition = 0;
+    let selectedTableRow = null;
     const totalRows = table.querySelectorAll("tr").length;
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -523,6 +541,7 @@
 
     backBtn.addEventListener("click", () => {
         mainElement.setAttribute("data-panel", "table");
+        bulkValidateBtn.setAttribute("data-panel", "table");
         window.scrollTo(0, scrollYPosition);
     });
 
@@ -574,6 +593,19 @@
     });
 
     bulkValidateBtn.addEventListener("click", async () => {
+        switch (bulkValidateBtn.getAttribute("data-panel")) {
+            case "table":
+                await validateAllSelected();
+                break;
+            case "details": {
+                const results = await validateRowExamples(selectedTableRow, extractRowValues(selectedTableRow));
+                createExampleRows(results);
+                break;
+            }
+        }
+    });
+
+    async function validateAllSelected() {
         const selectedRows = Array.from(table.querySelectorAll("input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
         const examples = selectedRows.map((row) => extractRowValues(row)).map((rowValues) => getExampleData(rowValues)).filter(examples => examples.length).flat();
         const {results, errorsCount, error} = await validateExample(examples);
@@ -590,7 +622,7 @@
             const isValid = result.error === null;
             exampleRows[i].setAttribute("data-valid", isValid);
         }
-    });
+    }
 
     function extractRowValues(tableRow) {
         const [_checkbox, _path, method, responseAndContentType, ..._] = [...tableRow.children].map((child) => child.textContent.trim());
@@ -641,6 +673,7 @@
         tableRow.setAttribute("data-valid", undefined);
         createAlert("Example Generated", `Example name: ${parseFileName(examples[0])}`, false);
         toggleValidateBtn(tableRow.querySelector("button.generate"));
+        tableRow.querySelector("td:nth-last-child(2)").textContent = parseFileName(examples[0])
     }
 
     async function validateRowExamples(tableRow, rowValues) {
@@ -661,9 +694,18 @@
     }
 
     async function goToDetails(tableRow, rowValues) {
+        selectedTableRow = tableRow;
         const results = await validateRowExamples(tableRow, rowValues);
         pathSummaryUl.replaceChildren(createPathSummary(rowValues));
 
+        createExampleRows(results);
+        bulkValidateBtn.setAttribute("data-panel", "details");
+        scrollYPosition = window.scrollY;
+        mainElement.setAttribute("data-panel", "details");
+        window.scrollTo(0, 0);
+    }
+
+    function createExampleRows(results) {
         const docFragment = document.createDocumentFragment();
         for (const example of results) {
             const exampleLi = document.createElement("li");
@@ -675,15 +717,16 @@
         }
 
         examplesOl.replaceChildren(docFragment);
-        scrollYPosition = window.scrollY;
-        mainElement.setAttribute("data-panel", "details");
-        window.scrollTo(0, 0);
     }
 
     function createPathSummary(rowValues) {
         const docFragment = document.createDocumentFragment();
 
         for (const [key, value] of Object.entries(rowValues)) {
+            if (!value) {
+                continue;
+            }
+
             const li = document.createElement("li");
             const keySpan = document.createElement("span");
             const valueSpan = document.createElement("span");

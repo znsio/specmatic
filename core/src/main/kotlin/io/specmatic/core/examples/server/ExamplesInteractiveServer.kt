@@ -233,7 +233,7 @@ class ExamplesInteractiveServer(
         ): List<String> {
             val feature = parseContractFileToFeature(contractFile)
             val examplesDir =
-                contractFile.canonicalFile.parentFile.resolve("""${contractFile.name}$EXAMPLES_DIR_SUFFIX""")
+                contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
             examplesDir.mkdirs()
             val scenario = feature.scenarios.firstOrNull {
                 it.method == method && it.status == responseStatusCode && it.path == path

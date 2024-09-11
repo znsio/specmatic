@@ -8655,6 +8655,11 @@ components:
         assertThat(results.success()).isTrue()
     }
 
+    @Test
+    fun `discriminator error when the discriminator key doesnt match`() {
+
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

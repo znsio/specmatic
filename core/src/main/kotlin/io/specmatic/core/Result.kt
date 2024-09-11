@@ -39,6 +39,8 @@ sealed class Result {
         }
     }
 
+    abstract fun isAnyFluffy(acceptableFluffLevel: Int): Boolean
+
     fun updateScenario(scenario: ScenarioDetailsForResult): Result {
         this.scenario = scenario
         return this
@@ -166,6 +168,10 @@ sealed class Result {
             }
         }
 
+        override fun isAnyFluffy(acceptableFluffLevel: Int): Boolean {
+            return failureReason?.let { it.fluffLevel > acceptableFluffLevel } == true || causes.any { it.cause?.isAnyFluffy(acceptableFluffLevel) == true }
+        }
+
         override fun isSuccess() = false
 
         fun traverseFailureReason(): FailureReason? {
@@ -176,6 +182,10 @@ sealed class Result {
     }
 
     data class Success(val variables: Map<String, String> = emptyMap(), val partialSuccessMessage: String? = null) : Result() {
+        override fun isAnyFluffy(acceptableFluffLevel: Int): Boolean {
+            return false
+        }
+
         override fun isSuccess() = true
         override fun ifSuccess(function: () -> Result) = function()
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {
@@ -231,7 +241,8 @@ enum class FailureReason(val fluffLevel: Int) {
     ContentTypeMismatch(1),
     RequestMismatchButStatusAlsoWrong(1),
     URLPathMisMatch(2),
-    SOAPActionMismatch(2)
+    SOAPActionMismatch(2),
+    DiscriminatorMismatch(2)
 }
 
 data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null)

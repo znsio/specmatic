@@ -1007,6 +1007,18 @@ class OpenApiSpecification(
     }
 
     data class Discriminator(private val discriminatorDetails: Map<String, Map<String, Pair<String, List<Schema<Any>>>>> = emptyMap()) {
+        val values: List<String>
+            get() {
+                return discriminatorDetails.entries.firstOrNull()?.let {
+                    it.value.keys.toList()
+                } ?: emptyList()
+            }
+
+        val key: String?
+            get() {
+                return discriminatorDetails.entries.firstOrNull()?.key
+            }
+
         val schemas: List<Schema<Any>>
             get() {
                 return discriminatorDetails.entries.flatMap {
@@ -1248,7 +1260,7 @@ class OpenApiSpecification(
                     else if (oneOfs.size > 1)
                         AnyPattern(oneOfs)
                     else if(schemaProperties.size > 1)
-                        AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") })
+                        AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") }, discriminatorProperty = allDiscriminators.key, discriminatorValues = allDiscriminators.values)
                     else
                         toJSONObjectPattern(schemaProperties.single(), "(${patternName})")
                 } else if (schema.oneOf != null) {

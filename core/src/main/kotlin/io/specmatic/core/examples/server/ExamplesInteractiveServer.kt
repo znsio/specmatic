@@ -10,6 +10,7 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.specmatic.core.CONTENT_TYPE
 import io.specmatic.core.EXAMPLES_DIR_SUFFIX
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
@@ -65,7 +66,8 @@ class ExamplesInteractiveServer(
                 post("/_specmatic/examples") {
                     val request = call.receive<ExamplePageRequest>()
                     contractFileFromRequest = File(request.contractFile)
-                    respondWithExamplePageHtmlContent(getContractFile(), call)
+                    val contractFile = getContractFileOrBadRequest(call) ?: return@post
+                    respondWithExamplePageHtmlContent(contractFile, call)
                 }
 
                 get("/_specmatic/examples") {
@@ -80,7 +82,8 @@ class ExamplesInteractiveServer(
                             contractFile,
                             request.method,
                             request.path,
-                            request.responseStatusCode
+                            request.responseStatusCode,
+                            request.contentType
                         )
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExamples))
                     } catch(e: Exception) {
@@ -89,16 +92,26 @@ class ExamplesInteractiveServer(
                 }
 
                 post("/_specmatic/examples/validate") {
-                    val contractFile = getContractFile()
                     val request = call.receive<ValidateExampleRequest>()
                     try {
-                        validate(
-                            contractFile,
-                            File(request.exampleFile)
-                        )
-                        call.respond(HttpStatusCode.OK, "The provided example is valid.")
-                    } catch(e: NoMatchingScenario) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.msg))
+                        val contractFile = getContractFile()
+                        val validationResults = request.exampleFiles.map {
+                            try {
+                                validate(contractFile, File(it))
+                                ValidateExampleResponse(
+                                    "SUCCESS",
+                                    "The example ${contractFile.nameWithoutExtension} is valid."
+                                )
+                            } catch(e: NoMatchingScenario) {
+                                ValidateExampleResponse("FAILURE", e.msg.orEmpty())
+                            } catch(e: Exception) {
+                                ValidateExampleResponse(
+                                    "FAILURE",
+                                    "An unexpected error occurred: ${e.message}"
+                                )
+                            }
+                        }
+                        call.respond(HttpStatusCode.OK, validationResults)
                     } catch(e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "An unexpected error occurred: ${e.message}"))
                     }
@@ -124,6 +137,15 @@ class ExamplesInteractiveServer(
 
     override fun close() {
         server.stop(0, 0)
+    }
+
+    private suspend fun getContractFileOrBadRequest(call: ApplicationCall): File? {
+        return try {
+            getContractFile()
+        } catch(e: ContractException) {
+            call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+            return null
+        }
     }
 
     private suspend fun respondWithExamplePageHtmlContent(contractFile: File, call: ApplicationCall) {
@@ -201,11 +223,12 @@ class ExamplesInteractiveServer(
             contractFile: File,
             method: String,
             path: String,
-            responseStatusCode: Int
+            responseStatusCode: Int,
+            contentType: String
         ): List<String> {
             val feature = parseContractFileToFeature(contractFile)
             val examplesDir =
-                contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
+                contractFile.canonicalFile.parentFile.resolve("""${contractFile.name}$EXAMPLES_DIR_SUFFIX""")
             examplesDir.mkdirs()
             val scenario = feature.scenarios.firstOrNull {
                 it.method == method && it.status == responseStatusCode && it.path == path
@@ -213,6 +236,7 @@ class ExamplesInteractiveServer(
             if(scenario == null) return emptyList()
 
             val request = scenario.generateHttpRequest()
+            if(request.headers[CONTENT_TYPE] != contentType) return emptyList()
             val response = feature.lookupResponse(request).cleanup()
             val scenarioStub = ScenarioStub(request, response)
 
@@ -260,13 +284,19 @@ data class ExamplePageRequest(
 )
 
 data class ValidateExampleRequest(
-    val exampleFile: String
+    val exampleFiles: List<String>
+)
+
+data class ValidateExampleResponse(
+    val verdict: String,
+    val message: String
 )
 
 data class GenerateExampleRequest(
     val method: String,
     val path: String,
-    val responseStatusCode: Int
+    val responseStatusCode: Int,
+    val contentType: String
 )
 
 data class GenerateExampleResponse(

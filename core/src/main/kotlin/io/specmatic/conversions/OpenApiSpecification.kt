@@ -1121,7 +1121,9 @@ class OpenApiSpecification(
             } else listOf(constituentSchema) to discriminator
         }.filterNotNull()
 
-        return allOfs.fold(Pair<List<Schema<Any>>, Discriminator>(emptyList(), discriminator)) { acc, item ->
+        val discriminatorForThisLevel = newDiscriminatorDetails?.let { Discriminator(mapOf(newDiscriminatorDetails.first to newDiscriminatorDetails.second)) } ?: Discriminator()
+
+        return allOfs.fold(Pair<List<Schema<Any>>, Discriminator>(emptyList(), discriminatorForThisLevel)) { acc, item ->
             val (accSchemas, accDiscriminator) = acc
             val (additionalSchemas, additionalSchemasDiscriminator) = item
 

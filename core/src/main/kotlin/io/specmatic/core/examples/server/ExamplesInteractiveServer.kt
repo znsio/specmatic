@@ -241,7 +241,8 @@ class ExamplesInteractiveServer(
             if(scenario == null) return emptyList()
 
             val request = scenario.generateHttpRequest()
-            if(request.headers[CONTENT_TYPE] != contentType) return emptyList()
+            val contentTypeFromRequest = request.headers[CONTENT_TYPE]
+            if (contentTypeFromRequest != null && contentTypeFromRequest != contentType) return emptyList()
             val response = feature.lookupResponse(request).cleanup()
             val scenarioStub = ScenarioStub(request, response)
 

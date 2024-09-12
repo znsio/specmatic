@@ -1140,7 +1140,7 @@
                 const docFragment = createExampleRows([{
                     absPath: exampleAbsPath,
                     exampleJson: exampleContent,
-                    error: validationDetails[Number.parseInt(selectedTableRow.firstElementChild.textContent)] || error,
+                    error: validationDetails[Number.parseInt(selectedTableRow.children[1].textContent)] || error,
                     hasBeenValidated: selectedTableRow.getAttribute("data-valid")
                 }]);
 
@@ -1261,7 +1261,7 @@
         const { exampleAbsPath, error } = await validateExample(exampleData);
 
         tableRow.setAttribute("data-valid", !error);
-        validationDetails[Number.parseInt(tableRow.firstElementChild.textContent)] = error;
+        validationDetails[Number.parseInt(tableRow.children[1].textContent)] = error;
 
         if (error) {
             if (!bulkMode) createAlert("Invalid Example", `Example name: ${parseFileName(exampleAbsPath)}`, true);
@@ -1281,7 +1281,7 @@
             docFragment = createExampleRows([{
                 absPath: exampleAbsPath,
                 exampleJson: example,
-                error: validationDetails[Number.parseInt(tableRow.firstElementChild.textContent)] || error,
+                error: validationDetails[Number.parseInt(tableRow.children[1].textContent)] || error,
                 hasBeenValidated: tableRow.getAttribute("data-valid")
             }]);
         }

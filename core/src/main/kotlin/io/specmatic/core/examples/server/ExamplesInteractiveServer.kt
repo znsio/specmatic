@@ -18,15 +18,14 @@ import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.uniqueNameForApiOperation
-import io.specmatic.core.value.Value
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.HttpStubData
-import io.specmatic.test.TestExecutor
 import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
+import java.util.*
 
 class ExamplesInteractiveServer(
     private val serverHost: String,
@@ -200,7 +199,7 @@ class ExamplesInteractiveServer(
     }
 
     private fun getExamplePageHtmlContent(contractFile: File): String {
-        val feature = filterScenarios(parseContractFileToFeature(contractFile))
+        val feature = ScenarioFilter(filterName, filterNotName).filter(parseContractFileToFeature(contractFile))
 
         val endpoints = ExamplesView.getEndpoints(feature)
         return HtmlTemplateConfiguration.process(
@@ -213,78 +212,96 @@ class ExamplesInteractiveServer(
         )
     }
 
-    private fun filterScenarios(feature: Feature): Feature {
-        val filterNameTokens = if(filterName.isNotBlank()) {
+    class ScenarioFilter(private val filterName: String, private val filterNotName: String) {
+        private val filterNameTokens = if(filterName.isNotBlank()) {
             filterName.trim().split(",").map { it.trim() }
         } else emptyList()
 
-        val filterNotNameTokens = if(filterNotName.isNotBlank()) {
+        private val filterNotNameTokens = if(filterNotName.isNotBlank()) {
             filterNotName.trim().split(",").map { it.trim() }
         } else emptyList()
 
-        val scenarios = feature.scenarios.filter { scenario ->
-            if(filterNameTokens.isNotEmpty()) {
-                filterNameTokens.any { name -> scenario.testDescription().contains(name) }
-            } else true
-        }.filter { scenario ->
-            if(filterNotNameTokens.isNotEmpty()) {
-                filterNotNameTokens.none { name -> scenario.testDescription().contains(name) }
-            } else true
-        }
+        fun filter(feature: Feature): Feature {
+            val scenarios = feature.scenarios.filter { scenario ->
+                if(filterNameTokens.isNotEmpty()) {
+                    filterNameTokens.any { name -> scenario.testDescription().contains(name) }
+                } else true
+            }.filter { scenario ->
+                if(filterNotNameTokens.isNotEmpty()) {
+                    filterNotNameTokens.none { name -> scenario.testDescription().contains(name) }
+                } else true
+            }
 
-        return feature.copy(scenarios = scenarios)
+            return feature.copy(scenarios = scenarios)
+        }
     }
 
     companion object {
-        fun generate(contractFile: File): List<String> {
-            val generatedExampleFiles = mutableListOf<String>()
-
+        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean, overwriteByDefault: Boolean): List<String> {
             try {
-                val feature = parseContractFileToFeature(contractFile)
+                val feature: Feature = parseContractFileToFeature(contractFile).let { feature ->
+                    val filteredScenarios = if (extensive == false) {
+                        feature.scenarios.filter {
+                            it.status.toString().startsWith("2")
+                        }
+                    } else {
+                        feature.scenarios
+                    }
 
-                var ctr = 0
+                    scenarioFilter.filter(feature.copy(scenarios = filteredScenarios.map {
+                        it.copy(examples = emptyList())
+                    })).copy(stubsFromExamples = emptyMap())
+                }
 
                 val examplesDir =
                     contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
+
+                if(examplesDir.exists() && overwriteByDefault == false) {
+                    val response: String = Scanner(System.`in`).use { scanner ->
+                        print("Do you want to continue? (y/n): ")
+                        scanner.nextLine().trim().lowercase()
+                    }
+
+                    if(response != "y") {
+                        println()
+                        println("You chose $response, terminating example generation.")
+                        println()
+                        return emptyList()
+                    }
+
+                    examplesDir.deleteRecursively()
+                }
+
                 examplesDir.mkdirs()
 
-                feature.executeTests(object : TestExecutor {
-                    override fun execute(request: HttpRequest): HttpResponse {
-                        ctr += 1
+                if (feature.scenarios.isEmpty()) {
+                    logger.log("All examples were filtered out by the filter expression")
+                    return emptyList()
+                }
 
-                        val response = feature.lookupResponse(request).cleanup()
+                return feature.scenarios.map { scenario ->
+                    println("Generating for ${scenario.testDescription()}")
+                    val generatedScenario = scenario.generateTestScenarios(DefaultStrategies).first().value
 
-                        val scenarioStub = ScenarioStub(request, response)
+                    val request = generatedScenario.httpRequestPattern.generate(generatedScenario.resolver)
+                    val response = generatedScenario.httpResponsePattern.generateResponse(generatedScenario.resolver).cleanup()
 
-                        val stubJSON = scenarioStub.toJSON()
+                    val scenarioStub = ScenarioStub(request, response)
 
-                        val stubString = stubJSON.toStringLiteral()
+                    val stubJSON = scenarioStub.toJSON()
+                    val uniqueNameForApiOperation =
+                        uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
 
-                        val uniqueNameForApiOperation =
-                            uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
+                    val file = examplesDir.resolve("${uniqueNameForApiOperation}.json")
+                    println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
+                    file.writeText(stubJSON.toStringLiteral())
 
-                        val filename = "${uniqueNameForApiOperation}_${ctr}.json"
-
-                        val file = examplesDir.resolve(filename)
-                        val loggablePath =
-                            "Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}"
-
-                        println(loggablePath)
-
-                        file.writeText(stubString)
-                        generatedExampleFiles.add(file.absolutePath)
-
-                        return response
-                    }
-
-                    override fun setServerState(serverState: Map<String, Value>) {
-                    }
-                })
+                    file.path
+                }
             } catch (e: StackOverflowError) {
                 logger.log("Got a stack overflow error. You probably have a recursive data structure definition in the contract.")
                 throw e
             }
-            return generatedExampleFiles
         }
 
         fun generate(

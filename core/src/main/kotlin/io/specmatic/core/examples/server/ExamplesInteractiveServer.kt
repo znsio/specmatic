@@ -10,6 +10,7 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesView.Companion.groupEndpoints
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
@@ -319,14 +320,16 @@ class ExamplesInteractiveServer(
             contentType: String? = null
         ): List<String> {
             val feature = parseContractFileToFeature(contractFile)
-            val examplesDir =
-                contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
-            examplesDir.mkdirs()
             val scenario = feature.scenarios.firstOrNull {
                 it.method == method && it.status == responseStatusCode && it.path == path
                         && (contentType == null || it.httpRequestPattern.headersPattern.contentType == contentType)
             }
             if(scenario == null) return emptyList()
+
+            val examplesDir =
+                contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
+            if(examplesDir.hasExistingMatchingExample(scenario)) return emptyList()
+            else examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
             val response = feature.lookupResponse(scenario).cleanup()
@@ -404,6 +407,19 @@ class ExamplesInteractiveServer(
 
         private fun HttpResponse.cleanup(): HttpResponse {
             return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
+        }
+
+        private fun File.hasExistingMatchingExample(scenario: Scenario): Boolean {
+            if (this.exists().not() || this.isDirectory.not()) throw IllegalArgumentException("Not a directory: $this")
+
+            val examples = this.listFiles()?.mapNotNull { file ->
+                ExampleFromFile(file)
+            } ?: emptyList()
+
+            return examples.any {
+                val response = it.response ?: return@any false
+                scenario.matchesMock(it.request, response).isSuccess()
+            }
         }
     }
 }

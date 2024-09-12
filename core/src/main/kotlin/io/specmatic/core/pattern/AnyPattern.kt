@@ -94,13 +94,18 @@ data class AnyPattern(
             val deepMatchResults = failures.filterNot { it.isAnyFluffy(0) }
 
             if(deepMatchResults.isEmpty())
-                return Failure("Expected key $discriminatorProperty to contain one of ${discriminatorValues.joinToString(", ")}")
+                return Failure("Expected key $discriminatorProperty to contain one of ${discriminatorValues.joinToString(", ")}", failureReason = FailureReason.DiscriminatorMismatch)
 
             return Failure.fromFailures(deepMatchResults)
         }
 
-        if(failures.all { it.isAnyFluffy(0) }) {
-            return Result.Failure.fromFailures(failures.map { it.keepFluffyOnly() })
+        if(failures.any { it.hasReason(FailureReason.DiscriminatorMismatch) }) {
+            val nonDiscriminatorMismatches = failures.filterNot { it.hasReason(FailureReason.DiscriminatorMismatch) }
+
+            if(nonDiscriminatorMismatches.isNotEmpty())
+                return Result.Failure.fromFailures(nonDiscriminatorMismatches)
+
+            return Result.Failure.fromFailures(failures)
         }
 
         val resolvedPatterns = pattern.map { resolvedHop(it, resolver) }

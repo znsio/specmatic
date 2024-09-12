@@ -89,6 +89,10 @@ sealed class Result {
 
             return this.copy(cause = newCause)
         }
+
+        fun hasReason(failureReason: FailureReason): Boolean {
+            return cause?.hasReason(failureReason) ?: false
+        }
     }
 
     data class Failure(val causes: List<FailureCause> = emptyList(), val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
@@ -203,6 +207,10 @@ sealed class Result {
                 causes = onlyFluffyCauses, failureReason = null
             )
         }
+
+        fun hasReason(failureReason: FailureReason): Boolean {
+            return this.failureReason == failureReason || causes.any { it.hasReason(failureReason) }
+        }
     }
 
     data class Success(val variables: Map<String, String> = emptyMap(), val partialSuccessMessage: String? = null) : Result() {
@@ -266,7 +274,7 @@ enum class FailureReason(val fluffLevel: Int) {
     RequestMismatchButStatusAlsoWrong(2),
     URLPathMisMatch(2),
     SOAPActionMismatch(2),
-    DiscriminatorMismatch(2)
+    DiscriminatorMismatch(0)
 }
 
 data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null)

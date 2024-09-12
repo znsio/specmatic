@@ -1158,13 +1158,14 @@
         bulkGenerateBtn.setAttribute("data-generate", "processing");
 
         let failedCount = 0;
-        const tableRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
+        const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
+        const rowsWithNoExamples = selectedRows.filter(row => !row.getAttribute("data-generate"));
 
-        for (const row of tableRows) {
+        for (const row of rowsWithNoExamples) {
             row.setAttribute("data-generate", "processing");
         }
 
-        for (const row of tableRows) {
+        for (const row of rowsWithNoExamples) {
             const rowValues = extractRowValues(row);
             const success = await generateRowExamples(row, rowValues, true);
 
@@ -1175,7 +1176,7 @@
 
         blockGenValidate = false;
         bulkGenerateBtn.removeAttribute("data-generate");
-        createAlert("Examples Generated", `${tableRows.length - failedCount} were examples generated`, failedCount !== 0);
+        createAlert("Examples Generated", `${rowsWithNoExamples.length - failedCount} were examples generated`, failedCount !== 0);
         return cleanUpSelections();
     });
 

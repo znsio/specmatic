@@ -4,6 +4,7 @@ import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
+import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
@@ -60,6 +61,8 @@ class ExamplesInteractiveServer(
 
             configureHealthCheckModule()
             routing {
+                staticResources("/_specmatic/assets", "/templates/examples/assets")
+
                 post("/_specmatic/examples") {
                     val request = call.receive<ExamplePageRequest>()
                     contractFileFromRequest = File(request.contractFile)
@@ -78,14 +81,16 @@ class ExamplesInteractiveServer(
                 post("/_specmatic/examples/generate") {
                     val contractFile = getContractFile()
                     try {
-                        val request = call.receive<GenerateExampleRequest>()
-                        val generatedExamples = generate(
-                            contractFile,
-                            request.method,
-                            request.path,
-                            request.responseStatusCode,
-                            request.contentType
-                        )
+                        val request = call.receive<List<GenerateExampleRequest>>()
+                        val generatedExamples = request.map {
+                            generate(
+                                contractFile,
+                                it.method,
+                                it.path,
+                                it.responseStatusCode,
+                                it.contentType
+                            )
+                        }
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExamples))
                     } catch(e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
@@ -149,14 +154,14 @@ class ExamplesInteractiveServer(
                 get("/_specmatic/examples/content") {
                     val fileName = call.request.queryParameters["fileName"]
                     if(fileName == null) {
-                        call.respond(HttpStatusCode.BadRequest, "Invalid request. Missing required query param named 'fileName'")
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request. Missing required query param named 'fileName'"))
                         return@get
                     }
                     val file = File(fileName)
                     if(file.exists().not() || file.extension != "json") {
                         val message = if(file.extension == "json") "The provided example file ${file.name} does not exist"
                         else "The provided example file ${file.name} is not a valid example file"
-                        call.respond(HttpStatusCode.BadRequest, message)
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to message))
                         return@get
                     }
                     call.respond(
@@ -318,17 +323,17 @@ class ExamplesInteractiveServer(
             path: String,
             responseStatusCode: Int,
             contentType: String? = null
-        ): List<String> {
+        ): String? {
             val feature = parseContractFileToFeature(contractFile)
             val scenario = feature.scenarios.firstOrNull {
                 it.method == method && it.status == responseStatusCode && it.path == path
                         && (contentType == null || it.httpRequestPattern.headersPattern.contentType == contentType)
             }
-            if(scenario == null) return emptyList()
+            if(scenario == null) return null
 
             val examplesDir =
                 contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
-            if(examplesDir.hasExistingMatchingExample(scenario)) return emptyList()
+            if(examplesDir.hasExistingMatchingExample(scenario)) return null
             else examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
@@ -342,7 +347,7 @@ class ExamplesInteractiveServer(
             val file = examplesDir.resolve("${uniqueNameForApiOperation}.json")
             println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
             file.writeText(stubJSON.toStringLiteral())
-            return listOf(file.absolutePath)
+            return file.absolutePath
         }
 
         fun validate(contractFile: File): Result {
@@ -470,5 +475,5 @@ data class GenerateExampleRequest(
 )
 
 data class GenerateExampleResponse(
-    val generatedExamples: List<String>
+    val generatedExamples: List<String?>
 )

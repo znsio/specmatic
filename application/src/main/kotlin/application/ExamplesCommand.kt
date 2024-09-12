@@ -20,6 +20,18 @@ import kotlin.system.exitProcess
 )
 class ExamplesCommand : Callable<Unit> {
 
+    @Option(names = ["--filter-name"], description = ["Use only APIs with this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NAME}")
+    var filterName: String = ""
+
+    @Option(names = ["--filter-not-name"], description = ["Use only APIs which do not have this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}")
+    var filterNotName: String = ""
+
+    @Option(names = ["--extensive"], description = ["Generate all examples (by default, generates one example per 2xx API)"], defaultValue = "false")
+    var extensive: Boolean = false
+
+    @Option(names = ["--overwrite"], description = ["Overwrite the examples directory if it exists"], defaultValue = "false")
+    var overwrite: Boolean = false
+
     @Parameters(index = "0", description = ["Contract file path"], arity = "0..1")
     var contractFile: File? = null
 
@@ -32,7 +44,7 @@ class ExamplesCommand : Callable<Unit> {
             exitWithMessage("Could not find file ${contractFile!!.path}")
 
         try {
-            ExamplesInteractiveServer.generate(contractFile!!)
+            ExamplesInteractiveServer.generate(contractFile!!, ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName), extensive, overwrite)
         } catch (e: Exception) {
             exitWithMessage("An unexpected error occurred while generating examples: ${e.message}")
         }

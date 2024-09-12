@@ -61,8 +61,6 @@ class ExamplesInteractiveServer(
 
             configureHealthCheckModule()
             routing {
-                staticResources("/_specmatic/assets", "/templates/examples/assets")
-
                 post("/_specmatic/examples") {
                     val request = call.receive<ExamplePageRequest>()
                     contractFileFromRequest = File(request.contractFile)

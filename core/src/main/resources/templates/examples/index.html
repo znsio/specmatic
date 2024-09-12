@@ -24,7 +24,7 @@
 </header>
 
 <main class="group" data-panel="table">
-    <table>
+    <table th:attr="data-generated=${hasExamples}">
         <thead>
             <tr>
                 <th>
@@ -41,13 +41,15 @@
             </tr>
         </thead>
         <tbody>
-            <tr th:each="row, iter : ${tableRows}" th:attr="data-raw-path=${row.rawPath}, data-examples='example'">
+            <tr
+                th:each="row, iter : ${tableRows}"
+                th:attr="data-raw-path=${row.rawPath}, data-examples=${row.example}, data-generate=${row.example != null ? 'success' : ''}">
                 <td>
                     <span th:text="${iter.index + 1} + '.'"></span>
                     <input type="checkbox" name="path-row" class="path-row">
                 </td>
                 <td th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=3">
-                    <span>[[${row.rawPath}]]</span>
+                    <span>[[${row.path}]]</span>
                 </td>
                 <td th:class="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodSpan}">
                     <p>[[${row.method}]]</p>
@@ -57,11 +59,12 @@
                     <span>[[${row.contentType}]]</span>
                 </td>
                 <td>
-                    <button class="generate" aria-label="Generate"></button>
+                    <button th:if="${row.example == null}" class="generate" aria-label="Generate"></button>
+                    <span th:if="${row.example != null}" th:text="${row.exampleName}"></span>
                 </td>
                 <td>
-                    <button class="validate hidden" aria-label="Validate"></button>
-                    <p class="hidden">View Details</p>
+                    <button th:class="${row.example != null ? 'validate' : 'validate hidden'}" aria-label="Validate"></button>
+                    <p th:class="${row.example != null ? '' : 'hidden'}">View Details</p>
                 </td>
             </tr>
         </tbody>

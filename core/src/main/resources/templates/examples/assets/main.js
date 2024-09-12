@@ -134,10 +134,7 @@ async function validateAllSelected() {
         row.setAttribute("data-valid", "processing");
     }
 
-    const examples = rowsWithExamples.flatMap((row) => {
-        console.log(row, getExampleData(row));
-        return getExampleData(row);
-    })
+    const examples = rowsWithExamples.flatMap((row) => getExampleData(row));
     const { results, errorsCount, error } = await validateExamples(examples);
 
     if (error) {
@@ -168,17 +165,14 @@ function toggleAllSelects(isSelected = true) {
     }
 }
 
-function storeExampleData(tableRow, newExamples) {
-    const existingData = tableRow.getAttribute("data-examples");
-    const examples = JSON.parse(existingData);
-    examples.push(...newExamples);
-    tableRow.setAttribute("data-examples", JSON.stringify(examples));
-    return examples;
+function storeExampleData(tableRow, newExample) {
+    tableRow.setAttribute("data-examples", newExample);
+    return newExample;
 }
 
 function getExampleData(tableRow) {
     const existingData = tableRow.getAttribute("data-examples");
-    return JSON.parse(existingData);
+    return existingData;
 }
 
 async function generateRowExamples(tableRow, rowValues) {
@@ -190,7 +184,7 @@ async function generateRowExamples(tableRow, rowValues) {
         return tableRow.setAttribute("data-generate", "failed");
     }
 
-    storeExampleData(tableRow, examples);
+    storeExampleData(tableRow, examples[0]);
     tableRow.setAttribute("data-generate", "success");
     createAlert("Example Generated", `Example name: ${parseFileName(examples[0])}`, false);
 
@@ -207,7 +201,7 @@ async function validateRowExamples(tableRow, rowValues) {
         return [];
     }
 
-    const { results, errorsCount, error } = await validateExamples(allExamples);
+    const { results, errorsCount, error } = await validateExamples([allExamples]);
     tableRow.setAttribute("data-valid", errorsCount === 0 && !error);
 
     if (error) {
@@ -397,17 +391,4 @@ function createAlert(heading, message, error) {
     for (const checkbox of table.querySelectorAll("input[type=checkbox]")) {
         checkbox.checked = false;
     }
-
-    for (const row of table.querySelectorAll("tr")) {
-        const examples = JSON.parse(row.getAttribute("data-examples") || "[]");
-        row.setAttribute("data-examples", JSON.stringify(examples));
-
-        if (examples.length > 0) {
-            const generateColumn = row.querySelector("td:nth-last-child(2)")
-            row.setAttribute("data-generate", "success");
-            enableValidateBtn(generateColumn);
-            generateColumn.textContent = parseFileName(examples[0]);
-        }
-    }
-
 })();

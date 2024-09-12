@@ -68,7 +68,7 @@ class ExamplesInteractiveServer(
                     contractFileFromRequest = File(request.contractFile)
                     val contractFile = getContractFileOrBadRequest(call) ?: return@post
                     try {
-                        respondWithExamplePageHtmlContent(getContractFile(), call)
+                        respondWithExamplePageHtmlContent(contractFile, call)
                     } catch (e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
                     }
@@ -214,13 +214,16 @@ class ExamplesInteractiveServer(
     private fun getExamplePageHtmlContent(contractFile: File): String {
         val feature = ScenarioFilter(filterName, filterNotName).filter(parseContractFileToFeature(contractFile))
 
-        val endpoints = ExamplesView.getEndpoints(feature)
+        val endpoints = ExamplesView.getEndpoints(feature, getExamplesDirPath(contractFile))
+        val tableRows = endpoints.groupEndpoints().toTableRows()
+
         return HtmlTemplateConfiguration.process(
             templateName = "examples/index.html",
             variables = mapOf(
-                "tableRows" to endpoints.groupEndpoints().toTableRows(),
+                "tableRows" to tableRows,
                 "contractFile" to contractFile.name,
-                "contractFilePath" to contractFile.absolutePath
+                "contractFilePath" to contractFile.absolutePath,
+                "hasExamples" to tableRows.any {it.example != null}
             )
         )
     }
@@ -267,7 +270,7 @@ class ExamplesInteractiveServer(
                 }
 
                 val examplesDir =
-                    contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
+                    getExamplesDirPath(contractFile)
 
                 if(examplesDir.exists() && overwriteByDefault == false) {
                     val response: String = Scanner(System.`in`).use { scanner ->
@@ -331,9 +334,9 @@ class ExamplesInteractiveServer(
             }
             if(scenario == null) return null
 
-            val examplesDir =
-                contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
-            if(examplesDir.hasExistingMatchingExample(scenario)) return null
+            val examplesDir = getExamplesDirPath(contractFile)
+            val existingExampleFile = getExistingExampleFile(scenario, examplesDir)
+            if(existingExampleFile != null) return existingExampleFile.absolutePath
             else examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
@@ -425,6 +428,21 @@ class ExamplesInteractiveServer(
                 val response = it.response ?: return@any false
                 scenario.matchesMock(it.request, response).isSuccess()
             }
+        }
+
+        fun getExistingExampleFile(scenario: Scenario, examplesDir: File): File? {
+            val exampleFile = examplesDir.listFiles()?.firstOrNull {
+                val example = ExampleFromFile(it)
+                val response = example.response ?: return@firstOrNull false
+                scenario.matchesMock(example.request, response).isSuccess()
+            }
+            return exampleFile
+        }
+
+        private fun getExamplesDirPath(contractFile: File): File {
+            return contractFile.canonicalFile
+                .parentFile
+                .resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
         }
     }
 }

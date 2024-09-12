@@ -151,6 +151,13 @@ class ExamplesInteractiveServer(
                         call.respond(HttpStatusCode.BadRequest, "Invalid request. Missing required query param named 'fileName'")
                         return@get
                     }
+                    val file = File(fileName)
+                    if(file.exists().not() || file.extension != "json") {
+                        val message = if(file.extension == "json") "The provided example file ${file.name} does not exist"
+                        else "The provided example file ${file.name} is not a valid example file"
+                        call.respond(HttpStatusCode.BadRequest, message)
+                        return@get
+                    }
                     call.respond(
                         HttpStatusCode.OK,
                         mapOf("content" to File(fileName).readText())

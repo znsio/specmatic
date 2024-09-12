@@ -995,7 +995,7 @@
                     <input type="checkbox" name="path-row" class="path-row">
                 </td>
                 <td>
-                    <span>[[${iter.index}]]</span>
+                    <span>[[${iter.index + 1}]]</span>
                 </td>
                 <td th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=3">
                     <span>[[${row.path}]]</span>

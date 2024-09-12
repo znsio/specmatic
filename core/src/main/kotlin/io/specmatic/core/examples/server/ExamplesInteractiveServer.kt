@@ -355,14 +355,14 @@ class ExamplesInteractiveServer(
         }
 
         fun validate(contractFile: File): Result {
+            val feature = parseContractFileToFeature(contractFile).also {
+                validateInlineExamples(it)
+            }
+
             val examplesDir = contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
 
             if(!examplesDir.isDirectory)
                 return Result.Failure("$examplesDir does not exist, did not find any files to validate")
-
-            val feature = parseContractFileToFeature(contractFile).also {
-                validateInlineExamples(it)
-            }
 
 
             logger.log("Validating examples in ${examplesDir.path}")
@@ -395,10 +395,11 @@ class ExamplesInteractiveServer(
         }
 
         fun validate(contractFile: File, exampleFile: File): List<HttpStubData> {
-            val scenarioStub = ScenarioStub.readFromFile(exampleFile)
             val feature = parseContractFileToFeature(contractFile).also {
                 validateInlineExamples(it)
             }
+
+            val scenarioStub = ScenarioStub.readFromFile(exampleFile)
 
             val result: Pair<Pair<Result.Success, List<HttpStubData>>?, NoMatchingScenario?> =
                 HttpStub.setExpectation(scenarioStub, feature, InteractiveExamplesMismatchMessages)

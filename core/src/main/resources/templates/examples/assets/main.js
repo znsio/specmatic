@@ -384,8 +384,9 @@ async function validateExamples(exampleFiles) {
 }
 
 async function getExampleContent(example) {
+    const exampleFileName = encodeURIComponent(example);
     try {
-        const resp = await fetch(`http://localhost:9001/_specmatic/examples/content?fileName=${example}`)
+        const resp = await fetch(`http://localhost:9001/_specmatic/examples/content?fileName=${exampleFileName}`)
         const data = await resp.json();
 
         if (!resp.ok) {

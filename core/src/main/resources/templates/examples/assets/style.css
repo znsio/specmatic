@@ -86,36 +86,33 @@ header {
         padding: var(--_padding);
         background-color: rgba(var(--blue));
         border-radius: var(--_radius);
-        padding: .5rem 0;
+        padding: .5rem 1rem;
         min-width: 9rem;
 
         &#bulk-validate {
-            padding: .5rem 1rem;
+            --_content: "Validate Selected";
 
-            &[data-selected="0"][data-panel="table"] {
-                display: none;
-            }
-
-            &[data-panel="table"]::before {
-                content: var(--_content, "Validate Selected");
-            }
-
-            &[data-panel="details"]::before {
-                content: var(--_content, "Validate Examples");
-            }
-
-            &[data-selected][data-panel="table"]::after {
-                content: var(--_after_content, " (" attr(data-selected) ") ");
-                color: white;
-            }
-
-            &[data-valid="processing"]::after {
-                margin-top: -5px;
-                --_after_content: "";
+            &[data-panel="details"] {
+                --_content: "Validate Examples";
             }
         }
 
+        &[data-selected="0"][data-panel="table"] {
+            display: none;
+        }
+
+        &[data-panel="table"]::before, &[data-panel="details"]::before  {
+            content: var(--_content);
+        }
+
+        &[data-selected][data-panel="table"]::after {
+            content: var(--_after_content, " (" attr(data-selected) ") ");
+            color: white;
+        }
+
         &#bulk-generate {
+            --_content: "Generate Selected";
+
             &::before {
                 content: var(--_content, "Generate All");
             }
@@ -139,6 +136,11 @@ header {
                 border-radius: 50%;
                 display: inline-flex;
                 animation: rotation 1s linear infinite;
+            }
+
+            &::after {
+                margin-top: -5px;
+                --_after_content: "";
             }
         }
     }
@@ -430,7 +432,7 @@ div.dropdown {
 .pill {
     --_pill-padding: 0.5rem 1.25rem;
     --_pill-radius: 0.5rem;
-    --_background-color: rgb(var(--pill-green));
+    --_background-color: rgb(var(--gray));
 
     padding: var(--_pill-padding);
     border-radius: var(--_pill-radius);
@@ -438,11 +440,19 @@ div.dropdown {
     text-transform: capitalize;
     font-weight: 500;
     flex-shrink: 0;
+    color: white;
 }
 
 .pill.red {
     --_background-color: rgb(var(--pill-red));
+    color: black;
 }
+
+.pill.green {
+    --_background-color: rgb(var(--pill-green));
+    color: black;
+}
+
 
 /* ALERT STYLES */
 

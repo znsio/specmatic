@@ -11,6 +11,7 @@ let scrollYPosition = 0;
 let selectedTableRow = null;
 const totalRows = table.querySelectorAll("tbody > tr").length;
 let blockGenValidate = false;
+const validationDetails = {}
 
 backBtn.addEventListener("click", () => {
     mainElement.setAttribute("data-panel", "table");
@@ -34,7 +35,7 @@ table.addEventListener("click", async (event) => {
                 if (target.classList.contains("generate")) {
                     return await generateRowExamples(nearestTableRow, rowValues);
                 }
-                return await validateRowExamples(nearestTableRow, rowValues);
+                return await validateRowExamples(nearestTableRow);
             }
 
             case "INPUT": {
@@ -42,10 +43,12 @@ table.addEventListener("click", async (event) => {
 
                 if (target.matches("th > label > input")) {
                     toggleAllSelects(target.checked);
+                    bulkGenerateBtn.setAttribute("data-selected", target.checked ? totalRows : 0);
                     return bulkValidateBtn.setAttribute("data-selected", target.checked ? totalRows : 0);
                 }
 
                 const nextSelectCount = prevSelectCount + (target.checked ? 1 : -1);
+                bulkGenerateBtn.setAttribute("data-selected", nextSelectCount);
                 return bulkValidateBtn.setAttribute("data-selected", nextSelectCount);
             }
 
@@ -79,8 +82,14 @@ bulkValidateBtn.addEventListener("click", async () => {
         }
 
         case "details": {
-            const results = await validateRowExamples(selectedTableRow, extractRowValues(selectedTableRow));
-            const docFragment = createExampleRows(results);
+            const result = await validateRowExamples(selectedTableRow);
+            const {example, error} = await getExampleContent(result[0].absPath);
+            const docFragment = createExampleRows([{
+                absPath: result[0].absPath,
+                exampleJson: example,
+                error: validationDetails[Number.parseInt(selectedTableRow.firstElementChild.textContent)],
+                hasBeenValidated: selectedTableRow.getAttribute("data-valid")
+            }]);
             examplesOl.replaceChildren(docFragment);
             break;
         }
@@ -92,12 +101,13 @@ bulkValidateBtn.addEventListener("click", async () => {
 bulkGenerateBtn.addEventListener("click", async () => {
     blockGenValidate = true;
     bulkGenerateBtn.setAttribute("data-generate", "processing");
-    const tableRows = Array.from(table.querySelectorAll("tbody > tr"));
+
+    const tableRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
     const rowValues = tableRows.map((row) => extractRowValues(row));
+
     for (const row of tableRows) {
         row.setAttribute("data-generate", "processing");
     }
-
 
     const {examples, generatedCount, error} = await generateExamples(rowValues);
 
@@ -111,7 +121,6 @@ bulkGenerateBtn.addEventListener("click", async () => {
     for (let i = 0; i < tableRows.length; i++) {
         const tableRow = tableRows[i];
         const example = examples[i];
-        const rowValue = rowValues[i];
         const exampleColumn = tableRow.querySelector("td:nth-last-child(2)");
 
         if (example) storeExampleData(tableRow, [example]);
@@ -127,14 +136,14 @@ bulkGenerateBtn.addEventListener("click", async () => {
 
 async function validateAllSelected() {
     blockGenValidate = true;
-    const selectedRows = Array.from(table.querySelectorAll("input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
+    const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
     const rowsWithExamples = selectedRows.filter(row => row.getAttribute("data-generate") === "success");
 
     for (const row of rowsWithExamples) {
         row.setAttribute("data-valid", "processing");
     }
 
-    const examples = rowsWithExamples.flatMap((row) => getExampleData(row));
+    const examples = rowsWithExamples.flatMap((row) => getExampleData(row))
     const { results, errorsCount, error } = await validateExamples(examples);
 
     if (error) {
@@ -146,8 +155,12 @@ async function validateAllSelected() {
     for (let i = 0; i < results.length; i++) {
         const result = results[i];
         const isValid = result.error === null;
+        const rowId = Number.parseInt(rowsWithExamples[i].firstElementChild.textContent);
+
         rowsWithExamples[i].setAttribute("data-valid", isValid);
+        validationDetails[rowId] = result.error;
     }
+
     blockGenValidate = false;
 }
 
@@ -193,7 +206,7 @@ async function generateRowExamples(tableRow, rowValues) {
     generateColumn.textContent = parseFileName(examples[0]);
 }
 
-async function validateRowExamples(tableRow, rowValues) {
+async function validateRowExamples(tableRow) {
     tableRow.setAttribute("data-valid", "processing");
     const allExamples = getExampleData(tableRow);
 
@@ -202,7 +215,9 @@ async function validateRowExamples(tableRow, rowValues) {
     }
 
     const { results, errorsCount, error } = await validateExamples([allExamples]);
+
     tableRow.setAttribute("data-valid", errorsCount === 0 && !error);
+    validationDetails[Number.parseInt(tableRow.firstElementChild.textContent)] = results[0].error;
 
     if (error) {
         createAlert("Example Validation Failed", error, true);
@@ -212,12 +227,21 @@ async function validateRowExamples(tableRow, rowValues) {
 }
 
 async function goToDetails(tableRow, rowValues) {
+    const exampleAbsPath = getExampleData(tableRow);
+    let docFragment = [];
+
+    if (exampleAbsPath) {
+        const {example, error} = await getExampleContent(exampleAbsPath);
+        docFragment = createExampleRows([{
+            absPath: exampleAbsPath,
+            exampleJson: example,
+            error: validationDetails[Number.parseInt(tableRow.firstElementChild.textContent)],
+            hasBeenValidated: tableRow.getAttribute("data-valid")
+        }]);
+    }
+
     pathSummaryUl.replaceChildren(createPathSummary(rowValues));
-
-    // TODO: GET AND PASS EXAMPLES DATA
-    const docFragment = createExampleRows([]);
     examplesOl.replaceChildren(docFragment);
-
     mainElement.setAttribute("data-panel", "details");
     bulkValidateBtn.setAttribute("data-panel", "details");
     bulkGenerateBtn.setAttribute("data-panel", "details");
@@ -265,10 +289,14 @@ function createExampleSummary(example) {
     const exampleBadge = document.createElement("span");
 
     exampleDiv.classList.add("example");
-    exampleBadge.classList.add("pill", example.error && "red");
+    exampleBadge.classList.add("pill", example.hasBeenValidated ? example.error ? "red" : "green" : "blue");
 
     exampleName.textContent = example.absPath;
-    exampleBadge.textContent = `${example.error ? "Invalid" : "Valid"} Example`;
+    if (example.hasBeenValidated) {
+        exampleBadge.textContent = `${example.error ? "Invalid" : "Valid"} Example`;
+    } else {
+        exampleBadge.textContent = "Generated Example";
+    }
 
     exampleDiv.appendChild(exampleName);
     exampleDiv.appendChild(exampleBadge);
@@ -289,7 +317,11 @@ function createExampleDropDown(example) {
     const detailsPre = document.createElement("pre");
 
     examplePre.textContent = example.exampleJson;
-    detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
+    if (example.hasBeenValidated) {
+        detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
+    } else {
+        detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
+    }
 
     const examplePreDiv = document.createElement("div");
     const detailsPreDiv = document.createElement("div");
@@ -349,6 +381,22 @@ async function validateExamples(exampleFiles) {
     } catch (error) {
         return { error: error.message, results: [], errorsCount: 0 };
     }
+}
+
+async function getExampleContent(example) {
+    try {
+        const resp = await fetch(`http://localhost:9001/_specmatic/examples/content?fileName=${example}`)
+        const data = await resp.json();
+
+        if (!resp.ok) {
+            throw new Error(data.error);
+        }
+
+        return {example: data.content, error: null};
+    } catch (e) {
+        return {example: [], error: e.message}
+    }
+
 }
 
 function parseFileName(absPath) {

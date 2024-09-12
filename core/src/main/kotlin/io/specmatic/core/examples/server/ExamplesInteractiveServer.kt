@@ -104,13 +104,13 @@ class ExamplesInteractiveServer(
                         val validationResults = request.exampleFiles.map {
                             try {
                                 validate(contractFile, File(it))
-                                ValidateExampleResponse(it, File(it).readText())
+                                ValidateExampleResponse(it)
                             } catch(e: FileNotFoundException){
-                                ValidateExampleResponse(it, "File not found", e.message)
+                                ValidateExampleResponse(it, e.message ?: "File not found")
                             } catch(e: NoMatchingScenario) {
-                                ValidateExampleResponse(it, File(it).readText(), e.msg ?: "Something went wrong")
+                                ValidateExampleResponse(it, e.msg ?: "Something went wrong")
                             } catch(e: Exception) {
-                                ValidateExampleResponse(it, File(it).readText(), e.message)
+                                ValidateExampleResponse(it, e.message ?: "An unexpected error occurred")
                             }
                         }
                         call.respond(HttpStatusCode.OK, validationResults)
@@ -471,8 +471,7 @@ data class ValidateExampleRequest(
 
 data class ValidateExampleResponse(
     val absPath: String,
-    val exampleJson: String,
-    val error: String? = null,
+    val error: String? = null
 )
 
 enum class ValidateExampleVerdict {

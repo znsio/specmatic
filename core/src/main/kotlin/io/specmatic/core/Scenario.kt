@@ -168,6 +168,15 @@ data class Scenario(
             httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
         }
 
+    fun generateHttpResponseWithAll(actualFacts: Map<String, Value>, requestContext: Context = NoContext): HttpResponse =
+        scenarioBreadCrumb(this) {
+            Resolver(emptyMap(), false, patterns)
+            val resolver = Resolver(actualFacts, false, patterns)
+            val facts = combineFacts(expectedFacts, actualFacts, resolver)
+
+            httpResponsePattern.generateResponseWithAll(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
+        }
+
     private fun combineFacts(
         expected: Map<String, Value>,
         actual: Map<String, Value>,

@@ -88,13 +88,19 @@ data class AnyPattern(
         if(matchResult != null)
             return matchResult.result
 
+        val failures = matchResults.map { it.result }.filterIsInstance<Failure>()
+
         if(discriminatorProperty != null) {
-            val deepMatchResults = matchResults.map { it.result }.filterIsInstance<Failure>().filterNot { it.isAnyFluffy(0) }
+            val deepMatchResults = failures.filterNot { it.isAnyFluffy(0) }
 
             if(deepMatchResults.isEmpty())
                 return Failure("Expected key $discriminatorProperty to contain one of ${discriminatorValues.joinToString(", ")}")
 
             return Failure.fromFailures(deepMatchResults)
+        }
+
+        if(failures.all { it.isAnyFluffy(0) }) {
+            return Result.Failure.fromFailures(failures.map { it.keepFluffyOnly() })
         }
 
         val resolvedPatterns = pattern.map { resolvedHop(it, resolver) }

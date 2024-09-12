@@ -7,7 +7,7 @@ import io.specmatic.core.mismatchResult
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.Value
 
-data class ExactValuePattern(override val pattern: Value, override val typeAlias: String? = null, private val discriminator: Boolean = false) : Pattern {
+data class ExactValuePattern(override val pattern: Value, override val typeAlias: String? = null, val discriminator: Boolean = false) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (pattern == sampleData) {
             true -> Result.Success()

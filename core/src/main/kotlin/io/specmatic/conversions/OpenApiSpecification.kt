@@ -1007,6 +1007,10 @@ class OpenApiSpecification(
     }
 
     data class Discriminator(private val discriminatorDetails: Map<String, Map<String, Pair<String, List<Schema<Any>>>>> = emptyMap()) {
+        fun isNotEmpty(): Boolean {
+            return discriminatorDetails.isNotEmpty()
+        }
+
         val values: List<String>
             get() {
                 return discriminatorDetails.entries.firstOrNull()?.let {
@@ -1055,7 +1059,7 @@ class OpenApiSpecification(
             if(propertyName !in discriminatorDetails)
                 throw ContractException("$propertyName not found in discriminator details")
 
-            return discriminatorDetails.getValue(propertyName).firstNotNullOf { ExactValuePattern(StringValue(it.key)) }
+            return discriminatorDetails.getValue(propertyName).firstNotNullOf { ExactValuePattern(StringValue(it.key), discriminator = true) }
         }
 
         fun explode(): List<Discriminator> {
@@ -1259,8 +1263,10 @@ class OpenApiSpecification(
                         oneOfs.single()
                     else if (oneOfs.size > 1)
                         AnyPattern(oneOfs)
-                    else if(schemaProperties.size > 1)
+                    else if(allDiscriminators.isNotEmpty())
                         AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") }, discriminatorProperty = allDiscriminators.key, discriminatorValues = allDiscriminators.values)
+                    else if(schemaProperties.size > 1)
+                        AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") })
                     else
                         toJSONObjectPattern(schemaProperties.single(), "(${patternName})")
                 } else if (schema.oneOf != null) {

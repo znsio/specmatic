@@ -16,6 +16,7 @@ import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
+import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.core.value.Value
 import io.specmatic.mock.NoMatchingScenario
@@ -352,11 +353,11 @@ object InteractiveExamplesMismatchMessages : MismatchMessages {
     }
 
     override fun unexpectedKey(keyLabel: String, keyName: String): String {
-        return "$keyLabel $keyName in the example is not in the specification"
+        return "${keyLabel.capitalizeFirstChar()} $keyName in the example is not in the specification"
     }
 
     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
-        return "$keyLabel $keyName in the specification is missing from the example"
+        return "${keyLabel.capitalizeFirstChar()} $keyName in the specification is missing from the example"
     }
 }
 

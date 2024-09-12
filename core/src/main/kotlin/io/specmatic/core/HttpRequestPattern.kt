@@ -163,7 +163,8 @@ data class HttpRequestPattern(
                 else
                     MatchSuccess(Triple(httpRequest, defaultResolver, failures.plus(result)))
             }
-            else -> MatchSuccess(Triple(httpRequest, defaultResolver, failures))
+            else ->
+                MatchSuccess(Triple(httpRequest, defaultResolver, failures))
         }
     }
 

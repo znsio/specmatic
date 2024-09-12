@@ -498,6 +498,9 @@ data class Scenario(
                     failureReason = FailureReason.RequestMismatchButStatusAlsoWrong
                 )
 
+            if(requestMatchResult is Result.Failure && requestMatchResult.isAnyFluffy(0))
+                return requestMatchResult
+
             val responseMatchResult =
                 attempt(breadCrumb = "RESPONSE") { httpResponsePattern.matchesMock(response, resolver) }
 

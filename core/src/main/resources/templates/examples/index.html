@@ -411,6 +411,16 @@
 
         body {
             font-family: var(--roboto);
+
+            & > .chevron-down {
+                display: none;
+            }
+        }
+
+        .chevron-down {
+            width: 2rem;
+            height: 2rem;
+            transition: all 0.25s ease-in-out;
         }
 
         main {
@@ -425,12 +435,15 @@
 
         header {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            justify-content: center;
             align-items: center;
-            padding: 0.5rem 1rem;
+            gap: .25rem;
+            padding-bottom: .5rem;
 
             & > #main-info {
                 display: flex;
+                text-align: center;
                 flex-direction: column;
 
                 & > h1 {
@@ -455,13 +468,17 @@
 
             & button {
                 --_radius: 0.25rem;
+                --_background-color: var(--blue);
 
                 color: white;
                 padding: var(--_padding);
-                background-color: rgba(var(--blue));
+                background-color: rgba(var(--_background-color));
                 border-radius: var(--_radius);
                 padding: .5rem 1rem;
                 min-width: 9rem;
+                display: flex;
+                align-items: center;
+                justify-content: space-around;
 
                 &#bulk-validate {
                     --_content: "Validate Selected";
@@ -472,14 +489,15 @@
                 }
 
                 &[data-selected="0"][data-panel="table"] {
-                    display: none;
+                    --_background-color: var(--gray);
+                    pointer-events: none;
                 }
 
-                &[data-panel="table"]::before, &[data-panel="details"]::before  {
+                &[data-panel="table"]::after, &[data-panel="details"]::after  {
                     content: var(--_content);
                 }
 
-                &[data-selected][data-panel="table"]::after {
+                &[data-selected][data-panel="table"]::before {
                     content: var(--_after_content, " (" attr(data-selected) ") ");
                     color: white;
                 }
@@ -487,22 +505,22 @@
                 &#bulk-generate {
                     --_content: "Generate Selected";
 
-                    &::before {
+                    &::after {
                         content: var(--_content, "Generate All");
                     }
 
                     &[data-panel="details"] {
-                        display: none;
+                        --_background-color: var(--gray);
+                        pointer-events: none;
                     }
                 }
 
                 &[data-valid="processing"],
                 &[data-generate="processing"] {
-                    padding: 0.1rem !important;
+                    pointer-events: none;
 
-                    &::before {
+                    &::after {
                         --_content: "";
-                        margin-top: 5px;
                         width: 24px;
                         height: 24px;
                         border: 3px solid #FFF;
@@ -512,9 +530,8 @@
                         animation: rotation 1s linear infinite;
                     }
 
-                    &::after {
-                        margin-top: -5px;
-                        --_after_content: "";
+                    &::before {
+                        --_after_content: "Processing";
                     }
                 }
             }
@@ -568,7 +585,7 @@
                     background-color: rgb(var(--slate));
                 }
 
-                & > td:not(:nth-last-child(-n + 3)):not(:first-child) {
+                & > td:nth-child(n+3):nth-last-child(n+4) {
                     background-color: rgb(var(--white));
                     word-break: break-word;
                     pointer-events: none;
@@ -606,7 +623,7 @@
                 }
             }
 
-            &[data-valid="false"] button {
+            &[data-valid="false"] button, &[data-generate="failed"] button {
                 --_background-color: var(--red);
             }
 
@@ -614,11 +631,7 @@
                 --_background-color: var(--green);
             }
 
-            &[data-generate="failed"] button {
-                --_background-color: var(--red);
-            }
-
-            &[data-generate="processing"] button, &[data-valid="processing"] button {
+            &[data-generate="processing"] button.generate {
                 --_padding: 0.15rem 0rem;
 
                 &::after {
@@ -638,17 +651,33 @@
                 content: var(--_content, "Generate");
             }
 
+            &[data-valid="processing"] button.validate {
+                --_padding: 0.15rem 0rem;
+
+                &::after {
+                    --_content: "";
+                    margin-top: 5px;
+                    width: 24px;
+                    height: 24px;
+                    border: 3px solid #FFF;
+                    border-bottom-color: transparent;
+                    border-radius: 50%;
+                    display: inline-block;
+                    animation: rotation 1s linear infinite;
+                }
+            }
+
             & button.validate::after {
                 content: var(--_content, "Validate");
             }
         }
 
-        td:nth-child(2) {
+        td:nth-child(3) {
             text-align: initial;
             min-width: 10rem;
         }
 
-        td:nth-child(3) {
+        td:nth-child(4) {
             min-width: 2rem;
         }
 
@@ -768,9 +797,15 @@
                     height: 0px;
                 }
 
-                &[data-expand="true"] .dropdown {
-                    height: auto;
-                    padding: 0rem 1rem 1rem 1rem;
+                &[data-expand="true"] {
+                    .dropdown {
+                        height: auto;
+                        padding: 0rem 1rem 1rem 1rem;
+                    }
+
+                    & .chevron-down {
+                        transform: rotate(180deg);
+                    }
                 }
             }
         }
@@ -781,6 +816,16 @@
             justify-content: space-between;
             padding: 0.5rem 0.5rem 0.5rem 1rem;
             cursor: pointer;
+
+            & > p {
+                max-width: 80%;
+            }
+
+            & > .expand-info {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
         }
 
         div.dropdown {
@@ -932,9 +977,9 @@
                 <th>
                     <label for="select-all">
                         <input type="checkbox" name="select-all" id="select-all">
-                        <span>Select All</span>
                     </label>
                 </th>
+                <th>S. No</th>
                 <th colspan="3">Path</th>
                 <th>Method</th>
                 <th>Response</th>
@@ -947,8 +992,10 @@
                 th:each="row, iter : ${tableRows}"
                 th:attr="data-raw-path=${row.rawPath}, data-examples=${row.example}, data-generate=${row.example != null ? 'success' : ''}">
                 <td>
-                    <span th:text="${iter.index + 1} + '.'"></span>
                     <input type="checkbox" name="path-row" class="path-row">
+                </td>
+                <td>
+                    <span>[[${iter.index}]]</span>
                 </td>
                 <td th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=3">
                     <span>[[${row.path}]]</span>
@@ -984,452 +1031,451 @@
 </main>
 
 <div id="alert-container"></div>
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="chevron-down">
+    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 5.25 7.5 7.5 7.5-7.5m-15 6 7.5 7.5 7.5-7.5" />
+</svg>
 
 <script>
     const mainElement = document.querySelector("main");
-const table = document.querySelector("table");
-const backBtn = document.querySelector("button#back");
-const pathSummaryUl = document.querySelector("ul#path-summary");
-const examplesOl = document.querySelector("ol#examples");
-const alerts = document.getElementById("alert-container");
-const bulkValidateBtn = document.querySelector("button#bulk-validate");
-const bulkGenerateBtn = document.querySelector("button#bulk-generate");
+    const table = document.querySelector("table");
+    const backBtn = document.querySelector("button#back");
+    const pathSummaryUl = document.querySelector("ul#path-summary");
+    const examplesOl = document.querySelector("ol#examples");
+    const alerts = document.getElementById("alert-container");
+    const bulkValidateBtn = document.querySelector("button#bulk-validate");
+    const bulkGenerateBtn = document.querySelector("button#bulk-generate");
+    const chevronDown = document.querySelector("svg.chevron-down");
 
-let scrollYPosition = 0;
-let selectedTableRow = null;
-const totalRows = table.querySelectorAll("tbody > tr").length;
-let blockGenValidate = false;
-const validationDetails = {}
+    let scrollYPosition = 0;
+    let selectedTableRow = null;
+    const totalRows = table.querySelectorAll("tbody > tr").length;
+    let blockGenValidate = false;
+    const validationDetails = {}
 
-backBtn.addEventListener("click", () => {
-    mainElement.setAttribute("data-panel", "table");
-    bulkValidateBtn.setAttribute("data-panel", "table");
-    bulkGenerateBtn.setAttribute("data-panel", "table");
-    window.scrollTo(0, scrollYPosition);
-});
+    backBtn.addEventListener("click", () => {
+        mainElement.setAttribute("data-panel", "table");
+        bulkValidateBtn.setAttribute("data-panel", "table");
+        bulkGenerateBtn.setAttribute("data-panel", "table");
+        window.scrollTo(0, scrollYPosition);
+    });
 
-table.addEventListener("click", async (event) => {
-    const target = event.target;
-    const nearestTableRow = target.closest("tr");
+    table.addEventListener("click", async (event) => {
+        const target = event.target;
+        const nearestTableRow = target.closest("tr");
 
-    if (nearestTableRow) {
-        selectedTableRow = nearestTableRow;
-        const rowValues = extractRowValues(nearestTableRow);
-        event.stopPropagation();
+        if (nearestTableRow) {
+            selectedTableRow = nearestTableRow;
+            const rowValues = extractRowValues(nearestTableRow);
+            event.stopPropagation();
 
-        switch (target.tagName) {
-            case "BUTTON": {
-                if (blockGenValidate) break;
-                if (target.classList.contains("generate")) {
-                    return await generateRowExamples(nearestTableRow, rowValues);
-                }
-                return await validateRowExamples(nearestTableRow);
-            }
-
-            case "INPUT": {
-                const prevSelectCount = Number.parseInt(bulkValidateBtn.getAttribute("data-selected") || 0);
-
-                if (target.matches("th > label > input")) {
-                    toggleAllSelects(target.checked);
-                    bulkGenerateBtn.setAttribute("data-selected", target.checked ? totalRows : 0);
-                    return bulkValidateBtn.setAttribute("data-selected", target.checked ? totalRows : 0);
+            switch (target.tagName) {
+                case "BUTTON": {
+                    if (blockGenValidate) break;
+                    if (target.classList.contains("generate")) {
+                        return await generateRowExamples(nearestTableRow, rowValues);
+                    }
+                    return await validateRowExamples(nearestTableRow);
                 }
 
-                const nextSelectCount = prevSelectCount + (target.checked ? 1 : -1);
-                bulkGenerateBtn.setAttribute("data-selected", nextSelectCount);
-                return bulkValidateBtn.setAttribute("data-selected", nextSelectCount);
-            }
+                case "INPUT": {
+                    const valPreSelectCount = Number.parseInt(bulkValidateBtn.getAttribute("data-selected") || 0);
+                    const genPreSelectCount = Number.parseInt(bulkGenerateBtn.getAttribute("data-selected") || 0);
 
-            default: {
-                if (!target.matches("tr > *:first-child, tr > *:first-child *") && nearestTableRow.getAttribute("data-generate") === "success") {
-                    return await goToDetails(nearestTableRow, rowValues);
+                    if (target.matches("th > label > input")) {
+                        toggleAllSelects(target.checked);
+
+                        if (table.hasAttribute("data-generated") ) {
+                            bulkValidateBtn.setAttribute("data-selected", target.checked ? totalRows : 0);
+                        }
+
+                        return bulkGenerateBtn.setAttribute("data-selected", target.checked ? totalRows : 0);
+                    }
+
+                    const hasBeenGenerated = nearestTableRow.getAttribute("data-generate") === "success";
+                    if (hasBeenGenerated) {
+                        bulkValidateBtn.setAttribute("data-selected", valPreSelectCount + (target.checked ? 1 : -1));
+                    } else {
+                        bulkGenerateBtn.setAttribute("data-selected", genPreSelectCount + (target.checked ? 1 : -1));
+                    }
+                    return;
+                }
+
+                default: {
+                    if (!target.matches("tr > *:first-child, tr > *:first-child *") && nearestTableRow.getAttribute("data-generate") === "success") {
+                        return await goToDetails(nearestTableRow, rowValues);
+                    }
                 }
             }
         }
-    }
-});
+    });
 
-examplesOl.addEventListener("click", (event) => {
-    const target = event.target;
-    const nearestLi = target.closest("li");
+    examplesOl.addEventListener("click", (event) => {
+        const target = event.target;
+        const nearestLi = target.closest("li");
 
-    if (nearestLi && target.matches(".example, .example *")) {
-        const currentExpandState = nearestLi.getAttribute("data-expand");
-        const newExpandState = currentExpandState === "true" ? "false" : "true";
-        nearestLi.setAttribute("data-expand", newExpandState);
-    }
-});
+        if (nearestLi && target.matches(".example, .example *")) {
+            const currentExpandState = nearestLi.getAttribute("data-expand");
+            const newExpandState = currentExpandState === "true" ? "false" : "true";
+            nearestLi.setAttribute("data-expand", newExpandState);
+        }
+    });
 
-bulkValidateBtn.addEventListener("click", async () => {
-    bulkValidateBtn.setAttribute("data-valid", "processing");
+    bulkValidateBtn.addEventListener("click", async () => {
+        bulkValidateBtn.setAttribute("data-valid", "processing");
 
-    switch (bulkValidateBtn.getAttribute("data-panel")) {
-        case "table": {
-            await validateAllSelected();
-            break;
+        switch (bulkValidateBtn.getAttribute("data-panel")) {
+            case "table": {
+                await validateAllSelected();
+                break;
+            }
+
+            case "details": {
+                await validateRowExamples(selectedTableRow);
+                const exampleAbsPath = getExampleData(selectedTableRow);
+                const {example: exampleContent, error} = await getExampleContent(exampleAbsPath);
+
+                const docFragment = createExampleRows([{
+                    absPath: exampleAbsPath,
+                    exampleJson: exampleContent,
+                    error: validationDetails[Number.parseInt(selectedTableRow.firstElementChild.textContent)] || error,
+                    hasBeenValidated: selectedTableRow.getAttribute("data-valid")
+                }]);
+
+                examplesOl.replaceChildren(docFragment);
+                break;
+            }
         }
 
-        case "details": {
-            const result = await validateRowExamples(selectedTableRow);
-            const {example, error} = await getExampleContent(result[0].absPath);
-            const docFragment = createExampleRows([{
-                absPath: result[0].absPath,
-                exampleJson: example,
-                error: validationDetails[Number.parseInt(selectedTableRow.firstElementChild.textContent)],
-                hasBeenValidated: selectedTableRow.getAttribute("data-valid")
-            }]);
-            examplesOl.replaceChildren(docFragment);
-            break;
+        bulkValidateBtn.removeAttribute("data-valid");
+        return cleanUpSelections();
+    });
+
+    bulkGenerateBtn.addEventListener("click", async () => {
+        blockGenValidate = true;
+        bulkGenerateBtn.setAttribute("data-generate", "processing");
+
+        let failedCount = 0;
+        const tableRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
+
+        for (const row of tableRows) {
+            row.setAttribute("data-generate", "processing");
         }
-    }
 
-    bulkValidateBtn.removeAttribute("data-valid");
-});
+        for (const row of tableRows) {
+            const rowValues = extractRowValues(row);
+            const success = await generateRowExamples(row, rowValues, true);
 
-bulkGenerateBtn.addEventListener("click", async () => {
-    blockGenValidate = true;
-    bulkGenerateBtn.setAttribute("data-generate", "processing");
+            if (!success) {
+                failedCount++;
+            }
+        }
 
-    const tableRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
-    const rowValues = tableRows.map((row) => extractRowValues(row));
-
-    for (const row of tableRows) {
-        row.setAttribute("data-generate", "processing");
-    }
-
-    const {examples, generatedCount, error} = await generateExamples(rowValues);
-
-    if (error) {
+        blockGenValidate = false;
         bulkGenerateBtn.removeAttribute("data-generate");
-        return createAlert("Something went wrong", error, true);
-    }
+        createAlert("Examples Generated", `${tableRows.length - failedCount} were examples generated`, failedCount !== 0);
+        return cleanUpSelections();
+    });
 
-    createAlert("Examples Generated", `${generatedCount} were examples generated`, generatedCount === 0);
+    async function validateAllSelected() {
+        blockGenValidate = true;
+        bulkValidateBtn.setAttribute("data-valid", "processing");
 
-    for (let i = 0; i < tableRows.length; i++) {
-        const tableRow = tableRows[i];
-        const example = examples[i];
-        const exampleColumn = tableRow.querySelector("td:nth-last-child(2)");
+        let errorsCount = 0;
+        const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
+        const rowsWithExamples = selectedRows.filter(row => row.getAttribute("data-generate") === "success");
 
-        if (example) storeExampleData(tableRow, [example]);
-        enableValidateBtn(exampleColumn);
-        tableRow.setAttribute("data-generate", example ? "success" : "failed");
-        tableRow.removeAttribute("data-valid");
-        exampleColumn.textContent = parseFileName(example);
-    }
-
-    bulkGenerateBtn.removeAttribute("data-generate");
-    blockGenValidate = false;
-});
-
-async function validateAllSelected() {
-    blockGenValidate = true;
-    const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
-    const rowsWithExamples = selectedRows.filter(row => row.getAttribute("data-generate") === "success");
-
-    for (const row of rowsWithExamples) {
-        row.setAttribute("data-valid", "processing");
-    }
-
-    const examples = rowsWithExamples.flatMap((row) => getExampleData(row))
-    const { results, errorsCount, error } = await validateExamples(examples);
-
-    if (error) {
-        createAlert("Something went wrong", error, true);
-    }
-
-    createAlert("Validations Complete", `${errorsCount} out of ${results.length} are invalid`, errorsCount > 0);
-
-    for (let i = 0; i < results.length; i++) {
-        const result = results[i];
-        const isValid = result.error === null;
-        const rowId = Number.parseInt(rowsWithExamples[i].firstElementChild.textContent);
-
-        rowsWithExamples[i].setAttribute("data-valid", isValid);
-        validationDetails[rowId] = result.error;
-    }
-
-    blockGenValidate = false;
-}
-
-function extractRowValues(tableRow) {
-    const [method, responseAndContentType] = [...tableRow.children].slice(2, 4).map((child) => child.textContent.trim());
-    const [responseStatusCode, contentType] = responseAndContentType.split("\n").map((str) => str.trim());
-
-    return { path: tableRow.getAttribute("data-raw-path"), method, responseStatusCode, contentType };
-}
-
-function toggleAllSelects(isSelected = true) {
-    const checkboxes = table.querySelectorAll("input[type=checkbox]");
-    for (const checkbox of checkboxes) {
-        checkbox.checked = isSelected;
-    }
-}
-
-function storeExampleData(tableRow, newExample) {
-    tableRow.setAttribute("data-examples", newExample);
-    return newExample;
-}
-
-function getExampleData(tableRow) {
-    const existingData = tableRow.getAttribute("data-examples");
-    return existingData;
-}
-
-async function generateRowExamples(tableRow, rowValues) {
-    tableRow.setAttribute("data-generate", "processing");
-    const { examples, error } = await generateExamples([rowValues]);
-
-    if (error) {
-        createAlert("Example Generation Failed", error, true);
-        return tableRow.setAttribute("data-generate", "failed");
-    }
-
-    storeExampleData(tableRow, examples[0]);
-    tableRow.setAttribute("data-generate", "success");
-    createAlert("Example Generated", `Example name: ${parseFileName(examples[0])}`, false);
-
-    const generateColumn = tableRow.querySelector("td:nth-last-child(2)")
-    enableValidateBtn(generateColumn);
-    generateColumn.textContent = parseFileName(examples[0]);
-}
-
-async function validateRowExamples(tableRow) {
-    tableRow.setAttribute("data-valid", "processing");
-    const allExamples = getExampleData(tableRow);
-
-    if (allExamples.length === 0) {
-        return [];
-    }
-
-    const { results, errorsCount, error } = await validateExamples([allExamples]);
-
-    tableRow.setAttribute("data-valid", errorsCount === 0 && !error);
-    validationDetails[Number.parseInt(tableRow.firstElementChild.textContent)] = results[0].error;
-
-    if (error) {
-        createAlert("Example Validation Failed", error, true);
-    }
-
-    createAlert(`${errorsCount > 0 ? "Invalid" : "Valid"} Example`, `Example name: ${parseFileName(allExamples)}`, errorsCount > 0);
-    return results;
-}
-
-async function goToDetails(tableRow, rowValues) {
-    const exampleAbsPath = getExampleData(tableRow);
-    let docFragment = [];
-
-    if (exampleAbsPath) {
-        const {example, error} = await getExampleContent(exampleAbsPath);
-        docFragment = createExampleRows([{
-            absPath: exampleAbsPath,
-            exampleJson: example,
-            error: validationDetails[Number.parseInt(tableRow.firstElementChild.textContent)],
-            hasBeenValidated: tableRow.getAttribute("data-valid")
-        }]);
-    }
-
-    pathSummaryUl.replaceChildren(createPathSummary(rowValues));
-    examplesOl.replaceChildren(docFragment);
-    mainElement.setAttribute("data-panel", "details");
-    bulkValidateBtn.setAttribute("data-panel", "details");
-    bulkGenerateBtn.setAttribute("data-panel", "details");
-    scrollYPosition = window.scrollY;
-    window.scrollTo(0, 0);
-}
-
-function createExampleRows(examples) {
-    const docFragment = document.createDocumentFragment();
-    for (const example of examples) {
-        const exampleLi = document.createElement("li");
-        exampleLi.setAttribute("data-expand", "false");
-        exampleLi.appendChild(createExampleSummary(example));
-        exampleLi.appendChild(createExampleDropDown(example));
-        docFragment.appendChild(exampleLi);
-    }
-
-    return docFragment;
-}
-
-function createPathSummary(rowValues) {
-    const docFragment = document.createDocumentFragment();
-
-    for (const [key, value] of Object.entries(rowValues)) {
-        if (!value) continue;
-
-        const li = document.createElement("li");
-        const keySpan = document.createElement("span");
-        const valueSpan = document.createElement("span");
-
-        keySpan.textContent = key;
-        valueSpan.textContent = value;
-        li.appendChild(keySpan);
-        li.appendChild(valueSpan);
-
-        docFragment.appendChild(li);
-    }
-
-    return docFragment;
-}
-
-function createExampleSummary(example) {
-    const exampleDiv = document.createElement("div");
-    const exampleName = document.createElement("p");
-    const exampleBadge = document.createElement("span");
-
-    exampleDiv.classList.add("example");
-    exampleBadge.classList.add("pill", example.hasBeenValidated ? example.error ? "red" : "green" : "blue");
-
-    exampleName.textContent = example.absPath;
-    if (example.hasBeenValidated) {
-        exampleBadge.textContent = `${example.error ? "Invalid" : "Valid"} Example`;
-    } else {
-        exampleBadge.textContent = "Generated Example";
-    }
-
-    exampleDiv.appendChild(exampleName);
-    exampleDiv.appendChild(exampleBadge);
-    return exampleDiv;
-}
-
-function createExampleDropDown(example) {
-    const dropDownDiv = document.createElement("div");
-    dropDownDiv.classList.add("dropdown");
-
-    const examplePara = document.createElement("p");
-    const detailsPara = document.createElement("p");
-
-    examplePara.textContent = "Example: ";
-    detailsPara.textContent = "Details: ";
-
-    const examplePre = document.createElement("pre");
-    const detailsPre = document.createElement("pre");
-
-    examplePre.textContent = example.exampleJson;
-    if (example.hasBeenValidated) {
-        detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
-    } else {
-        detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
-    }
-
-    const examplePreDiv = document.createElement("div");
-    const detailsPreDiv = document.createElement("div");
-
-    detailsPreDiv.appendChild(detailsPara);
-    detailsPreDiv.appendChild(detailsPre);
-
-    examplePreDiv.appendChild(examplePara);
-    examplePreDiv.appendChild(examplePre);
-
-    dropDownDiv.appendChild(detailsPreDiv);
-    dropDownDiv.appendChild(examplePreDiv);
-
-    return dropDownDiv;
-}
-
-async function generateExamples(pathList) {
-    try {
-        const resp = await fetch("http://localhost:9001/_specmatic/examples/generate", {
-            method: "POST",
-            body: JSON.stringify(pathList),
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
-        const data = await resp.json();
-
-        if (data.generatedExamples.length === 0) {
-            throw new Error("No examples were generated!");
+        for (const row of rowsWithExamples) {
+            row.setAttribute("data-valid", "processing");
         }
 
-        if (data.generatedExamples.length !== pathList.length) {
-            throw new Error("Not all examples were generated!");
+        for (const row of rowsWithExamples) {
+            const success = await validateRowExamples(row, true);
+
+            if (!success) {
+                errorsCount++;
+            }
         }
 
-        const generatedCount = data.generatedExamples.filter(example => example !== null).length;
-        return { examples: data.generatedExamples, generatedCount: generatedCount, error: data.error };
-    } catch (error) {
-        return { error: error.message, examples: [], generatedCount: 0 };
+        blockGenValidate = false;
+        bulkValidateBtn.removeAttribute("data-generate");
+        createAlert("Validations Complete", `${errorsCount} out of ${rowsWithExamples.length} are invalid`, errorsCount !== 0);
+        return cleanUpSelections();
     }
-}
 
-async function validateExamples(exampleFiles) {
-    try {
-        const resp = await fetch("http://localhost:9001/_specmatic/examples/validate", {
-            method: "POST",
-            body: JSON.stringify({ exampleFiles }),
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
+    function extractRowValues(tableRow) {
+        const [method, responseAndContentType] = [...tableRow.children].slice(3, 5).map((child) => child.textContent.trim());
+        const [responseStatusCode, contentType] = responseAndContentType.split("\n").map((str) => str.trim());
 
-        const data = await resp.json();
-        const errorsCount = data.filter((result) => result.error).length;
-
-        return { results: data, errorsCount: errorsCount, error: data.error };
-    } catch (error) {
-        return { error: error.message, results: [], errorsCount: 0 };
+        return { path: tableRow.getAttribute("data-raw-path"), method, responseStatusCode, contentType };
     }
-}
 
-async function getExampleContent(example) {
-    const exampleFileName = encodeURIComponent(example);
-    try {
-        const resp = await fetch(`http://localhost:9001/_specmatic/examples/content?fileName=${exampleFileName}`)
-        const data = await resp.json();
+    function toggleAllSelects(isSelected = true) {
+        const checkboxes = table.querySelectorAll("input[type=checkbox]");
+        for (const checkbox of checkboxes) {
+            checkbox.checked = isSelected;
+        }
+    }
 
-        if (!resp.ok) {
-            throw new Error(data.error);
+    function storeExampleData(tableRow, newExample) {
+        tableRow.setAttribute("data-examples", newExample);
+        return newExample;
+    }
+
+    function getExampleData(tableRow) {
+        const existingData = tableRow.getAttribute("data-examples");
+        return existingData;
+    }
+
+    async function generateRowExamples(tableRow, rowValues, bulkMode = false) {
+        tableRow.setAttribute("data-generate", "processing");
+        const { exampleAbsPath, error } = await generateExample(rowValues);
+
+        if (error) {
+            if (!bulkMode) createAlert("Example Generation Failed", error, true);
+            tableRow.setAttribute("data-generate", "failed");
+            return false;
         }
 
-        return {example: data.content, error: null};
-    } catch (e) {
-        return {example: [], error: e.message}
+        storeExampleData(tableRow, exampleAbsPath);
+        enableValidateBtn(tableRow);
+        tableRow.setAttribute("data-generate", "success");
+        const generateColumn = tableRow.querySelector("td:nth-last-child(2)")
+        generateColumn.textContent = parseFileName(exampleAbsPath);
+
+
+        if (!bulkMode) createAlert("Example Generated", `Example name: ${parseFileName(exampleAbsPath)}`, false);
+        return true;
     }
 
-}
+    async function validateRowExamples(tableRow, bulkMode = false) {
+        tableRow.setAttribute("data-valid", "processing");
+        const exampleData = getExampleData(tableRow);
+        const { exampleAbsPath, error } = await validateExample(exampleData);
 
-function parseFileName(absPath) {
-    return absPath.split("\\").pop().split("/").pop().split(".").at(0);
-}
+        tableRow.setAttribute("data-valid", !error);
+        validationDetails[Number.parseInt(tableRow.firstElementChild.textContent)] = error;
 
-function enableValidateBtn(generateBtn) {
-    table.setAttribute("data-generated", "true");
+        if (error) {
+            if (!bulkMode) createAlert("Invalid Example", `Example name: ${parseFileName(exampleAbsPath)}`, true);
+            return false;
+        }
 
-    for (const child of generateBtn.nextElementSibling.children) {
-        child.classList.remove("hidden");
+        if (!bulkMode) createAlert("Valid Example", `Example name: ${parseFileName(exampleAbsPath)}`, false);
+        return true;
     }
 
-}
+    async function goToDetails(tableRow, rowValues) {
+        const exampleAbsPath = getExampleData(tableRow);
+        let docFragment = [];
 
-function createAlert(heading, message, error) {
-    const alertBox = document.createElement("div");
-    alertBox.classList.add("alert-msg", "slide-in", error ? "red" : "green");
+        if (exampleAbsPath) {
+            const {example, error} = await getExampleContent(exampleAbsPath);
+            docFragment = createExampleRows([{
+                absPath: exampleAbsPath,
+                exampleJson: example,
+                error: validationDetails[Number.parseInt(tableRow.firstElementChild.textContent)] || error,
+                hasBeenValidated: tableRow.getAttribute("data-valid")
+            }]);
+        }
 
-    const alertTitle = document.createElement("p");
-    alertTitle.textContent = heading;
+        pathSummaryUl.replaceChildren(createPathSummary(rowValues));
+        examplesOl.replaceChildren(docFragment);
+        mainElement.setAttribute("data-panel", "details");
+        bulkValidateBtn.setAttribute("data-panel", "details");
+        bulkGenerateBtn.setAttribute("data-panel", "details");
+        scrollYPosition = window.scrollY;
+        window.scrollTo(0, 0);
+    }
 
-    const alertMsg = document.createElement("pre");
-    alertMsg.textContent = message;
+    function createExampleRows(examples) {
+        const docFragment = document.createDocumentFragment();
+        for (const example of examples) {
+            const exampleLi = document.createElement("li");
+            exampleLi.setAttribute("data-expand", "false");
+            exampleLi.appendChild(createExampleSummary(example));
+            exampleLi.appendChild(createExampleDropDown(example));
+            docFragment.appendChild(exampleLi);
+        }
 
-    alertBox.appendChild(alertTitle);
-    alertBox.appendChild(alertMsg);
-    alerts.replaceChildren(alertBox);
+        return docFragment;
+    }
 
-    setTimeout(() => {
-        alertBox.classList.add("slide-out");
+    function createPathSummary(rowValues) {
+        const docFragment = document.createDocumentFragment();
+
+        for (const [key, value] of Object.entries(rowValues)) {
+            if (!value) continue;
+
+            const li = document.createElement("li");
+            const keySpan = document.createElement("span");
+            const valueSpan = document.createElement("span");
+
+            keySpan.textContent = key;
+            valueSpan.textContent = value;
+            li.appendChild(keySpan);
+            li.appendChild(valueSpan);
+
+            docFragment.appendChild(li);
+        }
+
+        return docFragment;
+    }
+
+    function createExampleSummary(example) {
+        const exampleDiv = document.createElement("div");
+        const exampleName = document.createElement("p");
+        const exampleBadge = document.createElement("span");
+
+        exampleDiv.classList.add("example");
+        exampleBadge.classList.add("pill", example.hasBeenValidated ? example.error ? "red" : "green" : "blue");
+        exampleName.textContent = example.absPath;
+
+        if (example.hasBeenValidated) {
+            exampleBadge.textContent = `${example.error ? "Invalid" : "Valid"} Example`;
+        } else {
+            exampleBadge.textContent = "Generated Example";
+        }
+
+        const expandDiv = document.createElement("div");
+        expandDiv.classList.add("expand-info");
+        expandDiv.appendChild(exampleBadge);
+        expandDiv.appendChild(chevronDown.cloneNode(true))
+
+        exampleDiv.appendChild(exampleName);
+        exampleDiv.appendChild(expandDiv);
+        return exampleDiv;
+    }
+
+    function createExampleDropDown(example) {
+        const dropDownDiv = document.createElement("div");
+        dropDownDiv.classList.add("dropdown");
+
+        const examplePara = document.createElement("p");
+        const detailsPara = document.createElement("p");
+
+        examplePara.textContent = "Example: ";
+        detailsPara.textContent = "Details: ";
+
+        const examplePre = document.createElement("pre");
+        const detailsPre = document.createElement("pre");
+
+        examplePre.textContent = example.exampleJson;
+        if (example.hasBeenValidated) {
+            detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
+        } else {
+            detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
+        }
+
+        const examplePreDiv = document.createElement("div");
+        const detailsPreDiv = document.createElement("div");
+
+        detailsPreDiv.appendChild(detailsPara);
+        detailsPreDiv.appendChild(detailsPre);
+
+        examplePreDiv.appendChild(examplePara);
+        examplePreDiv.appendChild(examplePre);
+
+        dropDownDiv.appendChild(detailsPreDiv);
+        dropDownDiv.appendChild(examplePreDiv);
+
+        return dropDownDiv;
+    }
+
+    async function generateExample(pathInfo) {
+        try {
+            const resp = await fetch("http://localhost:9001/_specmatic/examples/generate", {
+                method: "POST",
+                body: JSON.stringify(pathInfo),
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+            const data = await resp.json();
+
+            return { exampleAbsPath: data.generatedExample, error: data.error };
+        } catch (error) {
+            return { error: error.message, exampleAbsPath: null };
+        }
+    }
+
+    async function validateExample(exampleFile) {
+        try {
+            const resp = await fetch("http://localhost:9001/_specmatic/examples/validate", {
+                method: "POST",
+                body: JSON.stringify({ exampleFile }),
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+            const data = await resp.json();
+
+            return { exampleAbsPath: data.absPath, error: data.error };
+        } catch (error) {
+            return { error: error.message, exampleAbsPath: null };
+        }
+    }
+
+    async function getExampleContent(example) {
+        const exampleFileName = encodeURIComponent(example);
+        try {
+            const resp = await fetch(`http://localhost:9001/_specmatic/examples/content?fileName=${exampleFileName}`)
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                throw new Error(data.error);
+            }
+
+            return {example: data.content, error: null};
+        } catch (e) {
+            return {example: null, error: e.message}
+        }
+
+    }
+
+    function parseFileName(absPath) {
+        return absPath.split("\\").pop().split("/").pop().split(".").at(0);
+    }
+
+    function enableValidateBtn(tableRow) {
+        table.setAttribute("data-generated", "true");
+
+        for (const child of tableRow.querySelector("td:last-child").children) {
+            child.classList.remove("hidden");
+        }
+
+    }
+
+    function createAlert(heading, message, error) {
+        const alertBox = document.createElement("div");
+        alertBox.classList.add("alert-msg", "slide-in", error ? "red" : "green");
+
+        const alertTitle = document.createElement("p");
+        alertTitle.textContent = heading;
+
+        const alertMsg = document.createElement("pre");
+        alertMsg.textContent = message;
+
+        alertBox.appendChild(alertTitle);
+        alertBox.appendChild(alertMsg);
+        alerts.replaceChildren(alertBox);
+
         setTimeout(() => {
-            alertBox.remove();
-        }, 250);
-    }, 3000);
-}
-
-
-(() => {
-    for (const checkbox of table.querySelectorAll("input[type=checkbox]")) {
-        checkbox.checked = false;
+            alertBox.classList.add("slide-out");
+            setTimeout(() => {
+                alertBox.remove();
+            }, 250);
+        }, 3000);
     }
-})();
+
+    function cleanUpSelections() {
+        for (const checkbox of table.querySelectorAll("input[type=checkbox]")) {
+            checkbox.checked = false;
+        }
+        bulkGenerateBtn.setAttribute("data-selected", "0");
+        bulkValidateBtn.setAttribute("data-selected", "0");
+    }
+
+    (() => cleanUpSelections())();
 </script>
 </body>
 

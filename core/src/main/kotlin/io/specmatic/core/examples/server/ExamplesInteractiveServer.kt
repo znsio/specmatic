@@ -79,16 +79,15 @@ class ExamplesInteractiveServer(
                 post("/_specmatic/examples/generate") {
                     val contractFile = getContractFile()
                     try {
-                        val request = call.receive<List<GenerateExampleRequest>>()
-                        val generatedExamples = request.map {
-                            generate(
-                                contractFile,
-                                it.method,
-                                it.path,
-                                it.responseStatusCode,
-                                it.contentType
-                            )
-                        }
+                        val request = call.receive<GenerateExampleRequest>()
+                        val generatedExamples = generate(
+                            contractFile,
+                            request.method,
+                            request.path,
+                            request.responseStatusCode,
+                            request.contentType
+                        )
+
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExamples))
                     } catch(e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
@@ -99,17 +98,15 @@ class ExamplesInteractiveServer(
                     val request = call.receive<ValidateExampleRequest>()
                     try {
                         val contractFile = getContractFile()
-                        val validationResults = request.exampleFiles.map {
-                            try {
-                                validate(contractFile, File(it))
-                                ValidateExampleResponse(it)
-                            } catch(e: FileNotFoundException){
-                                ValidateExampleResponse(it, e.message ?: "File not found")
-                            } catch(e: NoMatchingScenario) {
-                                ValidateExampleResponse(it, e.msg ?: "Something went wrong")
-                            } catch(e: Exception) {
-                                ValidateExampleResponse(it, e.message ?: "An unexpected error occurred")
-                            }
+                        val validationResults = try {
+                            validate(contractFile, File(request.exampleFile))
+                            ValidateExampleResponse(request.exampleFile)
+                        } catch (e: FileNotFoundException) {
+                            ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
+                        } catch (e: NoMatchingScenario) {
+                            ValidateExampleResponse(request.exampleFile, e.msg ?: "Something went wrong")
+                        } catch (e: Exception) {
+                            ValidateExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
                         }
                         call.respond(HttpStatusCode.OK, validationResults)
                     } catch(e: Exception) {
@@ -118,28 +115,28 @@ class ExamplesInteractiveServer(
                 }
 
                 post("/_specmatic/v2/examples/validate") {
-                    val request = call.receive<ValidateExampleRequest>()
+                    val request = call.receive<List<ValidateExampleRequest>>()
                     try {
                         val contractFile = getContractFile()
-                        val validationResults = request.exampleFiles.map {
+                        val validationResults = request.map {
                             try {
-                                validate(contractFile, File(it))
+                                validate(contractFile, File(it.exampleFile))
                                 ValidateExampleResponseV2(
                                     ValidateExampleVerdict.SUCCESS,
                                     "The provided example is valid",
-                                    it
+                                    it.exampleFile
                                 )
                             } catch(e: NoMatchingScenario) {
                                 ValidateExampleResponseV2(
                                     ValidateExampleVerdict.FAILURE,
                                     e.msg ?: "Something went wrong",
-                                    it
+                                    it.exampleFile
                                 )
                             } catch(e: Exception) {
                                 ValidateExampleResponseV2(
                                     ValidateExampleVerdict.FAILURE,
                                     e.message ?: "An unexpected error occurred",
-                                    it
+                                    it.exampleFile
                                 )
                             }
                         }
@@ -464,7 +461,7 @@ data class ExamplePageRequest(
 )
 
 data class ValidateExampleRequest(
-    val exampleFiles: List<String>
+    val exampleFile: String
 )
 
 data class ValidateExampleResponse(
@@ -490,5 +487,5 @@ data class GenerateExampleRequest(
 )
 
 data class GenerateExampleResponse(
-    val generatedExamples: List<String?>
+    val generatedExample: String?
 )

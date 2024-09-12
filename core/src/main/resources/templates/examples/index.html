@@ -480,6 +480,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: space-around;
+                gap: .1rem;
 
                 &#bulk-validate {
                     --_content: "Validate Selected";
@@ -507,7 +508,7 @@
                     --_content: "Generate Selected";
 
                     &::after {
-                        content: var(--_content, "Generate All");
+                        content: var(--_content, "Generate Selected");
                     }
 
                     &[data-panel="details"] {
@@ -1083,13 +1084,14 @@
                     const genPreSelectCount = Number.parseInt(bulkGenerateBtn.getAttribute("data-selected") || 0);
 
                     if (target.matches("th > label > input")) {
+                        const totalGeneratedRows = countAllGeneratedRows()
                         toggleAllSelects(target.checked);
 
                         if (table.hasAttribute("data-generated") ) {
-                            bulkValidateBtn.setAttribute("data-selected", target.checked ? totalRows : 0);
+                            bulkValidateBtn.setAttribute("data-selected", target.checked ? totalGeneratedRows : 0);
                         }
 
-                        return bulkGenerateBtn.setAttribute("data-selected", target.checked ? totalRows : 0);
+                        return bulkGenerateBtn.setAttribute("data-selected", target.checked ? totalRows - totalGeneratedRows : 0);
                     }
 
                     const hasBeenGenerated = nearestTableRow.getAttribute("data-generate") === "success";
@@ -1208,6 +1210,11 @@
         const [responseStatusCode, contentType] = responseAndContentType.split("\n").map((str) => str.trim());
 
         return { path: tableRow.getAttribute("data-raw-path"), method, responseStatusCode, contentType };
+    }
+
+    function countAllGeneratedRows() {
+        const tableRows = table.querySelectorAll("tr");
+        return Array.from(tableRows).filter((row) => row.getAttribute("data-generate") === "success").length;
     }
 
     function toggleAllSelects(isSelected = true) {

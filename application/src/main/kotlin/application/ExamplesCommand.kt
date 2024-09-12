@@ -47,20 +47,29 @@ class ExamplesCommand : Callable<Unit> {
         @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
         lateinit var contractFile: File
 
-        @Option(names = ["--example-file"], description = ["Example file path"], required = true)
-        lateinit var exampleFile: File
+        @Option(names = ["--example-file"], description = ["Example file path"], required = false)
+        val exampleFile: File? = null
 
         override fun call() {
-            if (!contractFile!!.exists())
-                exitWithMessage("Could not find file ${contractFile!!.path}")
+            if (!contractFile.exists())
+                exitWithMessage("Could not find file ${contractFile.path}")
 
-            try {
-                ExamplesInteractiveServer.validate(contractFile, exampleFile)
-                logger.log("The provided example ${exampleFile.name} is valid.")
-            } catch(e: NoMatchingScenario) {
-                logger.log("The provided example ${exampleFile.name} is invalid. Reason:\n")
-                logger.log(e.msg.orEmpty())
-                exitProcess(1)
+            if (exampleFile != null) {
+                try {
+                    ExamplesInteractiveServer.validate(contractFile, exampleFile)
+                    logger.log("The provided example ${exampleFile.name} is valid.")
+                } catch (e: NoMatchingScenario) {
+                    logger.log("The provided example ${exampleFile.name} is invalid. Reason:\n")
+                    logger.log(e.msg.orEmpty())
+                    exitProcess(1)
+                }
+            } else {
+                val result = ExamplesInteractiveServer.validate(contractFile)
+
+                if(result.isSuccess() == false) {
+                    logger.log(result.reportString())
+                    exitProcess(1)
+                }
             }
         }
     }

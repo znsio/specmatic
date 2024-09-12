@@ -2,21 +2,24 @@ package io.specmatic.core.examples.server
 
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.Feature
+import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExistingExampleFile
 import org.thymeleaf.TemplateEngine
 import org.thymeleaf.context.Context
 import org.thymeleaf.templatemode.TemplateMode
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver
+import java.io.File
 
 class ExamplesView {
     companion object {
-        fun getEndpoints(feature: Feature): List<Endpoint> {
+        fun getEndpoints(feature: Feature, examplesDir: File): List<Endpoint> {
             return feature.scenarios.map {
                 Endpoint(
                     path = convertPathParameterStyle(it.path),
                     rawPath = it.path,
                     method = it.method,
                     responseStatus = it.httpResponsePattern.status,
-                    contentType = it.httpRequestPattern.headersPattern.contentType
+                    contentType = it.httpRequestPattern.headersPattern.contentType,
+                    exampleFile = getExistingExampleFile(it, examplesDir)
                 )
             }.filterEndpoints().sortEndpoints()
         }
@@ -52,7 +55,9 @@ class ExamplesView {
                             methodSpan = endpoints.size,
                             showPath = showPath,
                             showMethod = !methodSet.contains(method),
-                            contentType = it.contentType ?: ""
+                            contentType = it.contentType ?: "",
+                            example = it.exampleFile?.absolutePath,
+                            exampleName = it.exampleFile?.nameWithoutExtension
                         ).also { methodSet.add(method); showPath = false }
                     }
                 }
@@ -70,7 +75,9 @@ data class TableRow(
     val pathSpan: Int,
     val methodSpan: Int,
     val showPath: Boolean,
-    val showMethod: Boolean
+    val showMethod: Boolean,
+    val example: String? = null,
+    val exampleName: String? = null
 )
 
 data class Endpoint(
@@ -78,7 +85,8 @@ data class Endpoint(
     val rawPath: String,
     val method: String,
     val responseStatus: Int,
-    val contentType: String? = null
+    val contentType: String? = null,
+    val exampleFile: File? = null
 )
 
 class HtmlTemplateConfiguration {

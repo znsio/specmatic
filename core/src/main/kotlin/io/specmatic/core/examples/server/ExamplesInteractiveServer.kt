@@ -4,12 +4,14 @@ import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
+import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesView.Companion.groupEndpoints
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
@@ -59,12 +61,14 @@ class ExamplesInteractiveServer(
 
             configureHealthCheckModule()
             routing {
+                staticResources("/_specmatic/assets", "/templates/examples/assets")
+
                 post("/_specmatic/examples") {
                     val request = call.receive<ExamplePageRequest>()
                     contractFileFromRequest = File(request.contractFile)
                     val contractFile = getContractFileOrBadRequest(call) ?: return@post
                     try {
-                        respondWithExamplePageHtmlContent(getContractFile(), call)
+                        respondWithExamplePageHtmlContent(contractFile, call)
                     } catch (e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
                     }
@@ -77,14 +81,16 @@ class ExamplesInteractiveServer(
                 post("/_specmatic/examples/generate") {
                     val contractFile = getContractFile()
                     try {
-                        val request = call.receive<GenerateExampleRequest>()
-                        val generatedExamples = generate(
-                            contractFile,
-                            request.method,
-                            request.path,
-                            request.responseStatusCode,
-                            request.contentType
-                        )
+                        val request = call.receive<List<GenerateExampleRequest>>()
+                        val generatedExamples = request.map {
+                            generate(
+                                contractFile,
+                                it.method,
+                                it.path,
+                                it.responseStatusCode,
+                                it.contentType
+                            )
+                        }
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExamples))
                     } catch(e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
@@ -98,13 +104,13 @@ class ExamplesInteractiveServer(
                         val validationResults = request.exampleFiles.map {
                             try {
                                 validate(contractFile, File(it))
-                                ValidateExampleResponse(it, File(it).readText())
+                                ValidateExampleResponse(it)
                             } catch(e: FileNotFoundException){
-                                ValidateExampleResponse(it, "File not found", e.message)
+                                ValidateExampleResponse(it, e.message ?: "File not found")
                             } catch(e: NoMatchingScenario) {
-                                ValidateExampleResponse(it, File(it).readText(), e.msg ?: "Something went wrong")
+                                ValidateExampleResponse(it, e.msg ?: "Something went wrong")
                             } catch(e: Exception) {
-                                ValidateExampleResponse(it, File(it).readText(), e.message)
+                                ValidateExampleResponse(it, e.message ?: "An unexpected error occurred")
                             }
                         }
                         call.respond(HttpStatusCode.OK, validationResults)
@@ -148,7 +154,14 @@ class ExamplesInteractiveServer(
                 get("/_specmatic/examples/content") {
                     val fileName = call.request.queryParameters["fileName"]
                     if(fileName == null) {
-                        call.respond(HttpStatusCode.BadRequest, "Invalid request. Missing required query param named 'fileName'")
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request. Missing required query param named 'fileName'"))
+                        return@get
+                    }
+                    val file = File(fileName)
+                    if(file.exists().not() || file.extension != "json") {
+                        val message = if(file.extension == "json") "The provided example file ${file.name} does not exist"
+                        else "The provided example file ${file.name} is not a valid example file"
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to message))
                         return@get
                     }
                     call.respond(
@@ -201,13 +214,16 @@ class ExamplesInteractiveServer(
     private fun getExamplePageHtmlContent(contractFile: File): String {
         val feature = ScenarioFilter(filterName, filterNotName).filter(parseContractFileToFeature(contractFile))
 
-        val endpoints = ExamplesView.getEndpoints(feature)
+        val endpoints = ExamplesView.getEndpoints(feature, getExamplesDirPath(contractFile))
+        val tableRows = endpoints.groupEndpoints().toTableRows()
+
         return HtmlTemplateConfiguration.process(
             templateName = "examples/index.html",
             variables = mapOf(
-                "tableRows" to endpoints.groupEndpoints().toTableRows(),
+                "tableRows" to tableRows,
                 "contractFile" to contractFile.name,
-                "contractFilePath" to contractFile.absolutePath
+                "contractFilePath" to contractFile.absolutePath,
+                "hasExamples" to tableRows.any {it.example != null}
             )
         )
     }
@@ -254,7 +270,7 @@ class ExamplesInteractiveServer(
                 }
 
                 val examplesDir =
-                    contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
+                    getExamplesDirPath(contractFile)
 
                 if(examplesDir.exists() && overwriteByDefault == false) {
                     val response: String = Scanner(System.`in`).use { scanner ->
@@ -310,16 +326,18 @@ class ExamplesInteractiveServer(
             path: String,
             responseStatusCode: Int,
             contentType: String? = null
-        ): List<String> {
+        ): String? {
             val feature = parseContractFileToFeature(contractFile)
-            val examplesDir =
-                contractFile.canonicalFile.parentFile.resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
-            examplesDir.mkdirs()
             val scenario = feature.scenarios.firstOrNull {
                 it.method == method && it.status == responseStatusCode && it.path == path
                         && (contentType == null || it.httpRequestPattern.headersPattern.contentType == contentType)
             }
-            if(scenario == null) return emptyList()
+            if(scenario == null) return null
+
+            val examplesDir = getExamplesDirPath(contractFile)
+            val existingExampleFile = getExistingExampleFile(scenario, examplesDir)
+            if(existingExampleFile != null) return existingExampleFile.absolutePath
+            else examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
             val response = feature.lookupResponse(scenario).cleanup()
@@ -332,7 +350,7 @@ class ExamplesInteractiveServer(
             val file = examplesDir.resolve("${uniqueNameForApiOperation}.json")
             println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
             file.writeText(stubJSON.toStringLiteral())
-            return listOf(file.absolutePath)
+            return file.absolutePath
         }
 
         fun validate(contractFile: File): Result {
@@ -398,6 +416,34 @@ class ExamplesInteractiveServer(
         private fun HttpResponse.cleanup(): HttpResponse {
             return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
         }
+
+        private fun File.hasExistingMatchingExample(scenario: Scenario): Boolean {
+            if (this.exists().not() || this.isDirectory.not()) throw IllegalArgumentException("Not a directory: $this")
+
+            val examples = this.listFiles()?.mapNotNull { file ->
+                ExampleFromFile(file)
+            } ?: emptyList()
+
+            return examples.any {
+                val response = it.response ?: return@any false
+                scenario.matchesMock(it.request, response).isSuccess()
+            }
+        }
+
+        fun getExistingExampleFile(scenario: Scenario, examplesDir: File): File? {
+            val exampleFile = examplesDir.listFiles()?.firstOrNull {
+                val example = ExampleFromFile(it)
+                val response = example.response ?: return@firstOrNull false
+                scenario.matchesMock(example.request, response).isSuccess()
+            }
+            return exampleFile
+        }
+
+        private fun getExamplesDirPath(contractFile: File): File {
+            return contractFile.canonicalFile
+                .parentFile
+                .resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
+        }
     }
 }
 
@@ -425,8 +471,7 @@ data class ValidateExampleRequest(
 
 data class ValidateExampleResponse(
     val absPath: String,
-    val exampleJson: String,
-    val error: String? = null,
+    val error: String? = null
 )
 
 enum class ValidateExampleVerdict {
@@ -447,5 +492,5 @@ data class GenerateExampleRequest(
 )
 
 data class GenerateExampleResponse(
-    val generatedExamples: List<String>
+    val generatedExamples: List<String?>
 )

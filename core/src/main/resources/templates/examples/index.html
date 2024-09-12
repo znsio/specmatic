@@ -527,12 +527,6 @@
             table-layout: auto;
             text-align: center;
             font-size: 0.99rem;
-
-            &[data-generated="true"] {
-                & > tbody td:nth-last-child(2) {
-                    width: 20rem;
-                }
-            }
         }
 
         thead {
@@ -651,10 +645,15 @@
 
         td:nth-child(2) {
             text-align: initial;
+            min-width: 10rem;
         }
 
         td:nth-child(3) {
-            min-width: 7rem;
+            min-width: 2rem;
+        }
+
+        td:nth-last-child(2) {
+            max-width: 15rem;
         }
 
         td p, td button {

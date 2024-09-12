@@ -39,6 +39,8 @@ sealed class Result {
         }
     }
 
+    abstract fun isAnyFluffy(acceptableFluffLevel: Int): Boolean
+
     fun updateScenario(scenario: ScenarioDetailsForResult): Result {
         this.scenario = scenario
         return this
@@ -73,7 +75,21 @@ sealed class Result {
     abstract fun throwOnFailure(): Success
     abstract fun <T> toReturnValue(returnValue: T, errorMessage: String): ReturnValue<T>
 
-    data class FailureCause(val message: String="", var cause: Failure? = null)
+    data class FailureCause(val message: String="", var cause: Failure? = null) {
+        fun keepFluffyOnly(): FailureCause? {
+            val cause =
+                cause
+                    ?: return this
+
+            val newCause =
+                if(cause.isAnyFluffy(0))
+                    cause.keepFluffyOnly()
+                else
+                    return null
+
+            return this.copy(cause = newCause)
+        }
+    }
 
     data class Failure(val causes: List<FailureCause> = emptyList(), val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
         constructor(message: String="", cause: Failure? = null, breadCrumb: String = "", failureReason: FailureReason? = null): this(listOf(FailureCause(message, cause)), breadCrumb, failureReason)
@@ -166,6 +182,10 @@ sealed class Result {
             }
         }
 
+        override fun isAnyFluffy(acceptableFluffLevel: Int): Boolean {
+            return failureReason?.let { it.fluffLevel > acceptableFluffLevel } == true || causes.any { it.cause?.isAnyFluffy(acceptableFluffLevel) == true }
+        }
+
         override fun isSuccess() = false
 
         fun traverseFailureReason(): FailureReason? {
@@ -173,9 +193,23 @@ sealed class Result {
                 it.cause?.traverseFailureReason()
             }.firstOrNull()
         }
+
+        fun keepFluffyOnly(): Result.Failure {
+            val onlyFluffyCauses = this.causes.map {
+                it.keepFluffyOnly()
+            }.filterNotNull()
+
+            return this.copy(
+                causes = onlyFluffyCauses, failureReason = null
+            )
+        }
     }
 
     data class Success(val variables: Map<String, String> = emptyMap(), val partialSuccessMessage: String? = null) : Result() {
+        override fun isAnyFluffy(acceptableFluffLevel: Int): Boolean {
+            return false
+        }
+
         override fun isSuccess() = true
         override fun ifSuccess(function: () -> Result) = function()
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {
@@ -227,11 +261,12 @@ enum class FailureReason(val fluffLevel: Int) {
     PartNameMisMatch(0),
     StatusMismatch(2),
     IdentifierMismatch(1),
-    MethodMismatch(1),
+    MethodMismatch(2),
     ContentTypeMismatch(1),
-    RequestMismatchButStatusAlsoWrong(1),
+    RequestMismatchButStatusAlsoWrong(2),
     URLPathMisMatch(2),
-    SOAPActionMismatch(2)
+    SOAPActionMismatch(2),
+    DiscriminatorMismatch(2)
 }
 
 data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null)

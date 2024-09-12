@@ -1,6 +1,7 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.core.*
+import io.specmatic.core.Result.Failure
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.NullValue
@@ -11,7 +12,9 @@ data class AnyPattern(
     override val pattern: List<Pattern>,
     val key: String? = null,
     override val typeAlias: String? = null,
-    override val example: String? = null
+    override val example: String? = null,
+    private val discriminatorProperty: String? = null,
+    private val discriminatorValues: List<String> = emptyList()
 ) : Pattern, HasDefaultExample {
     override fun equals(other: Any?): Boolean = other is AnyPattern && other.pattern == this.pattern
 
@@ -29,7 +32,7 @@ data class AnyPattern(
         if(successfulGeneration != null)
             return successfulGeneration
 
-        val failures = results.toList().filterIsInstance<Result.Failure>()
+        val failures = results.toList().filterIsInstance<Failure>()
 
         return HasFailure(Result.Failure.fromFailures(failures))
     }
@@ -85,18 +88,33 @@ data class AnyPattern(
         if(matchResult != null)
             return matchResult.result
 
+        val failures = matchResults.map { it.result }.filterIsInstance<Failure>()
+
+        if(discriminatorProperty != null) {
+            val deepMatchResults = failures.filterNot { it.isAnyFluffy(0) }
+
+            if(deepMatchResults.isEmpty())
+                return Failure("Expected key $discriminatorProperty to contain one of ${discriminatorValues.joinToString(", ")}")
+
+            return Failure.fromFailures(deepMatchResults)
+        }
+
+        if(failures.all { it.isAnyFluffy(0) }) {
+            return Result.Failure.fromFailures(failures.map { it.keepFluffyOnly() })
+        }
+
         val resolvedPatterns = pattern.map { resolvedHop(it, resolver) }
 
         if(resolvedPatterns.any { it is NullPattern } || resolvedPatterns.all { it is ExactValuePattern })
             return failedToFindAny(
                     typeName,
                     sampleData,
-                    getResult(matchResults.map { it.result as Result.Failure }),
+                    getResult(matchResults.map { it.result as Failure }),
                     resolver.mismatchMessages
                 )
 
         val failuresWithUpdatedBreadcrumbs = matchResults.map {
-            Pair(it.pattern, it.result as Result.Failure)
+            Pair(it.pattern, it.result as Failure)
         }.mapIndexed { index, (pattern, failure) ->
             val ordinal = index + 1
 
@@ -112,7 +130,7 @@ data class AnyPattern(
         return Result.fromFailures(failuresWithUpdatedBreadcrumbs)
     }
 
-    private fun getResult(failures: List<Result.Failure>): List<Result.Failure> = when {
+    private fun getResult(failures: List<Failure>): List<Failure> = when {
         isNullablePattern() -> {
             val index = pattern.indexOfFirst { !isEmpty(it) }
             listOf(failures[index])
@@ -259,7 +277,7 @@ data class AnyPattern(
     ): Result {
         val compatibleResult = otherPattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver, typeStack)
 
-        return if(compatibleResult is Result.Failure && allValuesAreScalar())
+        return if(compatibleResult is Failure && allValuesAreScalar())
             mismatchResult(this, otherPattern, thisResolver.mismatchMessages)
         else
             compatibleResult
@@ -290,7 +308,7 @@ data class AnyPattern(
     }
 }
 
-private fun failedToFindAny(expected: String, actual: Value?, results: List<Result.Failure>, mismatchMessages: MismatchMessages): Result.Failure =
+private fun failedToFindAny(expected: String, actual: Value?, results: List<Failure>, mismatchMessages: MismatchMessages): Failure =
     when (results.size) {
         1 -> results[0]
         else -> {

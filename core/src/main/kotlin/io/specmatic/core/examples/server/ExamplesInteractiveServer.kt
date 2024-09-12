@@ -18,6 +18,7 @@ import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.mock.NoMatchingScenario
@@ -354,12 +355,15 @@ class ExamplesInteractiveServer(
         }
 
         fun validate(contractFile: File): Result {
+            val feature = parseContractFileToFeature(contractFile).also {
+                validateInlineExamples(it)
+            }
+
             val examplesDir = contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
 
             if(!examplesDir.isDirectory)
                 return Result.Failure("$examplesDir does not exist, did not find any files to validate")
 
-            val feature = parseContractFileToFeature(contractFile)
 
             logger.log("Validating examples in ${examplesDir.path}")
 
@@ -391,8 +395,11 @@ class ExamplesInteractiveServer(
         }
 
         fun validate(contractFile: File, exampleFile: File): List<HttpStubData> {
+            val feature = parseContractFileToFeature(contractFile).also {
+                validateInlineExamples(it)
+            }
+
             val scenarioStub = ScenarioStub.readFromFile(exampleFile)
-            val feature = parseContractFileToFeature(contractFile)
 
             val result: Pair<Pair<Result.Success, List<HttpStubData>>?, NoMatchingScenario?> =
                 HttpStub.setExpectation(scenarioStub, feature, InteractiveExamplesMismatchMessages)
@@ -411,6 +418,15 @@ class ExamplesInteractiveServer(
             }
 
             return validationResult.second
+        }
+
+        private fun validateInlineExamples(it: Feature) {
+            if (Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES"))
+                try {
+                    it.validateExamplesOrException()
+                } catch (e: Exception) {
+                    logger.log(e)
+                }
         }
 
         private fun HttpResponse.cleanup(): HttpResponse {

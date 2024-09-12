@@ -421,6 +421,7 @@
             width: 2rem;
             height: 2rem;
             transition: all 0.25s ease-in-out;
+            flex-shrink: 0;
         }
 
         main {
@@ -818,13 +819,13 @@
             cursor: pointer;
 
             & > p {
-                max-width: 80%;
+                max-width: 75%;
             }
 
             & > .expand-info {
                 display: flex;
                 align-items: center;
-                gap: 1rem;
+                gap: .25rem;
             }
         }
 
@@ -1333,7 +1334,7 @@
         if (example.hasBeenValidated) {
             exampleBadge.textContent = `${example.error ? "Invalid" : "Valid"} Example`;
         } else {
-            exampleBadge.textContent = "Generated Example";
+            exampleBadge.textContent = "Example";
         }
 
         const expandDiv = document.createElement("div");

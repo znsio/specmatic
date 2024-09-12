@@ -105,7 +105,7 @@ data class AnyPattern(
             if(nonDiscriminatorMismatches.isNotEmpty())
                 return Result.Failure.fromFailures(nonDiscriminatorMismatches)
 
-            return Result.Failure.fromFailures(failures)
+            return Result.Failure.fromFailures(failures).filterByReason(FailureReason.DiscriminatorMismatch)
         }
 
         val resolvedPatterns = pattern.map { resolvedHop(it, resolver) }

@@ -93,6 +93,20 @@ sealed class Result {
         fun hasReason(failureReason: FailureReason): Boolean {
             return cause?.hasReason(failureReason) ?: false
         }
+
+        fun filterByReason(failureReason: FailureReason): FailureCause? {
+            val cause = cause ?: return null
+
+            if(cause.failureReason == failureReason)
+                return this
+
+            val filteredCause = cause.filterByReason(failureReason)
+
+            if(filteredCause.isEmpty())
+                return null
+
+            return this.copy(cause = filteredCause)
+        }
     }
 
     data class Failure(val causes: List<FailureCause> = emptyList(), val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
@@ -210,6 +224,21 @@ sealed class Result {
 
         fun hasReason(failureReason: FailureReason): Boolean {
             return this.failureReason == failureReason || causes.any { it.hasReason(failureReason) }
+        }
+
+        fun filterByReason(failureReason: FailureReason): Failure {
+            if(this.failureReason == FailureReason.DiscriminatorMismatch)
+                return this
+
+            val causesFilteredByReason: List<FailureCause> = this.causes.map {
+                it.filterByReason(failureReason)
+            }.filterNotNull()
+
+            return this.copy(causes = causesFilteredByReason)
+        }
+
+        fun isEmpty(): Boolean {
+            return this.causes.isEmpty()
         }
     }
 

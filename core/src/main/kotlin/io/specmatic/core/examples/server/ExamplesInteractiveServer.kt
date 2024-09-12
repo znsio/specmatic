@@ -20,6 +20,7 @@ import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.capitalizeFirstChar
+import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
@@ -420,13 +421,15 @@ class ExamplesInteractiveServer(
             return validationResult.second
         }
 
-        private fun validateInlineExamples(it: Feature) {
+        private fun validateInlineExamples(it: Feature): Result {
             if (Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES"))
                 try {
                     it.validateExamplesOrException()
                 } catch (e: Exception) {
-                    logger.log(e)
+                    return Result.Failure(exceptionCauseMessage(e))
                 }
+
+            return Result.Success()
         }
 
         private fun HttpResponse.cleanup(): HttpResponse {

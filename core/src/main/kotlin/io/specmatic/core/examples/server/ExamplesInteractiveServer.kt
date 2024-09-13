@@ -4,7 +4,6 @@ import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
-import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
@@ -80,7 +79,7 @@ class ExamplesInteractiveServer(
                     val contractFile = getContractFile()
                     try {
                         val request = call.receive<GenerateExampleRequest>()
-                        val generatedExamples = generate(
+                        val generatedExample = generate(
                             contractFile,
                             request.method,
                             request.path,
@@ -88,7 +87,7 @@ class ExamplesInteractiveServer(
                             request.contentType
                         )
 
-                        call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExamples))
+                        call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExample))
                     } catch(e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
                     }
@@ -218,7 +217,10 @@ class ExamplesInteractiveServer(
                 "tableRows" to tableRows,
                 "contractFile" to contractFile.name,
                 "contractFilePath" to contractFile.absolutePath,
-                "hasExamples" to tableRows.any {it.example != null}
+                "hasExamples" to tableRows.any {it.example != null},
+                "validationDetails" to tableRows.withIndex().associate { (idx, row) ->
+                    idx.inc() to row.exampleMismatchReason
+                }
             )
         )
     }
@@ -331,7 +333,7 @@ class ExamplesInteractiveServer(
 
             val examplesDir = getExamplesDirPath(contractFile)
             val existingExampleFile = getExistingExampleFile(scenario, examplesDir)
-            if(existingExampleFile != null) return existingExampleFile.absolutePath
+            if(existingExampleFile != null) return existingExampleFile.first.absolutePath
             else examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
@@ -412,26 +414,21 @@ class ExamplesInteractiveServer(
             return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
         }
 
-        private fun File.hasExistingMatchingExample(scenario: Scenario): Boolean {
-            if (this.exists().not() || this.isDirectory.not()) throw IllegalArgumentException("Not a directory: $this")
+        fun getExistingExampleFile(scenario: Scenario, examplesDir: File): Pair<File, String>? {
+            return examplesDir.listFiles()?.firstNotNullOfOrNull { file ->
+                val example = ExampleFromFile(file)
+                val response = example.response ?: return@firstNotNullOfOrNull null
 
-            val examples = this.listFiles()?.mapNotNull { file ->
-                ExampleFromFile(file)
-            } ?: emptyList()
-
-            return examples.any {
-                val response = it.response ?: return@any false
-                scenario.matchesMock(it.request, response).isSuccess()
+                when (val matchResult = scenario.matchesMock(example.request, response)) {
+                    is Result.Success -> file to ""
+                    is Result.Failure -> {
+                        val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs().none { breadCrumb ->
+                            breadCrumb.contains(PATH_BREAD_CRUMB) || breadCrumb.contains(METHOD_BREAD_CRUMB)
+                        }
+                        if (isFailureRelatedToScenario) file to matchResult.reportString() else null
+                    }
+                }
             }
-        }
-
-        fun getExistingExampleFile(scenario: Scenario, examplesDir: File): File? {
-            val exampleFile = examplesDir.listFiles()?.firstOrNull {
-                val example = ExampleFromFile(it)
-                val response = example.response ?: return@firstOrNull false
-                scenario.matchesMock(example.request, response).isSuccess()
-            }
-            return exampleFile
         }
 
         private fun getExamplesDirPath(contractFile: File): File {

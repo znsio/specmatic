@@ -992,7 +992,7 @@
         <tbody>
             <tr
                 th:each="row, iter : ${tableRows}"
-                th:attr="data-raw-path=${row.rawPath}, data-examples=${row.example}, data-generate=${row.example != null ? 'success' : ''}">
+                th:attr="data-raw-path=${row.rawPath}, data-examples=${row.example}, data-generate=${row.example != null ? 'success' : ''}, data-valid=${row.exampleMismatchReason == null ? 'true' : 'false'}">
                 <td>
                     <input type="checkbox" name="path-row" class="path-row">
                 </td>
@@ -1037,6 +1037,10 @@
     <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 5.25 7.5 7.5 7.5-7.5m-15 6 7.5 7.5 7.5-7.5" />
 </svg>
 
+<script th:inline="javascript">
+    const validationDetails = /*[[${validationDetails}]]*/ {};
+</script>
+
 <script>
     const mainElement = document.querySelector("main");
     const table = document.querySelector("table");
@@ -1052,7 +1056,6 @@
     let selectedTableRow = null;
     const totalRows = table.querySelectorAll("tbody > tr").length;
     let blockGenValidate = false;
-    const validationDetails = {}
 
     backBtn.addEventListener("click", () => {
         mainElement.setAttribute("data-panel", "table");

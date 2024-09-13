@@ -11,6 +11,7 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 
 private const val MULTIPART_FORMDATA_BREADCRUMB = "MULTIPART-FORMDATA"
+const val METHOD_BREAD_CRUMB = "METHOD"
 private const val FORM_FIELDS_BREADCRUMB = "FORM-FIELDS"
 const val CONTENT_TYPE = "Content-Type"
 
@@ -194,7 +195,12 @@ data class HttpRequestPattern(
 
         method.let {
             return if (it != httpRequest.method)
-                MatchFailure(mismatchResult(method ?: "", httpRequest.method ?: "").copy(failureReason = FailureReason.MethodMismatch).breadCrumb("METHOD"))
+                MatchFailure(
+                    mismatchResult(
+                        method ?: "",
+                        httpRequest.method ?: ""
+                    ).copy(failureReason = FailureReason.MethodMismatch).breadCrumb(METHOD_BREAD_CRUMB)
+                )
             else
                 MatchSuccess(Triple(httpRequest, resolver, failures))
         }

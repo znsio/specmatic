@@ -13,13 +13,15 @@ class ExamplesView {
     companion object {
         fun getEndpoints(feature: Feature, examplesDir: File): List<Endpoint> {
             return feature.scenarios.map {
+                val example = getExistingExampleFile(it, examplesDir)
                 Endpoint(
                     path = convertPathParameterStyle(it.path),
                     rawPath = it.path,
                     method = it.method,
                     responseStatus = it.httpResponsePattern.status,
                     contentType = it.httpRequestPattern.headersPattern.contentType,
-                    exampleFile = getExistingExampleFile(it, examplesDir)
+                    exampleFile = example?.first,
+                    exampleMismatchReason = example?.second
                 )
             }.filterEndpoints().sortEndpoints()
         }
@@ -57,7 +59,8 @@ class ExamplesView {
                             showMethod = !methodSet.contains(method),
                             contentType = it.contentType ?: "",
                             example = it.exampleFile?.absolutePath,
-                            exampleName = it.exampleFile?.nameWithoutExtension
+                            exampleName = it.exampleFile?.nameWithoutExtension,
+                            exampleMismatchReason = if(it.exampleMismatchReason?.isBlank() == true) null else it.exampleMismatchReason
                         ).also { methodSet.add(method); showPath = false }
                     }
                 }
@@ -77,7 +80,8 @@ data class TableRow(
     val showPath: Boolean,
     val showMethod: Boolean,
     val example: String? = null,
-    val exampleName: String? = null
+    val exampleName: String? = null,
+    val exampleMismatchReason: String? = null
 )
 
 data class Endpoint(
@@ -86,7 +90,8 @@ data class Endpoint(
     val method: String,
     val responseStatus: Int,
     val contentType: String? = null,
-    val exampleFile: File? = null
+    val exampleFile: File? = null,
+    val exampleMismatchReason: String? = null
 )
 
 class HtmlTemplateConfiguration {

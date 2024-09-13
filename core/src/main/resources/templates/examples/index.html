@@ -778,6 +778,7 @@
 
             & > li > span:last-of-type {
                 font-weight: 400;
+                word-break: break-word;
             }
         }
 
@@ -820,7 +821,8 @@
             cursor: pointer;
 
             & > p {
-                max-width: 75%;
+                word-break: break-all;
+                flex: 1;
             }
 
             & > .expand-info {

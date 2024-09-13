@@ -2,6 +2,7 @@ package io.specmatic.core.examples.server
 
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.Feature
+import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesFromDir
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExistingExampleFile
 import org.thymeleaf.TemplateEngine
 import org.thymeleaf.context.Context
@@ -12,8 +13,9 @@ import java.io.File
 class ExamplesView {
     companion object {
         fun getEndpoints(feature: Feature, examplesDir: File): List<Endpoint> {
+            val examples = examplesDir.getExamplesFromDir()
             return feature.scenarios.map {
-                val example = getExistingExampleFile(it, examplesDir)
+                val example = getExistingExampleFile(it, examples)
                 Endpoint(
                     path = convertPathParameterStyle(it.path),
                     rawPath = it.path,

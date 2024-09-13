@@ -336,7 +336,7 @@ class ExamplesInteractiveServer(
             if(scenario == null) return null
 
             val examplesDir = getExamplesDirPath(contractFile)
-            val existingExampleFile = getExistingExampleFile(scenario, examplesDir)
+            val existingExampleFile = getExistingExampleFile(scenario, examplesDir.getExamplesFromDir())
             if(existingExampleFile != null) return existingExampleFile.first.absolutePath
             else examplesDir.mkdirs()
 
@@ -418,32 +418,33 @@ class ExamplesInteractiveServer(
             return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
         }
 
-        fun getExistingExampleFile(scenario: Scenario, examplesDir: File): Pair<File, String>? = runBlocking {
-            examplesDir.listFiles()?.toList()?.map { file ->
-                async(Dispatchers.Default) {
-                    val example = ExampleFromFile(file)
-                    val response = example.response ?: return@async null
+        fun getExistingExampleFile(scenario: Scenario, examples: List<ExampleFromFile>): Pair<File, String>? {
+            return examples.firstNotNullOfOrNull { example ->
+                val response = example.response ?: return@firstNotNullOfOrNull null
 
-                    when (val matchResult = scenario.matchesMock(example.request, response)) {
-                        is Result.Success -> file to ""
-                        is Result.Failure -> {
-                            val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs().none { breadCrumb ->
-                                breadCrumb.contains(PATH_BREAD_CRUMB)
-                                        || breadCrumb.contains(METHOD_BREAD_CRUMB)
-                                        || breadCrumb.contains("Content-Type")
-                                        || breadCrumb.contains("STATUS")
-                            }
-                            if (isFailureRelatedToScenario) file to matchResult.reportString() else null
+                when (val matchResult = scenario.matchesMock(example.request, response)) {
+                    is Result.Success -> example.file to ""
+                    is Result.Failure -> {
+                        val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs().none { breadCrumb ->
+                            breadCrumb.contains(PATH_BREAD_CRUMB)
+                                    || breadCrumb.contains(METHOD_BREAD_CRUMB)
+                                    || breadCrumb.contains("Content-Type")
+                                    || breadCrumb.contains("STATUS")
                         }
+                        if (isFailureRelatedToScenario) example.file to matchResult.reportString() else null
                     }
                 }
-            }?.awaitAll()?.firstOrNull { it != null }
+            }
         }
 
         private fun getExamplesDirPath(contractFile: File): File {
             return contractFile.canonicalFile
                 .parentFile
                 .resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
+        }
+
+        fun File.getExamplesFromDir(): List<ExampleFromFile> {
+            return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
         }
     }
 }

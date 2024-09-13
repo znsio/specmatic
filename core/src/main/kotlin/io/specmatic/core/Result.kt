@@ -303,7 +303,9 @@ enum class FailureReason(val fluffLevel: Int) {
     RequestMismatchButStatusAlsoWrong(2),
     URLPathMisMatch(2),
     SOAPActionMismatch(2),
-    DiscriminatorMismatch(0)
+    DiscriminatorMismatch(0),
+    FailedButDiscriminatorMatched(0),
+    FailedButObjectTypeMatched(0)
 }
 
 data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null)

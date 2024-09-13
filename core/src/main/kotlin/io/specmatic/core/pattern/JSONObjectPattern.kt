@@ -207,17 +207,30 @@ data class JSONObjectPattern(
                 it.missingKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
             }
 
-        val results: List<Result.Failure> =
+        data class ResultWithDiscriminatorStatus(val result: Result, val isDiscrimintor: Boolean)
+
+        val resultsWithDiscriminator: List<ResultWithDiscriminatorStatus> =
             mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
-                resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
-            }.filterIsInstance<Result.Failure>()
+                ResultWithDiscriminatorStatus(resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key), (patternValue is ExactValuePattern && patternValue.discriminator == true))
+            }
+
+        val results: List<Result.Failure> = resultsWithDiscriminator.map { it.result }.filterIsInstance<Result.Failure>()
 
         val failures: List<Result.Failure> = minCountErrors + maxCountErrors + keyErrors + results
 
         return if (failures.isEmpty())
             Result.Success()
-        else
-            Result.Failure.fromFailures(failures)
+        else {
+            val discriminatorMatched = resultsWithDiscriminator.any { it.isDiscrimintor == true && it.result.isSuccess() }
+
+            val failure = Result.Failure.fromFailures(failures)
+
+            if(discriminatorMatched) {
+                failure.copy(failureReason = FailureReason.FailedButDiscriminatorMatched)
+            } else {
+                failure.copy(failureReason = FailureReason.FailedButObjectTypeMatched)
+            }
+        }
     }
 
     override fun generate(resolver: Resolver): JSONObjectValue {

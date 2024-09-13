@@ -100,12 +100,25 @@ data class AnyPattern(
         }
 
         if(failures.any { it.hasReason(FailureReason.DiscriminatorMismatch) }) {
-            val nonDiscriminatorMismatches = failures.filterNot { it.hasReason(FailureReason.DiscriminatorMismatch) }
+            val discriminatorMatchedButHadSomeOtherMismatch = failures.filter { it.hasReason(FailureReason.FailedButDiscriminatorMatched) }
 
-            if(nonDiscriminatorMismatches.isNotEmpty())
-                return Result.Failure.fromFailures(nonDiscriminatorMismatches)
+            if(discriminatorMatchedButHadSomeOtherMismatch.isNotEmpty())
+                return Result.Failure.fromFailures(discriminatorMatchedButHadSomeOtherMismatch)
 
-            return Result.Failure.fromFailures(failures).filterByReason(FailureReason.DiscriminatorMismatch)
+            return failures.map {
+                if(it.hasReason(FailureReason.DiscriminatorMismatch))
+                    it.filterByReason(FailureReason.DiscriminatorMismatch)
+                else
+                    it
+            }.let {
+                Result.Failure.fromFailures(it)
+            }
+        }
+
+        if(failures.any { it.hasReason(FailureReason.FailedButObjectTypeMatched) || it.hasReason(FailureReason.FailedButDiscriminatorMatched) }) {
+            val objectTypeMatchedButHadSomeOtherMismatch = failures.filter { it.hasReason(FailureReason.FailedButObjectTypeMatched) || it.hasReason(FailureReason.FailedButDiscriminatorMatched) }
+
+            return Result.Failure.fromFailures(objectTypeMatchedButHadSomeOtherMismatch)
         }
 
         val resolvedPatterns = pattern.map { resolvedHop(it, resolver) }

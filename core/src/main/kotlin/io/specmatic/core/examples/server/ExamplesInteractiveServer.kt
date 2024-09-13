@@ -423,7 +423,9 @@ class ExamplesInteractiveServer(
                     is Result.Success -> file to ""
                     is Result.Failure -> {
                         val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs().none { breadCrumb ->
-                            breadCrumb.contains(PATH_BREAD_CRUMB) || breadCrumb.contains(METHOD_BREAD_CRUMB)
+                            breadCrumb.contains(PATH_BREAD_CRUMB)
+                                    || breadCrumb.contains(METHOD_BREAD_CRUMB)
+                                    || breadCrumb.contains("Content-Type")
                         }
                         if (isFailureRelatedToScenario) file to matchResult.reportString() else null
                     }

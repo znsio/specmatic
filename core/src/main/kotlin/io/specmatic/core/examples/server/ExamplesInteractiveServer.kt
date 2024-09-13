@@ -23,6 +23,10 @@ import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.HttpStubData
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
@@ -414,24 +418,26 @@ class ExamplesInteractiveServer(
             return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
         }
 
-        fun getExistingExampleFile(scenario: Scenario, examplesDir: File): Pair<File, String>? {
-            return examplesDir.listFiles()?.firstNotNullOfOrNull { file ->
-                val example = ExampleFromFile(file)
-                val response = example.response ?: return@firstNotNullOfOrNull null
+        fun getExistingExampleFile(scenario: Scenario, examplesDir: File): Pair<File, String>? = runBlocking {
+            examplesDir.listFiles()?.toList()?.map { file ->
+                async(Dispatchers.Default) {
+                    val example = ExampleFromFile(file)
+                    val response = example.response ?: return@async null
 
-                when (val matchResult = scenario.matchesMock(example.request, response)) {
-                    is Result.Success -> file to ""
-                    is Result.Failure -> {
-                        val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs().none { breadCrumb ->
-                            breadCrumb.contains(PATH_BREAD_CRUMB)
-                                    || breadCrumb.contains(METHOD_BREAD_CRUMB)
-                                    || breadCrumb.contains("Content-Type")
-                                    || breadCrumb.contains("STATUS")
+                    when (val matchResult = scenario.matchesMock(example.request, response)) {
+                        is Result.Success -> file to ""
+                        is Result.Failure -> {
+                            val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs().none { breadCrumb ->
+                                breadCrumb.contains(PATH_BREAD_CRUMB)
+                                        || breadCrumb.contains(METHOD_BREAD_CRUMB)
+                                        || breadCrumb.contains("Content-Type")
+                                        || breadCrumb.contains("STATUS")
+                            }
+                            if (isFailureRelatedToScenario) file to matchResult.reportString() else null
                         }
-                        if (isFailureRelatedToScenario) file to matchResult.reportString() else null
                     }
                 }
-            }
+            }?.awaitAll()?.firstOrNull { it != null }
         }
 
         private fun getExamplesDirPath(contractFile: File): File {

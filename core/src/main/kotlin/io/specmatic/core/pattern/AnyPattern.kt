@@ -115,8 +115,14 @@ data class AnyPattern(
             }
         }
 
-        if(failures.any { it.hasReason(FailureReason.FailedButObjectTypeMatched) || it.hasReason(FailureReason.FailedButDiscriminatorMatched) }) {
-            val objectTypeMatchedButHadSomeOtherMismatch = failures.filter { it.hasReason(FailureReason.FailedButObjectTypeMatched) || it.hasReason(FailureReason.FailedButDiscriminatorMatched) }
+        if(failures.any { it.hasAnyOfTheseReasons(FailureReason.FailedButObjectTypeMatched, FailureReason.FailedButDiscriminatorMatched) }) {
+            val failureMatchResults = matchResults.filter {
+                it.result is Failure &&
+                        it.result.hasAnyOfTheseReasons(FailureReason.FailedButObjectTypeMatched, FailureReason.FailedButDiscriminatorMatched)
+
+            }
+
+            val objectTypeMatchedButHadSomeOtherMismatch = addTypeInfoBreadCrumbs(failureMatchResults)
 
             return Result.Failure.fromFailures(objectTypeMatchedButHadSomeOtherMismatch)
         }
@@ -131,21 +137,25 @@ data class AnyPattern(
                     resolver.mismatchMessages
                 )
 
+        val failuresWithUpdatedBreadcrumbs = addTypeInfoBreadCrumbs(matchResults)
+
+        return Result.fromFailures(failuresWithUpdatedBreadcrumbs)
+    }
+
+    private fun addTypeInfoBreadCrumbs(matchResults: List<AnyPatternMatch>): List<Failure> {
         val failuresWithUpdatedBreadcrumbs = matchResults.map {
             Pair(it.pattern, it.result as Failure)
         }.mapIndexed { index, (pattern, failure) ->
             val ordinal = index + 1
 
             pattern.typeAlias?.let {
-                if(it.isBlank() || it == "()")
+                if (it.isBlank() || it == "()")
                     failure.breadCrumb("(~~~object $ordinal)")
                 else
                     failure.breadCrumb("(~~~${withoutPatternDelimiters(it)} object)")
-            } ?:
-            failure
+            } ?: failure
         }
-
-        return Result.fromFailures(failuresWithUpdatedBreadcrumbs)
+        return failuresWithUpdatedBreadcrumbs
     }
 
     private fun getResult(failures: List<Failure>): List<Failure> = when {

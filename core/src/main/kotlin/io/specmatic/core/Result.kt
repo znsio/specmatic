@@ -107,6 +107,10 @@ sealed class Result {
 
             return this.copy(cause = filteredCause)
         }
+
+        fun hasAnyOfTheseReasons(failureReasons: List<FailureReason>): Boolean {
+            return cause?.hasAnyOfTheseReasons(*failureReasons.toTypedArray()) ?: false
+        }
     }
 
     data class Failure(val causes: List<FailureCause> = emptyList(), val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
@@ -224,6 +228,10 @@ sealed class Result {
 
         fun hasReason(failureReason: FailureReason): Boolean {
             return this.failureReason == failureReason || causes.any { it.hasReason(failureReason) }
+        }
+
+        fun hasAnyOfTheseReasons(vararg failureReasons: FailureReason): Boolean {
+            return this.failureReason != null && this.failureReason in failureReasons || causes.any { it.hasAnyOfTheseReasons(failureReasons.toList()) }
         }
 
         fun filterByReason(failureReason: FailureReason): Failure {

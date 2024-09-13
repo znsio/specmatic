@@ -76,20 +76,6 @@ sealed class Result {
     abstract fun <T> toReturnValue(returnValue: T, errorMessage: String): ReturnValue<T>
 
     data class FailureCause(val message: String="", var cause: Failure? = null) {
-        fun keepFluffyOnly(): FailureCause? {
-            val cause =
-                cause
-                    ?: return this
-
-            val newCause =
-                if(cause.isAnyFluffy(0))
-                    cause.keepFluffyOnly()
-                else
-                    return null
-
-            return this.copy(cause = newCause)
-        }
-
         fun hasReason(failureReason: FailureReason): Boolean {
             return cause?.hasReason(failureReason) ?: false
         }
@@ -214,16 +200,6 @@ sealed class Result {
             return failureReason ?: causes.asSequence().map {
                 it.cause?.traverseFailureReason()
             }.firstOrNull()
-        }
-
-        fun keepFluffyOnly(): Result.Failure {
-            val onlyFluffyCauses = this.causes.map {
-                it.keepFluffyOnly()
-            }.filterNotNull()
-
-            return this.copy(
-                causes = onlyFluffyCauses, failureReason = null
-            )
         }
 
         fun hasReason(failureReason: FailureReason): Boolean {

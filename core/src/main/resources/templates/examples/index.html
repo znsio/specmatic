@@ -992,7 +992,10 @@
         <tbody>
             <tr
                 th:each="row, iter : ${tableRows}"
-                th:attr="data-raw-path=${row.rawPath}, data-examples=${row.example}, data-generate=${row.example != null ? 'success' : ''}, data-valid=${row.exampleMismatchReason == null ? 'true' : 'false'}">
+                th:attr="data-raw-path=${row.rawPath},
+                        data-examples=${row.example},
+                        data-generate=${row.example != null ? 'success' : ''},
+                        data-valid=${row.example != null ? (row.exampleMismatchReason == null ? 'true' : 'false') : ''}">
                 <td>
                     <input type="checkbox" name="path-row" class="path-row">
                 </td>

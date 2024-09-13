@@ -426,6 +426,7 @@ class ExamplesInteractiveServer(
                             breadCrumb.contains(PATH_BREAD_CRUMB)
                                     || breadCrumb.contains(METHOD_BREAD_CRUMB)
                                     || breadCrumb.contains("Content-Type")
+                                    || breadCrumb.contains("STATUS")
                         }
                         if (isFailureRelatedToScenario) file to matchResult.reportString() else null
                     }

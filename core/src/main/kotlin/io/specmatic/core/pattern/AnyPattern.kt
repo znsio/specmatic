@@ -97,13 +97,6 @@ data class AnyPattern(
                 return Failure.fromFailures(deepMatchResults).removeReasonsFromCauses().copy(failureReason = FailureReason.FailedButDiscriminatorMatched)
 
             val failure = if(discriminatorValues.size == 1) {
-//                if(failures.sumOf { it.failureCount() } == 1 && failures.any { it.hasReason(FailureReason.DiscriminatorMismatch)}) {
-//                    val message =
-//                        "Expected the value of discriminator property $discriminatorProperty to be \"${discriminatorValues.single()}\""
-//
-//                    Failure(message, breadCrumb = discriminatorProperty, failureReason = FailureReason.DiscriminatorMismatch)
-//                }
-//                else Failure.fromFailures(failures).removeReasonsFromCauses()
                 Failure.fromFailures(failures).removeReasonsFromCauses()
             }
             else {

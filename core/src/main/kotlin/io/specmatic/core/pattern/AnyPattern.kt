@@ -175,6 +175,14 @@ data class AnyPattern(
     }
 
     private fun generateRandomValue(resolver: Resolver): Value {
+        if(
+            pattern.size == 2 &&
+            pattern.any { it is NullPattern} &&
+            pattern.filterNot { it is NullPattern }.filter { it is ScalarType }.size == 1
+        ) {
+            return pattern.filterNot { it is NullPattern }.filter { it is ScalarType }.first().generate(resolver)
+        }
+
         val randomPattern = pattern.random()
         val isNullable = pattern.any { it is NullPattern }
         return resolver.withCyclePrevention(randomPattern, isNullable) { cyclePreventedResolver ->

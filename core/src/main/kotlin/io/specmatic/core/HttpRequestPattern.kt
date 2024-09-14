@@ -8,6 +8,7 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
 import io.ktor.util.*
 import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 
@@ -18,8 +19,6 @@ const val CONTENT_TYPE = "Content-Type"
 private val invalidRequestStatuses = listOf(400, 422)
 
 data class HeaderMatchParams(val request: HttpRequest, val headersResolver: Resolver?, val defaultResolver: Resolver, val failures: List<Failure>)
-
-private const val EXTENSIBLE_QUERY_PARAMS = "EXTENSIBLE_QUERY_PARAMS"
 
 data class HttpRequestPattern(
     val headersPattern: HttpHeadersPattern = HttpHeadersPattern(),

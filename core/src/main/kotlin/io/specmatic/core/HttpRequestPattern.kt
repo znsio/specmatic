@@ -7,6 +7,7 @@ import io.specmatic.core.Result.Success
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
 import io.ktor.util.*
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 
@@ -17,6 +18,8 @@ const val CONTENT_TYPE = "Content-Type"
 private val invalidRequestStatuses = listOf(400, 422)
 
 data class HeaderMatchParams(val request: HttpRequest, val headersResolver: Resolver?, val defaultResolver: Resolver, val failures: List<Failure>)
+
+private const val EXTENSIBLE_QUERY_PARAMS = "EXTENSIBLE_QUERY_PARAMS"
 
 data class HttpRequestPattern(
     val headersPattern: HttpHeadersPattern = HttpHeadersPattern(),
@@ -223,7 +226,17 @@ data class HttpRequestPattern(
     private fun matchQuery(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
 
-        val result = httpQueryParamPattern.matches(httpRequest, resolver)
+        val updatedResolver =
+            if(Flags.getBooleanValue(EXTENSIBLE_QUERY_PARAMS))
+                resolver.copy(
+                    findKeyErrorCheck = resolver.findKeyErrorCheck.copy(
+                        unexpectedKeyCheck = IgnoreUnexpectedKeys
+                    )
+                )
+            else
+                resolver
+
+        val result = httpQueryParamPattern.matches(httpRequest, updatedResolver)
 
         return if (result is Failure)
             MatchSuccess(Triple(httpRequest, resolver, failures.plus(result)))
@@ -364,24 +377,29 @@ data class HttpRequestPattern(
 
             val matchResult = Result.fromResults(results)
 
-            if(matchResult is Failure)
+            if (matchResult is Failure)
                 throw ContractException(matchResult.toFailureReport())
 
-            paramsUnaccountedFor.map { (name, values) ->
-                val pattern = if (values.size > 1) {
-                    QueryParameterArrayPattern(values.map { ExactValuePattern(StringValue(it.second)) }, name)
-                } else {
-                    QueryParameterScalarPattern(ExactValuePattern(StringValue(values.single().second)))
-                }
-
-                name to pattern
-            }.toMap()
+            unaccountedQueryParamsToMap(paramsUnaccountedFor)
+        } else if(Flags.getBooleanValue(EXTENSIBLE_QUERY_PARAMS)) {
+            unaccountedQueryParamsToMap(paramsUnaccountedFor)
         } else {
             emptyMap()
         }
 
         return paramsWithinPattern + paramsOutsidePattern
     }
+
+    private fun unaccountedQueryParamsToMap(paramsUnaccountedFor: Map<String, List<Pair<String, String>>>) =
+        paramsUnaccountedFor.map { (name, values) ->
+            val pattern = if (values.size > 1) {
+                QueryParameterArrayPattern(values.map { ExactValuePattern(StringValue(it.second)) }, name)
+            } else {
+                QueryParameterScalarPattern(ExactValuePattern(StringValue(values.single().second)))
+            }
+
+            name to pattern
+        }.toMap()
 
     private fun encompassedType(valueString: String, key: String?, type: Pattern, resolver: Resolver): Pattern {
         return when {

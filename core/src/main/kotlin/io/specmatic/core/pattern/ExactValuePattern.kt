@@ -13,10 +13,7 @@ data class ExactValuePattern(override val pattern: Value, override val typeAlias
             true -> Result.Success()
             else -> {
                 if (discriminator) {
-                    val errorMessage = resolver.mismatchMessages.mismatchMessage(
-                        "${pattern.displayableValue()} as this property is a discriminator",
-                        sampleData?.displayableValue() ?: ""
-                    )
+                    val errorMessage = "Expected the value of discriminator property to be ${sampleData?.displayableValue()}"
                     Result.Failure(errorMessage, failureReason = FailureReason.DiscriminatorMismatch)
                 } else
                     mismatchResult(pattern, sampleData, resolver.mismatchMessages)

@@ -1264,7 +1264,7 @@ class OpenApiSpecification(
                     else if (oneOfs.size > 1)
                         AnyPattern(oneOfs)
                     else if(allDiscriminators.isNotEmpty())
-                        AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") }, discriminatorProperty = allDiscriminators.key, discriminatorValues = allDiscriminators.values)
+                        AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") }, discriminatorProperty = allDiscriminators.key, discriminatorValues = allDiscriminators.values.toSet())
                     else if(schemaProperties.size > 1)
                         AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") })
                     else
@@ -1283,7 +1283,7 @@ class OpenApiSpecification(
                     val nullable =
                         if (schema.oneOf.any { nullableEmptyObject(it) }) listOf(NullPattern) else emptyList()
 
-                    AnyPattern(candidatePatterns.plus(nullable))
+                    AnyPattern(candidatePatterns.plus(nullable), discriminatorProperty =  schema.discriminator?.propertyName, discriminatorValues = schema.discriminator?.let { it.mapping.keys.toSet() }.orEmpty())
                 } else if (schema.anyOf != null) {
                     throw UnsupportedOperationException("Specmatic does not support anyOf")
                 } else {
@@ -1597,7 +1597,7 @@ class OpenApiSpecification(
     ): Map<String, Pattern> {
         val patternMap = schema.properties.orEmpty().map { (propertyName, propertyType) ->
             if (schema.discriminator?.propertyName == propertyName)
-                propertyName to ExactValuePattern(StringValue(patternName))
+                propertyName to ExactValuePattern(StringValue(patternName), discriminator = true)
             else if (discriminator.hasValueForKey(propertyName)) {
                 propertyName to discriminator.valueFor(propertyName)
             } else {

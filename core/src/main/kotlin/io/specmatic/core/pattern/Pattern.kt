@@ -88,3 +88,7 @@ interface Pattern {
     val typeName: String
     val pattern: Any
 }
+
+fun Pattern.isDiscriminator(): Boolean {
+    return this is ExactValuePattern && this.discriminator == true
+}

@@ -97,6 +97,18 @@ sealed class Result {
         fun hasAnyOfTheseReasons(failureReasons: List<FailureReason>): Boolean {
             return cause?.hasAnyOfTheseReasons(*failureReasons.toTypedArray()) ?: false
         }
+
+        fun removeReasonsFromCauses(): FailureCause {
+            return this.copy(cause = cause?._removeReasonsFromCauses())
+        }
+
+        fun reasonIs(reasonFilter: (failureReason: FailureReason) -> Boolean): Boolean {
+            return (cause ?: return false).reasonIs(reasonFilter)
+        }
+
+        fun failureCount(): Int {
+            return cause?.let { it.failureCount() } ?: 1
+        }
     }
 
     data class Failure(val causes: List<FailureCause> = emptyList(), val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
@@ -230,6 +242,22 @@ sealed class Result {
         fun isEmpty(): Boolean {
             return this.causes.isEmpty()
         }
+
+        fun removeReasonsFromCauses(): Failure {
+            return this.copy(causes = causes.map { it.removeReasonsFromCauses() })
+        }
+
+        fun _removeReasonsFromCauses(): Failure {
+            return this.copy(causes = causes.map { it.removeReasonsFromCauses() }, failureReason = null)
+        }
+
+        fun reasonIs(reasonFilter: (failureReason: FailureReason) -> Boolean): Boolean {
+            return (failureReason?.let { reasonFilter(it) } ?: false) || causes.any { it.reasonIs(reasonFilter) }
+        }
+
+        fun failureCount(): Int {
+            return causes.sumOf { it.failureCount() }
+        }
     }
 
     data class Success(val variables: Map<String, String> = emptyMap(), val partialSuccessMessage: String? = null) : Result() {
@@ -284,18 +312,18 @@ enum class TestResult {
     NotCovered
 }
 
-enum class FailureReason(val fluffLevel: Int) {
-    PartNameMisMatch(0),
-    StatusMismatch(2),
-    IdentifierMismatch(1),
-    MethodMismatch(2),
-    ContentTypeMismatch(1),
-    RequestMismatchButStatusAlsoWrong(2),
-    URLPathMisMatch(2),
-    SOAPActionMismatch(2),
-    DiscriminatorMismatch(0),
-    FailedButDiscriminatorMatched(0),
-    FailedButObjectTypeMatched(0)
+enum class FailureReason(val fluffLevel: Int, val objectMatchOccurred: Boolean) {
+    PartNameMisMatch(0, false),
+    StatusMismatch(2, false),
+    IdentifierMismatch(1, false),
+    MethodMismatch(2, false),
+    ContentTypeMismatch(1, false),
+    RequestMismatchButStatusAlsoWrong(2, false),
+    URLPathMisMatch(2, false),
+    SOAPActionMismatch(2, false),
+    DiscriminatorMismatch(0, true),
+    FailedButDiscriminatorMatched(0, true),
+    FailedButObjectTypeMatched(0, true)
 }
 
 data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null)

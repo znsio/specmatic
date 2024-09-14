@@ -14,7 +14,7 @@ data class AnyPattern(
     override val typeAlias: String? = null,
     override val example: String? = null,
     private val discriminatorProperty: String? = null,
-    private val discriminatorValues: List<String> = emptyList()
+    private val discriminatorValues: Set<String> = emptySet()
 ) : Pattern, HasDefaultExample {
     override fun equals(other: Any?): Boolean = other is AnyPattern && other.pattern == this.pattern
 
@@ -91,40 +91,40 @@ data class AnyPattern(
         val failures = matchResults.map { it.result }.filterIsInstance<Failure>()
 
         if(discriminatorProperty != null) {
-            val deepMatchResults = failures.filterNot { it.isAnyFluffy(0) }
+            val deepMatchResults = failures.filter { it.hasReason(FailureReason.FailedButDiscriminatorMatched) }
 
-            if(deepMatchResults.isEmpty())
-                return Failure("Expected key $discriminatorProperty to contain one of ${discriminatorValues.joinToString(", ")}", failureReason = FailureReason.DiscriminatorMismatch)
+            if(deepMatchResults.isNotEmpty())
+                return Failure.fromFailures(deepMatchResults).removeReasonsFromCauses().copy(failureReason = FailureReason.FailedButDiscriminatorMatched)
 
-            return Failure.fromFailures(deepMatchResults)
-        }
-
-        if(failures.any { it.hasReason(FailureReason.DiscriminatorMismatch) }) {
-            val discriminatorMatchedButHadSomeOtherMismatch = failures.filter { it.hasReason(FailureReason.FailedButDiscriminatorMatched) }
-
-            if(discriminatorMatchedButHadSomeOtherMismatch.isNotEmpty())
-                return Result.Failure.fromFailures(discriminatorMatchedButHadSomeOtherMismatch)
-
-            return failures.map {
-                if(it.hasReason(FailureReason.DiscriminatorMismatch))
-                    it.filterByReason(FailureReason.DiscriminatorMismatch)
-                else
-                    it
-            }.let {
-                Result.Failure.fromFailures(it)
+            val failure = if(discriminatorValues.size == 1) {
+//                if(failures.sumOf { it.failureCount() } == 1 && failures.any { it.hasReason(FailureReason.DiscriminatorMismatch)}) {
+//                    val message =
+//                        "Expected the value of discriminator property $discriminatorProperty to be \"${discriminatorValues.single()}\""
+//
+//                    Failure(message, breadCrumb = discriminatorProperty, failureReason = FailureReason.DiscriminatorMismatch)
+//                }
+//                else Failure.fromFailures(failures).removeReasonsFromCauses()
+                Failure.fromFailures(failures).removeReasonsFromCauses()
             }
+            else {
+                val discriminatorCsv = discriminatorValues.joinToString(", ")
+                val message =
+                    "Expected the value of discriminator property to be one of $discriminatorCsv"
+
+                Failure(message, breadCrumb = discriminatorProperty, failureReason = FailureReason.DiscriminatorMismatch)
+            }
+
+            return failure.copy(failureReason = FailureReason.DiscriminatorMismatch)
         }
 
-        if(failures.any { it.hasAnyOfTheseReasons(FailureReason.FailedButObjectTypeMatched, FailureReason.FailedButDiscriminatorMatched) }) {
+        if(failures.any { it.reasonIs { it.objectMatchOccurred } }) {
             val failureMatchResults = matchResults.filter {
-                it.result is Failure &&
-                        it.result.hasAnyOfTheseReasons(FailureReason.FailedButObjectTypeMatched, FailureReason.FailedButDiscriminatorMatched)
-
+                it.result is Failure && it.result.reasonIs { it.objectMatchOccurred }
             }
 
             val objectTypeMatchedButHadSomeOtherMismatch = addTypeInfoBreadCrumbs(failureMatchResults)
 
-            return Result.Failure.fromFailures(objectTypeMatchedButHadSomeOtherMismatch)
+            return Result.Failure.fromFailures(objectTypeMatchedButHadSomeOtherMismatch).removeReasonsFromCauses()
         }
 
         val resolvedPatterns = pattern.map { resolvedHop(it, resolver) }

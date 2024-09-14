@@ -207,17 +207,43 @@ data class JSONObjectPattern(
                 it.missingKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
             }
 
-        val results: List<Result.Failure> =
+        data class ResultWithDiscriminatorStatus(val result: Result, val isDiscriminator: Boolean)
+
+        val resultsWithDiscriminator: List<ResultWithDiscriminatorStatus> =
             mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
-                resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
-            }.filterIsInstance<Result.Failure>()
+                val result = resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
+
+                val isDiscrimintor = patternValue.isDiscriminator()
+
+                val cleanedUpResult = if(!isDiscrimintor && result is Result.Failure) {
+                    result.removeReasonsFromCauses()
+                } else {
+                    result
+                }
+
+                ResultWithDiscriminatorStatus(cleanedUpResult, isDiscrimintor)
+            }
+
+        val results: List<Result.Failure> = resultsWithDiscriminator.map { it.result }.filterIsInstance<Result.Failure>()
 
         val failures: List<Result.Failure> = minCountErrors + maxCountErrors + keyErrors + results
 
         return if (failures.isEmpty())
             Result.Success()
-        else
-            Result.Failure.fromFailures(failures)
+        else {
+            val discriminatorMatchFound = resultsWithDiscriminator.any { it.isDiscriminator && it.result.isSuccess() }
+
+            val combinedFailure = Result.Failure.fromFailures(failures)
+
+            if(discriminatorMatchFound)
+                return combinedFailure.withFailureReason(FailureReason.FailedButDiscriminatorMatched)
+
+            val discriminatorMisMatchFound = resultsWithDiscriminator.any { it.isDiscriminator && !it.result.isSuccess() }
+            if(discriminatorMisMatchFound)
+                return combinedFailure.withFailureReason(FailureReason.DiscriminatorMismatch)
+
+            return combinedFailure.withFailureReason(FailureReason.FailedButObjectTypeMatched)
+        }
     }
 
     override fun generate(resolver: Resolver): JSONObjectValue {

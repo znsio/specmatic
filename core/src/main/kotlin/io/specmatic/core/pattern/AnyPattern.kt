@@ -14,7 +14,7 @@ data class AnyPattern(
     override val typeAlias: String? = null,
     override val example: String? = null,
     private val discriminatorProperty: String? = null,
-    private val discriminatorValues: List<String> = emptyList()
+    private val discriminatorValues: Set<String> = emptySet()
 ) : Pattern, HasDefaultExample {
     override fun equals(other: Any?): Boolean = other is AnyPattern && other.pattern == this.pattern
 
@@ -91,16 +91,33 @@ data class AnyPattern(
         val failures = matchResults.map { it.result }.filterIsInstance<Failure>()
 
         if(discriminatorProperty != null) {
-            val deepMatchResults = failures.filterNot { it.isAnyFluffy(0) }
+            val deepMatchResults = failures.filter { it.hasReason(FailureReason.FailedButDiscriminatorMatched) }
 
-            if(deepMatchResults.isEmpty())
-                return Failure("Expected key $discriminatorProperty to contain one of ${discriminatorValues.joinToString(", ")}")
+            if(deepMatchResults.isNotEmpty())
+                return Failure.fromFailures(deepMatchResults).removeReasonsFromCauses().copy(failureReason = FailureReason.FailedButDiscriminatorMatched)
 
-            return Failure.fromFailures(deepMatchResults)
+            val failure = if(discriminatorValues.size == 1) {
+                Failure.fromFailures(failures).removeReasonsFromCauses()
+            }
+            else {
+                val discriminatorCsv = discriminatorValues.joinToString(", ")
+                val message =
+                    "Expected the value of discriminator property to be one of $discriminatorCsv"
+
+                Failure(message, breadCrumb = discriminatorProperty, failureReason = FailureReason.DiscriminatorMismatch)
+            }
+
+            return failure.copy(failureReason = FailureReason.DiscriminatorMismatch)
         }
 
-        if(failures.all { it.isAnyFluffy(0) }) {
-            return Result.Failure.fromFailures(failures.map { it.keepFluffyOnly() })
+        if(failures.any { it.reasonIs { it.objectMatchOccurred } }) {
+            val failureMatchResults = matchResults.filter {
+                it.result is Failure && it.result.reasonIs { it.objectMatchOccurred }
+            }
+
+            val objectTypeMatchedButHadSomeOtherMismatch = addTypeInfoBreadCrumbs(failureMatchResults)
+
+            return Result.Failure.fromFailures(objectTypeMatchedButHadSomeOtherMismatch).removeReasonsFromCauses()
         }
 
         val resolvedPatterns = pattern.map { resolvedHop(it, resolver) }
@@ -113,21 +130,25 @@ data class AnyPattern(
                     resolver.mismatchMessages
                 )
 
+        val failuresWithUpdatedBreadcrumbs = addTypeInfoBreadCrumbs(matchResults)
+
+        return Result.fromFailures(failuresWithUpdatedBreadcrumbs)
+    }
+
+    private fun addTypeInfoBreadCrumbs(matchResults: List<AnyPatternMatch>): List<Failure> {
         val failuresWithUpdatedBreadcrumbs = matchResults.map {
             Pair(it.pattern, it.result as Failure)
         }.mapIndexed { index, (pattern, failure) ->
             val ordinal = index + 1
 
             pattern.typeAlias?.let {
-                if(it.isBlank() || it == "()")
+                if (it.isBlank() || it == "()")
                     failure.breadCrumb("(~~~object $ordinal)")
                 else
                     failure.breadCrumb("(~~~${withoutPatternDelimiters(it)} object)")
-            } ?:
-            failure
+            } ?: failure
         }
-
-        return Result.fromFailures(failuresWithUpdatedBreadcrumbs)
+        return failuresWithUpdatedBreadcrumbs
     }
 
     private fun getResult(failures: List<Failure>): List<Failure> = when {
@@ -147,6 +168,14 @@ data class AnyPattern(
     }
 
     private fun generateRandomValue(resolver: Resolver): Value {
+        if(
+            pattern.size == 2 &&
+            pattern.any { it is NullPattern} &&
+            pattern.filterNot { it is NullPattern }.filter { it is ScalarType }.size == 1
+        ) {
+            return pattern.filterNot { it is NullPattern }.filter { it is ScalarType }.first().generate(resolver)
+        }
+
         val randomPattern = pattern.random()
         val isNullable = pattern.any { it is NullPattern }
         return resolver.withCyclePrevention(randomPattern, isNullable) { cyclePreventedResolver ->

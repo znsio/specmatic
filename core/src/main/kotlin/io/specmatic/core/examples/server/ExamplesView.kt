@@ -2,7 +2,6 @@ package io.specmatic.core.examples.server
 
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.Feature
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesFromDir
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExistingExampleFile
 import org.thymeleaf.TemplateEngine
 import org.thymeleaf.context.Context
@@ -13,17 +12,14 @@ import java.io.File
 class ExamplesView {
     companion object {
         fun getEndpoints(feature: Feature, examplesDir: File): List<Endpoint> {
-            val examples = examplesDir.getExamplesFromDir()
             return feature.scenarios.map {
-                val example = getExistingExampleFile(it, examples)
                 Endpoint(
                     path = convertPathParameterStyle(it.path),
                     rawPath = it.path,
                     method = it.method,
                     responseStatus = it.httpResponsePattern.status,
                     contentType = it.httpRequestPattern.headersPattern.contentType,
-                    exampleFile = example?.first,
-                    exampleMismatchReason = example?.second
+                    exampleFile = getExistingExampleFile(it, examplesDir)
                 )
             }.filterEndpoints().sortEndpoints()
         }
@@ -61,8 +57,7 @@ class ExamplesView {
                             showMethod = !methodSet.contains(method),
                             contentType = it.contentType ?: "",
                             example = it.exampleFile?.absolutePath,
-                            exampleName = it.exampleFile?.nameWithoutExtension,
-                            exampleMismatchReason = if(it.exampleMismatchReason?.isBlank() == true) null else it.exampleMismatchReason
+                            exampleName = it.exampleFile?.nameWithoutExtension
                         ).also { methodSet.add(method); showPath = false }
                     }
                 }
@@ -82,8 +77,7 @@ data class TableRow(
     val showPath: Boolean,
     val showMethod: Boolean,
     val example: String? = null,
-    val exampleName: String? = null,
-    val exampleMismatchReason: String? = null
+    val exampleName: String? = null
 )
 
 data class Endpoint(
@@ -92,8 +86,7 @@ data class Endpoint(
     val method: String,
     val responseStatus: Int,
     val contentType: String? = null,
-    val exampleFile: File? = null,
-    val exampleMismatchReason: String? = null
+    val exampleFile: File? = null
 )
 
 class HtmlTemplateConfiguration {

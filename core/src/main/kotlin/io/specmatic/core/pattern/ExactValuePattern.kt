@@ -11,12 +11,11 @@ data class ExactValuePattern(override val pattern: Value, override val typeAlias
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (pattern == sampleData) {
             true -> Result.Success()
-            else -> {
-                if (discriminator) {
-                    val errorMessage = "Expected the value of discriminator property to be ${pattern.displayableValue()}"
-                    Result.Failure(errorMessage, failureReason = FailureReason.DiscriminatorMismatch)
-                } else
-                    mismatchResult(pattern, sampleData, resolver.mismatchMessages)
+            else -> mismatchResult(pattern, sampleData, resolver.mismatchMessages).let {
+                if(discriminator)
+                    it.copy(failureReason = FailureReason.DiscriminatorMismatch)
+                else
+                    it
             }
         }
     }

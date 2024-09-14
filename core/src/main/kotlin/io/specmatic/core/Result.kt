@@ -117,6 +117,12 @@ sealed class Result {
             return FailureCause(cause = this)
         }
 
+        fun getFailureBreadCrumbs(): List<String> {
+            return causes.mapNotNull { it.cause?.getFailureBreadCrumbs() }
+                .flatten()
+                .plus(breadCrumb)
+        }
+
         override fun ifSuccess(function: () -> Result) = this
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {
             return this

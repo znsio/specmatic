@@ -10,7 +10,6 @@ import java.net.URI
 val OMIT = listOf("(OMIT)", "(omit)")
 
 val EMPTY_PATH= HttpPathPattern(emptyList(), "")
-const val PATH_BREAD_CRUMB = "PATH"
 
 data class HttpPathPattern(
     val pathSegmentPatterns: List<URLPathSegmentPattern>,
@@ -49,7 +48,7 @@ data class HttpPathPattern(
         if (pathSegmentPatterns.size != pathSegments.size)
             return Failure(
                 "Expected $path (having ${pathSegments.size} path segments) to match ${this.path} (which has ${pathSegmentPatterns.size} path segments).",
-                breadCrumb = PATH_BREAD_CRUMB,
+                breadCrumb = "PATH",
                 failureReason = FailureReason.URLPathMisMatch
             )
 
@@ -60,18 +59,18 @@ data class HttpPathPattern(
                 val result = resolver.matchesPattern(urlPathPattern.key, urlPathPattern.pattern, parsedValue)
                 if (result is Failure) {
                     when (urlPathPattern.key) {
-                        null -> result.breadCrumb("$PATH_BREAD_CRUMB ($path)").withFailureReason(FailureReason.URLPathMisMatch)
-                        else -> result.breadCrumb(urlPathPattern.key).breadCrumb(PATH_BREAD_CRUMB)
+                        null -> result.breadCrumb("PATH ($path)").withFailureReason(FailureReason.URLPathMisMatch)
+                        else -> result.breadCrumb(urlPathPattern.key).breadCrumb("PATH")
                     }
                 } else {
                     Result.Success()
                 }
             } catch (e: ContractException) {
-                e.failure().breadCrumb("$PATH_BREAD_CRUMB ($path)").let { failure ->
+                e.failure().breadCrumb("PATH ($path)").let { failure ->
                     urlPathPattern.key?.let { failure.breadCrumb(urlPathPattern.key) } ?: failure
                 }.withFailureReason(FailureReason.URLPathMisMatch)
             } catch (e: Throwable) {
-                Failure(e.localizedMessage).breadCrumb("$PATH_BREAD_CRUMB ($path)").let { failure ->
+                Failure(e.localizedMessage).breadCrumb("PATH ($path)").let { failure ->
                     urlPathPattern.key?.let { failure.breadCrumb(urlPathPattern.key) } ?: failure
                 }.withFailureReason(FailureReason.URLPathMisMatch)
             }
@@ -88,7 +87,7 @@ data class HttpPathPattern(
     }
 
     fun generate(resolver: Resolver): String {
-        return attempt(breadCrumb = PATH_BREAD_CRUMB) {
+        return attempt(breadCrumb = "PATH") {
             ("/" + pathSegmentPatterns.mapIndexed { index, urlPathPattern ->
                 attempt(breadCrumb = "[$index]") {
                     val key = urlPathPattern.key
@@ -113,7 +112,7 @@ data class HttpPathPattern(
         val generatedPatterns = newListBasedOn(pathSegmentPatterns.mapIndexed { index, urlPathParamPattern ->
                 val key = urlPathParamPattern.key
                 if (key === null || !row.containsField(key)) return@mapIndexed urlPathParamPattern
-                attempt(breadCrumb = "$PATH_BREAD_CRUMB.${withoutOptionality(key)}") {
+                attempt(breadCrumb = "PATH.${withoutOptionality(key)}") {
                     val rowValue = row.getField(key)
                     when {
                         isPatternToken(rowValue) -> attempt("Pattern mismatch in example of path param \"${urlPathParamPattern.key}\"") {

@@ -62,8 +62,6 @@ class ExamplesInteractiveServer(
 
             configureHealthCheckModule()
             routing {
-                staticResources("/_specmatic/assets", "/templates/examples/assets")
-
                 post("/_specmatic/examples") {
                     val request = call.receive<ExamplePageRequest>()
                     contractFileFromRequest = File(request.contractFile)
@@ -82,17 +80,16 @@ class ExamplesInteractiveServer(
                 post("/_specmatic/examples/generate") {
                     val contractFile = getContractFile()
                     try {
-                        val request = call.receive<List<GenerateExampleRequest>>()
-                        val generatedExamples = request.map {
-                            generate(
-                                contractFile,
-                                it.method,
-                                it.path,
-                                it.responseStatusCode,
-                                it.contentType
-                            )
-                        }
-                        call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExamples))
+                        val request = call.receive<GenerateExampleRequest>()
+                        val generatedExample = generate(
+                            contractFile,
+                            request.method,
+                            request.path,
+                            request.responseStatusCode,
+                            request.contentType
+                        )
+
+                        call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExample))
                     } catch(e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
                     }
@@ -102,17 +99,15 @@ class ExamplesInteractiveServer(
                     val request = call.receive<ValidateExampleRequest>()
                     try {
                         val contractFile = getContractFile()
-                        val validationResults = request.exampleFiles.map {
-                            try {
-                                validate(contractFile, File(it))
-                                ValidateExampleResponse(it)
-                            } catch(e: FileNotFoundException){
-                                ValidateExampleResponse(it, e.message ?: "File not found")
-                            } catch(e: NoMatchingScenario) {
-                                ValidateExampleResponse(it, e.msg ?: "Something went wrong")
-                            } catch(e: Exception) {
-                                ValidateExampleResponse(it, e.message ?: "An unexpected error occurred")
-                            }
+                        val validationResults = try {
+                            validate(contractFile, File(request.exampleFile))
+                            ValidateExampleResponse(request.exampleFile)
+                        } catch (e: FileNotFoundException) {
+                            ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
+                        } catch (e: NoMatchingScenario) {
+                            ValidateExampleResponse(request.exampleFile, e.msg ?: "Something went wrong")
+                        } catch (e: Exception) {
+                            ValidateExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
                         }
                         call.respond(HttpStatusCode.OK, validationResults)
                     } catch(e: Exception) {
@@ -121,28 +116,28 @@ class ExamplesInteractiveServer(
                 }
 
                 post("/_specmatic/v2/examples/validate") {
-                    val request = call.receive<ValidateExampleRequest>()
+                    val request = call.receive<List<ValidateExampleRequest>>()
                     try {
                         val contractFile = getContractFile()
-                        val validationResults = request.exampleFiles.map {
+                        val validationResults = request.map {
                             try {
-                                validate(contractFile, File(it))
+                                validate(contractFile, File(it.exampleFile))
                                 ValidateExampleResponseV2(
                                     ValidateExampleVerdict.SUCCESS,
                                     "The provided example is valid",
-                                    it
+                                    it.exampleFile
                                 )
                             } catch(e: NoMatchingScenario) {
                                 ValidateExampleResponseV2(
                                     ValidateExampleVerdict.FAILURE,
                                     e.msg ?: "Something went wrong",
-                                    it
+                                    it.exampleFile
                                 )
                             } catch(e: Exception) {
                                 ValidateExampleResponseV2(
                                     ValidateExampleVerdict.FAILURE,
                                     e.message ?: "An unexpected error occurred",
-                                    it
+                                    it.exampleFile
                                 )
                             }
                         }
@@ -224,7 +219,10 @@ class ExamplesInteractiveServer(
                 "tableRows" to tableRows,
                 "contractFile" to contractFile.name,
                 "contractFilePath" to contractFile.absolutePath,
-                "hasExamples" to tableRows.any {it.example != null}
+                "hasExamples" to tableRows.any {it.example != null},
+                "validationDetails" to tableRows.withIndex().associate { (idx, row) ->
+                    idx.inc() to row.exampleMismatchReason
+                }
             )
         )
     }
@@ -336,8 +334,8 @@ class ExamplesInteractiveServer(
             if(scenario == null) return null
 
             val examplesDir = getExamplesDirPath(contractFile)
-            val existingExampleFile = getExistingExampleFile(scenario, examplesDir)
-            if(existingExampleFile != null) return existingExampleFile.absolutePath
+            val existingExampleFile = getExistingExampleFile(scenario, examplesDir.getExamplesFromDir())
+            if(existingExampleFile != null) return existingExampleFile.first.absolutePath
             else examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
@@ -433,32 +431,33 @@ class ExamplesInteractiveServer(
             return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
         }
 
-        private fun File.hasExistingMatchingExample(scenario: Scenario): Boolean {
-            if (this.exists().not() || this.isDirectory.not()) throw IllegalArgumentException("Not a directory: $this")
+        fun getExistingExampleFile(scenario: Scenario, examples: List<ExampleFromFile>): Pair<File, String>? {
+            return examples.firstNotNullOfOrNull { example ->
+                val response = example.response ?: return@firstNotNullOfOrNull null
 
-            val examples = this.listFiles()?.mapNotNull { file ->
-                ExampleFromFile(file)
-            } ?: emptyList()
-
-            return examples.any {
-                val response = it.response ?: return@any false
-                scenario.matchesMock(it.request, response).isSuccess()
+                when (val matchResult = scenario.matchesMock(example.request, response)) {
+                    is Result.Success -> example.file to ""
+                    is Result.Failure -> {
+                        val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs().none { breadCrumb ->
+                            breadCrumb.contains(PATH_BREAD_CRUMB)
+                                    || breadCrumb.contains(METHOD_BREAD_CRUMB)
+                                    || breadCrumb.contains("Content-Type")
+                                    || breadCrumb.contains("STATUS")
+                        }
+                        if (isFailureRelatedToScenario) example.file to matchResult.reportString() else null
+                    }
+                }
             }
-        }
-
-        fun getExistingExampleFile(scenario: Scenario, examplesDir: File): File? {
-            val exampleFile = examplesDir.listFiles()?.firstOrNull {
-                val example = ExampleFromFile(it)
-                val response = example.response ?: return@firstOrNull false
-                scenario.matchesMock(example.request, response).isSuccess()
-            }
-            return exampleFile
         }
 
         private fun getExamplesDirPath(contractFile: File): File {
             return contractFile.canonicalFile
                 .parentFile
                 .resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
+        }
+
+        fun File.getExamplesFromDir(): List<ExampleFromFile> {
+            return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
         }
     }
 }
@@ -482,7 +481,7 @@ data class ExamplePageRequest(
 )
 
 data class ValidateExampleRequest(
-    val exampleFiles: List<String>
+    val exampleFile: String
 )
 
 data class ValidateExampleResponse(
@@ -508,5 +507,5 @@ data class GenerateExampleRequest(
 )
 
 data class GenerateExampleResponse(
-    val generatedExamples: List<String?>
+    val generatedExample: String?
 )

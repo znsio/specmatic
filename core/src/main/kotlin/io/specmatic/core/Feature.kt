@@ -142,7 +142,7 @@ data class Feature(
 
     fun lookupResponse(scenario: Scenario): HttpResponse {
         try {
-            return scenario.generateHttpResponseWithAll(serverState)
+            return scenario.generateHttpResponse(serverState)
         } finally {
             serverState = emptyMap()
         }

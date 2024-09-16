@@ -15,6 +15,8 @@ class Flags {
         const val SPECMATIC_PRETTY_PRINT = "SPECMATIC_PRETTY_PRINT"
         const val EXAMPLE_DIRECTORIES = "EXAMPLE_DIRECTORIES"
 
+        const val EXTENSIBLE_QUERY_PARAMS = "EXTENSIBLE_QUERY_PARAMS"
+
         fun getStringValue(flagName: String): String? = System.getenv(flagName) ?: System.getProperty(flagName)
 
         fun getBooleanValue(flagName: String, default: Boolean = false) = getStringValue(flagName)?.toBoolean() ?: default

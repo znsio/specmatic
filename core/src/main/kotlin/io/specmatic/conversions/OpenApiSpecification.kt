@@ -1259,7 +1259,7 @@ class OpenApiSpecification(
                         toJSONObjectPattern(properties, "(${componentName})")
                     }
 
-                    if (oneOfs.size == 1)
+                    val pattern = if (oneOfs.size == 1)
                         oneOfs.single()
                     else if (oneOfs.size > 1)
                         AnyPattern(oneOfs)
@@ -1269,6 +1269,10 @@ class OpenApiSpecification(
                         AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") })
                     else
                         toJSONObjectPattern(schemaProperties.single(), "(${patternName})")
+
+                    cacheComponentPattern(patternName, pattern)
+
+                    pattern
                 } else if (schema.oneOf != null) {
                     val candidatePatterns = schema.oneOf.filterNot { nullableEmptyObject(it) }.map { componentSchema ->
                         val (componentName, schemaToProcess) =

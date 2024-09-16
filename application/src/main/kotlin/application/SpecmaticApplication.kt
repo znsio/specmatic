@@ -20,6 +20,10 @@ open class SpecmaticApplication {
 
             Thread.setDefaultUncaughtExceptionHandler(UncaughtExceptionHandler())
 
+            if (args.isEmpty() || args[0] !in listOf("--version", "-V")) {
+                println("Specmatic Version: ${VersionProvider().getVersion()[0]}" + System.lineSeparator())
+            }
+
             when {
                 args.isEmpty() -> CommandLine(SpecmaticCommand()).usage(System.out)
                 else ->  {

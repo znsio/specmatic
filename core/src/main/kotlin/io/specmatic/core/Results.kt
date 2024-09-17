@@ -97,9 +97,9 @@ data class Results(val results: List<Result> = emptyList()) {
 
     fun summary(): String {
         return when {
-            successCount > 0 && failureCount == 0 -> "All $successCount examples are valid."
-            successCount == 0 && failureCount > 0 -> "All $failureCount examples are invalid."
-            else -> "$successCount examples are valid. $failureCount examples are invalid."
+            successCount > 0 && failureCount == 0 -> "All $successCount example(s) are valid."
+            successCount == 0 && failureCount > 0 -> "All $failureCount example(s) are invalid."
+            else -> "$successCount example(s) are valid. $failureCount example(s) are invalid."
         }
     }
 }

@@ -273,7 +273,7 @@ class ExamplesInteractiveServer(
 
                 if(examplesDir.exists() && overwriteByDefault.not()) {
                     val response: String = Scanner(System.`in`).use { scanner ->
-                        print("Do you want to overwrite all the existing examples in ${examplesDir.name}? (y/n): ")
+                        print("Found examples working directory at \"${examplesDir.path}\". Overwrite it? (y/n): ")
                         scanner.nextLine().trim().lowercase()
                     }
                     if(response == "y") {

@@ -1,54 +1,81 @@
 package application
 
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
-import io.specmatic.core.log.StringLog
-import io.specmatic.core.log.consoleLog
-import io.specmatic.core.log.logger
+import io.specmatic.core.log.*
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.NoMatchingScenario
+import net.bytebuddy.implementation.bytecode.Throw
 import picocli.CommandLine.*
 import java.io.File
 import java.lang.Thread.sleep
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
-@Command(name = "examples",
-        mixinStandardHelpOptions = true,
-        description = ["Generate externalised JSON example files with API requests and responses"],
-        subcommands = [ExamplesCommand.Validate::class, ExamplesCommand.Interactive::class]
+@Command(
+    name = "examples",
+    mixinStandardHelpOptions = true,
+    description = ["Generate externalised JSON example files with API requests and responses"],
+    subcommands = [ExamplesCommand.Validate::class, ExamplesCommand.Interactive::class]
 )
 class ExamplesCommand : Callable<Unit> {
-
-    @Option(names = ["--filter-name"], description = ["Use only APIs with this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NAME}")
+    @Option(
+        names = ["--filter-name"],
+        description = ["Use only APIs with this value in their name"],
+        defaultValue = "\${env:SPECMATIC_FILTER_NAME}"
+    )
     var filterName: String = ""
 
-    @Option(names = ["--filter-not-name"], description = ["Use only APIs which do not have this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}")
+    @Option(
+        names = ["--filter-not-name"],
+        description = ["Use only APIs which do not have this value in their name"],
+        defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}"
+    )
     var filterNotName: String = ""
 
-    @Option(names = ["--extensive"], description = ["Generate all examples (by default, generates one example per 2xx API)"], defaultValue = "false")
+    @Option(
+        names = ["--extensive"],
+        description = ["Generate all examples (by default, generates one example per 2xx API)"],
+        defaultValue = "false"
+    )
     var extensive: Boolean = false
 
-    @Option(names = ["--overwrite"], description = ["Overwrite the examples directory if it exists"], defaultValue = "false")
+    @Option(
+        names = ["--overwrite"],
+        description = ["Overwrite the examples directory if it exists"],
+        defaultValue = "false"
+    )
     var overwrite: Boolean = false
 
     @Parameters(index = "0", description = ["Contract file path"], arity = "0..1")
     var contractFile: File? = null
 
+    @Option(names = ["--debug"], description = ["Debug logs"])
+    var verbose = false
+
     override fun call() {
-        if(contractFile == null) {
+        if (contractFile == null) {
             println("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
             return
         }
         if (!contractFile!!.exists())
             exitWithMessage("Could not find file ${contractFile!!.path}")
 
+        configureLogger(this.verbose)
+
         try {
-            ExamplesInteractiveServer.generate(contractFile!!, ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName), extensive, overwrite)
-        } catch (e: Exception) {
-            exitWithMessage("An unexpected error occurred while generating examples: ${e.message}")
+            ExamplesInteractiveServer.generate(
+                contractFile!!,
+                ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName),
+                extensive,
+                overwrite
+            )
+        } catch (e: Throwable) {
+            logger.log(e)
+            exitProcess(1)
         }
     }
+
 
     @Command(
         name = "validate",
@@ -62,9 +89,14 @@ class ExamplesCommand : Callable<Unit> {
         @Option(names = ["--example-file"], description = ["Example file path"], required = false)
         val exampleFile: File? = null
 
+        @Option(names = ["--debug"], description = ["Debug logs"])
+        var verbose = false
+
         override fun call() {
             if (!contractFile.exists())
                 exitWithMessage("Could not find file ${contractFile.path}")
+
+            configureLogger(this.verbose)
 
             if (exampleFile != null) {
                 try {
@@ -78,7 +110,7 @@ class ExamplesCommand : Callable<Unit> {
             } else {
                 val result = ExamplesInteractiveServer.validate(contractFile)
 
-                if(result.isSuccess() == false) {
+                if (result.isSuccess() == false) {
                     logger.log(result.reportString())
                     exitProcess(1)
                 }
@@ -95,28 +127,41 @@ class ExamplesCommand : Callable<Unit> {
         @Option(names = ["--contract-file"], description = ["Contract file path"], required = false)
         var contractFile: File? = null
 
-        @Option(names = ["--filter-name"], description = ["Use only APIs with this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NAME}")
+        @Option(
+            names = ["--filter-name"],
+            description = ["Use only APIs with this value in their name"],
+            defaultValue = "\${env:SPECMATIC_FILTER_NAME}"
+        )
         var filterName: String = ""
 
-        @Option(names = ["--filter-not-name"], description = ["Use only APIs which do not have this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}")
+        @Option(
+            names = ["--filter-not-name"],
+            description = ["Use only APIs which do not have this value in their name"],
+            defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}"
+        )
         var filterNotName: String = ""
+
+        @Option(names = ["--debug"], description = ["Debug logs"])
+        var verbose = false
 
         var server: ExamplesInteractiveServer? = null
 
         override fun call() {
-           try {
-               if (contractFile != null && !contractFile!!.exists())
-                   exitWithMessage("Could not find file ${contractFile!!.path}")
+            configureLogger(verbose)
 
-               server = ExamplesInteractiveServer("0.0.0.0", 9001, contractFile, filterName, filterNotName)
-               addShutdownHook()
+            try {
+                if (contractFile != null && !contractFile!!.exists())
+                    exitWithMessage("Could not find file ${contractFile!!.path}")
 
-               consoleLog(StringLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop."))
-               while(true) sleep(10000)
-           } catch(e: Exception) {
-               logger.log(exceptionCauseMessage(e))
-               exitWithMessage(e.message.orEmpty())
-           }
+                server = ExamplesInteractiveServer("0.0.0.0", 9001, contractFile, filterName, filterNotName)
+                addShutdownHook()
+
+                consoleLog(StringLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop."))
+                while (true) sleep(10000)
+            } catch (e: Exception) {
+                logger.log(exceptionCauseMessage(e))
+                exitWithMessage(e.message.orEmpty())
+            }
         }
 
         private fun addShutdownHook() {
@@ -134,4 +179,13 @@ class ExamplesCommand : Callable<Unit> {
             })
         }
     }
+}
+
+private fun configureLogger(verbose: Boolean) {
+    val logPrinters = listOf(ConsolePrinter)
+
+    logger = if (verbose)
+        Verbose(CompositePrinter(logPrinters))
+    else
+        NonVerbose(CompositePrinter(logPrinters))
 }

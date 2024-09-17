@@ -25,10 +25,6 @@ import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.HttpStubData
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
 import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
@@ -275,20 +271,16 @@ class ExamplesInteractiveServer(
                 val examplesDir =
                     getExamplesDirPath(contractFile)
 
-                if(examplesDir.exists() && overwriteByDefault == false) {
+                if(examplesDir.exists() && overwriteByDefault.not()) {
                     val response: String = Scanner(System.`in`).use { scanner ->
                         print("Found examples working directory at \"${examplesDir.path}\". Overwrite it? (y/n): ")
                         scanner.nextLine().trim().lowercase()
                     }
-
-                    if(response != "y") {
+                    if(response == "y") {
+                        println("Overwriting all the examples in ${examplesDir.name}")
                         println()
-                        println("You chose $response, terminating example generation.")
-                        println()
-                        return emptyList()
+                        examplesDir.deleteRecursively()
                     }
-
-                    examplesDir.deleteRecursively()
                 }
 
                 examplesDir.mkdirs()
@@ -298,7 +290,15 @@ class ExamplesInteractiveServer(
                     return emptyList()
                 }
 
+                val existingExamples = examplesDir.getExamplesFromDir()
                 return feature.scenarios.map { scenario ->
+                    val existingExample = getExistingExampleFile(scenario, existingExamples)
+                    if(existingExample?.second?.isNotBlank() == true) existingExample.first.delete()
+                    if(existingExample != null && existingExample.second.isBlank()) {
+                        println("Example already exists for ${scenario.testDescription()} within the file ${existingExample.first.name}, skipping generation.\n")
+                        return@map existingExample.first.path
+                    }
+
                     println("Generating for ${scenario.testDescription()}")
                     val generatedScenario = scenario.generateTestScenarios(DefaultStrategies).first().value
 

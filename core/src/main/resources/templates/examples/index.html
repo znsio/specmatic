@@ -1400,7 +1400,7 @@
 
     async function generateExample(pathInfo) {
         try {
-            const resp = await fetch("http://localhost:9001/_specmatic/examples/generate", {
+            const resp = await fetch("/_specmatic/examples/generate", {
                 method: "POST",
                 body: JSON.stringify(pathInfo),
                 headers: {
@@ -1417,7 +1417,7 @@
 
     async function validateExample(exampleFile) {
         try {
-            const resp = await fetch("http://localhost:9001/_specmatic/examples/validate", {
+            const resp = await fetch("/_specmatic/examples/validate", {
                 method: "POST",
                 body: JSON.stringify({ exampleFile }),
                 headers: {
@@ -1435,7 +1435,7 @@
     async function getExampleContent(example) {
         const exampleFileName = encodeURIComponent(example);
         try {
-            const resp = await fetch(`http://localhost:9001/_specmatic/examples/content?fileName=${exampleFileName}`)
+            const resp = await fetch(`/_specmatic/examples/content?fileName=${exampleFileName}`)
             const data = await resp.json();
 
             if (!resp.ok) {

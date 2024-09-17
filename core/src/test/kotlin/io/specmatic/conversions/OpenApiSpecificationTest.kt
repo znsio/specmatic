@@ -8290,7 +8290,7 @@ paths:
     }
 
     @Test
-    fun `check that a console warning is printed when a named response example has no corresponding named request example`() {
+    fun `check that a console warning is printed when a named response example for 4xx has no corresponding named request example`() {
         val (stdout, _) = captureStandardOutput {
             OpenApiSpecification.fromYAML(
                 """
@@ -8314,7 +8314,7 @@ paths:
                                       description: age of the person
                                       type: number
                           responses:
-                            200:
+                            400:
                               description: "Get person by id"
                               content:
                                 text/plain:
@@ -8656,8 +8656,108 @@ components:
     }
 
     @Test
-    fun `discriminator error when the discriminator key doesnt match`() {
+    fun `missing request example should still pick up valid 2xx response example`() {
+        val spec = """
+        ---
+        openapi: "3.0.1"
+        info:
+          title: "Person API"
+          version: "1"
+        paths:
+          /persons:
+            get:
+              summary: "Get all persons"
+              responses:
+                200:
+                  description: "all persons"
+                  content:
+                    text/plain:
+                      schema:
+                        type: "string"
+                      examples:
+                        SUCCESSFUL_API_CALL:
+                          value: "all persons"
+        """.trimIndent()
+        val name =
+            OpenApiSpecification.fromYAML(spec, "").toFeature().scenarios.single().examples.single().rows.single().name
+        assertThat(name).isEqualTo("SUCCESSFUL_API_CALL")
+    }
 
+    @Test
+    fun `missing request example where request has one query param should generate only one test`() {
+        val spec = """
+        ---
+        openapi: "3.0.1"
+        info:
+          title: "Person API"
+          version: "1"
+        paths:
+          /persons:
+            get:
+              summary: "Get all persons"
+              parameters:
+                - in: query
+                  name: id
+                  schema:
+                    type: string
+              responses:
+                200:
+                  description: "all persons"
+                  content:
+                    text/plain:
+                      schema:
+                        type: "string"
+                      examples:
+                        SUCCESSFUL_API_CALL:
+                          value: "all persons"
+        """.trimIndent()
+        val testCount =
+            OpenApiSpecification.fromYAML(spec, "").toFeature().generateContractTests(emptyList()).toList().size
+        assertThat(testCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `missing request example should generate still pick up the first valid 2xx response example`() {
+        val spec = """
+        ---
+        openapi: "3.0.1"
+        info:
+          title: "Person API"
+          version: "1"
+        paths:
+          /persons:
+            get:
+              summary: "Get all persons"
+              parameters:
+                - in: query
+                  name: id
+                  schema:
+                    type: string
+              responses:
+                200:
+                  description: "all persons"
+                  content:
+                    text/plain:
+                      schema:
+                        type: "string"
+                      examples:
+                        SUCCESSFUL_API_CALL:
+                          value: "all persons"
+                201:
+                  description: "all persons"
+                  content:
+                    text/plain:
+                      schema:
+                        type: "string"
+                      examples:
+                        201_SUCCESSFUL_API_CALL:
+                          value: "all persons"
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val name = feature.scenarios.find { it.httpResponsePattern.status == 200 }?.examples?.single()?.rows?.single()?.name
+        assertThat(name).isEqualTo("SUCCESSFUL_API_CALL")
+        val testCount = feature.scenarios.find { it.httpResponsePattern.status == 201 }?.examples?.size
+        assertThat(testCount).isEqualTo(0)
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

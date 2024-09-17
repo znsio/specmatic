@@ -46,6 +46,8 @@ internal fun missingRequestExampleErrorMessageForTest(exampleName: String): Stri
 internal fun missingResponseExampleErrorMessageForTest(exampleName: String): String =
     missingResponseExampleErrorMessageForTest.format(exampleName, exampleName)
 
+private const val SPECMATIC_TEST_WITH_NO_REQ_EX = "SPECMATIC-TEST-WITH-NO-REQ-EX"
+
 class OpenApiSpecification(
     private val openApiFilePath: String,
     private val parsedOpenApi: OpenAPI,
@@ -321,6 +323,10 @@ class OpenApiSpecification(
                             toHttpResponsePatterns(operation.responses)
                         }
 
+                    val first2xxResponseStatus =
+                        httpResponsePatterns.filter { it.responsePattern.status.toString().startsWith("2") }
+                            .minOfOrNull { it.responsePattern.status }
+
                     val httpResponsePatternsGrouped = httpResponsePatterns.groupBy { it.responsePattern.status }
 
                     val httpRequestPatterns: List<RequestPatternsData> =
@@ -361,7 +367,7 @@ class OpenApiSpecification(
                         val (response, responseMediaType: MediaType, httpResponsePattern, responseExamples: Map<String, HttpResponse>) = responsePatternData
 
                         val specmaticExampleRows: List<Row> =
-                            testRowsFromExamples(responseExamples, requestExamples, operation, openApiRequest)
+                            testRowsFromExamples(responseExamples, requestExamples, operation, openApiRequest, first2xxResponseStatus)
                         val scenarioName = scenarioName(operation, response, httpRequestPattern)
 
                         val ignoreFailure = operation.tags.orEmpty().map { it.trim() }.contains("WIP")
@@ -528,7 +534,8 @@ class OpenApiSpecification(
         responseExamples: Map<String, HttpResponse>,
         requestExampleAsHttpRequests: Map<String, List<HttpRequest>>,
         operation: Operation,
-        openApiRequest: Pair<String, MediaType>?
+        openApiRequest: Pair<String, MediaType>?,
+        first2xxResponseStatus: Int?
     ): List<Row> {
 
         return responseExamples.mapNotNull { (exampleName, responseExample) ->
@@ -540,9 +547,9 @@ class OpenApiSpecification(
             val requestExamples = parameterExamples.plus(requestBodyExample).map { (key, value) ->
                 if (value.toString().contains("externalValue")) "${key}_filename" to value
                 else key to value
-            }.toMap()
+            }.toMap().ifEmpty { mapOf(SPECMATIC_TEST_WITH_NO_REQ_EX to "") }
 
-            if (requestExamples.isEmpty()) {
+            if (requestExamples.containsKey(SPECMATIC_TEST_WITH_NO_REQ_EX) && responseExample.status != first2xxResponseStatus) {
                 logger.log(missingRequestExampleErrorMessageForTest(exampleName))
                 return@mapNotNull null
             }

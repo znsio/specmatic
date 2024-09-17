@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1202,7 +1201,6 @@
 
         for (const row of rowsWithExamples) {
             const success = await validateRowExamples(row, true);
-
             if (!success) {
                 errorsCount++;
             }
@@ -1258,7 +1256,6 @@
         tableRow.setAttribute("data-generate", "success");
         const generateColumn = tableRow.querySelector("td:nth-last-child(2)")
         generateColumn.textContent = parseFileName(exampleAbsPath);
-
 
         if (!bulkMode) createAlert("Example Generated", `Example name: ${parseFileName(exampleAbsPath)}`, false);
         return true;
@@ -1334,7 +1331,6 @@
 
             docFragment.appendChild(li);
         }
-
         return docFragment;
     }
 
@@ -1405,7 +1401,7 @@
                 body: JSON.stringify(pathInfo),
                 headers: {
                     "Content-Type": "application/json",
-                },
+                }
             });
             const data = await resp.json();
 
@@ -1422,7 +1418,7 @@
                 body: JSON.stringify({ exampleFile }),
                 headers: {
                     "Content-Type": "application/json",
-                },
+                }
             });
             const data = await resp.json();
 
@@ -1446,7 +1442,6 @@
         } catch (e) {
             return {example: null, error: e.message}
         }
-
     }
 
     function parseFileName(absPath) {
@@ -1459,7 +1454,6 @@
         for (const child of tableRow.querySelector("td:last-child").children) {
             child.classList.remove("hidden");
         }
-
     }
 
     function createAlert(heading, message, error) {
@@ -1495,5 +1489,4 @@
     (() => cleanUpSelections())();
 </script>
 </body>
-
 </html>

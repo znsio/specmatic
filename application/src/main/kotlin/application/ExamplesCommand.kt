@@ -61,7 +61,7 @@ class ExamplesCommand : Callable<Unit> {
             ExamplesInteractiveServer.generate(
                 contractFile!!,
                 ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName),
-                extensive,
+                extensive
             )
         } catch (e: Throwable) {
             logger.log(e)

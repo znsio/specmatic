@@ -112,7 +112,9 @@ class ExamplesCommand : Callable<Unit> {
                 val results = ExamplesInteractiveServer.validate(contractFile)
                 val result = Result.fromResults(results)
                 logger.log(result.reportString())
+                logger.log("----------------Summary----------------")
                 logger.log(Results(results).summary())
+                logger.log("---------------------------------------")
                 if (!result.isSuccess()) {
                     exitProcess(1)
                 }

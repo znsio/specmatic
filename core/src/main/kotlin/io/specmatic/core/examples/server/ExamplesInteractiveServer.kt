@@ -227,7 +227,7 @@ class ExamplesInteractiveServer(
         )
     }
 
-    class ScenarioFilter(private val filterName: String, private val filterNotName: String) {
+    class ScenarioFilter(filterName: String, filterNotName: String) {
         private val filterNameTokens = if(filterName.isNotBlank()) {
             filterName.trim().split(",").map { it.trim() }
         } else emptyList()
@@ -255,7 +255,7 @@ class ExamplesInteractiveServer(
         fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean, overwriteByDefault: Boolean): List<String> {
             try {
                 val feature: Feature = parseContractFileToFeature(contractFile).let { feature ->
-                    val filteredScenarios = if (extensive == false) {
+                    val filteredScenarios = if (!extensive) {
                         feature.scenarios.filter {
                             it.status.toString().startsWith("2")
                         }
@@ -316,7 +316,11 @@ class ExamplesInteractiveServer(
                     file.writeText(stubJSON.toStringLiteral())
 
                     file.path
-                }.also { println("Successfully wrote ${it.size} examples to ${examplesDir.canonicalPath}") }
+                }.also {
+                    println("-----------------Summary--------------------")
+                    println("Successfully wrote ${it.size} examples to ${examplesDir.canonicalPath}")
+                    println("--------------------------------------------")
+                }
             } catch (e: StackOverflowError) {
                 logger.log("Got a stack overflow error. You probably have a recursive data structure definition in the contract.")
                 throw e

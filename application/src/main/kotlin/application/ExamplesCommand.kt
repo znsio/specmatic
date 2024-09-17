@@ -1,11 +1,12 @@
 package application
 
+import io.specmatic.core.Result
+import io.specmatic.core.Results
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.NoMatchingScenario
-import net.bytebuddy.implementation.bytecode.Throw
 import picocli.CommandLine.*
 import java.io.File
 import java.lang.Thread.sleep
@@ -108,10 +109,11 @@ class ExamplesCommand : Callable<Unit> {
                     exitProcess(1)
                 }
             } else {
-                val result = ExamplesInteractiveServer.validate(contractFile)
-
-                if (result.isSuccess() == false) {
-                    logger.log(result.reportString())
+                val results = ExamplesInteractiveServer.validate(contractFile)
+                val result = Result.fromResults(results)
+                logger.log(result.reportString())
+                logger.log(Results(results).summary())
+                if (!result.isSuccess()) {
                     exitProcess(1)
                 }
             }

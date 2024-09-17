@@ -94,6 +94,14 @@ data class Results(val results: List<Result> = emptyList()) {
 
         return Results(uniqueResults)
     }
+
+    fun summary(): String {
+        return when {
+            successCount > 0 && failureCount == 0 -> "All $successCount examples are valid."
+            successCount == 0 && failureCount > 0 -> "All $failureCount examples are invalid."
+            else -> "$successCount examples are valid. $failureCount examples are invalid."
+        }
+    }
 }
 
 private fun listToReport(results: List<Result>): String {

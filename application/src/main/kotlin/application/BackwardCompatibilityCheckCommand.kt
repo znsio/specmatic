@@ -6,7 +6,6 @@ import io.specmatic.core.*
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger
-import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.stub.isOpenAPI
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
@@ -174,7 +173,7 @@ class BackwardCompatibilityCheckCommand(
 
                         var errorsFound = false
 
-                        if(!examplesAreValid(newer, "newer")) {
+                        if(!examplesAreValid(newer)) {
                             println(
                                 "$newLine *** Examples in $specFilePath are not valid. ***$newLine".prependIndent(
                                     MARGIN_SPACE
@@ -227,7 +226,7 @@ class BackwardCompatibilityCheckCommand(
         }
     }
 
-    private fun examplesAreValid(feature: Feature, which: String): Boolean {
+    private fun examplesAreValid(feature: Feature): Boolean {
         return try {
             feature.validateExamplesOrException()
             true

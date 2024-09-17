@@ -535,7 +535,7 @@ sample.json didn't match math.$CONTRACT_EXTENSION
 
         assertThat(errorMessage).isEqualTo("""
             stubfile.json didn't match any of the contracts
-              No matching REST stub or contract found for method POST and path /test (assuming you're looking for a REST API since no SOAPAction header was detected)
+              No matching REST stub or contract found for method POST and path /test
 """.trimIndent())
         println(errorMessage)
     }

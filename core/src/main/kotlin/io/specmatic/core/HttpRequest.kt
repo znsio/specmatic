@@ -314,11 +314,11 @@ data class HttpRequest(
         }
 
         override fun xmlOverHttp(method: String, path: String): String {
-            return "No matching XML-REST stub or contract found for method $method and path $path (assuming you're looking for a REST API since no SOAPAction header was detected)"
+            return "No matching XML-REST stub or contract found for method $method and path $path"
         }
 
         override fun restful(method: String, path: String): String {
-            return "No matching REST stub or contract found for method $method and path $path (assuming you're looking for a REST API since no SOAPAction header was detected)"
+            return "No matching REST stub or contract found for method $method and path $path"
         }
     }
 
@@ -328,11 +328,11 @@ data class HttpRequest(
         }
 
         override fun xmlOverHttp(method: String, path: String): String {
-            return "No matching XML-REST stub (strict mode) found for method $method and path $path (assuming you're looking for a REST API since no SOAPAction header was detected)"
+            return "No matching XML-REST stub (strict mode) found for method $method and path $path"
         }
 
         override fun restful(method: String, path: String): String {
-            return "No matching REST stub (strict mode) found for method $method and path $path (assuming you're looking for a REST API since no SOAPAction header was detected)"
+            return "No matching REST stub (strict mode) found for method $method and path $path"
         }
     }
 

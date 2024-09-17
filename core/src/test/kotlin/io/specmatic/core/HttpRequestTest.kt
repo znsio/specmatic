@@ -296,7 +296,7 @@ internal class HttpRequestTest {
                 "POST",
                 "/test"
             )
-        ).isEqualTo("No matching XML-REST stub or contract found for method POST and path /test (assuming you're looking for a REST API since no SOAPAction header was detected)")
+        ).isEqualTo("No matching XML-REST stub or contract found for method POST and path /test")
     }
 
     @Test
@@ -306,7 +306,7 @@ internal class HttpRequestTest {
                 "POST",
                 "/test"
             )
-        ).isEqualTo("No matching REST stub or contract found for method POST and path /test (assuming you're looking for a REST API since no SOAPAction header was detected)")
+        ).isEqualTo("No matching REST stub or contract found for method POST and path /test")
     }
 
     @Test
@@ -326,7 +326,7 @@ internal class HttpRequestTest {
                 "POST",
                 "/test"
             )
-        ).isEqualTo("No matching XML-REST stub (strict mode) found for method POST and path /test (assuming you're looking for a REST API since no SOAPAction header was detected)")
+        ).isEqualTo("No matching XML-REST stub (strict mode) found for method POST and path /test")
     }
 
     @Test
@@ -336,7 +336,7 @@ internal class HttpRequestTest {
                 "POST",
                 "/test"
             )
-        ).isEqualTo("No matching REST stub (strict mode) found for method POST and path /test (assuming you're looking for a REST API since no SOAPAction header was detected)")
+        ).isEqualTo("No matching REST stub (strict mode) found for method POST and path /test")
     }
 
     @Test

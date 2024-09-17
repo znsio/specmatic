@@ -249,7 +249,7 @@ class ExamplesInteractiveServer(
     }
 
     companion object {
-        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean, overwriteByDefault: Boolean): List<String> {
+        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean): List<String> {
             try {
                 val feature: Feature = parseContractFileToFeature(contractFile).let { feature ->
                     val filteredScenarios = if (!extensive) {
@@ -268,18 +268,6 @@ class ExamplesInteractiveServer(
                 val examplesDir =
                     getExamplesDirPath(contractFile)
 
-                if(examplesDir.exists() && overwriteByDefault.not()) {
-                    val response: String = Scanner(System.`in`).use { scanner ->
-                        print("Found examples working directory at \"${examplesDir.path}\". Overwrite it? (y/n): ")
-                        scanner.nextLine().trim().lowercase()
-                    }
-                    if(response == "y") {
-                        println("Overwriting all the examples in ${examplesDir.name}")
-                        println()
-                        examplesDir.deleteRecursively()
-                    }
-                }
-
                 examplesDir.mkdirs()
 
                 if (feature.scenarios.isEmpty()) {
@@ -290,8 +278,7 @@ class ExamplesInteractiveServer(
                 val existingExamples = examplesDir.getExamplesFromDir()
                 return feature.scenarios.map { scenario ->
                     val existingExample = getExistingExampleFile(scenario, existingExamples)
-                    if(existingExample?.second?.isNotBlank() == true) existingExample.first.delete()
-                    if(existingExample != null && existingExample.second.isBlank()) {
+                    if(existingExample != null) {
                         println("Example already exists for ${scenario.testDescription()} within the file ${existingExample.first.name}, skipping generation.\n")
                         return@map existingExample.first.path
                     }

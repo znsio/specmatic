@@ -41,13 +41,6 @@ class ExamplesCommand : Callable<Unit> {
     )
     var extensive: Boolean = false
 
-    @Option(
-        names = ["--overwrite"],
-        description = ["Overwrite the examples directory if it exists"],
-        defaultValue = "false"
-    )
-    var overwrite: Boolean = false
-
     @Parameters(index = "0", description = ["Contract file path"], arity = "0..1")
     var contractFile: File? = null
 
@@ -69,7 +62,6 @@ class ExamplesCommand : Callable<Unit> {
                 contractFile!!,
                 ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName),
                 extensive,
-                overwrite
             )
         } catch (e: Throwable) {
             logger.log(e)

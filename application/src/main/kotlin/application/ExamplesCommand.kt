@@ -97,7 +97,7 @@ class ExamplesCommand : Callable<Unit> {
                     logger.log("The provided example ${exampleFile.name} is valid.")
                 } catch (e: NoMatchingScenario) {
                     logger.log("The provided example ${exampleFile.name} is invalid. Reason:\n")
-                    logger.log(e.msg.orEmpty())
+                    logger.log(e.msg ?: e.message ?: "")
                     exitProcess(1)
                 }
             } else {

@@ -371,9 +371,22 @@ class ExamplesInteractiveServer(
                     logger.log("Example validation failed for ${file.path}")
                     val failures = noMatchingScenario?.results?.withoutFluff()?.results ?: emptyList()
                     val failureResults = Results(failures).withoutFluff()
-                    file.canonicalPath to failureResults.toResultIfAny()
+                    val cleanedUpFailure = getCleanedUpFailure(failureResults, noMatchingScenario)
+                    file.canonicalPath to cleanedUpFailure
                 }
             }.filterNotNull().toMap()
+        }
+
+        private fun getCleanedUpFailure(
+            failureResults: Results,
+            noMatchingScenario: NoMatchingScenario?
+        ): Result {
+            return failureResults.toResultIfAny().let {
+                if (it.reportString().isBlank())
+                    Result.Failure(noMatchingScenario?.message ?: "")
+                else
+                    it
+            }
         }
 
         fun validate(contractFile: File, exampleFile: File): List<HttpStubData> {

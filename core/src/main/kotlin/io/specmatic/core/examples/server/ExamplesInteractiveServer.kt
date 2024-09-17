@@ -67,14 +67,10 @@ class ExamplesInteractiveServer(
                     contractFileFromRequest = File(request.contractFile)
                     val contractFile = getContractFileOrBadRequest(call) ?: return@post
                     try {
-                        respondWithExamplePageHtmlContent(contractFile, call)
+                        respondWithExamplePageHtmlContent(contractFile, request.hostPort, call)
                     } catch (e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
                     }
-                }
-
-                get("/_specmatic/examples") {
-                    respondWithExamplePageHtmlContent(getContractFile(), call)
                 }
 
                 post("/_specmatic/examples/generate") {
@@ -197,9 +193,9 @@ class ExamplesInteractiveServer(
         }
     }
 
-    private suspend fun respondWithExamplePageHtmlContent(contractFile: File, call: ApplicationCall) {
+    private suspend fun respondWithExamplePageHtmlContent(contractFile: File, hostPort: String, call: ApplicationCall) {
         try {
-            val html = getExamplePageHtmlContent(contractFile)
+            val html = getExamplePageHtmlContent(contractFile, hostPort)
             call.respondText(html, contentType = ContentType.Text.Html)
         } catch (e: Exception) {
             println(e)
@@ -207,7 +203,7 @@ class ExamplesInteractiveServer(
         }
     }
 
-    private fun getExamplePageHtmlContent(contractFile: File): String {
+    private fun getExamplePageHtmlContent(contractFile: File, hostPort: String): String {
         val feature = ScenarioFilter(filterName, filterNotName).filter(parseContractFileToFeature(contractFile))
 
         val endpoints = ExamplesView.getEndpoints(feature, getExamplesDirPath(contractFile))
@@ -219,6 +215,7 @@ class ExamplesInteractiveServer(
                 "tableRows" to tableRows,
                 "contractFile" to contractFile.name,
                 "contractFilePath" to contractFile.absolutePath,
+                "hostPort" to hostPort,
                 "hasExamples" to tableRows.any {it.example != null},
                 "validationDetails" to tableRows.withIndex().associate { (idx, row) ->
                     idx.inc() to row.exampleMismatchReason
@@ -479,7 +476,8 @@ object InteractiveExamplesMismatchMessages : MismatchMessages {
 }
 
 data class ExamplePageRequest(
-    val contractFile: String
+    val contractFile: String,
+    val hostPort: String
 )
 
 data class ValidateExampleRequest(

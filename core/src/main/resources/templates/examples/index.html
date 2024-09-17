@@ -974,7 +974,7 @@
 </header>
 
 <main class="group" data-panel="table">
-    <table th:attr="data-generated=${hasExamples}">
+    <table th:attr="data-generated=${hasExamples},data-hostPort=${hostPort}">
         <thead>
             <tr>
                 <th>
@@ -1396,7 +1396,7 @@
 
     async function generateExample(pathInfo) {
         try {
-            const resp = await fetch("/_specmatic/examples/generate", {
+            const resp = await fetch(getHostPort() + "/_specmatic/examples/generate", {
                 method: "POST",
                 body: JSON.stringify(pathInfo),
                 headers: {
@@ -1413,7 +1413,7 @@
 
     async function validateExample(exampleFile) {
         try {
-            const resp = await fetch("/_specmatic/examples/validate", {
+            const resp = await fetch(getHostPort() + "/_specmatic/examples/validate", {
                 method: "POST",
                 body: JSON.stringify({ exampleFile }),
                 headers: {
@@ -1431,7 +1431,7 @@
     async function getExampleContent(example) {
         const exampleFileName = encodeURIComponent(example);
         try {
-            const resp = await fetch(`/_specmatic/examples/content?fileName=${exampleFileName}`)
+            const resp = await fetch(getHostPort() + `/_specmatic/examples/content?fileName=${exampleFileName}`)
             const data = await resp.json();
 
             if (!resp.ok) {
@@ -1446,6 +1446,10 @@
 
     function parseFileName(absPath) {
         return absPath.split("\\").pop().split("/").pop().split(".").at(0);
+    }
+
+    function getHostPort() {
+        return table.getAttribute("data-hostPort");
     }
 
     function enableValidateBtn(tableRow) {

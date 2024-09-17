@@ -109,13 +109,32 @@ class ExamplesCommand : Callable<Unit> {
                     exitProcess(1)
                 }
             } else {
-                val results = ExamplesInteractiveServer.validate(contractFile)
-                val result = Result.fromResults(results)
-                logger.log(result.reportString())
-                logger.log("----------------Summary----------------")
-                logger.log(Results(results).summary())
-                logger.log("---------------------------------------")
-                if (!result.isSuccess()) {
+                val examplesDir = contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
+                if (!examplesDir.isDirectory) {
+                    logger.log("$examplesDir does not exist, did not find any files to validate")
+                    exitProcess(1)
+                }
+
+                val results: Map<String, Result> = ExamplesInteractiveServer.validateAll(contractFile, examplesDir)
+
+                val hasFailures = results.any { it.value is Result.Failure }
+
+                if(hasFailures) {
+                    logger.log("=============== Validation Results ===============")
+
+                    results.forEach { (exampleFileName, result) ->
+                        if (!result.isSuccess()) {
+                            logger.log("Example File $exampleFileName has following validation errors:")
+                            logger.log(result.reportString())
+                        }
+                    }
+                }
+
+                logger.log("=============== Validation Summary ===============")
+                logger.log(Results(results.values.toList()).summary())
+                logger.log("=======================================")
+
+                if (hasFailures) {
                     exitProcess(1)
                 }
             }

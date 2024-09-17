@@ -317,9 +317,9 @@ class ExamplesInteractiveServer(
 
                     file.path
                 }.also {
-                    println("-----------------Summary--------------------")
+                    println("=============== Example Generation Summary ===============")
                     println("Successfully wrote ${it.size} examples to ${examplesDir.canonicalPath}")
-                    println("--------------------------------------------")
+                    println("==========================================================")
                 }
             } catch (e: StackOverflowError) {
                 logger.log("Got a stack overflow error. You probably have a recursive data structure definition in the contract.")
@@ -360,16 +360,10 @@ class ExamplesInteractiveServer(
             return file.absolutePath
         }
 
-        fun validate(contractFile: File): List<Result> {
+        fun validateAll(contractFile: File, examplesDir: File): Map<String, Result> {
             val feature = parseContractFileToFeature(contractFile).also {
                 validateInlineExamples(it)
             }
-
-            val examplesDir = contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
-
-            if (!examplesDir.isDirectory)
-                return listOf(Result.Failure("$examplesDir does not exist, did not find any files to validate"))
-
 
             logger.log("Validating examples in ${examplesDir.path}")
 
@@ -388,14 +382,14 @@ class ExamplesInteractiveServer(
 
                 if (validationResult != null) {
                     logger.log("Example validation successful for ${file.path}")
-                    Result.Success()
+                    file.canonicalPath to Result.Success()
                 } else {
                     logger.log("Example validation failed for ${file.path}")
                     val failures = noMatchingScenario?.results?.withoutFluff()?.results ?: emptyList()
                     val failureResults = Results(failures).withoutFluff()
-                    failureResults.toResultIfAny()
+                    file.canonicalPath to failureResults.toResultIfAny()
                 }
-            }.filterNotNull().toList()
+            }.filterNotNull().toMap()
         }
 
         fun validate(contractFile: File, exampleFile: File): List<HttpStubData> {

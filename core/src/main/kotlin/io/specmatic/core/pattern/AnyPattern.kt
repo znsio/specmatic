@@ -3,10 +3,7 @@ package io.specmatic.core.pattern
 import io.specmatic.core.*
 import io.specmatic.core.Result.Failure
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
-import io.specmatic.core.value.EmptyString
-import io.specmatic.core.value.NullValue
-import io.specmatic.core.value.ScalarValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 
 data class AnyPattern(
     override val pattern: List<Pattern>,
@@ -101,10 +98,21 @@ data class AnyPattern(
             }
             else {
                 val discriminatorCsv = discriminatorValues.joinToString(", ")
-                val message =
-                    "Expected the value of discriminator property to be one of $discriminatorCsv"
 
-                Failure(message, breadCrumb = discriminatorProperty, failureReason = FailureReason.DiscriminatorMismatch)
+                if(sampleData is JSONObjectValue) {
+                    val baseMessage = "Expected the value of discriminator property to be one of $discriminatorCsv"
+
+                    val message = baseMessage + if(discriminatorProperty in sampleData.jsonObject) {
+                        " but it was ${sampleData.jsonObject.getValue(discriminatorProperty).displayableValue()}"
+                    } else {
+                        " but it was missing"
+                    }
+
+                    Failure(message, breadCrumb = discriminatorProperty, failureReason = FailureReason.DiscriminatorMismatch)
+                } else {
+                    resolver.mismatchMessages.valueMismatchFailure("json object", sampleData)
+                }
+
             }
 
             return failure.copy(failureReason = FailureReason.DiscriminatorMismatch)

@@ -14,6 +14,7 @@ import io.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import io.cucumber.messages.internal.com.fasterxml.jackson.databind.ObjectMapper
 import io.cucumber.messages.types.Step
 import io.ktor.util.reflect.*
+import io.specmatic.core.utilities.Flags
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
@@ -715,7 +716,7 @@ class OpenApiSpecification(
         }
 
         val headerExamples =
-            if(specmaticConfig.ignoreInlineExamples)
+            if(specmaticConfig.ignoreInlineExamples || Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
                 emptyMap()
             else
                 response.headers.orEmpty().entries.fold(emptyMap<String, Map<String, String>>()) { acc, (headerName, header) ->
@@ -733,7 +734,7 @@ class OpenApiSpecification(
             )
 
             val exampleBodies: Map<String, String?> =
-                if(specmaticConfig.ignoreInlineExamples)
+                if(specmaticConfig.ignoreInlineExamples || Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
                     emptyMap()
                 else
                     mediaType.examples?.mapValues {
@@ -879,7 +880,7 @@ class OpenApiSpecification(
                     }
 
                     val allExamples =
-                        if(specmaticConfig.ignoreInlineExamples)
+                        if(specmaticConfig.ignoreInlineExamples || Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
                             emptyMap()
                         else
                             exampleRequestBuilder.examplesWithRequestBodies(exampleBodies, contentType)
@@ -915,7 +916,7 @@ class OpenApiSpecification(
         operation: Operation,
         parameterType: Class<T>
     ): Map<String, Map<String, String>> {
-        if(specmaticConfig.ignoreInlineExamples)
+        if(specmaticConfig.ignoreInlineExamples || Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
             return emptyMap()
 
         return operation.parameters.orEmpty()

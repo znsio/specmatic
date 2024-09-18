@@ -115,7 +115,7 @@ class ExamplesCommand : Callable<Unit> {
                     logger.log("=============== Validation Results ===============")
 
                     if(internalResult != null) {
-                        logger.log(internalResult.reportString())
+                        logger.log("      " + internalResult.reportString())
 
                     }
 

@@ -1,27 +1,100 @@
 package io.specmatic.conversions
 
 import com.fasterxml.jackson.databind.node.ArrayNode
-import io.specmatic.core.*
-import io.specmatic.core.Result.Failure
-import io.specmatic.core.log.LogStrategy
-import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.*
-import io.specmatic.core.utilities.capitalizeFirstChar
-import io.specmatic.core.value.*
-import io.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
-import io.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
-import io.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import io.cucumber.messages.internal.com.fasterxml.jackson.databind.ObjectMapper
 import io.cucumber.messages.types.Step
 import io.ktor.util.reflect.*
+import io.specmatic.core.DEFAULT_RESPONSE_CODE
+import io.specmatic.core.Feature
+import io.specmatic.core.HttpHeadersPattern
+import io.specmatic.core.HttpPathPattern
+import io.specmatic.core.HttpQueryParamPattern
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpRequestPattern
+import io.specmatic.core.HttpResponse
+import io.specmatic.core.HttpResponsePattern
+import io.specmatic.core.MatchFailure
+import io.specmatic.core.MatchSuccess
+import io.specmatic.core.MatchingResult
+import io.specmatic.core.MultiPartContentPattern
+import io.specmatic.core.MultiPartFilePattern
+import io.specmatic.core.MultiPartFormDataPattern
+import io.specmatic.core.NoBodyPattern
+import io.specmatic.core.NoBodyValue
+import io.specmatic.core.OMIT
+import io.specmatic.core.Resolver
+import io.specmatic.core.Result
+import io.specmatic.core.Result.Failure
+import io.specmatic.core.Scenario
+import io.specmatic.core.ScenarioInfo
+import io.specmatic.core.SecurityConfiguration
+import io.specmatic.core.SecuritySchemeConfiguration
+import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.URLPathSegmentPattern
+import io.specmatic.core.handleError
+import io.specmatic.core.log.LogStrategy
+import io.specmatic.core.log.logger
+import io.specmatic.core.otherwise
+import io.specmatic.core.pattern.AnyNonNullJSONValue
+import io.specmatic.core.pattern.AnyPattern
+import io.specmatic.core.pattern.AnythingPattern
+import io.specmatic.core.pattern.Base64StringPattern
+import io.specmatic.core.pattern.BinaryPattern
+import io.specmatic.core.pattern.BooleanPattern
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.DatePattern
+import io.specmatic.core.pattern.DateTimePattern
+import io.specmatic.core.pattern.DeferredPattern
+import io.specmatic.core.pattern.DictionaryPattern
+import io.specmatic.core.pattern.EmailPattern
+import io.specmatic.core.pattern.EnumPattern
+import io.specmatic.core.pattern.ExactValuePattern
+import io.specmatic.core.pattern.Examples
+import io.specmatic.core.pattern.JSONObjectPattern
+import io.specmatic.core.pattern.ListPattern
+import io.specmatic.core.pattern.NullPattern
+import io.specmatic.core.pattern.NumberPattern
+import io.specmatic.core.pattern.Pattern
+import io.specmatic.core.pattern.PatternInStringPattern
+import io.specmatic.core.pattern.QueryParameterArrayPattern
+import io.specmatic.core.pattern.QueryParameterScalarPattern
+import io.specmatic.core.pattern.ResponseExample
+import io.specmatic.core.pattern.ResponseValueExample
+import io.specmatic.core.pattern.Row
+import io.specmatic.core.pattern.StringPattern
+import io.specmatic.core.pattern.TYPE_ATTRIBUTE_NAME
+import io.specmatic.core.pattern.UUIDPattern
+import io.specmatic.core.pattern.XMLPattern
+import io.specmatic.core.pattern.XMLTypeData
+import io.specmatic.core.pattern.attempt
+import io.specmatic.core.pattern.parsedJSON
+import io.specmatic.core.pattern.toJSONObjectPattern
+import io.specmatic.core.pattern.withoutOptionality
+import io.specmatic.core.then
+import io.specmatic.core.to
 import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.Flags.Companion.IGNORE_INLINE_EXAMPLE_WARNINGS
+import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
+import io.specmatic.core.utilities.capitalizeFirstChar
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NullValue
+import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
+import io.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
+import io.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
+import io.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.examples.Example
 import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.media.*
-import io.swagger.v3.oas.models.parameters.*
+import io.swagger.v3.oas.models.parameters.HeaderParameter
+import io.swagger.v3.oas.models.parameters.Parameter
+import io.swagger.v3.oas.models.parameters.PathParameter
+import io.swagger.v3.oas.models.parameters.QueryParameter
+import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
 import io.swagger.v3.oas.models.security.SecurityScheme
@@ -437,8 +510,10 @@ class OpenApiSpecification(
 
                 val unusedRequestExampleNames = requestExampleNames - usedExamples
 
-                unusedRequestExampleNames.forEach { unusedRequestExampleName ->
-                    logger.log(missingResponseExampleErrorMessageForTest(unusedRequestExampleName))
+                if(Flags.getBooleanValue(IGNORE_INLINE_EXAMPLE_WARNINGS).not()) {
+                    unusedRequestExampleNames.forEach { unusedRequestExampleName ->
+                        logger.log(missingResponseExampleErrorMessageForTest(unusedRequestExampleName))
+                    }
                 }
 
                 scenariosAndExamples.map {
@@ -613,7 +688,8 @@ class OpenApiSpecification(
             }.toMap().ifEmpty { mapOf(SPECMATIC_TEST_WITH_NO_REQ_EX to "") }
 
             if (requestExamples.containsKey(SPECMATIC_TEST_WITH_NO_REQ_EX) && responseExample.status != first2xxResponseStatus) {
-                if (responseExamples.isEmpty()) logger.log(missingRequestExampleErrorMessageForTest(exampleName))
+                if (responseExamples.isEmpty() && getBooleanValue(IGNORE_INLINE_EXAMPLE_WARNINGS).not())
+                    logger.log(missingRequestExampleErrorMessageForTest(exampleName))
                 return@mapNotNull null
             }
 

@@ -107,24 +107,32 @@ class ExamplesCommand : Callable<Unit> {
                     exitProcess(1)
                 }
 
-                val results: Map<String, Result> = ExamplesInteractiveServer.validateAll(contractFile, examplesDir)
+                val (internalResult, externalResults) = ExamplesInteractiveServer.validateAll(contractFile, examplesDir)
 
-                val hasFailures = results.any { it.value is Result.Failure }
+                val hasFailures = internalResult is Result.Failure || externalResults?.any { it.value is Result.Failure } == true
 
                 if(hasFailures) {
                     logger.log("=============== Validation Results ===============")
 
-                    results.forEach { (exampleFileName, result) ->
-                        if (!result.isSuccess()) {
-                            logger.log(System.lineSeparator() + "Example File $exampleFileName has following validation error(s):")
-                            logger.log(result.reportString())
+                    if(internalResult != null) {
+                        logger.log(internalResult.reportString())
+
+                    }
+
+                    if(externalResults != null) {
+                        externalResults.forEach { (exampleFileName, result) ->
+                            if (!result.isSuccess()) {
+                                logger.log(System.lineSeparator() + "Example File $exampleFileName has following validation error(s):")
+                                logger.log(result.reportString())
+                            }
                         }
+
+                        logger.log("=============== Validation Summary ===============")
+                        logger.log(Results(externalResults.values.toList()).summary())
+                        logger.log("=======================================")
                     }
                 }
 
-                logger.log("=============== Validation Summary ===============")
-                logger.log(Results(results.values.toList()).summary())
-                logger.log("=======================================")
 
                 if (hasFailures) {
                     exitProcess(1)

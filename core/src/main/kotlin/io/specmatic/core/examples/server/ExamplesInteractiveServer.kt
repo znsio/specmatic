@@ -17,10 +17,7 @@ import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
-import io.specmatic.core.utilities.Flags
-import io.specmatic.core.utilities.capitalizeFirstChar
-import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.utilities.uniqueNameForApiOperation
+import io.specmatic.core.utilities.*
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
@@ -29,6 +26,7 @@ import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
 import java.util.*
+import kotlin.system.exitProcess
 
 class ExamplesInteractiveServer(
     private val serverHost: String,
@@ -344,11 +342,31 @@ class ExamplesInteractiveServer(
             return file.absolutePath
         }
 
-        fun validateAll(contractFile: File, examplesDir: File): Map<String, Result> {
-            val feature = parseContractFileToFeature(contractFile).also {
-                validateInlineExamples(it)
+        fun validateAll(contractFile: File, examplesDir: File): Pair<Result?, Map<String, Result>?> {
+            val feature = parseContractFileToFeature(contractFile)
+
+            val (validateInline, validateExternal) = if(!Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") && !Flags.getBooleanValue("IGNORE_INLINE_EXAMPLES")) {
+                true to true
+            } else {
+                Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") to Flags.getBooleanValue("IGNORE_INLINE_EXAMPLES")
             }
 
+            val inlineResult = if (validateInline) {
+                logger.log(System.lineSeparator() + "VALIDATING INLINE EXAMPLES" + System.lineSeparator())
+                validateInlineExamples(feature)
+            } else null
+
+            val externalResult = if(validateExternal)
+                validateExternalExamples(examplesDir, feature)
+            else null
+
+            return inlineResult to externalResult
+        }
+
+        private fun validateExternalExamples(
+            examplesDir: File,
+            feature: Feature
+        ): Map<String, Result> {
             logger.log("Validating examples in ${examplesDir.path}")
 
             return examplesDir.walkTopDown().map { file: File ->

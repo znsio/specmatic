@@ -401,6 +401,10 @@ class OpenApiSpecification(
                         httpResponsePatterns.filter { it.responsePattern.status.toString().startsWith("2") }
                             .minOfOrNull { it.responsePattern.status }
 
+                    val firstNoBodyResponseStatus =
+                        httpResponsePatterns.filter { it.responsePattern.body is NoBodyPattern }
+                            .minOfOrNull { it.responsePattern.status }
+
                     val httpResponsePatternsGrouped = httpResponsePatterns.groupBy { it.responsePattern.status }
 
                     val httpRequestPatterns: List<RequestPatternsData> =
@@ -481,9 +485,8 @@ class OpenApiSpecification(
                     val unusedRequestExampleNames = requestExampleNames - usedExamples
 
                     val responseThatReturnsNoValues = httpResponsePatterns.find { responsePatternData ->
-                        responsePatternData.let {
-                            it.responsePattern.body == NoBodyPattern && it.responsePattern.headersPattern.isEmpty()
-                        }
+                        responsePatternData.responsePattern.body == NoBodyPattern
+                                && responsePatternData.responsePattern.status == firstNoBodyResponseStatus
                     }
 
                     val (additionalExamples, updatedScenarios)
@@ -494,7 +497,8 @@ class OpenApiSpecification(
                                         requestExamples,
                                         unusedRequestExampleNames,
                                         scenarioInfos,
-                                        operation
+                                        operation,
+                                        firstNoBodyResponseStatus
                                     )
                                 }
 
@@ -538,7 +542,8 @@ class OpenApiSpecification(
         requestExamples: Map<String, List<HttpRequest>>,
         unusedRequestExampleNames: Set<String>,
         scenarioInfos: List<ScenarioInfo>,
-        operation: Operation
+        operation: Operation,
+        firstNoBodyResponseStatus: Int?,
     ): Pair<Map<String, List<Pair<HttpRequest, HttpResponse>>>, List<ScenarioInfo>> {
         val emptyResponse = HttpResponse(
             status = responseThatReturnsNoValues.responsePattern.status,
@@ -552,7 +557,9 @@ class OpenApiSpecification(
                 }
 
         val updatedScenarioInfos = scenarioInfos.map { scenarioInfo ->
-            if (scenarioInfo.httpResponsePattern.body == NoBodyPattern) {
+            if (scenarioInfo.httpResponsePattern.body == NoBodyPattern
+                && scenarioInfo.httpResponsePattern.status == firstNoBodyResponseStatus
+            ) {
                 val unusedRequestExample =
                     requestExamples.filter { it.key in unusedRequestExampleNames }
 

@@ -8819,6 +8819,126 @@ paths:
     }
 
     @Test
+    fun `should use all the path parameter examples for a no body response`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.3
+info:
+  title: Example API
+  description: An API with operations that have no response bodies or headers.
+  version: 1.0.0
+  contact:
+    name: Jack
+servers:
+  - url: http://prod
+tags:
+  - name: mod
+  - name: read
+paths:
+  /items/{itemId}:
+    delete:
+      summary: Delete an item
+      operationId: deleteItem
+      description: "Delete an item"
+      tags:
+        - mod
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: ID of the item to delete
+          schema:
+            type: string
+          examples:
+            DELETE_ITEM:
+              value: '123-to-be-deleted'
+            DELETE_ANOTHER_ITEM:
+              value: '456-to-be-deleted'
+      responses:
+        '204':
+          description: No Content - The item was successfully deleted
+        '203':
+          description: No Content - 203
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        fun createAndAssertStub(request: HttpRequest, response: HttpResponse, expectedMethod: String, expectedStatus: Int) {
+            val stub: HttpStubData = feature.matchingStub(request, response)
+
+            println(stub.requestType)
+
+            assertThat(stub.requestType.method).isEqualTo(expectedMethod)
+            assertThat(stub.response.status).isEqualTo(expectedStatus)
+        }
+
+        val request1 = HttpRequest("DELETE", "/items/123-to-be-deleted")
+        val response1 = HttpResponse(203, emptyMap())
+        createAndAssertStub(request1, response1, "DELETE", 203)
+
+        val request2 = HttpRequest("DELETE", "/items/456-to-be-deleted")
+        val response2 = HttpResponse(203, emptyMap())
+        createAndAssertStub(request2, response2, "DELETE", 203)
+    }
+
+    @Test
+    fun `should use the path parameter example for a no body 304 response`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.3
+info:
+  title: Example API
+  description: An API with operations that have no response bodies or headers.
+  version: 1.0.0
+  contact:
+    name: Jack
+servers:
+  - url: http://prod
+tags:
+  - name: mod
+  - name: read
+paths:
+  /items/{itemId}:
+    delete:
+      summary: Delete an item
+      operationId: deleteItem
+      description: "Delete an item"
+      tags:
+        - mod
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: ID of the item to delete
+          schema:
+            type: string
+          examples:
+            DELETE_ITEM:
+              value: '123-to-be-deleted'
+      responses:
+        '304':
+          description: No Content - The item was successfully deleted
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val request = HttpRequest(
+            "DELETE",
+            "/items/123-to-be-deleted"
+        )
+        val response = HttpResponse(304, emptyMap())
+
+        val stub: HttpStubData = feature.matchingStub(request, response)
+
+        println(stub.requestType)
+
+        assertThat(stub.requestType.method).isEqualTo("DELETE")
+        assertThat(stub.response.status).isEqualTo(304)
+    }
+
+    @Test
     fun `should use the given response example if there is no request body or params present as part of the request`() {
         val openAPI =
             """

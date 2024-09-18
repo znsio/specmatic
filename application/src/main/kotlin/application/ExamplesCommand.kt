@@ -101,13 +101,7 @@ class ExamplesCommand : Callable<Unit> {
                     exitProcess(1)
                 }
             } else {
-                val examplesDir = contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
-                if (!examplesDir.isDirectory) {
-                    logger.log("$examplesDir does not exist, did not find any files to validate")
-                    exitProcess(1)
-                }
-
-                val (internalResult, externalResults) = ExamplesInteractiveServer.validateAll(contractFile, examplesDir)
+                val (internalResult, externalResults) = ExamplesInteractiveServer.validateAll(contractFile)
 
                 val hasFailures = internalResult is Result.Failure || externalResults?.any { it.value is Result.Failure } == true
 

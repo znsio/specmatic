@@ -342,7 +342,7 @@ class ExamplesInteractiveServer(
             return file.absolutePath
         }
 
-        fun validateAll(contractFile: File, examplesDir: File): Pair<Result?, Map<String, Result>?> {
+        fun validateAll(contractFile: File): Pair<Result?, Map<String, Result>?> {
             val feature = parseContractFileToFeature(contractFile)
 
             val (validateInline, validateExternal) = if(!Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") && !Flags.getBooleanValue("IGNORE_INLINE_EXAMPLES")) {
@@ -356,8 +356,16 @@ class ExamplesInteractiveServer(
                 validateInlineExamples(feature)
             } else null
 
-            val externalResult = if(validateExternal)
+            val externalResult = if(validateExternal) {
+                val examplesDir =
+                    contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
+                if (!examplesDir.isDirectory) {
+                    logger.log("$examplesDir does not exist, did not find any files to validate")
+                    exitProcess(1)
+                }
+
                 validateExternalExamples(examplesDir, feature)
+            }
             else null
 
             return inlineResult to externalResult

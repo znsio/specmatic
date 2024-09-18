@@ -8883,6 +8883,123 @@ paths:
     }
 
     @Test
+    fun `should respond with the first no body status given a stubbed request and it should have the specmatic random header`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.3
+info:
+  title: Example API
+  description: An API with operations that have no response bodies or headers.
+  version: 1.0.0
+  contact:
+    name: Jack
+servers:
+  - url: http://prod
+tags:
+  - name: mod
+  - name: read
+paths:
+  /items/{itemId}:
+    delete:
+      summary: Delete an item
+      operationId: deleteItem
+      description: "Delete an item"
+      tags:
+        - mod
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: ID of the item to delete
+          schema:
+            type: string
+          examples:
+            DELETE_ITEM:
+              value: '123-to-be-deleted'
+            DELETE_ANOTHER_ITEM:
+              value: '456-to-be-deleted'
+      responses:
+        '204':
+          description: No Content - The item was successfully deleted
+        '203':
+          description: No Content - 203
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        HttpStub(feature).use { stub ->
+            stub.client.execute(HttpRequest("DELETE", "/items/123-to-be-deleted")).also { response ->
+                assertThat(response.status).isEqualTo(203)
+                assertThat(response.headers).doesNotContainEntry(SPECMATIC_TYPE_HEADER, "random")
+            }
+
+            stub.client.execute(HttpRequest("DELETE", "/items/456-to-be-deleted")).also { response ->
+                assertThat(response.status).isEqualTo(203)
+                assertThat(response.headers).doesNotContainEntry(SPECMATIC_TYPE_HEADER, "random")
+            }
+        }
+    }
+
+    @Test
+    fun `example of no-body response should execute as test`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.3
+info:
+  title: Example API
+  description: An API with operations that have no response bodies or headers.
+  version: 1.0.0
+  contact:
+    name: Jack
+servers:
+  - url: http://prod
+tags:
+  - name: mod
+  - name: read
+paths:
+  /items/{itemId}:
+    delete:
+      summary: Delete an item
+      operationId: deleteItem
+      description: "Delete an item"
+      tags:
+        - mod
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: ID of the item to delete
+          schema:
+            type: string
+          examples:
+            DELETE_ITEM:
+              value: '123-to-be-deleted'
+            DELETE_ANOTHER_ITEM:
+              value: '456-to-be-deleted'
+      responses:
+        '204':
+          description: No Content - The item was successfully deleted
+        '203':
+          description: No Content - 203
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return if(request.path!!.contains("deleted"))
+                    HttpResponse(203, NoBodyValue)
+                else
+                    HttpResponse(204, NoBodyValue)
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
     fun `should use the path parameter example for a no body 304 response`() {
         val openAPI =
             """

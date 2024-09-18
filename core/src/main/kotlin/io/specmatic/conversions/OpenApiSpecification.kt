@@ -397,19 +397,11 @@ class OpenApiSpecification(
                     }.foldRight(emptyMap<String, List<HttpRequest>>()) { acc, map ->
                         acc.plus(map)
                     }
-                    val requestExamplesForNoParamNoBodyRequest = getRequestExamplesForRequestWithNoParamsAndBody(
-                        operation,
-                        requestExamples,
-                        responseExamplesList,
-                        httpRequestPatterns
-                    )
-
-                    val allRequestExamples = requestExamples.plus(requestExamplesForNoParamNoBodyRequest)
 
                     val examples =
-                        collateExamplesForExpectations(allRequestExamples, responseExamplesList, httpRequestPatterns)
+                        collateExamplesForExpectations(requestExamples, responseExamplesList, httpRequestPatterns)
 
-                    val requestExampleNames = allRequestExamples.keys
+                    val requestExampleNames = requestExamples.keys
 
                     val usedExamples = examples.keys
 
@@ -426,18 +418,10 @@ class OpenApiSpecification(
                                 responseThatReturnsNoValues != null && unusedRequestExampleNames.isNotEmpty() -> {
                                     getUpdatedScenarioInfosWithNoBodyResponseExamples(
                                         responseThatReturnsNoValues,
-                                        allRequestExamples,
+                                        requestExamples,
                                         unusedRequestExampleNames,
                                         scenarioInfos,
                                         operation
-                                    )
-                                }
-                                requestExamplesForNoParamNoBodyRequest.isNotEmpty() -> {
-                                    getUpdatedScenarioInfosWithNoBodyNoParamRequestExamples(
-                                        examples,
-                                        requestExamplesForNoParamNoBodyRequest,
-                                        operation,
-                                        scenarioInfos
                                     )
                                 }
 
@@ -473,29 +457,6 @@ class OpenApiSpecification(
         return scenarioInfos to examples
     }
 
-    private fun getUpdatedScenarioInfosWithNoBodyNoParamRequestExamples(
-        examples: Map<String, List<Pair<HttpRequest, HttpResponse>>>,
-        requestExamplesForNoParamNoBodyRequest: Map<String, List<HttpRequest>>,
-        operation: Operation,
-        scenarioInfos: List<ScenarioInfo>
-    ): Pair<Map<String, List<Pair<HttpRequest, HttpResponse>>>, List<ScenarioInfo>> {
-        return examples to scenarioInfos.map { scenarioInfo ->
-            val rows = getRowsFromRequestExample(
-                requestExamplesForNoParamNoBodyRequest,
-                operation,
-                scenarioInfo
-            )
-            val updatedExamples: List<Examples> = listOf(
-                Examples(
-                    rows.first().columnNames,
-                    scenarioInfo.examples.firstOrNull()?.rows.orEmpty() + rows
-                )
-            )
-            scenarioInfo.copy(
-                examples = updatedExamples
-            )
-        }
-    }
 
     private fun getUpdatedScenarioInfosWithNoBodyResponseExamples(
         responseThatReturnsNoValues: ResponsePatternData,

@@ -2585,7 +2585,7 @@ paths:
     }
 
     @Test
-    fun `should pass when response is changed from no-body to some body`() {
+    fun `should fail when response is changed from no-body to some body`() {
         val olderContract: Feature =
             """
                 openapi: 3.0.0
@@ -2730,7 +2730,7 @@ paths:
     }
 
     @Test
-    fun `should pass when request is changed from some body to no-body`() {
+    fun `should fail when request is changed from some body to no-body`() {
         val olderContract: Feature =
             """
                 openapi: 3.0.0

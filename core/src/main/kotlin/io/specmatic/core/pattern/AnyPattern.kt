@@ -100,15 +100,37 @@ data class AnyPattern(
                 val discriminatorCsv = discriminatorValues.joinToString(", ")
 
                 if(sampleData is JSONObjectValue) {
-                    val baseMessage = "Expected the value of discriminator property to be one of $discriminatorCsv"
+                    val actualDiscriminatorValue = sampleData.jsonObject[discriminatorProperty]?.toStringLiteral()
 
-                    val message = baseMessage + if(discriminatorProperty in sampleData.jsonObject) {
-                        " but it was ${sampleData.jsonObject.getValue(discriminatorProperty).displayableValue()}"
-                    } else {
-                        " but it was missing"
+                    if(actualDiscriminatorValue == null) {
+                        Failure(
+                            "Discriminator property ${discriminatorProperty} is missing from the object",
+                            breadCrumb = discriminatorProperty,
+                            failureReason = FailureReason.DiscriminatorMismatch
+                        )
+
+                    } else if (actualDiscriminatorValue !in discriminatorValues) {
+                        val baseMessage = "Expected the value of discriminator property to be one of $discriminatorCsv"
+
+                        val message = baseMessage + if (discriminatorProperty in sampleData.jsonObject) {
+                            " but it was ${sampleData.jsonObject.getValue(discriminatorProperty).displayableValue()}"
+                        } else {
+                            " but it was missing"
+                        }
+
+                        Failure(
+                            message,
+                            breadCrumb = discriminatorProperty,
+                            failureReason = FailureReason.DiscriminatorMismatch
+                        )
                     }
-
-                    Failure(message, breadCrumb = discriminatorProperty, failureReason = FailureReason.DiscriminatorMismatch)
+                    else {
+                        Failure(
+                            "Discriminator property ${discriminatorProperty} is missing from the spec",
+                            breadCrumb = discriminatorProperty,
+                            failureReason = FailureReason.DiscriminatorMismatch
+                        )
+                    }
                 } else {
                     resolver.mismatchMessages.valueMismatchFailure("json object", sampleData)
                 }

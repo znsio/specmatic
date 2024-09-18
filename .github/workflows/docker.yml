@@ -41,10 +41,9 @@ jobs:
         uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: znsio/specmatic:${{ steps.read_version.outputs.VERSION }}
-          severity: HIGH,CRITICAL,MEDIUM,LOW,UNKNOWN 
+          severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: true
-          severity-threshold: HIGH 
           format: table
           vulnerability-type: os,library
     

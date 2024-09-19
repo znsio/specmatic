@@ -129,10 +129,10 @@ sealed class Result {
             return FailureCause(cause = this)
         }
 
-        fun getFailureBreadCrumbs(): List<String> {
-            return causes.mapNotNull { it.cause?.getFailureBreadCrumbs() }
+        fun getFailureBreadCrumbs(prefix: String): List<String> {
+            return causes.mapNotNull { it.cause?.getFailureBreadCrumbs("$prefix$breadCrumb.") }
                 .flatten()
-                .plus(breadCrumb)
+                .plus("$prefix$breadCrumb")
         }
 
         override fun ifSuccess(function: () -> Result) = this

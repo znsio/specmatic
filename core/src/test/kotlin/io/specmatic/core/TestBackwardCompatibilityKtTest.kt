@@ -2208,8 +2208,8 @@ paths:
 """.trimIndent(), ""
         ).toFeature()
 
-        val result = testBackwardCompatibility(oldContract, newContract)
-        assertThat(result.success()).withFailMessage(result.report()).isFalse()
+        val results = testBackwardCompatibility(oldContract, newContract)
+        assertThat(results.success()).isFalse()
     }
 
     @Test
@@ -2584,6 +2584,262 @@ paths:
         assertThat(results.success()).isFalse
     }
 
+    @Test
+    fun `should fail when response is changed from no-body to some body`() {
+        val olderContract: Feature =
+            """
+                openapi: 3.0.0
+                info:
+                  title: Sample API
+                  version: 0.1.9
+                paths:
+                  /products:
+                    post:
+                      summary: Create a product
+                      description: Create a new product entry
+                      requestBody:
+                        description: Product to add
+                        required: true
+                        content:
+                          application/json:
+                            schema:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                type:
+                                  type: string
+                      responses:
+                        '201':
+                          description: Created
+                          # No content key, indicating no body
+        """.trimIndent().openAPIToContract()
+
+        val newerContract: Feature =
+            """
+                openapi: 3.0.0
+                info:
+                  title: Sample API
+                  version: 0.2.0
+                paths:
+                  /products:
+                    post:
+                      summary: Create a product
+                      description: Create a new product entry
+                      requestBody:
+                        description: Product to add
+                        required: true
+                        content:
+                          application/json:
+                            schema:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                type:
+                                  type: string
+                      responses:
+                        '201':
+                          description: Created
+                          content:
+                            application/json:
+                              schema:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                  message:
+                                    type: string
+        """.trimIndent().openAPIToContract()
+
+        val results: Results = testBackwardCompatibility(olderContract, newerContract)
+        assertThat(results.success()).isFalse()
+    }
+
+    @Test
+    fun `should fail when response is changed from some body to no-body`() {
+        val olderContract: Feature =
+            """
+                openapi: 3.0.0
+                info:
+                  title: Sample API
+                  version: 0.1.9
+                paths:
+                  /products:
+                    post:
+                      summary: Create a product
+                      description: Create a new product entry
+                      requestBody:
+                        description: Product to add
+                        required: true
+                        content:
+                          application/json:
+                            schema:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                type:
+                                  type: string
+                      responses:
+                        '201':
+                          description: Created
+                          content:
+                            application/json:
+                              schema:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                  message:
+                                    type: string
+        """.trimIndent().openAPIToContract()
+
+        val newerContract: Feature =
+            """
+                openapi: 3.0.0
+                info:
+                  title: Sample API
+                  version: 0.2.0
+                paths:
+                  /products:
+                    post:
+                      summary: Create a product
+                      description: Create a new product entry
+                      requestBody:
+                        description: Product to add
+                        required: true
+                        content:
+                          application/json:
+                            schema:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                type:
+                                  type: string
+                      responses:
+                        '201':
+                          description: Created
+                          # No content key, indicating no body
+        """.trimIndent().openAPIToContract()
+
+        val results: Results = testBackwardCompatibility(olderContract, newerContract)
+        println(results.report())
+        assertThat(results.success()).isFalse
+    }
+
+    @Test
+    fun `should fail when request is changed from some body to no-body`() {
+        val olderContract: Feature =
+            """
+                openapi: 3.0.0
+                info:
+                  title: Sample API
+                  version: 0.1.9
+                paths:
+                  /products:
+                    post:
+                      summary: Create a product
+                      description: Create a new product entry
+                      requestBody:
+                        description: Product to add
+                        required: true
+                        content:
+                          application/json:
+                            schema:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                type:
+                                  type: string
+                                inventory:
+                                  type: integer
+                                  minimum: 1
+                                  maximum: 101
+                      responses:
+                        '201':
+                          description: Created
+        """.trimIndent().openAPIToContract()
+
+        val newerContract: Feature =
+            """
+                openapi: 3.0.0
+                info:
+                  title: Sample API
+                  version: 0.2.0
+                paths:
+                  /products:
+                    get:
+                      summary: Create a product
+                      description: Create a new product entry
+                      # No requestBody, indicating no body
+                      responses:
+                        '201':
+                          description: Created
+        """.trimIndent().openAPIToContract()
+
+        val results: Results = testBackwardCompatibility(olderContract, newerContract)
+        println(results.report())
+        assertThat(results.success()).isFalse()
+    }
+
+    @Test
+    fun `should fail when request is changed from no-body to some body`() {
+        val olderContract: Feature =
+            """
+                openapi: 3.0.0
+                info:
+                  title: Sample API
+                  version: 0.1.9
+                paths:
+                  /products:
+                    post:
+                      summary: Create a product
+                      description: Create a new product entry
+                      responses:
+                        '201':
+                          description: Created
+        """.trimIndent().openAPIToContract()
+
+        val newerContract: Feature =
+            """
+                openapi: 3.0.0
+                info:
+                  title: Sample API
+                  version: 0.2.0
+                paths:
+                  /products:
+                    post:
+                      summary: Create a product
+                      description: Create a new product entry
+                      requestBody:
+                        description: Product to add
+                        required: true
+                        content:
+                          application/json:
+                            schema:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                type:
+                                  type: string
+                                inventory:
+                                  type: integer
+                                  minimum: 1
+                                  maximum: 101
+                      responses:
+                        '201':
+                          description: Created
+        """.trimIndent().openAPIToContract()
+
+        val results: Results = testBackwardCompatibility(olderContract, newerContract)
+        println(results.report())
+        assertThat(results.success()).isFalse()
+        assertThat(results.report()).contains("an empty string or no body value")
+    }
 }
 
 private fun String.openAPIToContract(): Feature {

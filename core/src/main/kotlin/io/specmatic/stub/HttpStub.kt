@@ -711,13 +711,6 @@ internal suspend fun respondToKtorHttpResponse(
     delayInMilliSeconds: Long? = null,
     specmaticConfig: SpecmaticConfig? = null
 ) {
-    val contentType = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
-    val textContent = TextContent(
-        httpResponse.body.toStringLiteral(),
-        ContentType.parse(contentType),
-        HttpStatusCode.fromValue(httpResponse.status)
-    )
-
     val headersControlledByEngine = listOfExcludedHeaders().map { it.lowercase() }
     for ((name, value) in httpResponse.headers.filterNot { it.key.lowercase() in headersControlledByEngine }) {
         call.response.headers.append(name, value)
@@ -728,7 +721,18 @@ internal suspend fun respondToKtorHttpResponse(
         delay(delayInMs)
     }
 
-    call.respond(textContent)
+    val contentType = httpResponse.headers["Content-Type"] ?: httpResponse.body.httpContentType
+    val responseBody = httpResponse.body.toStringLiteral()
+    val status = HttpStatusCode.fromValue(httpResponse.status)
+
+    if (contentType.isBlank()) {
+        call.respond(object : OutgoingContent.NoContent() {
+            override val status: HttpStatusCode = HttpStatusCode.fromValue(httpResponse.status)
+        })
+        return
+    }
+
+    call.respond(TextContent(responseBody, ContentType.parse(contentType), status))
 }
 
 fun getHttpResponse(

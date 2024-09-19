@@ -5,7 +5,7 @@ import io.specmatic.core.value.*
 
 object NoBodyValue : Value {
     override val httpContentType: String
-        get() = "text/plain"
+        get() = ""
 
     override fun displayableValue(): String {
         return "No body"

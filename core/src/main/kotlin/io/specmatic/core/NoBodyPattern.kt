@@ -8,10 +8,7 @@ import io.specmatic.core.value.Value
 
 object NoBodyPattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        if(sampleData == null)
-            return Result.Success()
-
-        if(sampleData is NoBodyValue)
+        if(sampleData is NoBodyValue || sampleData == null)
             return Result.Success()
 
         return Result.Failure("Expected no body, but found ${sampleData.displayableType()}")

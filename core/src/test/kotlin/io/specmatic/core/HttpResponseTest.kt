@@ -160,7 +160,10 @@ internal class HttpResponseTest {
 
         @Test
         fun `should return false both body and headers are empty`() {
-            val httpResponse = HttpResponse()
+            val httpResponse = HttpResponse(
+                body = NoBodyValue,
+                headers = emptyMap()
+            )
 
             assertThat(httpResponse.isNotEmpty()).isEqualTo(false)
         }
@@ -217,5 +220,16 @@ internal class HttpResponseTest {
         } finally {
             System.clearProperty(Flags.SPECMATIC_PRETTY_PRINT)
         }
+    }
+
+    @Test
+    fun `should set the response body as NoBodyValue if the json object does not have the body key`() {
+        val response = HttpResponse.fromJSON(
+            mapOf("status" to NumberValue(203))
+        )
+
+        assertThat(response.body).isEqualTo(NoBodyValue)
+        assertThat(response.status).isEqualTo(203)
+        assertThat(response.headers).isEmpty()
     }
 }

@@ -149,7 +149,7 @@ data class HttpResponse(
                 nativeInteger(jsonObject, "status")
                     ?: throw ContractException("http-response must contain a key named status, whose value is the http status in the response"),
                 nativeStringStringMap(jsonObject, "headers").toMutableMap(),
-                jsonObject.getOrDefault("body", StringValue()),
+                jsonObject.getOrDefault("body", NoBodyValue),
                 jsonObject.getOrDefault("externalisedResponseCommand", "").toString()
             )
         }
@@ -158,8 +158,7 @@ data class HttpResponse(
     fun withoutDynamicHeaders(): HttpResponse = copy(headers = headers.withoutDynamicHeaders())
 
     fun isNotEmpty(): Boolean {
-        // TODO: This check should change to NoBodyValue once responses support having no body
-        val bodyIsEmpty = body == StringValue()
+        val bodyIsEmpty = body == NoBodyValue
         val headersIsEmpty = headers.isEmpty() ||  headersHasOnlyTextPlainContentTypeHeader()
 
         val responseIsEmpty = bodyIsEmpty && headersIsEmpty

@@ -1566,34 +1566,6 @@ data class Feature(
         return loadExternalisedExamplesAndListUnloadableExamples().first
     }
 
-    private fun testDirectoryFileFromEnvironmentVariable(): File? {
-        return readEnvVarOrProperty(testDirectoryEnvironmentVariable, testDirectoryProperty)?.let {
-            File(System.getenv(testDirectoryEnvironmentVariable))
-        }
-    }
-
-    private fun testDirectoryFileFromSpecificationPath(openApiFilePath: String): File? {
-        if (openApiFilePath.isBlank())
-            return null
-
-        return examplesDirFor(openApiFilePath, TEST_DIR_SUFFIX)
-    }
-
-    private fun getTestsDirectory(contractFile: File): File? {
-        val testDirectory = testDirectoryFileFromSpecificationPath(contractFile.path) ?: testDirectoryFileFromEnvironmentVariable()
-
-        return when {
-            testDirectory?.exists() == true -> {
-                logger.log("Test directory ${testDirectory.canonicalPath} found")
-                testDirectory
-            }
-
-            else -> {
-                null
-            }
-        }
-    }
-
     fun validateExamplesOrException() {
         val errors = scenarios.map { scenario ->
             try {
@@ -1606,6 +1578,37 @@ data class Feature(
 
         if(errors.isNotEmpty())
             throw ContractException(errors.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))
+    }
+
+    companion object {
+
+        private fun getTestsDirectory(contractFile: File): File? {
+            val testDirectory = testDirectoryFileFromSpecificationPath(contractFile.path) ?: testDirectoryFileFromEnvironmentVariable()
+
+            return when {
+                testDirectory?.exists() == true -> {
+                    logger.log("Test directory ${testDirectory.canonicalPath} found")
+                    testDirectory
+                }
+
+                else -> {
+                    null
+                }
+            }
+        }
+
+        private fun testDirectoryFileFromEnvironmentVariable(): File? {
+            return readEnvVarOrProperty(testDirectoryEnvironmentVariable, testDirectoryProperty)?.let {
+                File(System.getenv(testDirectoryEnvironmentVariable))
+            }
+        }
+
+        private fun testDirectoryFileFromSpecificationPath(openApiFilePath: String): File? {
+            if (openApiFilePath.isBlank())
+                return null
+
+            return examplesDirFor(openApiFilePath, TEST_DIR_SUFFIX)
+        }
     }
 }
 

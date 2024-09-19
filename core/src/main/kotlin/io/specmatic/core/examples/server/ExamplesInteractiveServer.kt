@@ -342,9 +342,7 @@ class ExamplesInteractiveServer(
         }
 
         fun validateAll(contractFile: File): Pair<Result?, Map<String, Result>?> {
-            val feature = parseContractFileToFeature(contractFile).let {
-                ExamplesInteractiveServer.ScenarioFilter("", "/hub,/listener,-> 202").filter(it)
-            }
+            val feature = parseContractFileToFeature(contractFile)
 
             val (validateInline, validateExternal) = if(!Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") && !Flags.getBooleanValue("IGNORE_INLINE_EXAMPLES")) {
                 true to true
@@ -354,7 +352,9 @@ class ExamplesInteractiveServer(
 
             val inlineResult = if (validateInline) {
                 logger.log(System.lineSeparator() + "VALIDATING INLINE EXAMPLES" + System.lineSeparator())
-                validateInlineExamples(feature)
+                validateInlineExamples(
+                    ExamplesInteractiveServer.ScenarioFilter("", "/hub,/listener,-> 202").filter(feature)
+                )
             } else null
 
             val externalResult = if(validateExternal) {

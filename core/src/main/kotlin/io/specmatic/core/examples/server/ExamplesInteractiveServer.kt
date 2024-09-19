@@ -463,8 +463,8 @@ class ExamplesInteractiveServer(
                     is Result.Success -> example.file to ""
                     is Result.Failure -> {
                         val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs("").none { breadCrumb ->
-                            breadCrumb.contains("REQUEST.$PATH_BREAD_CRUMB")
-                                    || breadCrumb.contains("REQUEST.$METHOD_BREAD_CRUMB")
+                            breadCrumb.contains(PATH_BREAD_CRUMB)
+                                    || breadCrumb.contains(METHOD_BREAD_CRUMB)
                                     || breadCrumb.contains("REQUEST.HEADERS.Content-Type")
                                     || breadCrumb.contains("STATUS")
                         }

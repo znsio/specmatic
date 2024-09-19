@@ -711,4 +711,54 @@ internal class HttpRequestPatternTest {
 
         assertThat(testDescriptions.count { it.matches(Regex("^.*HEADER.*enum.*$")) }).isEqualTo(4)
     }
+
+    @Test
+    fun `a response that does not match response content-type should not go deeper`() {
+        val openApiYAMLSpecWithEnumInQueryParamAs = """
+            openapi: 3.0.0
+            info:
+              title: Test API
+              version: 1.0.0
+            paths:
+              /:
+                post:
+                  requestBody:
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: string
+                  responses:
+                    '200':
+                      description: OK
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - jsonKeyThatShouldNotAppearInError
+                            properties:
+                              jsonKeyThatShouldNotAppearInError:
+                                type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openApiYAMLSpecWithEnumInQueryParamAs, "").toFeature()
+
+        val matchResult = feature.matchResult(HttpRequest("POST", "/", headers = mapOf("Content-Type" to "application/json"), body = parsedJSONObject("""{"id": "abc123"}""")), HttpResponse(200, headers = mapOf("Content-Type" to "application/patch+json"), body = parsedJSONObject("""{"jsonKeyThatShouldNotAppearInError": "abc123"}""")))
+
+        assertThat(matchResult.isSuccess()).isFalse()
+
+        println(matchResult.reportString())
+
+        assertThat(matchResult.reportString())
+            .contains("Content-Type")
+            .contains("application/json")
+            .contains("application/patch+json")
+            .doesNotContain("jsonKeyThatShouldNotAppearInError")
+    }
+
 }

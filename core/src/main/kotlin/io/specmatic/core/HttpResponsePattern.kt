@@ -100,7 +100,14 @@ data class HttpResponsePattern(
     private fun matchHeaders(parameters: Pair<HttpResponse, Resolver>): MatchingResult<Triple<HttpResponse, Resolver, List<Result.Failure>>> {
         val (response, resolver) = parameters
         return when (val result = headersPattern.matches(response.headers, resolver)) {
-            is Result.Failure -> MatchSuccess(Triple(response, resolver, listOf(result)))
+            is Result.Failure -> {
+                val failureReason = result.traverseFailureReason()
+
+                if(failureReason == FailureReason.ContentTypeMismatch)
+                    MatchFailure(result)
+                else
+                    MatchSuccess(Triple(response, resolver, listOf(result)))
+            }
             else -> MatchSuccess(Triple(response, resolver, emptyList()))
         }
     }

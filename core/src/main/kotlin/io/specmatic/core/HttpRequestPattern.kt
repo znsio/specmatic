@@ -161,6 +161,7 @@ data class HttpRequestPattern(
         return when (val result = this.headersPattern.matches(headers, headersResolver ?: defaultResolver)) {
             is Failure -> {
                 val failureReason = result.traverseFailureReason()
+
                 if(failureReason == FailureReason.ContentTypeMismatch)
                     MatchFailure(result)
                 else

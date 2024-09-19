@@ -126,7 +126,7 @@ class ExamplesCommand : Callable<Unit> {
 
                     if(internalResult != null) {
                         logger.log("      " + internalResult.reportString())
-
+                        logger.log(System.lineSeparator() + "Inline example(s) had errors" + System.lineSeparator())
                     }
 
                     if(externalResults != null) {

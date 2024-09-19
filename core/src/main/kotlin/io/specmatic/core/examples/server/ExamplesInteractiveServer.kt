@@ -353,7 +353,6 @@ class ExamplesInteractiveServer(
             }
 
             val inlineResult = if (validateInline) {
-                logger.log(System.lineSeparator() + "VALIDATING INLINE EXAMPLES" + System.lineSeparator())
                 validateInlineExamples(feature)
             } else null
 

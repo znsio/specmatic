@@ -6791,6 +6791,56 @@ paths:
     }
 
     @Test
+    fun `null type should translate to null when found in oneOf with enum type`() {
+        val contract = OpenApiSpecification.fromYAML(
+            """
+---
+openapi: "3.0.1"
+info:
+  title: "Person API"
+  version: "1"
+paths:
+  /person:
+    post:
+      summary: "Add person by id"
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+              - "type"
+              - "id"
+              properties:
+                id:
+                  type: "string"
+                type:
+                  oneOf:
+                    - type: string
+                      enum:
+                        - HUMAN
+                        - INHUMAN
+                    - type: "null" 
+      responses:
+        200:
+          description: "Add person by id"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+""".trimIndent(), ""
+        ).toFeature()
+
+        val requestBodyType = contract.scenarios.first().httpRequestPattern.body as JSONObjectPattern
+        val typeType = requestBodyType.pattern["type"] as AnyPattern
+
+        assertThat(typeType.pattern).hasSize(2)
+        assertThat(NullPattern).isIn(typeType.pattern)
+        assertThat(EnumPattern::class).isIn(typeType.pattern.map { it::class })
+    }
+
+    @Test
     fun `should be possible to have two stubs of authorization header with different values`() {
         val specification = """
             openapi: 3.0.1

@@ -1428,7 +1428,7 @@ class OpenApiSpecification(
 
                     pattern
                 } else if (schema.oneOf != null) {
-                    val candidatePatterns = schema.oneOf.filterNot { nullableEmptyObject(it) }.map { componentSchema ->
+                    val candidatePatterns = schema.oneOf.filterNot { isNullable(it) }.map { componentSchema ->
                         val (componentName, schemaToProcess) =
                             if (componentSchema.`$ref` != null)
                                 resolveReferenceToSchema(componentSchema.`$ref`)
@@ -1439,7 +1439,7 @@ class OpenApiSpecification(
                     }
 
                     val nullable =
-                        if (schema.oneOf.any { nullableEmptyObject(it) }) listOf(NullPattern) else emptyList()
+                        if (schema.oneOf.any { isNullable(it) }) listOf(NullPattern) else emptyList()
 
                     AnyPattern(candidatePatterns.plus(nullable), discriminatorProperty =  schema.discriminator?.propertyName, discriminatorValues = schema.discriminator?.let { it.mapping.keys.toSet() }.orEmpty())
                 } else if (schema.anyOf != null) {
@@ -1561,7 +1561,8 @@ class OpenApiSpecification(
         return pattern
     }
 
-    private fun nullableEmptyObject(schema: Schema<*>): Boolean {
+    private fun isNullable(schema: Schema<*>): Boolean {
+         if(schema.type == "null") return true
         return schema is ObjectSchema && schema.nullable == true
     }
 

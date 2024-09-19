@@ -8131,7 +8131,6 @@ paths:
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 
-    @Disabled("With this implementation, all the response examples will be taken into consideration. Where does this test stand then?")
     @Test
     fun `400 status named response examples with no corresponding named request example should be ignored`() {
         val feature = OpenApiSpecification.fromYAML(
@@ -8170,7 +8169,7 @@ paths:
             }
         })
 
-        assertThat(results.testCount).isEqualTo(2)
+        assertThat(results.testCount).isEqualTo(1)
         assertThat(results.success()).isTrue()
     }
 

@@ -85,6 +85,20 @@ class ExamplesCommand : Callable<Unit> {
         @Option(names = ["--debug"], description = ["Debug logs"])
         var verbose = false
 
+        @Option(
+            names = ["--filter-name"],
+            description = ["Validate examples of only APIs with this value in their name"],
+            defaultValue = "\${env:SPECMATIC_FILTER_NAME}"
+        )
+        var filterName: String = ""
+
+        @Option(
+            names = ["--filter-not-name"],
+            description = ["Validate examples of only APIs which do not have this value in their name"],
+            defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}"
+        )
+        var filterNotName: String = ""
+
         override fun call() {
             if (!contractFile.exists())
                 exitWithMessage("Could not find file ${contractFile.path}")
@@ -101,7 +115,9 @@ class ExamplesCommand : Callable<Unit> {
                     exitProcess(1)
                 }
             } else {
-                val (internalResult, externalResults) = ExamplesInteractiveServer.validateAll(contractFile)
+                val (internalResult, externalResults) = ExamplesInteractiveServer.validateAll(contractFile,
+                    ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName)
+                )
 
                 val hasFailures = internalResult is Result.Failure || externalResults?.any { it.value is Result.Failure } == true
 

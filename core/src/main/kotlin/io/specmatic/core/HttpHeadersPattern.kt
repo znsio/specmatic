@@ -49,7 +49,6 @@ data class HttpHeadersPattern(
                 return MatchFailure(
                     Result.Failure(
                         resolver.mismatchMessages.mismatchMessage(contentType, contentTypeHeaderValue),
-//                        "Content-Type header mismatch, expected \"$contentType\", found \"$contentTypeHeaderValue\"",
                         breadCrumb = "Content-Type",
                         failureReason = FailureReason.ContentTypeMismatch
                     )

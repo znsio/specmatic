@@ -89,8 +89,6 @@ data class HttpResponsePattern(
 
         val (response, _) = parameters
 
-        val body = response.body
-
         return when (response.status) {
             status -> MatchSuccess(parameters)
             else -> MatchFailure(mismatchResult("status $status", "status ${response.status}").copy(breadCrumb = "STATUS", failureReason = FailureReason.StatusMismatch))

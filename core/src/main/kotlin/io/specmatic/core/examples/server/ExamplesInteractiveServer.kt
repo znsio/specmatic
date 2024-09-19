@@ -25,7 +25,6 @@ import io.specmatic.stub.HttpStubData
 import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
-import java.util.*
 import kotlin.system.exitProcess
 
 class ExamplesInteractiveServer(
@@ -458,15 +457,15 @@ class ExamplesInteractiveServer(
 
         fun getExistingExampleFile(scenario: Scenario, examples: List<ExampleFromFile>): Pair<File, String>? {
             return examples.firstNotNullOfOrNull { example ->
-                val response = example.response ?: return@firstNotNullOfOrNull null
+                val response = example.response
 
                 when (val matchResult = scenario.matchesMock(example.request, response)) {
                     is Result.Success -> example.file to ""
                     is Result.Failure -> {
-                        val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs().none { breadCrumb ->
-                            breadCrumb.contains(PATH_BREAD_CRUMB)
-                                    || breadCrumb.contains(METHOD_BREAD_CRUMB)
-                                    || breadCrumb.contains("Content-Type")
+                        val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs("").none { breadCrumb ->
+                            breadCrumb.contains("REQUEST.$PATH_BREAD_CRUMB")
+                                    || breadCrumb.contains("REQUEST.$METHOD_BREAD_CRUMB")
+                                    || breadCrumb.contains("REQUEST.HEADERS.Content-Type")
                                     || breadCrumb.contains("STATUS")
                         }
                         if (isFailureRelatedToScenario) example.file to matchResult.reportString() else null

@@ -181,7 +181,7 @@ class StubCommand : Callable<Unit> {
     private fun startServer() {
         val workingDirectory = WorkingDirectory()
         if(strictMode) exitIfInvalidExamplesDirExists(exampleDirs)
-        val stubData = stubLoaderEngine.loadStubs(contractSources, exampleDirs, specmaticConfigPath)
+        val stubData = stubLoaderEngine.loadStubs(contractSources, exampleDirs, specmaticConfigPath, strictMode)
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 

@@ -104,7 +104,7 @@ internal fun createStub(
     if(strict) exitIfInvalidExamplesDirExists(dataDirPaths)
 
     val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
-    val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths, specmaticConfig)
+    val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths, specmaticConfig, strict)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
 
@@ -274,7 +274,12 @@ private fun logIgnoredFiles(implicitDataDir: File) {
     }
 }
 
-fun loadContractStubsFromFiles(contractPathDataList: List<ContractPathData>, dataDirPaths: List<String>, specmaticConfig: SpecmaticConfig): List<Pair<Feature, List<ScenarioStub>>> {
+fun loadContractStubsFromFiles(
+    contractPathDataList: List<ContractPathData>,
+    dataDirPaths: List<String>,
+    specmaticConfig: SpecmaticConfig,
+    strictMode: Boolean = false
+): List<Pair<Feature, List<ScenarioStub>>> {
     val contactPathsString = contractPathDataList.joinToString(System.lineSeparator()) { it.path }
     consoleLog(StringLog("Loading the following contracts:${System.lineSeparator()}$contactPathsString"))
     consoleLog(StringLog(""))
@@ -283,12 +288,13 @@ fun loadContractStubsFromFiles(contractPathDataList: List<ContractPathData>, dat
         loadIfOpenAPISpecification(contractPathData, specmaticConfig)
     }
 
-    return loadExpectationsForFeatures(features, dataDirPaths)
+    return loadExpectationsForFeatures(features, dataDirPaths, strictMode)
 }
 
 fun loadExpectationsForFeatures(
     features: List<Pair<String, Feature>>,
-    dataDirPaths: List<String>
+    dataDirPaths: List<String>,
+    strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
     val dataDirFileList = allDirsInTree(dataDirPaths).sorted()
 
@@ -308,7 +314,7 @@ fun loadExpectationsForFeatures(
         }
     }
 
-    return loadContractStubs(features, mockData)
+    return loadContractStubs(features, mockData, strictMode)
 }
 
 private fun printDataFiles(dataFiles: List<File>) {
@@ -374,7 +380,11 @@ fun stubMatchErrorMessage(
     }
 }
 
-fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair<String, ScenarioStub>>): List<Pair<Feature, List<ScenarioStub>>> {
+fun loadContractStubs(
+    features: List<Pair<String, Feature>>,
+    stubData: List<Pair<String, ScenarioStub>>,
+    strictMode: Boolean = false
+): List<Pair<Feature, List<ScenarioStub>>> {
     val contractInfoFromStubs: List<Pair<Feature, List<ScenarioStub>>> = stubData.mapNotNull { (stubFile, stub) ->
         val matchResults = features.map { (specFile, feature) ->
             try {
@@ -388,9 +398,8 @@ fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair
         when (val feature = matchResults.firstNotNullOfOrNull { it.feature }) {
             null -> {
                 val errorMessage = stubMatchErrorMessage(matchResults, stubFile).prependIndent("  ")
-
-                consoleLog(StringLog(errorMessage))
-
+                if(strictMode) exitWithMessage(errorMessage)
+                else consoleLog(StringLog(errorMessage))
                 null
             }
             else -> Pair(feature, stub)

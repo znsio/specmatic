@@ -13,7 +13,12 @@ import java.io.File
 
 @Component
 class StubLoaderEngine {
-    fun loadStubs(contractPathDataList: List<ContractPathData>, dataDirs: List<String>, specmaticConfigPath: String? = null): List<Pair<Feature, List<ScenarioStub>>> {
+    fun loadStubs(
+        contractPathDataList: List<ContractPathData>,
+        dataDirs: List<String>,
+        specmaticConfigPath: String? = null,
+        strictMode: Boolean
+    ): List<Pair<Feature, List<ScenarioStub>>> {
         contractPathDataList.forEach { contractPath ->
             if(!File(contractPath.path).exists()) {
                 logger.log("$contractPath does not exist.")
@@ -24,7 +29,7 @@ class StubLoaderEngine {
 
         return when {
             dataDirs.isNotEmpty() -> {
-                loadContractStubsFromFiles(contractPathDataList, dataDirs, specmaticConfig)
+                loadContractStubsFromFiles(contractPathDataList, dataDirs, specmaticConfig, strictMode)
             }
             else -> loadContractStubsFromImplicitPaths(contractPathDataList, specmaticConfig)
         }

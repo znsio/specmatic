@@ -9110,6 +9110,86 @@ paths:
         assertThat(responseBody.string).isEqualTo("success")
     }
 
+    @Test
+    fun `error message when a request spec has two media types and the real request does not match content type of one and payload of the other`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.3
+info:
+  title: example api
+  description: an api with operations that have no response bodies or headers.
+  version: 1.0.0
+  contact:
+    name: jack
+servers:
+  - url: http://prod
+tags:
+  - name: mod
+  - name: read
+paths:
+  /ping:
+    post:
+      summary: Just ping to see if the service responds
+      operationId: ping
+      description: "Ping"
+      tags:
+        - mod
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+              properties:
+                id:
+                  type: string
+          application/merge-patch+json:
+            schema:
+              type: array
+              items:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                PING:
+                  value: success
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val request = HttpRequest(
+            "POST",
+            "/ping",
+            headers = mapOf("Content-Type" to "application/json"),
+            body = parsedJSONObject("""{"id": 10}""")
+        )
+
+        val response = HttpResponse(
+            200,
+            headers = mapOf("Content-Type" to "text/plain"),
+            body = StringValue("success")
+        )
+
+        val result = feature.matchResult(request, response)
+
+        assertThat(result.reportString())
+            .doesNotContain("Content-Type")
+            .doesNotContain("merge-patch-json")
+            .doesNotContain("application/json")
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

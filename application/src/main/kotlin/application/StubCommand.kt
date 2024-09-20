@@ -10,6 +10,7 @@ import io.specmatic.core.utilities.exitIfAnyDoNotExist
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.HttpClientFactory
+import io.specmatic.stub.exitIfInvalidExamplesDirExists
 import org.springframework.beans.factory.annotation.Autowired
 import picocli.CommandLine.*
 import java.io.File
@@ -179,6 +180,7 @@ class StubCommand : Callable<Unit> {
 
     private fun startServer() {
         val workingDirectory = WorkingDirectory()
+        if(strictMode) exitIfInvalidExamplesDirExists(exampleDirs)
         val stubData = stubLoaderEngine.loadStubs(contractSources, exampleDirs, specmaticConfigPath)
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)

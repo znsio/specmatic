@@ -10,6 +10,7 @@ import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.contractStubPaths
 import io.specmatic.core.utilities.examplesDirFor
 import io.specmatic.core.utilities.exitIfDoesNotExist
+import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import org.yaml.snakeyaml.Yaml
@@ -99,6 +100,8 @@ internal fun createStub(
     val configFileName = getConfigFileName()
     exitIfDoesNotExist("config file", configFileName)
     val contractPathData = contractStubPaths(configFileName)
+
+    if(strict) exitIfInvalidExamplesDirExists(dataDirPaths)
 
     val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
     val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths, specmaticConfig)
@@ -477,3 +480,9 @@ fun isOpenAPI(path: String): Boolean =
         false
     }
 
+fun exitIfInvalidExamplesDirExists(exampleDirPaths: List<String>) {
+    val invalidDataDirs = exampleDirPaths.filter { File(it).exists().not() || File(it).isDirectory.not() }
+    if (invalidDataDirs.isNotEmpty()) {
+        exitWithMessage("The following example directories are invalid: ${invalidDataDirs.joinToString(", ")}. Please provide the valid example directories.")
+    }
+}

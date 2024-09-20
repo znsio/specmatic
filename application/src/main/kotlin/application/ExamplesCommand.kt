@@ -7,6 +7,7 @@ import io.specmatic.core.log.*
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.NoMatchingScenario
+import io.specmatic.mock.loadDictionary
 import picocli.CommandLine.*
 import java.io.File
 import java.lang.Thread.sleep
@@ -47,6 +48,9 @@ class ExamplesCommand : Callable<Unit> {
     @Option(names = ["--debug"], description = ["Debug logs"])
     var verbose = false
 
+    @Option(names = ["--dictionary"], description = ["External Dictionary File Path"])
+    var dictFilePath: String? = null
+
     override fun call() {
         if (contractFile == null) {
             println("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
@@ -56,12 +60,16 @@ class ExamplesCommand : Callable<Unit> {
             exitWithMessage("Could not find file ${contractFile!!.path}")
 
         configureLogger(this.verbose)
+        val externalDictionary = dictFilePath?.let {
+            loadDictionary(it)
+        } ?: emptyMap()
 
         try {
             ExamplesInteractiveServer.generate(
                 contractFile!!,
                 ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName),
-                extensive
+                extensive,
+                externalDictionary
             )
         } catch (e: Throwable) {
             logger.log(e)
@@ -177,10 +185,17 @@ class ExamplesCommand : Callable<Unit> {
         @Option(names = ["--debug"], description = ["Debug logs"])
         var verbose = false
 
+        @Option(names = ["--dictionary"], description = ["External Dictionary File Path"])
+        var dictFilePath: String? = null
+
         var server: ExamplesInteractiveServer? = null
 
         override fun call() {
             configureLogger(verbose)
+
+            val externalDictionary = dictFilePath?.let {
+                loadDictionary(it)
+            } ?: emptyMap()
 
             try {
                 if (contractFile != null && !contractFile!!.exists())

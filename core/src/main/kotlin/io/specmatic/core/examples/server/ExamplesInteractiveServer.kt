@@ -18,6 +18,7 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.*
+import io.specmatic.core.value.*
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
@@ -32,7 +33,8 @@ class ExamplesInteractiveServer(
     private val serverPort: Int,
     private val inputContractFile: File? = null,
     private val filterName: String,
-    private val filterNotName: String
+    private val filterNotName: String,
+    private val externalDictionary: Map<String, Value>
 ) : Closeable {
     private var contractFileFromRequest: File? = null
 
@@ -79,7 +81,8 @@ class ExamplesInteractiveServer(
                             request.method,
                             request.path,
                             request.responseStatusCode,
-                            request.contentType
+                            request.contentType,
+                            externalDictionary
                         )
 
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExample))
@@ -246,7 +249,7 @@ class ExamplesInteractiveServer(
     }
 
     companion object {
-        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean): List<String> {
+        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean, externalDictionary: Map<String, Value>): List<String> {
             try {
                 val feature: Feature = parseContractFileToFeature(contractFile).let { feature ->
                     val filteredScenarios = if (!extensive) {
@@ -284,10 +287,12 @@ class ExamplesInteractiveServer(
                     val generatedScenario = scenario.generateTestScenarios(DefaultStrategies).first().value
 
                     val request = generatedScenario.httpRequestPattern.generate(generatedScenario.resolver)
+                    val updatedRequest = request.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
+
                     val response = generatedScenario.httpResponsePattern.generateResponse(generatedScenario.resolver).cleanup()
+                    val updatedResponse = response.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
 
-                    val scenarioStub = ScenarioStub(request, response)
-
+                    val scenarioStub = ScenarioStub(updatedRequest, updatedResponse)
                     val stubJSON = scenarioStub.toJSON()
                     val uniqueNameForApiOperation =
                         uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
@@ -313,7 +318,8 @@ class ExamplesInteractiveServer(
             method: String,
             path: String,
             responseStatusCode: Int,
-            contentType: String? = null
+            contentType: String? = null,
+            externalDictionary: Map<String, Value>
         ): String? {
             val feature = parseContractFileToFeature(contractFile)
             val scenario = feature.scenarios.firstOrNull {
@@ -328,12 +334,14 @@ class ExamplesInteractiveServer(
             else examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
-            val response = feature.lookupResponse(scenario).cleanup()
-            val scenarioStub = ScenarioStub(request, response)
+            val updatedRequest = request.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
 
+            val response = feature.lookupResponse(scenario).cleanup()
+            val updatedResponse = response.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
+
+            val scenarioStub = ScenarioStub(updatedRequest, updatedResponse)
             val stubJSON = scenarioStub.toJSON()
-            val uniqueNameForApiOperation =
-                uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
+            val uniqueNameForApiOperation = uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
 
             val file = examplesDir.resolve("${uniqueNameForApiOperation}.json")
             println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")

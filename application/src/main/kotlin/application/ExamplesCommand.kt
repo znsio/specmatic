@@ -166,31 +166,29 @@ class ExamplesCommand : Callable<Unit> {
                     println()
                     logger.log("=============== Validation Results ===============")
 
-                    if(inlineExampleValidationResults.isNotEmpty()) {
-                        printValidationResult(inlineExampleValidationResults)
-                    }
-
-                    if(externalExampleValidationResults.isNotEmpty()) {
-                        printValidationResult(externalExampleValidationResults)
-                    }
+                    printValidationResult(inlineExampleValidationResults, "Inline example")
+                    printValidationResult(externalExampleValidationResults, "Example file")
 
                     exitProcess(1)
                 }
             }
         }
 
-        private fun printValidationResult(inlineExampleValidationResults: Map<String, Result>) {
-            inlineExampleValidationResults.forEach { (exampleFileName, result) ->
+        private fun printValidationResult(validationResults: Map<String, Result>, tag: String) {
+            if(validationResults.isEmpty())
+                return
+
+            validationResults.forEach { (exampleFileName, result) ->
                 if (!result.isSuccess()) {
-                    logger.log(System.lineSeparator() + "Example File $exampleFileName has following validation error(s):")
+                    logger.log(System.lineSeparator() + "$tag $exampleFileName has following validation error(s):")
                     logger.log(result.reportString())
                 }
             }
 
             println()
             logger.log("=============== Validation Summary ===============")
-            logger.log(Results(inlineExampleValidationResults.values.toList()).summary())
-            logger.log("=======================================")
+            logger.log(Results(validationResults.values.toList()).summary())
+            logger.log("==================================================")
         }
     }
 

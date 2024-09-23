@@ -3,7 +3,7 @@ package application
 import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validate2
+import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validate
 import io.specmatic.core.log.*
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
@@ -111,7 +111,7 @@ class ExamplesCommand : Callable<Unit> {
 
             if (exampleFile != null) {
                 try {
-                    Result.fromResults(validate2(contractFile, exampleFile).values.filterIsInstance<Result.Failure>()).throwOnFailure()
+                    Result.fromResults(validate(contractFile, exampleFile).values.filterIsInstance<Result.Failure>()).throwOnFailure()
 
                     logger.log("The provided example ${exampleFile.name} is valid.")
                 } catch (e: ContractException) {
@@ -137,7 +137,7 @@ class ExamplesCommand : Callable<Unit> {
                         }
                     }
 
-                    ExamplesInteractiveServer.validate2(feature, examples = inlineExamples, scenarioFilter = scenarioFilter)
+                    ExamplesInteractiveServer.validate(feature, examples = inlineExamples, scenarioFilter = scenarioFilter)
                 } else emptyMap()
 
                 val externalExampleValidationResults = if(validateExternal) {
@@ -157,7 +157,7 @@ class ExamplesCommand : Callable<Unit> {
                         listOf(ScenarioStub.readFromFile(it.value))
                     }
 
-                    ExamplesInteractiveServer.validate2(feature, examples = externalExamples, scenarioFilter = scenarioFilter)
+                    ExamplesInteractiveServer.validate(feature, examples = externalExamples, scenarioFilter = scenarioFilter)
                 } else emptyMap()
 
                 val hasFailures = inlineExampleValidationResults.isNotEmpty() || externalExampleValidationResults.isNotEmpty()

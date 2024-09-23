@@ -93,12 +93,12 @@ class ExamplesInteractiveServer(
                     try {
                         val contractFile = getContractFile()
                         val validationResults = try {
-                            validate(contractFile, File(request.exampleFile))
+                            throwExceptionIfExampleIsInvalid(contractFile, request.exampleFile)
                             ValidateExampleResponse(request.exampleFile)
                         } catch (e: FileNotFoundException) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
-                        } catch (e: NoMatchingScenario) {
-                            ValidateExampleResponse(request.exampleFile, e.msg ?: "Something went wrong")
+                        } catch (e: ContractException) {
+                            ValidateExampleResponse(request.exampleFile, exceptionCauseMessage(e))
                         } catch (e: Exception) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
                         }
@@ -113,24 +113,26 @@ class ExamplesInteractiveServer(
                     try {
                         val contractFile = getContractFile()
                         val validationResults = request.map {
+                            val exampleFilePath = it.exampleFile
+
                             try {
-                                validate(contractFile, File(it.exampleFile))
+                                throwExceptionIfExampleIsInvalid(contractFile, exampleFilePath)
                                 ValidateExampleResponseV2(
                                     ValidateExampleVerdict.SUCCESS,
                                     "The provided example is valid",
-                                    it.exampleFile
+                                    exampleFilePath
                                 )
-                            } catch(e: NoMatchingScenario) {
+                            } catch (e: ContractException) {
                                 ValidateExampleResponseV2(
                                     ValidateExampleVerdict.FAILURE,
-                                    e.msg ?: "Something went wrong",
-                                    it.exampleFile
+                                    exceptionCauseMessage(e),
+                                    exampleFilePath
                                 )
-                            } catch(e: Exception) {
+                            } catch (e: Exception) {
                                 ValidateExampleResponseV2(
                                     ValidateExampleVerdict.FAILURE,
                                     e.message ?: "An unexpected error occurred",
-                                    it.exampleFile
+                                    exampleFilePath
                                 )
                             }
                         }
@@ -164,6 +166,11 @@ class ExamplesInteractiveServer(
             this.host = serverHost
             this.port = serverPort
         }
+    }
+
+    private fun throwExceptionIfExampleIsInvalid(contractFile: File, exampleFilePath: String) {
+        val results = validate(contractFile, File(exampleFilePath))
+        Result.fromResults(results.values.map { it }).throwOnFailure()
     }
 
     private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {
@@ -341,12 +348,12 @@ class ExamplesInteractiveServer(
             return file.absolutePath
         }
 
-        fun validate2(contractFile: File, exampleFile: File? = null, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+        fun validate(contractFile: File, exampleFile: File? = null, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
             val feature = parseContractFileToFeature(contractFile)
-            return validate2(feature, exampleFile, examples, scenarioFilter)
+            return validate(feature, exampleFile, examples, scenarioFilter)
         }
 
-        fun validate2(feature: Feature, exampleFile: File? = null, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+        fun validate(feature: Feature, exampleFile: File? = null, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
             if(exampleFile != null) {
                 val scenarioStub = ScenarioStub.readFromFile(exampleFile)
 
@@ -456,16 +463,6 @@ class ExamplesInteractiveServer(
                 else
                     it
             }
-        }
-
-        fun validate(contractFile: File, exampleFile: File) {
-            val feature = parseContractFileToFeature(contractFile).also {
-                validateInlineExamples(it)
-            }
-
-            val scenarioStub = ScenarioStub.readFromFile(exampleFile)
-
-            validateExample(feature, scenarioStub)
         }
 
         private fun validateExample(

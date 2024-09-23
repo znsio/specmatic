@@ -221,7 +221,7 @@ class ExamplesInteractiveServer(
         )
     }
 
-    class ScenarioFilter(filterName: String, filterNotName: String) {
+    class ScenarioFilter(filterName: String = "", filterNotName: String = "") {
         private val filterNameTokens = if(filterName.isNotBlank()) {
             filterName.trim().split(",").map { it.trim() }
         } else emptyList()
@@ -341,6 +341,43 @@ class ExamplesInteractiveServer(
             return file.absolutePath
         }
 
+        fun validate2(contractFile: File, exampleFile: File? = null, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+            val feature = parseContractFileToFeature(contractFile)
+            return validate2(feature, exampleFile, examples, scenarioFilter)
+        }
+
+        fun validate2(feature: Feature, exampleFile: File? = null, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+            if(exampleFile != null) {
+                val scenarioStub = ScenarioStub.readFromFile(exampleFile)
+
+                try {
+                    validateExample(feature, scenarioStub)
+                    return mapOf(exampleFile.path to Result.Success())
+                } catch(e: NoMatchingScenario) {
+                    return mapOf(exampleFile.path to e.results.toResultIfAny())
+                }
+            }
+
+            val updatedFeature = scenarioFilter.filter(feature)
+
+            val results = examples.mapValues { (name, exampleList) ->
+                logger.log("Validating ${name}")
+
+                exampleList.map { example ->
+                    try {
+                        validateExample(updatedFeature, example)
+                        Result.Success()
+                    } catch(e: NoMatchingScenario) {
+                        e.results.toResultIfAny()
+                    }
+                }.let {
+                    Result.fromResults(it)
+                }
+            }
+
+            return results
+        }
+
         fun validateAll(contractFile: File, scenarioFilter: ScenarioFilter): Pair<Result?, Map<String, Result>?> {
             val feature = parseContractFileToFeature(contractFile).let {
                 scenarioFilter.filter(it)
@@ -377,13 +414,19 @@ class ExamplesInteractiveServer(
         ): Map<String, Result> {
             logger.log("Validating examples in ${examplesDir.path}")
 
-            return examplesDir.walkTopDown().map { file: File ->
-                if (file.isDirectory)
+            return examplesDir.walkTopDown().map { exampleFile: File ->
+                if (exampleFile.isDirectory)
                     return@map null
 
-                logger.log("Validating ${file.path}")
+                logger.log("Validating ${exampleFile.path}")
 
-                val scenarioStub = ScenarioStub.readFromFile(file)
+                val scenarioStub = ScenarioStub.readFromFile(exampleFile)
+
+                try {
+                    validateExample(feature, scenarioStub)
+                } catch(e: NoMatchingScenario) {
+
+                }
 
                 val result: Pair<Pair<Result.Success, List<HttpStubData>>?, NoMatchingScenario?> =
                     HttpStub.setExpectation(scenarioStub, feature, InteractiveExamplesMismatchMessages)
@@ -391,14 +434,14 @@ class ExamplesInteractiveServer(
                 val noMatchingScenario = result.second
 
                 if (validationResult != null) {
-                    logger.log("Example validation successful for ${file.path}")
-                    file.canonicalPath to Result.Success()
+                    logger.log("Example validation successful for ${exampleFile.path}")
+                    exampleFile.canonicalPath to Result.Success()
                 } else {
-                    logger.log("Example validation failed for ${file.path}")
+                    logger.log("Example validation failed for ${exampleFile.path}")
                     val failures = noMatchingScenario?.results?.withoutFluff()?.results ?: emptyList()
                     val failureResults = Results(failures).withoutFluff()
                     val cleanedUpFailure = getCleanedUpFailure(failureResults, noMatchingScenario)
-                    file.canonicalPath to cleanedUpFailure
+                    exampleFile.canonicalPath to cleanedUpFailure
                 }
             }.filterNotNull().toMap()
         }
@@ -415,20 +458,27 @@ class ExamplesInteractiveServer(
             }
         }
 
-        fun validate(contractFile: File, exampleFile: File): List<HttpStubData> {
+        fun validate(contractFile: File, exampleFile: File) {
             val feature = parseContractFileToFeature(contractFile).also {
                 validateInlineExamples(it)
             }
 
             val scenarioStub = ScenarioStub.readFromFile(exampleFile)
 
+            validateExample(feature, scenarioStub)
+        }
+
+        private fun validateExample(
+            feature: Feature,
+            scenarioStub: ScenarioStub
+        ) {
             val result: Pair<Pair<Result.Success, List<HttpStubData>>?, NoMatchingScenario?> =
                 HttpStub.setExpectation(scenarioStub, feature, InteractiveExamplesMismatchMessages)
             val validationResult = result.first
             val noMatchingScenario = result.second
 
-            if(validationResult == null) {
-                val failures =  noMatchingScenario?.results?.withoutFluff()?.results ?: emptyList()
+            if (validationResult == null) {
+                val failures = noMatchingScenario?.results?.withoutFluff()?.results ?: emptyList()
 
                 val failureResults = Results(failures).withoutFluff()
                 throw NoMatchingScenario(
@@ -437,8 +487,6 @@ class ExamplesInteractiveServer(
                     msg = failureResults.report(scenarioStub.request)
                 )
             }
-
-            return validationResult.second
         }
 
         private fun validateInlineExamples(it: Feature): Result {

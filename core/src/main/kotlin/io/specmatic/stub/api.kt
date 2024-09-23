@@ -284,6 +284,12 @@ fun loadContractStubsFromFiles(
     consoleLog(StringLog("Loading the following contracts:${System.lineSeparator()}$contactPathsString"))
     consoleLog(StringLog(""))
 
+    val invalidContractPaths = contractPathDataList.filter { File(it.path).exists().not() }.map { it.path }
+    if(invalidContractPaths.isNotEmpty() && strictMode) {
+        val exitMessage = "Error loading the following contracts since they do not exist:${System.lineSeparator()}${invalidContractPaths.joinToString(System.lineSeparator())}"
+        throw Exception(exitMessage)
+    }
+
     val features = contractPathDataList.mapNotNull { contractPathData ->
         loadIfOpenAPISpecification(contractPathData, specmaticConfig)
     }

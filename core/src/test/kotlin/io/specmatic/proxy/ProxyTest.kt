@@ -8,6 +8,7 @@ import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.stub.HttpStub
 import io.ktor.http.*
+import io.specmatic.Waiter
 import io.specmatic.mock.DELAY_IN_MILLISECONDS
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -275,7 +276,15 @@ internal class ProxyTest {
                 assertThat(response.statusCodeValue).isEqualTo(202)
                 assertThat(response.body).isEqualTo("Dump process of spec and examples has started in the background")
 
-                Thread.sleep(3000)
+                val waiter = Waiter(1000L, 5000L)
+
+                while(waiter.canWaitForMoreTime()) {
+                    if(fakeFileWriter.receivedContract != null)
+                        break
+
+                    waiter.waitForMoreTime()
+                }
+
                 assertThat(fakeFileWriter.receivedContract?.trim()).startsWith("openapi:")
                 assertThatCode {
                     OpenApiSpecification.fromYAML(

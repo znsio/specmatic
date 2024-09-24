@@ -323,7 +323,8 @@ enum class FailureReason(val fluffLevel: Int, val objectMatchOccurred: Boolean) 
     SOAPActionMismatch(2, false),
     DiscriminatorMismatch(0, true),
     FailedButDiscriminatorMatched(0, true),
-    FailedButObjectTypeMatched(0, true)
+    FailedButObjectTypeMatched(0, true),
+    ScenarioMismatch(2, false)
 }
 
 data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null)

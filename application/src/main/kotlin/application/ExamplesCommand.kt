@@ -4,9 +4,15 @@ import io.specmatic.core.Dictionary
 import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
+import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validate
+import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
+import io.specmatic.core.parseContractFileToFeature
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.exitWithMessage
+import io.specmatic.mock.ScenarioStub
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.loadDictionary
 import picocli.CommandLine.*
@@ -84,7 +90,7 @@ class ExamplesCommand : Callable<Unit> {
         mixinStandardHelpOptions = true,
         description = ["Validate the examples"]
     )
-    class Validate : Callable<Unit> {
+    class Validate : Callable<Int> {
         @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
         lateinit var contractFile: File
 
@@ -108,7 +114,7 @@ class ExamplesCommand : Callable<Unit> {
         )
         var filterNotName: String = ""
 
-        override fun call() {
+        override fun call(): Int {
             if (!contractFile.exists())
                 exitWithMessage("Could not find file ${contractFile.path}")
 
@@ -116,47 +122,82 @@ class ExamplesCommand : Callable<Unit> {
 
             if (exampleFile != null) {
                 try {
-                    ExamplesInteractiveServer.validate(contractFile, exampleFile)
+                    Result.fromResults(validate(contractFile, exampleFile).values.filterIsInstance<Result.Failure>()).throwOnFailure()
+
                     logger.log("The provided example ${exampleFile.name} is valid.")
-                } catch (e: NoMatchingScenario) {
+                } catch (e: ContractException) {
                     logger.log("The provided example ${exampleFile.name} is invalid. Reason:\n")
-                    logger.log(e.msg ?: e.message ?: "")
-                    exitProcess(1)
+                    logger.log(exceptionCauseMessage(e))
+                    return 1
                 }
             } else {
-                val (internalResult, externalResults) = ExamplesInteractiveServer.validateAll(contractFile,
-                    ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName)
-                )
+                val scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName)
 
-                val hasFailures = internalResult is Result.Failure || externalResults?.any { it.value is Result.Failure } == true
+                val (validateInline, validateExternal) = if(!Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") && !Flags.getBooleanValue("IGNORE_INLINE_EXAMPLES")) {
+                    true to true
+                } else {
+                    Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") to Flags.getBooleanValue("IGNORE_INLINE_EXAMPLES")
+                }
+
+                val feature = parseContractFileToFeature(contractFile)
+
+                val inlineExampleValidationResults = if(validateInline) {
+                    val inlineExamples = feature.stubsFromExamples.mapValues {
+                        it.value.map {
+                            ScenarioStub(it.first, it.second)
+                        }
+                    }
+
+                    ExamplesInteractiveServer.validate(feature, examples = inlineExamples, inline = true, scenarioFilter = scenarioFilter)
+                } else emptyMap()
+
+                val externalExampleValidationResults = if(validateExternal) {
+                    val (externalExampleDir, externalExamples) = loadExternalExamples(contractFile)
+
+                    if(!externalExampleDir.exists()) {
+                        logger.log("$externalExampleDir does not exist, did not find any files to validate")
+                        return 1
+                    }
+
+                    if(externalExamples.none()) {
+                        logger.log("No example files found in $externalExampleDir")
+                        return 1
+                    }
+
+                    ExamplesInteractiveServer.validate(feature, examples = externalExamples, scenarioFilter = scenarioFilter)
+                } else emptyMap()
+
+                val hasFailures = inlineExampleValidationResults.any { it.value is Result.Failure } || externalExampleValidationResults.any { it.value is Result.Failure }
 
                 if(hasFailures) {
+                    println()
                     logger.log("=============== Validation Results ===============")
 
-                    if(internalResult != null) {
-                        logger.log("      " + internalResult.reportString())
-                        logger.log(System.lineSeparator() + "Inline example(s) had errors" + System.lineSeparator())
-                    }
+                    printValidationResult(inlineExampleValidationResults, "Inline example")
+                    printValidationResult(externalExampleValidationResults, "Example file")
 
-                    if(externalResults != null) {
-                        externalResults.forEach { (exampleFileName, result) ->
-                            if (!result.isSuccess()) {
-                                logger.log(System.lineSeparator() + "Example File $exampleFileName has following validation error(s):")
-                                logger.log(result.reportString())
-                            }
-                        }
-
-                        logger.log("=============== Validation Summary ===============")
-                        logger.log(Results(externalResults.values.toList()).summary())
-                        logger.log("=======================================")
-                    }
-                }
-
-
-                if (hasFailures) {
-                    exitProcess(1)
+                    return 1
                 }
             }
+
+            return 0
+        }
+
+        private fun printValidationResult(validationResults: Map<String, Result>, tag: String) {
+            if(validationResults.isEmpty())
+                return
+
+            validationResults.forEach { (exampleFileName, result) ->
+                if (!result.isSuccess()) {
+                    logger.log(System.lineSeparator() + "$tag $exampleFileName has the following validation error(s):")
+                    logger.log(result.reportString())
+                }
+            }
+
+            println()
+            logger.log("=============== Validation Summary ===============")
+            logger.log(Results(validationResults.values.toList()).summary())
+            logger.log("""==================================================""")
         }
     }
 

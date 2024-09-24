@@ -627,7 +627,7 @@ data class Scenario(
         return httpResponsePattern.resolveSubstitutions(substitution, response)
     }
 
-    fun matchesTemplate(template: ScenarioStub): Result {
+    fun matchesPartial(template: ScenarioStub): Result {
         val updatedResolver = resolver.copy(findKeyErrorCheck = PARTIAL_KEYCHECK, mockMode = true)
 
         val requestMatch = httpRequestPattern.matches(template.request, updatedResolver, updatedResolver)

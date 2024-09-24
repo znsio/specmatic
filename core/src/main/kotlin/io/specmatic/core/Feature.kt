@@ -473,14 +473,14 @@ data class Feature(
         val dictionaryMap = specmaticConfig.stub.dictionary?.let { loadDictionary(it) } ?: emptyMap()
         val dictionary = Dictionary(dictionaryMap)
 
-        val scenarioStub = scenarioStub.copy(dictionary = dictionary)
+        val scenarioStubWithDictionary = scenarioStub.copy(dictionary = dictionary)
 
         if(scenarios.isEmpty())
             throw ContractException("No scenarios found in feature $name ($path)")
 
-        return if(scenarioStub.partial != null) {
+        return if(scenarioStubWithDictionary.partial != null) {
             val results = scenarios.asSequence().map { scenario ->
-                scenario.matchesTemplate(scenarioStub.partial) to scenario
+                scenario.matchesPartial(scenarioStubWithDictionary.partial) to scenario
             }
 
             val matchingScenario = results.filter { it.first is Result.Success }.map { it.second }.firstOrNull()
@@ -506,30 +506,30 @@ data class Feature(
                     matchingScenario.resolver,
                     responsePattern = responseTypeWithAncestors,
                     scenario = matchingScenario,
-                    partial = scenarioStub.partial.copy(response = scenarioStub.partial.response.substituteDictionaryValues(dictionary)),
-                    data = scenarioStub.data,
-                    dictionary = scenarioStub.dictionary,
-                    examplePath = scenarioStub.filePath
+                    partial = scenarioStubWithDictionary.partial.copy(response = scenarioStubWithDictionary.partial.response.substituteDictionaryValues(scenarioStubWithDictionary.dictionary)),
+                    data = scenarioStubWithDictionary.data,
+                    dictionary = scenarioStubWithDictionary.dictionary,
+                    examplePath = scenarioStubWithDictionary.filePath
                 )
             }
             else {
                 val failures = Results(results.map { it.first }.filterIsInstance<Result.Failure>().toList()).withoutFluff()
 
-                throw NoMatchingScenario(failures, msg = "Could not load partial example ${scenarioStub.filePath}")
+                throw NoMatchingScenario(failures, msg = "Could not load partial example ${scenarioStubWithDictionary.filePath}")
             }
         } else {
             matchingStub(
-                scenarioStub.request,
-                scenarioStub.response,
+                scenarioStubWithDictionary.request,
+                scenarioStubWithDictionary.response,
                 mismatchMessages,
-                scenarioStub.dictionary
+                scenarioStubWithDictionary.dictionary
             ).copy(
-                delayInMilliseconds = scenarioStub.delayInMilliseconds,
-                requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) },
-                stubToken = scenarioStub.stubToken,
-                data = scenarioStub.data,
-                dictionary = scenarioStub.dictionary,
-                examplePath = scenarioStub.filePath
+                delayInMilliseconds = scenarioStubWithDictionary.delayInMilliseconds,
+                requestBodyRegex = scenarioStubWithDictionary.requestBodyRegex?.let { Regex(it) },
+                stubToken = scenarioStubWithDictionary.stubToken,
+                data = scenarioStubWithDictionary.data,
+                dictionary = scenarioStubWithDictionary.dictionary,
+                examplePath = scenarioStubWithDictionary.filePath
             )
         }
     }

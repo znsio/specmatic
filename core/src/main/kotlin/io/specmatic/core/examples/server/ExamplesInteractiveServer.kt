@@ -415,6 +415,18 @@ class ExamplesInteractiveServer(
             return results
         }
 
+        private fun getCleanedUpFailure(
+            failureResults: Results,
+            noMatchingScenario: NoMatchingScenario?
+        ): Results {
+            return failureResults.toResultIfAny().let {
+                if (it.reportString().isBlank())
+                    Results(listOf(Result.Failure(noMatchingScenario?.message ?: "")))
+                else
+                    failureResults
+            }
+        }
+
         private fun validateExample(
             feature: Feature,
             scenarioStub: ScenarioStub
@@ -427,7 +439,9 @@ class ExamplesInteractiveServer(
             if (validationResult == null) {
                 val failures = noMatchingScenario?.results?.withoutFluff()?.results ?: emptyList()
 
-                val failureResults = Results(failures).withoutFluff()
+                val failureResults = Results(failures).withoutFluff().let {
+                    getCleanedUpFailure(it, noMatchingScenario)
+                }
                 throw NoMatchingScenario(
                     failureResults,
                     cachedMessage = failureResults.report(scenarioStub.request),

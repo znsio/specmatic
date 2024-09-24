@@ -80,7 +80,7 @@ class ExamplesCommand : Callable<Unit> {
         mixinStandardHelpOptions = true,
         description = ["Validate the examples"]
     )
-    class Validate : Callable<Unit> {
+    class Validate : Callable<Int> {
         @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
         lateinit var contractFile: File
 
@@ -104,7 +104,7 @@ class ExamplesCommand : Callable<Unit> {
         )
         var filterNotName: String = ""
 
-        override fun call() {
+        override fun call(): Int {
             if (!contractFile.exists())
                 exitWithMessage("Could not find file ${contractFile.path}")
 
@@ -118,7 +118,7 @@ class ExamplesCommand : Callable<Unit> {
                 } catch (e: ContractException) {
                     logger.log("The provided example ${exampleFile.name} is invalid. Reason:\n")
                     logger.log(exceptionCauseMessage(e))
-                    exitProcess(1)
+                    return 1
                 }
             } else {
                 val scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName)
@@ -146,12 +146,12 @@ class ExamplesCommand : Callable<Unit> {
 
                     if(!externalExampleDir.exists()) {
                         logger.log("$externalExampleDir does not exist, did not find any files to validate")
-                        exitProcess(1)
+                        return 1
                     }
 
                     if(externalExamples.none()) {
                         logger.log("No example files found in $externalExampleDir")
-                        exitProcess(1)
+                        return 1
                     }
 
                     ExamplesInteractiveServer.validate(feature, examples = externalExamples, scenarioFilter = scenarioFilter)
@@ -166,9 +166,11 @@ class ExamplesCommand : Callable<Unit> {
                     printValidationResult(inlineExampleValidationResults, "Inline example")
                     printValidationResult(externalExampleValidationResults, "Example file")
 
-                    exitProcess(1)
+                    return 1
                 }
             }
+
+            return 0
         }
 
         private fun printValidationResult(validationResults: Map<String, Result>, tag: String) {

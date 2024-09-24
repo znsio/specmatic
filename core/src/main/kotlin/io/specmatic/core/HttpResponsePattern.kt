@@ -168,7 +168,7 @@ data class HttpResponsePattern(
         )
     }
 
-    fun generateResponse(partial: HttpResponse, dictionary: Map<String, Value>, resolver: Resolver): HttpResponse {
+    fun generateResponse(partial: HttpResponse, dictionary: Dictionary, resolver: Resolver): HttpResponse {
         val headers = headersPattern.fillInTheBlanks(partial.headers, dictionary, resolver).breadCrumb("HEADERS")
         val body: ReturnValue<Value> = body.fillInTheBlanks(partial.body, dictionary, resolver).breadCrumb("BODY")
 

@@ -294,7 +294,7 @@ data class Feature(
         request: HttpRequest,
         response: HttpResponse,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages,
-        dictionary: Map<String, Value> = emptyMap()
+        dictionary: Dictionary = Dictionary()
     ): HttpStubData {
         try {
             val results = stubMatchResult(request, response.substituteDictionaryValues(dictionary), mismatchMessages)
@@ -470,7 +470,8 @@ data class Feature(
         scenarioStub: ScenarioStub,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): HttpStubData {
-        val dictionary = specmaticConfig.stub.dictionary?.let { loadDictionary(it) } ?: emptyMap()
+        val dictionaryMap = specmaticConfig.stub.dictionary?.let { loadDictionary(it) } ?: emptyMap()
+        val dictionary = Dictionary(dictionaryMap)
 
         val scenarioStubWithDictionary = scenarioStub.copy(dictionary = dictionary)
 

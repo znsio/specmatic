@@ -18,6 +18,7 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.*
+import io.specmatic.core.value.*
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
@@ -32,7 +33,8 @@ class ExamplesInteractiveServer(
     private val serverPort: Int,
     private val inputContractFile: File? = null,
     private val filterName: String,
-    private val filterNotName: String
+    private val filterNotName: String,
+    private val externalDictionary: Dictionary
 ) : Closeable {
     private var contractFileFromRequest: File? = null
 
@@ -79,7 +81,8 @@ class ExamplesInteractiveServer(
                             request.method,
                             request.path,
                             request.responseStatusCode,
-                            request.contentType
+                            request.contentType,
+                            externalDictionary
                         )
 
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExample))
@@ -268,7 +271,7 @@ class ExamplesInteractiveServer(
             constructor(): this(null, ExampleGenerationStatus.ERROR)
         }
 
-        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean): List<String> {
+        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean, externalDictionary: Dictionary): List<String> {
             try {
                 val feature: Feature = parseContractFileToFeature(contractFile).let { feature ->
                     val filteredScenarios = if (!extensive) {
@@ -296,7 +299,7 @@ class ExamplesInteractiveServer(
 
                 return feature.scenarios.map { scenario ->
                     try {
-                        val generatedExampleFilePath = generateExampleFile(contractFile, feature, scenario)
+                        val generatedExampleFilePath = generateExampleFile(contractFile, feature, scenario, externalDictionary)
 
                         generatedExampleFilePath.also {
                             val loggablePath =
@@ -305,7 +308,7 @@ class ExamplesInteractiveServer(
                             val trimmedScenarioDescription = scenario.testDescription().trim()
 
                             if (!it.created) {
-                                println("Example for $trimmedScenarioDescription exists: $loggablePath")
+                                println("Example exists for $trimmedScenarioDescription: $loggablePath")
                             } else {
                                 println("Created example for $trimmedScenarioDescription: $loggablePath")
                             }
@@ -324,8 +327,10 @@ class ExamplesInteractiveServer(
 
                     logger.log(System.lineSeparator() + "NOTE: All examples may be found in ${getExamplesDirPath(contractFile).canonicalFile}" + System.lineSeparator())
 
+                    val errorsClause = if(errorCount > 0) ", $errorCount examples could not be generated due to errors" else ""
+
                     logger.log("=============== Example Generation Summary ===============")
-                    logger.log("Created: $createdFileCount, Already existed: $existingFileCount, Errors: $errorCount")
+                    logger.log("$createdFileCount example(s) created, $existingFileCount examples already existed$errorsClause")
                     logger.log("==========================================================")
                 }.mapNotNull { it.path }
             } catch (e: StackOverflowError) {
@@ -339,7 +344,8 @@ class ExamplesInteractiveServer(
             method: String,
             path: String,
             responseStatusCode: Int,
-            contentType: String? = null
+            contentType: String? = null,
+            externalDictionary: Dictionary
         ): String? {
             val feature = parseContractFileToFeature(contractFile)
             val scenario: Scenario? = feature.scenarios.firstOrNull {
@@ -348,7 +354,7 @@ class ExamplesInteractiveServer(
             }
             if(scenario == null) return null
 
-            return generateExampleFile(contractFile, feature, scenario).also {
+            return generateExampleFile(contractFile, feature, scenario, externalDictionary).also {
                 println("Writing to file: ${File(it.path).canonicalFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
             }.path
         }
@@ -358,7 +364,8 @@ class ExamplesInteractiveServer(
         private fun generateExampleFile(
             contractFile: File,
             feature: Feature,
-            scenario: Scenario
+            scenario: Scenario,
+            externalDictionary: Dictionary
         ): ExamplePathInfo {
             val examplesDir = getExamplesDirPath(contractFile)
             val existingExampleFile = getExistingExampleFile(scenario, examplesDir.getExamplesFromDir())
@@ -366,14 +373,18 @@ class ExamplesInteractiveServer(
             else examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
-            val response = feature.lookupResponse(scenario).cleanup()
-            val scenarioStub = ScenarioStub(request, response)
+            val updatedRequest = request.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
 
+            val response = feature.lookupResponse(scenario).cleanup()
+            val updatedResponse = response.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
+
+            val scenarioStub = ScenarioStub(updatedRequest, updatedResponse)
             val stubJSON = scenarioStub.toJSON()
             val uniqueNameForApiOperation =
                 uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
 
             val file = examplesDir.resolve("${uniqueNameForApiOperation}.json")
+            println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
             file.writeText(stubJSON.toStringLiteral())
             return ExamplePathInfo(file.absolutePath, true)
         }

@@ -1,5 +1,6 @@
 package application
 
+import io.specmatic.core.Dictionary
 import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
@@ -12,11 +13,12 @@ import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.mock.NoMatchingScenario
+import io.specmatic.mock.loadDictionary
 import picocli.CommandLine.*
 import java.io.File
 import java.lang.Thread.sleep
 import java.util.concurrent.Callable
-import kotlin.system.exitProcess
 
 @Command(
     name = "examples",
@@ -24,7 +26,7 @@ import kotlin.system.exitProcess
     description = ["Generate externalised JSON example files with API requests and responses"],
     subcommands = [ExamplesCommand.Validate::class, ExamplesCommand.Interactive::class]
 )
-class ExamplesCommand : Callable<Unit> {
+class ExamplesCommand : Callable<Int> {
     @Option(
         names = ["--filter-name"],
         description = ["Use only APIs with this value in their name"],
@@ -52,28 +54,39 @@ class ExamplesCommand : Callable<Unit> {
     @Option(names = ["--debug"], description = ["Debug logs"])
     var verbose = false
 
-    override fun call() {
+    @Option(names = ["--dictionary"], description = ["External Dictionary File Path, defaults to dictionary.json"])
+    var dictFile: File? = null
+
+    override fun call(): Int {
         if (contractFile == null) {
             println("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
-            return
+            return 1
         }
-        if (!contractFile!!.exists())
-            exitWithMessage("Could not find file ${contractFile!!.path}")
+        if (!contractFile!!.exists()) {
+            logger.log("Could not find file ${contractFile!!.path}")
+            return 1
+        }
 
         configureLogger(this.verbose)
+
+        val externalDictionary = getDictionaryPath(dictFile, contractFile)?.let {
+            Dictionary(loadDictionary(it))
+        } ?: Dictionary(emptyMap())
 
         try {
             ExamplesInteractiveServer.generate(
                 contractFile!!,
                 ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName),
-                extensive
+                extensive,
+                externalDictionary
             )
         } catch (e: Throwable) {
             logger.log(e)
-            exitProcess(1)
+            return 1
         }
-    }
 
+        return 0
+    }
 
     @Command(
         name = "validate",
@@ -105,8 +118,10 @@ class ExamplesCommand : Callable<Unit> {
         var filterNotName: String = ""
 
         override fun call(): Int {
-            if (!contractFile.exists())
-                exitWithMessage("Could not find file ${contractFile.path}")
+            if (!contractFile.exists()) {
+                logger.log("Could not find file ${contractFile.path}")
+                return 1
+            }
 
             configureLogger(this.verbose)
 
@@ -217,6 +232,9 @@ class ExamplesCommand : Callable<Unit> {
         @Option(names = ["--debug"], description = ["Debug logs"])
         var verbose = false
 
+        @Option(names = ["--dictionary"], description = ["External Dictionary File Path"])
+        var dictFile: File? = null
+
         var server: ExamplesInteractiveServer? = null
 
         override fun call() {
@@ -226,7 +244,12 @@ class ExamplesCommand : Callable<Unit> {
                 if (contractFile != null && !contractFile!!.exists())
                     exitWithMessage("Could not find file ${contractFile!!.path}")
 
-                server = ExamplesInteractiveServer("0.0.0.0", 9001, contractFile, filterName, filterNotName)
+                val externalDictionary = getDictionaryPath(dictFile, contractFile)?.let {
+                    Dictionary(loadDictionary(it))
+                } ?: Dictionary(emptyMap())
+
+                println(getDictionaryPath(dictFile, contractFile))
+                server = ExamplesInteractiveServer("0.0.0.0", 9001, contractFile, filterName, filterNotName, externalDictionary)
                 addShutdownHook()
 
                 consoleLog(StringLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop."))
@@ -261,4 +284,19 @@ private fun configureLogger(verbose: Boolean) {
         Verbose(CompositePrinter(logPrinters))
     else
         NonVerbose(CompositePrinter(logPrinters))
+}
+
+private fun getDictionaryPath(dictFile: File?, contractFile: File?): String? {
+    return when {
+        dictFile != null -> dictFile.path
+
+        contractFile?.parentFile?.resolve("dictionary.json")?.exists() == true -> {
+            contractFile.parentFile.resolve("dictionary.json").path
+        }
+
+        else -> {
+            val currentDir = File(System.getProperty("user.dir"))
+            currentDir.resolve("dictionary.json").takeIf { it.exists() }?.path
+        }
+    }
 }

@@ -1,9 +1,6 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.core.Resolver
-import io.specmatic.core.Result
-import io.specmatic.core.Substitution
-import io.specmatic.core.mismatchResult
+import io.specmatic.core.*
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
@@ -11,7 +8,7 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
 data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern, override val typeAlias: String? = null) : Pattern {
-    override fun fillInTheBlanks(value: Value, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
         val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
 
         val returnValue = jsonObject.jsonObject.mapValues { (key, value) ->

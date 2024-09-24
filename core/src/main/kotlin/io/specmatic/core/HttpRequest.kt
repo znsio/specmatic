@@ -363,6 +363,13 @@ data class HttpRequest(
     }
 
     fun withoutDynamicHeaders(): HttpRequest = copy(headers = headers.withoutDynamicHeaders())
+
+    fun substituteDictionaryValues(dictionary: Dictionary, forceSubstitution: Boolean = false): HttpRequest {
+        val updatedHeaders = dictionary.substituteDictionaryValues(this.headers, forceSubstitution = forceSubstitution)
+        val updatedBody = dictionary.substituteDictionaryValues(this.body, forceSubstitution = forceSubstitution)
+
+        return this.copy(headers = updatedHeaders, body= updatedBody)
+    }
 }
 
 private fun setIfNotEmpty(dest: MutableMap<String, Value>, key: String, data: Map<String, String>) {

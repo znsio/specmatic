@@ -9,7 +9,7 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.contractStubPaths
 import io.specmatic.core.utilities.examplesDirFor
-import io.specmatic.core.utilities.exitIfInvalidExamplesDirExists
+import io.specmatic.core.utilities.exitIfDirectoriesAreInvalid
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
@@ -97,10 +97,10 @@ internal fun createStub(
     strict: Boolean = false
 ): ContractStub {
     val configFileName = getConfigFileName()
-    if(File(configFileName).exists().not()) exitWithMessage(missingConfigurationFileMessage)
+    if(File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
     val contractPathData = contractStubPaths(configFileName)
 
-    if(strict) exitIfInvalidExamplesDirExists(dataDirPaths)
+    if(strict) exitIfDirectoriesAreInvalid(dataDirPaths, "example directories")
 
     val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
     val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths, specmaticConfig, strict)
@@ -122,7 +122,7 @@ internal fun createStub(
 internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMillis: Long, strict: Boolean = false, givenConfigFileName: String? = null): ContractStub {
     val workingDirectory = WorkingDirectory()
     val configFileName = givenConfigFileName ?: getConfigFileName()
-    if(File(configFileName).exists().not()) exitWithMessage(missingConfigurationFileMessage)
+    if(File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
 
     val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
     val stubs = loadContractStubsFromImplicitPaths(contractStubPaths(configFileName), specmaticConfig)

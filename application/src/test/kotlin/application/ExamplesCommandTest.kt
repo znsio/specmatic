@@ -161,7 +161,7 @@ paths:
     }
 
     @Test
-    fun `should display a success message when all examples are valid`(@TempDir tempDir: File) {
+    fun `should not display an error message when all examples are valid`(@TempDir tempDir: File) {
         val specFile = tempDir.resolve("spec.yaml")
         val examplesDir = tempDir.resolve("spec_examples")
 
@@ -394,7 +394,5 @@ paths:
 
         val generatedExample = examplesCreated.first { it.name == "product_GET_200.json" }
         assertThat(generatedExample.readText()).contains(""""path": "/product"""")
-
-
     }
 }

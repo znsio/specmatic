@@ -4,6 +4,7 @@ import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validate
+import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
@@ -141,20 +142,16 @@ class ExamplesCommand : Callable<Unit> {
                 } else emptyMap()
 
                 val externalExampleValidationResults = if(validateExternal) {
-                    val examplesDir =
-                        contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
-                    if (!examplesDir.isDirectory) {
-                        logger.log("$examplesDir does not exist, did not find any files to validate")
+                    val (externalExampleDir, externalExamples) = loadExternalExamples(contractFile)
+
+                    if(!externalExampleDir.exists()) {
+                        logger.log("$externalExampleDir does not exist, did not find any files to validate")
                         exitProcess(1)
                     }
 
-                    val externalExamples = examplesDir.walk().mapNotNull {
-                        if(it.isFile)
-                            Pair(it.path, it)
-                        else
-                            null
-                    }.filterNotNull().toMap().mapValues {
-                        listOf(ScenarioStub.readFromFile(it.value))
+                    if(externalExamples.none()) {
+                        logger.log("No example files found in $externalExampleDir")
+                        exitProcess(1)
                     }
 
                     ExamplesInteractiveServer.validate(feature, examples = externalExamples, scenarioFilter = scenarioFilter)

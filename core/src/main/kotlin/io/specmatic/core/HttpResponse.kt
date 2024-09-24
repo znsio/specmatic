@@ -167,6 +167,13 @@ data class HttpResponse(
     }
 
     private fun headersHasOnlyTextPlainContentTypeHeader() = headers.size == 1 && headers[CONTENT_TYPE] == "text/plain"
+
+    fun substituteDictionaryValues(dictionary: Dictionary, forceSubstitution: Boolean = false): HttpResponse {
+        val updatedHeaders = dictionary.substituteDictionaryValues(this.headers, forceSubstitution = forceSubstitution)
+        val updatedBody = dictionary.substituteDictionaryValues(this.body, forceSubstitution = forceSubstitution)
+
+        return this.copy(headers = updatedHeaders, body= updatedBody)
+    }
 }
 
 fun isVanillaPatternToken(token: String) = isPatternToken(token) && token.indexOf(':') < 0

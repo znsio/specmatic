@@ -291,7 +291,7 @@ data class HttpHeadersPattern(
         }
     }
 
-    fun fillInTheBlanks(headers: Map<String, String>, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Map<String, String>> {
+    fun fillInTheBlanks(headers: Map<String, String>, dictionary: Dictionary, resolver: Resolver): ReturnValue<Map<String, String>> {
         val headersToConsider = ancestorHeaders?.let {
             headers.filterKeys { key -> key in it || "$key?" in it }
         } ?: headers
@@ -299,14 +299,14 @@ data class HttpHeadersPattern(
         val map: Map<String, ReturnValue<String>> = headersToConsider.mapValues { (headerName, headerValue) ->
             val headerPattern = pattern.get(headerName) ?: pattern.get("$headerName?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
 
-            if(headerName in dictionary) {
-                val dictionaryValue = dictionary.getValue(headerName)
+            if(dictionary.contains(headerName)) {
+                val dictionaryValue = dictionary.lookup(headerName)
                 val matchResult = headerPattern.matches(dictionaryValue, resolver)
 
                 if(matchResult is Result.Failure)
                     HasFailure(matchResult)
                 else
-                    HasValue(dictionaryValue.toStringLiteral())
+                    HasValue(dictionaryValue!!.toStringLiteral())
             } else {
                 exception { headerPattern.parse(headerValue, resolver) }?.let { return@mapValues HasException(it) }
 
@@ -317,7 +317,7 @@ data class HttpHeadersPattern(
         val headersInPartialR = map.mapFold()
 
         val missingHeadersR = pattern.filterKeys { !it.endsWith("?") && it !in headers }.mapValues { (headerName, headerPattern) ->
-            val generatedValue = dictionary[headerName]?.let { dictionaryValue ->
+            val generatedValue = dictionary.lookup(headerName)?.let { dictionaryValue ->
                 val matchResult = headerPattern.matches(dictionaryValue, resolver)
                 if(matchResult is Result.Failure)
                     HasFailure(matchResult)

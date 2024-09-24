@@ -27,7 +27,7 @@ data class JSONObjectPattern(
     val minProperties: Int? = null,
     val maxProperties: Int? = null
 ) : Pattern {
-    override fun fillInTheBlanks(value: Value, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
         val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
 
         val mapWithKeysInPartial = jsonObject.jsonObject.mapValues { (name, value) ->
@@ -54,7 +54,7 @@ data class JSONObjectPattern(
         val mapWithMissingKeysGenerated = pattern.filterKeys {
             !it.endsWith("?") && it !in jsonObject.jsonObject
         }.mapValues { (name, valuePattern) ->
-            val generatedValue = dictionary[name]?.let { dictionaryValue ->
+            val generatedValue = dictionary.lookup(name)?.let { dictionaryValue ->
                 val matchResult = valuePattern.matches(dictionaryValue, resolver)
                 if(matchResult is Result.Failure)
                     HasFailure(matchResult)

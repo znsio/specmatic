@@ -297,7 +297,7 @@ data class Feature(
         dictionary: Dictionary = Dictionary()
     ): HttpStubData {
         try {
-            val results = stubMatchResult(request, dictionary.substituteDictionaryValues(response), mismatchMessages)
+            val results = stubMatchResult(request, response.substituteDictionaryValues(dictionary), mismatchMessages)
 
             return results.find {
                 it.first != null
@@ -506,7 +506,7 @@ data class Feature(
                     matchingScenario.resolver,
                     responsePattern = responseTypeWithAncestors,
                     scenario = matchingScenario,
-                    partial = scenarioStub.partial.copy(response = dictionary.substituteDictionaryValues(scenarioStub.partial.response)),
+                    partial = scenarioStub.partial.copy(response = scenarioStub.partial.response.substituteDictionaryValues(dictionary)),
                     data = scenarioStub.data,
                     dictionary = scenarioStub.dictionary,
                     examplePath = scenarioStub.filePath

@@ -106,7 +106,7 @@ class Substitution(
     fun substituteSimpleVariableLookup(string: String, key: String? = null): String {
         val name = string.trim().removeSurrounding("$(", ")")
         return variableValues[name]
-                ?: key?.let { dictionary.map[key]?.toStringLiteral() }
+                ?: key?.let { dictionary.lookup(key)?.toStringLiteral() }
                 ?: throw ContractException("Could not resolve expression $string as no variable by the name $name was found")
     }
 

@@ -16,12 +16,12 @@ class DictionaryTest {
     }
 
     @Test
-    fun `should substitute for concrete and non-concrete values from dictionary when forceSubstitution is true`() {
+    fun `should substitute concrete and non-concrete values when forceSubstitution is enabled`() {
         val httpResponse = HttpResponse(
             headers = mapOf("Authentication" to "RANDOM_STRING"),
             body = parsedJSONObject("""{"name": "RANDOM_STRING", "address": "RANDOM_STRING"}""")
         )
-        val updatedResponse = dictionary.substituteDictionaryValues(httpResponse, forceSubstitution = true)
+        val updatedResponse = httpResponse.substituteDictionaryValues(dictionary, forceSubstitution = true)
         val jsonResponse = updatedResponse.body as JSONObjectValue
 
         assertThat(updatedResponse.headers["Authentication"]).isEqualTo("Bearer 123")
@@ -30,13 +30,13 @@ class DictionaryTest {
     }
 
     @Test
-    fun `should substitute for non-concrete values values from dictionary when forceSubstitution is false`() {
+    fun `should substitute only non-concrete values and retain concrete values when forceSubstitution is disabled`() {
         val httpRequest = HttpRequest(
             path = "/foo", method = "GET",
             headers = mapOf("Authentication" to "(string)"),
             body = parsedJSONObject("""{"name": "(string)", "address": "RANDOM_STRING"}""")
         )
-        val updatedHttpRequest = dictionary.substituteDictionaryValues(httpRequest)
+        val updatedHttpRequest = httpRequest.substituteDictionaryValues(dictionary)
         val jsonResponse = updatedHttpRequest.body as JSONObjectValue
 
         assertThat(updatedHttpRequest.headers["Authentication"]).isEqualTo("Bearer 123")

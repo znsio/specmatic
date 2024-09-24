@@ -287,10 +287,10 @@ class ExamplesInteractiveServer(
                     val generatedScenario = scenario.generateTestScenarios(DefaultStrategies).first().value
 
                     val request = generatedScenario.httpRequestPattern.generate(generatedScenario.resolver)
-                    val updatedRequest = externalDictionary.substituteDictionaryValues(request, forceSubstitution = true)
+                    val updatedRequest = request.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
 
                     val response = generatedScenario.httpResponsePattern.generateResponse(generatedScenario.resolver).cleanup()
-                    val updatedResponse = externalDictionary.substituteDictionaryValues(response, forceSubstitution = true)
+                    val updatedResponse = response.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
 
                     val scenarioStub = ScenarioStub(updatedRequest, updatedResponse)
                     val stubJSON = scenarioStub.toJSON()
@@ -334,10 +334,10 @@ class ExamplesInteractiveServer(
             else examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
-            val updatedRequest = externalDictionary.substituteDictionaryValues(request, forceSubstitution = true)
+            val updatedRequest = request.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
 
             val response = feature.lookupResponse(scenario).cleanup()
-            val updatedResponse = externalDictionary.substituteDictionaryValues(response, forceSubstitution = true)
+            val updatedResponse = response.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
 
             val scenarioStub = ScenarioStub(updatedRequest, updatedResponse)
             val stubJSON = scenarioStub.toJSON()

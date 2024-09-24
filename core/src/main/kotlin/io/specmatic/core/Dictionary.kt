@@ -5,7 +5,7 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
-class Dictionary(val map: Map<String, Value> = emptyMap()) {
+class Dictionary(private val map: Map<String, Value> = emptyMap()) {
     private fun substituteDictionaryValues(value: JSONArrayValue, paths: List<String> = emptyList(), forceSubstitution: Boolean = false): Value {
         val newList = value.list.mapIndexed { index, valueInArray ->
             val indexesToAdd = listOf("[$index]", "[*]")
@@ -42,7 +42,7 @@ class Dictionary(val map: Map<String, Value> = emptyMap()) {
         return value.copy(jsonObject = newMap)
     }
 
-    private fun substituteDictionaryValues(value: Value, paths: List<String> = emptyList(), forceSubstitution: Boolean = false): Value {
+    fun substituteDictionaryValues(value: Value, paths: List<String> = emptyList(), forceSubstitution: Boolean = false): Value {
         return when (value) {
             is JSONObjectValue -> {
                 substituteDictionaryValues(value, paths, forceSubstitution)
@@ -54,25 +54,19 @@ class Dictionary(val map: Map<String, Value> = emptyMap()) {
         }
     }
 
-    fun substituteDictionaryValues(httpResponse: HttpResponse, forceSubstitution: Boolean = false): HttpResponse {
-        val updatedHeaders = httpResponse.headers.mapValues { (headerName, headerValue) ->
-            if((isVanillaPatternToken(headerValue) || forceSubstitution) && headerName in map) {
-                map.getValue(headerName).toStringLiteral()
-            } else headerValue
+    fun substituteDictionaryValues(value: Map<String, String>, forceSubstitution: Boolean = false): Map<String, String> {
+        return value.mapValues { (name, value) ->
+            if((isVanillaPatternToken(value) || forceSubstitution) && name in map) {
+                map.getValue(name).toStringLiteral()
+            } else value
         }
-        val updatedBody = substituteDictionaryValues(httpResponse.body, forceSubstitution = forceSubstitution)
-
-        return httpResponse.copy(headers = updatedHeaders, body= updatedBody)
     }
 
-    fun substituteDictionaryValues(httpRequest: HttpRequest, forceSubstitution: Boolean = false): HttpRequest {
-        val updatedHeaders = httpRequest.headers.mapValues { (headerName, headerValue) ->
-            if((isVanillaPatternToken(headerValue) || forceSubstitution) && headerName in map) {
-                map.getValue(headerName).toStringLiteral()
-            } else headerValue
-        }
-        val updatedBody = substituteDictionaryValues(httpRequest.body, forceSubstitution = forceSubstitution)
+    fun lookup(key: String): Value? {
+        return map[key]
+    }
 
-        return httpRequest.copy(headers = updatedHeaders, body= updatedBody)
+    fun contains(key: String): Boolean {
+        return key in map
     }
 }

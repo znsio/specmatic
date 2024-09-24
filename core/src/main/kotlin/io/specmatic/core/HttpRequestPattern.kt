@@ -582,10 +582,7 @@ data class HttpRequestPattern(
                                             newRequestPattern.copy(securitySchemes = listOf(it))
                                         }
                                     }.map { requestPattern ->
-                                        // Note - got to find a better way
-                                        val requestPatternWithValueDetails = newHeadersPattern.ifValue { requestPattern }
-                                        if(requestPatternWithValueDetails !is HasValue) HasValue(requestPattern)
-                                        else requestPatternWithValueDetails
+                                        newHeadersPattern.ifValue { requestPattern }
                                     }
                                 }
                             }

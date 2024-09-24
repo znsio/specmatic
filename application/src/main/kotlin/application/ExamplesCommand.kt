@@ -157,7 +157,7 @@ class ExamplesCommand : Callable<Unit> {
                     ExamplesInteractiveServer.validate(feature, examples = externalExamples, scenarioFilter = scenarioFilter)
                 } else emptyMap()
 
-                val hasFailures = inlineExampleValidationResults.isNotEmpty() || externalExampleValidationResults.isNotEmpty()
+                val hasFailures = inlineExampleValidationResults.any { it.value is Result.Failure } || externalExampleValidationResults.any { it.value is Result.Failure }
 
                 if(hasFailures) {
                     println()

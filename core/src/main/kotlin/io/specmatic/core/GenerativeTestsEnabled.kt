@@ -119,4 +119,37 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean) : Generatio
             noOverlapBetween(it, newQueryParamsList, resolver)
         }.filterNotNull()
     }
+
+    override fun fillInTheMissingMapPatternsR(
+        newQueryParamsList: Sequence<Map<String, Pattern>>,
+        queryPatterns: Map<String, Pattern>,
+        additionalProperties: Pattern?,
+        row: Row,
+        resolver: Resolver
+    ): Sequence<ReturnValue<Map<String, Pattern>>> {
+        val additionalPatterns = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
+            val queryParams = queryPatterns.let {
+                if (additionalProperties != null)
+                    it.plus(randomString(5) to additionalProperties)
+                else
+                    it
+            }
+
+            forEachKeyCombinationIn(queryParams, Row()) { entry: Map<String, Pattern> ->
+                newMapBasedOn(entry, row, resolver)
+            }.map { newPattern ->
+                newPattern.update { map ->
+                    map.mapKeys { withoutOptionality(it.key) }
+                }
+            }
+        }
+
+        return additionalPatterns.map { pattern ->
+            pattern.update {
+                noOverlapBetween(it, newQueryParamsList, resolver) ?: emptyMap()
+            }
+        }.filter {
+            it.value.isNotEmpty()
+        }
+    }
 }

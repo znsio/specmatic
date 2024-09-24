@@ -507,12 +507,14 @@ data class HttpRequestPattern(
                     HasValue(HttpQueryParamPattern(it))
                 }
 
-            val newHeadersPattern: Sequence<ReturnValue<HttpHeadersPattern>> = if (status.toString().startsWith("2")) {
-                val new = headersPattern.newBasedOn(row, resolver)
-                headersPattern.addComplimentaryPatterns(new, row, resolver)
-            } else {
-                headersPattern.readFrom(row, resolver)
-            }.map { HasValue(it) }
+            val newHeadersPattern: Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = "HEADERS") {
+                if (status.toString().startsWith("2")) {
+                    val new = headersPattern.newBasedOn(row, resolver)
+                    headersPattern.addComplimentaryPatterns(new, row, resolver)
+                } else {
+                    headersPattern.readFrom(row, resolver)
+                }
+            }
 
             val newBodies: Sequence<ReturnValue<Pattern>> = attempt(breadCrumb = "BODY") {
                 body.let {
@@ -579,7 +581,12 @@ data class HttpRequestPattern(
                                         securitySchemes.asSequence().map {
                                             newRequestPattern.copy(securitySchemes = listOf(it))
                                         }
-                                    }.map { HasValue(it) }
+                                    }.map { requestPattern ->
+                                        // Note - got to find a better way
+                                        val requestPatternWithValueDetails = newHeadersPattern.ifValue { requestPattern }
+                                        if(requestPatternWithValueDetails !is HasValue) HasValue(requestPattern)
+                                        else requestPatternWithValueDetails
+                                    }
                                 }
                             }
                         }

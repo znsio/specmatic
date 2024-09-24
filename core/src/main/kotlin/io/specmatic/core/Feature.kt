@@ -420,7 +420,16 @@ data class Feature(
             else
                 flagsBased.withoutGenerativeTests()
 
-            originalScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs, fn).map { Pair(originalScenario.copy(generativePrefix = flagsBased.positivePrefix), it) }
+            originalScenario.generateTestScenarios(
+                resolverStrategies,
+                testVariables,
+                testBaseURLs,
+                fn
+            ).map {
+                getScenarioWithDescription(it)
+            }.map {
+                Pair(originalScenario.copy(generativePrefix = flagsBased.positivePrefix), it)
+            }
         }
 
     fun negativeTestScenarios(): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
@@ -430,19 +439,8 @@ data class Feature(
             val negativeScenario = originalScenario.negativeBasedOn(getBadRequestsOrDefault(originalScenario))
 
             val negativeTestScenarios =
-                negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs).map { negativeScenarioResult ->
-                    negativeScenarioResult.ifHasValue { result: HasValue<Scenario> ->
-                        val descriptionFromPlugin = result.value.descriptionFromPlugin?.takeIf {
-                            it.isNotBlank()
-                        }?.plus(" ") ?: ""
-                        val description = result.valueDetails.singleLineDescription()
-
-                        val tag = if(description.isNotBlank())
-                            " [${description}]"
-                        else
-                            ""
-                        HasValue(result.value.copy(descriptionFromPlugin = "$descriptionFromPlugin${result.value.apiDescription}$tag"))
-                    }
+                negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs).map {
+                    getScenarioWithDescription(it)
                 }
 
             negativeTestScenarios.filterNot { negativeTestScenarioR ->
@@ -535,6 +533,21 @@ data class Feature(
 
     fun clearServerState() {
         serverState = emptyMap()
+    }
+
+    private fun getScenarioWithDescription(scenarioResult: ReturnValue<Scenario>): ReturnValue<Scenario> {
+        return scenarioResult.ifHasValue { result: HasValue<Scenario> ->
+            val descriptionFromPlugin = result.value.descriptionFromPlugin?.takeIf {
+                it.isNotBlank()
+            }?.plus(" ") ?: ""
+            val description = result.valueDetails.singleLineDescription()
+
+            val tag = if(description.isNotBlank())
+                " [${description}]"
+            else
+                ""
+            HasValue(result.value.copy(descriptionFromPlugin = "$descriptionFromPlugin${result.value.apiDescription}$tag"))
+        }
     }
 
     private fun combine(baseScenario: Scenario, newScenario: Scenario): Scenario {

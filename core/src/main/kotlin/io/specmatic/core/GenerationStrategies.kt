@@ -19,6 +19,14 @@ interface GenerationStrategies {
         row: Row,
         resolver: Resolver
     ): Sequence<Map<String, Pattern>>
+
+    fun fillInTheMissingMapPatternsR(
+        newQueryParamsList: Sequence<Map<String, Pattern>>,
+        queryPatterns: Map<String, Pattern>,
+        additionalProperties: Pattern?,
+        row: Row,
+        resolver: Resolver
+    ): Sequence<ReturnValue<Map<String, Pattern>>>
 }
 
 internal fun noOverlapBetween(

@@ -50,4 +50,13 @@ object NonGenerativeTests : GenerationStrategies {
     ): Sequence<Map<String, Pattern>> {
         return emptySequence()
     }
+
+
+    override fun fillInTheMissingMapPatternsR(
+        newQueryParamsList: Sequence<Map<String, Pattern>>,
+        queryPatterns: Map<String, Pattern>,
+        additionalProperties: Pattern?,
+        row: Row,
+        resolver: Resolver
+    ): Sequence<ReturnValue<Map<String, Pattern>>> = emptySequence()
 }

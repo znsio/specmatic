@@ -1,0 +1,30 @@
+openapi: 3.0.3
+info:
+  title: Simple API with Header Enum
+  version: 1.0.0
+  description: A simple API with a GET endpoint that accepts a header with enum values.
+paths:
+  /items:
+    get:
+      summary: Get items by region
+      operationId: getItemsByRegion
+      parameters:
+        - name: X-region
+          in: header
+          required: true
+          description: Specifies the region for the request
+          schema:
+            type: string
+            enum:
+              - FIRST
+              - SECOND
+              - THIRD
+      responses:
+        '200':
+          description: A response message based on the region
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "You have selected the FIRST region"
+

@@ -9,7 +9,7 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.contractStubPaths
 import io.specmatic.core.utilities.examplesDirFor
-import io.specmatic.core.utilities.exitIfDoesNotExist
+import io.specmatic.core.utilities.exitIfInvalidExamplesDirExists
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
@@ -96,9 +96,8 @@ internal fun createStub(
     timeoutMillis: Long,
     strict: Boolean = false
 ): ContractStub {
-    // TODO - see if these two can be extracted out.
     val configFileName = getConfigFileName()
-    exitIfDoesNotExist("config file", configFileName)
+    if(File(configFileName).exists().not()) exitWithMessage(missingConfigurationFileMessage)
     val contractPathData = contractStubPaths(configFileName)
 
     if(strict) exitIfInvalidExamplesDirExists(dataDirPaths)
@@ -122,9 +121,8 @@ internal fun createStub(
 
 internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMillis: Long, strict: Boolean = false, givenConfigFileName: String? = null): ContractStub {
     val workingDirectory = WorkingDirectory()
-    // TODO - see if these two can be extracted out.
     val configFileName = givenConfigFileName ?: getConfigFileName()
-    exitIfDoesNotExist("config file", configFileName)
+    if(File(configFileName).exists().not()) exitWithMessage(missingConfigurationFileMessage)
 
     val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
     val stubs = loadContractStubsFromImplicitPaths(contractStubPaths(configFileName), specmaticConfig)
@@ -494,10 +492,3 @@ fun isOpenAPI(path: String): Boolean =
         logger.log(e, "Could not parse $path")
         false
     }
-
-fun exitIfInvalidExamplesDirExists(exampleDirPaths: List<String>) {
-    val invalidDataDirs = exampleDirPaths.filter { File(it).exists().not() || File(it).isDirectory.not() }
-    if (invalidDataDirs.isNotEmpty()) {
-        exitWithMessage("The following example directories are invalid: ${invalidDataDirs.joinToString(", ")}. Please provide the valid example directories.")
-    }
-}

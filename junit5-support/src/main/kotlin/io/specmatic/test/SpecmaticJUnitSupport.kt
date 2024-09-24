@@ -243,8 +243,7 @@ open class SpecmaticJUnitSupport {
                 }
                 else -> {
                     val configFile = configFile
-
-                    exitIfDoesNotExist("config file", configFile)
+                    if(File(configFile).exists().not()) exitWithMessage(missingConfigurationFileMessage)
 
                     createIfDoesNotExist(workingDirectory.path)
 

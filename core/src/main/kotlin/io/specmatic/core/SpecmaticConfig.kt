@@ -42,6 +42,8 @@ const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
 
 const val SPECMATIC_STUB_DICTIONARY = "SPECMATIC_STUB_DICTIONARY"
 
+const val missingConfigurationFileMessage = "config file does not exist. (Could not find file ./specmatic.json OR ./specmatic.yaml OR ./specmatic.yml)"
+
 class WorkingDirectory(private val filePath: File) {
     constructor(path: String = DEFAULT_WORKING_DIRECTORY): this(File(path))
 

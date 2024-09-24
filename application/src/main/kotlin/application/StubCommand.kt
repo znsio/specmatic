@@ -7,10 +7,10 @@ import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
+import io.specmatic.core.utilities.exitIfInvalidExamplesDirExists
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.HttpClientFactory
-import io.specmatic.stub.exitIfInvalidExamplesDirExists
 import org.springframework.beans.factory.annotation.Autowired
 import picocli.CommandLine.*
 import java.io.File

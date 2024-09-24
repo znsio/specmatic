@@ -4,8 +4,7 @@ import io.specmatic.core.Dictionary
 import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validate
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingle
+import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingleExample
 import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
 import io.specmatic.core.parseContractFileToFeature
@@ -127,7 +126,7 @@ class ExamplesCommand : Callable<Int> {
 
             if (exampleFile != null) {
                 try {
-                    validateSingle(contractFile, exampleFile).throwOnFailure()
+                    validateSingleExample(contractFile, exampleFile).throwOnFailure()
 
                     logger.log("The provided example ${exampleFile.name} is valid.")
                 } catch (e: ContractException) {
@@ -153,7 +152,7 @@ class ExamplesCommand : Callable<Int> {
                         }
                     }
 
-                    ExamplesInteractiveServer.validate(feature, examples = inlineExamples, inline = true, scenarioFilter = scenarioFilter)
+                    ExamplesInteractiveServer.validateMultipleExamples(feature, examples = inlineExamples, inline = true, scenarioFilter = scenarioFilter)
                 } else emptyMap()
 
                 val externalExampleValidationResults = if(validateExternal) {
@@ -169,7 +168,7 @@ class ExamplesCommand : Callable<Int> {
                         return 1
                     }
 
-                    ExamplesInteractiveServer.validate(feature, examples = externalExamples, scenarioFilter = scenarioFilter)
+                    ExamplesInteractiveServer.validateMultipleExamples(feature, examples = externalExamples, scenarioFilter = scenarioFilter)
                 } else emptyMap()
 
                 val hasFailures = inlineExampleValidationResults.any { it.value is Result.Failure } || externalExampleValidationResults.any { it.value is Result.Failure }

@@ -18,7 +18,6 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.*
-import io.specmatic.core.value.*
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
@@ -96,7 +95,7 @@ class ExamplesInteractiveServer(
                     try {
                         val contractFile = getContractFile()
                         val validationResultResponse = try {
-                            val result = validateSingle(contractFile, File(request.exampleFile))
+                            val result = validateSingleExample(contractFile, File(request.exampleFile))
                             if(result.isSuccess())
                                 ValidateExampleResponse(request.exampleFile)
                             else
@@ -124,7 +123,7 @@ class ExamplesInteractiveServer(
                             exampleFilePath to listOf(ScenarioStub.readFromFile(File(exampleFilePath)))
                         }.toMap()
 
-                        val results = validate(contractFile, examples = examples)
+                        val results = validateMultipleExamples(contractFile, examples = examples)
 
                         val validationResults = results.map { (exampleFilePath, result) ->
                             try {
@@ -388,12 +387,12 @@ class ExamplesInteractiveServer(
             return ExamplePathInfo(file.absolutePath, true)
         }
 
-        fun validateSingle(contractFile: File, exampleFile: File): Result {
+        fun validateSingleExample(contractFile: File, exampleFile: File): Result {
             val feature = parseContractFileToFeature(contractFile)
-            return validateSingle(feature, exampleFile)
+            return validateSingleExample(feature, exampleFile)
         }
 
-        fun validateSingle(feature: Feature, exampleFile: File): Result {
+        fun validateSingleExample(feature: Feature, exampleFile: File): Result {
             val scenarioStub = ScenarioStub.readFromFile(exampleFile)
 
             return try {
@@ -404,12 +403,12 @@ class ExamplesInteractiveServer(
             }
         }
 
-        fun validate(contractFile: File, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+        fun validateMultipleExamples(contractFile: File, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
             val feature = parseContractFileToFeature(contractFile)
-            return validate(feature, examples, false, scenarioFilter)
+            return validateMultipleExamples(feature, examples, false, scenarioFilter)
         }
 
-        fun validate(feature: Feature, examples: Map<String, List<ScenarioStub>> = emptyMap(), inline: Boolean = false, scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+        fun validateMultipleExamples(feature: Feature, examples: Map<String, List<ScenarioStub>> = emptyMap(), inline: Boolean = false, scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
             val updatedFeature = scenarioFilter.filter(feature)
 
             val results = examples.mapValues { (name, exampleList) ->

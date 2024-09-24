@@ -695,7 +695,7 @@ class OpenApiSpecification(
             }.toMap().ifEmpty { mapOf(SPECMATIC_TEST_WITH_NO_REQ_EX to "") }
 
             if (requestExamples.containsKey(SPECMATIC_TEST_WITH_NO_REQ_EX) && responseExample.status != first2xxResponseStatus) {
-                if (responseExamples.isEmpty() && getBooleanValue(IGNORE_INLINE_EXAMPLE_WARNINGS).not())
+                if (getBooleanValue(IGNORE_INLINE_EXAMPLE_WARNINGS).not())
                     logger.log(missingRequestExampleErrorMessageForTest(exampleName))
                 return@mapNotNull null
             }

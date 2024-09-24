@@ -8289,7 +8289,6 @@ paths:
         }
     }
 
-    @Disabled("With this implementation, all the response examples will be taken into consideration. Where does this test stand then?")
     @Test
     fun `check that a console warning is printed when a named response example for 4xx has no corresponding named request example`() {
         val (stdout, _) = captureStandardOutput {

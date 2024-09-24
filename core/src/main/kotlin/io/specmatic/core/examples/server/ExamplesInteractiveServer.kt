@@ -380,10 +380,10 @@ class ExamplesInteractiveServer(
 
         fun validate(contractFile: File, exampleFile: File? = null, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
             val feature = parseContractFileToFeature(contractFile)
-            return validate(feature, exampleFile, examples, scenarioFilter)
+            return validate(feature, exampleFile, examples, false, scenarioFilter)
         }
 
-        fun validate(feature: Feature, exampleFile: File? = null, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+        fun validate(feature: Feature, exampleFile: File? = null, examples: Map<String, List<ScenarioStub>> = emptyMap(), inline: Boolean = false, scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
             if(exampleFile != null) {
                 val scenarioStub = ScenarioStub.readFromFile(exampleFile)
 
@@ -405,9 +405,12 @@ class ExamplesInteractiveServer(
                         validateExample(updatedFeature, example)
                         Result.Success()
                     } catch(e: NoMatchingScenario) {
-                        e.results.toResultIfAny()
+                        if(inline && e.results.withoutFluff().hasResults() == false)
+                            null
+                        else
+                            e.results.toResultIfAny()
                     }
-                }.let {
+                }.filterNotNull().let {
                     Result.fromResults(it)
                 }
             }
@@ -421,7 +424,7 @@ class ExamplesInteractiveServer(
         ): Results {
             return failureResults.toResultIfAny().let {
                 if (it.reportString().isBlank())
-                    Results(listOf(Result.Failure(noMatchingScenario?.message ?: "")))
+                    Results(listOf(Result.Failure(noMatchingScenario?.message ?: "", failureReason = FailureReason.ScenarioMismatch)))
                 else
                     failureResults
             }

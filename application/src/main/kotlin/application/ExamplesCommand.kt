@@ -138,7 +138,7 @@ class ExamplesCommand : Callable<Unit> {
                         }
                     }
 
-                    ExamplesInteractiveServer.validate(feature, examples = inlineExamples, scenarioFilter = scenarioFilter)
+                    ExamplesInteractiveServer.validate(feature, examples = inlineExamples, inline = true, scenarioFilter = scenarioFilter)
                 } else emptyMap()
 
                 val externalExampleValidationResults = if(validateExternal) {

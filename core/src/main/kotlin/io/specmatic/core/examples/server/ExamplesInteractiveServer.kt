@@ -308,7 +308,7 @@ class ExamplesInteractiveServer(
                             val trimmedScenarioDescription = scenario.testDescription().trim()
 
                             if (!it.created) {
-                                println("Example for $trimmedScenarioDescription exists: $loggablePath")
+                                println("Example exists for $trimmedScenarioDescription: $loggablePath")
                             } else {
                                 println("Created example for $trimmedScenarioDescription: $loggablePath")
                             }
@@ -327,8 +327,10 @@ class ExamplesInteractiveServer(
 
                     logger.log(System.lineSeparator() + "NOTE: All examples may be found in ${getExamplesDirPath(contractFile).canonicalFile}" + System.lineSeparator())
 
+                    val errorsClause = if(errorCount > 0) ", $errorCount examples could not be generated due to errors" else ""
+
                     logger.log("=============== Example Generation Summary ===============")
-                    logger.log("Created: $createdFileCount, Already existed: $existingFileCount, Errors: $errorCount")
+                    logger.log("$createdFileCount example(s) created, $existingFileCount examples already existed$errorsClause")
                     logger.log("==========================================================")
                 }.mapNotNull { it.path }
             } catch (e: StackOverflowError) {

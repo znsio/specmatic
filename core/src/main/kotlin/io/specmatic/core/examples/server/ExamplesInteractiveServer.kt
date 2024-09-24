@@ -34,7 +34,7 @@ class ExamplesInteractiveServer(
     private val inputContractFile: File? = null,
     private val filterName: String,
     private val filterNotName: String,
-    private val externalDictionary: Map<String, Value>
+    private val externalDictionary: Dictionary
 ) : Closeable {
     private var contractFileFromRequest: File? = null
 
@@ -249,7 +249,7 @@ class ExamplesInteractiveServer(
     }
 
     companion object {
-        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean, externalDictionary: Map<String, Value>): List<String> {
+        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean, externalDictionary: Dictionary): List<String> {
             try {
                 val feature: Feature = parseContractFileToFeature(contractFile).let { feature ->
                     val filteredScenarios = if (!extensive) {
@@ -287,10 +287,10 @@ class ExamplesInteractiveServer(
                     val generatedScenario = scenario.generateTestScenarios(DefaultStrategies).first().value
 
                     val request = generatedScenario.httpRequestPattern.generate(generatedScenario.resolver)
-                    val updatedRequest = request.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
+                    val updatedRequest = externalDictionary.substituteDictionaryValues(request, forceSubstitution = true)
 
                     val response = generatedScenario.httpResponsePattern.generateResponse(generatedScenario.resolver).cleanup()
-                    val updatedResponse = response.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
+                    val updatedResponse = externalDictionary.substituteDictionaryValues(response, forceSubstitution = true)
 
                     val scenarioStub = ScenarioStub(updatedRequest, updatedResponse)
                     val stubJSON = scenarioStub.toJSON()
@@ -319,7 +319,7 @@ class ExamplesInteractiveServer(
             path: String,
             responseStatusCode: Int,
             contentType: String? = null,
-            externalDictionary: Map<String, Value>
+            externalDictionary: Dictionary
         ): String? {
             val feature = parseContractFileToFeature(contractFile)
             val scenario = feature.scenarios.firstOrNull {
@@ -334,10 +334,10 @@ class ExamplesInteractiveServer(
             else examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
-            val updatedRequest = request.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
+            val updatedRequest = externalDictionary.substituteDictionaryValues(request, forceSubstitution = true)
 
             val response = feature.lookupResponse(scenario).cleanup()
-            val updatedResponse = response.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
+            val updatedResponse = externalDictionary.substituteDictionaryValues(response, forceSubstitution = true)
 
             val scenarioStub = ScenarioStub(updatedRequest, updatedResponse)
             val stubJSON = scenarioStub.toJSON()

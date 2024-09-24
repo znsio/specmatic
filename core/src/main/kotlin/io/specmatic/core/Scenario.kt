@@ -621,7 +621,7 @@ data class Scenario(
         originalRequest: HttpRequest,
         response: HttpResponse,
         data: JSONObjectValue,
-        dictionary: Map<String, Value>
+        dictionary: Dictionary
     ): HttpResponse {
         val substitution = httpRequestPattern.getSubstitution(request, originalRequest, resolver, data, dictionary)
         return httpResponsePattern.resolveSubstitutions(substitution, response)

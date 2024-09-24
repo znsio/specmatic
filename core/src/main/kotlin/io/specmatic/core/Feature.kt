@@ -294,10 +294,10 @@ data class Feature(
         request: HttpRequest,
         response: HttpResponse,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages,
-        dictionary: Map<String, Value> = emptyMap()
+        dictionary: Dictionary = Dictionary()
     ): HttpStubData {
         try {
-            val results = stubMatchResult(request, response.substituteDictionaryValues(dictionary), mismatchMessages)
+            val results = stubMatchResult(request, dictionary.substituteDictionaryValues(response), mismatchMessages)
 
             return results.find {
                 it.first != null
@@ -470,7 +470,8 @@ data class Feature(
         scenarioStub: ScenarioStub,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): HttpStubData {
-        val dictionary = specmaticConfig.stub.dictionary?.let { loadDictionary(it) } ?: emptyMap()
+        val dictionaryMap = specmaticConfig.stub.dictionary?.let { loadDictionary(it) } ?: emptyMap()
+        val dictionary = Dictionary(dictionaryMap)
 
         val scenarioStub = scenarioStub.copy(dictionary = dictionary)
 
@@ -505,7 +506,7 @@ data class Feature(
                     matchingScenario.resolver,
                     responsePattern = responseTypeWithAncestors,
                     scenario = matchingScenario,
-                    partial = scenarioStub.partial.copy(response = scenarioStub.partial.response.substituteDictionaryValues(scenarioStub.dictionary)),
+                    partial = scenarioStub.partial.copy(response = dictionary.substituteDictionaryValues(scenarioStub.partial.response)),
                     data = scenarioStub.data,
                     dictionary = scenarioStub.dictionary,
                     examplePath = scenarioStub.filePath

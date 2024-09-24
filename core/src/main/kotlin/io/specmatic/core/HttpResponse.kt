@@ -167,22 +167,6 @@ data class HttpResponse(
     }
 
     private fun headersHasOnlyTextPlainContentTypeHeader() = headers.size == 1 && headers[CONTENT_TYPE] == "text/plain"
-
-    /**
-     * @param forceSubstitution Forces substitution even in case of a concrete values (eg: "BYFJA").
-     */
-    fun substituteDictionaryValues(dictionary: Map<String, Value>, forceSubstitution: Boolean = false): HttpResponse {
-        val updatedHeaders = headers.mapValues { (headerName, headerValue) ->
-            if((isVanillaPatternToken(headerValue) || forceSubstitution) && headerName in dictionary) {
-                dictionary.getValue(headerName).toStringLiteral()
-            } else headerValue
-        }
-
-        val updatedBody = substituteDictionaryValues(body, dictionary, forceSubstitution = forceSubstitution)
-
-        return this.copy(headers = updatedHeaders, body= updatedBody)
-    }
-
 }
 
 fun isVanillaPatternToken(token: String) = isPatternToken(token) && token.indexOf(':') < 0
@@ -262,51 +246,3 @@ fun dropContentAndCORSResponseHeaders(response: HttpResponse) =
     response.copy(headers = response.headers.filterNot {
         it.key in responseHeadersToExcludeFromConversion || it.key.lowercase() in listOf("content-type", "content-encoding", "content-length", "content-disposition") || it.key.startsWith("Access-Control-")
     })
-
-fun substituteDictionaryValues(value: JSONArrayValue, dictionary: Map<String, Value>, paths: List<String> = emptyList(), forceSubstitution: Boolean = false): Value {
-    val newList = value.list.mapIndexed { index, valueInArray ->
-        val indexesToAdd = listOf("[$index]", "[*]")
-
-        val updatedPaths = paths.flatMap { path ->
-            indexesToAdd.map { indexToAdd ->
-                path + indexToAdd
-            }
-        }.ifEmpty {
-            indexesToAdd
-        }
-
-        substituteDictionaryValues(valueInArray, dictionary, updatedPaths, forceSubstitution)
-    }
-
-    return value.copy(newList)
-}
-
-fun substituteDictionaryValues(value: JSONObjectValue, dictionary: Map<String, Value>, paths: List<String> = emptyList(), forceSubstitution: Boolean = false): Value {
-    val newMap = value.jsonObject.mapValues { (key, value) ->
-
-        val updatedPaths = paths.map { path ->
-            path + ".$key"
-        }.ifEmpty { listOf(key) }
-
-        val pathFoundInDictionary = updatedPaths.firstOrNull { it in dictionary }
-        if(value is StringValue && (isVanillaPatternToken(value.string) || forceSubstitution) && pathFoundInDictionary != null) {
-            dictionary.getValue(pathFoundInDictionary)
-        } else {
-            substituteDictionaryValues(value, dictionary, updatedPaths, forceSubstitution)
-        }
-    }
-
-    return value.copy(newMap)
-}
-
-fun substituteDictionaryValues(value: Value, dictionary: Map<String, Value>, paths: List<String> = emptyList(), forceSubstitution: Boolean = false): Value {
-    return when (value) {
-        is JSONObjectValue -> {
-            substituteDictionaryValues(value, dictionary, paths, forceSubstitution)
-        }
-        is JSONArrayValue -> {
-            substituteDictionaryValues(value, dictionary, paths, forceSubstitution)
-        }
-        else -> value
-    }
-}

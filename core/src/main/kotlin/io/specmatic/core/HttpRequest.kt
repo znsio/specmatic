@@ -363,21 +363,6 @@ data class HttpRequest(
     }
 
     fun withoutDynamicHeaders(): HttpRequest = copy(headers = headers.withoutDynamicHeaders())
-
-    /**
-     * @param forceSubstitution Forces substitution even in case of a concrete values (eg: "BYFJA").
-     */
-    fun substituteDictionaryValues(dictionary: Map<String, Value>, forceSubstitution: Boolean = false): HttpRequest {
-        val updatedHeaders = headers.mapValues { (headerName, headerValue) ->
-            if((isVanillaPatternToken(headerValue) || forceSubstitution) && headerName in dictionary) {
-                dictionary.getValue(headerName).toStringLiteral()
-            } else headerValue
-        }
-
-        val updatedBody = substituteDictionaryValues(body, dictionary, forceSubstitution = forceSubstitution)
-
-        return this.copy(headers = updatedHeaders, body= updatedBody)
-    }
 }
 
 private fun setIfNotEmpty(dest: MutableMap<String, Value>, key: String, data: Map<String, String>) {

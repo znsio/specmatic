@@ -15,7 +15,7 @@ class Substitution(
     val body: Pattern,
     val resolver: Resolver,
     val data: JSONObjectValue,
-    val dictionary: Map<String, Value>
+    val dictionary: Dictionary
 ) {
     val variableValues: Map<String, String>
 
@@ -106,7 +106,7 @@ class Substitution(
     fun substituteSimpleVariableLookup(string: String, key: String? = null): String {
         val name = string.trim().removeSurrounding("$(", ")")
         return variableValues[name]
-                ?: key?.let { dictionary[key]?.toStringLiteral() }
+                ?: key?.let { dictionary.map[key]?.toStringLiteral() }
                 ?: throw ContractException("Could not resolve expression $string as no variable by the name $name was found")
     }
 

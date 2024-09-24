@@ -1449,7 +1449,8 @@
     }
 
     function getHostPort() {
-        return table.getAttribute("data-hostPort");
+        let hostPort = table.getAttribute("data-hostPort");
+        return hostPort ? hostPort.replace(/\/$/, '') : hostPort;
     }
 
     function enableValidateBtn(tableRow) {

@@ -5,6 +5,7 @@ import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validate
+import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingle
 import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
 import io.specmatic.core.parseContractFileToFeature
@@ -13,7 +14,6 @@ import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.loadDictionary
 import picocli.CommandLine.*
 import java.io.File
@@ -127,7 +127,7 @@ class ExamplesCommand : Callable<Int> {
 
             if (exampleFile != null) {
                 try {
-                    Result.fromResults(validate(contractFile, exampleFile).values.filterIsInstance<Result.Failure>()).throwOnFailure()
+                    validateSingle(contractFile, exampleFile).throwOnFailure()
 
                     logger.log("The provided example ${exampleFile.name} is valid.")
                 } catch (e: ContractException) {
@@ -290,8 +290,8 @@ private fun getDictionaryPath(dictFile: File?, contractFile: File?): String? {
     return when {
         dictFile != null -> dictFile.path
 
-        contractFile?.parentFile?.resolve("dictionary.json")?.exists() == true -> {
-            contractFile.parentFile.resolve("dictionary.json").path
+        contractFile?.canonicalFile?.parentFile?.resolve("dictionary.json")?.exists() == true -> {
+            contractFile.canonicalFile.parentFile.resolve("dictionary.json").path
         }
 
         else -> {

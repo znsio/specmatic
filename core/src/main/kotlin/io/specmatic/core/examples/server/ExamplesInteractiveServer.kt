@@ -96,8 +96,7 @@ class ExamplesInteractiveServer(
                     try {
                         val contractFile = getContractFile()
                         val validationResultResponse = try {
-                            val results = validate(contractFile, File(request.exampleFile))
-                            val result = Result.fromResults(results.values.map { it }).throwOnFailure()
+                            val result = validateSingle(contractFile, File(request.exampleFile))
                             if(result.isSuccess())
                                 ValidateExampleResponse(request.exampleFile)
                             else
@@ -389,23 +388,28 @@ class ExamplesInteractiveServer(
             return ExamplePathInfo(file.absolutePath, true)
         }
 
-        fun validate(contractFile: File, exampleFile: File? = null, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+        fun validateSingle(contractFile: File, exampleFile: File): Result {
             val feature = parseContractFileToFeature(contractFile)
-            return validate(feature, exampleFile, examples, false, scenarioFilter)
+            return validateSingle(feature, exampleFile)
         }
 
-        fun validate(feature: Feature, exampleFile: File? = null, examples: Map<String, List<ScenarioStub>> = emptyMap(), inline: Boolean = false, scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
-            if(exampleFile != null) {
-                val scenarioStub = ScenarioStub.readFromFile(exampleFile)
+        fun validateSingle(feature: Feature, exampleFile: File): Result {
+            val scenarioStub = ScenarioStub.readFromFile(exampleFile)
 
-                try {
-                    validateExample(feature, scenarioStub)
-                    return mapOf(exampleFile.path to Result.Success())
-                } catch(e: NoMatchingScenario) {
-                    return mapOf(exampleFile.path to e.results.toResultIfAny())
-                }
+            return try {
+                validateExample(feature, scenarioStub)
+                Result.Success()
+            } catch(e: NoMatchingScenario) {
+                e.results.toResultIfAny()
             }
+        }
 
+        fun validate(contractFile: File, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+            val feature = parseContractFileToFeature(contractFile)
+            return validate(feature, examples, false, scenarioFilter)
+        }
+
+        fun validate(feature: Feature, examples: Map<String, List<ScenarioStub>> = emptyMap(), inline: Boolean = false, scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
             val updatedFeature = scenarioFilter.filter(feature)
 
             val results = examples.mapValues { (name, exampleList) ->

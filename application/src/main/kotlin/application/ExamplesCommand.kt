@@ -19,7 +19,6 @@ import picocli.CommandLine.*
 import java.io.File
 import java.lang.Thread.sleep
 import java.util.concurrent.Callable
-import kotlin.system.exitProcess
 
 @Command(
     name = "examples",
@@ -27,7 +26,7 @@ import kotlin.system.exitProcess
     description = ["Generate externalised JSON example files with API requests and responses"],
     subcommands = [ExamplesCommand.Validate::class, ExamplesCommand.Interactive::class]
 )
-class ExamplesCommand : Callable<Unit> {
+class ExamplesCommand : Callable<Int> {
     @Option(
         names = ["--filter-name"],
         description = ["Use only APIs with this value in their name"],
@@ -58,13 +57,15 @@ class ExamplesCommand : Callable<Unit> {
     @Option(names = ["--dictionary"], description = ["External Dictionary File Path, defaults to dictionary.json"])
     var dictFile: File? = null
 
-    override fun call() {
+    override fun call(): Int {
         if (contractFile == null) {
             println("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
-            return
+            return 1
         }
-        if (!contractFile!!.exists())
-            exitWithMessage("Could not find file ${contractFile!!.path}")
+        if (!contractFile!!.exists()) {
+            logger.log("Could not find file ${contractFile!!.path}")
+            return 1
+        }
 
         configureLogger(this.verbose)
 
@@ -81,8 +82,10 @@ class ExamplesCommand : Callable<Unit> {
             )
         } catch (e: Throwable) {
             logger.log(e)
-            exitProcess(1)
+            return 1
         }
+
+        return 0
     }
 
     @Command(
@@ -115,8 +118,10 @@ class ExamplesCommand : Callable<Unit> {
         var filterNotName: String = ""
 
         override fun call(): Int {
-            if (!contractFile.exists())
-                exitWithMessage("Could not find file ${contractFile.path}")
+            if (!contractFile.exists()) {
+                logger.log("Could not find file ${contractFile.path}")
+                return 1
+            }
 
             configureLogger(this.verbose)
 

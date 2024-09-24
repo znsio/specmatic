@@ -92,9 +92,13 @@ class ExamplesInteractiveServer(
                     val request = call.receive<ValidateExampleRequest>()
                     try {
                         val contractFile = getContractFile()
-                        val validationResults = try {
-                            throwExceptionIfExampleIsInvalid(contractFile, request.exampleFile)
-                            ValidateExampleResponse(request.exampleFile)
+                        val validationResultResponse = try {
+                            val results = validate(contractFile, File(request.exampleFile))
+                            val result = Result.fromResults(results.values.map { it }).throwOnFailure()
+                            if(result.isSuccess())
+                                ValidateExampleResponse(request.exampleFile)
+                            else
+                                ValidateExampleResponse(request.exampleFile, result.reportString())
                         } catch (e: FileNotFoundException) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
                         } catch (e: ContractException) {
@@ -102,7 +106,7 @@ class ExamplesInteractiveServer(
                         } catch (e: Exception) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
                         }
-                        call.respond(HttpStatusCode.OK, validationResults)
+                        call.respond(HttpStatusCode.OK, validationResultResponse)
                     } catch(e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "An unexpected error occurred: ${e.message}"))
                     }
@@ -173,11 +177,6 @@ class ExamplesInteractiveServer(
             this.host = serverHost
             this.port = serverPort
         }
-    }
-
-    private fun throwExceptionIfExampleIsInvalid(contractFile: File, exampleFilePath: String) {
-        val results = validate(contractFile, File(exampleFilePath))
-        Result.fromResults(results.values.map { it }).throwOnFailure()
     }
 
     private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {

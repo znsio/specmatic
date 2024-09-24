@@ -177,7 +177,7 @@ class ExamplesCommand : Callable<Unit> {
 
             validationResults.forEach { (exampleFileName, result) ->
                 if (!result.isSuccess()) {
-                    logger.log(System.lineSeparator() + "$tag $exampleFileName has following validation error(s):")
+                    logger.log(System.lineSeparator() + "$tag $exampleFileName has the following validation error(s):")
                     logger.log(result.reportString())
                 }
             }
@@ -185,7 +185,7 @@ class ExamplesCommand : Callable<Unit> {
             println()
             logger.log("=============== Validation Summary ===============")
             logger.log(Results(validationResults.values.toList()).summary())
-            logger.log("==================================================")
+            logger.log("""==================================================""")
         }
     }
 

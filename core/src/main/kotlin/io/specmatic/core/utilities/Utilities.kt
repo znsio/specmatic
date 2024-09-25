@@ -244,10 +244,10 @@ fun createIfDoesNotExist(workingDirectoryPath: String) {
     }
 }
 
-fun exitIfDirectoriesAreInvalid(directoryPathsToVerify: List<String>, natureOfDirectoryPaths: String) {
+fun throwExceptionIfDirectoriesAreInvalid(directoryPathsToVerify: List<String>, natureOfDirectoryPaths: String) {
     val invalidDataDirs = directoryPathsToVerify.filter { File(it).exists().not() || File(it).isDirectory.not() }
     if (invalidDataDirs.isNotEmpty()) {
-        exitWithMessage("The following $natureOfDirectoryPaths are invalid: ${invalidDataDirs.joinToString(", ")}. Please provide the valid $natureOfDirectoryPaths.")
+        throw Exception("The following $natureOfDirectoryPaths are invalid: ${invalidDataDirs.joinToString(", ")}. Please provide the valid $natureOfDirectoryPaths.")
     }
 }
 

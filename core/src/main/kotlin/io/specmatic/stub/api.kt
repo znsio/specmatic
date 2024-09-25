@@ -9,7 +9,7 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.contractStubPaths
 import io.specmatic.core.utilities.examplesDirFor
-import io.specmatic.core.utilities.exitIfDirectoriesAreInvalid
+import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
@@ -100,7 +100,7 @@ internal fun createStub(
     if(File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
     val contractPathData = contractStubPaths(configFileName)
 
-    if(strict) exitIfDirectoriesAreInvalid(dataDirPaths, "example directories")
+    if(strict) throwExceptionIfDirectoriesAreInvalid(dataDirPaths, "example directories")
 
     val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
     val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths, specmaticConfig, strict)
@@ -402,7 +402,7 @@ fun loadContractStubs(
         when (val feature = matchResults.firstNotNullOfOrNull { it.feature }) {
             null -> {
                 val errorMessage = stubMatchErrorMessage(matchResults, stubFile).prependIndent("  ")
-                if(strictMode) exitWithMessage(errorMessage)
+                if(strictMode) throw Exception(errorMessage)
                 else consoleLog(StringLog(errorMessage))
                 null
             }

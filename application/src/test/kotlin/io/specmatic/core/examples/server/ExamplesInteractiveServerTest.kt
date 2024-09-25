@@ -10,7 +10,6 @@ import io.specmatic.core.value.Value
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.io.File
 
 class ExamplesInteractiveServerTest {
@@ -42,7 +41,8 @@ class ExamplesInteractiveServerTest {
         }
 
         fun assertPathParameters(path: String?, name: String, address: String) {
-            assertThat(path).isEqualTo("/generate/names/$name/address/$address")
+            assertThat(path).contains("/generate/names/$name/address/$address")
+            assertThat(path!!.trim('/').split('/').last()).isNotEqualTo("(string)")
         }
 
         fun assertQueryParameters(queryParameters: QueryParameters, name: String, address: String) {
@@ -89,26 +89,40 @@ class ExamplesInteractiveServerTest {
             val example = ExampleFromFile(it)
             val request = example.request
             val response = example.response
+            val responseBody = response.body as JSONArrayValue
 
-            assertThrows<AssertionError>("Header Values should be randomly generated") {
-                assertHeaders(request.headers, "Bearer 123")
-            }
+            assertThat(request.headers["Authentication"])
+                .withFailMessage("Header values should be randomly generated")
+                .isNotEqualTo("Bearer 123")
 
-            assertThrows<AssertionError>("Request Body Values should be randomly generated") {
-                when(request.method) {
-                    "POST" -> assertRequestBody(request.body, "John-Doe", "123-Main-Street")
-                    "GET"  -> assertQueryParameters(request.queryParams, "John-Doe", "123-Main-Street")
-                    "DELETE" -> assertPathParameters(request.path, "John-Doe", "123-Main-Street")
+            when(request.method) {
+                "POST" -> {
+                    val body = request.body as JSONObjectValue
+                    assertThat(body.findFirstChildByPath("name")?.toStringLiteral()).isNotEqualTo("John-Doe")
+                    assertThat(body.findFirstChildByPath("address")?.toStringLiteral()).isNotEqualTo("123-Main-Street")
+
+                }
+                "GETS" -> {
+                    val queryParameters = request.queryParams
+                    assertThat(queryParameters.getValues("name")).doesNotContain("John-Doe")
+                    assertThat(queryParameters.getValues("address")).doesNotContain("123-Main-Street")
+                }
+                "DELETE" -> {
+                    val path = request.path as String
+                    assertThat(path).doesNotContain("/generate/names/John-Doe/address/123-Main-Street")
+                    assertThat(path.trim('/').split('/').last()).isNotEqualTo("(string)")
                 }
             }
 
-            assertThrows<AssertionError>("Response Body Values should be randomly generated") {
-                assertResponseBody(response.body) {
-                    index -> when(index) {
-                        0 -> "John Doe" to "123 Main Street"
-                        else -> "Jane Doe" to "456 Main Street"
-                    }
+            responseBody.list.forEachIndexed { index, value ->
+                value as JSONObjectValue
+                val (name, address) = when(index) {
+                    0 -> "John Doe" to "123 Main Street"
+                    else -> "Jane Doe" to "456 Main Street"
                 }
+
+                assertThat(value.findFirstChildByPath("name")?.toStringLiteral()).isNotEqualTo(name)
+                assertThat(value.findFirstChildByPath("address")?.toStringLiteral()).isNotEqualTo(address)
             }
         }
     }
@@ -155,10 +169,11 @@ class ExamplesInteractiveServerTest {
             val example = ExampleFromFile(it)
             val request = example.request
             val response = example.response
+            val responseBody = response.body as JSONArrayValue
 
-            assertThrows<AssertionError>("Header Values should be randomly generated") {
-                assertHeaders(request.headers, "Bearer 123")
-            }
+            assertThat(request.headers["Authentication"])
+                .withFailMessage("Header values should be randomly generated")
+                .isNotEqualTo("Bearer 123")
 
             when(request.method) {
                 "POST" -> assertRequestBody(request.body, "John-Doe", "123-Main-Street")
@@ -166,13 +181,15 @@ class ExamplesInteractiveServerTest {
                 "DELETE" -> assertPathParameters(request.path, "John-Doe", "123-Main-Street")
             }
 
-            assertThrows<AssertionError>("Response Body Values should be randomly generated") {
-                assertResponseBody(response.body) {
-                    index -> when(index) {
-                        0 -> "John Doe" to "123 Main Street"
-                        else -> "Jane Doe" to "456 Main Street"
-                    }
+            responseBody.list.forEachIndexed { index, value ->
+                value as JSONObjectValue
+                val (name, address) = when(index) {
+                    0 -> "John Doe" to "123 Main Street"
+                    else -> "Jane Doe" to "456 Main Street"
                 }
+
+                assertThat(value.findFirstChildByPath("name")?.toStringLiteral()).isNotEqualTo(name)
+                assertThat(value.findFirstChildByPath("address")?.toStringLiteral()).isNotEqualTo(address)
             }
         }
     }

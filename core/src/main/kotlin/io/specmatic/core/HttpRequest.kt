@@ -377,13 +377,16 @@ data class HttpRequest(
     }
 
     private fun substituteDictionaryValuesInPath(dictionary: Dictionary, httpPathPattern: HttpPathPattern): String {
-        val prefix  = "/".takeIf { this.path!!.startsWith("/") }.orEmpty()
-        val postfix = "/".takeIf {  this.path!!.endsWith("/")  }.orEmpty()
+        this.path as String
+        val prefix = "/".takeIf { this.path.startsWith("/") }.orEmpty()
+        val postfix = "/".takeIf { this.path.endsWith("/") }.orEmpty()
+        val actualPathSegments = this.path.trim('/').split("/").filter { it.isNotEmpty() }
 
-        return httpPathPattern.pathSegmentPatterns.map {
-            when (it.key) {
-                null -> it.pattern
-                else -> dictionary.substituteDictionaryValues(it.key, it.pattern.toString())
+        return httpPathPattern.pathSegmentPatterns.zip(actualPathSegments).map { (segmentPattern, actual) ->
+            if (segmentPattern.key != null && dictionary.contains(segmentPattern.key)) {
+                dictionary.substituteDictionaryValues(segmentPattern.key, "(${segmentPattern.pattern.typeName})")
+            } else {
+                actual
             }
         }.joinToString("/", prefix = prefix, postfix = postfix)
     }

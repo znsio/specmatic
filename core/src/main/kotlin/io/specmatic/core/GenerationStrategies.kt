@@ -12,15 +12,8 @@ interface GenerationStrategies {
     fun generateHttpRequestBodies(resolver: Resolver, body: Pattern, row: Row): Sequence<ReturnValue<Pattern>>
     fun resolveRow(row: Row): Row
     fun generateKeySubLists(key: String, subList: List<String>): Sequence<List<String>>
-    fun fillInTheMissingMapPatterns(
-        newQueryParamsList: Sequence<Map<String, Pattern>>,
-        queryPatterns: Map<String, Pattern>,
-        additionalProperties: Pattern?,
-        row: Row,
-        resolver: Resolver
-    ): Sequence<Map<String, Pattern>>
 
-    fun fillInTheMissingMapPatternsR(
+    fun fillInTheMissingMapPatterns(
         newQueryParamsList: Sequence<Map<String, Pattern>>,
         queryPatterns: Map<String, Pattern>,
         additionalProperties: Pattern?,

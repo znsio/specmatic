@@ -195,7 +195,7 @@ data class HttpHeadersPattern(
             newMapBasedOn(pattern, row, resolver)
         }
 
-        val generatedWithoutExamples: Sequence<ReturnValue<Map<String, Pattern>>> = resolver.generation.fillInTheMissingMapPatternsR(
+        val generatedWithoutExamples: Sequence<ReturnValue<Map<String, Pattern>>> = resolver.generation.fillInTheMissingMapPatterns(
             basedOnExamples.map { it.value },
             pattern,
             null,
@@ -277,7 +277,7 @@ data class HttpHeadersPattern(
     }
 
     fun addComplimentaryPatterns(basePatterns: Sequence<ReturnValue<HttpHeadersPattern>>, row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
-        return addComplimentaryPatternsR(
+        return addComplimentaryPatterns(
             basePatterns.map { it.ifValue { it.pattern } },
             pattern,
             null,
@@ -344,11 +344,17 @@ data class HttpHeadersPattern(
         }
     }
 
-    private fun addComplimentaryPatternsR(baseGeneratedPatterns: Sequence<ReturnValue<Map<String, Pattern>>>, patterns: Map<String, Pattern>, additionalProperties: Pattern?, row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
+    private fun addComplimentaryPatterns(
+        baseGeneratedPatterns: Sequence<ReturnValue<Map<String, Pattern>>>,
+        patterns: Map<String, Pattern>,
+        additionalProperties: Pattern?,
+        row: Row,
+        resolver: Resolver
+    ): Sequence<ReturnValue<Map<String, Pattern>>> {
         val generatedWithoutExamples: Sequence<ReturnValue<Map<String, Pattern>>> =
             resolver
                 .generation
-                .fillInTheMissingMapPatternsR(
+                .fillInTheMissingMapPatterns(
                     baseGeneratedPatterns.map { it.value },
                     patterns,
                     additionalProperties,
@@ -356,9 +362,7 @@ data class HttpHeadersPattern(
                     resolver
                 )
                 .map {
-                    it.update { map ->
-                        map.mapKeys { withoutOptionality(it.key) }
-                    }
+                    it.update { map -> map.mapKeys { withoutOptionality(it.key) } }
                 }
 
         return baseGeneratedPatterns + generatedWithoutExamples

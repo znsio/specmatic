@@ -509,8 +509,11 @@ data class HttpRequestPattern(
 
             val newHeadersPattern: Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = "HEADERS") {
                 if (status.toString().startsWith("2")) {
-                    val new = headersPattern.newBasedOn(row, resolver)
-                    headersPattern.addComplimentaryPatterns(new, row, resolver)
+                    headersPattern.addComplimentaryPatterns(
+                        headersPattern.newBasedOn(row, resolver),
+                        row,
+                        resolver
+                    )
                 } else {
                     headersPattern.readFrom(row, resolver)
                 }

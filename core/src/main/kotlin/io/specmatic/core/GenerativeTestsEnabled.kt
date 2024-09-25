@@ -99,33 +99,6 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean) : Generatio
         additionalProperties: Pattern?,
         row: Row,
         resolver: Resolver
-    ): Sequence<Map<String, Pattern>> {
-        val additionalPatterns = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
-            val queryParams = queryPatterns.let {
-                if (additionalProperties != null)
-                    it.plus(randomString(5) to additionalProperties)
-                else
-                    it
-            }
-
-            forEachKeyCombinationIn<Pattern>(queryParams, Row(), returnValues<Pattern> { entry: Map<String, Pattern> ->
-                newMapBasedOn(entry, row, resolver).map { it.value }
-            }).map { it.value }.map {
-                it.mapKeys { withoutOptionality(it.key) }
-            }
-        }
-
-        return additionalPatterns.map {
-            noOverlapBetween(it, newQueryParamsList, resolver)
-        }.filterNotNull()
-    }
-
-    override fun fillInTheMissingMapPatternsR(
-        newQueryParamsList: Sequence<Map<String, Pattern>>,
-        queryPatterns: Map<String, Pattern>,
-        additionalProperties: Pattern?,
-        row: Row,
-        resolver: Resolver
     ): Sequence<ReturnValue<Map<String, Pattern>>> {
         val additionalPatterns = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams = queryPatterns.let {
@@ -144,12 +117,9 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean) : Generatio
             }
         }
 
-        return additionalPatterns.map { pattern ->
-            pattern.update {
-                noOverlapBetween(it, newQueryParamsList, resolver) ?: emptyMap()
-            }
-        }.filter {
-            it.value.isNotEmpty()
+        return additionalPatterns.mapNotNull { pattern ->
+            val overlapResult = noOverlapBetween(pattern.value, newQueryParamsList, resolver) ?: return@mapNotNull null
+            pattern.update { overlapResult }
         }
     }
 }

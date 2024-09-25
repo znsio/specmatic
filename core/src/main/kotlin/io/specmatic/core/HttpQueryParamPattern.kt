@@ -207,7 +207,7 @@ fun addComplimentaryPatterns(baseGeneratedPatterns: Sequence<Map<String, Pattern
             .generation
             .fillInTheMissingMapPatterns(baseGeneratedPatterns, patterns, additionalProperties, row, resolver)
             .map {
-                it.mapKeys { withoutOptionality(it.key) }
+                it.value.mapKeys { withoutOptionality(it.key) }
             }
 
     return baseGeneratedPatterns + generatedWithoutExamples

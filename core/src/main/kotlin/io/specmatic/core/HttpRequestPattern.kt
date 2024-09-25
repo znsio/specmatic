@@ -585,7 +585,11 @@ data class HttpRequestPattern(
                                             newRequestPattern.copy(securitySchemes = listOf(it))
                                         }
                                     }.map { requestPattern ->
-                                        newHeadersPattern.ifValue { requestPattern }
+                                        val requestValueDetails = listOf(newHeadersPattern)
+                                            .filterIsInstance<HasValue<*>>().flatMap {
+                                                it.valueDetails
+                                            }
+                                        HasValue(requestPattern, requestValueDetails)
                                     }
                                 }
                             }

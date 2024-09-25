@@ -97,7 +97,8 @@ internal class StubCommandTest {
                 stubLoaderEngine.loadStubs(
                     listOf(contractPath).map { ContractPathData("", it) },
                     emptyList(),
-                    any()
+                    any(),
+                    false
                 )
             }.returns(stubInfo)
 
@@ -203,7 +204,8 @@ internal class StubCommandTest {
                 stubLoaderEngine.loadStubs(
                     listOf(contractPath).map { ContractPathData("", it) },
                     emptyList(),
-                    any()
+                    any(),
+                    false
                 )
             }.returns(stubInfo)
 

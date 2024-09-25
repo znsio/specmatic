@@ -1,14 +1,30 @@
 package application
 
-import io.specmatic.core.*
+import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.CONTRACT_EXTENSIONS
+import io.specmatic.core.Configuration
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
-import io.specmatic.core.log.*
+import io.specmatic.core.WorkingDirectory
+import io.specmatic.core.getConfigFileName
+import io.specmatic.core.log.CompositePrinter
+import io.specmatic.core.log.ConsolePrinter
+import io.specmatic.core.log.JSONConsoleLogPrinter
+import io.specmatic.core.log.JSONFilePrinter
+import io.specmatic.core.log.LogDirectory
+import io.specmatic.core.log.LogPrinter
+import io.specmatic.core.log.LogTail
+import io.specmatic.core.log.NonVerbose
+import io.specmatic.core.log.StringLog
+import io.specmatic.core.log.TextFilePrinter
+import io.specmatic.core.log.Verbose
+import io.specmatic.core.log.consoleLog
+import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
-import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
 import io.specmatic.core.utilities.exitWithMessage
+import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.HttpClientFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -147,7 +163,7 @@ class StubCommand : Callable<Unit> {
                 }
             }
         } catch (e: Throwable) {
-            consoleLog(e)
+            exitWithMessage(e.message.orEmpty())
         }
     }
 

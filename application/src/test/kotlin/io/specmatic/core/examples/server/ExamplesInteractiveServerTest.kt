@@ -101,7 +101,7 @@ class ExamplesInteractiveServerTest {
                     assertThat(body.findFirstChildByPath("address")?.toStringLiteral()).isNotEqualTo("123-Main-Street")
 
                 }
-                "GETS" -> {
+                "GET" -> {
                     val queryParameters = request.queryParams
                     assertThat(queryParameters.getValues("name")).doesNotContain("John-Doe")
                     assertThat(queryParameters.getValues("address")).doesNotContain("123-Main-Street")
@@ -111,6 +111,7 @@ class ExamplesInteractiveServerTest {
                     assertThat(path).doesNotContain("/generate/names/John-Doe/address/123-Main-Street")
                     assertThat(path.trim('/').split('/').last()).isNotEqualTo("(string)")
                 }
+                else -> throw IllegalArgumentException("Unexpected method ${request.method}")
             }
 
             responseBody.list.forEachIndexed { index, value ->
@@ -148,6 +149,7 @@ class ExamplesInteractiveServerTest {
                     assertPathParameters(request.path, "John-Doe", "123-Main-Street")
                     assertThat(request.path!!.trim('/').split('/').last()).isNotEqualTo("(string)")
                 }
+                else -> throw IllegalArgumentException("Unexpected method ${request.method}")
             }
 
             assertResponseBody(response.body) {
@@ -184,6 +186,7 @@ class ExamplesInteractiveServerTest {
                     assertPathParameters(request.path, "John-Doe", "123-Main-Street")
                     assertThat(request.path!!.trim('/').split('/').last()).isNotEqualTo("(string)")
                 }
+                else -> throw IllegalArgumentException("Unexpected method ${request.method}")
             }
 
             responseBody.list.forEachIndexed { index, value ->

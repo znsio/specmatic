@@ -1,14 +1,24 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.core.*
+import io.cucumber.messages.types.TableRow
+import io.specmatic.core.Resolver
+import io.specmatic.core.Result
+import io.specmatic.core.UnexpectedKeyCheck
+import io.specmatic.core.ValidateUnexpectedKeys
+import io.specmatic.core.mismatchResult
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
+import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
+import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.specmatic.core.utilities.mapZip
 import io.specmatic.core.utilities.stringToPatternMap
 import io.specmatic.core.utilities.withNullPattern
-import io.specmatic.core.value.*
-import io.cucumber.messages.types.TableRow
-import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
-import io.specmatic.core.utilities.Flags.Companion.getStringValue
+import io.specmatic.core.value.BooleanValue
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NullValue
+import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
 
 fun toTabularPattern(jsonContent: String, typeAlias: String? = null): TabularPattern =
     toTabularPattern(stringToPatternMap(jsonContent), typeAlias)
@@ -145,7 +155,9 @@ data class TabularPattern(
 fun newMapBasedOn(patternMap: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
     val patternCollection: Map<String, Sequence<ReturnValue<Pattern>>> = patternMap.mapValues { (key, pattern) ->
         attempt(breadCrumb = withoutOptionality(key)) {
-            newPatternsBasedOn(row, key, pattern, resolver)
+            newPatternsBasedOn(row, key, pattern, resolver).map {
+                it.addDetails(breadCrumb = withoutOptionality(key), message = "")
+            }
         }
     }
 
@@ -297,8 +309,8 @@ fun <ValueType> forEachKeyCombinationGivenRowIn(
     patternMap: Map<String, ValueType>,
     row: Row,
     resolver: Resolver,
-    creator: (Map<String, ValueType>) -> Sequence<Map<String, ValueType>>
-): Sequence<Map<String, ValueType>> =
+    creator: (Map<String, ValueType>) -> Sequence<ReturnValue<Map<String, ValueType>>>
+): Sequence<ReturnValue<Map<String, ValueType>>> =
     keySets(patternMap.keys.toList(), row, resolver).map { keySet ->
         patternMap.filterKeys { key -> key in keySet }
     }.map { newPattern ->

@@ -1,0 +1,29 @@
+openapi: 3.0.3
+info:
+  title: Simple API with Query Param Enum
+  version: 1.0.0
+  description: A simple API with a GET endpoint that accepts a query parameter with enum values.
+paths:
+  /items:
+    get:
+      summary: Get items by region
+      operationId: getItemsByRegion
+      parameters:
+        - name: region
+          in: query
+          required: true
+          description: Specifies the region for the request
+          schema:
+            type: string
+            enum:
+              - FIRST
+              - SECOND
+              - THIRD
+      responses:
+        '200':
+          description: A response message based on the region
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "You have selected the FIRST region"

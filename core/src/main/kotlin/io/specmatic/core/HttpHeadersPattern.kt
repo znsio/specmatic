@@ -186,20 +186,30 @@ data class HttpHeadersPattern(
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
-        val basedOnExamples = forEachKeyCombinationGivenRowIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
-            newMapBasedOn(pattern, row, resolver).map { it.value }
+    fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
+        val basedOnExamples = forEachKeyCombinationGivenRowIn(
+            row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver),
+            row,
+            resolver
+        ) { pattern ->
+            newMapBasedOn(pattern, row, resolver)
         }
 
-        val generatedWithoutExamples: Sequence<Map<String, Pattern>> = resolver.generation.fillInTheMissingMapPatterns(
-            basedOnExamples,
+        val generatedWithoutExamples: Sequence<ReturnValue<Map<String, Pattern>>> = resolver.generation.fillInTheMissingMapPatterns(
+            basedOnExamples.map { it.value },
             pattern,
             null,
             row,
             resolver
         )
 
-        return (basedOnExamples + generatedWithoutExamples).map { map -> HttpHeadersPattern(map.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
+        return (basedOnExamples + generatedWithoutExamples).map { example ->
+            example.update { map ->
+                map.mapKeys { withoutOptionality(it.key) }
+            }.ifValue {
+                HttpHeadersPattern(it, contentType = contentType)
+            }
+        }
     }
 
     fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
@@ -266,15 +276,17 @@ data class HttpHeadersPattern(
         return Result.fromFailures(failures)
     }
 
-    fun addComplimentaryPatterns(basePatterns: Sequence<HttpHeadersPattern>, row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
-        return io.specmatic.core.addComplimentaryPatterns(
-            basePatterns.map {it.pattern},
+    fun addComplimentaryPatterns(basePatterns: Sequence<ReturnValue<HttpHeadersPattern>>, row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
+        return addComplimentaryPatterns(
+            basePatterns.map { it.ifValue { it.pattern } },
             pattern,
             null,
             row,
             resolver,
         ).map {
-            HttpHeadersPattern(it, contentType = contentType)
+            it.ifValue {
+                HttpHeadersPattern(it, contentType = contentType)
+            }
         }
     }
 
@@ -282,12 +294,11 @@ data class HttpHeadersPattern(
         return matches(this.pattern, row, resolver, "header")
     }
 
-    fun readFrom(row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
+    fun readFrom(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
         return attempt(breadCrumb = HEADERS_BREADCRUMB) {
             readFrom(this.pattern, row, resolver)
         }.map {
-            HttpHeadersPattern(it, contentType = contentType)
-
+            HasValue(HttpHeadersPattern(it, contentType = contentType))
         }
     }
 

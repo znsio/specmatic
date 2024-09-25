@@ -7485,6 +7485,39 @@ components:
     }
 
     @Test
+    fun `should contain the positive test names with details around the enum value picked up as a request header`() {
+        val specFilePath = "core/src/test/resources/openapi/spec_with_request_header_as_enum.yaml"
+        val spec = OpenApiSpecification.fromFile(specFilePath, "")
+            .toFeature()
+
+        val tests = spec.generateContractTestScenarios(emptyList()).toList().map { it.second.value }
+
+        val testDescriptionList = tests.map { it.testDescription() }
+        assertThat(testDescriptionList).containsExactlyInAnyOrder(
+            " Scenario: GET /items -> 200 [REQUEST.HEADERS.X-region selected FIRST from enum]",
+            " Scenario: GET /items -> 200 [REQUEST.HEADERS.X-region selected SECOND from enum]",
+            " Scenario: GET /items -> 200 [REQUEST.HEADERS.X-region selected THIRD from enum]"
+        )
+    }
+
+    @Test
+    @Disabled
+    fun `should contain the positive test names with details around the enum value picked up as a request query param`() {
+        val specFilePath = "core/src/test/resources/openapi/spec_with_request_query_param_as_enum.yaml"
+        val spec = OpenApiSpecification.fromFile(specFilePath, "")
+            .toFeature()
+
+        val tests = spec.generateContractTestScenarios(emptyList()).toList().map { it.second.value }
+
+        val testDescriptionList = tests.map { it.testDescription() }
+        assertThat(testDescriptionList).containsExactlyInAnyOrder(
+            " Scenario: GET /items -> 200 [REQUEST.QUERY-PARAMS.region selected FIRST from enum]",
+            " Scenario: GET /items -> 200 [REQUEST.QUERY-PARAMS.region selected SECOND from enum]",
+            " Scenario: GET /items -> 200 [REQUEST.QUERY-PARAMS.region selected THIRD from enum]"
+        )
+    }
+
+    @Test
     fun `show an error when examples with no mediaType is found in the request`() {
         assertThatThrownBy {
             OpenApiSpecification.fromYAML(

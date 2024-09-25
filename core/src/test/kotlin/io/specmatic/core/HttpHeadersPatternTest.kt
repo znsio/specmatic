@@ -173,7 +173,7 @@ internal class HttpHeadersPatternTest {
     fun `should generate new header objects given an empty row`() {
         val headers = HttpHeadersPattern(mapOf("Content-Type" to stringToPattern("(string)", "Content-Type")))
         val newHeaders = headers.newBasedOn(Row(), Resolver()).toList()
-        assertEquals("(string)", newHeaders[0].pattern.getValue("Content-Type").toString())
+        assertEquals("(string)", newHeaders[0].value.pattern.getValue("Content-Type").toString())
     }
 
     @Tag(GENERATION)
@@ -181,14 +181,14 @@ internal class HttpHeadersPatternTest {
     fun `should generate new header object with the value of the example in the given row`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern()))
         val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver()).toList()
-        assertThat(newHeaders[0].pattern.getValue("X-TraceID")).isEqualTo(ExactValuePattern(StringValue("123")))
+        assertThat(newHeaders[0].value.pattern.getValue("X-TraceID")).isEqualTo(ExactValuePattern(StringValue("123")))
     }
 
     @Tag(GENERATION)
     @Test
     fun `should generate two header object given one optional header and an empty row`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern(), "X-Identifier?" to StringPattern()))
-        val newHeaders = headers.newBasedOn(Row(), Resolver()).toList()
+        val newHeaders = headers.newBasedOn(Row(), Resolver()).toList().map { it.value }
 
         assertThat(newHeaders).containsExactlyInAnyOrder(
             HttpHeadersPattern(mapOf("X-TraceID" to StringPattern())),
@@ -200,7 +200,10 @@ internal class HttpHeadersPatternTest {
     @Test
     fun `should generate only one header object given one optional header an example of only the mandatory header`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern(), "X-Identifier?" to StringPattern()))
-        val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver()).toList()
+        val newHeaders = headers.newBasedOn(
+            Row(mapOf("X-TraceID" to "123")),
+            Resolver()
+        ).toList().map { it.value }
 
         assertThat(newHeaders).containsExactly(
             HttpHeadersPattern(mapOf("X-TraceID" to ExactValuePattern(StringValue("123")))),
@@ -212,7 +215,7 @@ internal class HttpHeadersPatternTest {
     fun `should generate one header object given one optional header an example of the optional header`() {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern()))
         val newHeaders = headers.newBasedOn(Row(mapOf("X-TraceID" to "123")), Resolver()).toList()
-        assertThat(newHeaders[0].pattern.getValue("X-TraceID")).isEqualTo(ExactValuePattern(StringValue("123")))
+        assertThat(newHeaders[0].value.pattern.getValue("X-TraceID")).isEqualTo(ExactValuePattern(StringValue("123")))
     }
 
     @Tag(GENERATION)
@@ -270,7 +273,7 @@ internal class HttpHeadersPatternTest {
 
         val flags = list.map {
             when {
-                it.pattern.contains("X-Optional") -> "with"
+                it.value.pattern.contains("X-Optional") -> "with"
                 else -> "without"
             }
         }

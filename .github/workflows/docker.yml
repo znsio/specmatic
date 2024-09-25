@@ -1,6 +1,8 @@
 name: Manual Release Build and Docker Image
 
 on:
+  repository_dispatch:
+    types: [specmatic-core-release]
   workflow_dispatch:
 
 jobs:
@@ -41,7 +43,11 @@ jobs:
         uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: znsio/specmatic:${{ steps.read_version.outputs.VERSION }}
-        continue-on-error: true
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+          format: table
+          vulnerability-type: os,library
     
       - name: Push Docker Image
         run: docker push znsio/specmatic:${{ steps.read_version.outputs.VERSION }}

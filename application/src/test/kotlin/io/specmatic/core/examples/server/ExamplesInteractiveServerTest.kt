@@ -2,7 +2,7 @@ package io.specmatic.core.examples.server
 
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.Dictionary
-import io.specmatic.core.HttpRequest
+import io.specmatic.core.QueryParameters
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
@@ -37,26 +37,30 @@ class ExamplesInteractiveServerTest {
                 """.trimIndent()).jsonObject
         )
 
-        fun assertTrackerRequest(httpRequest: HttpRequest, name: String, address: String) {
-            when(httpRequest.method) {
-                "POST" -> {
-                    val requestBody = httpRequest.body as JSONObjectValue
-                    assertThat(requestBody.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo(name)
-                    assertThat(requestBody.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo(address)
-                }
-
-                "GET" -> {
-                    val queryParams = httpRequest.queryParams
-                    assertThat(queryParams.getValues("name")).contains(name)
-                    assertThat(queryParams.getValues("address")).contains(address)
-                }
-            }
+        fun assertHeaders(headers: Map<String, String>, apiKey: String) {
+            assertThat(headers["Authentication"]).isEqualTo(apiKey)
         }
 
-        fun assertTrackerResponseObject(value: Value, name: String, address: String) {
-            value as JSONObjectValue
-            assertThat(value.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo(name)
-            assertThat(value.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo(address)
+        fun assertQueryParameters(queryParameters: QueryParameters, name: String, address: String) {
+            assertThat(queryParameters.getValues("name")).contains(name)
+            assertThat(queryParameters.getValues("address")).contains(address)
+        }
+
+        fun assertRequestBody(body: Value, name: String, address: String) {
+            body as JSONObjectValue
+            assertThat(body.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo(name)
+            assertThat(body.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo(address)
+        }
+
+        fun assertResponseBody(body: Value, getNameAddress: (index: Int) -> Pair<String, String>) {
+            body as JSONArrayValue
+            body.list.forEachIndexed { index, value ->
+                value as JSONObjectValue
+
+                val (name, address) = getNameAddress(index)
+                assertThat(value.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo(name)
+                assertThat(value.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo(address)
+            }
         }
     }
 
@@ -79,18 +83,26 @@ class ExamplesInteractiveServerTest {
 
         examples.forEach {
             val example = ExampleFromFile(it)
-
             val request = example.request
-            assertThat(request.headers).containsKeys("Authentication")
-            assertThrows<AssertionError>("Name and Address should be random Values") {
-                assertTrackerRequest(request, "John Doe", "123 Main Street")
+            val response = example.response
+
+            assertThrows<AssertionError>("Header Values should be randomly generated") {
+                assertHeaders(request.headers, "Bearer 123")
             }
 
-            val response = example.response
-            val responseBody = (response.body as JSONArrayValue).list
-            responseBody.forEach { value ->
-                assertThrows<AssertionError> {
-                    assertTrackerResponseObject(value, "John Doe", "123 Main Street")
+            assertThrows<AssertionError>("Request Body Values should be randomly generated") {
+                when(request.method) {
+                    "POST" -> assertRequestBody(request.body, "John Doe", "123 Main Street")
+                    "GET"  -> assertQueryParameters(request.queryParams, "John Doe", "123 Main Street")
+                }
+            }
+
+            assertThrows<AssertionError>("Response Body Values should be randomly generated") {
+                assertResponseBody(response.body) {
+                    index -> when(index) {
+                        0 -> "John Doe" to "123 Main Street"
+                        else -> "Jane Doe" to "456 Main Street"
+                    }
                 }
             }
         }
@@ -106,19 +118,21 @@ class ExamplesInteractiveServerTest {
 
         examples.forEach {
             val example = ExampleFromFile(it)
-
             val request = example.request
-            assertThat(request.headers.getValue("Authentication")).isEqualTo("Bearer 123")
-            assertTrackerRequest(request, "John Doe", "123 Main Street")
-
             val response = example.response
-            val responseBody = (response.body as JSONArrayValue).list
-            responseBody.forEachIndexed { index, value ->
-                val (name, address) = when (index) {
+
+            assertHeaders(request.headers, "Bearer 123")
+
+            when(request.method) {
+                "POST" -> assertRequestBody(request.body, "John Doe", "123 Main Street")
+                "GET"  -> assertQueryParameters(request.queryParams, "John Doe", "123 Main Street")
+            }
+
+            assertResponseBody(response.body) {
+                index -> when(index) {
                     0 -> "John Doe" to "123 Main Street"
                     else -> "Jane Doe" to "456 Main Street"
                 }
-                assertTrackerResponseObject(value, name, address)
             }
         }
     }
@@ -133,21 +147,24 @@ class ExamplesInteractiveServerTest {
 
         examples.forEach {
             val example = ExampleFromFile(it)
-
             val request = example.request
-            assertThat(request.headers).containsKeys("Authentication")
-            assertTrackerRequest(request, "John Doe", "123 Main Street")
-
             val response = example.response
-            val responseBody = (response.body as JSONArrayValue).list
-            responseBody.forEachIndexed { index, value ->
-                val (name, address) = when (index) {
-                    0 -> "John Doe" to "123 Main Street"
-                    else -> "Jane Doe" to "456 Main Street"
-                }
 
-                assertThrows<AssertionError>("Name and Address should be random Values") {
-                    assertTrackerResponseObject(value, name, address)
+            assertThrows<AssertionError>("Header Values should be randomly generated") {
+                assertHeaders(request.headers, "Bearer 123")
+            }
+
+            when(request.method) {
+                "POST" -> assertRequestBody(request.body, "John Doe", "123 Main Street")
+                "GET"  -> assertQueryParameters(request.queryParams, "John Doe", "123 Main Street")
+            }
+
+            assertThrows<AssertionError>("Response Body Values should be randomly generated") {
+                assertResponseBody(response.body) {
+                    index -> when(index) {
+                        0 -> "John Doe" to "123 Main Street"
+                        else -> "Jane Doe" to "456 Main Street"
+                    }
                 }
             }
         }

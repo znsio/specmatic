@@ -55,11 +55,15 @@ class Dictionary(private val map: Map<String, Value> = emptyMap()) {
     }
 
     fun substituteDictionaryValues(value: Map<String, String>, forceSubstitution: Boolean = false): Map<String, String> {
-        return value.mapValues { (name, value) ->
-            if((isVanillaPatternToken(value) || forceSubstitution) && name in map) {
-                map.getValue(name).toStringLiteral()
-            } else value
+        return value.mapValues { (key, value) ->
+            substituteDictionaryValues(key, value, forceSubstitution)
         }
+    }
+
+    fun substituteDictionaryValues(name: String, value: String, forceSubstitution: Boolean = false): String {
+        return if((isVanillaPatternToken(value) || forceSubstitution) && name in map) {
+            map.getValue(name).toStringLiteral()
+        } else value
     }
 
     fun lookup(key: String): Value? {

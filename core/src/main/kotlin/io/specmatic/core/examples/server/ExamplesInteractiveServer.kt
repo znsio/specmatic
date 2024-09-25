@@ -20,6 +20,7 @@ import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHeal
 import io.specmatic.core.utilities.*
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.mock.loadDictionary
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.HttpStubData
 import java.io.Closeable
@@ -33,7 +34,7 @@ class ExamplesInteractiveServer(
     private val inputContractFile: File? = null,
     private val filterName: String,
     private val filterNotName: String,
-    private val externalDictionary: Dictionary
+    private val externalDictionaryFile: File? = null
 ) : Closeable {
     private var contractFileFromRequest: File? = null
 
@@ -73,6 +74,7 @@ class ExamplesInteractiveServer(
 
                 post("/_specmatic/examples/generate") {
                     val contractFile = getContractFile()
+                    val dictionary = loadExternalDictionary(externalDictionaryFile, contractFile)
                     try {
                         val request = call.receive<GenerateExampleRequest>()
                         val generatedExample = generate(
@@ -81,7 +83,7 @@ class ExamplesInteractiveServer(
                             request.path,
                             request.responseStatusCode,
                             request.contentType,
-                            externalDictionary
+                            dictionary
                         )
 
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExample))
@@ -371,7 +373,8 @@ class ExamplesInteractiveServer(
             else examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
-            val updatedRequest = request.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
+            val httpPathPattern = scenario.httpRequestPattern.httpPathPattern
+            val updatedRequest = request.substituteDictionaryValues(externalDictionary, forceSubstitution = true, httpPathPattern)
 
             val response = feature.lookupResponse(scenario).cleanup()
             val updatedResponse = response.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
@@ -498,6 +501,26 @@ class ExamplesInteractiveServer(
 
         fun File.getExamplesFromDir(): List<ExampleFromFile> {
             return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
+        }
+
+        fun loadExternalDictionary(dictFile: File?, contractFile: File?): Dictionary {
+            val dictFilePath = when {
+                dictFile != null -> dictFile.path
+
+                contractFile != null -> {
+                    val dictFileName = "${contractFile.nameWithoutExtension}${DICTIONARY_FILE_SUFFIX}"
+                    contractFile.canonicalFile.parentFile.resolve(dictFileName).takeIf { it.exists() }?.path
+                }
+
+                else -> {
+                    val currentDir = File(System.getProperty("user.dir"))
+                    currentDir.resolve("dictionary.json").takeIf { it.exists() }?.path
+                }
+            }
+
+            return dictFilePath?.let {
+                Dictionary(loadDictionary(dictFilePath))
+            } ?: Dictionary(emptyMap())
         }
     }
 }

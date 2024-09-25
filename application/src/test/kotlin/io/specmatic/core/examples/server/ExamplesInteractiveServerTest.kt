@@ -2,11 +2,13 @@ package io.specmatic.core.examples.server
 
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.Dictionary
+import io.specmatic.core.QueryParameters
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.Value
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import java.io.File
 
@@ -16,8 +18,8 @@ class ExamplesInteractiveServerTest {
             parsedJSONObject("""
                 {
                     "Authentication": "Bearer 123",
-                    "name": "John Doe",
-                    "address": "123 Main Street",
+                    "name": "John-Doe",
+                    "address": "123-Main-Street",
                     "[0].name": "John Doe",
                     "[0].address": "123 Main Street",
                     "[*].name": "Jane Doe",
@@ -28,17 +30,49 @@ class ExamplesInteractiveServerTest {
         private val partialDictionary = Dictionary(
             parsedJSONObject("""
                 {
-                    "name": "John Doe",
-                    "address": "123 Main Street"
+                    "name": "John-Doe",
+                    "address": "123-Main-Street"
                 }
                 """.trimIndent()).jsonObject
         )
 
-        @JvmStatic
-        @AfterAll
-        fun cleanUp() {
-            val examplesFolder = File("src/test/resources/specifications/tracker_examples")
-            if (examplesFolder.exists()) examplesFolder.delete()
+        fun assertHeaders(headers: Map<String, String>, apiKey: String) {
+            assertThat(headers["Authentication"]).isEqualTo(apiKey)
+        }
+
+        fun assertPathParameters(path: String?, name: String, address: String) {
+            assertThat(path).contains("/generate/names/$name/address/$address")
+        }
+
+        fun assertQueryParameters(queryParameters: QueryParameters, name: String, address: String) {
+            assertThat(queryParameters.getValues("name")).contains(name)
+            assertThat(queryParameters.getValues("address")).contains(address)
+        }
+
+        fun assertRequestBody(body: Value, name: String, address: String) {
+            body as JSONObjectValue
+            assertThat(body.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo(name)
+            assertThat(body.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo(address)
+        }
+
+        fun assertResponseBody(body: Value, getNameAddress: (index: Int) -> Pair<String, String>) {
+            body as JSONArrayValue
+            body.list.forEachIndexed { index, value ->
+                value as JSONObjectValue
+
+                val (name, address) = getNameAddress(index)
+                assertThat(value.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo(name)
+                assertThat(value.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo(address)
+            }
+        }
+    }
+
+    @AfterEach
+    fun cleanUp() {
+        val examplesFolder = File("src/test/resources/specifications/tracker_examples")
+        if (examplesFolder.exists()) {
+            examplesFolder.listFiles()?.forEach { it.delete() }
+            examplesFolder.delete()
         }
     }
 
@@ -50,26 +84,46 @@ class ExamplesInteractiveServerTest {
             externalDictionary = Dictionary()
         ).map { File(it) }
 
-        try {
-            examples.forEach {
-                val example = ExampleFromFile(it)
+        examples.forEach {
+            val example = ExampleFromFile(it)
+            val request = example.request
+            val response = example.response
+            val responseBody = response.body as JSONArrayValue
 
-                val request = example.request
-                val requestBody = request.body as JSONObjectValue
-                assertThat(request.headers).containsKeys("Authentication")
-                assertThat(requestBody.findFirstChildByPath("name")?.toStringLiteral()).isNotNull()
-                assertThat(requestBody.findFirstChildByPath("address")?.toStringLiteral()).isNotNull()
+            assertThat(request.headers["Authentication"])
+                .withFailMessage("Header values should be randomly generated")
+                .isNotEqualTo("Bearer 123")
 
-                val response = example.response
-                val responseBody = (response.body as JSONArrayValue).list
-                responseBody.forEach { value ->
-                    value as JSONObjectValue
-                    assertThat(value.findFirstChildByPath("name")?.toStringLiteral()).isNotNull()
-                    assertThat(value.findFirstChildByPath("address")?.toStringLiteral()).isNotNull()
+            when(request.method) {
+                "POST" -> {
+                    val body = request.body as JSONObjectValue
+                    assertThat(body.findFirstChildByPath("name")?.toStringLiteral()).isNotEqualTo("John-Doe")
+                    assertThat(body.findFirstChildByPath("address")?.toStringLiteral()).isNotEqualTo("123-Main-Street")
+
                 }
+                "GET" -> {
+                    val queryParameters = request.queryParams
+                    assertThat(queryParameters.getValues("name")).doesNotContain("John-Doe")
+                    assertThat(queryParameters.getValues("address")).doesNotContain("123-Main-Street")
+                }
+                "DELETE" -> {
+                    val path = request.path as String
+                    assertThat(path).doesNotContain("/generate/names/John-Doe/address/123-Main-Street")
+                    assertThat(path.trim('/').split('/').last()).isNotEqualTo("(string)")
+                }
+                else -> throw IllegalArgumentException("Unexpected method ${request.method}")
             }
-        } finally {
-            examples.forEach { it.delete() }
+
+            responseBody.list.forEachIndexed { index, value ->
+                value as JSONObjectValue
+                val (name, address) = when(index) {
+                    0 -> "John Doe" to "123 Main Street"
+                    else -> "Jane Doe" to "456 Main Street"
+                }
+
+                assertThat(value.findFirstChildByPath("name")?.toStringLiteral()).isNotEqualTo(name)
+                assertThat(value.findFirstChildByPath("address")?.toStringLiteral()).isNotEqualTo(address)
+            }
         }
     }
 
@@ -81,33 +135,29 @@ class ExamplesInteractiveServerTest {
             externalDictionary = externalDictionary
         ).map { File(it) }
 
-        try {
-            examples.forEach {
-                val example = ExampleFromFile(it)
+        examples.forEach {
+            val example = ExampleFromFile(it)
+            val request = example.request
+            val response = example.response
 
-                val request = example.request
-                val requestBody = request.body as JSONObjectValue
+            assertHeaders(request.headers, "Bearer 123")
 
-                assertThat(request.headers).containsKeys("Authentication")
-                assertThat(request.headers.getValue("Authentication")).isEqualTo("Bearer 123")
-                assertThat(requestBody.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo("John Doe")
-                assertThat(requestBody.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo("123 Main Street")
+            when(request.method) {
+                "POST" -> assertRequestBody(request.body, "John-Doe", "123-Main-Street")
+                "GET"  -> assertQueryParameters(request.queryParams, "John-Doe", "123-Main-Street")
+                "DELETE" -> {
+                    assertPathParameters(request.path, "John-Doe", "123-Main-Street")
+                    assertThat(request.path!!.trim('/').split('/').last()).isNotEqualTo("(string)")
+                }
+                else -> throw IllegalArgumentException("Unexpected method ${request.method}")
+            }
 
-                val response = example.response
-                val responseBody = (response.body as JSONArrayValue).list
-                responseBody.forEachIndexed { index, value ->
-                    value as JSONObjectValue
-                    val (name, address) = when (index) {
-                        0 -> "John Doe" to "123 Main Street"
-                        else -> "Jane Doe" to "456 Main Street"
-                    }
-
-                    assertThat(value.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo(name)
-                    assertThat(value.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo(address)
+            assertResponseBody(response.body) {
+                index -> when(index) {
+                    0 -> "John Doe" to "123 Main Street"
+                    else -> "Jane Doe" to "456 Main Street"
                 }
             }
-        } finally {
-            examples.forEach { it.delete() }
         }
     }
 
@@ -119,33 +169,36 @@ class ExamplesInteractiveServerTest {
             externalDictionary = partialDictionary
         ).map { File(it) }
 
-        try {
-            examples.forEach {
-                val example = ExampleFromFile(it)
+        examples.forEach {
+            val example = ExampleFromFile(it)
+            val request = example.request
+            val response = example.response
+            val responseBody = response.body as JSONArrayValue
 
-                val request = example.request
-                val requestBody = request.body as JSONObjectValue
+            assertThat(request.headers["Authentication"])
+                .withFailMessage("Header values should be randomly generated")
+                .isNotEqualTo("Bearer 123")
 
-                assertThat(request.headers).containsKeys("Authentication")
-                assertThat(request.headers.getValue("Authentication")).isNotEqualTo("Bearer 123")
-                assertThat(requestBody.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo("John Doe")
-                assertThat(requestBody.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo("123 Main Street")
-
-                val response = example.response
-                val responseBody = (response.body as JSONArrayValue).list
-                responseBody.forEachIndexed { index, value ->
-                    value as JSONObjectValue
-                    val (name, address) = when (index) {
-                        0 -> "John Doe" to "123 Main Street"
-                        else -> "Jane Doe" to "456 Main Street"
-                    }
-
-                    assertThat(value.findFirstChildByPath("name")?.toStringLiteral()).isNotEqualTo(name)
-                    assertThat(value.findFirstChildByPath("address")?.toStringLiteral()).isNotEqualTo(address)
+            when(request.method) {
+                "POST" -> assertRequestBody(request.body, "John-Doe", "123-Main-Street")
+                "GET"  -> assertQueryParameters(request.queryParams, "John-Doe", "123-Main-Street")
+                "DELETE" -> {
+                    assertPathParameters(request.path, "John-Doe", "123-Main-Street")
+                    assertThat(request.path!!.trim('/').split('/').last()).isNotEqualTo("(string)")
                 }
+                else -> throw IllegalArgumentException("Unexpected method ${request.method}")
             }
-        } finally {
-            examples.forEach { it.delete() }
+
+            responseBody.list.forEachIndexed { index, value ->
+                value as JSONObjectValue
+                val (name, address) = when(index) {
+                    0 -> "John Doe" to "123 Main Street"
+                    else -> "Jane Doe" to "456 Main Street"
+                }
+
+                assertThat(value.findFirstChildByPath("name")?.toStringLiteral()).isNotEqualTo(name)
+                assertThat(value.findFirstChildByPath("address")?.toStringLiteral()).isNotEqualTo(address)
+            }
         }
     }
 }

@@ -497,15 +497,19 @@ data class HttpRequestPattern(
                 newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }.map { HasValue(it) }
             } ?: sequenceOf(HasValue(null))
 
-            val newQueryParamsPatterns: Sequence<ReturnValue<HttpQueryParamPattern>> =
+            val newQueryParamsPatterns: Sequence<ReturnValue<HttpQueryParamPattern>> = returnValue(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
                 if (status.toString().startsWith("2")) {
-                    val new = httpQueryParamPattern.newBasedOn(row, resolver)
-                    httpQueryParamPattern.addComplimentaryPatterns(new, row, resolver)
+                    httpQueryParamPattern.addComplimentaryPatterns(
+                        httpQueryParamPattern.newBasedOn(row, resolver),
+                        row,
+                        resolver
+                    )
                 } else {
                     httpQueryParamPattern.readFrom(row, resolver)
-                }.map {
-                    HasValue(HttpQueryParamPattern(it))
+                }.map { pattern ->
+                    pattern.ifValue { HttpQueryParamPattern(pattern.value) }
                 }
+            }
 
             val newHeadersPattern: Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = "HEADERS") {
                 if (status.toString().startsWith("2")) {
@@ -585,7 +589,7 @@ data class HttpRequestPattern(
                                             newRequestPattern.copy(securitySchemes = listOf(it))
                                         }
                                     }.map { requestPattern ->
-                                        val requestValueDetails = listOf(newHeadersPattern)
+                                        val requestValueDetails = listOf(newHeadersPattern, newBody, newQueryParamPattern)
                                             .filterIsInstance<HasValue<*>>().flatMap {
                                                 it.valueDetails
                                             }

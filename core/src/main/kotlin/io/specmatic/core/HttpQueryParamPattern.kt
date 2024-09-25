@@ -34,7 +34,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
     fun newBasedOn(
         row: Row,
         resolver: Resolver
-    ): Sequence<Map<String, Pattern>> {
+    ): Sequence<ReturnValue<Map<String, Pattern>>> {
         val createdBasedOnExamples = attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams = queryPatterns.let {
                 if(additionalProperties != null)
@@ -43,28 +43,25 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
                     it
             }
 
-            val combinations = forEachKeyCombinationIn<Pattern>(
+            val combinations = forEachKeyCombinationIn(
                 row.withoutOmittedKeys(queryParams, resolver.defaultExampleResolver),
-                row, returnValues<Pattern> { entry: Map<String, Pattern> ->
-                    newMapBasedOn(entry, row, resolver).map { it.value }
-                }).map { it.value }
+                row
+            ) { entry ->
+                newMapBasedOn(entry, row, resolver)
+            }
 
-            combinations.map {
-                it.mapKeys { withoutOptionality(it.key) }
+            combinations.map { pattern ->
+                pattern.update {
+                    it.mapKeys { withoutOptionality(it.key) }
+                }
             }
         }
 
         return createdBasedOnExamples
     }
 
-    fun addComplimentaryPatterns(basePatterns: Sequence<Map<String, Pattern>>, row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
-        return addComplimentaryPatterns(
-            basePatterns.map { HasValue(it) },
-            queryPatterns,
-            additionalProperties,
-            row,
-            resolver
-        ).map { it.value }
+    fun addComplimentaryPatterns(basePatterns: Sequence<ReturnValue<Map<String, Pattern>>>, row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
+        return addComplimentaryPatterns(basePatterns, queryPatterns, additionalProperties, row, resolver)
     }
 
     fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
@@ -171,9 +168,9 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         return matches(HttpRequest(path = uri.path, queryParametersMap =  queryParams), resolver)
     }
 
-    fun readFrom(row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
+    fun readFrom(row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
         return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
-            readFrom(queryPatterns, row, resolver)
+            readFrom(queryPatterns, row, resolver).map { HasValue(it) }
         }
     }
     fun matches(row: Row, resolver: Resolver): Result {

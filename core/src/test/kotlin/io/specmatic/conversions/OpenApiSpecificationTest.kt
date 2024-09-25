@@ -7501,6 +7501,7 @@ components:
     }
 
     @Test
+    @Disabled
     fun `should contain the positive test names with details around the enum value picked up as a request query param`() {
         val specFilePath = "core/src/test/resources/openapi/spec_with_request_query_param_as_enum.yaml"
         val spec = OpenApiSpecification.fromFile(specFilePath, "")

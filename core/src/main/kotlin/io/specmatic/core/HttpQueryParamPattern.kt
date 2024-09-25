@@ -57,15 +57,14 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         return createdBasedOnExamples
     }
 
-
     fun addComplimentaryPatterns(basePatterns: Sequence<Map<String, Pattern>>, row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
         return addComplimentaryPatterns(
-            basePatterns,
+            basePatterns.map { HasValue(it) },
             queryPatterns,
             additionalProperties,
             row,
             resolver
-        )
+        ).map { it.value }
     }
 
     fun matches(httpRequest: HttpRequest, resolver: Resolver): Result {
@@ -201,13 +200,25 @@ internal fun buildQueryPattern(
     return HttpQueryParamPattern(queryPattern)
 }
 
-fun addComplimentaryPatterns(baseGeneratedPatterns: Sequence<Map<String, Pattern>>, patterns: Map<String, Pattern>, additionalProperties: Pattern?, row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
-    val generatedWithoutExamples: Sequence<Map<String, Pattern>> =
+fun addComplimentaryPatterns(
+    baseGeneratedPatterns: Sequence<ReturnValue<Map<String, Pattern>>>,
+    patterns: Map<String, Pattern>,
+    additionalProperties: Pattern?,
+    row: Row,
+    resolver: Resolver
+): Sequence<ReturnValue<Map<String, Pattern>>> {
+    val generatedWithoutExamples: Sequence<ReturnValue<Map<String, Pattern>>> =
         resolver
             .generation
-            .fillInTheMissingMapPatterns(baseGeneratedPatterns, patterns, additionalProperties, row, resolver)
+            .fillInTheMissingMapPatterns(
+                baseGeneratedPatterns.map { it.value },
+                patterns,
+                additionalProperties,
+                row,
+                resolver
+            )
             .map {
-                it.value.mapKeys { withoutOptionality(it.key) }
+                it.update { map -> map.mapKeys { withoutOptionality(it.key) } }
             }
 
     return baseGeneratedPatterns + generatedWithoutExamples

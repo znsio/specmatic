@@ -343,30 +343,6 @@ data class HttpHeadersPattern(
             headersInPartial + missingHeaders
         }
     }
-
-    private fun addComplimentaryPatterns(
-        baseGeneratedPatterns: Sequence<ReturnValue<Map<String, Pattern>>>,
-        patterns: Map<String, Pattern>,
-        additionalProperties: Pattern?,
-        row: Row,
-        resolver: Resolver
-    ): Sequence<ReturnValue<Map<String, Pattern>>> {
-        val generatedWithoutExamples: Sequence<ReturnValue<Map<String, Pattern>>> =
-            resolver
-                .generation
-                .fillInTheMissingMapPatterns(
-                    baseGeneratedPatterns.map { it.value },
-                    patterns,
-                    additionalProperties,
-                    row,
-                    resolver
-                )
-                .map {
-                    it.update { map -> map.mapKeys { withoutOptionality(it.key) } }
-                }
-
-        return baseGeneratedPatterns + generatedWithoutExamples
-    }
 }
 
 private fun parseOrString(pattern: Pattern, sampleValue: String, resolver: Resolver) =

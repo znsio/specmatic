@@ -91,6 +91,48 @@ paths:
                     - name
                     - trackerId
                     - address
+  /generate/names/{name}/address/{address}:
+    delete:
+      summary: Generate a response with name, address, and tracker ID using path parameters
+      description: Accepts `name` and `address` as path parameters and returns an object with `name`, `trackerId`, and `address`.
+      security:
+        - apiKey: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "John Doe"
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "123 Main St, Anytown, USA"
+      responses:
+        '200':
+          description: Successful response with name, tracker ID, and address
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: "John Doe"
+                    trackerId:
+                      type: integer
+                      example: 123456
+                    address:
+                      type: string
+                      example: "123 Main St, Anytown, USA"
+                  required:
+                    - name
+                    - trackerId
+                    - address
 components:
   securitySchemes:
     apiKey:

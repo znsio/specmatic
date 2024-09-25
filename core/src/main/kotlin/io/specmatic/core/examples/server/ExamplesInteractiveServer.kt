@@ -373,7 +373,8 @@ class ExamplesInteractiveServer(
             else examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
-            val updatedRequest = request.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
+            val httpPathPattern = scenario.httpRequestPattern.httpPathPattern
+            val updatedRequest = request.substituteDictionaryValues(externalDictionary, forceSubstitution = true, httpPathPattern)
 
             val response = feature.lookupResponse(scenario).cleanup()
             val updatedResponse = response.substituteDictionaryValues(externalDictionary, forceSubstitution = true)

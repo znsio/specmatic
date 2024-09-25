@@ -364,12 +364,28 @@ data class HttpRequest(
 
     fun withoutDynamicHeaders(): HttpRequest = copy(headers = headers.withoutDynamicHeaders())
 
-    fun substituteDictionaryValues(dictionary: Dictionary, forceSubstitution: Boolean = false): HttpRequest {
+    fun substituteDictionaryValues(dictionary: Dictionary, forceSubstitution: Boolean = false, httpPathPattern: HttpPathPattern? = null): HttpRequest {
         val updatedHeaders = dictionary.substituteDictionaryValues(this.headers, forceSubstitution = forceSubstitution)
-        val updatedBody = dictionary.substituteDictionaryValues(this.body, forceSubstitution = forceSubstitution)
         val queryParams = queryParams.substituteDictionaryValues(dictionary, forceSubstitution)
+        val updatedBody = dictionary.substituteDictionaryValues(this.body, forceSubstitution = forceSubstitution)
+        val updatedPath = when {
+            this.path != null  && httpPathPattern != null -> substituteDictionaryValuesInPath(dictionary, httpPathPattern)
+            else -> this.path
+        }
 
-        return this.copy(headers = updatedHeaders, body= updatedBody, queryParams = queryParams)
+        return this.copy(headers = updatedHeaders, body= updatedBody, queryParams = queryParams, path = updatedPath)
+    }
+
+    private fun substituteDictionaryValuesInPath(dictionary: Dictionary, httpPathPattern: HttpPathPattern): String {
+        val prefix  = "/".takeIf { this.path!!.startsWith("/") }.orEmpty()
+        val postfix = "/".takeIf {  this.path!!.endsWith("/")  }.orEmpty()
+
+        return httpPathPattern.pathSegmentPatterns.map {
+            when (it.key) {
+                null -> it.pattern
+                else -> dictionary.substituteDictionaryValues(it.key, it.pattern.toString())
+            }
+        }.joinToString("/", prefix = prefix, postfix = postfix)
     }
 }
 

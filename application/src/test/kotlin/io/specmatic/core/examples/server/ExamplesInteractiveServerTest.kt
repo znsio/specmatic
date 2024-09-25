@@ -19,8 +19,8 @@ class ExamplesInteractiveServerTest {
             parsedJSONObject("""
                 {
                     "Authentication": "Bearer 123",
-                    "name": "John Doe",
-                    "address": "123 Main Street",
+                    "name": "John-Doe",
+                    "address": "123-Main-Street",
                     "[0].name": "John Doe",
                     "[0].address": "123 Main Street",
                     "[*].name": "Jane Doe",
@@ -31,14 +31,18 @@ class ExamplesInteractiveServerTest {
         private val partialDictionary = Dictionary(
             parsedJSONObject("""
                 {
-                    "name": "John Doe",
-                    "address": "123 Main Street"
+                    "name": "John-Doe",
+                    "address": "123-Main-Street"
                 }
                 """.trimIndent()).jsonObject
         )
 
         fun assertHeaders(headers: Map<String, String>, apiKey: String) {
             assertThat(headers["Authentication"]).isEqualTo(apiKey)
+        }
+
+        fun assertPathParameters(path: String?, name: String, address: String) {
+            assertThat(path).isEqualTo("/generate/names/$name/address/$address")
         }
 
         fun assertQueryParameters(queryParameters: QueryParameters, name: String, address: String) {
@@ -92,8 +96,9 @@ class ExamplesInteractiveServerTest {
 
             assertThrows<AssertionError>("Request Body Values should be randomly generated") {
                 when(request.method) {
-                    "POST" -> assertRequestBody(request.body, "John Doe", "123 Main Street")
-                    "GET"  -> assertQueryParameters(request.queryParams, "John Doe", "123 Main Street")
+                    "POST" -> assertRequestBody(request.body, "John-Doe", "123-Main-Street")
+                    "GET"  -> assertQueryParameters(request.queryParams, "John-Doe", "123-Main-Street")
+                    "DELETE" -> assertPathParameters(request.path, "John-Doe", "123-Main-Street")
                 }
             }
 
@@ -124,8 +129,9 @@ class ExamplesInteractiveServerTest {
             assertHeaders(request.headers, "Bearer 123")
 
             when(request.method) {
-                "POST" -> assertRequestBody(request.body, "John Doe", "123 Main Street")
-                "GET"  -> assertQueryParameters(request.queryParams, "John Doe", "123 Main Street")
+                "POST" -> assertRequestBody(request.body, "John-Doe", "123-Main-Street")
+                "GET"  -> assertQueryParameters(request.queryParams, "John-Doe", "123-Main-Street")
+                "DELETE" -> assertPathParameters(request.path, "John-Doe", "123-Main-Street")
             }
 
             assertResponseBody(response.body) {
@@ -155,8 +161,9 @@ class ExamplesInteractiveServerTest {
             }
 
             when(request.method) {
-                "POST" -> assertRequestBody(request.body, "John Doe", "123 Main Street")
-                "GET"  -> assertQueryParameters(request.queryParams, "John Doe", "123 Main Street")
+                "POST" -> assertRequestBody(request.body, "John-Doe", "123-Main-Street")
+                "GET"  -> assertQueryParameters(request.queryParams, "John-Doe", "123-Main-Street")
+                "DELETE" -> assertPathParameters(request.path, "John-Doe", "123-Main-Street")
             }
 
             assertThrows<AssertionError>("Response Body Values should be randomly generated") {

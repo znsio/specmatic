@@ -102,6 +102,9 @@ dependencies {
 test {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
+    def junit5SystemExit = configurations.testRuntimeClasspath.files
+            .find { it.name.contains('junit5-system-exit') }
+    jvmArgumentProviders.add({["-javaagent:$junit5SystemExit"]} as CommandLineArgumentProvider)
 }
 
 jacocoTestReport {

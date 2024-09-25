@@ -77,6 +77,7 @@ class ExamplesInteractiveServer(
                 post("/_specmatic/examples") {
                     val request = call.receive<ExamplePageRequest>()
                     contractFileFromRequest = File(request.contractFile)
+                    dictionaryFileFromRequest = request.dictionaryFile?.let { dictPath -> File(dictPath) }
                     val contractFile = getContractFileOrBadRequest(call) ?: return@post
                     try {
                         respondWithExamplePageHtmlContent(contractFile, request.hostPort, call)
@@ -519,8 +520,9 @@ class ExamplesInteractiveServer(
             val dictFilePath = when {
                 dictFile != null -> dictFile.path
 
-                contractFile?.canonicalFile?.parentFile?.resolve("dictionary.json")?.exists() == true -> {
-                    contractFile.canonicalFile.parentFile.resolve("dictionary.json").path
+                contractFile != null -> {
+                    val dictFileName = "${contractFile.nameWithoutExtension}${DICTIONARY_FILE_SUFFIX}"
+                    contractFile.canonicalFile.parentFile.resolve(dictFileName).takeIf { it.exists() }?.path
                 }
 
                 else -> {

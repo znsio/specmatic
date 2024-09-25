@@ -7,6 +7,7 @@ import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.io.File
 
@@ -36,6 +37,7 @@ class ExamplesInteractiveServerTest {
 
         @JvmStatic
         @AfterAll
+        @BeforeAll
         fun cleanUp() {
             val examplesFolder = File("src/test/resources/specifications/tracker_examples")
             if (examplesFolder.exists()) examplesFolder.delete()

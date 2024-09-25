@@ -377,7 +377,9 @@ data class HttpRequest(
     }
 
     private fun substituteDictionaryValuesInPath(dictionary: Dictionary, httpPathPattern: HttpPathPattern): String {
-        this.path as String
+        if (this.path !is String)
+            throw ContractException("Expected path to be a string value")
+
         val prefix = "/".takeIf { this.path.startsWith("/") }.orEmpty()
         val postfix = "/".takeIf { this.path.endsWith("/") }.orEmpty()
         val actualPathSegments = this.path.trim('/').split("/").filter { it.isNotEmpty() }

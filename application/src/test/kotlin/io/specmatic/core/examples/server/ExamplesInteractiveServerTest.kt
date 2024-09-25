@@ -42,7 +42,6 @@ class ExamplesInteractiveServerTest {
 
         fun assertPathParameters(path: String?, name: String, address: String) {
             assertThat(path).contains("/generate/names/$name/address/$address")
-            assertThat(path!!.trim('/').split('/').last()).isNotEqualTo("(string)")
         }
 
         fun assertQueryParameters(queryParameters: QueryParameters, name: String, address: String) {
@@ -145,7 +144,10 @@ class ExamplesInteractiveServerTest {
             when(request.method) {
                 "POST" -> assertRequestBody(request.body, "John-Doe", "123-Main-Street")
                 "GET"  -> assertQueryParameters(request.queryParams, "John-Doe", "123-Main-Street")
-                "DELETE" -> assertPathParameters(request.path, "John-Doe", "123-Main-Street")
+                "DELETE" -> {
+                    assertPathParameters(request.path, "John-Doe", "123-Main-Street")
+                    assertThat(request.path!!.trim('/').split('/').last()).isNotEqualTo("(string)")
+                }
             }
 
             assertResponseBody(response.body) {
@@ -178,7 +180,10 @@ class ExamplesInteractiveServerTest {
             when(request.method) {
                 "POST" -> assertRequestBody(request.body, "John-Doe", "123-Main-Street")
                 "GET"  -> assertQueryParameters(request.queryParams, "John-Doe", "123-Main-Street")
-                "DELETE" -> assertPathParameters(request.path, "John-Doe", "123-Main-Street")
+                "DELETE" -> {
+                    assertPathParameters(request.path, "John-Doe", "123-Main-Street")
+                    assertThat(request.path!!.trim('/').split('/').last()).isNotEqualTo("(string)")
+                }
             }
 
             responseBody.list.forEachIndexed { index, value ->

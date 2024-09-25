@@ -20,6 +20,7 @@ import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHeal
 import io.specmatic.core.utilities.*
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.mock.loadDictionary
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.HttpStubData
 import java.io.Closeable
@@ -33,14 +34,27 @@ class ExamplesInteractiveServer(
     private val inputContractFile: File? = null,
     private val filterName: String,
     private val filterNotName: String,
-    private val externalDictionary: Dictionary
+    private val externalDictionaryFile: File? = null
 ) : Closeable {
     private var contractFileFromRequest: File? = null
+    private var dictionaryFileFromRequest: File? = null
 
     private fun getContractFile(): File {
         if(inputContractFile != null && inputContractFile.exists()) return inputContractFile
         if(contractFileFromRequest != null && contractFileFromRequest!!.exists()) return contractFileFromRequest!!
         throw ContractException("Invalid contract file provided to the examples interactive server")
+    }
+
+    private fun getDictionaryFile(): File? {
+        if (externalDictionaryFile != null && externalDictionaryFile.exists()) return externalDictionaryFile
+        if(dictionaryFileFromRequest != null && dictionaryFileFromRequest!!.exists()) return dictionaryFileFromRequest
+        return null
+    }
+
+    private fun getDictionary(): Dictionary {
+        val contractFile = getContractFile()
+        val dictionaryFile = getDictionaryFile()
+        return loadExternalDictionary(dictionaryFile, contractFile)
     }
 
     private val environment = applicationEngineEnvironment {
@@ -73,6 +87,7 @@ class ExamplesInteractiveServer(
 
                 post("/_specmatic/examples/generate") {
                     val contractFile = getContractFile()
+                    val dictionary = getDictionary()
                     try {
                         val request = call.receive<GenerateExampleRequest>()
                         val generatedExample = generate(
@@ -81,7 +96,7 @@ class ExamplesInteractiveServer(
                             request.path,
                             request.responseStatusCode,
                             request.contentType,
-                            externalDictionary
+                            dictionary
                         )
 
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExample))
@@ -499,6 +514,25 @@ class ExamplesInteractiveServer(
         fun File.getExamplesFromDir(): List<ExampleFromFile> {
             return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
         }
+
+        fun loadExternalDictionary(dictFile: File?, contractFile: File?): Dictionary {
+            val dictFilePath = when {
+                dictFile != null -> dictFile.path
+
+                contractFile?.canonicalFile?.parentFile?.resolve("dictionary.json")?.exists() == true -> {
+                    contractFile.canonicalFile.parentFile.resolve("dictionary.json").path
+                }
+
+                else -> {
+                    val currentDir = File(System.getProperty("user.dir"))
+                    currentDir.resolve("dictionary.json").takeIf { it.exists() }?.path
+                }
+            }
+
+            return dictFilePath?.let {
+                Dictionary(loadDictionary(dictFilePath))
+            } ?: Dictionary(emptyMap())
+        }
     }
 }
 
@@ -518,7 +552,8 @@ object InteractiveExamplesMismatchMessages : MismatchMessages {
 
 data class ExamplePageRequest(
     val contractFile: String,
-    val hostPort: String
+    val hostPort: String,
+    val dictionaryFile: String?
 )
 
 data class ValidateExampleRequest(

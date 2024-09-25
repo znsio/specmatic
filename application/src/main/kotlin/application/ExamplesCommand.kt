@@ -1,9 +1,9 @@
 package application
 
-import io.specmatic.core.Dictionary
 import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
+import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.loadExternalDictionary
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingleExample
 import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
@@ -13,7 +13,6 @@ import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.mock.loadDictionary
 import picocli.CommandLine.*
 import java.io.File
 import java.lang.Thread.sleep
@@ -68,11 +67,8 @@ class ExamplesCommand : Callable<Int> {
 
         configureLogger(this.verbose)
 
-        val externalDictionary = getDictionaryPath(dictFile, contractFile)?.let {
-            Dictionary(loadDictionary(it))
-        } ?: Dictionary(emptyMap())
-
         try {
+            val externalDictionary = loadExternalDictionary(dictFile, contractFile)
             ExamplesInteractiveServer.generate(
                 contractFile!!,
                 ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName),
@@ -243,12 +239,7 @@ class ExamplesCommand : Callable<Int> {
                 if (contractFile != null && !contractFile!!.exists())
                     exitWithMessage("Could not find file ${contractFile!!.path}")
 
-                val externalDictionary = getDictionaryPath(dictFile, contractFile)?.let {
-                    Dictionary(loadDictionary(it))
-                } ?: Dictionary(emptyMap())
-
-                println(getDictionaryPath(dictFile, contractFile))
-                server = ExamplesInteractiveServer("0.0.0.0", 9001, contractFile, filterName, filterNotName, externalDictionary)
+                server = ExamplesInteractiveServer("0.0.0.0", 9001, contractFile, filterName, filterNotName, dictFile)
                 addShutdownHook()
 
                 consoleLog(StringLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop."))
@@ -283,19 +274,4 @@ private fun configureLogger(verbose: Boolean) {
         Verbose(CompositePrinter(logPrinters))
     else
         NonVerbose(CompositePrinter(logPrinters))
-}
-
-private fun getDictionaryPath(dictFile: File?, contractFile: File?): String? {
-    return when {
-        dictFile != null -> dictFile.path
-
-        contractFile?.canonicalFile?.parentFile?.resolve("dictionary.json")?.exists() == true -> {
-            contractFile.canonicalFile.parentFile.resolve("dictionary.json").path
-        }
-
-        else -> {
-            val currentDir = File(System.getProperty("user.dir"))
-            currentDir.resolve("dictionary.json").takeIf { it.exists() }?.path
-        }
-    }
 }

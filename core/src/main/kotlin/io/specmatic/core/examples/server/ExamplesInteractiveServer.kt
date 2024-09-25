@@ -37,24 +37,11 @@ class ExamplesInteractiveServer(
     private val externalDictionaryFile: File? = null
 ) : Closeable {
     private var contractFileFromRequest: File? = null
-    private var dictionaryFileFromRequest: File? = null
 
     private fun getContractFile(): File {
         if(inputContractFile != null && inputContractFile.exists()) return inputContractFile
         if(contractFileFromRequest != null && contractFileFromRequest!!.exists()) return contractFileFromRequest!!
         throw ContractException("Invalid contract file provided to the examples interactive server")
-    }
-
-    private fun getDictionaryFile(): File? {
-        if (externalDictionaryFile != null && externalDictionaryFile.exists()) return externalDictionaryFile
-        if(dictionaryFileFromRequest != null && dictionaryFileFromRequest!!.exists()) return dictionaryFileFromRequest
-        return null
-    }
-
-    private fun getDictionary(): Dictionary {
-        val contractFile = getContractFile()
-        val dictionaryFile = getDictionaryFile()
-        return loadExternalDictionary(dictionaryFile, contractFile)
     }
 
     private val environment = applicationEngineEnvironment {
@@ -77,7 +64,6 @@ class ExamplesInteractiveServer(
                 post("/_specmatic/examples") {
                     val request = call.receive<ExamplePageRequest>()
                     contractFileFromRequest = File(request.contractFile)
-                    dictionaryFileFromRequest = request.dictionaryFile?.let { dictPath -> File(dictPath) }
                     val contractFile = getContractFileOrBadRequest(call) ?: return@post
                     try {
                         respondWithExamplePageHtmlContent(contractFile, request.hostPort, call)
@@ -88,7 +74,7 @@ class ExamplesInteractiveServer(
 
                 post("/_specmatic/examples/generate") {
                     val contractFile = getContractFile()
-                    val dictionary = getDictionary()
+                    val dictionary = loadExternalDictionary(externalDictionaryFile, contractFile)
                     try {
                         val request = call.receive<GenerateExampleRequest>()
                         val generatedExample = generate(
@@ -554,8 +540,7 @@ object InteractiveExamplesMismatchMessages : MismatchMessages {
 
 data class ExamplePageRequest(
     val contractFile: String,
-    val hostPort: String,
-    val dictionaryFile: String?
+    val hostPort: String
 )
 
 data class ValidateExampleRequest(

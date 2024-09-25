@@ -367,8 +367,9 @@ data class HttpRequest(
     fun substituteDictionaryValues(dictionary: Dictionary, forceSubstitution: Boolean = false): HttpRequest {
         val updatedHeaders = dictionary.substituteDictionaryValues(this.headers, forceSubstitution = forceSubstitution)
         val updatedBody = dictionary.substituteDictionaryValues(this.body, forceSubstitution = forceSubstitution)
+        val queryParams = queryParams.substituteDictionaryValues(dictionary, forceSubstitution)
 
-        return this.copy(headers = updatedHeaders, body= updatedBody)
+        return this.copy(headers = updatedHeaders, body= updatedBody, queryParams = queryParams)
     }
 }
 

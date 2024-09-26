@@ -187,8 +187,14 @@ class HttpStub(
 
     private val requestInterceptors: MutableList<RequestInterceptor> = mutableListOf()
 
+    private val responseInterceptors: MutableList<ResponseInterceptor> = mutableListOf()
+
     fun registerRequestInterceptor(requestInterceptor: RequestInterceptor) {
         requestInterceptors.add(requestInterceptor)
+    }
+
+    fun registerResponseInterceptor(responseInterceptor: ResponseInterceptor) {
+        responseInterceptors.add(responseInterceptor)
     }
 
     private val environment = applicationEngineEnvironment {
@@ -226,7 +232,6 @@ class HttpStub(
                         requestInterceptor.interceptRequest(request) ?: request
                     }
 
-
                     val responseFromRequestHandler = requestHandlers.map { it.handleRequest(httpRequest) }.firstOrNull()
 
                     val httpStubResponse: HttpStubResponse = when {
@@ -239,6 +244,10 @@ class HttpStub(
                         isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
                         isFlushTransientStubsRequest(httpRequest) -> handleFlushTransientStubsRequest(httpRequest)
                         else -> serveStubResponse(httpRequest, specmaticConfig)
+                    }
+
+                    val httpResponse = responseInterceptors.fold(httpStubResponse.response) { response, responseInterceptor ->
+                        responseInterceptor.interceptResponse(httpRequest, response) ?: response
                     }
 
                     if (httpRequest.path!!.startsWith("""/features/default""")) {
@@ -273,8 +282,9 @@ class HttpStub(
                             )
                         }
                     } else {
-                        respondToKtorHttpResponse(call, httpStubResponse.response, httpStubResponse.delayInMilliSeconds, specmaticConfig)
-                        httpLogMessage.addResponse(httpStubResponse)
+                        val updatedHttpStubResponse = httpStubResponse.copy(response = httpResponse)
+                        respondToKtorHttpResponse(call, updatedHttpStubResponse.response, updatedHttpStubResponse.delayInMilliSeconds, specmaticConfig)
+                        httpLogMessage.addResponse(updatedHttpStubResponse)
                     }
                 } catch (e: ContractException) {
                     val response = badRequest(e.report())

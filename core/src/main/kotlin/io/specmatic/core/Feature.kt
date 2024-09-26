@@ -538,16 +538,11 @@ data class Feature(
 
     private fun getScenarioWithDescription(scenarioResult: ReturnValue<Scenario>): ReturnValue<Scenario> {
         return scenarioResult.ifHasValue { result: HasValue<Scenario> ->
-            val descriptionFromPlugin = result.value.descriptionFromPlugin?.takeIf {
-                it.isNotBlank()
-            }?.plus(" ") ?: ""
-            val description = result.valueDetails.singleLineDescription()
-
-            val tag = if(description.isNotBlank())
-                " [${description}]"
-            else
-                ""
-            HasValue(result.value.copy(descriptionFromPlugin = "$descriptionFromPlugin${result.value.apiDescription}$tag"))
+            val apiDescription = result.value.descriptionFromPlugin ?: result.value.apiDescription
+            val tag = result.valueDetails.singleLineDescription().let {
+                if (it.isNotBlank()) " [$it]" else ""
+            }
+            HasValue(result.value.copy(descriptionFromPlugin = "$apiDescription$tag"))
         }
     }
 

@@ -236,5 +236,26 @@ data class Resolver(
     fun generateKeySubLists(key: String, subList: List<String>): Sequence<List<String>> {
         return generation.generateKeySubLists(key, subList)
     }
+
+    fun generateList(pattern: Pattern): Value {
+        val lookupKey = dictionaryLookupPath.trim() + "[*]"
+
+        val value = dictionary[lookupKey] ?: return generateRandomList(pattern)
+
+        val matchResult = pattern.matches(value, this)
+
+        if(matchResult.isSuccess())
+            return JSONArrayValue(listOf(value))
+
+        logger.log(matchResult.reportString())
+
+        return generateRandomList(pattern)
+    }
+
+    private fun generateRandomList(pattern: Pattern): Value {
+        return pattern.listOf(0.until(randomNumber(3)).mapIndexed{ index, _ ->
+            attempt(breadCrumb = "[$index (random)]") { pattern.generate(this) }
+        }, this)
+    }
 }
 

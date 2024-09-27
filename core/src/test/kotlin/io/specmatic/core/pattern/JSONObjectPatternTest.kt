@@ -700,6 +700,28 @@ internal class JSONObjectPatternTest {
     }
 
     @Test
+    fun `generate should return value from dictionary for key when typeAlias is missing`() {
+        val addressPattern = JSONObjectPattern(
+            mapOf(
+                "address" to StringPattern()
+            )
+        )
+
+        val expectedAddress = StringValue("22B Baker Street")
+
+        val dictionary = mapOf(".address" to expectedAddress)
+
+        val resolver = Resolver(
+            dictionary = dictionary
+        )
+
+        var value = resolver.generate(addressPattern) as JSONObjectValue
+
+        val address = value.findFirstChildByPath("address") as StringValue
+        assertThat(address).isEqualTo(expectedAddress)
+    }
+
+    @Test
     fun `should generate objects in an array with the dictionary-provided values`() {
         val personTypeAlias = "(Person)"
 

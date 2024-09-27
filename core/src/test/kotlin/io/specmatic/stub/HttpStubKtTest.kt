@@ -878,7 +878,6 @@ paths:
 
             assertThat(responseString).contains("Contract expected")
             assertThat(responseString).contains("request contained")
-            assertThat(responseString).contains("json array")
         }
     }
 

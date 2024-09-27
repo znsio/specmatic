@@ -244,9 +244,11 @@ fun createIfDoesNotExist(workingDirectoryPath: String) {
     }
 }
 
-fun exitIfDoesNotExist(label: String, filePath: String) {
-    if(!File(filePath).exists())
-        exitWithMessage("${label.capitalizeFirstChar()} does not exist. (Could not find file ./specmatic.json OR ./specmatic.yaml OR ./specmatic.yml)")
+fun throwExceptionIfDirectoriesAreInvalid(directoryPathsToVerify: List<String>, natureOfDirectoryPaths: String) {
+    val invalidDataDirs = directoryPathsToVerify.filter { File(it).exists().not() || File(it).isDirectory.not() }
+    if (invalidDataDirs.isNotEmpty()) {
+        throw Exception("The following $natureOfDirectoryPaths are invalid: ${invalidDataDirs.joinToString(", ")}. Please provide the valid $natureOfDirectoryPaths.")
+    }
 }
 
 fun exitIfAnyDoNotExist(label: String, filePaths: List<String>) {
@@ -362,11 +364,14 @@ fun nullOrExceptionString(fn: () -> Result): String? {
 }
 
 fun uniqueNameForApiOperation(httpRequest: HttpRequest, baseURL: String, responseStatus: Int): String {
-    val (method, path) = httpRequest
+    val (method, path, headers) = httpRequest
+    val contentType = if(method == "PATCH")
+        "_" + headers[CONTENT_TYPE].orEmpty().replace("/", "_")
+    else ""
     val formattedPath = path?.replace(baseURL, "")
         ?.replace("/", "_")
         ?.drop(1)
         .orEmpty()
     if (formattedPath.isEmpty()) return "${method}_${responseStatus}"
-    return "${formattedPath}_${method}_${responseStatus}"
+    return "${formattedPath}_${method}_${responseStatus}$contentType"
 }

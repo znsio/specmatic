@@ -140,6 +140,14 @@ data class Feature(
         }
     }
 
+    fun lookupResponse(scenario: Scenario): HttpResponse {
+        try {
+            return scenario.generateHttpResponse(serverState)
+        } finally {
+            serverState = emptyMap()
+        }
+    }
+
     fun stubResponse(
         httpRequest: HttpRequest,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
@@ -152,8 +160,16 @@ data class Feature(
                 it.matchesStub(httpRequest, localCopyOfServerState, mismatchMessages)
             })
 
-            return matchingScenario(resultList)?.let { Pair(ResponseBuilder(it, serverState), Results()) }
-                ?: Pair(null, Results(resultList.map { it.second }.toMutableList()).withoutFluff())
+            return matchingScenario(resultList)?.let {
+                Pair(ResponseBuilder(it, serverState), Results())
+            }
+                ?: Pair(
+                    null,
+                    Results(resultList.map {
+                            it.second
+                        }.toList())
+                    .withoutFluff()
+                )
         } finally {
             serverState = emptyMap()
         }
@@ -278,7 +294,7 @@ data class Feature(
         request: HttpRequest,
         response: HttpResponse,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages,
-        dictionary: Map<String, Value> = emptyMap()
+        dictionary: Dictionary = Dictionary()
     ): HttpStubData {
         try {
             val results = stubMatchResult(request, response.substituteDictionaryValues(dictionary), mismatchMessages)
@@ -404,7 +420,16 @@ data class Feature(
             else
                 flagsBased.withoutGenerativeTests()
 
-            originalScenario.generateTestScenarios(resolverStrategies, testVariables, testBaseURLs, fn).map { Pair(originalScenario.copy(generativePrefix = flagsBased.positivePrefix), it) }
+            originalScenario.generateTestScenarios(
+                resolverStrategies,
+                testVariables,
+                testBaseURLs,
+                fn
+            ).map {
+                getScenarioWithDescription(it)
+            }.map {
+                Pair(originalScenario.copy(generativePrefix = flagsBased.positivePrefix), it)
+            }
         }
 
     fun negativeTestScenarios(): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
@@ -414,19 +439,8 @@ data class Feature(
             val negativeScenario = originalScenario.negativeBasedOn(getBadRequestsOrDefault(originalScenario))
 
             val negativeTestScenarios =
-                negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs).map { negativeScenarioResult ->
-                    negativeScenarioResult.ifHasValue { result: HasValue<Scenario> ->
-                        val descriptionFromPlugin = result.value.descriptionFromPlugin?.takeIf {
-                            it.isNotBlank()
-                        }?.plus(" ") ?: ""
-                        val description = result.valueDetails.singleLineDescription()
-
-                        val tag = if(description.isNotBlank())
-                            " [${description}]"
-                        else
-                            ""
-                        HasValue(result.value.copy(descriptionFromPlugin = "$descriptionFromPlugin${result.value.apiDescription}$tag"))
-                    }
+                negativeScenario.generateTestScenarios(flagsBased, testVariables, testBaseURLs).map {
+                    getScenarioWithDescription(it)
                 }
 
             negativeTestScenarios.filterNot { negativeTestScenarioR ->
@@ -454,16 +468,17 @@ data class Feature(
         scenarioStub: ScenarioStub,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): HttpStubData {
-        val dictionary = specmaticConfig.stub.dictionary?.let { loadDictionary(it) } ?: emptyMap()
+        val dictionaryMap = specmaticConfig.stub.dictionary?.let { loadDictionary(it) } ?: emptyMap()
+        val dictionary = Dictionary(dictionaryMap)
 
-        val scenarioStub = scenarioStub.copy(dictionary = dictionary)
+        val scenarioStubWithDictionary = scenarioStub.copy(dictionary = dictionary)
 
         if(scenarios.isEmpty())
             throw ContractException("No scenarios found in feature $name ($path)")
 
-        return if(scenarioStub.partial != null) {
+        return if(scenarioStubWithDictionary.partial != null) {
             val results = scenarios.asSequence().map { scenario ->
-                scenario.matchesTemplate(scenarioStub.partial) to scenario
+                scenario.matchesPartial(scenarioStubWithDictionary.partial) to scenario
             }
 
             val matchingScenario = results.filter { it.first is Result.Success }.map { it.second }.firstOrNull()
@@ -489,36 +504,51 @@ data class Feature(
                     matchingScenario.resolver,
                     responsePattern = responseTypeWithAncestors,
                     scenario = matchingScenario,
-                    partial = scenarioStub.partial.copy(response = scenarioStub.partial.response.substituteDictionaryValues(scenarioStub.dictionary)),
-                    data = scenarioStub.data,
-                    dictionary = scenarioStub.dictionary,
-                    examplePath = scenarioStub.filePath
+                    partial = scenarioStubWithDictionary.partial.copy(response = scenarioStubWithDictionary.partial.response.substituteDictionaryValues(scenarioStubWithDictionary.dictionary)),
+                    data = scenarioStubWithDictionary.data,
+                    dictionary = scenarioStubWithDictionary.dictionary,
+                    examplePath = scenarioStubWithDictionary.filePath
                 )
             }
             else {
                 val failures = Results(results.map { it.first }.filterIsInstance<Result.Failure>().toList()).withoutFluff()
 
-                throw NoMatchingScenario(failures, msg = "Could not load partial example ${scenarioStub.filePath}")
+                throw NoMatchingScenario(failures, msg = "Could not load partial example ${scenarioStubWithDictionary.filePath}")
             }
         } else {
             matchingStub(
-                scenarioStub.request,
-                scenarioStub.response,
+                scenarioStubWithDictionary.request,
+                scenarioStubWithDictionary.response,
                 mismatchMessages,
-                scenarioStub.dictionary
+                scenarioStubWithDictionary.dictionary
             ).copy(
-                delayInMilliseconds = scenarioStub.delayInMilliseconds,
-                requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) },
-                stubToken = scenarioStub.stubToken,
-                data = scenarioStub.data,
-                dictionary = scenarioStub.dictionary,
-                examplePath = scenarioStub.filePath
+                delayInMilliseconds = scenarioStubWithDictionary.delayInMilliseconds,
+                requestBodyRegex = scenarioStubWithDictionary.requestBodyRegex?.let { Regex(it) },
+                stubToken = scenarioStubWithDictionary.stubToken,
+                data = scenarioStubWithDictionary.data,
+                dictionary = scenarioStubWithDictionary.dictionary,
+                examplePath = scenarioStubWithDictionary.filePath
             )
         }
     }
 
     fun clearServerState() {
         serverState = emptyMap()
+    }
+
+    private fun getScenarioWithDescription(scenarioResult: ReturnValue<Scenario>): ReturnValue<Scenario> {
+        return scenarioResult.ifHasValue { result: HasValue<Scenario> ->
+            val descriptionFromPlugin = result.value.descriptionFromPlugin?.takeIf {
+                it.isNotBlank()
+            }?.plus(" ") ?: ""
+            val description = result.valueDetails.singleLineDescription()
+
+            val tag = if(description.isNotBlank())
+                " [${description}]"
+            else
+                ""
+            HasValue(result.value.copy(descriptionFromPlugin = "$descriptionFromPlugin${result.value.apiDescription}$tag"))
+        }
     }
 
     private fun combine(baseScenario: Scenario, newScenario: Scenario): Scenario {
@@ -1473,7 +1503,9 @@ data class Feature(
                     OpenApiSpecification.OperationIdentifier(
                         requestMethod,
                         requestPath,
-                        responseStatus
+                        responseStatus,
+                        exampleFromFile.headers.filter { it.key.lowercase() == "content-type" }.values.firstOrNull(),
+                        exampleFromFile.responseHeaders?.let { it.jsonObject.filter { it.key.lowercase() == "content-type" }.values.firstOrNull()?.toStringLiteral() }
                     ) to exampleFromFile.toRow(specmaticConfig)
                 }
             } catch (e: Throwable) {
@@ -1548,34 +1580,6 @@ data class Feature(
         return loadExternalisedExamplesAndListUnloadableExamples().first
     }
 
-    private fun testDirectoryFileFromEnvironmentVariable(): File? {
-        return readEnvVarOrProperty(testDirectoryEnvironmentVariable, testDirectoryProperty)?.let {
-            File(System.getenv(testDirectoryEnvironmentVariable))
-        }
-    }
-
-    private fun testDirectoryFileFromSpecificationPath(openApiFilePath: String): File? {
-        if (openApiFilePath.isBlank())
-            return null
-
-        return examplesDirFor(openApiFilePath, TEST_DIR_SUFFIX)
-    }
-
-    private fun getTestsDirectory(contractFile: File): File? {
-        val testDirectory = testDirectoryFileFromSpecificationPath(contractFile.path) ?: testDirectoryFileFromEnvironmentVariable()
-
-        return when {
-            testDirectory?.exists() == true -> {
-                logger.log("Test directory ${testDirectory.canonicalPath} found")
-                testDirectory
-            }
-
-            else -> {
-                null
-            }
-        }
-    }
-
     fun validateExamplesOrException() {
         val errors = scenarios.map { scenario ->
             try {
@@ -1588,6 +1592,37 @@ data class Feature(
 
         if(errors.isNotEmpty())
             throw ContractException(errors.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))
+    }
+
+    companion object {
+
+        private fun getTestsDirectory(contractFile: File): File? {
+            val testDirectory = testDirectoryFileFromSpecificationPath(contractFile.path) ?: testDirectoryFileFromEnvironmentVariable()
+
+            return when {
+                testDirectory?.exists() == true -> {
+                    logger.log("Test directory ${testDirectory.canonicalPath} found")
+                    testDirectory
+                }
+
+                else -> {
+                    null
+                }
+            }
+        }
+
+        private fun testDirectoryFileFromEnvironmentVariable(): File? {
+            return readEnvVarOrProperty(testDirectoryEnvironmentVariable, testDirectoryProperty)?.let {
+                File(System.getenv(testDirectoryEnvironmentVariable))
+            }
+        }
+
+        private fun testDirectoryFileFromSpecificationPath(openApiFilePath: String): File? {
+            if (openApiFilePath.isBlank())
+                return null
+
+            return examplesDirFor(openApiFilePath, TEST_DIR_SUFFIX)
+        }
     }
 }
 

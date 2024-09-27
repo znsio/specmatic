@@ -90,6 +90,11 @@ data class QueryParameters(val paramPairs: List<Pair<String, String>> = emptyLis
 
         })
     }
+
+    fun substituteDictionaryValues(dictionary: Dictionary, forceSubstitution: Boolean = false): QueryParameters {
+        val updatedQueryParameters = dictionary.substituteDictionaryValues(listOfPairsToMap(this.paramPairs), forceSubstitution)
+        return this.copy(paramPairs = mapToListOfPairs(updatedQueryParameters))
+    }
 }
 
 fun paramPairsExpanded(inputList: List<Pair<String, String>>): List<Pair<String, String>> {
@@ -102,6 +107,10 @@ fun mapToListOfPairs(inputMap: Map<String, String>): List<Pair<String, String>> 
     return inputMap.flatMap { (key, value) ->
         toListOfPairs(value, key)
     }
+}
+
+fun listOfPairsToMap(inputList: List<Pair<String, String>>): Map<String, String> {
+    return inputList.toMap()
 }
 
 fun pairToListOfPairs(pair: Pair<String, String>): List<Pair<String, String>> {

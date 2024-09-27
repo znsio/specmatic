@@ -7,10 +7,13 @@ import io.specmatic.core.Result.Success
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
 import io.ktor.util.*
+import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 
 private const val MULTIPART_FORMDATA_BREADCRUMB = "MULTIPART-FORMDATA"
+const val METHOD_BREAD_CRUMB = "METHOD"
 private const val FORM_FIELDS_BREADCRUMB = "FORM-FIELDS"
 const val CONTENT_TYPE = "Content-Type"
 
@@ -156,8 +159,15 @@ data class HttpRequestPattern(
         val (httpRequest, headersResolver, defaultResolver, failures) = parameters
         val headers = httpRequest.headers
         return when (val result = this.headersPattern.matches(headers, headersResolver ?: defaultResolver)) {
-            is Failure -> MatchSuccess(Triple(httpRequest, defaultResolver, failures.plus(result)))
-            else -> MatchSuccess(Triple(httpRequest, defaultResolver, failures))
+            is Failure -> {
+                val failureReason = result.traverseFailureReason()
+                if(failureReason == FailureReason.ContentTypeMismatch)
+                    MatchFailure(result)
+                else
+                    MatchSuccess(Triple(httpRequest, defaultResolver, failures.plus(result)))
+            }
+            else ->
+                MatchSuccess(Triple(httpRequest, defaultResolver, failures))
         }
     }
 
@@ -187,7 +197,12 @@ data class HttpRequestPattern(
 
         method.let {
             return if (it != httpRequest.method)
-                MatchFailure(mismatchResult(method ?: "", httpRequest.method ?: "").copy(failureReason = FailureReason.MethodMismatch).breadCrumb("METHOD"))
+                MatchFailure(
+                    mismatchResult(
+                        method ?: "",
+                        httpRequest.method ?: ""
+                    ).copy(failureReason = FailureReason.MethodMismatch).breadCrumb(METHOD_BREAD_CRUMB)
+                )
             else
                 MatchSuccess(Triple(httpRequest, resolver, failures))
         }
@@ -216,7 +231,17 @@ data class HttpRequestPattern(
     private fun matchQuery(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
 
-        val result = httpQueryParamPattern.matches(httpRequest, resolver)
+        val updatedResolver =
+            if(Flags.getBooleanValue(EXTENSIBLE_QUERY_PARAMS))
+                resolver.copy(
+                    findKeyErrorCheck = resolver.findKeyErrorCheck.copy(
+                        unexpectedKeyCheck = IgnoreUnexpectedKeys
+                    )
+                )
+            else
+                resolver
+
+        val result = httpQueryParamPattern.matches(httpRequest, updatedResolver)
 
         return if (result is Failure)
             MatchSuccess(Triple(httpRequest, resolver, failures.plus(result)))
@@ -357,24 +382,29 @@ data class HttpRequestPattern(
 
             val matchResult = Result.fromResults(results)
 
-            if(matchResult is Failure)
+            if (matchResult is Failure)
                 throw ContractException(matchResult.toFailureReport())
 
-            paramsUnaccountedFor.map { (name, values) ->
-                val pattern = if (values.size > 1) {
-                    QueryParameterArrayPattern(values.map { ExactValuePattern(StringValue(it.second)) }, name)
-                } else {
-                    QueryParameterScalarPattern(ExactValuePattern(StringValue(values.single().second)))
-                }
-
-                name to pattern
-            }.toMap()
+            unaccountedQueryParamsToMap(paramsUnaccountedFor)
+        } else if(Flags.getBooleanValue(EXTENSIBLE_QUERY_PARAMS)) {
+            unaccountedQueryParamsToMap(paramsUnaccountedFor)
         } else {
             emptyMap()
         }
 
         return paramsWithinPattern + paramsOutsidePattern
     }
+
+    private fun unaccountedQueryParamsToMap(paramsUnaccountedFor: Map<String, List<Pair<String, String>>>) =
+        paramsUnaccountedFor.map { (name, values) ->
+            val pattern = if (values.size > 1) {
+                QueryParameterArrayPattern(values.map { ExactValuePattern(StringValue(it.second)) }, name)
+            } else {
+                QueryParameterScalarPattern(ExactValuePattern(StringValue(values.single().second)))
+            }
+
+            name to pattern
+        }.toMap()
 
     private fun encompassedType(valueString: String, key: String?, type: Pattern, resolver: Resolver): Pattern {
         return when {
@@ -467,22 +497,31 @@ data class HttpRequestPattern(
                 newURLPathSegmentPatternsList.map { HttpPathPattern(it, httpPathPattern.path) }.map { HasValue(it) }
             } ?: sequenceOf(HasValue(null))
 
-            val newQueryParamsPatterns: Sequence<ReturnValue<HttpQueryParamPattern>> =
+            val newQueryParamsPatterns: Sequence<ReturnValue<HttpQueryParamPattern>> = returnValue(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
                 if (status.toString().startsWith("2")) {
-                    val new = httpQueryParamPattern.newBasedOn(row, resolver)
-                    httpQueryParamPattern.addComplimentaryPatterns(new, row, resolver)
+                    httpQueryParamPattern.addComplimentaryPatterns(
+                        httpQueryParamPattern.newBasedOn(row, resolver),
+                        row,
+                        resolver
+                    )
                 } else {
                     httpQueryParamPattern.readFrom(row, resolver)
-                }.map {
-                    HasValue(HttpQueryParamPattern(it))
+                }.map { pattern ->
+                    pattern.ifValue { HttpQueryParamPattern(pattern.value) }
                 }
+            }
 
-            val newHeadersPattern: Sequence<ReturnValue<HttpHeadersPattern>> = if (status.toString().startsWith("2")) {
-                val new = headersPattern.newBasedOn(row, resolver)
-                headersPattern.addComplimentaryPatterns(new, row, resolver)
-            } else {
-                headersPattern.readFrom(row, resolver)
-            }.map { HasValue(it) }
+            val newHeadersPattern: Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = "HEADERS") {
+                if (status.toString().startsWith("2")) {
+                    headersPattern.addComplimentaryPatterns(
+                        headersPattern.newBasedOn(row, resolver),
+                        row,
+                        resolver
+                    )
+                } else {
+                    headersPattern.readFrom(row, resolver)
+                }
+            }
 
             val newBodies: Sequence<ReturnValue<Pattern>> = attempt(breadCrumb = "BODY") {
                 body.let {
@@ -549,7 +588,13 @@ data class HttpRequestPattern(
                                         securitySchemes.asSequence().map {
                                             newRequestPattern.copy(securitySchemes = listOf(it))
                                         }
-                                    }.map { HasValue(it) }
+                                    }.map { requestPattern ->
+                                        val requestValueDetails = listOf(newHeadersPattern)
+                                            .filterIsInstance<HasValue<*>>().flatMap {
+                                                it.valueDetails
+                                            }
+                                        HasValue(requestPattern, requestValueDetails)
+                                    }
                                 }
                             }
                         }
@@ -738,7 +783,7 @@ data class HttpRequestPattern(
         originalRequest: HttpRequest,
         resolver: Resolver,
         data: JSONObjectValue,
-        dictionary: Map<String, Value>
+        dictionary: Dictionary
     ): Substitution {
         return Substitution(runningRequest, originalRequest, httpPathPattern ?: HttpPathPattern(emptyList(), ""), headersPattern, httpQueryParamPattern, body, resolver, data, dictionary)
     }

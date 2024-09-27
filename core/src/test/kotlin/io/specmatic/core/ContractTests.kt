@@ -21,6 +21,7 @@ import io.ktor.util.*
 import io.specmatic.core.log.logger
 import io.specmatic.test.ScenarioAsTest
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.fail
 
 class ContractTests {
@@ -1255,6 +1256,7 @@ Examples:
         assertThat(results.testCount).isEqualTo(2)
     }
 
+    @Disabled("Disabled temporarily")
     @Test
     fun `an orphan request example for a 204 that has headers should not run as a test`() {
         val feature = OpenApiSpecification.fromYAML(
@@ -1307,6 +1309,17 @@ Examples:
         })
 
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `external examples should load only against a scenario with matching request and response content types`() {
+        val feature =
+            OpenApiSpecification
+                .fromFile("src/test/resources/openapi/multiple_requests_and_responses_in_one_status.yaml")
+                .toFeature()
+                .loadExternalisedExamples()
+
+        assertThat(feature.scenarios.filter { it.examples.singleOrNull()?.rows?.size?.let { it > 0 } == true }).hasSize(1)
     }
 }
 

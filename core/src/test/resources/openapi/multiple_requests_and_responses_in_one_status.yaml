@@ -1,0 +1,46 @@
+openapi: 3.0.3
+info:
+  title: Simple API
+  version: 1.0.0
+paths:
+  /:
+    post:
+      summary: Simple POST endpoint
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - field
+              properties:
+                field:
+                  type: string
+          application/merge-patch+json:
+            schema:
+              type: object
+              required:
+                - different
+              properties:
+                different:
+                  type: string
+      responses:
+        '200':
+          description: A simple string response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - field
+                properties:
+                  field:
+                    type: string
+            application/merge-patch+json:
+              schema:
+                type: object
+                required:
+                  - different
+                properties:
+                  different:
+                    type: string

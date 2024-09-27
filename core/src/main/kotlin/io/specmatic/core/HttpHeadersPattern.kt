@@ -48,7 +48,7 @@ data class HttpHeadersPattern(
             if(parsedContentType != parsedContentTypeHeaderValue)
                 return MatchFailure(
                     Result.Failure(
-                        "Content-Type header mismatch, expected \"$contentType\", found \"$contentTypeHeaderValue\"",
+                        resolver.mismatchMessages.mismatchMessage(contentType, contentTypeHeaderValue),
                         breadCrumb = "Content-Type",
                         failureReason = FailureReason.ContentTypeMismatch
                     )
@@ -186,20 +186,30 @@ data class HttpHeadersPattern(
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
     }
 
-    fun newBasedOn(row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
-        val basedOnExamples = forEachKeyCombinationGivenRowIn(row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver), row, resolver) { pattern ->
-            newMapBasedOn(pattern, row, resolver).map { it.value }
+    fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
+        val basedOnExamples = forEachKeyCombinationGivenRowIn(
+            row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver),
+            row,
+            resolver
+        ) { pattern ->
+            newMapBasedOn(pattern, row, resolver)
         }
 
-        val generatedWithoutExamples: Sequence<Map<String, Pattern>> = resolver.generation.fillInTheMissingMapPatterns(
-            basedOnExamples,
+        val generatedWithoutExamples: Sequence<ReturnValue<Map<String, Pattern>>> = resolver.generation.fillInTheMissingMapPatterns(
+            basedOnExamples.map { it.value },
             pattern,
             null,
             row,
             resolver
         )
 
-        return (basedOnExamples + generatedWithoutExamples).map { map -> HttpHeadersPattern(map.mapKeys { withoutOptionality(it.key) }, contentType = contentType) }
+        return (basedOnExamples + generatedWithoutExamples).map { example ->
+            example.update { map ->
+                map.mapKeys { withoutOptionality(it.key) }
+            }.ifValue {
+                HttpHeadersPattern(it, contentType = contentType)
+            }
+        }
     }
 
     fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
@@ -266,15 +276,17 @@ data class HttpHeadersPattern(
         return Result.fromFailures(failures)
     }
 
-    fun addComplimentaryPatterns(basePatterns: Sequence<HttpHeadersPattern>, row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
-        return io.specmatic.core.addComplimentaryPatterns(
-            basePatterns.map {it.pattern},
+    fun addComplimentaryPatterns(basePatterns: Sequence<ReturnValue<HttpHeadersPattern>>, row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
+        return addComplimentaryPatterns(
+            basePatterns.map { it.ifValue { it.pattern } },
             pattern,
             null,
             row,
             resolver,
         ).map {
-            HttpHeadersPattern(it, contentType = contentType)
+            it.ifValue {
+                HttpHeadersPattern(it, contentType = contentType)
+            }
         }
     }
 
@@ -282,16 +294,15 @@ data class HttpHeadersPattern(
         return matches(this.pattern, row, resolver, "header")
     }
 
-    fun readFrom(row: Row, resolver: Resolver): Sequence<HttpHeadersPattern> {
+    fun readFrom(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
         return attempt(breadCrumb = HEADERS_BREADCRUMB) {
             readFrom(this.pattern, row, resolver)
         }.map {
-            HttpHeadersPattern(it, contentType = contentType)
-
+            HasValue(HttpHeadersPattern(it, contentType = contentType))
         }
     }
 
-    fun fillInTheBlanks(headers: Map<String, String>, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Map<String, String>> {
+    fun fillInTheBlanks(headers: Map<String, String>, dictionary: Dictionary, resolver: Resolver): ReturnValue<Map<String, String>> {
         val headersToConsider = ancestorHeaders?.let {
             headers.filterKeys { key -> key in it || "$key?" in it }
         } ?: headers
@@ -299,14 +310,14 @@ data class HttpHeadersPattern(
         val map: Map<String, ReturnValue<String>> = headersToConsider.mapValues { (headerName, headerValue) ->
             val headerPattern = pattern.get(headerName) ?: pattern.get("$headerName?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
 
-            if(headerName in dictionary) {
-                val dictionaryValue = dictionary.getValue(headerName)
+            if(dictionary.contains(headerName)) {
+                val dictionaryValue = dictionary.lookup(headerName)
                 val matchResult = headerPattern.matches(dictionaryValue, resolver)
 
                 if(matchResult is Result.Failure)
                     HasFailure(matchResult)
                 else
-                    HasValue(dictionaryValue.toStringLiteral())
+                    HasValue(dictionaryValue!!.toStringLiteral())
             } else {
                 exception { headerPattern.parse(headerValue, resolver) }?.let { return@mapValues HasException(it) }
 
@@ -317,7 +328,7 @@ data class HttpHeadersPattern(
         val headersInPartialR = map.mapFold()
 
         val missingHeadersR = pattern.filterKeys { !it.endsWith("?") && it !in headers }.mapValues { (headerName, headerPattern) ->
-            val generatedValue = dictionary[headerName]?.let { dictionaryValue ->
+            val generatedValue = dictionary.lookup(headerName)?.let { dictionaryValue ->
                 val matchResult = headerPattern.matches(dictionaryValue, resolver)
                 if(matchResult is Result.Failure)
                     HasFailure(matchResult)

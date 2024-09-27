@@ -90,29 +90,27 @@ open class SpecmaticJUnitSupport {
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
-            val defaultFormatters = listOf(
-                ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE),
-                ReportFormatter(ReportFormatterType.HTML)
-            )
-            val defaultReportTypes = ReportTypes(apiCoverage = APICoverage(openAPI = APICoverageConfiguration(successCriteria = SuccessCriteria(0, 0, false))))
-
             return when (val reportConfiguration = specmaticConfig?.report) {
                 null -> {
                     logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
-                    ReportConfiguration(formatters = defaultFormatters, types = defaultReportTypes)
+                    ReportConfiguration(
+                        formatters = listOf(
+                            ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE),
+                            ReportFormatter(ReportFormatterType.HTML)
+                        ), types = ReportTypes()
+                    )
                 }
 
                 else -> {
-                    reportConfiguration.copy(
-                        formatters = defaultFormatters.map { defaultFormatter ->
-                            val existingFormatter = reportConfiguration.formatters?.firstOrNull { it.type == defaultFormatter.type }
-                            defaultFormatter.copy(
-                                layout = existingFormatter?.layout ?: defaultFormatter.layout,
-                                title = existingFormatter?.title ?: defaultFormatter.title,
-                                heading = existingFormatter?.heading ?: defaultFormatter.heading,
-                                outputDirectory = existingFormatter?.outputDirectory ?: defaultFormatter.outputDirectory
-                            )
-                        }
+                    val htmlReportFormatter = reportConfiguration.formatters?.firstOrNull {
+                        it.type == ReportFormatterType.HTML
+                    } ?: ReportFormatter(ReportFormatterType.HTML)
+                    val textReportFormatter = reportConfiguration.formatters?.firstOrNull {
+                        it.type == ReportFormatterType.TEXT
+                    } ?: ReportFormatter(ReportFormatterType.TEXT)
+                    ReportConfiguration(
+                        formatters = listOf(htmlReportFormatter, textReportFormatter),
+                        types = reportConfiguration.types
                     )
                 }
             }
@@ -235,7 +233,8 @@ open class SpecmaticJUnitSupport {
                             testConfig,
                             specificationPath = it,
                             filterName = filterName,
-                            filterNotName = filterNotName
+                            filterNotName = filterNotName,
+                            specmaticConfig = specmaticConfig
                         )
                     }
                     val tests: Sequence<ContractTest> = testScenariosAndEndpointsPairList.asSequence().flatMap { it.first }
@@ -244,8 +243,7 @@ open class SpecmaticJUnitSupport {
                 }
                 else -> {
                     val configFile = configFile
-
-                    exitIfDoesNotExist("config file", configFile)
+                    if(File(configFile).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
 
                     createIfDoesNotExist(workingDirectory.path)
 

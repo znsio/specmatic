@@ -1,11 +1,7 @@
 package io.specmatic.stub
 
-import io.specmatic.core.Feature
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.Scenario
+import io.specmatic.core.*
 import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.Value
 
 data class HttpStubResponse(
     val response: HttpResponse,
@@ -14,7 +10,7 @@ data class HttpStubResponse(
     val examplePath: String? = null,
     val feature: Feature? = null,
     val scenario: Scenario? = null,
-    val dictionary: Map<String, Value> = emptyMap()
+    val dictionary: Dictionary = Dictionary()
 ) {
     fun resolveSubstitutions(
         request: HttpRequest,

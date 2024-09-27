@@ -28,7 +28,7 @@ data class ScenarioStub(
     val data: JSONObjectValue = JSONObjectValue(),
     val filePath: String? = null,
     val partial: ScenarioStub? = null,
-    val dictionary: Map<String, Value> = emptyMap()
+    val dictionary: Dictionary = Dictionary()
 ) {
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()

@@ -1,17 +1,17 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.core.*
+import io.specmatic.core.Result.Failure
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
-import io.specmatic.core.value.EmptyString
-import io.specmatic.core.value.NullValue
-import io.specmatic.core.value.ScalarValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 
 data class AnyPattern(
     override val pattern: List<Pattern>,
     val key: String? = null,
     override val typeAlias: String? = null,
-    override val example: String? = null
+    override val example: String? = null,
+    private val discriminatorProperty: String? = null,
+    private val discriminatorValues: Set<String> = emptySet()
 ) : Pattern, HasDefaultExample {
     override fun equals(other: Any?): Boolean = other is AnyPattern && other.pattern == this.pattern
 
@@ -19,7 +19,7 @@ data class AnyPattern(
 
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
 
-    override fun fillInTheBlanks(value: Value, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
         val results = pattern.asSequence().map {
             it.fillInTheBlanks(value, dictionary, resolver)
         }
@@ -29,7 +29,7 @@ data class AnyPattern(
         if(successfulGeneration != null)
             return successfulGeneration
 
-        val failures = results.toList().filterIsInstance<Result.Failure>()
+        val failures = results.toList().filterIsInstance<Failure>()
 
         return HasFailure(Result.Failure.fromFailures(failures))
     }
@@ -85,34 +85,103 @@ data class AnyPattern(
         if(matchResult != null)
             return matchResult.result
 
+        val failures = matchResults.map { it.result }.filterIsInstance<Failure>()
+
+        if(discriminatorProperty != null) {
+            val deepMatchResults = failures.filter { it.hasReason(FailureReason.FailedButDiscriminatorMatched) }
+
+            if(deepMatchResults.isNotEmpty())
+                return Failure.fromFailures(deepMatchResults).removeReasonsFromCauses().copy(failureReason = FailureReason.FailedButDiscriminatorMatched)
+
+            val failure = if(discriminatorValues.size == 1) {
+                Failure.fromFailures(failures).removeReasonsFromCauses()
+            }
+            else {
+                val discriminatorCsv = discriminatorValues.joinToString(", ")
+
+                if(sampleData is JSONObjectValue) {
+                    val actualDiscriminatorValue = sampleData.jsonObject[discriminatorProperty]?.toStringLiteral()
+
+                    if(actualDiscriminatorValue == null) {
+                        Failure(
+                            "Discriminator property ${discriminatorProperty} is missing from the object",
+                            breadCrumb = discriminatorProperty,
+                            failureReason = FailureReason.DiscriminatorMismatch
+                        )
+
+                    } else if (actualDiscriminatorValue !in discriminatorValues) {
+                        val baseMessage = "Expected the value of discriminator property to be one of $discriminatorCsv"
+
+                        val message = baseMessage + if (discriminatorProperty in sampleData.jsonObject) {
+                            " but it was ${sampleData.jsonObject.getValue(discriminatorProperty).displayableValue()}"
+                        } else {
+                            " but it was missing"
+                        }
+
+                        Failure(
+                            message,
+                            breadCrumb = discriminatorProperty,
+                            failureReason = FailureReason.DiscriminatorMismatch
+                        )
+                    }
+                    else {
+                        Failure(
+                            "Discriminator property ${discriminatorProperty} is missing from the spec",
+                            breadCrumb = discriminatorProperty,
+                            failureReason = FailureReason.DiscriminatorMismatch
+                        )
+                    }
+                } else {
+                    resolver.mismatchMessages.valueMismatchFailure("json object", sampleData)
+                }
+
+            }
+
+            return failure.copy(failureReason = FailureReason.DiscriminatorMismatch)
+        }
+
+        if(failures.any { it.reasonIs { it.objectMatchOccurred } }) {
+            val failureMatchResults = matchResults.filter {
+                it.result is Failure && it.result.reasonIs { it.objectMatchOccurred }
+            }
+
+            val objectTypeMatchedButHadSomeOtherMismatch = addTypeInfoBreadCrumbs(failureMatchResults)
+
+            return Result.Failure.fromFailures(objectTypeMatchedButHadSomeOtherMismatch).removeReasonsFromCauses()
+        }
+
         val resolvedPatterns = pattern.map { resolvedHop(it, resolver) }
 
         if(resolvedPatterns.any { it is NullPattern } || resolvedPatterns.all { it is ExactValuePattern })
             return failedToFindAny(
                     typeName,
                     sampleData,
-                    getResult(matchResults.map { it.result as Result.Failure }),
+                    getResult(matchResults.map { it.result as Failure }),
                     resolver.mismatchMessages
                 )
 
-        val failuresWithUpdatedBreadcrumbs = matchResults.map {
-            Pair(it.pattern, it.result as Result.Failure)
-        }.mapIndexed { index, (pattern, failure) ->
-            val ordinal = index + 1
-
-            pattern.typeAlias?.let {
-                if(it.isBlank() || it == "()")
-                    failure.breadCrumb("(~~~object $ordinal)")
-                else
-                    failure.breadCrumb("(~~~${withoutPatternDelimiters(it)} object)")
-            } ?:
-            failure
-        }
+        val failuresWithUpdatedBreadcrumbs = addTypeInfoBreadCrumbs(matchResults)
 
         return Result.fromFailures(failuresWithUpdatedBreadcrumbs)
     }
 
-    private fun getResult(failures: List<Result.Failure>): List<Result.Failure> = when {
+    private fun addTypeInfoBreadCrumbs(matchResults: List<AnyPatternMatch>): List<Failure> {
+        val failuresWithUpdatedBreadcrumbs = matchResults.map {
+            Pair(it.pattern, it.result as Failure)
+        }.mapIndexed { index, (pattern, failure) ->
+            val ordinal = index + 1
+
+            pattern.typeAlias?.let {
+                if (it.isBlank() || it == "()")
+                    failure.breadCrumb("(~~~object $ordinal)")
+                else
+                    failure.breadCrumb("(~~~${withoutPatternDelimiters(it)} object)")
+            } ?: failure
+        }
+        return failuresWithUpdatedBreadcrumbs
+    }
+
+    private fun getResult(failures: List<Failure>): List<Failure> = when {
         isNullablePattern() -> {
             val index = pattern.indexOfFirst { !isEmpty(it) }
             listOf(failures[index])
@@ -129,6 +198,14 @@ data class AnyPattern(
     }
 
     private fun generateRandomValue(resolver: Resolver): Value {
+        if(
+            pattern.size == 2 &&
+            pattern.any { it is NullPattern} &&
+            pattern.filterNot { it is NullPattern }.filter { it is ScalarType }.size == 1
+        ) {
+            return pattern.filterNot { it is NullPattern }.filter { it is ScalarType }.first().generate(resolver)
+        }
+
         val randomPattern = pattern.random()
         val isNullable = pattern.any { it is NullPattern }
         return resolver.withCyclePrevention(randomPattern, isNullable) { cyclePreventedResolver ->
@@ -259,7 +336,7 @@ data class AnyPattern(
     ): Result {
         val compatibleResult = otherPattern.fitsWithin(patternSet(thisResolver), otherResolver, thisResolver, typeStack)
 
-        return if(compatibleResult is Result.Failure && allValuesAreScalar())
+        return if(compatibleResult is Failure && allValuesAreScalar())
             mismatchResult(this, otherPattern, thisResolver.mismatchMessages)
         else
             compatibleResult
@@ -290,7 +367,7 @@ data class AnyPattern(
     }
 }
 
-private fun failedToFindAny(expected: String, actual: Value?, results: List<Result.Failure>, mismatchMessages: MismatchMessages): Result.Failure =
+private fun failedToFindAny(expected: String, actual: Value?, results: List<Failure>, mismatchMessages: MismatchMessages): Failure =
     when (results.size) {
         1 -> results[0]
         else -> {

@@ -8,6 +8,7 @@ import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.stub.HttpStub
 import io.ktor.http.*
+import io.specmatic.Waiter
 import io.specmatic.mock.DELAY_IN_MILLISECONDS
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -256,6 +257,46 @@ internal class ProxyTest {
 
                 assertThat(response.statusCodeValue).isEqualTo(200)
                 assertThat(response.body).isEqualTo(mapOf("status" to "UP"))
+            }
+        }
+    }
+
+    @Test
+    fun `should dump the examples and spec if the specmatic proxy dump endpoint is hit`() {
+        HttpStub(simpleFeature).use {
+            Proxy(host = "localhost", port = 9001, "http://localhost:9000", fakeFileWriter).use {
+                val restProxy = java.net.Proxy(java.net.Proxy.Type.HTTP, InetSocketAddress("localhost", 9001))
+                val requestFactory = SimpleClientHttpRequestFactory()
+                requestFactory.setProxy(restProxy)
+                val client = RestTemplate(requestFactory)
+                client.postForEntity("http://localhost:9000/multiply", "10", String::class.java)
+
+                val response = client.postForEntity<String>("http://localhost:9001/_specmatic/proxy/dump")
+
+                assertThat(response.statusCodeValue).isEqualTo(202)
+                assertThat(response.body).isEqualTo("Dump process of spec and examples has started in the background")
+
+                val waiter = Waiter(1000L, 5000L)
+
+                while(waiter.canWaitForMoreTime()) {
+                    if(fakeFileWriter.receivedContract != null)
+                        break
+
+                    waiter.waitForMoreTime()
+                }
+
+                assertThat(fakeFileWriter.receivedContract?.trim()).startsWith("openapi:")
+                assertThatCode {
+                    OpenApiSpecification.fromYAML(
+                        fakeFileWriter.receivedContract!!,
+                        ""
+                    )
+                }.doesNotThrowAnyException()
+                assertThatCode { parsedJSON(fakeFileWriter.receivedStub ?: "") }.doesNotThrowAnyException()
+                assertThat(fakeFileWriter.receivedPaths.toList()).contains(
+                    "proxy_generated.yaml",
+                    "multiply_POST_200_1.json"
+                )
             }
         }
     }

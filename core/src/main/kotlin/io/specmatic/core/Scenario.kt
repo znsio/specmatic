@@ -168,6 +168,15 @@ data class Scenario(
             httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
         }
 
+    fun generateHttpResponseWithAll(actualFacts: Map<String, Value>, requestContext: Context = NoContext): HttpResponse =
+        scenarioBreadCrumb(this) {
+            Resolver(emptyMap(), false, patterns)
+            val resolver = Resolver(actualFacts, false, patterns)
+            val facts = combineFacts(expectedFacts, actualFacts, resolver)
+
+            httpResponsePattern.generateResponseWithAll(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
+        }
+
     private fun combineFacts(
         expected: Map<String, Value>,
         actual: Map<String, Value>,
@@ -498,6 +507,9 @@ data class Scenario(
                     failureReason = FailureReason.RequestMismatchButStatusAlsoWrong
                 )
 
+            if(requestMatchResult is Result.Failure && requestMatchResult.isAnyFluffy(0))
+                return requestMatchResult
+
             val responseMatchResult =
                 attempt(breadCrumb = "RESPONSE") { httpResponsePattern.matchesMock(response, resolver) }
 
@@ -585,7 +597,23 @@ data class Scenario(
             operationId.requestMethod.equals(method, ignoreCase = true)
                     && operationId.responseStatus == status
                     && httpRequestPattern.matchesPath(operationId.requestPath, patternMatchingResolver).isSuccess()
+                    && matchesRequestContentType(operationId)
+                    && matchesResponseContentType(operationId)
         }
+    }
+
+    private fun matchesResponseContentType(operationId: OpenApiSpecification.OperationIdentifier): Boolean {
+        val exampleResponseContentType = operationId.responseContentType ?: return true
+        val patternResponseContentType = httpResponsePattern.headersPattern.contentType ?: return true
+
+        return exampleResponseContentType == patternResponseContentType
+    }
+
+    private fun matchesRequestContentType(operationId: OpenApiSpecification.OperationIdentifier): Boolean {
+        val exampleRequestContentType = operationId.requestContentType ?: return true
+        val patternRequestContentType = httpRequestPattern.headersPattern.contentType ?: return true
+
+        return exampleRequestContentType == patternRequestContentType
     }
 
     fun resolveSubtitutions(
@@ -593,13 +621,13 @@ data class Scenario(
         originalRequest: HttpRequest,
         response: HttpResponse,
         data: JSONObjectValue,
-        dictionary: Map<String, Value>
+        dictionary: Dictionary
     ): HttpResponse {
         val substitution = httpRequestPattern.getSubstitution(request, originalRequest, resolver, data, dictionary)
         return httpResponsePattern.resolveSubstitutions(substitution, response)
     }
 
-    fun matchesTemplate(template: ScenarioStub): Result {
+    fun matchesPartial(template: ScenarioStub): Result {
         val updatedResolver = resolver.copy(findKeyErrorCheck = PARTIAL_KEYCHECK, mockMode = true)
 
         val requestMatch = httpRequestPattern.matches(template.request, updatedResolver, updatedResolver)

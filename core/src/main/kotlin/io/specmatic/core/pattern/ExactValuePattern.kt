@@ -1,16 +1,23 @@
 package io.specmatic.core.pattern
 
+import io.specmatic.core.FailureReason
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.mismatchResult
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.Value
 
-data class ExactValuePattern(override val pattern: Value, override val typeAlias: String? = null) : Pattern {
+data class ExactValuePattern(override val pattern: Value, override val typeAlias: String? = null, val discriminator: Boolean = false) : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         return when (pattern == sampleData) {
             true -> Result.Success()
-            else -> mismatchResult(pattern, sampleData, resolver.mismatchMessages)
+            else -> {
+                if (discriminator) {
+                    val errorMessage = "Expected the value of discriminator property to be ${pattern.displayableValue()} but it was ${sampleData?.displayableValue()}"
+                    Result.Failure(errorMessage, failureReason = FailureReason.DiscriminatorMismatch)
+                } else
+                    mismatchResult(pattern, sampleData, resolver.mismatchMessages)
+            }
         }
     }
 

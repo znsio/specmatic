@@ -1,9 +1,6 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.core.Resolver
-import io.specmatic.core.Result
-import io.specmatic.core.Substitution
-import io.specmatic.core.mismatchResult
+import io.specmatic.core.*
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.ListValue
@@ -14,7 +11,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
 
-    override fun fillInTheBlanks(value: Value, dictionary: Map<String, Value>, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
         val listValue = value as? JSONArrayValue ?: return HasFailure("Cannot generate a list from partial of type ${value.displayableType()}")
         val newList = listValue.list.map { pattern.fillInTheBlanks(it, dictionary, resolver) }.listFold()
 

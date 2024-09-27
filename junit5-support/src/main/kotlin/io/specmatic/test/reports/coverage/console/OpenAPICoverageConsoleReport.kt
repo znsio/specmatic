@@ -25,7 +25,7 @@ data class OpenAPICoverageConsoleReport(
         return ((totalCountOfCoveredEndpointsWithResponseStatuses * 100) / totalCountOfEndpointsWithResponseStatuses).toDouble().roundToInt()
     }
 
-    fun getGroupedTestResultRecords(): Map<String, Map<String, Map<String, List<TestResultRecord>>>> {
+    fun getGroupedTestResultRecords(testResultRecords: List<TestResultRecord>): Map<String, Map<String, Map<String, List<TestResultRecord>>>> {
         return testResultRecords.groupBy { it.path }.mapValues { serviceGroup ->
             serviceGroup.value.groupBy { it.method }.mapValues { rpcGroup ->
                 rpcGroup.value.groupBy { it.responseStatus.toString() }
@@ -33,7 +33,7 @@ data class OpenAPICoverageConsoleReport(
         }
     }
 
-    fun getGroupedCoverageRows(): Map<String, Map<String, Map<String, List<OpenApiCoverageConsoleRow>>>> {
+    fun getGroupedCoverageRows(coverageRows: List<OpenApiCoverageConsoleRow>): Map<String, Map<String, Map<String, List<OpenApiCoverageConsoleRow>>>> {
         return coverageRows.groupBy { it.path }.mapValues { serviceGroup ->
             serviceGroup.value.groupBy { it.method }.mapValues { rpcGroup ->
                 rpcGroup.value.groupBy { it.responseStatus }

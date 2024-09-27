@@ -12,7 +12,12 @@ data class Results(val results: List<Result> = emptyList()) {
 
     fun withoutFluff(): Results = copy(results = minimumFluff())
 
-    private fun minimumFluff() = results.filterNot { it.isFluffy() }.ifEmpty { results.filterNot { it.isFluffy(1) } }
+    private fun minimumFluff() =
+        results.filterNot {
+            it.isFluffy()
+        }.ifEmpty {
+            results.filterNot { it.isFluffy(1) }
+        }
 
     fun toResultIfAny(): Result {
         return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { it.toReport().toText() })
@@ -88,6 +93,14 @@ data class Results(val results: List<Result> = emptyList()) {
         }
 
         return Results(uniqueResults)
+    }
+
+    fun summary(): String {
+        return when {
+            successCount > 0 && failureCount == 0 -> "All $successCount example(s) are valid."
+            successCount == 0 && failureCount > 0 -> "All $failureCount example(s) are invalid."
+            else -> "$successCount example(s) are valid. $failureCount example(s) are invalid."
+        }
     }
 }
 

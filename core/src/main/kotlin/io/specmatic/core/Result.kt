@@ -34,10 +34,12 @@ sealed class Result {
     fun isFluffy(acceptableFluffLevel: Int): Boolean {
         return when(this) {
             is Failure ->
-                failureReason?.let { it.fluffLevel > acceptableFluffLevel } == true || cause?.isFluffy() == true
+                failureReason?.let { it.fluffLevel > acceptableFluffLevel } == true || cause?.isFluffy(acceptableFluffLevel) == true
             else -> false
         }
     }
+
+    abstract fun isAnyFluffy(acceptableFluffLevel: Int): Boolean
 
     fun updateScenario(scenario: ScenarioDetailsForResult): Result {
         this.scenario = scenario
@@ -73,7 +75,41 @@ sealed class Result {
     abstract fun throwOnFailure(): Success
     abstract fun <T> toReturnValue(returnValue: T, errorMessage: String): ReturnValue<T>
 
-    data class FailureCause(val message: String="", var cause: Failure? = null)
+    data class FailureCause(val message: String="", var cause: Failure? = null) {
+        fun hasReason(failureReason: FailureReason): Boolean {
+            return cause?.hasReason(failureReason) ?: false
+        }
+
+        fun filterByReason(failureReason: FailureReason): FailureCause? {
+            val cause = cause ?: return null
+
+            if(cause.failureReason == failureReason)
+                return this
+
+            val filteredCause = cause.filterByReason(failureReason)
+
+            if(filteredCause.isEmpty())
+                return null
+
+            return this.copy(cause = filteredCause)
+        }
+
+        fun hasAnyOfTheseReasons(failureReasons: List<FailureReason>): Boolean {
+            return cause?.hasAnyOfTheseReasons(*failureReasons.toTypedArray()) ?: false
+        }
+
+        fun removeReasonsFromCauses(): FailureCause {
+            return this.copy(cause = cause?._removeReasonsFromCauses())
+        }
+
+        fun reasonIs(reasonFilter: (failureReason: FailureReason) -> Boolean): Boolean {
+            return (cause ?: return false).reasonIs(reasonFilter)
+        }
+
+        fun failureCount(): Int {
+            return cause?.let { it.failureCount() } ?: 1
+        }
+    }
 
     data class Failure(val causes: List<FailureCause> = emptyList(), val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
         constructor(message: String="", cause: Failure? = null, breadCrumb: String = "", failureReason: FailureReason? = null): this(listOf(FailureCause(message, cause)), breadCrumb, failureReason)
@@ -91,6 +127,12 @@ sealed class Result {
 
         fun toFailureCause(): FailureCause {
             return FailureCause(cause = this)
+        }
+
+        fun getFailureBreadCrumbs(prefix: String): List<String> {
+            return causes.mapNotNull { it.cause?.getFailureBreadCrumbs("$prefix$breadCrumb.") }
+                .flatten()
+                .plus("$prefix$breadCrumb")
         }
 
         override fun ifSuccess(function: () -> Result) = this
@@ -166,10 +208,63 @@ sealed class Result {
             }
         }
 
+        override fun isAnyFluffy(acceptableFluffLevel: Int): Boolean {
+            return failureReason?.let { it.fluffLevel > acceptableFluffLevel } == true || causes.any { it.cause?.isAnyFluffy(acceptableFluffLevel) == true }
+        }
+
         override fun isSuccess() = false
+
+        fun traverseFailureReason(): FailureReason? {
+            return failureReason ?: causes.asSequence().map {
+                it.cause?.traverseFailureReason()
+            }.firstOrNull()
+        }
+
+        fun hasReason(failureReason: FailureReason): Boolean {
+            return this.failureReason == failureReason || causes.any { it.hasReason(failureReason) }
+        }
+
+        fun hasAnyOfTheseReasons(vararg failureReasons: FailureReason): Boolean {
+            return this.failureReason != null && this.failureReason in failureReasons || causes.any { it.hasAnyOfTheseReasons(failureReasons.toList()) }
+        }
+
+        fun filterByReason(failureReason: FailureReason): Failure {
+            if(this.failureReason == FailureReason.DiscriminatorMismatch)
+                return this
+
+            val causesFilteredByReason: List<FailureCause> = this.causes.map {
+                it.filterByReason(failureReason)
+            }.filterNotNull()
+
+            return this.copy(causes = causesFilteredByReason)
+        }
+
+        fun isEmpty(): Boolean {
+            return this.causes.isEmpty()
+        }
+
+        fun removeReasonsFromCauses(): Failure {
+            return this.copy(causes = causes.map { it.removeReasonsFromCauses() })
+        }
+
+        fun _removeReasonsFromCauses(): Failure {
+            return this.copy(causes = causes.map { it.removeReasonsFromCauses() }, failureReason = null)
+        }
+
+        fun reasonIs(reasonFilter: (failureReason: FailureReason) -> Boolean): Boolean {
+            return (failureReason?.let { reasonFilter(it) } ?: false) || causes.any { it.reasonIs(reasonFilter) }
+        }
+
+        fun failureCount(): Int {
+            return causes.sumOf { it.failureCount() }
+        }
     }
 
     data class Success(val variables: Map<String, String> = emptyMap(), val partialSuccessMessage: String? = null) : Result() {
+        override fun isAnyFluffy(acceptableFluffLevel: Int): Boolean {
+            return false
+        }
+
         override fun isSuccess() = true
         override fun ifSuccess(function: () -> Result) = function()
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {
@@ -217,15 +312,19 @@ enum class TestResult {
     NotCovered
 }
 
-enum class FailureReason(val fluffLevel: Int) {
-    PartNameMisMatch(0),
-    StatusMismatch(1),
-    IdentifierMismatch(1),
-    MethodMismatch(1),
-    ContentTypeMismatch(0),
-    RequestMismatchButStatusAlsoWrong(1),
-    URLPathMisMatch(2),
-    SOAPActionMismatch(2)
+enum class FailureReason(val fluffLevel: Int, val objectMatchOccurred: Boolean) {
+    PartNameMisMatch(0, false),
+    StatusMismatch(2, false),
+    IdentifierMismatch(1, false),
+    MethodMismatch(2, false),
+    ContentTypeMismatch(1, false),
+    RequestMismatchButStatusAlsoWrong(2, false),
+    URLPathMisMatch(2, false),
+    SOAPActionMismatch(2, false),
+    DiscriminatorMismatch(0, true),
+    FailedButDiscriminatorMatched(0, true),
+    FailedButObjectTypeMatched(0, true),
+    ScenarioMismatch(2, false)
 }
 
 data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null)

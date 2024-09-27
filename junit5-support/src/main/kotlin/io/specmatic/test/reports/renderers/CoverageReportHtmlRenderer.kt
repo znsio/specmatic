@@ -1,5 +1,6 @@
 package io.specmatic.test.reports.renderers
 
+import io.specmatic.core.ReportFormatter
 import io.specmatic.core.ReportFormatterType
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
@@ -9,6 +10,7 @@ import io.specmatic.test.TestInteractionsLog.displayName
 import io.specmatic.test.TestInteractionsLog.duration
 import io.specmatic.test.TestResultRecord
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
+import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
 import io.specmatic.test.reports.coverage.html.*
 import java.util.*
 
@@ -34,7 +36,7 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
 
         val reportData = HtmlReportData(
             totalCoveragePercentage = report.totalCoveragePercentage, actuatorEnabled = actuatorEnabled,
-            tableRows = makeTableRows(report),
+            tableRows = makeTableRows(report, htmlReportConfiguration),
             scenarioData = makeScenarioData(report), totalTestDuration = getTotalDuration(report)
         )
 
@@ -56,8 +58,13 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
         return props.getProperty("version")
     }
 
-    private fun makeTableRows(report: OpenAPICoverageConsoleReport): List<TableRow> {
-        return report.getGroupedCoverageRows().flatMap { (_, methodGroup) ->
+    private fun makeTableRows(report: OpenAPICoverageConsoleReport, htmlReportConfiguration: ReportFormatter): List<TableRow> {
+        val updatedCoverageRows = when(htmlReportConfiguration.lite) {
+            true -> reCreateCoverageRowsForLite(report, report.coverageRows)
+            else -> report.coverageRows
+        }
+
+        return report.getGroupedCoverageRows(updatedCoverageRows).flatMap { (_, methodGroup) ->
             methodGroup.flatMap { (_, statusGroup) ->
                 statusGroup.flatMap { (_, coverageRows) ->
                     coverageRows.map {
@@ -86,7 +93,7 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
     private fun makeScenarioData(report: OpenAPICoverageConsoleReport): Map<String, Map<String, Map<String, List<ScenarioData>>>> {
         val testData: MutableMap<String, MutableMap<String, MutableMap<String, MutableList<ScenarioData>>>> = mutableMapOf()
 
-        for ((path, methodGroup) in report.getGroupedTestResultRecords()) {
+        for ((path, methodGroup) in report.getGroupedTestResultRecords(report.testResultRecords)) {
             for ((method, statusGroup) in methodGroup) {
                 val methodMap = testData.getOrPut(path) { mutableMapOf() }
 
@@ -154,5 +161,31 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
 
     private fun getReportDetail(testResult: TestResultRecord): String {
         return testResult.scenarioResult?.reportString() ?: ""
+    }
+
+    private fun reCreateCoverageRowsForLite(report: OpenAPICoverageConsoleReport, coverageRows: List<OpenApiCoverageConsoleRow>): List<OpenApiCoverageConsoleRow> {
+        val exercisedRows = coverageRows.filter { it.count.toInt() > 0 }
+        val updatedRows = mutableListOf<OpenApiCoverageConsoleRow>()
+
+        report.getGroupedCoverageRows(exercisedRows).forEach { (_, methodGroup) ->
+            val rowGroup = mutableListOf<OpenApiCoverageConsoleRow>()
+
+            methodGroup.forEach { (method, statusGroup) ->
+                statusGroup.forEach { (_, coverageRows) ->
+                    coverageRows.forEach {
+                        if (rowGroup.isEmpty()) {
+                            rowGroup.add(it.copy(showPath = true, showMethod = true))
+                        } else {
+                            val methodExists = rowGroup.any {row ->  row.method == method }
+                            rowGroup.add(it.copy(showPath = false, showMethod = !methodExists))
+                        }
+                    }
+                }
+            }
+
+            updatedRows.addAll(rowGroup)
+        }
+
+        return updatedRows
     }
 }

@@ -7,6 +7,7 @@ import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
+import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.HttpClientFactory
@@ -179,7 +180,8 @@ class StubCommand : Callable<Unit> {
 
     private fun startServer() {
         val workingDirectory = WorkingDirectory()
-        val stubData = stubLoaderEngine.loadStubs(contractSources, exampleDirs, specmaticConfigPath)
+        if(strictMode) throwExceptionIfDirectoriesAreInvalid(exampleDirs, "example directories")
+        val stubData = stubLoaderEngine.loadStubs(contractSources, exampleDirs, specmaticConfigPath, strictMode)
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
 

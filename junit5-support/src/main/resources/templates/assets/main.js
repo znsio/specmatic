@@ -165,7 +165,7 @@ function createScenarioInformation(scenario) {
   scenarioDuration.textContent = `${scenario.duration}ms`;
 
   const scenarioResult = document.createElement("span");
-  const pillColor = getColor(scenario.htmlResult);
+  const pillColor = scenario.valid ? getColor(scenario.htmlResult) : "red";
   const pillText = scenario.wip ? "WIP" : scenario.valid || scenario.testResult === "MissingInSpec" ? scenario.testResult : "Invalid";
   scenarioResult.classList.add(...PILL_CSS, `bg-${pillColor}-300`, "w-36");
   scenarioResult.textContent = pillText;

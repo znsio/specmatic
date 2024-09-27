@@ -25,7 +25,7 @@ data class HttpStubData(
     val originalRequest: HttpRequest? = null,
     val data: JSONObjectValue = JSONObjectValue(),
     val partial: ScenarioStub? = null,
-    val dictionary: Map<String, Value> = emptyMap()
+    val dictionary: Dictionary = Dictionary()
 ) {
     val matchFailure: Boolean
         get() = response.headers[SPECMATIC_RESULT_HEADER] == "failure"

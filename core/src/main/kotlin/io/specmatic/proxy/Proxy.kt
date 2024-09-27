@@ -1,12 +1,23 @@
 package io.specmatic.proxy
 
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.specmatic.core.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
+import io.specmatic.core.EXAMPLES_DIR_SUFFIX
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
+import io.specmatic.core.KeyData
+import io.specmatic.core.NamedStub
+import io.specmatic.core.URLParts
+import io.specmatic.core.log.logger
+import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
-import io.specmatic.core.log.logger
+import io.specmatic.core.toGherkinFeature
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.mock.ScenarioStub
@@ -16,6 +27,11 @@ import io.specmatic.stub.ktorHttpRequestToHttpRequest
 import io.specmatic.stub.respondToKtorHttpResponse
 import io.specmatic.test.HttpClient
 import io.swagger.v3.core.util.Yaml
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.Closeable
 import java.net.URI
 import java.net.URL
@@ -39,6 +55,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                     val httpRequest = ktorHttpRequestToHttpRequest(call)
 
                     if(httpRequest.isHealthCheckRequest()) return@intercept
+                    if(httpRequest.isDumpRequest()) return@intercept
 
                     when (httpRequest.method?.uppercase()) {
                         "CONNECT" -> {
@@ -96,6 +113,10 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
             }
 
             configureHealthCheckModule()
+
+            routing {
+                post(DUMP_ENDPOINT) { handleDumpRequest(call) }
+            }
         }
 
         when (keyData) {
@@ -153,31 +174,50 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
     }
 
     override fun close() {
+        runBlocking {
+            dumpSpecAndExamplesIntoOutputDir()
+        }
         server.stop(0, 0)
+    }
 
+    private suspend fun dumpSpecAndExamplesIntoOutputDir() = Mutex().withLock {
         val gherkin = toGherkinFeature("New feature", stubs)
         val base = "proxy_generated"
         val featureFileName = "$base.yaml"
 
         if(stubs.isEmpty()) {
             println("No stubs were recorded. No contract will be written.")
-        } else {
-            outputDirectory.createDirectory()
+            return
+        }
+        outputDirectory.createDirectory()
 
-            val stubDataDirectory = outputDirectory.subDirectory("${base}$EXAMPLES_DIR_SUFFIX")
-            stubDataDirectory.createDirectory()
+        val stubDataDirectory = outputDirectory.subDirectory("${base}$EXAMPLES_DIR_SUFFIX")
+        stubDataDirectory.createDirectory()
 
-            stubs.mapIndexed { index, namedStub: NamedStub ->
-                val fileName = "${namedStub.shortName}_${index.inc()}.json"
-                println("Writing stub data to $fileName")
-                stubDataDirectory.writeText(fileName, namedStub.stub.toJSON().toStringLiteral())
-            }
+        stubs.mapIndexed { index, namedStub: NamedStub ->
+            val fileName = "${namedStub.shortName}_${index.inc()}.json"
+            println("Writing stub data to $fileName")
+            stubDataDirectory.writeText(fileName, namedStub.stub.toJSON().toStringLiteral())
+        }
 
-            val openApi = parseGherkinStringToFeature(gherkin).toOpenApi()
+        val openApi = parseGherkinStringToFeature(gherkin).toOpenApi()
 
-            println("Writing specification to $featureFileName")
-            outputDirectory.writeText(featureFileName, Yaml.pretty(openApi))
+        println("Writing specification to $featureFileName")
+        outputDirectory.writeText(featureFileName, Yaml.pretty(openApi))
+    }
 
+    private suspend fun handleDumpRequest(call: ApplicationCall) {
+        call.respond(HttpStatusCode.Accepted, "Dump process of spec and examples has started in the background")
+        withContext(Dispatchers.IO) {
+            dumpSpecAndExamplesIntoOutputDir()
+        }
+    }
+
+    companion object {
+        private const val DUMP_ENDPOINT = "/_specmatic/proxy/dump"
+
+        private fun HttpRequest.isDumpRequest(): Boolean {
+            return (this.path == DUMP_ENDPOINT) && (this.method == HttpMethod.Post.value)
         }
     }
 }

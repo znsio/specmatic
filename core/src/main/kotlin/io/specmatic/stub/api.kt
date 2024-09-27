@@ -9,7 +9,8 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.contractStubPaths
 import io.specmatic.core.utilities.examplesDirFor
-import io.specmatic.core.utilities.exitIfDoesNotExist
+import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
+import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import org.yaml.snakeyaml.Yaml
@@ -95,13 +96,14 @@ internal fun createStub(
     timeoutMillis: Long,
     strict: Boolean = false
 ): ContractStub {
-    // TODO - see if these two can be extracted out.
     val configFileName = getConfigFileName()
-    exitIfDoesNotExist("config file", configFileName)
+    if(File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
     val contractPathData = contractStubPaths(configFileName)
 
+    if(strict) throwExceptionIfDirectoriesAreInvalid(dataDirPaths, "example directories")
+
     val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
-    val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths, specmaticConfig)
+    val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths, specmaticConfig, strict)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
 
@@ -119,9 +121,8 @@ internal fun createStub(
 
 internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMillis: Long, strict: Boolean = false, givenConfigFileName: String? = null): ContractStub {
     val workingDirectory = WorkingDirectory()
-    // TODO - see if these two can be extracted out.
     val configFileName = givenConfigFileName ?: getConfigFileName()
-    exitIfDoesNotExist("config file", configFileName)
+    if(File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
 
     val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
     val stubs = loadContractStubsFromImplicitPaths(contractStubPaths(configFileName), specmaticConfig)
@@ -271,21 +272,33 @@ private fun logIgnoredFiles(implicitDataDir: File) {
     }
 }
 
-fun loadContractStubsFromFiles(contractPathDataList: List<ContractPathData>, dataDirPaths: List<String>, specmaticConfig: SpecmaticConfig): List<Pair<Feature, List<ScenarioStub>>> {
+fun loadContractStubsFromFiles(
+    contractPathDataList: List<ContractPathData>,
+    dataDirPaths: List<String>,
+    specmaticConfig: SpecmaticConfig,
+    strictMode: Boolean = false
+): List<Pair<Feature, List<ScenarioStub>>> {
     val contactPathsString = contractPathDataList.joinToString(System.lineSeparator()) { it.path }
     consoleLog(StringLog("Loading the following contracts:${System.lineSeparator()}$contactPathsString"))
     consoleLog(StringLog(""))
+
+    val invalidContractPaths = contractPathDataList.filter { File(it.path).exists().not() }.map { it.path }
+    if(invalidContractPaths.isNotEmpty() && strictMode) {
+        val exitMessage = "Error loading the following contracts since they do not exist:${System.lineSeparator()}${invalidContractPaths.joinToString(System.lineSeparator())}"
+        throw Exception(exitMessage)
+    }
 
     val features = contractPathDataList.mapNotNull { contractPathData ->
         loadIfOpenAPISpecification(contractPathData, specmaticConfig)
     }
 
-    return loadExpectationsForFeatures(features, dataDirPaths)
+    return loadExpectationsForFeatures(features, dataDirPaths, strictMode)
 }
 
 fun loadExpectationsForFeatures(
     features: List<Pair<String, Feature>>,
-    dataDirPaths: List<String>
+    dataDirPaths: List<String>,
+    strictMode: Boolean = false
 ): List<Pair<Feature, List<ScenarioStub>>> {
     val dataDirFileList = allDirsInTree(dataDirPaths).sorted()
 
@@ -305,7 +318,7 @@ fun loadExpectationsForFeatures(
         }
     }
 
-    return loadContractStubs(features, mockData)
+    return loadContractStubs(features, mockData, strictMode)
 }
 
 private fun printDataFiles(dataFiles: List<File>) {
@@ -371,7 +384,11 @@ fun stubMatchErrorMessage(
     }
 }
 
-fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair<String, ScenarioStub>>): List<Pair<Feature, List<ScenarioStub>>> {
+fun loadContractStubs(
+    features: List<Pair<String, Feature>>,
+    stubData: List<Pair<String, ScenarioStub>>,
+    strictMode: Boolean = false
+): List<Pair<Feature, List<ScenarioStub>>> {
     val contractInfoFromStubs: List<Pair<Feature, List<ScenarioStub>>> = stubData.mapNotNull { (stubFile, stub) ->
         val matchResults = features.map { (specFile, feature) ->
             try {
@@ -385,9 +402,8 @@ fun loadContractStubs(features: List<Pair<String, Feature>>, stubData: List<Pair
         when (val feature = matchResults.firstNotNullOfOrNull { it.feature }) {
             null -> {
                 val errorMessage = stubMatchErrorMessage(matchResults, stubFile).prependIndent("  ")
-
-                consoleLog(StringLog(errorMessage))
-
+                if(strictMode) throw Exception(errorMessage)
+                else consoleLog(StringLog(errorMessage))
                 null
             }
             else -> Pair(feature, stub)
@@ -476,4 +492,3 @@ fun isOpenAPI(path: String): Boolean =
         logger.log(e, "Could not parse $path")
         false
     }
-

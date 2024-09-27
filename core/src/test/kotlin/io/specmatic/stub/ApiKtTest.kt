@@ -511,7 +511,7 @@ sample.json didn't match math.$CONTRACT_EXTENSION
 
     @Test
     fun `should show level 1 fluffy errors and eliminate level 2 fluffy errors if no deep errors are found`() {
-        val results1 = Results(listOf(Result.Failure("failed", null, "", FailureReason.StatusMismatch)))
+        val results1 = Results(listOf(Result.Failure("failed", null, "", FailureReason.ContentTypeMismatch)))
         val results2 = Results(listOf(Result.Failure("fluffy", null, "", FailureReason.SOAPActionMismatch)))
 
         val errorMessage = stubMatchErrorMessage(listOf(makeStubMatchResults(results1), makeStubMatchResults(results2)), "stubfile.json")
@@ -535,7 +535,7 @@ sample.json didn't match math.$CONTRACT_EXTENSION
 
         assertThat(errorMessage).isEqualTo("""
             stubfile.json didn't match any of the contracts
-              No matching REST stub or contract found for method POST and path /test (assuming you're looking for a REST API since no SOAPAction header was detected)
+              No matching REST stub or contract found for method POST and path /test
 """.trimIndent())
         println(errorMessage)
     }

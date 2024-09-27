@@ -19,10 +19,9 @@ data class HttpResponsePattern(
         return attempt(breadCrumb = "RESPONSE") {
             val value = softCastValueToXML(resolver.withCyclePrevention(body, body::generate))
             val headers = headersPattern.generate(resolver).plus(SPECMATIC_RESULT_HEADER to "success").let { headers ->
-                when {
-                    !headers.containsKey("Content-Type") -> headers.plus("Content-Type" to value.httpContentType)
-                    else -> headers
-                }
+                if ((headers.containsKey("Content-Type").not() && value.httpContentType.isBlank().not()))
+                    headers.plus("Content-Type" to value.httpContentType)
+                else headers
             }
             HttpResponse(status, headers, value)
         }
@@ -169,7 +168,7 @@ data class HttpResponsePattern(
         )
     }
 
-    fun generateResponse(partial: HttpResponse, dictionary: Map<String, Value>, resolver: Resolver): HttpResponse {
+    fun generateResponse(partial: HttpResponse, dictionary: Dictionary, resolver: Resolver): HttpResponse {
         val headers = headersPattern.fillInTheBlanks(partial.headers, dictionary, resolver).breadCrumb("HEADERS")
         val body: ReturnValue<Value> = body.fillInTheBlanks(partial.body, dictionary, resolver).breadCrumb("BODY")
 

@@ -1,5 +1,6 @@
 package io.specmatic.conversions
 
+import io.specmatic.core.NoBodyValue
 import io.specmatic.core.pattern.parsedJSONObject
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -50,4 +51,60 @@ class ExampleFromFileTest {
 
         assertThat(example.queryParams).containsExactlyEntriesOf(mapOf("hello" to "true", "world" to "true"))
     }
+
+    @Test
+    fun `it should return no body and empty headers if response body and headers are null`() {
+        val example = """
+        {
+            "http-request": {
+                "method": "GET",
+                "path": "/hello?world=true"
+            },
+            "http-response": {
+                "status": 200
+            }
+        }
+    """.trimIndent().let {
+            ExampleFromFile(parsedJSONObject(it), File("./data.json"))
+        }
+
+        val response = example.response
+
+        assertThat(response.body).isEqualTo(NoBodyValue)
+        assertThat(response.headers).isEmpty()
+        assertThat(response.status).isEqualTo(200)
+    }
+
+    @Test
+    fun `it should return a valid HttpRequest with the correct properties`() {
+        val example = """
+        {
+            "http-request": {
+                "method": "POST",
+                "path": "/api/resource?filter=active",
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "body": {
+                    "key": "value"
+                }
+            },
+            "http-response": {
+                "status": 200,
+                "body": "ok"
+            }
+        }
+    """.trimIndent().let {
+            ExampleFromFile(parsedJSONObject(it), File("./data.json"))
+        }
+
+        val request = example.request
+
+        assertThat(request.method).isEqualTo("POST")
+        assertThat(request.path).isEqualTo("/api/resource")
+        assertThat(request.headers).containsEntry("Content-Type", "application/json")
+        assertThat(request.body).isEqualTo(parsedJSONObject("""{"key":"value"}"""))
+        assertThat(request.queryParams.asMap()).containsExactlyEntriesOf(mapOf("filter" to "active"))
+    }
+
 }

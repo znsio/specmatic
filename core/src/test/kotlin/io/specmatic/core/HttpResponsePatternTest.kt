@@ -57,4 +57,17 @@ internal class HttpResponsePatternTest {
         assertThat(resultText).contains("RESPONSE.HEADER.X-Data")
         assertThat(resultText).contains("RESPONSE.BODY")
     }
+
+    @Test
+    fun `should generate no body response if the body pattern is NoBodyPattern`() {
+        val httpResponsePattern = HttpResponsePattern(
+            status = 203,
+            body = NoBodyPattern
+        )
+        val response = httpResponsePattern.generateResponse(Resolver())
+
+        assertThat(response.status).isEqualTo(203)
+        assertThat(response.headers["Content-Type"]).isNull()
+        assertThat(response.body).isEqualTo(NoBodyValue)
+    }
 }

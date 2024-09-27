@@ -30,6 +30,7 @@ import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
 import java.math.BigDecimal
@@ -337,6 +338,7 @@ Pet:
         val openApiFile = "src/test/resources/openapi/response_schema_validation_including_optional_spec.yaml"
         val specmaticConfig = mockk<SpecmaticConfig> {
             every { isResponseValueValidationEnabled() } returns true
+            every { ignoreInlineExamples } returns false
         }
         val openApiSpecification = OpenApiSpecification(
             openApiFilePath = openApiFile,
@@ -5923,6 +5925,378 @@ paths:
         }.isInstanceOf(NoMatchingScenario::class.java)
     }
 
+    @Nested
+    inner class Discriminator {
+        val openAPIText = """
+            ---
+            openapi: 3.0.3
+            info:
+              title: Vehicle API
+              version: 1.0.0
+            paths:
+              /car:
+                post:
+                  summary: Add a new vehicle
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Car'
+                  responses:
+                    '201':
+                      description: Vehicle created successfully
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                description: Unique identifier for the newly created vehicle
+                              type:
+                                type: string
+                                description: Type of the vehicle (car or bike)
+              /bike:
+                post:
+                  summary: Add a new vehicle
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Bike'
+                  responses:
+                    '201':
+                      description: Vehicle created successfully
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                description: Unique identifier for the newly created vehicle
+                              type:
+                                type: string
+                                description: Type of the vehicle (car or bike)
+
+            components:
+              schemas:
+                VehicleType:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+            
+                Car:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/VehicleType'
+                    - type: object
+                      properties:
+                        type:
+                          type: string
+                        seatingCapacity:
+                          type: integer
+                        trunkSize:
+                          type: string
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "car": "#/components/schemas/Car"
+            
+                Bike:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/VehicleType'
+                    - type: object
+                      properties:
+                        type:
+                          type: string
+                        hasCarrier:
+                          type: boolean
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "bike": "#/components/schemas/Bike"
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(openAPIText, "").toFeature()
+
+        @ParameterizedTest
+        @CsvSource(
+            value = [
+                "path, type",
+                "/car, plane",
+                "/bike, plane",
+                "/car, bike",
+                "/bike, car"
+            ],
+            useHeadersInDisplayName = true,
+        )
+        fun `discriminator mismatch`(path: String, type: String) {
+            val body = requestBody(path, type)
+
+            assertThatThrownBy {
+                feature.matchingStub(
+                    HttpRequest(
+                        "POST",
+                        path,
+                        body = body
+                    ),
+                    HttpResponse(
+                        201,
+                        headers = mapOf("Content-Type" to "application/json"),
+                        parsedJSONObject("""{"id": "abc123", "type": "$type"}""")
+                    )
+                )
+            }.isInstanceOf(NoMatchingScenario::class.java)
+        }
+
+        private fun requestBody(path: String, type: String): Value {
+            val body = when (path) {
+                "/car" -> parsedJSON("""{"type": "$type", "seatingCapacity": 4, "trunkSize": "large"}""")
+                "/bike" -> parsedJSON("""{"type": "$type", "hasCarrier": false}""")
+                else -> fail("Path $path not recognized in this test")
+            }
+            return body
+        }
+
+        @ParameterizedTest
+        @CsvSource(
+            value = [
+                "path, type",
+                "/car, car",
+                "/bike, bike"
+            ],
+            useHeadersInDisplayName = true,
+        )
+        fun `happy path tests using discriminator as enum`(path: String, type: String) {
+            val body = requestBody(path, type)
+
+            assertThat(
+                feature.matchingStub(
+                    HttpRequest(
+                        "POST",
+                        path,
+                        body = body
+                    ),
+                    HttpResponse(
+                        201,
+                        headers = mapOf("Content-Type" to "application/json"),
+                        parsedJSONObject("""{"id": "abc123", "type": "$type"}""")
+                    )
+                ).response.headers["X-Specmatic-Result"]
+            ).isEqualTo("success")
+        }
+    }
+
+    @Test
+    fun `discriminator can extend an allOf`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: 3.0.3
+            info:
+              title: Vehicle API
+              version: 1.0.0
+            paths:
+              /vehicle:
+                post:
+                  summary: Add a new vehicle
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Vehicle'
+                  responses:
+                    '201':
+                      description: Vehicle created successfully
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+
+            components:
+              schemas:
+                VehicleType:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+
+                Vehicle:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/VehicleType'
+                    - type: object
+                      properties:
+                        seatingCapacity:
+                          type: integer
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "car": "#/components/schemas/Transmission"
+                      "bike": "#/components/schemas/SideCar"
+
+                Transmission:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      requried:
+                        - gearType
+                      properties:
+                        gearType:
+                          type: string
+
+                SideCar:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      requried:
+                        - sidecarAvailable
+                      properties:
+                        sidecarAvailable:
+                          type: boolean
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(feature).use { stub ->
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "MT"}"""))).let {
+                assertThat(it.status).isEqualTo(201)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
+                assertThat(it.status).isEqualTo(201)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
+                assertThat(it.status).isEqualTo(400)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 4, "gearType": "MT"}"""))).let {
+                assertThat(it.status).isEqualTo(400)
+            }
+        }
+    }
+
+    @Test
+    @Disabled
+    fun `two discriminator at different levels can extend an allOf`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: 3.0.3
+            info:
+              title: Vehicle API
+              version: 1.0.0
+            paths:
+              /vehicle:
+                post:
+                  summary: Add a new vehicle
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Vehicle'
+                  responses:
+                    '201':
+                      description: Vehicle created successfully
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+
+            components:
+              schemas:
+                VehicleType:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+
+                Vehicle:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/VehicleType'
+                    - type: object
+                      properties:
+                        seatingCapacity:
+                          type: integer
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "car": "#/components/schemas/Transmission"
+                      "bike": "#/components/schemas/SideCar"
+
+                Transmission:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      required:
+                        - gearType
+                      properties:
+                        gearType:
+                          type: string
+                  discriminator:
+                    propertyName: "gearType"
+                    mapping:
+                      "MT": '#/components/schemas/ManualTransmission'
+                      "AT": '#/components/schemas/AutomaticTransmission'
+
+                ManualTransmission:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Transmission'
+                    - type: object
+                      required:
+                        - gearCount
+                      properties:
+                        gearCount:
+                          type: integer
+
+                AutomaticTransmission:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Transmission'
+                    - type: object
+                      required:
+                        - hasSportsMode
+                      properties:
+                        hasSportsMode:
+                          type: boolean
+
+                SideCar:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      requried:
+                        - sidecarAvailable
+                      properties:
+                        sidecarAvailable:
+                          type: boolean
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(feature).use { stub ->
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "MT", "gearCount": 4}"""))).let {
+                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(201)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "AT", "hasSportsMode": true}"""))).let {
+                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(201)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
+                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(201)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
+                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(400)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 4, "gearType": "MT", "gearCount": 4}"""))).let {
+                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(400)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "AT", "gearCount": 4}"""))).let {
+                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(400)
+            }
+        }
+    }
+
     @Test
     fun `should read WIP tag in OpenAPI paths`() {
         val contractString = """
@@ -7111,6 +7485,39 @@ components:
     }
 
     @Test
+    fun `should contain the positive test names with details around the enum value picked up as a request header`() {
+        val specFilePath = "core/src/test/resources/openapi/spec_with_request_header_as_enum.yaml"
+        val spec = OpenApiSpecification.fromFile(specFilePath, "")
+            .toFeature()
+
+        val tests = spec.generateContractTestScenarios(emptyList()).toList().map { it.second.value }
+
+        val testDescriptionList = tests.map { it.testDescription() }
+        assertThat(testDescriptionList).containsExactlyInAnyOrder(
+            " Scenario: GET /items -> 200 [REQUEST.HEADERS.X-region selected FIRST from enum]",
+            " Scenario: GET /items -> 200 [REQUEST.HEADERS.X-region selected SECOND from enum]",
+            " Scenario: GET /items -> 200 [REQUEST.HEADERS.X-region selected THIRD from enum]"
+        )
+    }
+
+    @Test
+    @Disabled
+    fun `should contain the positive test names with details around the enum value picked up as a request query param`() {
+        val specFilePath = "core/src/test/resources/openapi/spec_with_request_query_param_as_enum.yaml"
+        val spec = OpenApiSpecification.fromFile(specFilePath, "")
+            .toFeature()
+
+        val tests = spec.generateContractTestScenarios(emptyList()).toList().map { it.second.value }
+
+        val testDescriptionList = tests.map { it.testDescription() }
+        assertThat(testDescriptionList).containsExactlyInAnyOrder(
+            " Scenario: GET /items -> 200 [REQUEST.QUERY-PARAMS.region selected FIRST from enum]",
+            " Scenario: GET /items -> 200 [REQUEST.QUERY-PARAMS.region selected SECOND from enum]",
+            " Scenario: GET /items -> 200 [REQUEST.QUERY-PARAMS.region selected THIRD from enum]"
+        )
+    }
+
+    @Test
     fun `show an error when examples with no mediaType is found in the request`() {
         assertThatThrownBy {
             OpenApiSpecification.fromYAML(
@@ -7916,7 +8323,7 @@ paths:
     }
 
     @Test
-    fun `check that a console warning is printed when a named response example has no corresponding named request example`() {
+    fun `check that a console warning is printed when a named response example for 4xx has no corresponding named request example`() {
         val (stdout, _) = captureStandardOutput {
             OpenApiSpecification.fromYAML(
                 """
@@ -7940,7 +8347,7 @@ paths:
                                       description: age of the person
                                       type: number
                           responses:
-                            200:
+                            400:
                               description: "Get person by id"
                               content:
                                 text/plain:
@@ -8134,6 +8541,605 @@ components:
 
         assertThat(path).endsWith("/xyzabc")
         assertThat(results.success()).isTrue()
+    }
+
+    @Test
+    fun `when the content types in header and response code match exactly then map them one to one in scenarios rather than exploding`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: '1.0.0'
+              description: |
+                This API allows you to create a new product. The POST /products endpoint 
+                accepts a product name in both plain text and JSON formats, and responds 
+                with the same formats.
+              contact:
+                name: API Support
+                url: https://api.example.com/support
+                email: support@example.com
+
+            servers:
+              - url: https://api.example.com/v1
+                description: Production server
+              - url: https://staging-api.example.com/v1
+                description: Staging server
+            tags:
+              - name: create
+            paths:
+              /products:
+                post:
+                  summary: Create a new product
+                  description: "temp"
+                  tags:
+                    - create
+                  operationId: create-product
+                  requestBody:
+                    required: true
+                    content:
+                      text/plain:
+                        schema:
+                          type: string
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - product_name
+                          properties:
+                            product_name:
+                              type: string
+                  responses:
+                    '200':
+                      description: Successfully created product
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - product_name
+                            properties:
+                              product_name:
+                                type: string
+                    '202':
+                      description: Successfully created product
+                      content:
+                        application/json:
+                          schema:
+                            type: object
+                            required:
+                              - id
+                            properties:
+                              id:
+                                type: string
+        """.trimIndent(), "").toFeature()
+
+        assertThat(feature.scenarios.size).isEqualTo(4)
+
+        val requestResponsePairs = feature.scenarios.map {
+            it.httpRequestPattern.headersPattern.contentType to it.httpResponsePattern.headersPattern.contentType
+        }
+
+        val expected = listOf(
+            "text/plain" to "text/plain",
+            "application/json" to "application/json",
+            "text/plain" to "application/json",
+            "application/json" to "application/json",
+        )
+
+        assertThat(requestResponsePairs).isEqualTo(expected)
+
+    }
+
+    @Test
+    fun `should ignore inline examples when ignoreInlineExamples flag is set in specmatic config`() {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /person:
+                    post:
+                      summary: "Get person by id"
+                      requestBody:
+                        content:
+                          application/json:
+                            schema:
+                              required:
+                              - age
+                              properties:
+                                age:
+                                  description: age of the person
+                                  type: number
+                            examples:
+                              SUCCESSFUL_API_CALL:
+                                value:
+                                  age: 10
+                      responses:
+                        200:
+                          description: "Get person by id"
+                          content:
+                            text/plain:
+                              schema:
+                                type: string
+                              examples:
+                                SUCCESSFUL_API_CALL:
+                                  value:
+                                    age: "person data"
+                """.trimIndent(), "",
+            specmaticConfig = SpecmaticConfig(ignoreInlineExamples = true)
+        ).toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonRequestBody = request.body as JSONObjectValue
+
+                assertThat(jsonRequestBody.findFirstChildByPath("age")?.toStringLiteral()).isNotEqualTo("10")
+                return HttpResponse(200, "person data")
+            }
+        })
+
+        assertThat(results.testCount).isPositive()
+        assertThat(results.success()).isTrue()
+    }
+
+    @Test
+    fun `missing request example should still pick up valid 2xx response example`() {
+        val spec = """
+        ---
+        openapi: "3.0.1"
+        info:
+          title: "Person API"
+          version: "1"
+        paths:
+          /persons:
+            get:
+              summary: "Get all persons"
+              responses:
+                200:
+                  description: "all persons"
+                  content:
+                    text/plain:
+                      schema:
+                        type: "string"
+                      examples:
+                        SUCCESSFUL_API_CALL:
+                          value: "all persons"
+        """.trimIndent()
+        val name =
+            OpenApiSpecification.fromYAML(spec, "").toFeature().scenarios.single().examples.single().rows.single().name
+        assertThat(name).isEqualTo("SUCCESSFUL_API_CALL")
+    }
+
+    @Test
+    fun `missing request example where request has one query param should generate only one test`() {
+        val spec = """
+        ---
+        openapi: "3.0.1"
+        info:
+          title: "Person API"
+          version: "1"
+        paths:
+          /persons:
+            get:
+              summary: "Get all persons"
+              parameters:
+                - in: query
+                  name: id
+                  schema:
+                    type: string
+              responses:
+                200:
+                  description: "all persons"
+                  content:
+                    text/plain:
+                      schema:
+                        type: "string"
+                      examples:
+                        SUCCESSFUL_API_CALL:
+                          value: "all persons"
+        """.trimIndent()
+        val testCount =
+            OpenApiSpecification.fromYAML(spec, "").toFeature().generateContractTests(emptyList()).toList().size
+        assertThat(testCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `missing request example should generate still pick up the first valid 2xx response example`() {
+        val spec = """
+        ---
+        openapi: "3.0.1"
+        info:
+          title: "Person API"
+          version: "1"
+        paths:
+          /persons:
+            get:
+              summary: "Get all persons"
+              parameters:
+                - in: query
+                  name: id
+                  schema:
+                    type: string
+              responses:
+                200:
+                  description: "all persons"
+                  content:
+                    text/plain:
+                      schema:
+                        type: "string"
+                      examples:
+                        SUCCESSFUL_API_CALL:
+                          value: "all persons"
+                201:
+                  description: "all persons"
+                  content:
+                    text/plain:
+                      schema:
+                        type: "string"
+                      examples:
+                        201_SUCCESSFUL_API_CALL:
+                          value: "all persons"
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val name = feature.scenarios.find { it.httpResponsePattern.status == 200 }?.examples?.single()?.rows?.single()?.name
+        assertThat(name).isEqualTo("SUCCESSFUL_API_CALL")
+        val testCount = feature.scenarios.find { it.httpResponsePattern.status == 201 }?.examples?.size
+        assertThat(testCount).isEqualTo(0)
+    }
+
+    @Test
+    fun `should use the path parameter example for a no body response`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.3
+info:
+  title: Example API
+  description: An API with operations that have no response bodies or headers.
+  version: 1.0.0
+  contact:
+    name: Jack
+servers:
+  - url: http://prod
+tags:
+  - name: mod
+  - name: read
+paths:
+  /items/{itemId}:
+    delete:
+      summary: Delete an item
+      operationId: deleteItem
+      description: "Delete an item"
+      tags:
+        - mod
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: ID of the item to delete
+          schema:
+            type: string
+          examples:
+            DELETE_ITEM:
+              value: '123-to-be-deleted'
+      responses:
+        '204':
+          description: No Content - The item was successfully deleted
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val request = HttpRequest(
+            "DELETE",
+            "/items/123-to-be-deleted"
+        )
+        val response = HttpResponse(204, emptyMap())
+
+        val stub: HttpStubData = feature.matchingStub(request, response)
+
+        println(stub.requestType)
+
+        assertThat(stub.requestType.method).isEqualTo("DELETE")
+        assertThat(stub.response.status).isEqualTo(204)
+    }
+
+    @Test
+    fun `should use all the path parameter examples for a no body response`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.3
+info:
+  title: Example API
+  description: An API with operations that have no response bodies or headers.
+  version: 1.0.0
+  contact:
+    name: Jack
+servers:
+  - url: http://prod
+tags:
+  - name: mod
+  - name: read
+paths:
+  /items/{itemId}:
+    delete:
+      summary: Delete an item
+      operationId: deleteItem
+      description: "Delete an item"
+      tags:
+        - mod
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: ID of the item to delete
+          schema:
+            type: string
+          examples:
+            DELETE_ITEM:
+              value: '123-to-be-deleted'
+            DELETE_ANOTHER_ITEM:
+              value: '456-to-be-deleted'
+      responses:
+        '204':
+          description: No Content - The item was successfully deleted
+        '203':
+          description: No Content - 203
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        fun createAndAssertStub(request: HttpRequest, response: HttpResponse, expectedMethod: String, expectedStatus: Int) {
+            val stub: HttpStubData = feature.matchingStub(request, response)
+
+            println(stub.requestType)
+
+            assertThat(stub.requestType.method).isEqualTo(expectedMethod)
+            assertThat(stub.response.status).isEqualTo(expectedStatus)
+        }
+
+        val request1 = HttpRequest("DELETE", "/items/123-to-be-deleted")
+        val response1 = HttpResponse(203, emptyMap())
+        createAndAssertStub(request1, response1, "DELETE", 203)
+
+        val request2 = HttpRequest("DELETE", "/items/456-to-be-deleted")
+        val response2 = HttpResponse(203, emptyMap())
+        createAndAssertStub(request2, response2, "DELETE", 203)
+    }
+
+    @Test
+    fun `should respond with the first no body status given a stubbed request and it should have the specmatic random header`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.3
+info:
+  title: Example API
+  description: An API with operations that have no response bodies or headers.
+  version: 1.0.0
+  contact:
+    name: Jack
+servers:
+  - url: http://prod
+tags:
+  - name: mod
+  - name: read
+paths:
+  /items/{itemId}:
+    delete:
+      summary: Delete an item
+      operationId: deleteItem
+      description: "Delete an item"
+      tags:
+        - mod
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: ID of the item to delete
+          schema:
+            type: string
+          examples:
+            DELETE_ITEM:
+              value: '123-to-be-deleted'
+            DELETE_ANOTHER_ITEM:
+              value: '456-to-be-deleted'
+      responses:
+        '204':
+          description: No Content - The item was successfully deleted
+        '203':
+          description: No Content - 203
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        HttpStub(feature).use { stub ->
+            stub.client.execute(HttpRequest("DELETE", "/items/123-to-be-deleted")).also { response ->
+                assertThat(response.status).isEqualTo(203)
+                assertThat(response.headers).doesNotContainEntry(SPECMATIC_TYPE_HEADER, "random")
+            }
+
+            stub.client.execute(HttpRequest("DELETE", "/items/456-to-be-deleted")).also { response ->
+                assertThat(response.status).isEqualTo(203)
+                assertThat(response.headers).doesNotContainEntry(SPECMATIC_TYPE_HEADER, "random")
+            }
+        }
+    }
+
+    @Test
+    fun `example of no-body response should execute as test`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.3
+info:
+  title: Example API
+  description: An API with operations that have no response bodies or headers.
+  version: 1.0.0
+  contact:
+    name: Jack
+servers:
+  - url: http://prod
+tags:
+  - name: mod
+  - name: read
+paths:
+  /items/{itemId}:
+    delete:
+      summary: Delete an item
+      operationId: deleteItem
+      description: "Delete an item"
+      tags:
+        - mod
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: ID of the item to delete
+          schema:
+            type: string
+          examples:
+            DELETE_ITEM:
+              value: '123-to-be-deleted'
+            DELETE_ANOTHER_ITEM:
+              value: '456-to-be-deleted'
+      responses:
+        '204':
+          description: No Content - The item was successfully deleted
+        '203':
+          description: No Content - 203
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return if(request.path!!.contains("deleted"))
+                    HttpResponse(203, NoBodyValue)
+                else
+                    HttpResponse(204, NoBodyValue)
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `should use the path parameter example for a no body 304 response`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.3
+info:
+  title: Example API
+  description: An API with operations that have no response bodies or headers.
+  version: 1.0.0
+  contact:
+    name: Jack
+servers:
+  - url: http://prod
+tags:
+  - name: mod
+  - name: read
+paths:
+  /items/{itemId}:
+    delete:
+      summary: Delete an item
+      operationId: deleteItem
+      description: "Delete an item"
+      tags:
+        - mod
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          description: ID of the item to delete
+          schema:
+            type: string
+          examples:
+            DELETE_ITEM:
+              value: '123-to-be-deleted'
+      responses:
+        '304':
+          description: No Content - The item was successfully deleted
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val request = HttpRequest(
+            "DELETE",
+            "/items/123-to-be-deleted"
+        )
+        val response = HttpResponse(304, emptyMap())
+
+        val stub: HttpStubData = feature.matchingStub(request, response)
+
+        println(stub.requestType)
+
+        assertThat(stub.requestType.method).isEqualTo("DELETE")
+        assertThat(stub.response.status).isEqualTo(304)
+    }
+
+    @Test
+    fun `should use the given response example if there is no request body or params present as part of the request`() {
+        val openAPI =
+            """
+---
+openapi: 3.0.3
+info:
+  title: example api
+  description: an api with operations that have no response bodies or headers.
+  version: 1.0.0
+  contact:
+    name: jack
+servers:
+  - url: http://prod
+tags:
+  - name: mod
+  - name: read
+paths:
+  /ping:
+    get:
+      summary: Just ping to see if the service responds
+      operationId: ping
+      description: "Ping"
+      tags:
+        - mod
+      responses:
+        '200':
+          description: Success
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                PING:
+                  value: success
+""".trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(openAPI, "").toFeature()
+
+        val request = HttpRequest(
+            "GET",
+            "/ping"
+        )
+        val response = HttpResponse(200, emptyMap(), StringValue("success"))
+
+        val stub: HttpStubData = feature.matchingStub(request, response)
+
+        println(stub.requestType)
+
+        assertThat(stub.requestType.method).isEqualTo("GET")
+        assertThat(stub.response.status).isEqualTo(200)
+        assertThat(stub.response.body).isInstanceOf(StringValue::class.java)
+        val responseBody = stub.response.body as StringValue
+        assertThat(responseBody.string).isEqualTo("success")
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

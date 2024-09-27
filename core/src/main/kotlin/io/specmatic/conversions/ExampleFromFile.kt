@@ -1,6 +1,9 @@
 package io.specmatic.conversions
 
+import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.NoBodyValue
+import io.specmatic.core.QueryParameters
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
@@ -57,15 +60,30 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
 
     val expectationFilePath: String = file.canonicalPath
 
-    val response: HttpResponse?
+    val response: HttpResponse
         get() {
             if(responseBody == null && responseHeaders == null)
-                return null
+                return HttpResponse(
+                    responseStatus,
+                    body = NoBodyValue,
+                    headers = emptyMap()
+                )
 
             val body = responseBody ?: EmptyString
             val headers = responseHeaders ?: JSONObjectValue()
 
             return HttpResponse(responseStatus, headers.jsonObject.mapValues { it.value.toStringLiteral() }, body)
+        }
+
+    val request: HttpRequest
+        get() {
+            return HttpRequest(
+                method = requestMethod,
+                path = requestPath,
+                headers = headers,
+                body = requestBody ?: NoBodyValue,
+                queryParams = QueryParameters(queryParams),
+            )
         }
 
     val responseBody: Value? = attempt("Error reading response body in file ${file.parentFile.canonicalPath}") {

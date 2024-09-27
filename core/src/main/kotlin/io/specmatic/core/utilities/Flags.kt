@@ -12,8 +12,14 @@ class Flags {
         const val SPECMATIC_STUB_DELAY = "SPECMATIC_STUB_DELAY"
         const val SPECMATIC_TEST_TIMEOUT = "SPECMATIC_TEST_TIMEOUT"
 
+        const val IGNORE_INLINE_EXAMPLES = "IGNORE_INLINE_EXAMPLES"
+        const val VALIDATE_INLINE_EXAMPLES = "VALIDATE_INLINE_EXAMPLES"
+        const val IGNORE_INLINE_EXAMPLE_WARNINGS = "IGNORE_INLINE_EXAMPLE_WARNINGS"
+
         const val SPECMATIC_PRETTY_PRINT = "SPECMATIC_PRETTY_PRINT"
         const val EXAMPLE_DIRECTORIES = "EXAMPLE_DIRECTORIES"
+
+        const val EXTENSIBLE_QUERY_PARAMS = "EXTENSIBLE_QUERY_PARAMS"
 
         fun getStringValue(flagName: String): String? = System.getenv(flagName) ?: System.getProperty(flagName)
 

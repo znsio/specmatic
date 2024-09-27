@@ -47,7 +47,5 @@ object NonGenerativeTests : GenerationStrategies {
         additionalProperties: Pattern?,
         row: Row,
         resolver: Resolver
-    ): Sequence<Map<String, Pattern>> {
-        return emptySequence()
-    }
+    ): Sequence<ReturnValue<Map<String, Pattern>>> = emptySequence()
 }

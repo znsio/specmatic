@@ -10,6 +10,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.specmatic.core.Configuration.Companion.globalConfigFileName
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
@@ -36,10 +37,13 @@ val CONTRACT_EXTENSIONS = listOf(CONTRACT_EXTENSION, WSDL) + OPENAPI_FILE_EXTENS
 const val DATA_DIR_SUFFIX = "_data"
 const val TEST_DIR_SUFFIX = "_tests"
 const val EXAMPLES_DIR_SUFFIX = "_examples"
+const val DICTIONARY_FILE_SUFFIX = "_dictionary.json"
 const val SPECMATIC_GITHUB_ISSUES = "https://github.com/znsio/specmatic/issues"
 const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
 
 const val SPECMATIC_STUB_DICTIONARY = "SPECMATIC_STUB_DICTIONARY"
+
+const val MISSING_CONFIG_FILE_MESSAGE = "Config file does not exist. (Could not find file ./specmatic.json OR ./specmatic.yaml OR ./specmatic.yml)"
 
 class WorkingDirectory(private val filePath: File) {
     constructor(path: String = DEFAULT_WORKING_DIRECTORY): this(File(path))
@@ -93,7 +97,8 @@ data class SpecmaticConfig(
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
-    val workflow: WorkflowConfiguration? = null
+    val workflow: WorkflowConfiguration? = null,
+    val ignoreInlineExamples: Boolean = Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES)
 ) {
     fun isExtensibleSchemaEnabled(): Boolean {
         return (test?.allowExtensibleSchema == true)
@@ -190,7 +195,10 @@ data class ReportConfiguration(
 data class ReportFormatter(
     var type: ReportFormatterType = ReportFormatterType.TEXT,
     val layout: ReportFormatterLayout = ReportFormatterLayout.TABLE,
+    val lite: Boolean = false,
     val title: String = "Specmatic Report",
+    val logo: String = "assets/specmatic-logo.svg",
+    val logoAltText: String = "Specmatic",
     val heading: String = "Contract Test Results",
     val outputDirectory: String = "./build/reports/specmatic/html"
 )

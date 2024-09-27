@@ -60,7 +60,21 @@ function groupRowsByFirstAndSecondGroups(tableRows) {
 
 function updateTable(groupedRows) {
   for (const row of tableRows) {
-    const [coverageTd, firstGroupTd, secondGroupTd, ...rest] = Array.from(row.children);
+    const rowChildren = Array.from(row.children);
+    let firstGroupTd;
+    let secondGroupTd;
+    let rest;
+
+    if (rowChildren.length === 6) {
+      firstGroupTd = rowChildren[1];
+      secondGroupTd = rowChildren[2];
+      rest = rowChildren.slice(3);
+    } else {
+      firstGroupTd = rowChildren[0];
+      secondGroupTd = rowChildren[1];
+      rest = rowChildren.slice(2);
+    }
+
     const { firstGroup, secondGroup, thirdGroup } = extractValuesFromTableRow(row);
 
     const firstGroupExists = firstGroup in groupedRows;

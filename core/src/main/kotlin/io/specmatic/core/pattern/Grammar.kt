@@ -291,7 +291,7 @@ fun parsedJSON(content: String, mismatchMessages: MismatchMessages = DefaultMism
 
 fun stringInErrorMessage(value: String): String {
     return value.ifBlank {
-        "an empty string"
+        "an empty string or no body value"
     }
 }
 

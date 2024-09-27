@@ -1911,6 +1911,47 @@ components:
         }
     }
 
+    @Test
+    fun `should intercept the request and response as configured`() {
+        createStubFromContracts(
+            contractPaths = listOf("src/test/resources/openapi/hello.yaml"),
+            dataDirPaths = emptyList(),
+            timeoutMillis = 0
+        ).use { stub ->
+
+            stub.registerRequestInterceptor(object: RequestInterceptor {
+                override fun interceptRequest(httpRequest: HttpRequest): HttpRequest {
+                    val id = httpRequest.path?.split("/")?.last()?.toInt() ?: 0
+                    val updatedPath = httpRequest.path?.split("/")?.map {
+                        if(it == "$id") return@map "${id * 10}"
+                        it
+                    }?.joinToString("/") ?: ""
+                    return httpRequest.updatePath(updatedPath)
+                }
+            })
+
+            stub.registerResponseInterceptor(object: ResponseInterceptor {
+                override fun interceptResponse(
+                    httpRequest: HttpRequest,
+                    httpResponse: HttpResponse
+                ): HttpResponse {
+                    val id = httpRequest.path?.split("/")?.last()?.toInt() ?: 0
+                    return httpResponse.copy(body = StringValue("This is a response for id : $id"))
+                }
+            })
+
+            val request = HttpRequest(
+                "GET",
+                "/hello/10",
+                headers = mapOf("Authorization" to "Bearer token")
+            )
+
+            val response = stub.client.execute(request).body.toStringLiteral()
+
+            assertThat(response).isEqualTo("This is a response for id : 100")
+        }
+    }
+
     @ParameterizedTest
     @CsvSource(
         "Expected, Actual, Status",

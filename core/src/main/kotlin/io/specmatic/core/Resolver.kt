@@ -141,9 +141,17 @@ data class Resolver(
         if(dictionaryValueMatchResult.isSuccess())
             return value
 
-        logger.log(dictionaryValueMatchResult.reportString())
-        return pattern.generate(this)
+        val errorReport = """
+>> $dictionaryLookupPath
 
+Dictionary value did not match the spec
+
+${dictionaryValueMatchResult.reportString()}
+        """.trimIndent()
+
+        logger.log(errorReport)
+
+        return pattern.generate(this)
     }
 
     fun generate(typeAlias: String?, dictionaryLookupKey: String, pattern: Pattern): Value {
@@ -166,6 +174,35 @@ data class Resolver(
         }
 
         return updatedResolver.generate(pattern)
+    }
+
+    fun generateList(pattern: Pattern): Value {
+        val lookupKey = dictionaryLookupPath.trim() + "[*]"
+
+        val value = dictionary[lookupKey] ?: return generateRandomList(pattern)
+
+        val matchResult = pattern.matches(value, this)
+
+        if(matchResult.isSuccess())
+            return JSONArrayValue(listOf(value))
+
+        val errorReport = """
+>> $lookupKey
+
+Dictionary value did not match the spec
+
+${matchResult.reportString()}
+        """.trimIndent()
+
+        logger.log(errorReport)
+
+        return generateRandomList(pattern)
+    }
+
+    private fun generateRandomList(pattern: Pattern): Value {
+        return pattern.listOf(0.until(randomNumber(3)).mapIndexed{ index, _ ->
+            attempt(breadCrumb = "[$index (random)]") { pattern.generate(this) }
+        }, this)
     }
 
     fun generate(factKey: String, pattern: Pattern): Value {
@@ -235,27 +272,6 @@ data class Resolver(
 
     fun generateKeySubLists(key: String, subList: List<String>): Sequence<List<String>> {
         return generation.generateKeySubLists(key, subList)
-    }
-
-    fun generateList(pattern: Pattern): Value {
-        val lookupKey = dictionaryLookupPath.trim() + "[*]"
-
-        val value = dictionary[lookupKey] ?: return generateRandomList(pattern)
-
-        val matchResult = pattern.matches(value, this)
-
-        if(matchResult.isSuccess())
-            return JSONArrayValue(listOf(value))
-
-        logger.log(matchResult.reportString())
-
-        return generateRandomList(pattern)
-    }
-
-    private fun generateRandomList(pattern: Pattern): Value {
-        return pattern.listOf(0.until(randomNumber(3)).mapIndexed{ index, _ ->
-            attempt(breadCrumb = "[$index (random)]") { pattern.generate(this) }
-        }, this)
     }
 }
 

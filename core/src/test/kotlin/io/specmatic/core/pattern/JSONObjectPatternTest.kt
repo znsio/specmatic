@@ -767,6 +767,7 @@ internal class JSONObjectPatternTest {
         assertThat(output)
             .contains("string")
             .contains("number")
+            .contains("Person.addresses[*]")
     }
 
     @Test
@@ -938,7 +939,6 @@ internal class JSONObjectPatternTest {
         )
 
         val id = StringValue("abc123")
-        val street = StringValue("Baker Street")
 
         val dictionary = mapOf("Person.id" to id)
 
@@ -954,5 +954,6 @@ internal class JSONObjectPatternTest {
         assertThat(output)
             .contains("number")
             .contains("abc123")
+            .contains("Person.id")
     }
 }

@@ -168,15 +168,6 @@ data class Scenario(
             httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
         }
 
-    fun generateHttpResponseWithAll(actualFacts: Map<String, Value>, requestContext: Context = NoContext): HttpResponse =
-        scenarioBreadCrumb(this) {
-            Resolver(emptyMap(), false, patterns)
-            val resolver = Resolver(actualFacts, false, patterns)
-            val facts = combineFacts(expectedFacts, actualFacts, resolver)
-
-            httpResponsePattern.generateResponseWithAll(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
-        }
-
     private fun combineFacts(
         expected: Map<String, Value>,
         actual: Map<String, Value>,
@@ -562,15 +553,6 @@ data class Scenario(
             statusInDescription = "4xx",
             generativePrefix = "-ve",
         )
-    }
-
-    fun getStatus(response: HttpResponse?): Int {
-        // TODO: This should return a string so that we can return a 4xx when response is null for a negative scenario
-        return when {
-            response == null -> status
-            isNegative -> response.status
-            else -> status
-        }
     }
 
     fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Scenario {

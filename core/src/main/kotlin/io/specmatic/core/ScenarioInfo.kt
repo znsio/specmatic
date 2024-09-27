@@ -22,8 +22,6 @@ data class ScenarioInfo(
     val specification:String? = null,
     val serviceType:String? = null
 ) {
-    fun matchesSignature(other: ScenarioInfo) = httpRequestPattern.matchesSignature(other.httpRequestPattern) &&
-            httpResponsePattern.status == other.httpResponsePattern.status
 
     fun matchesGherkinWrapperPath(scenarioInfos: List<ScenarioInfo>, apiSpecification: ApiSpecification): List<ScenarioInfo> =
         scenarioInfos.filter { openApiScenarioInfo ->

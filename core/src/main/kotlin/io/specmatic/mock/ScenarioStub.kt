@@ -1,11 +1,9 @@
 package io.specmatic.mock
 
 import io.specmatic.core.*
-import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.parsedJSONObject
-import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
@@ -39,27 +37,6 @@ data class ScenarioStub(
         return JSONObjectValue(mockInteraction)
     }
 
-    private fun combinations(data: Map<String, Map<String, Map<String, Value>>>): List<Map<String, Map<String, Map<String, Value>>>> {
-        // Helper function to compute Cartesian product of multiple lists
-        fun <T> cartesianProduct(lists: List<List<T>>): List<List<T>> {
-            return lists.fold(listOf(listOf())) { acc, list ->
-                acc.flatMap { item -> list.map { value -> item + value } }
-            }
-        }
-
-        // Generate the Cartesian product of the values in the input map
-        val product = cartesianProduct(data.map { (key, nestedMap) ->
-            nestedMap.map { (nestedKey, valueMap) ->
-                mapOf(key to mapOf(nestedKey to valueMap))
-            }
-        })
-
-        // Convert each product result into a combined map
-        return product.map { item ->
-            item.reduce { acc, map -> acc + map }
-        }
-    }
-
     fun findPatterns(input: String): Set<String> {
         val pattern = """\{\{(@\w+)\}\}""".toRegex()
         return pattern.findAll(input).map { it.groupValues[1] }.toSet()
@@ -69,33 +46,8 @@ data class ScenarioStub(
         return wholeDataTemplateName.split(".").first()
     }
 
-    fun requestDataTemplates(): Set<String> {
-        return findPatterns(request.toLogString()).map(this::dataTemplateNameOnly).toSet()
-    }
-
-    fun responseDataTemplates(): Set<String> {
-        return findPatterns(response.toLogString()).map(this::dataTemplateNameOnly).toSet()
-    }
-
-    fun resolveDataSubstitutions(scenario: Scenario): List<ScenarioStub> {
+    fun resolveDataSubstitutions(): List<ScenarioStub> {
         return listOf(this)
-    }
-
-    private fun unwrapSubstitutions(rawSubstitutions: JSONObjectValue): Map<String, Map<String, Map<String, Value>>> {
-        val substitutions = rawSubstitutions.jsonObject.mapValues {
-            val json =
-                it.value as? JSONObjectValue ?: throw ContractException("Invalid structure of data in the example file")
-
-            json.jsonObject.mapValues {
-                val innerJSON =
-                    it.value as? JSONObjectValue ?: throw ContractException("Invalid structure of data in the example file")
-
-                innerJSON.jsonObject.mapValues {
-                    it.value
-                }
-            }
-        }
-        return substitutions
     }
 
     private fun replaceInRequestBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>, requestTemplatePatterns: Map<String, Pattern>, resolver: Resolver): Value {
@@ -147,33 +99,6 @@ data class ScenarioStub(
             }
             else -> value
         }
-    }
-
-    private fun replaceInExample(substitutions: Map<String, Map<String, Map<String, Value>>>, requestBody: Pattern, resolver: Resolver): ScenarioStub {
-        val requestTemplatePatterns = requestBody.getTemplateTypes("", request.body, resolver).value
-
-        val newPath = replaceInPath(request.path ?: "", substitutions)
-        val newRequestHeaders = replaceInRequestHeaders(request.headers, substitutions)
-        val newQueryParams: Map<String, String> = replaceInRequestQueryParams(request.queryParams, substitutions)
-        val newRequestBody = replaceInRequestBody("", request.body, substitutions, requestTemplatePatterns, resolver)
-
-        val newRequest = request.copy(
-            path = newPath,
-            headers = newRequestHeaders,
-            queryParams = QueryParameters(newQueryParams),
-            body = newRequestBody)
-
-        val newResponseBody = replaceInResponseBody(response.body, substitutions, "")
-        val newResponseHeaders = replaceInResponseHeaders(response.headers, substitutions)
-        val newResponse = response.copy(
-            headers = newResponseHeaders,
-            body = newResponseBody
-        )
-
-        return copy(
-            request = newRequest,
-            response = newResponse
-        )
     }
 
     private fun replaceInPath(path: String, substitutions: Map<String, Map<String, Map<String, Value>>>): String {
@@ -351,12 +276,6 @@ fun getJSONObjectValue(keys: List<String>, mapData: Map<String, Value>): Map<Str
 
 fun getJSONObjectValue(key: String, mapData: Map<String, Value>): Map<String, Value> {
     val data = mapData.getValue(key)
-    if(data !is JSONObjectValue) throw ContractException("$key should be a json object")
-    return data.jsonObject
-}
-
-fun getJSONObjectValueOrNull(key: String, mapData: Map<String, Value>): Map<String, Value>? {
-    val data = mapData[key] ?: return null
     if(data !is JSONObjectValue) throw ContractException("$key should be a json object")
     return data.jsonObject
 }

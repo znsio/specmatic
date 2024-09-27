@@ -250,7 +250,8 @@ data class JSONObjectPattern(
         return JSONObjectValue(
             generate(
                 selectPropertiesWithinMaxAndMin(pattern, minProperties, maxProperties),
-                withNullPattern(resolver)
+                withNullPattern(resolver),
+                typeAlias
             )
         )
     }
@@ -291,7 +292,7 @@ data class JSONObjectPattern(
     override val typeName: String = "json object"
 }
 
-fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String, Value> {
+fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver, typeAlias: String?): Map<String, Value> {
     val resolverWithNullType = withNullPattern(resolver)
 
     val optionalProps = jsonPattern.keys.filter { isOptional(it) }.map { withoutOptionality(it) }
@@ -302,7 +303,7 @@ fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String,
             attempt(breadCrumb = key) {
                 // Handle cycle (represented by null value) by marking this property as removable
                 Optional.ofNullable(resolverWithNullType.withCyclePrevention(pattern, optionalProps.contains(key)) {
-                    it.generate(key, pattern)
+                    it.generate(typeAlias, key, pattern)
                 })
             }
         }

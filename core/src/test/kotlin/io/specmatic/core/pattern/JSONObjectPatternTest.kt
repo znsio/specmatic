@@ -11,6 +11,7 @@ import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.shouldNotMatch
+import io.specmatic.stub.captureStandardOutput
 import io.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -648,5 +649,216 @@ internal class JSONObjectPatternTest {
                 mapOf("address?" to BooleanPattern())
             )
         }
+    }
+
+    @Test
+    fun `generate should return value from dictionary if present`() {
+        val addressTypeAlias = "(Address)"
+
+        val addressPattern = JSONObjectPattern(
+            mapOf(
+                "address" to StringPattern()
+            ),
+            typeAlias = addressTypeAlias
+        )
+
+        val address = StringValue("22B Baker Street")
+
+        val dictionary = mapOf("Address.address" to address)
+
+        val resolver = Resolver(
+            newPatterns = mapOf(addressTypeAlias to addressPattern),
+            dictionary = dictionary
+        )
+
+        val value = resolver.generate(addressPattern)
+        assertThat(value).isEqualTo(JSONObjectValue(mapOf("address" to address)))
+    }
+
+    @Test
+    fun `generate should return value for optional keys from dictionary if present`() {
+        val addressTypeAlias = "(Address)"
+
+        val addressPattern = JSONObjectPattern(
+            mapOf(
+                "address?" to StringPattern()
+            ),
+            typeAlias = addressTypeAlias
+        )
+
+        val expectedAddress = StringValue("22B Baker Street")
+
+        val dictionary = mapOf("Address.address" to expectedAddress)
+
+        val resolver = Resolver(
+            newPatterns = mapOf(addressTypeAlias to addressPattern),
+            dictionary = dictionary
+        )
+
+        var value: JSONObjectValue
+
+        while(true) {
+            value = resolver.generate(addressPattern) as JSONObjectValue
+            if("address" in value.jsonObject)
+                break
+        }
+
+        assertThat(value).isEqualTo(JSONObjectValue(mapOf("address" to expectedAddress)))
+    }
+
+    @Test
+    fun `generate should return value from dictionary two levels down if present`() {
+        val typeAlias = "(Person)"
+
+        val personPattern = JSONObjectPattern(
+            mapOf(
+                "name" to JSONObjectPattern(
+                    mapOf(
+                        "last_name" to StringPattern()
+                    )
+                )
+            ),
+            typeAlias = typeAlias
+        )
+
+        val name = StringValue("Stark")
+
+        val dictionary = mapOf("Person.name.last_name" to name)
+
+        val resolver = Resolver(
+            newPatterns = mapOf(typeAlias to personPattern),
+            dictionary = dictionary
+        )
+
+        val value = resolver.generate(personPattern)
+
+        val expectedPersonDetails = JSONObjectValue(
+            mapOf(
+                "name" to JSONObjectValue(
+                    mapOf("last_name" to name)
+                )
+            )
+        )
+
+        assertThat(value).isEqualTo(expectedPersonDetails)
+    }
+
+    @Test
+    fun `reffed pattern alias should restart the path when calculating the lookup`() {
+        val personTypeAlias = "(Person)"
+
+        val personPattern = JSONObjectPattern(
+            mapOf(
+                "name" to StringPattern(),
+                "address" to DeferredPattern("(Address)")
+            ),
+            typeAlias = personTypeAlias
+        )
+
+        val addressTypeAlias = "(Address)"
+
+        val addressPattern = JSONObjectPattern(
+            mapOf(
+                "street" to StringPattern()
+            ),
+            typeAlias = addressTypeAlias
+        )
+
+        val name = StringValue("Stark")
+        val street = StringValue("Baker Street")
+
+        val dictionary = mapOf("Person.name" to name, "Address.street" to street)
+
+        val resolver = Resolver(
+            newPatterns = mapOf(personTypeAlias to personPattern, addressTypeAlias to addressPattern),
+            dictionary = dictionary
+        )
+
+        val value = resolver.generate(DeferredPattern("(Person)"))
+
+        val expectedPersonDetails = JSONObjectValue(
+            mapOf(
+                "name" to StringValue("Stark"),
+                "address" to JSONObjectValue(
+                    mapOf("street" to street)
+                )
+            )
+        )
+
+        assertThat(value).isEqualTo(expectedPersonDetails)
+    }
+
+    @Test
+    fun `multi-level example in dictionary`() {
+        val personTypeAlias = "(Person)"
+
+        val personPattern = JSONObjectPattern(
+            mapOf(
+                "address" to DeferredPattern("(Address)")
+            ),
+            typeAlias = personTypeAlias
+        )
+
+        val addressTypeAlias = "(Address)"
+
+        val addressPattern = JSONObjectPattern(
+            mapOf(
+                "street" to StringPattern()
+            ),
+            typeAlias = addressTypeAlias
+        )
+
+        val street = StringValue("Baker Street")
+
+        val dictionary = mapOf("Person.address" to JSONObjectValue(
+            mapOf("street" to street)
+        ))
+
+        val resolver = Resolver(
+            newPatterns = mapOf(personTypeAlias to personPattern, addressTypeAlias to addressPattern),
+            dictionary = dictionary
+        )
+
+        val value = resolver.generate(DeferredPattern("(Person)"))
+
+        val expectedPersonDetails = JSONObjectValue(
+            mapOf(
+                "address" to JSONObjectValue(
+                    mapOf("street" to street)
+                )
+            )
+        )
+
+        assertThat(value).isEqualTo(expectedPersonDetails)
+    }
+
+    @Test
+    fun `print error when example is found but invalid `() {
+        val personTypeAlias = "(Person)"
+
+        val personPattern = JSONObjectPattern(
+            mapOf(
+                "id" to NumberPattern(),
+            ),
+            typeAlias = personTypeAlias
+        )
+
+        val id = StringValue("abc123")
+        val street = StringValue("Baker Street")
+
+        val dictionary = mapOf("Person.id" to id)
+
+        val resolver = Resolver(
+            newPatterns = mapOf(personTypeAlias to personPattern),
+            dictionary = dictionary
+        )
+
+        val (output, _) = captureStandardOutput {
+            resolver.generate(DeferredPattern("(Person)"))
+        }
+
+        assertThat(output)
+            .contains("number")
+            .contains("abc123")
     }
 }

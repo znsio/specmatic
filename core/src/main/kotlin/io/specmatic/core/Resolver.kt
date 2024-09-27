@@ -1,5 +1,6 @@
 package io.specmatic.core
 
+import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
@@ -34,7 +35,9 @@ data class Resolver(
     val parseStrategy: (resolver: Resolver, pattern: Pattern, rowValue: String) -> Value = actualParse,
     val cyclePreventionStack: List<Pattern> = listOf(),
     val defaultExampleResolver: DefaultExampleResolver = DoNotUseDefaultExample,
-    val generation: GenerationStrategies = NonGenerativeTests
+    val generation: GenerationStrategies = NonGenerativeTests,
+    val dictionary: Map<String, Value> = emptyMap(),
+    val dictionaryLookupPath: String = ""
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
@@ -126,6 +129,43 @@ data class Resolver(
             // Returns null if (and only if) a cycle has been detected and returnNullOnCycle=true
             null
         }
+    }
+
+    fun generate(pattern: Pattern): Value {
+        if(dictionaryLookupPath.isBlank())
+            return pattern.generate(this)
+
+        val value = dictionary[dictionaryLookupPath] ?: return pattern.generate(this)
+
+        val dictionaryValueMatchResult = pattern.matches(value, this)
+        if(dictionaryValueMatchResult.isSuccess())
+            return value
+
+        logger.log(dictionaryValueMatchResult.reportString())
+        return pattern.generate(this)
+
+    }
+
+    fun generate(typeAlias: String?, dictionaryLookupKey: String, pattern: Pattern): Value {
+        if (factStore.has(dictionaryLookupKey))
+            return generate(dictionaryLookupKey, pattern)
+
+        val lookupPath = if(typeAlias == null) {
+            if(dictionaryLookupKey.isBlank())
+                ""
+            else
+                "$dictionaryLookupPath.$dictionaryLookupKey"
+        } else {
+            "${withoutPatternDelimiters(typeAlias)}.$dictionaryLookupKey"
+        }
+
+        val updatedResolver = if(lookupPath.isNotBlank()) {
+            this.copy(dictionaryLookupPath = lookupPath)
+        } else {
+            this
+        }
+
+        return updatedResolver.generate(pattern)
     }
 
     fun generate(factKey: String, pattern: Pattern): Value {

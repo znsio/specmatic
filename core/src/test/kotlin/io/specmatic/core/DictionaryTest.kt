@@ -1,7 +1,11 @@
 package io.specmatic.core
 
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.stub.HttpStub
+import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 
 import org.junit.jupiter.api.Test
@@ -42,5 +46,41 @@ class DictionaryTest {
         assertThat(updatedHttpRequest.headers["Authentication"]).isEqualTo("Bearer 123")
         assertThat(jsonResponse.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo("John Doe")
         assertThat(jsonResponse.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo("RANDOM_STRING")
+    }
+
+    @Test
+    fun `should generate test values based on a dictionary found by convention in the same directory`() {
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/spec_with_dictionary/spec.yaml")
+            .toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonPayload = request.body as JSONObjectValue
+
+                assertThat(jsonPayload.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo("input123")
+
+                return HttpResponse.ok(parsedJSONObject("""{"data": "success"}"""))
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `stubbed responses for request with no matching example should return dictionary values if available`() {
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/spec_with_dictionary/spec.yaml")
+            .toFeature()
+
+        HttpStub(feature).use { stub ->
+            val response = stub.client.execute(HttpRequest("POST", "/data", body = parsedJSON("""{"name": "data"}""")))
+
+            val jsonResponsePayload = response.body as JSONObjectValue
+
+            assertThat(response.status).isEqualTo(200)
+
+            assertThat(jsonResponsePayload.findFirstChildByPath("data")?.toStringLiteral()).isEqualTo("output123")
+        }
     }
 }

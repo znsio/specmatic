@@ -58,7 +58,8 @@ data class Scenario(
     val generativePrefix: String = "",
     val statusInDescription: String = httpResponsePattern.status.toString(),
     val disambiguate: () -> String = { "" },
-    val descriptionFromPlugin: String? = null
+    val descriptionFromPlugin: String? = null,
+    val dictionary: Map<String, Value> = emptyMap()
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -161,8 +162,6 @@ data class Scenario(
 
     fun generateHttpResponse(actualFacts: Map<String, Value>, requestContext: Context = NoContext): HttpResponse =
         scenarioBreadCrumb(this) {
-            Resolver(emptyMap(), false, patterns)
-            val resolver = Resolver(actualFacts, false, patterns)
             val facts = combineFacts(expectedFacts, actualFacts, resolver)
 
             httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
@@ -219,7 +218,7 @@ data class Scenario(
     }
 
     fun generateHttpRequest(flagsBased: FlagsBased = DefaultStrategies): HttpRequest =
-        scenarioBreadCrumb(this) { httpRequestPattern.generate(flagsBased.update(Resolver(expectedFacts, false, patterns))) }
+        scenarioBreadCrumb(this) { httpRequestPattern.generate(flagsBased.update(resolver.copy(factStore = CheckFacts(expectedFacts)))) }
 
     fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
         val resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck).copy(context = RequestContext(httpRequest))
@@ -468,7 +467,7 @@ data class Scenario(
         }
     }
 
-    val resolver: Resolver = Resolver(newPatterns = patterns)
+    val resolver: Resolver = Resolver(newPatterns = patterns, dictionary = dictionary)
 
     val serverState: Map<String, Value>
         get() = expectedFacts

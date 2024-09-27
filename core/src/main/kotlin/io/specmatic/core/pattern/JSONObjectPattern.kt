@@ -268,7 +268,7 @@ data class JSONObjectPattern(
             it.ifValue {
                 toJSONObjectPattern(it.mapKeys { (key, _) ->
                     withoutOptionality(key)
-                })
+                }, typeAlias)
             }
     }
 

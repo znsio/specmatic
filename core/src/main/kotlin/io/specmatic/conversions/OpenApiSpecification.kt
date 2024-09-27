@@ -35,40 +35,7 @@ import io.specmatic.core.handleError
 import io.specmatic.core.log.LogStrategy
 import io.specmatic.core.log.logger
 import io.specmatic.core.otherwise
-import io.specmatic.core.pattern.AnyNonNullJSONValue
-import io.specmatic.core.pattern.AnyPattern
-import io.specmatic.core.pattern.AnythingPattern
-import io.specmatic.core.pattern.Base64StringPattern
-import io.specmatic.core.pattern.BinaryPattern
-import io.specmatic.core.pattern.BooleanPattern
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.DatePattern
-import io.specmatic.core.pattern.DateTimePattern
-import io.specmatic.core.pattern.DeferredPattern
-import io.specmatic.core.pattern.DictionaryPattern
-import io.specmatic.core.pattern.EmailPattern
-import io.specmatic.core.pattern.EnumPattern
-import io.specmatic.core.pattern.ExactValuePattern
-import io.specmatic.core.pattern.Examples
-import io.specmatic.core.pattern.JSONObjectPattern
-import io.specmatic.core.pattern.ListPattern
-import io.specmatic.core.pattern.NullPattern
-import io.specmatic.core.pattern.NumberPattern
-import io.specmatic.core.pattern.Pattern
-import io.specmatic.core.pattern.PatternInStringPattern
-import io.specmatic.core.pattern.QueryParameterArrayPattern
-import io.specmatic.core.pattern.QueryParameterScalarPattern
-import io.specmatic.core.pattern.ResponseExample
-import io.specmatic.core.pattern.ResponseValueExample
-import io.specmatic.core.pattern.Row
-import io.specmatic.core.pattern.StringPattern
-import io.specmatic.core.pattern.TYPE_ATTRIBUTE_NAME
-import io.specmatic.core.pattern.UUIDPattern
-import io.specmatic.core.pattern.XMLPattern
-import io.specmatic.core.pattern.XMLTypeData
-import io.specmatic.core.pattern.attempt
-import io.specmatic.core.pattern.parsedJSON
-import io.specmatic.core.pattern.toJSONObjectPattern
+import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.withoutOptionality
 import io.specmatic.core.then
 import io.specmatic.core.to
@@ -201,8 +168,25 @@ class OpenApiSpecification(
                 sourceRepositoryBranch,
                 specificationPath,
                 securityConfiguration,
-                specmaticConfig
+                specmaticConfig,
             )
+        }
+
+        fun loadDictionary(openApiFilePath: String): Map<String, Value> {
+            val dictionaryFile = File(openApiFilePath).let {
+                it.canonicalFile.parentFile.resolve(it.nameWithoutExtension + "_dictionary.json")
+            }
+
+            if(!dictionaryFile.exists() || !dictionaryFile.isFile)
+                return emptyMap()
+
+            try {
+                return parsedJSONObject(dictionaryFile.readText()).jsonObject
+            } catch(e: Throwable) {
+                logger.log(e)
+
+                throw e
+            }
         }
 
         private fun printMessages(parseResult: SwaggerParseResult, filePath: String, loggerForErrors: LogStrategy) {
@@ -229,8 +213,10 @@ class OpenApiSpecification(
 
         val (scenarioInfos, stubsFromExamples) = toScenarioInfos()
 
+        val dictionary = loadDictionary(openApiFilePath)
+
         return Feature(
-            scenarioInfos.map { Scenario(it) }, name = name, path = openApiFilePath, sourceProvider = sourceProvider,
+            scenarioInfos.map { Scenario(it).copy(dictionary = dictionary) }, name = name, path = openApiFilePath, sourceProvider = sourceProvider,
             sourceRepository = sourceRepository,
             sourceRepositoryBranch = sourceRepositoryBranch,
             specification = specificationPath,

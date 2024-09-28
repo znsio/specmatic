@@ -154,17 +154,18 @@ ${dictionaryValueMatchResult.reportString()}
         return pattern.generate(this)
     }
 
-    fun generate(typeAlias: String?, dictionaryLookupKey: String, pattern: Pattern): Value {
-        if (factStore.has(dictionaryLookupKey))
-            return generate(dictionaryLookupKey, pattern)
+    fun generate(typeAlias: String?, rawLookupKey: String, pattern: Pattern): Value {
+        val lookupKey = withoutOptionality(rawLookupKey)
+        if (factStore.has(lookupKey))
+            return generate(lookupKey, pattern)
 
         val lookupPath = if(typeAlias == null) {
-            if(dictionaryLookupKey.isBlank())
+            if(lookupKey.isBlank())
                 ""
             else
-                "$dictionaryLookupPath.$dictionaryLookupKey"
+                "$dictionaryLookupPath.$lookupKey"
         } else {
-            "${withoutPatternDelimiters(typeAlias)}.$dictionaryLookupKey"
+            "${withoutPatternDelimiters(typeAlias)}.$lookupKey"
         }
 
         val updatedResolver = if(lookupPath.isNotBlank()) {

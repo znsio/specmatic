@@ -5,6 +5,8 @@ import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.stub.HttpStub
+import io.specmatic.stub.httpRequestLog
+import io.specmatic.stub.httpResponseLog
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 
@@ -81,6 +83,63 @@ class DictionaryTest {
             assertThat(response.status).isEqualTo(200)
 
             assertThat(jsonResponsePayload.findFirstChildByPath("data")?.toStringLiteral()).isEqualTo("output123")
+        }
+    }
+
+    @Test
+    fun `tests should use dictionary to generate query params`() {
+        val queryParamValueFromDictionary = "input123"
+
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/spec_with_dictionary_and_query_params/spec.yaml")
+            .toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.queryParams.asMap()["name"]).isEqualTo(queryParamValueFromDictionary)
+                return HttpResponse.ok(parsedJSONObject("""{"data": "success"}""")).also {
+                    println(httpRequestLog(request))
+                    println(httpResponseLog(it))
+                }
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `tests should use dictionary to generate request headers`() {
+        val requestHeaderValueFromDictionary = "abc123"
+
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/spec_with_dictionary_and_request_headers/spec.yaml")
+            .toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.headers["X-LoginID"]).isEqualTo(requestHeaderValueFromDictionary)
+                return HttpResponse.ok(parsedJSONObject("""{"data": "success"}""")).also {
+                    println(httpRequestLog(request))
+                    println(httpResponseLog(it))
+                }
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `stub should return dictionary value if available for response header instead of random data`() {
+        val requestHeaderValueFromDictionary = "abc123"
+
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/spec_with_dictionary_and_response_headers/spec.yaml")
+            .toFeature()
+
+        HttpStub(feature).use { stub ->
+            val response = stub.client.execute(HttpRequest("POST", "/data", body = parsedJSONObject("""{"name": "data"}""")))
+            assertThat(response.status).isEqualTo(200)
+            assertThat(response.headers["X-Trace-ID"]).isEqualTo("trace123")
         }
     }
 }

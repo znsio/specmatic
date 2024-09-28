@@ -14,7 +14,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         return attempt(breadCrumb = "QUERY-PARAMS") {
             queryPatterns.map { it.key.removeSuffix("?") to it.value }.flatMap { (parameterName, pattern) ->
                 attempt(breadCrumb = parameterName) {
-                    val generatedValue =  resolver.withCyclePrevention(pattern) { it.generate(parameterName, pattern) }
+                    val generatedValue =  resolver.withCyclePrevention(pattern) { it.generate("QUERY-PARAMS", parameterName, pattern) }
                     if(generatedValue is JSONArrayValue) {
                         generatedValue.list.map { parameterName to it.toString() }
                     }

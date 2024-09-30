@@ -138,23 +138,17 @@ data class Resolver(
         val value = dictionary[dictionaryLookupPath] ?: return pattern.generate(this)
 
         val dictionaryValueMatchResult = pattern.matches(value, this)
-        if(dictionaryValueMatchResult.isSuccess())
-            return value
 
-        val errorReport = """
->> $dictionaryLookupPath
+        dictionaryValueMatchResult.throwOnFailure()
 
-Dictionary value did not match the spec
-
-${dictionaryValueMatchResult.reportString()}
-        """.trimIndent()
-
-        logger.log(errorReport)
-
-        return pattern.generate(this)
+        return value
     }
 
     fun generate(typeAlias: String?, rawLookupKey: String, pattern: Pattern): Value {
+        val resolvedPattern = resolvedHop(pattern, this)
+        if(resolvedPattern is ExactValuePattern && !resolvedPattern.hasPatternToken())
+            return pattern.generate(this)
+
         val lookupKey = withoutOptionality(rawLookupKey)
         if (factStore.has(lookupKey))
             return generate(lookupKey, pattern)
@@ -162,6 +156,8 @@ ${dictionaryValueMatchResult.reportString()}
         val lookupPath = if(typeAlias == null) {
             if(lookupKey.isBlank())
                 ""
+            else if(lookupKey == "[*]")
+                "$dictionaryLookupPath$lookupKey"
             else
                 "$dictionaryLookupPath.$lookupKey"
         } else {
@@ -274,5 +270,9 @@ ${matchResult.reportString()}
     fun generateKeySubLists(key: String, subList: List<String>): Sequence<List<String>> {
         return generation.generateKeySubLists(key, subList)
     }
+}
+
+private fun ExactValuePattern.hasPatternToken(): Boolean {
+    return this.pattern is StringValue && isPatternToken(this.pattern.string)
 }
 

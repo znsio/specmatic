@@ -785,7 +785,7 @@ data class HttpRequestPattern(
         data: JSONObjectValue,
         dictionary: Dictionary
     ): Substitution {
-        return Substitution(runningRequest, originalRequest, httpPathPattern ?: HttpPathPattern(emptyList(), ""), headersPattern, httpQueryParamPattern, body, resolver, data, dictionary)
+        return Substitution(runningRequest, originalRequest, httpPathPattern ?: HttpPathPattern(emptyList(), ""), headersPattern, httpQueryParamPattern, body, resolver, data)
     }
 
 }

@@ -5,6 +5,7 @@ import io.specmatic.core.MatchFailureDetails
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
+import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
 import io.specmatic.shouldNotMatch
 import io.specmatic.stub.captureStandardOutput
@@ -950,7 +951,7 @@ internal class JSONObjectPatternTest {
     }
 
     @Test
-    fun `print error when example is found but invalid `() {
+    fun `throw exception when example is found but invalid `() {
         val personTypeAlias = "(Person)"
 
         val personPattern = JSONObjectPattern(
@@ -969,13 +970,13 @@ internal class JSONObjectPatternTest {
             dictionary = dictionary
         )
 
-        val (output, _) = captureStandardOutput {
+        assertThatThrownBy {
             resolver.generate(DeferredPattern("(Person)"))
-        }
-
-        assertThat(output)
-            .contains("number")
-            .contains("abc123")
-            .contains("Person.id")
+        }.satisfies(Consumer {
+            assertThat(exceptionCauseMessage(it))
+                .withFailMessage(exceptionCauseMessage(it))
+                .contains("number")
+                .contains("abc123")
+        })
     }
 }

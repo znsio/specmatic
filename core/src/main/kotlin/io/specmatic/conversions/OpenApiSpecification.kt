@@ -4,41 +4,12 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import io.cucumber.messages.internal.com.fasterxml.jackson.databind.ObjectMapper
 import io.cucumber.messages.types.Step
 import io.ktor.util.reflect.*
-import io.specmatic.core.DEFAULT_RESPONSE_CODE
-import io.specmatic.core.Feature
-import io.specmatic.core.HttpHeadersPattern
-import io.specmatic.core.HttpPathPattern
-import io.specmatic.core.HttpQueryParamPattern
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpRequestPattern
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.HttpResponsePattern
-import io.specmatic.core.MatchFailure
-import io.specmatic.core.MatchSuccess
-import io.specmatic.core.MatchingResult
-import io.specmatic.core.MultiPartContentPattern
-import io.specmatic.core.MultiPartFilePattern
-import io.specmatic.core.MultiPartFormDataPattern
-import io.specmatic.core.NoBodyPattern
-import io.specmatic.core.NoBodyValue
-import io.specmatic.core.OMIT
-import io.specmatic.core.Resolver
-import io.specmatic.core.Result
+import io.specmatic.core.*
 import io.specmatic.core.Result.Failure
-import io.specmatic.core.Scenario
-import io.specmatic.core.ScenarioInfo
-import io.specmatic.core.SecurityConfiguration
-import io.specmatic.core.SecuritySchemeConfiguration
-import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.URLPathSegmentPattern
-import io.specmatic.core.handleError
 import io.specmatic.core.log.LogStrategy
 import io.specmatic.core.log.logger
-import io.specmatic.core.otherwise
 import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.withoutOptionality
-import io.specmatic.core.then
-import io.specmatic.core.to
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.IGNORE_INLINE_EXAMPLE_WARNINGS
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
@@ -174,15 +145,23 @@ class OpenApiSpecification(
 
         fun loadDictionary(openApiFilePath: String): Map<String, Value> {
             val dictionaryFile = File(openApiFilePath).let {
-                it.canonicalFile.parentFile.resolve(it.nameWithoutExtension + "_dictionary.json")
+                Flags.getStringValue(SPECMATIC_STUB_DICTIONARY)?.let { File(it) }
+                    ?: it.canonicalFile.parentFile.resolve(it.nameWithoutExtension + "_dictionary.json")
             }
 
-            if(!dictionaryFile.exists() || !dictionaryFile.isFile)
+            if(!dictionaryFile.exists() || !dictionaryFile.isFile) {
+                logger.log("Found dictionary file ${dictionaryFile.path} but it was empty")
+
                 return emptyMap()
+            }
 
             try {
-                return parsedJSONObject(dictionaryFile.readText()).jsonObject
+                val dictionary = parsedJSONObject(dictionaryFile.readText()).jsonObject
+                logger.log("Using dictionary file ${dictionaryFile.path}")
+
+                return dictionary
             } catch(e: Throwable) {
+                logger.log("Could not parse dictionary file ${dictionaryFile.path} due to error")
                 logger.log(e)
 
                 throw e

@@ -31,14 +31,28 @@ data class JSONObjectPattern(
         val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
 
         val mapWithKeysInPartial = jsonObject.jsonObject.mapValues { (name, value) ->
-            val valuePattern = pattern.get(name) ?: pattern.get("$name?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", name)))
+            val valuePattern = pattern.get(name) ?: pattern.get("$name?") ?: return@mapValues HasFailure<Value>(
+                Result.Failure(
+                    resolver.mismatchMessages.unexpectedKey("header", name)
+                )
+            ).breadCrumb(name)
 
-            val returnValue = if(value is StringValue && isPatternToken(value.string))
-                HasValue(resolver.getPattern(value.string).generate(resolver))
-            else if (value is ScalarValue) {
+            val returnValue = if (value is StringValue && isPatternToken(value.string)) {
+                try {
+                    val generatedValue = resolver.generate(typeAlias, name, resolver.getPattern(value.string))
+                    val matchResult = valuePattern.matches(generatedValue, resolver)
+
+                    if (matchResult is Result.Failure)
+                        HasFailure(matchResult, "Could not generate value for key $name")
+                    else
+                        HasValue(generatedValue)
+                } catch(e: Throwable) {
+                    HasException(e)
+                }
+            } else if (value is ScalarValue) {
                 val matchResult = valuePattern.matches(value, resolver)
 
-                val returnValue: ReturnValue<Value> = if(matchResult is Result.Failure)
+                val returnValue: ReturnValue<Value> = if (matchResult is Result.Failure)
                     HasFailure(matchResult)
                 else
                     HasValue(value)
@@ -54,15 +68,11 @@ data class JSONObjectPattern(
         val mapWithMissingKeysGenerated = pattern.filterKeys {
             !it.endsWith("?") && it !in jsonObject.jsonObject
         }.mapValues { (name, valuePattern) ->
-            val generatedValue = dictionary.lookup(name)?.let { dictionaryValue ->
-                val matchResult = valuePattern.matches(dictionaryValue, resolver)
-                if(matchResult is Result.Failure)
-                    HasFailure(matchResult)
-                else
-                    HasValue(dictionaryValue)
-            } ?: HasValue(valuePattern.generate(resolver))
-
-            generatedValue.breadCrumb(name)
+            try {
+                HasValue(resolver.generate(typeAlias, name, valuePattern))
+            } catch(e: Throwable) {
+                HasException(e)
+            }.breadCrumb(name)
         }.mapFold()
 
         return mapWithKeysInPartial.combine(mapWithMissingKeysGenerated) { entriesInPartial, missingEntries ->

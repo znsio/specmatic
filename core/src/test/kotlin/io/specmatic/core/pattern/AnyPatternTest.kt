@@ -47,6 +47,25 @@ internal class AnyPatternTest {
     }
 
     @Test
+    fun `should return error message when object type matches but there is another mismatch and no ambiguous pattern in AnyPattern list`() {
+        val jsonPattern = JSONObjectPattern(
+            mapOf(
+                "firstname" to StringPattern(),
+                "lastname" to NumberPattern()
+            )
+        )
+        val pattern = AnyPattern(listOf(NullPattern, DeferredPattern(pattern = "(Person)")))
+        val value = parsedValue("""{"firstname": "Jane", "lastname": "Doe"}""")
+        val resolver = withNullPattern(Resolver(
+            newPatterns = mapOf("(Person)" to jsonPattern)
+        ))
+
+        val result = pattern.matches(value, resolver)
+
+        assertThat(result.toReport().toText().trimIndent()).doesNotContain("when Person object")
+    }
+
+    @Test
     fun `typename of a nullable type`() {
         val pattern1 = AnyPattern(listOf(NullPattern, StringPattern()))
         val pattern2 = AnyPattern(listOf(DeferredPattern("(empty)"), StringPattern()))

@@ -13,20 +13,6 @@ import io.specmatic.core.value.Value
 import java.util.*
 
 data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), override val typeAlias: String? = null) : Pattern, SequenceType {
-    override fun addTypeAliases(originalPattern: Pattern, resolver: Resolver): Pattern {
-        val resolvedOriginalPattern = resolvedHop(originalPattern, resolver)
-
-        if(resolvedOriginalPattern !is ListPattern)
-            throw ContractException("Internal: expected list type, got ${resolvedOriginalPattern.typeName}")
-
-        return this.copy(
-            typeAlias = resolvedOriginalPattern.typeAlias,
-            pattern = pattern.map {
-                it.addTypeAliases(resolvedOriginalPattern.pattern, resolver)
-            }
-        )
-    }
-
     override val memberList: MemberList
         get() {
             if (pattern.isEmpty())

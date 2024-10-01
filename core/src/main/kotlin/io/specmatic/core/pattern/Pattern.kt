@@ -85,8 +85,8 @@ interface Pattern {
         return HasValue(value)
     }
 
-    fun addTypeAliases(originalPattern: Pattern, resolver: Resolver): Pattern {
-        return originalPattern
+    fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver): Pattern {
+        return concretePattern
     }
 
     val typeAlias: String?

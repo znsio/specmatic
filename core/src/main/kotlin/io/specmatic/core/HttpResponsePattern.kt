@@ -151,7 +151,7 @@ data class HttpResponsePattern(
         else
             emptyMap()
 
-        val bodyWithTypeAliases = response.body.exactMatchElseType().let { it.addTypeAliases(body, resolver) }
+        val bodyWithTypeAliases = response.body.exactMatchElseType().let { body.addTypeAliasesToConcretePattern(it, resolver) }
 
         return HttpResponsePattern(
             HttpHeadersPattern(responseHeaders + contentTypeHeader),

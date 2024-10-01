@@ -10,6 +10,18 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
 
+    override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver): Pattern {
+        if(concretePattern !is JSONArrayPattern)
+            return concretePattern
+
+        return concretePattern.copy(
+            typeAlias = this.typeAlias,
+            pattern = concretePattern.pattern.map { concreteItemPattern ->
+                pattern.addTypeAliasesToConcretePattern(concreteItemPattern, resolver)
+            }
+        )
+    }
+
     override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
         val listValue = value as? JSONArrayValue ?: return HasFailure("Cannot generate a list from partial of type ${value.displayableType()}")
         val newList = listValue.list.map { pattern.fillInTheBlanks(it, dictionary, resolver.plusDictionaryLookupDetails(null, "[*]")) }.listFold()

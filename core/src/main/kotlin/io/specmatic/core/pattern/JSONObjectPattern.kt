@@ -27,19 +27,20 @@ data class JSONObjectPattern(
     val minProperties: Int? = null,
     val maxProperties: Int? = null
 ) : Pattern {
-    override fun addTypeAliases(originalPattern: Pattern, resolver: Resolver): Pattern {
-        val resolvedOriginalPattern = resolvedHop(originalPattern, resolver)
+    override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver): Pattern {
+        if(concretePattern !is JSONObjectPattern)
+            throw ContractException("Expected json object type but got ${concretePattern.typeName}")
 
-        if(resolvedOriginalPattern !is JSONObjectPattern)
-            throw ContractException("Expected json object type but got ${originalPattern.typeName}")
-
-        val updatedPatternMapWithTypeAliases = pattern.mapValues { (key, pattern) ->
-            val originalChildPattern = resolvedOriginalPattern.pattern[key] ?: resolvedOriginalPattern.pattern["$key?"] ?: throw ContractException("Internal error: key $key missing in ${resolvedOriginalPattern.typeAlias}")
-            pattern.addTypeAliases(originalChildPattern, resolver)
+        val updatedPatternMapWithTypeAliases = concretePattern.pattern.mapValues { (key, concreteChildPattern) ->
+            val originalChildPattern =
+                this.pattern[key]
+                    ?: this.pattern["$key?"]
+                    ?: return@mapValues concreteChildPattern
+            concreteChildPattern.addTypeAliasesToConcretePattern(concreteChildPattern, resolver)
         }
 
-        return this.copy(
-            typeAlias = originalPattern.typeAlias,
+        return concretePattern.copy(
+            typeAlias = this.typeAlias,
             pattern = updatedPatternMapWithTypeAliases
         )
     }

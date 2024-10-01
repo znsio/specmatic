@@ -10,6 +10,10 @@ data class LookupRowPattern(override val pattern: Pattern, override val key: Str
     override fun equals(other: Any?): Boolean = other is LookupRowPattern && resolvedHop(other.pattern, Resolver()) == resolvedHop(pattern, Resolver())
     override fun hashCode(): Int = pattern.hashCode()
 
+    override fun addTypeAliases(originalPattern: Pattern, resolver: Resolver): Pattern {
+        return pattern.addTypeAliases(originalPattern, resolver)
+    }
+
     override fun matches(sampleData: Value?, resolver: Resolver): Result =
             resolver.matchesPattern(key, pattern, sampleData ?: EmptyString)
 

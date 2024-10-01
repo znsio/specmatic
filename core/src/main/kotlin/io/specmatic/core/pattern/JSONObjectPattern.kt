@@ -27,6 +27,23 @@ data class JSONObjectPattern(
     val minProperties: Int? = null,
     val maxProperties: Int? = null
 ) : Pattern {
+    override fun addTypeAliases(originalPattern: Pattern, resolver: Resolver): Pattern {
+        val resolvedOriginalPattern = resolvedHop(originalPattern, resolver)
+
+        if(resolvedOriginalPattern !is JSONObjectPattern)
+            throw ContractException("Expected json object type but got ${originalPattern.typeName}")
+
+        val updatedPatternMapWithTypeAliases = pattern.mapValues { (key, pattern) ->
+            val originalChildPattern = resolvedOriginalPattern.pattern[key] ?: resolvedOriginalPattern.pattern["$key?"] ?: throw ContractException("Internal error: key $key missing in ${resolvedOriginalPattern.typeAlias}")
+            pattern.addTypeAliases(originalChildPattern, resolver)
+        }
+
+        return this.copy(
+            typeAlias = originalPattern.typeAlias,
+            pattern = updatedPatternMapWithTypeAliases
+        )
+    }
+
     override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
         val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
 

@@ -518,7 +518,7 @@ data class Scenario(
     fun resolverAndResponseForExpectation(response: HttpResponse): Pair<Resolver, HttpResponse> =
         scenarioBreadCrumb(this) {
             attempt(breadCrumb = "RESPONSE") {
-                Pair(this.resolver, httpResponsePattern.fromResponseExpectation(response).generateResponse(this.resolver))
+                Pair(this.resolver, httpResponsePattern.fromResponseExpectation(response, resolver).generateResponse(this.resolver))
             }
         }
 

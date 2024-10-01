@@ -9,6 +9,7 @@ import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.stub.HttpStub
+import io.specmatic.stub.createStubFromContracts
 import io.specmatic.stub.httpRequestLog
 import io.specmatic.stub.httpResponseLog
 import io.specmatic.test.TestExecutor
@@ -214,6 +215,33 @@ class DictionaryTest {
         }
     }
 
+    @Test
+    fun `stub should leverage dictionary array object value at the second level in a schema in an example`() {
+//        val feature = OpenApiSpecification
+//            .fromFile("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_array_objects_with_example/spec.yaml")
+//            .toFeature().loadExternalisedExamples()
+
+        createStubFromContracts(
+            listOf("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_array_objects_with_example/spec.yaml"),
+            listOf("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_array_objects_with_example/spec_examples"),
+            timeoutMillis = 0).use { stub ->
+//        HttpStub(feature).use { stub ->
+            val request = HttpRequest("GET", "/person")
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+
+            val json = response.body as JSONObjectValue
+
+            val addresses = json.findFirstChildByPath("details.addresses") as JSONArrayValue
+
+            assertThat(addresses.list).allSatisfy {
+                val jsonAddressObject = it as JSONObjectValue
+                assertThat(jsonAddressObject.jsonObject["street"]?.toStringLiteral()).isEqualTo("22B Baker Street")
+            }
+        }
+    }
 
     @Test
     fun `generative tests with a dictionary work as usual`() {

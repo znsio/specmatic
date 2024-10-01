@@ -9,6 +9,10 @@ import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.Value
 
 data class DeferredPattern(override val pattern: String, val key: String? = null) : Pattern {
+    override fun addTypeAliases(originalPattern: Pattern, resolver: Resolver): Pattern {
+        return resolvePattern(resolver).addTypeAliases(originalPattern, resolver)
+    }
+
     override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
         return resolvePattern(resolver).fillInTheBlanks(value, dictionary, resolver)
     }

@@ -85,6 +85,10 @@ interface Pattern {
         return HasValue(value)
     }
 
+    fun addTypeAliases(originalPattern: Pattern, resolver: Resolver): Pattern {
+        return originalPattern
+    }
+
     val typeAlias: String?
     val typeName: String
     val pattern: Any

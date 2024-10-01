@@ -7,7 +7,6 @@ import io.specmatic.core.value.ListValue
 import io.specmatic.core.value.Value
 
 data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null, override val example: List<String?>? = null) : Pattern, SequenceType, HasDefaultExample {
-
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
 

@@ -149,9 +149,9 @@ class DictionaryTest {
     }
 
     @Test
-    fun `stub should return complex dictionary value at the second level in a schema`() {
+    fun `stub should leverage dictionary object value at the second level in a schema`() {
         val feature = OpenApiSpecification
-            .fromFile("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_complex_value/spec.yaml")
+            .fromFile("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_object_value/spec.yaml")
             .toFeature()
 
         HttpStub(feature).use { stub ->
@@ -166,6 +166,26 @@ class DictionaryTest {
             assertThat(json.findFirstChildByPath("name.salutation")?.toStringLiteral()).isEqualTo("Ms")
             assertThat(json.findFirstChildByPath("name.details.first_name")?.toStringLiteral()).isEqualTo("Leanna")
             assertThat(json.findFirstChildByPath("name.details.last_name")?.toStringLiteral()).isEqualTo("Schwartz")
+        }
+    }
+
+    @Test
+    fun `stub should leverage dictionary array value at the second level in a schema`() {
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_array_value/spec.yaml")
+            .toFeature()
+
+        HttpStub(feature).use { stub ->
+            val request = HttpRequest("GET", "/person")
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+
+            val json = response.body as JSONObjectValue
+
+            assertThat(json.findFirstChildByPath("details.addresses.[0]")?.toStringLiteral()).isEqualTo("22B Baker Street")
+            assertThat(json.findFirstChildByPath("details.addresses.[1]")?.toStringLiteral()).isEqualTo("10A Horowitz Street")
         }
     }
 

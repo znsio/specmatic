@@ -177,7 +177,7 @@ data class Resolver(
     fun generateList(pattern: Pattern): Value {
         val lookupKey = dictionaryLookupPath.trim() + "[*]"
 
-        val value = dictionary[lookupKey] ?: return generateRandomList(pattern)
+        val value = dictionary[lookupKey] ?: return this.copy(dictionaryLookupPath = lookupKey).generateRandomList(pattern)
 
         val matchResult = pattern.matches(value, this)
 

@@ -468,8 +468,7 @@ data class Feature(
         scenarioStub: ScenarioStub,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): HttpStubData {
-        val dictionaryMap = specmaticConfig.stub.dictionary?.let { loadDictionary(it) } ?: emptyMap()
-        val dictionary = Dictionary(dictionaryMap)
+        val dictionary = Dictionary(emptyMap())
 
         val scenarioStubWithDictionary = scenarioStub.copy(dictionary = dictionary)
 

@@ -59,7 +59,7 @@ data class JSONObjectPattern(
 
                 returnValue
             } else {
-                valuePattern.fillInTheBlanks(value, dictionary, resolver)
+                valuePattern.fillInTheBlanks(value, dictionary, resolver.plusDictionaryLookupDetails(typeAlias, name))
             }
 
             returnValue.breadCrumb(name)

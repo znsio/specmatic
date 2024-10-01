@@ -150,6 +150,7 @@ data class Resolver(
             return pattern.generate(this)
 
         val lookupKey = withoutOptionality(rawLookupKey)
+
         if (factStore.has(lookupKey))
             return generate(lookupKey, pattern)
 
@@ -269,6 +270,23 @@ ${matchResult.reportString()}
 
     fun generateKeySubLists(key: String, subList: List<String>): Sequence<List<String>> {
         return generation.generateKeySubLists(key, subList)
+    }
+
+    fun plusDictionaryLookupDetails(typeAlias: String?, key: String): Resolver {
+        val newDictionaryLookupPath = addToDictionaryLookupPath(typeAlias, key)
+
+        return this.copy(dictionaryLookupPath = newDictionaryLookupPath)
+    }
+
+    private fun addToDictionaryLookupPath(typeAlias: String?, key: String): String {
+        if(typeAlias.isNullOrBlank()) {
+            if(key.startsWith("["))
+                return "$dictionaryLookupPath$key"
+            else
+                return "$dictionaryLookupPath.$key"
+        }
+
+        return "${withoutPatternDelimiters(typeAlias)}.$key"
     }
 }
 

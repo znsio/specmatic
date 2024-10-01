@@ -145,13 +145,17 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         } else ""
     }
 
-    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
-        return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
+    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> = returnValue(breadCrumb = "QUERY-PARAM") {
+        attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams: Map<String, Pattern> = queryPatterns.let {
                 if (additionalProperties != null)
                     it.plus(randomString(5) to additionalProperties)
                 else
                     it
+            }
+            val patternMap = queryParams.mapValues {
+                if(it.value is QueryParameterScalarPattern) return@mapValues it.value.pattern as Pattern
+                (it.value as QueryParameterArrayPattern).pattern.firstOrNull() ?: EmptyStringPattern
             }
 
             forEachKeyCombinationIn(queryParams, row) { entry ->
@@ -159,7 +163,26 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
                     entry.mapKeys { withoutOptionality(it.key) },
                     row,
                     resolver
-                ).map { it.breadCrumb("QUERY-PARAM") }
+                )
+            }.plus(
+                patternsWithNoRequiredQueryParams(patternMap)
+            )
+        }
+    }
+
+    private fun patternsWithNoRequiredQueryParams(
+        params: Map<String, Pattern>
+    ): Sequence<ReturnValue<Map<String, Pattern>>> = sequence {
+        params.forEach { (key, _) ->
+            if (key.endsWith("?").not()) {
+                yield(
+                    HasValue(
+                        params.filterKeys { paramKey -> paramKey != key }.mapKeys {
+                            withoutOptionality(it.key)
+                        },
+                        "removed from the request"
+                    ).breadCrumb(key)
+                )
             }
         }
     }

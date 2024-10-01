@@ -10,12 +10,12 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
 
-    override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver): Pattern {
+    override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
         if(concretePattern !is JSONArrayPattern)
             return concretePattern
 
         return concretePattern.copy(
-            typeAlias = this.typeAlias,
+            typeAlias = typeAlias ?: this.typeAlias,
             pattern = concretePattern.pattern.map { concreteItemPattern ->
                 pattern.addTypeAliasesToConcretePattern(concreteItemPattern, resolver)
             }

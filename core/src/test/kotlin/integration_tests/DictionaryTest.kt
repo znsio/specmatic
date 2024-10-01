@@ -258,6 +258,24 @@ class DictionaryTest {
     }
 
     @Test
+    fun `stub should leverage dictionary object value at the second level given oneOf in a schema in an example`() {
+        createStubFromContracts(
+            listOf("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_objects_with_oneOf_and_example/spec.yaml"),
+            listOf("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_objects_with_oneOf_and_example/spec_examples"),
+            timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("GET", "/person")
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+
+            val json = response.body as JSONObjectValue
+
+            assertThat(json.findFirstChildByPath("full_name")?.toStringLiteral()).isEqualTo("Jack Sprat")
+        }
+    }
+
+    @Test
     fun `generative tests with a dictionary work as usual`() {
         val testCountWithoutDictionary = OpenApiSpecification
             .fromFile("src/test/resources/openapi/spec_with_dictionary_and_constraints/spec.yaml")

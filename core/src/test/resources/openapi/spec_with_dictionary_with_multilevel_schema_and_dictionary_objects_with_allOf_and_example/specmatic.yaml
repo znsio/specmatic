@@ -1,4 +1,0 @@
-contract_repositories:
-  - type: filesystem
-    consumes:
-      - spec.yaml

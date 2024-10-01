@@ -27,7 +27,7 @@ data class JSONObjectPattern(
     val minProperties: Int? = null,
     val maxProperties: Int? = null
 ) : Pattern {
-    override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver): Pattern {
+    override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
         if(concretePattern !is JSONObjectPattern)
             throw ContractException("Expected json object type but got ${concretePattern.typeName}")
 
@@ -36,11 +36,11 @@ data class JSONObjectPattern(
                 this.pattern[key]
                     ?: this.pattern["$key?"]
                     ?: return@mapValues concreteChildPattern
-            concreteChildPattern.addTypeAliasesToConcretePattern(concreteChildPattern, resolver)
+            originalChildPattern.addTypeAliasesToConcretePattern(concreteChildPattern, resolver)
         }
 
         return concretePattern.copy(
-            typeAlias = this.typeAlias,
+            typeAlias = typeAlias ?: this.typeAlias,
             pattern = updatedPatternMapWithTypeAliases
         )
     }

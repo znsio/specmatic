@@ -17,6 +17,12 @@ data class AnyPattern(
 
     override fun hashCode(): Int = pattern.hashCode()
 
+    override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
+        val matchingPattern = pattern.find { it.matches(concretePattern.generate(resolver), resolver) is Result.Success } ?: return concretePattern
+
+        return matchingPattern.addTypeAliasesToConcretePattern(concretePattern, resolver, this.typeAlias ?: typeAlias)
+    }
+
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
 
     override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {

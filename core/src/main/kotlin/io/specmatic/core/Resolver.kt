@@ -153,7 +153,7 @@ data class Resolver(
         if (factStore.has(lookupKey))
             return generate(lookupKey, pattern)
 
-        val lookupPath = if(typeAlias == null) {
+        val lookupPath = if(typeAlias.isNullOrBlank()) {
             if(lookupKey.isBlank())
                 ""
             else if(lookupKey == "[*]")

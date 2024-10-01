@@ -1708,7 +1708,7 @@ class OpenApiSpecification(
         val schemaProperties = toSchemaProperties(schema, requiredFields, patternName, typeStack)
         val minProperties: Int? = schema.minProperties
         val maxProperties: Int? = schema.maxProperties
-        val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})").copy(
+        val jsonObjectPattern = toJSONObjectPattern(schemaProperties, if(patternName.isNotBlank()) "(${patternName})" else "").copy(
             minProperties = minProperties,
             maxProperties = maxProperties
         )

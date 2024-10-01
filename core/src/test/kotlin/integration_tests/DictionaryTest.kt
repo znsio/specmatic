@@ -128,6 +128,48 @@ class DictionaryTest {
     }
 
     @Test
+    fun `stub should return dictionary value at the second level in a schema`() {
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/spec_with_dictionary_and_multilevel_schema/spec.yaml")
+            .toFeature()
+
+        HttpStub(feature).use { stub ->
+            val request = HttpRequest("GET", "/person")
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+
+            val json = response.body as JSONObjectValue
+
+            assertThat(json.findFirstChildByPath("name.salutation")?.toStringLiteral()).isEqualTo("Ms")
+            assertThat(json.findFirstChildByPath("name.details.first_name")?.toStringLiteral()).isEqualTo("Leanna")
+            assertThat(json.findFirstChildByPath("name.details.last_name")?.toStringLiteral()).isEqualTo("Schwartz")
+        }
+    }
+
+    @Test
+    fun `stub should return complex dictionary value at the second level in a schema`() {
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_complex_value/spec.yaml")
+            .toFeature()
+
+        HttpStub(feature).use { stub ->
+            val request = HttpRequest("GET", "/person")
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+
+            val json = response.body as JSONObjectValue
+
+            assertThat(json.findFirstChildByPath("name.salutation")?.toStringLiteral()).isEqualTo("Ms")
+            assertThat(json.findFirstChildByPath("name.details.first_name")?.toStringLiteral()).isEqualTo("Leanna")
+            assertThat(json.findFirstChildByPath("name.details.last_name")?.toStringLiteral()).isEqualTo("Schwartz")
+        }
+    }
+
+    @Test
     fun `generative tests with a dictionary work as usual`() {
         val testCountWithoutDictionary = OpenApiSpecification
             .fromFile("src/test/resources/openapi/spec_with_dictionary_and_constraints/spec.yaml")

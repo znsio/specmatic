@@ -29,19 +29,16 @@ components:
           type: string
 
     Person:
-      type: object
-      required:
-        - details
-      properties:
-        details:
-          type: object
+      allOf:
+        - type: object
           required:
-            - addresses
+            - name
           properties:
-            addresses:
-              type: array
-              items:
-                type: object
-                properties:
-                  street:
-                    type: string
+            name:
+              type: string
+        - type: object
+          required:
+            - address
+          properties:
+            address:
+              type: string

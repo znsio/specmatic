@@ -239,10 +239,10 @@ class DictionaryTest {
     }
 
     @Test
-    fun `stub should leverage dictionary object value at the second level given oneOf in a schema in an example`() {
+    fun `stub should leverage dictionary object value at the second level given allOf in a schema in an example`() {
         createStubFromContracts(
-            listOf("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_array_objects_with_example/spec.yaml"),
-            listOf("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_array_objects_with_example/spec_examples"),
+            listOf("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_objects_with_allOf_and_example/spec.yaml"),
+            listOf("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_objects_with_allOf_and_example/spec_examples"),
             timeoutMillis = 0).use { stub ->
             val request = HttpRequest("GET", "/person")
 
@@ -252,12 +252,8 @@ class DictionaryTest {
 
             val json = response.body as JSONObjectValue
 
-            val addresses = json.findFirstChildByPath("details.addresses") as JSONArrayValue
-
-            assertThat(addresses.list).allSatisfy {
-                val jsonAddressObject = it as JSONObjectValue
-                assertThat(jsonAddressObject.jsonObject["street"]?.toStringLiteral()).isEqualTo("22B Baker Street")
-            }
+            assertThat(json.findFirstChildByPath("name")).isNotNull()
+            assertThat(json.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo("22B Baker Street")
         }
     }
 

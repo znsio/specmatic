@@ -6,13 +6,8 @@
   "http-response": {
     "status": 200,
     "body": {
-      "details": {
-        "addresses": [
-          {
-            "street": "(string)"
-          }
-        ]
-      }
+      "name": "(string)",
+      "address": "(string)"
     }
   }
 }

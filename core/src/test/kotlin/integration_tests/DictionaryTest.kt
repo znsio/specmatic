@@ -3,6 +3,7 @@ package integration_tests
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
@@ -94,8 +95,6 @@ class DictionaryTest {
 
     @Test
     fun `stub should return dictionary value if available for response header instead of random data`() {
-        val requestHeaderValueFromDictionary = "abc123"
-
         val feature = OpenApiSpecification
             .fromFile("src/test/resources/openapi/spec_with_dictionary_and_response_headers/spec.yaml")
             .toFeature()
@@ -105,5 +104,63 @@ class DictionaryTest {
             assertThat(response.status).isEqualTo(200)
             assertThat(response.headers["X-Trace-ID"]).isEqualTo("trace123")
         }
+    }
+
+    @Test
+    fun `stub should return dictionary value at the second level in a payload`() {
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/spec_with_dictionary_and_multilevel_response/spec.yaml")
+            .toFeature()
+
+        HttpStub(feature).use { stub ->
+            val request = HttpRequest("GET", "/person")
+            println(request.toLogString())
+
+            val response = stub.client.execute(request)
+
+            println(response.toLogString())
+            assertThat(response.status).isEqualTo(200)
+
+            val json = response.body as JSONObjectValue
+            assertThat(json.findFirstChildByPath("name.salutation")?.toStringLiteral()).isEqualTo("Ms")
+            assertThat(json.findFirstChildByPath("name.full_name")?.toStringLiteral()).isEqualTo("Lena Schwartz")
+        }
+    }
+
+    @Test
+    fun `generative tests with a dictionary work as usual`() {
+        val testCountWithoutDictionary = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/spec_with_dictionary_and_constraints/spec.yaml")
+            .toFeature()
+            .enableGenerativeTesting().let { feature ->
+                feature.executeTests(object : TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        return HttpResponse.ok("success")
+                    }
+                })
+            }.let { results ->
+                results.testCount
+            }
+
+        val testCountWithDictionary = try {
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, "src/test/resources/openapi/spec_with_dictionary_and_constraints/dictionary.json")
+
+            OpenApiSpecification
+                .fromFile("src/test/resources/openapi/spec_with_dictionary_and_constraints/spec.yaml")
+                .toFeature()
+                .enableGenerativeTesting().let { feature ->
+                    feature.executeTests(object : TestExecutor {
+                        override fun execute(request: HttpRequest): HttpResponse {
+                            return HttpResponse.ok("success")
+                        }
+                    })
+                }.let { results ->
+                    results.testCount
+                }
+        } finally {
+            System.clearProperty(SPECMATIC_STUB_DICTIONARY)
+        }
+
+        assertThat(testCountWithDictionary).isEqualTo(testCountWithoutDictionary)
     }
 }

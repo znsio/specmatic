@@ -1369,11 +1369,11 @@
 
         tableRow.setAttribute("data-valid", error ? "failed": "success");
         validationDetails[Number.parseInt(tableRow.children[1].textContent)] = error;
+        testDetails[Number.parseInt(tableRow.children[1].textContent)] = null;
 
         if (error) {
             if (!bulkMode) createAlert("Invalid Example", `Example name: ${parseFileName(exampleAbsPath)}`, true);
             tableRow.removeAttribute("data-test");
-            testDetails[Number.parseInt(tableRow.children[1].textContent)] = null;
             return false;
         }
 

@@ -1118,7 +1118,7 @@
                             return await validateRowExamples(nearestTableRow);
                         }
                         default: {
-                            return await testRowExample(nearestTableRow, rowValues);
+                            return await testRowExample(nearestTableRow);
                         }
                     }
                 }
@@ -1266,8 +1266,7 @@
             }
 
             case "details": {
-                const rowValues = extractRowValues(selectedTableRow);
-                await testRowExample(selectedTableRow, rowValues);
+                await testRowExample(selectedTableRow);
                 const exampleAbsPath = getExampleData(selectedTableRow);
                 const {example: exampleContent, error} = await getExampleContent(exampleAbsPath);
 
@@ -1298,8 +1297,7 @@
 
         let failureCount = 0;
         for (const row of rowsWithValidations) {
-            const rowValues = extractRowValues(row);
-            const result = await testRowExample(row, rowValues);
+            const result = await testRowExample(row);
 
             if (!result) {
                 failureCount++;
@@ -1384,7 +1382,7 @@
         return true;
     }
 
-    async function testRowExample(tableRow, rowValues) {
+    async function testRowExample(tableRow) {
         tableRow.setAttribute("data-test", "processing");
 
         const isExampleValid = await validateRowExamples(tableRow);
@@ -1396,7 +1394,6 @@
 
         const exampleData = getExampleData(tableRow);
         const {data, error} = await testExample({
-            ...rowValues,
             exampleFile: exampleData
         });
 

@@ -23,6 +23,7 @@ import io.specmatic.mock.ScenarioStub
 import io.specmatic.mock.loadDictionary
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.HttpStubData
+import io.specmatic.test.ContractTest
 import io.specmatic.test.TestInteractionsLog
 import io.specmatic.test.TestInteractionsLog.combineLog
 import java.io.Closeable
@@ -47,9 +48,16 @@ class ExamplesInteractiveServer(
         throw ContractException("Invalid contract file provided to the examples interactive server")
     }
 
-    private fun getServerHostPort(request: ExamplePageRequest? = null) : String {
-        return request?.hostPort ?: "$serverHost:$serverPort"
+    private fun getContractTests(): List<ContractTest> {
+        return getContractFile().let {
+            parseContractFileToFeature(it.path).loadExternalisedExamples().generateContractTests(emptyList())
+        }.toList()
     }
+
+    private fun getServerHostPort(request: ExamplePageRequest? = null) : String {
+        return request?.hostPort ?: "localhost:$serverPort"
+    }
+
     private val environment = applicationEngineEnvironment {
         module {
             install(CORS) {
@@ -193,9 +201,9 @@ class ExamplesInteractiveServer(
                 post ("/_specmatic/examples/test") {
                     val request = call.receive<ExampleTestRequest>()
                     try {
-                        val contractFile = getContractFileOrBadRequest(call) ?: return@post
+                        val contractTests = getContractTests()
                         val (result, testLog) = testExample(
-                            contractFile, request, testBaseUrl
+                            contractTests, request, testBaseUrl
                         )
                         call.respond(HttpStatusCode.OK, ExampleTestResponse(result, testLog, exampleFile = File(request.exampleFile)))
                     } catch (e: Throwable) {
@@ -299,15 +307,11 @@ class ExamplesInteractiveServer(
             constructor(): this(null, ExampleGenerationStatus.ERROR)
         }
 
-        fun testExample(contractFile: File, exampleTestRequest: ExampleTestRequest, testBaseUrl: String): Pair<TestResult, String> {
-            val feature = parseContractFileToFeature(contractFile)
-            val scenario = feature.scenarios.firstOrNull {
-                it.method == exampleTestRequest.method && it.status == exampleTestRequest.responseStatusCode && it.path == exampleTestRequest.path
-                        && (exampleTestRequest.contentType == null || it.httpRequestPattern.headersPattern.contentType == exampleTestRequest.contentType)
-            } ?: return Pair(TestResult.Error, "No matching scenario found")
+        fun testExample(contractTests: List<ContractTest>, exampleTestRequest: ExampleTestRequest, testBaseUrl: String): Pair<TestResult, String> {
+            val test = contractTests.firstOrNull {
+                it.testDescription().contains(File(exampleTestRequest.exampleFile).nameWithoutExtension)
+            } ?: return Pair(TestResult.Error, "No matching test found")
 
-            val updatedFeature = feature.copy(scenarios = listOf(scenario.copy(examples = emptyList()))).loadExternalisedExamples()
-            val test = updatedFeature.generateContractTests(emptyList()).first()
             val testResultRecord = test.runTest(testBaseUrl, timeoutInMilliseconds = DEFAULT_TIMEOUT_IN_MILLISECONDS).let {
                 test.testResultRecord(it.first, it.second)
             } ?: return Pair(TestResult.Error, "No Test Result Record Found")
@@ -622,11 +626,7 @@ data class GenerateExampleResponse(
 )
 
 data class ExampleTestRequest(
-    val path: String,
-    val method: String,
-    val responseStatusCode: Int,
-    val exampleFile: String,
-    val contentType: String? = null
+    val exampleFile: String
 )
 
 data class ExampleTestResponse(

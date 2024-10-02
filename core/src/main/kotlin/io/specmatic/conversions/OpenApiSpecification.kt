@@ -1359,7 +1359,11 @@ class OpenApiSpecification(
 
                     val oneOfs = schemasWithOneOf.map { oneOfTheSchemas ->
                         val result = oneOfTheSchemas.oneOf.map {
-                            val (componentName, schemaToProcess) = resolveReferenceToSchema(it.`$ref`)
+                            val (componentName, schemaToProcess) = if(it.`$ref` != null) {
+                                resolveReferenceToSchema(it.`$ref`)
+                            } else {
+                                "" to it
+                            }
                             val requiredFields = schemaToProcess.required.orEmpty()
                             componentName to toSchemaProperties(
                                 schemaToProcess,
@@ -1381,7 +1385,7 @@ class OpenApiSpecification(
                     val pattern = if (oneOfs.size == 1)
                         oneOfs.single()
                     else if (oneOfs.size > 1)
-                        AnyPattern(oneOfs)
+                        AnyPattern(oneOfs, typeAlias = "(${patternName})")
                     else if(allDiscriminators.isNotEmpty())
                         AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") }, discriminatorProperty = allDiscriminators.key, discriminatorValues = allDiscriminators.values.toSet())
                     else if(schemaProperties.size > 1)

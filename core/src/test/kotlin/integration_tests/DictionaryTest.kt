@@ -217,9 +217,10 @@ class DictionaryTest {
 
     @Test
     fun `stub should leverage dictionary array object value at the second level in a schema in an example`() {
+        val specSourceDir = "spec_with_dictionary_with_multilevel_schema_and_dictionary_array_objects_with_example"
         createStubFromContracts(
-            listOf("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_array_objects_with_example/spec.yaml"),
-            listOf("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_array_objects_with_example/spec_examples"),
+            listOf("src/test/resources/openapi/$specSourceDir/spec.yaml"),
+            listOf("src/test/resources/openapi/$specSourceDir/spec_examples"),
             timeoutMillis = 0).use { stub ->
             val request = HttpRequest("GET", "/person")
 
@@ -240,9 +241,11 @@ class DictionaryTest {
 
     @Test
     fun `stub should leverage dictionary object value at the second level given allOf in a schema in an example`() {
+        val specSourceDir = "spec_with_dictionary_with_multilevel_schema_and_dictionary_objects_with_allOf_and_example"
+
         createStubFromContracts(
-            listOf("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_objects_with_allOf_and_example/spec.yaml"),
-            listOf("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_objects_with_allOf_and_example/spec_examples"),
+            listOf("src/test/resources/openapi/$specSourceDir/spec.yaml"),
+            listOf("src/test/resources/openapi/$specSourceDir/spec_examples"),
             timeoutMillis = 0).use { stub ->
             val request = HttpRequest("GET", "/person")
 
@@ -259,9 +262,30 @@ class DictionaryTest {
 
     @Test
     fun `stub should leverage dictionary object value at the second level given oneOf in a schema in an example`() {
+        val specSourceDir = "spec_with_dictionary_with_multilevel_schema_and_dictionary_objects_with_oneOf_and_example"
         createStubFromContracts(
-            listOf("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_objects_with_oneOf_and_example/spec.yaml"),
-            listOf("src/test/resources/openapi/spec_with_dictionary_with_multilevel_schema_and_dictionary_objects_with_oneOf_and_example/spec_examples"),
+            listOf("src/test/resources/openapi/$specSourceDir/spec.yaml"),
+            listOf("src/test/resources/openapi/$specSourceDir/spec_examples"),
+            timeoutMillis = 0).use { stub ->
+            val request = HttpRequest("GET", "/person")
+
+            val response = stub.client.execute(request)
+
+            assertThat(response.status).isEqualTo(200)
+
+            val json = response.body as JSONObjectValue
+
+            assertThat(json.findFirstChildByPath("full_name")?.toStringLiteral()).isEqualTo("Jack Sprat")
+        }
+    }
+
+    @Test
+    fun `stub should leverage dictionary object value at the second level given oneOf in allOf in a schema in an example`() {
+        val specSourceDir = "spec_with_dictionary_with_multilevel_schema_and_dictionary_objects_with_oneOf_in_allOf_and_example"
+
+        createStubFromContracts(
+            listOf("src/test/resources/openapi/$specSourceDir/spec.yaml"),
+            listOf("src/test/resources/openapi/$specSourceDir/spec_examples"),
             timeoutMillis = 0).use { stub ->
             val request = HttpRequest("GET", "/person")
 

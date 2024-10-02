@@ -103,15 +103,6 @@ data class AnyPattern(
                     resultsSoFar.plus((AnyPatternMatch(pattern, resolver.matchesPattern(key, pattern, sampleData)))) to true
                 else
                     resultsSoFar.plus(discriminatorMatchFailure(pattern)) to false
-
-//                if (probeResult is Result.Failure) {
-//                    if (probeResult.hasReason(FailureReason.FailedButDiscriminatorMatched))
-//                        resultsSoFar.plus((AnyPatternMatch(pattern, resolver.matchesPattern(key, pattern, sampleData)))) to true
-//                    else
-//                        resultsSoFar.plus(discriminatorMatchFailure(pattern)) to false
-//                } else
-//                    resultsSoFar.plus((AnyPatternMatch(pattern, resolver.matchesPattern(key, pattern, sampleData)))) to true
-
             }.first
 
             patternMatchResults

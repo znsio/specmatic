@@ -80,13 +80,16 @@ data class AnyPattern(
             if (sampleData !is JSONObjectValue)
                 return jsonObjectMismatchError(resolver, sampleData)
 
-            val discriminatorCsv = discriminatorValues.joinToString(", ")
+            val discriminatorCsvClause = if(discriminatorValues.size ==  1)
+                discriminatorValues.first()
+            else
+                "one of ${discriminatorValues.joinToString(", ")}"
 
-            val actualDiscriminatorValue = sampleData.jsonObject[discriminatorProperty] ?: return discriminatorKeyMissingFailure(discriminatorProperty, discriminatorCsv)
+            val actualDiscriminatorValue = sampleData.jsonObject[discriminatorProperty] ?: return discriminatorKeyMissingFailure(discriminatorProperty, discriminatorCsvClause)
 
             if (actualDiscriminatorValue.toStringLiteral() !in discriminatorValues) {
                 val message =
-                    "Expected the value of discriminator property to be one of $discriminatorCsv but it was ${actualDiscriminatorValue.toStringLiteral()}"
+                    "Expected the value of discriminator property to be $discriminatorCsvClause but it was ${actualDiscriminatorValue.toStringLiteral()}"
 
                 return Failure(
                     message,
@@ -191,7 +194,7 @@ data class AnyPattern(
     ) = resolver.mismatchMessages.valueMismatchFailure("json object", sampleData)
 
     private fun AnyPattern.discriminatorKeyMissingFailure(discriminatorProperty: String, discriminatorCsv: String) = Failure(
-        "Discriminator property ${discriminatorProperty} is missing from the object (it's value should be one of $discriminatorCsv)",
+        "Discriminator property ${discriminatorProperty} is missing from the object (it's value should be $discriminatorCsv)",
         breadCrumb = discriminatorProperty,
         failureReason = FailureReason.DiscriminatorMismatch
     )

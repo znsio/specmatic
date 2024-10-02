@@ -5,6 +5,7 @@ import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.NoMatchingScenario
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import java.util.function.Consumer
 
 class AllOfDiscriminatorTest {
     @Test
@@ -367,6 +369,66 @@ class AllOfDiscriminatorTest {
                     )
                 )
             }.isInstanceOf(NoMatchingScenario::class.java)
+        }
+
+        @Test
+        fun `error when discriminator key is missing`() {
+            assertThatThrownBy {
+                feature.matchingStub(
+                    HttpRequest(
+                        "POST",
+                        "/car",
+                        body = parsedJSON("""{"seatingCapacity": 4, "trunkSize": "large"}""")
+                    ),
+                    HttpResponse(
+                        201,
+                        headers = mapOf("Content-Type" to "application/json"),
+                        parsedJSONObject("""{"id": "abc123", "type": "car"}""")
+                    )
+                )
+            }.satisfies(Consumer {
+                assertThat(exceptionCauseMessage(it)).contains("property type is missing from the object")
+            })
+        }
+
+        @Test
+        fun `error when discriminator key has the wrong value`() {
+            assertThatThrownBy {
+                feature.matchingStub(
+                    HttpRequest(
+                        "POST",
+                        "/car",
+                        body = parsedJSON("""{"type": "airplane", "seatingCapacity": 4, "trunkSize": "large"}""")
+                    ),
+                    HttpResponse(
+                        201,
+                        headers = mapOf("Content-Type" to "application/json"),
+                        parsedJSONObject("""{"id": "abc123", "type": "car"}""")
+                    )
+                )
+            }.satisfies(Consumer {
+                assertThat(exceptionCauseMessage(it)).contains("discriminator property to be car")
+            })
+        }
+
+        @Test
+        fun `error when discriminator key matches but there is some other mismatch`() {
+            assertThatThrownBy {
+                feature.matchingStub(
+                    HttpRequest(
+                        "POST",
+                        "/car",
+                        body = parsedJSON("""{"type": "car", "seatingCapacity": "four", "trunkSize": "large"}""")
+                    ),
+                    HttpResponse(
+                        201,
+                        headers = mapOf("Content-Type" to "application/json"),
+                        parsedJSONObject("""{"id": "abc123", "type": "car"}""")
+                    )
+                )
+            }.satisfies(Consumer {
+                assertThat(exceptionCauseMessage(it)).contains("REQUEST.BODY.seatingCapacity")
+            })
         }
 
         private fun requestBody(path: String, type: String): Value {

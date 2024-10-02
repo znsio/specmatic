@@ -1297,7 +1297,7 @@
 
         let failureCount = 0;
         for (const row of rowsWithValidations) {
-            const result = await testRowExample(row);
+            const result = await testRowExample(row, true);
 
             if (!result) {
                 failureCount++;
@@ -1382,10 +1382,10 @@
         return true;
     }
 
-    async function testRowExample(tableRow) {
+    async function testRowExample(tableRow, bulkMode = false) {
         tableRow.setAttribute("data-test", "processing");
 
-        const isExampleValid = await validateRowExamples(tableRow);
+        const isExampleValid = await validateRowExamples(tableRow, bulkMode);
         tableRow.setAttribute("data-valid", isExampleValid ? "success": "failed");
 
         if (!isExampleValid) {
@@ -1401,11 +1401,11 @@
         testDetails[Number.parseInt(tableRow.children[1].textContent)] = data;
 
         if (error || data?.result !== "Success") {
-            createAlert(`Test ${data ? data.result : "Failed"}`, `Example name: ${parseFileName(exampleData)}`, true);
+            if (!bulkMode) createAlert(`Test ${data ? data.result : "Failed"}`, `Example name: ${parseFileName(exampleData)}`, true);
             return false;
         }
 
-        createAlert("Test Passed", `Example name: ${parseFileName(exampleData)}`, false);
+        if (!bulkMode) createAlert("Test Passed", `Example name: ${parseFileName(exampleData)}`, false);
         return true;
     }
 

@@ -291,4 +291,12 @@ internal class AnyPatternTest {
 
         assertEquals(3, (listOf as JSONArrayValue).list.size)
     }
+
+    @Test
+    fun `error when a discriminator exists and the value is not a json object`() {
+        val pattern = AnyPattern(emptyList(), discriminatorProperty = "type")
+        val result = pattern.matches(StringValue(""), Resolver())
+
+        assertThat(result.reportString()).contains("Expected json object")
+    }
 }

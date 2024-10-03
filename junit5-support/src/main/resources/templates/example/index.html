@@ -410,6 +410,10 @@
 
         body {
             font-family: var(--roboto);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            min-width: 100vw;
 
             & > .chevron-down {
                 display: none;
@@ -708,8 +712,12 @@
 
         td:nth-last-child(2) {
             max-width: 15rem;
-            word-break: break-word;
-            font-size: .85rem;
+
+            & p {
+                white-space: normal;
+                word-break: break-word;
+                font-size: .85rem;
+            }
         }
 
         td p, td button {
@@ -1397,7 +1405,7 @@
     async function testRowExample(tableRow, bulkMode = false) {
         tableRow.setAttribute("data-test", "processing");
 
-        const isExampleValid = await validateRowExamples(tableRow, bulkMode);
+        const isExampleValid = await validateRowExamples(tableRow, true);
         tableRow.setAttribute("data-valid", isExampleValid ? "success": "failed");
 
         if (!isExampleValid) {

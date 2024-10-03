@@ -1126,6 +1126,7 @@
                 case "INPUT": {
                     const valPreSelectCount = Number.parseInt(bulkValidateBtn.getAttribute("data-selected") || 0);
                     const genPreSelectCount = Number.parseInt(bulkGenerateBtn.getAttribute("data-selected") || 0);
+                    const testPreSelectCount = Number.parseInt(bulkTestBtn.getAttribute("data-selected") || 0);
 
                     if (target.matches("th > label > input")) {
                         const totalGeneratedRows = countAllGeneratedRows()
@@ -1145,7 +1146,7 @@
                     if (hasBeenGenerated) {
                         bulkValidateBtn.setAttribute("data-selected", valPreSelectCount + (target.checked ? 1 : -1));
                         if (hasBeenValidated) {
-                            bulkTestBtn.setAttribute("data-selected", valPreSelectCount + (target.checked ? 1 : -1));
+                            bulkTestBtn.setAttribute("data-selected", testPreSelectCount + (target.checked ? 1 : -1));
                         }
                     } else {
                         bulkGenerateBtn.setAttribute("data-selected", genPreSelectCount + (target.checked ? 1 : -1));

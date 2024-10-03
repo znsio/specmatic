@@ -1405,9 +1405,7 @@
         }
 
         const exampleFilePath = getExampleData(tableRow);
-        const {data, error} = await testExample({
-            exampleFile: exampleFilePath
-        });
+        const {data, error} = await testExample(exampleFilePath);
 
         tableRow.setAttribute("data-test", (error || data?.result !== "Success") ? "failed": "success");
         testDetails[Number.parseInt(tableRow.children[1].textContent)] = data;

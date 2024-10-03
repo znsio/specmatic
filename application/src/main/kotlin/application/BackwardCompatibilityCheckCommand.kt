@@ -6,6 +6,7 @@ import io.specmatic.core.*
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger
+import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.stub.isOpenAPI
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command

@@ -71,7 +71,7 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
         )
 
         return configureTemplateEngine().process(
-            "report",
+            "report/index.html",
             Context().apply { setVariables(templateVariables) }
         )
     }

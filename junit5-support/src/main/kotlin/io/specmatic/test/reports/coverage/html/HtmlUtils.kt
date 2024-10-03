@@ -44,7 +44,7 @@ fun createAssetsDir(reportsDir: String) {
 
     fileNames.forEach { fileName ->
         loadFileFromClasspathAndSaveIt(
-            "templates/assets/$fileName",
+            "templates/report/assets/$fileName",
             reportsDir,
             "assets/$fileName"
         )

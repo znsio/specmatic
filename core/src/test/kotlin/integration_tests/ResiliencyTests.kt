@@ -1068,6 +1068,7 @@ class GenerativeTests {
             components:
               schemas:
                 Address:
+                  type: object
                   properties:
                     street:
                       type: "string"
@@ -1076,7 +1077,7 @@ class GenerativeTests {
 
         val requestBodiesSeen = mutableListOf<Value>()
 
-        val results = specification.enableGenerativeTesting().executeTests(object : TestExecutor {
+        val results = specification.enableGenerativeTesting(onlyPositive = true).executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 println(request.body)
                 requestBodiesSeen.add(request.body)
@@ -1088,7 +1089,7 @@ class GenerativeTests {
         })
         println(results.report())
 
-        assertThat(requestBodiesSeen).hasSize(3)
+        assertThat(requestBodiesSeen).hasSize(2)
     }
 
     @Test
@@ -1155,7 +1156,7 @@ class GenerativeTests {
             }
         })
 
-        assertThat(results.results).hasSize(9)
+        assertThat(results.results).hasSize(13)
     }
 
     private fun runGenerativeTests(

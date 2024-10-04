@@ -587,7 +587,7 @@ data class Scenario(
             listOf(Examples(columns, rowsWithPathData))
         }.flatten()
 
-        return this.copy(examples = this.examples + newExamples)
+        return this.copy(examples = getOverriddenInlineExamples(newExamples) + newExamples)
     }
 
     private fun matchingRows(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Map<OpenApiSpecification.OperationIdentifier, List<Row>> {
@@ -635,6 +635,15 @@ data class Scenario(
         val responseMatch = httpResponsePattern.matchesMock(template.response, updatedResolver)
 
         return Result.fromResults(listOf(requestMatch, responseMatch))
+    }
+
+    private fun getOverriddenInlineExamples(newExamples: List<Examples>): List<Examples> {
+        val newExampleNames = newExamples.flatMap { it.rows.map { row -> row.name } }.toSet()
+        return this.examples.mapNotNull {
+            val updatedRows  = it.rows.filter { row -> row.name !in newExampleNames }
+            if(updatedRows.isEmpty()) return@mapNotNull null
+            it.copy(rows = updatedRows)
+        }
     }
 }
 

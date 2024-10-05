@@ -1,9 +1,7 @@
 package io.specmatic.core.examples.server
 
 import io.specmatic.conversions.ExampleFromFile
-import io.specmatic.core.Dictionary
 import io.specmatic.core.QueryParameters
-import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
@@ -14,27 +12,6 @@ import java.io.File
 
 class ExamplesInteractiveServerTest {
     companion object {
-        private val externalDictionary = Dictionary(
-            parsedJSONObject("""
-                {
-                    "Authentication": "Bearer 123",
-                    "name": "John-Doe",
-                    "address": "123-Main-Street",
-                    "[0].name": "John Doe",
-                    "[0].address": "123 Main Street",
-                    "[*].name": "Jane Doe",
-                    "[*].address": "456 Main Street"
-                }
-                """.trimIndent()).jsonObject
-        )
-        private val partialDictionary = Dictionary(
-            parsedJSONObject("""
-                {
-                    "name": "John-Doe",
-                    "address": "123-Main-Street"
-                }
-                """.trimIndent()).jsonObject
-        )
 
         fun assertHeaders(headers: Map<String, String>, apiKey: String) {
             assertThat(headers["Authentication"]).isEqualTo(apiKey)
@@ -81,7 +58,6 @@ class ExamplesInteractiveServerTest {
         val examples = ExamplesInteractiveServer.generate(
             contractFile = File("src/test/resources/specifications/tracker.yaml"),
             scenarioFilter = ExamplesInteractiveServer.ScenarioFilter("", ""), extensive = false,
-            externalDictionary = Dictionary()
         ).map { File(it) }
 
         examples.forEach {
@@ -132,7 +108,6 @@ class ExamplesInteractiveServerTest {
         val examples = ExamplesInteractiveServer.generate(
             contractFile = File("src/test/resources/specifications/tracker.yaml"),
             scenarioFilter = ExamplesInteractiveServer.ScenarioFilter("", ""), extensive = false,
-            externalDictionary = externalDictionary
         ).map { File(it) }
 
         examples.forEach {
@@ -166,7 +141,6 @@ class ExamplesInteractiveServerTest {
         val examples = ExamplesInteractiveServer.generate(
             contractFile = File("src/test/resources/specifications/tracker.yaml"),
             scenarioFilter = ExamplesInteractiveServer.ScenarioFilter("", ""), extensive = false,
-            externalDictionary = partialDictionary
         ).map { File(it) }
 
         examples.forEach {

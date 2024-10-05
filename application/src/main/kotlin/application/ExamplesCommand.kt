@@ -3,7 +3,6 @@ package application
 import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.loadExternalDictionary
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingleExample
 import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
@@ -68,12 +67,10 @@ class ExamplesCommand : Callable<Int> {
         configureLogger(this.verbose)
 
         try {
-            val externalDictionary = loadExternalDictionary(dictFile, contractFile)
             ExamplesInteractiveServer.generate(
                 contractFile!!,
                 ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName),
                 extensive,
-                externalDictionary
             )
         } catch (e: Throwable) {
             logger.log(e)

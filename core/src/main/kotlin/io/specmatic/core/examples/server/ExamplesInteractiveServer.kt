@@ -37,6 +37,10 @@ class ExamplesInteractiveServer(
 ) : Closeable {
     private var contractFileFromRequest: File? = null
 
+    init {
+        if(externalDictionaryFile != null) System.setProperty(SPECMATIC_STUB_DICTIONARY, externalDictionaryFile.path)
+    }
+
     private fun getContractFile(): File {
         if(inputContractFile != null && inputContractFile.exists()) return inputContractFile
         if(contractFileFromRequest != null && contractFileFromRequest!!.exists()) return contractFileFromRequest!!

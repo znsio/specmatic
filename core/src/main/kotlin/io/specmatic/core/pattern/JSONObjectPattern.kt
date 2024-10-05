@@ -45,7 +45,7 @@ data class JSONObjectPattern(
         )
     }
 
-    override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
         val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
 
         val mapWithKeysInPartial = jsonObject.jsonObject.mapValues { (name, value) ->
@@ -77,7 +77,7 @@ data class JSONObjectPattern(
 
                 returnValue
             } else {
-                valuePattern.fillInTheBlanks(value, dictionary, resolver.plusDictionaryLookupDetails(typeAlias, name))
+                valuePattern.fillInTheBlanks(value, resolver.plusDictionaryLookupDetails(typeAlias, name))
             }
 
             returnValue.breadCrumb(name)

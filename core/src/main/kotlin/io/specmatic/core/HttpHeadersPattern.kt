@@ -302,7 +302,7 @@ data class HttpHeadersPattern(
         }
     }
 
-    fun fillInTheBlanks(headers: Map<String, String>, dictionary: Dictionary, resolver: Resolver): ReturnValue<Map<String, String>> {
+    fun fillInTheBlanks(headers: Map<String, String>, resolver: Resolver): ReturnValue<Map<String, String>> {
         val headersToConsider = ancestorHeaders?.let {
             headers.filterKeys { key -> key in it || "$key?" in it }
         } ?: headers

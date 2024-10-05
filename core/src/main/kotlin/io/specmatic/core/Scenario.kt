@@ -600,10 +600,9 @@ data class Scenario(
         request: HttpRequest,
         originalRequest: HttpRequest,
         response: HttpResponse,
-        data: JSONObjectValue,
-        dictionary: Dictionary
+        data: JSONObjectValue
     ): HttpResponse {
-        val substitution = httpRequestPattern.getSubstitution(request, originalRequest, resolver, data, dictionary)
+        val substitution = httpRequestPattern.getSubstitution(request, originalRequest, resolver, data)
         return httpResponsePattern.resolveSubstitutions(substitution, response)
     }
 

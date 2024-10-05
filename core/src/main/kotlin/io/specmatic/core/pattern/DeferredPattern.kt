@@ -1,6 +1,5 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.core.Dictionary
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.Substitution
@@ -13,8 +12,8 @@ data class DeferredPattern(override val pattern: String, val key: String? = null
         return resolvePattern(resolver).addTypeAliasesToConcretePattern(concretePattern, resolver, null)
     }
 
-    override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
-        return resolvePattern(resolver).fillInTheBlanks(value, dictionary, resolver)
+    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
+        return resolvePattern(resolver).fillInTheBlanks(value, resolver)
     }
 
     override fun equals(other: Any?): Boolean = when(other) {

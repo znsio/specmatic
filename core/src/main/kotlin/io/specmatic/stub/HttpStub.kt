@@ -809,9 +809,9 @@ private fun stubbedResponse(
             softCastResponse,
             it.delayInMilliseconds,
             it.contractPath,
-            scenario = mock.scenario,
+            examplePath = it.examplePath,
             feature = mock.feature,
-            examplePath = it.examplePath
+            scenario = mock.scenario
         ) to it
     }
 
@@ -891,7 +891,7 @@ private fun stubThatMatchesRequest(
 
         if(result is Result.Success) {
             val response = if(stubData.partial != null)
-                stubData.responsePattern.generateResponse(stubData.partial.response, stubData.dictionary, stubData.resolver)
+                stubData.responsePattern.generateResponse(stubData.partial.response, stubData.resolver)
             else
                 stubData.response
 
@@ -899,9 +899,8 @@ private fun stubThatMatchesRequest(
                 response,
                 stubData.delayInMilliseconds,
                 stubData.contractPath,
-                scenario = stubData.scenario,
                 feature = stubData.feature,
-                dictionary = stubData.dictionary
+                scenario = stubData.scenario
             )
 
             try {

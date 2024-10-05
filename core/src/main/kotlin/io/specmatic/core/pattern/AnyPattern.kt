@@ -25,9 +25,9 @@ data class AnyPattern(
 
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
 
-    override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
         val results = pattern.asSequence().map {
-            it.fillInTheBlanks(value, dictionary, resolver)
+            it.fillInTheBlanks(value, resolver)
         }
 
         val successfulGeneration = results.firstOrNull { it is HasValue }

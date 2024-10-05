@@ -25,8 +25,7 @@ data class ScenarioStub(
     val requestBodyRegex: String? = null,
     val data: JSONObjectValue = JSONObjectValue(),
     val filePath: String? = null,
-    val partial: ScenarioStub? = null,
-    val dictionary: Dictionary = Dictionary()
+    val partial: ScenarioStub? = null
 ) {
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
@@ -241,7 +240,7 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
     if(PARTIAL in mockSpec) {
         val template = mockSpec.getValue(PARTIAL) as? JSONObjectValue ?: throw ContractException("template key must be an object")
 
-        return ScenarioStub(partial = mockFromJSON(template.jsonObject), data = data)
+        return ScenarioStub(data = data, partial = mockFromJSON(template.jsonObject))
     }
 
     val mockRequest: HttpRequest = requestFromJSON(getJSONObjectValue(MOCK_HTTP_REQUEST_ALL_KEYS, mockSpec))

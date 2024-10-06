@@ -1,0 +1,18 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/person"
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "details": {
+        "addresses": [
+          {
+            "street": "(string)"
+          }
+        ]
+      }
+    }
+  }
+}

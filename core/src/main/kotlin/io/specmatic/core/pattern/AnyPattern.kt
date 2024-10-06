@@ -17,11 +17,17 @@ data class AnyPattern(
 
     override fun hashCode(): Int = pattern.hashCode()
 
+    override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
+        val matchingPattern = pattern.find { it.matches(concretePattern.generate(resolver), resolver) is Result.Success } ?: return concretePattern
+
+        return matchingPattern.addTypeAliasesToConcretePattern(concretePattern, resolver, this.typeAlias ?: typeAlias)
+    }
+
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
 
-    override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
         val results = pattern.asSequence().map {
-            it.fillInTheBlanks(value, dictionary, resolver)
+            it.fillInTheBlanks(value, resolver)
         }
 
         val successfulGeneration = results.firstOrNull { it is HasValue }
@@ -76,9 +82,77 @@ data class AnyPattern(
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        val matchResults = pattern.map {
-            AnyPatternMatch(it, resolver.matchesPattern(key, it, sampleData ?: EmptyString))
+        if(discriminatorProperty != null) {
+            if (sampleData !is JSONObjectValue)
+                return jsonObjectMismatchError(resolver, sampleData)
+
+            val discriminatorCsvClause = if(discriminatorValues.size ==  1)
+                discriminatorValues.first()
+            else
+                "one of ${discriminatorValues.joinToString(", ")}"
+
+            val actualDiscriminatorValue = sampleData.jsonObject[discriminatorProperty] ?: return discriminatorKeyMissingFailure(discriminatorProperty, discriminatorCsvClause)
+
+            if (actualDiscriminatorValue.toStringLiteral() !in discriminatorValues) {
+                val message =
+                    "Expected the value of discriminator property to be $discriminatorCsvClause but it was ${actualDiscriminatorValue.toStringLiteral()}"
+
+                return Failure(
+                    message,
+                    breadCrumb = discriminatorProperty,
+                    failureReason = FailureReason.DiscriminatorMismatch
+                )
+            }
+
+            val emptyPatternMatchResults = Pair(emptyList<AnyPatternMatch>(), false)
+
+            val (matchResults: List<AnyPatternMatch>, discriminatorMatchOccurred: Boolean) = pattern.fold(emptyPatternMatchResults) { acc, pattern ->
+                val (resultsSoFar, discriminatorMatchHasOccurred) = acc
+
+                if (discriminatorMatchHasOccurred) {
+                    return@fold resultsSoFar.plus(discriminatorMatchFailure(pattern)) to true
+                }
+
+                val discriminatorProbe = JSONObjectValue(mapOf(discriminatorProperty to actualDiscriminatorValue))
+
+                val discriminatorMatched = pattern.matches(discriminatorProbe, resolver).let { probeResult ->
+                    probeResult is Result.Success
+                            || (probeResult is Result.Failure && probeResult.hasReason(FailureReason.FailedButDiscriminatorMatched))
+                }
+
+                if(discriminatorMatched)
+                    resultsSoFar.plus((AnyPatternMatch(pattern, resolver.matchesPattern(key, pattern, sampleData)))) to true
+                else
+                    resultsSoFar.plus(discriminatorMatchFailure(pattern)) to false
+            }
+
+            if(!discriminatorMatchOccurred) {
+                return Failure(
+                    "Discriminator property ${discriminatorProperty} is missing from the spec",
+                    breadCrumb = discriminatorProperty,
+                    failureReason = FailureReason.DiscriminatorMismatch
+                )
+            }
+
+            val matchResult = matchResults.find { it.result is Result.Success }
+
+            if(matchResult != null)
+                return matchResult.result
+
+            val failures = matchResults.map { it.result }.filterIsInstance<Failure>()
+
+            val deepMatchResults = failures.filter { it.hasReason(FailureReason.FailedButDiscriminatorMatched) }
+
+            return if(deepMatchResults.isNotEmpty())
+                Failure.fromFailures(deepMatchResults).removeReasonsFromCauses().copy(failureReason = FailureReason.FailedButDiscriminatorMatched)
+            else
+                Failure.fromFailures(failures).removeReasonsFromCauses()
         }
+
+        val matchResults: List<AnyPatternMatch> =
+            pattern.map {
+                AnyPatternMatch(it, resolver.matchesPattern(key, it, sampleData ?: EmptyString))
+            }
 
         val matchResult = matchResults.find { it.result is Result.Success }
 
@@ -86,59 +160,6 @@ data class AnyPattern(
             return matchResult.result
 
         val failures = matchResults.map { it.result }.filterIsInstance<Failure>()
-
-        if(discriminatorProperty != null) {
-            val deepMatchResults = failures.filter { it.hasReason(FailureReason.FailedButDiscriminatorMatched) }
-
-            if(deepMatchResults.isNotEmpty())
-                return Failure.fromFailures(deepMatchResults).removeReasonsFromCauses().copy(failureReason = FailureReason.FailedButDiscriminatorMatched)
-
-            val failure = if(discriminatorValues.size == 1) {
-                Failure.fromFailures(failures).removeReasonsFromCauses()
-            }
-            else {
-                val discriminatorCsv = discriminatorValues.joinToString(", ")
-
-                if(sampleData is JSONObjectValue) {
-                    val actualDiscriminatorValue = sampleData.jsonObject[discriminatorProperty]?.toStringLiteral()
-
-                    if(actualDiscriminatorValue == null) {
-                        Failure(
-                            "Discriminator property ${discriminatorProperty} is missing from the object",
-                            breadCrumb = discriminatorProperty,
-                            failureReason = FailureReason.DiscriminatorMismatch
-                        )
-
-                    } else if (actualDiscriminatorValue !in discriminatorValues) {
-                        val baseMessage = "Expected the value of discriminator property to be one of $discriminatorCsv"
-
-                        val message = baseMessage + if (discriminatorProperty in sampleData.jsonObject) {
-                            " but it was ${sampleData.jsonObject.getValue(discriminatorProperty).displayableValue()}"
-                        } else {
-                            " but it was missing"
-                        }
-
-                        Failure(
-                            message,
-                            breadCrumb = discriminatorProperty,
-                            failureReason = FailureReason.DiscriminatorMismatch
-                        )
-                    }
-                    else {
-                        Failure(
-                            "Discriminator property ${discriminatorProperty} is missing from the spec",
-                            breadCrumb = discriminatorProperty,
-                            failureReason = FailureReason.DiscriminatorMismatch
-                        )
-                    }
-                } else {
-                    resolver.mismatchMessages.valueMismatchFailure("json object", sampleData)
-                }
-
-            }
-
-            return failure.copy(failureReason = FailureReason.DiscriminatorMismatch)
-        }
 
         if(failures.any { it.reasonIs { it.objectMatchOccurred } }) {
             val failureMatchResults = matchResults.filter {
@@ -164,6 +185,25 @@ data class AnyPattern(
 
         return Result.fromFailures(failuresWithUpdatedBreadcrumbs)
     }
+
+    private fun discriminatorMatchFailure(pattern: Pattern) = AnyPatternMatch(
+        pattern,
+        Failure(
+            "Discriminator match failure",
+            failureReason = FailureReason.DiscriminatorMismatch
+        )
+    )
+
+    private fun jsonObjectMismatchError(
+        resolver: Resolver,
+        sampleData: Value?
+    ) = resolver.mismatchMessages.valueMismatchFailure("json object", sampleData)
+
+    private fun AnyPattern.discriminatorKeyMissingFailure(discriminatorProperty: String, discriminatorCsv: String) = Failure(
+        "Discriminator property ${discriminatorProperty} is missing from the object (it's value should be $discriminatorCsv)",
+        breadCrumb = discriminatorProperty,
+        failureReason = FailureReason.DiscriminatorMismatch
+    )
 
     private fun addTypeInfoBreadCrumbs(matchResults: List<AnyPatternMatch>): List<Failure> {
         val failuresWithUpdatedBreadcrumbs = matchResults.map {

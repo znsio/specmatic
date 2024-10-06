@@ -20,7 +20,6 @@ import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHeal
 import io.specmatic.core.utilities.*
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.mock.loadDictionary
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.HttpStubData
 import io.specmatic.test.ContractTest
@@ -41,6 +40,10 @@ class ExamplesInteractiveServer(
     private val externalDictionaryFile: File? = null
 ) : Closeable {
     private var contractFileFromRequest: File? = null
+
+    init {
+        if(externalDictionaryFile != null) System.setProperty(SPECMATIC_STUB_DICTIONARY, externalDictionaryFile.path)
+    }
 
     private fun getContractFile(): File {
         if(inputContractFile != null && inputContractFile.exists()) return inputContractFile
@@ -97,7 +100,7 @@ class ExamplesInteractiveServer(
 
                 post("/_specmatic/examples/generate") {
                     val contractFile = getContractFile()
-                    val dictionary = loadExternalDictionary(externalDictionaryFile, contractFile)
+
                     try {
                         val request = call.receive<GenerateExampleRequest>()
                         val generatedExample = generate(
@@ -106,7 +109,6 @@ class ExamplesInteractiveServer(
                             request.path,
                             request.responseStatusCode,
                             request.contentType,
-                            dictionary
                         )
 
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExample))
@@ -321,7 +323,7 @@ class ExamplesInteractiveServer(
             } ?: Pair(TestResult.Error, "No Log Message Found")
         }
 
-        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean, externalDictionary: Dictionary): List<String> {
+        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean): List<String> {
             try {
                 val feature: Feature = parseContractFileToFeature(contractFile).let { feature ->
                     val filteredScenarios = if (!extensive) {
@@ -349,7 +351,7 @@ class ExamplesInteractiveServer(
 
                 return feature.scenarios.map { scenario ->
                     try {
-                        val generatedExampleFilePath = generateExampleFile(contractFile, feature, scenario, externalDictionary)
+                        val generatedExampleFilePath = generateExampleFile(contractFile, feature, scenario)
 
                         generatedExampleFilePath.also {
                             val loggablePath =
@@ -395,7 +397,6 @@ class ExamplesInteractiveServer(
             path: String,
             responseStatusCode: Int,
             contentType: String? = null,
-            externalDictionary: Dictionary
         ): String? {
             val feature = parseContractFileToFeature(contractFile)
             val scenario: Scenario? = feature.scenarios.firstOrNull {
@@ -404,7 +405,7 @@ class ExamplesInteractiveServer(
             }
             if(scenario == null) return null
 
-            return generateExampleFile(contractFile, feature, scenario, externalDictionary).also {
+            return generateExampleFile(contractFile, feature, scenario).also {
                 println("Writing to file: ${File(it.path).canonicalFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
             }.path
         }
@@ -415,7 +416,6 @@ class ExamplesInteractiveServer(
             contractFile: File,
             feature: Feature,
             scenario: Scenario,
-            externalDictionary: Dictionary
         ): ExamplePathInfo {
             val examplesDir = getExamplesDirPath(contractFile)
             val existingExampleFile = getExistingExampleFile(scenario, examplesDir.getExamplesFromDir())
@@ -423,13 +423,10 @@ class ExamplesInteractiveServer(
             else examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
-            val httpPathPattern = scenario.httpRequestPattern.httpPathPattern
-            val updatedRequest = request.substituteDictionaryValues(externalDictionary, forceSubstitution = true, httpPathPattern)
 
             val response = feature.lookupResponse(scenario).cleanup()
-            val updatedResponse = response.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
 
-            val scenarioStub = ScenarioStub(updatedRequest, updatedResponse)
+            val scenarioStub = ScenarioStub(request, response)
             val stubJSON = scenarioStub.toJSON()
             val uniqueNameForApiOperation =
                 uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
@@ -553,25 +550,6 @@ class ExamplesInteractiveServer(
             return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
         }
 
-        fun loadExternalDictionary(dictFile: File?, contractFile: File?): Dictionary {
-            val dictFilePath = when {
-                dictFile != null -> dictFile.path
-
-                contractFile != null -> {
-                    val dictFileName = "${contractFile.nameWithoutExtension}${DICTIONARY_FILE_SUFFIX}"
-                    contractFile.canonicalFile.parentFile.resolve(dictFileName).takeIf { it.exists() }?.path
-                }
-
-                else -> {
-                    val currentDir = File(System.getProperty("user.dir"))
-                    currentDir.resolve("dictionary.json").takeIf { it.exists() }?.path
-                }
-            }
-
-            return dictFilePath?.let {
-                Dictionary(loadDictionary(dictFilePath))
-            } ?: Dictionary(emptyMap())
-        }
     }
 }
 

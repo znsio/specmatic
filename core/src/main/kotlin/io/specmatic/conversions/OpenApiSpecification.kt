@@ -68,7 +68,8 @@ class OpenApiSpecification(
     private val sourceRepositoryBranch: String? = null,
     private val specificationPath: String? = null,
     private val securityConfiguration: SecurityConfiguration? = null,
-    private val specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+    private val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    private val dictionary: Map<String, Value> = loadDictionary(openApiFilePath)
 ) : IncludedSpecification, ApiSpecification {
     init {
         logger.log(openApiSpecificationInfo(openApiFilePath, parsedOpenApi))
@@ -191,8 +192,6 @@ class OpenApiSpecification(
         val name = File(openApiFilePath).name
 
         val (scenarioInfos, stubsFromExamples) = toScenarioInfos()
-
-        val dictionary = loadDictionary(openApiFilePath)
 
         return Feature(
             scenarioInfos.map { Scenario(it).copy(dictionary = dictionary) }, name = name, path = openApiFilePath, sourceProvider = sourceProvider,

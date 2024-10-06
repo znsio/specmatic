@@ -288,6 +288,14 @@ ${matchResult.reportString()}
 
         return "${withoutPatternDelimiters(typeAlias)}.$key"
     }
+
+    fun hasDictionaryToken(key: String): Boolean {
+        return key in dictionary
+    }
+
+    fun getDictionaryToken(key: String): Value {
+        return dictionary.getValue(key)
+    }
 }
 
 private fun ExactValuePattern.hasPatternToken(): Boolean {

@@ -164,7 +164,9 @@ data class HttpHeadersPattern(
     fun generate(resolver: Resolver): Map<String, String> {
         val headers = pattern.mapValues { (key, pattern) ->
             attempt(breadCrumb = "HEADERS.$key") {
-                toStringLiteral(resolver.withCyclePrevention(pattern) { it.generate("HEADERS", key, pattern) })
+                toStringLiteral(resolver.withCyclePrevention(pattern) {
+                    it.generate("HEADERS", key, pattern)
+                })
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
         if (contentType.isNullOrBlank()) return headers

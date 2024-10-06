@@ -2,6 +2,7 @@ package application
 
 import io.specmatic.core.Result
 import io.specmatic.core.Results
+import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingleExample
 import io.specmatic.core.examples.server.loadExternalExamples
@@ -52,7 +53,7 @@ class ExamplesCommand : Callable<Int> {
     var verbose = false
 
     @Option(names = ["--dictionary"], description = ["External Dictionary File Path, defaults to dictionary.json"])
-    var dictFile: File? = null
+    var dictionaryFile: File? = null
 
     override fun call(): Int {
         if (contractFile == null) {
@@ -67,6 +68,10 @@ class ExamplesCommand : Callable<Int> {
         configureLogger(this.verbose)
 
         try {
+            dictionaryFile?.also {
+                System.setProperty(SPECMATIC_STUB_DICTIONARY, it.path)
+            }
+
             ExamplesInteractiveServer.generate(
                 contractFile!!,
                 ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName),

@@ -467,7 +467,7 @@ data class HttpRequestPattern(
             }
 
             newRequest = securitySchemes.fold(newRequest) { request, securityScheme ->
-                securityScheme.addTo(request)
+                securityScheme.addTo(request, resolver)
             }
 
             val multipartData = attempt(breadCrumb = "MULTIPART DATA") {

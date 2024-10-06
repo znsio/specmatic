@@ -144,13 +144,17 @@ class OpenApiSpecification(
             )
         }
 
-        fun loadDictionary(openApiFilePath: String, dictionary: String?): Map<String, Value> {
-            val dictionaryFile = File(openApiFilePath).let {
-                (dictionary ?: Flags.getStringValue(SPECMATIC_STUB_DICTIONARY))?.let { File(it) }
-                    ?: it.canonicalFile.parentFile.resolve(it.nameWithoutExtension + "_dictionary.json")
-            }
+        fun loadDictionary(openApiFilePath: String, dictionaryPathFromConfig: String?): Map<String, Value> {
+            val dictionaryFile =
+                (dictionaryPathFromConfig ?: Flags.getStringValue(SPECMATIC_STUB_DICTIONARY))?.let { File(it) }
+                    ?: File(openApiFilePath).let {
+                        it.canonicalFile.parentFile.resolve(it.nameWithoutExtension + "_dictionary.json")
+                }
 
-            if(!dictionaryFile.exists() || !dictionaryFile.isFile) {
+            if(!dictionaryFile.exists())
+                return emptyMap()
+
+            if(dictionaryFile.exists() && !dictionaryFile.isFile) {
                 logger.log("Found dictionary file ${dictionaryFile.path} but it was empty")
 
                 return emptyMap()

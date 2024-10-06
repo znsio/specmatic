@@ -301,13 +301,25 @@ class DictionaryTest {
 
     @Test
     fun `generative tests with a dictionary work as usual`() {
+        val parentPath = "src/test/resources/openapi/simple_spec_with_dictionary"
+
+        val openApiFilePath = "${parentPath}/spec.yaml"
+        val dictionaryPath = "${parentPath}/dictionary.json"
+
         val testCountWithoutDictionary = OpenApiSpecification
-            .fromFile("src/test/resources/openapi/spec_with_dictionary_and_constraints/spec.yaml")
+            .fromFile(openApiFilePath)
             .toFeature()
             .enableGenerativeTesting().let { feature ->
                 feature.executeTests(object : TestExecutor {
                     override fun execute(request: HttpRequest): HttpResponse {
-                        return HttpResponse.ok("success")
+                        return HttpResponse.ok("success").also {
+                            println(request.toLogString())
+                            println()
+                            println(it.toLogString())
+
+                            println()
+                            println()
+                        }
                     }
                 })
             }.let { results ->
@@ -315,10 +327,10 @@ class DictionaryTest {
             }
 
         val testCountWithDictionary = try {
-            System.setProperty(SPECMATIC_STUB_DICTIONARY, "src/test/resources/openapi/spec_with_dictionary_and_constraints/dictionary.json")
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, dictionaryPath)
 
             OpenApiSpecification
-                .fromFile("src/test/resources/openapi/spec_with_dictionary_and_constraints/spec.yaml")
+                .fromFile(openApiFilePath)
                 .toFeature()
                 .enableGenerativeTesting().let { feature ->
                     feature.executeTests(object : TestExecutor {

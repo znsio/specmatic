@@ -84,7 +84,7 @@ class HttpStub(
 
                 val matchedScenario = tier1Match.scenario ?: throw ContractException("Expected scenario after stub matched for:${System.lineSeparator()}${stub.toJSON()}")
 
-                val stubWithSubstitutionsResolved = stub.resolveDataSubstitutions(matchedScenario).map { scenarioStub ->
+                val stubWithSubstitutionsResolved = stub.resolveDataSubstitutions().map { scenarioStub ->
                     feature.matchingStub(scenarioStub, ContractAndStubMismatchMessages)
                 }
 
@@ -819,9 +819,9 @@ private fun stubbedResponse(
             softCastResponse,
             it.delayInMilliseconds,
             it.contractPath,
-            scenario = mock.scenario,
+            examplePath = it.examplePath,
             feature = mock.feature,
-            examplePath = it.examplePath
+            scenario = mock.scenario
         ) to it
     }
 
@@ -901,7 +901,7 @@ private fun stubThatMatchesRequest(
 
         if(result is Result.Success) {
             val response = if(stubData.partial != null)
-                stubData.responsePattern.generateResponse(stubData.partial.response, stubData.dictionary, stubData.resolver)
+                stubData.responsePattern.generateResponse(stubData.partial.response, stubData.resolver)
             else
                 stubData.response
 
@@ -909,9 +909,8 @@ private fun stubThatMatchesRequest(
                 response,
                 stubData.delayInMilliseconds,
                 stubData.contractPath,
-                scenario = stubData.scenario,
                 feature = stubData.feature,
-                dictionary = stubData.dictionary
+                scenario = stubData.scenario
             )
 
             try {
@@ -1131,7 +1130,7 @@ fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<Scenari
             feature.matchingStub(example, ContractAndStubMismatchMessages) to example
         }.flatMap { (stubData, example) ->
             val examplesWithDataSubstitutionsResolved = try {
-                example.resolveDataSubstitutions(stubData.scenario!!)
+                example.resolveDataSubstitutions()
             } catch(e: Throwable) {
                 println()
                 logger.log("    Error resolving template data for example ${example.filePath}")

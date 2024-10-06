@@ -1,6 +1,5 @@
 package io.specmatic.stub
 
-import integration_tests.testCount
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.pattern.*
@@ -1335,7 +1334,10 @@ paths:
             val request = HttpRequest("GET", "/data", body = NoBodyValue)
 
             val htmlContent = "<html><body>hi</body></html>"
-            val expectation = ScenarioStub(request, HttpResponse(200, headers = mapOf("Content-Type" to "text/html"), body = htmlContent))
+            val expectation = ScenarioStub(
+                request,
+                HttpResponse(200, headers = mapOf("Content-Type" to "text/html"), body = htmlContent)
+            )
 
             val expectationResponse = stub.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectation.toJSON()))
 
@@ -1377,7 +1379,10 @@ paths:
 
             val incorrectContentType = "text/plain"
             val expectationWithIncorrectContentType =
-                ScenarioStub(request, HttpResponse(200, headers = mapOf("Content-Type" to incorrectContentType), body = htmlContent))
+                ScenarioStub(
+                    request,
+                    HttpResponse(200, headers = mapOf("Content-Type" to incorrectContentType), body = htmlContent)
+                )
 
             stub.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectationWithIncorrectContentType.toJSON())).let { response ->
                 assertThat(response.status).isEqualTo(400)
@@ -1385,7 +1390,10 @@ paths:
 
             val correctContentType = "text/html"
             val expectationWithValidContentType =
-                ScenarioStub(request, HttpResponse(200, headers = mapOf("Content-Type" to correctContentType), body = htmlContent))
+                ScenarioStub(
+                    request,
+                    HttpResponse(200, headers = mapOf("Content-Type" to correctContentType), body = htmlContent)
+                )
 
             stub.client.execute(HttpRequest("POST", "/_specmatic/expectations", body = expectationWithValidContentType.toJSON())).let { response ->
                 assertThat(response.status).isEqualTo(200)
@@ -1871,26 +1879,6 @@ components:
             assertThat(response.status).isEqualTo(200)
             val responseBody = response.body as JSONObjectValue
             assertThat(responseBody.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo("Mumbai")
-        }
-    }
-
-    @Test
-    fun `example using invalid dictionary value should throw an error`() {
-        try {
-            System.setProperty(SPECMATIC_STUB_DICTIONARY, "src/test/resources/openapi/substitutions/dictionary.json")
-
-            val (output, _) = captureStandardOutput {
-                val stub = createStubFromContracts(
-                    listOf("src/test/resources/openapi/substitutions/spec_with_invalid_dictionary_value.yaml"),
-                    timeoutMillis = 0
-                )
-
-                stub.close()
-            }
-
-            assertThat(output).contains(">> RESPONSE.BODY.id")
-        } finally {
-            System.clearProperty(SPECMATIC_STUB_DICTIONARY)
         }
     }
 

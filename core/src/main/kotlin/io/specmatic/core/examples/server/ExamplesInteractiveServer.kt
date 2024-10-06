@@ -11,6 +11,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.specmatic.conversions.ExampleFromFile
+import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesView.Companion.groupEndpoints
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
@@ -20,9 +21,11 @@ import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHeal
 import io.specmatic.core.utilities.*
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.mock.loadDictionary
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.HttpStubData
+import io.specmatic.test.ContractTest
+import io.specmatic.test.TestInteractionsLog
+import io.specmatic.test.TestInteractionsLog.combineLog
 import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
@@ -31,6 +34,7 @@ import kotlin.system.exitProcess
 class ExamplesInteractiveServer(
     private val serverHost: String,
     private val serverPort: Int,
+    private val testBaseUrl: String,
     private val inputContractFile: File? = null,
     private val filterName: String,
     private val filterNotName: String,
@@ -38,10 +42,18 @@ class ExamplesInteractiveServer(
 ) : Closeable {
     private var contractFileFromRequest: File? = null
 
+    init {
+        if(externalDictionaryFile != null) System.setProperty(SPECMATIC_STUB_DICTIONARY, externalDictionaryFile.path)
+    }
+
     private fun getContractFile(): File {
         if(inputContractFile != null && inputContractFile.exists()) return inputContractFile
         if(contractFileFromRequest != null && contractFileFromRequest!!.exists()) return contractFileFromRequest!!
         throw ContractException("Invalid contract file provided to the examples interactive server")
+    }
+
+    private fun getServerHostPort(request: ExamplePageRequest? = null) : String {
+        return request?.hostPort ?: "localhost:$serverPort"
     }
 
     private val environment = applicationEngineEnvironment {
@@ -61,12 +73,21 @@ class ExamplesInteractiveServer(
 
             configureHealthCheckModule()
             routing {
+                get("/_specmatic/examples") {
+                    val contractFile = getContractFileOrBadRequest(call) ?: return@get
+                    try {
+                        respondWithExamplePageHtmlContent(contractFile, getServerHostPort(), call)
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
+                    }
+                }
+
                 post("/_specmatic/examples") {
                     val request = call.receive<ExamplePageRequest>()
                     contractFileFromRequest = File(request.contractFile)
                     val contractFile = getContractFileOrBadRequest(call) ?: return@post
                     try {
-                        respondWithExamplePageHtmlContent(contractFile, request.hostPort, call)
+                        respondWithExamplePageHtmlContent(contractFile,getServerHostPort(request), call)
                     } catch (e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
                     }
@@ -74,7 +95,7 @@ class ExamplesInteractiveServer(
 
                 post("/_specmatic/examples/generate") {
                     val contractFile = getContractFile()
-                    val dictionary = loadExternalDictionary(externalDictionaryFile, contractFile)
+
                     try {
                         val request = call.receive<GenerateExampleRequest>()
                         val generatedExample = generate(
@@ -83,7 +104,6 @@ class ExamplesInteractiveServer(
                             request.path,
                             request.responseStatusCode,
                             request.contentType,
-                            dictionary
                         )
 
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExample))
@@ -173,6 +193,21 @@ class ExamplesInteractiveServer(
                         HttpStatusCode.OK,
                         mapOf("content" to File(fileName).readText())
                     )
+                }
+
+                post ("/_specmatic/examples/test") {
+                    val request = call.receive<ExampleTestRequest>()
+                    try {
+                        val feature = OpenApiSpecification.fromFile(getContractFile().path).toFeature()
+
+                        val contractTest = feature.createContractTestFromExampleFile(request.exampleFile).value
+
+                        val (result, testLog) = testExample(contractTest, testBaseUrl)
+
+                        call.respond(HttpStatusCode.OK, ExampleTestResponse(result, testLog, exampleFile = File(request.exampleFile)))
+                    } catch (e: Throwable) {
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "An unexpected error occurred: ${e.message}"))
+                    }
                 }
             }
         }
@@ -271,7 +306,17 @@ class ExamplesInteractiveServer(
             constructor(): this(null, ExampleGenerationStatus.ERROR)
         }
 
-        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean, externalDictionary: Dictionary): List<String> {
+        fun testExample(test: ContractTest, testBaseUrl: String): Pair<TestResult, String> {
+            val testResultRecord = test.runTest(testBaseUrl, timeoutInMilliseconds = DEFAULT_TIMEOUT_IN_MILLISECONDS).let {
+                test.testResultRecord(it.first, it.second)
+            } ?: return Pair(TestResult.Error, "No Test Result Record Found")
+
+            return testResultRecord.scenarioResult?.let { scenarioResult ->
+                Pair(testResultRecord.result, TestInteractionsLog.testHttpLogMessages.last { it.scenario == scenarioResult.scenario }.combineLog())
+            } ?: Pair(TestResult.Error, "No Log Message Found")
+        }
+
+        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean): List<String> {
             try {
                 val feature: Feature = parseContractFileToFeature(contractFile).let { feature ->
                     val filteredScenarios = if (!extensive) {
@@ -299,7 +344,7 @@ class ExamplesInteractiveServer(
 
                 return feature.scenarios.map { scenario ->
                     try {
-                        val generatedExampleFilePath = generateExampleFile(contractFile, feature, scenario, externalDictionary)
+                        val generatedExampleFilePath = generateExampleFile(contractFile, feature, scenario)
 
                         generatedExampleFilePath.also {
                             val loggablePath =
@@ -345,7 +390,6 @@ class ExamplesInteractiveServer(
             path: String,
             responseStatusCode: Int,
             contentType: String? = null,
-            externalDictionary: Dictionary
         ): String? {
             val feature = parseContractFileToFeature(contractFile)
             val scenario: Scenario? = feature.scenarios.firstOrNull {
@@ -354,7 +398,7 @@ class ExamplesInteractiveServer(
             }
             if(scenario == null) return null
 
-            return generateExampleFile(contractFile, feature, scenario, externalDictionary).also {
+            return generateExampleFile(contractFile, feature, scenario).also {
                 println("Writing to file: ${File(it.path).canonicalFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
             }.path
         }
@@ -365,7 +409,6 @@ class ExamplesInteractiveServer(
             contractFile: File,
             feature: Feature,
             scenario: Scenario,
-            externalDictionary: Dictionary
         ): ExamplePathInfo {
             val examplesDir = getExamplesDirPath(contractFile)
             val existingExampleFile = getExistingExampleFile(scenario, examplesDir.getExamplesFromDir())
@@ -373,13 +416,10 @@ class ExamplesInteractiveServer(
             else examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
-            val httpPathPattern = scenario.httpRequestPattern.httpPathPattern
-            val updatedRequest = request.substituteDictionaryValues(externalDictionary, forceSubstitution = true, httpPathPattern)
 
             val response = feature.lookupResponse(scenario).cleanup()
-            val updatedResponse = response.substituteDictionaryValues(externalDictionary, forceSubstitution = true)
 
-            val scenarioStub = ScenarioStub(updatedRequest, updatedResponse)
+            val scenarioStub = ScenarioStub(request, response)
             val stubJSON = scenarioStub.toJSON()
             val uniqueNameForApiOperation =
                 uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
@@ -503,25 +543,6 @@ class ExamplesInteractiveServer(
             return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
         }
 
-        fun loadExternalDictionary(dictFile: File?, contractFile: File?): Dictionary {
-            val dictFilePath = when {
-                dictFile != null -> dictFile.path
-
-                contractFile != null -> {
-                    val dictFileName = "${contractFile.nameWithoutExtension}${DICTIONARY_FILE_SUFFIX}"
-                    contractFile.canonicalFile.parentFile.resolve(dictFileName).takeIf { it.exists() }?.path
-                }
-
-                else -> {
-                    val currentDir = File(System.getProperty("user.dir"))
-                    currentDir.resolve("dictionary.json").takeIf { it.exists() }?.path
-                }
-            }
-
-            return dictFilePath?.let {
-                Dictionary(loadDictionary(dictFilePath))
-            } ?: Dictionary(emptyMap())
-        }
     }
 }
 
@@ -557,6 +578,7 @@ enum class ValidateExampleVerdict {
     SUCCESS,
     FAILURE
 }
+
 data class ValidateExampleResponseV2(
     val verdict: ValidateExampleVerdict,
     val message: String,
@@ -573,6 +595,34 @@ data class GenerateExampleRequest(
 data class GenerateExampleResponse(
     val generatedExample: String?
 )
+
+data class ExampleTestRequest(
+    val exampleFile: String
+)
+
+data class ExampleTestResponse(
+    val result: TestResult,
+    val details: String,
+    val testLog: String
+) {
+    constructor(result: TestResult, testLog: String, exampleFile: File): this (
+        result = result,
+        details = resultToDetails(result, exampleFile),
+        testLog = testLog.trim('-', ' ', '\n', '\r')
+    )
+
+    companion object {
+        fun resultToDetails(result: TestResult, exampleFile: File): String {
+            val postFix = when(result) {
+                TestResult.Success -> "has SUCCEEDED"
+                TestResult.Error -> "has ERROR"
+                else -> "has FAILED"
+            }
+
+            return "Example test for ${exampleFile.nameWithoutExtension} $postFix"
+        }
+    }
+}
 
 fun loadExternalExamples(contractFile: File): Pair<File, Map<String, List<ScenarioStub>>> {
     val examplesDir =

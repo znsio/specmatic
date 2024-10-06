@@ -173,15 +173,15 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
     private fun patternsWithNoRequiredQueryParams(
         params: Map<String, Pattern>
     ): Sequence<ReturnValue<Map<String, Pattern>>> = sequence {
-        params.forEach { (key, _) ->
-            if (key.endsWith("?").not()) {
+        params.forEach { (keyToOmit, _) ->
+            if (keyToOmit.endsWith("?").not()) {
                 yield(
                     HasValue(
-                        params.filterKeys { paramKey -> paramKey != key }.mapKeys {
+                        params.filterKeys { key -> key != keyToOmit }.mapKeys {
                             withoutOptionality(it.key)
                         },
-                        "removed from the request"
-                    ).breadCrumb(key)
+                        "mandatory query param not sent"
+                    ).breadCrumb(keyToOmit)
                 )
             }
         }

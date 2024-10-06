@@ -8815,8 +8815,8 @@ paths:
             val secondScenarioQueryParams = tests.last().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
             assertThat(firstScenarioQueryParams.keys).doesNotContain("id")
             assertThat(secondScenarioQueryParams.keys).doesNotContain("age")
-            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.id removed from the request]")
-            assertThat(tests.last().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.age removed from the request]")
+            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.id mandatory query param not sent]")
+            assertThat(tests.last().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.age mandatory query param not sent]")
         }
 
         @Test
@@ -8859,7 +8859,7 @@ paths:
             val firstScenarioQueryParams = tests.first().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
 
             assertThat(firstScenarioQueryParams.keys).doesNotContain("ids")
-            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /items -> 4xx [REQUEST.QUERY-PARAM.ids removed from the request]")
+            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /items -> 4xx [REQUEST.QUERY-PARAM.ids mandatory query param not sent]")
         }
     }
 

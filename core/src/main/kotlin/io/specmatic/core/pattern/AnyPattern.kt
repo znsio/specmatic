@@ -206,6 +206,10 @@ data class AnyPattern(
     )
 
     private fun addTypeInfoBreadCrumbs(matchResults: List<AnyPatternMatch>): List<Failure> {
+        if(this.hasNoAmbiguousPatterns()) {
+            return matchResults.map { it.result as Failure }
+        }
+
         val failuresWithUpdatedBreadcrumbs = matchResults.map {
             Pair(it.pattern, it.result as Failure)
         }.mapIndexed { index, (pattern, failure) ->
@@ -256,7 +260,6 @@ data class AnyPattern(
         } ?: NullValue // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
     }
 
-
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         resolver.resolveExample(example, pattern)?.let {
             return sequenceOf(HasValue(ExactValuePattern(it)))
@@ -278,7 +281,6 @@ data class AnyPattern(
 
         return newTypesOrExceptionIfNone(patternResults, "Could not generate new tests")
     }
-
 
     private fun newTypesOrExceptionIfNone(patternResults: Sequence<Pair<Sequence<ReturnValue<Pattern>>?, Throwable?>>, message: String): Sequence<ReturnValue<Pattern>> {
         val newPatterns: Sequence<ReturnValue<Pattern>> = patternResults.mapNotNull { it.first }.flatten()
@@ -404,6 +406,10 @@ data class AnyPattern(
 
     override fun toNullable(defaultValue: String?): Pattern {
         return this
+    }
+
+    private fun hasNoAmbiguousPatterns(): Boolean {
+        return this.pattern.count { it !is NullPattern } == 1
     }
 }
 

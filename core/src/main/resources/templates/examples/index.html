@@ -489,7 +489,7 @@
                     }
                 }
 
-                &[data-selected="0"][data-panel="table"] {
+                &[data-selected="0"][data-panel="table"], &.bulk-disabled {
                     --_background-color: var(--gray);
                     pointer-events: none;
                 }
@@ -516,8 +516,17 @@
                     }
                 }
 
+                &#bulk-test {
+                    --_content: "Test Selected";
+
+                    &[data-panel="details"] {
+                        --_content: "Test Examples";
+                    }
+                }
+
                 &[data-valid="processing"],
-                &[data-generate="processing"] {
+                &[data-generate="processing"],
+                &[data-test="processing"] {
                     pointer-events: none;
 
                     &::after {
@@ -605,7 +614,8 @@
                 --_text-color: var(--white);
 
                 padding: var(--_padding);
-                width: 8rem;
+                display: inline-block;
+                width: 7rem;
                 border-radius: 0.5rem;
                 color: rgb(var(--_text-color));
                 background-color: rgba(var(--_background-color));
@@ -617,22 +627,46 @@
             }
 
             & > td:last-child {
-                & > p {
+                & > span {
                     font-size: .75rem;
                     line-height: 1.5rem;
                     text-decoration: underline;
                 }
             }
 
-            &[data-valid="false"] button, &[data-generate="failed"] button {
+            &[data-valid="failed"] button.validate, &[data-generate="failed"] button.generate, &[data-test="failed"] button.test {
                 --_background-color: var(--red);
             }
 
-            &[data-valid="true"] button {
+            &[data-valid="success"] button.validate, &[data-test="success"] button.test {
                 --_background-color: var(--green);
             }
 
-            &[data-generate="processing"] button.generate {
+            &[data-generate="success"] {
+                & td:last-child {
+                    & button.validate {
+                        display: inline-block;
+                    }
+
+                    & > span {
+                        display: block;
+                    }
+                }
+            }
+
+            &[data-valid="success"] {
+                & td:last-child {
+                    & button.validate {
+                        display: none;
+                    }
+
+                    & button.test {
+                        display: inline-block;
+                    }
+                }
+            }
+
+            &[data-generate="processing"] button.generate, &[data-valid="processing"] button.validate, &[data-test="processing"] button.test {
                 --_padding: 0.15rem 0rem;
 
                 &::after {
@@ -652,24 +686,12 @@
                 content: var(--_content, "Generate");
             }
 
-            &[data-valid="processing"] button.validate {
-                --_padding: 0.15rem 0rem;
-
-                &::after {
-                    --_content: "";
-                    margin-top: 5px;
-                    width: 24px;
-                    height: 24px;
-                    border: 3px solid #FFF;
-                    border-bottom-color: transparent;
-                    border-radius: 50%;
-                    display: inline-block;
-                    animation: rotation 1s linear infinite;
-                }
-            }
-
             & button.validate::after {
                 content: var(--_content, "Validate");
+            }
+
+            & button.test::after {
+                content: var(--_content, "Test");
             }
         }
 
@@ -682,18 +704,19 @@
             min-width: 2rem;
         }
 
+        td:last-child {
+            max-width: 9rem;
+        }
+
         td:nth-last-child(2) {
             max-width: 15rem;
+            word-break: break-word;
+            font-size: .85rem;
         }
 
         td p, td button {
             white-space: nowrap;
             min-width: fit-content;
-        }
-
-        td:nth-last-child(2) {
-            word-break: break-word;
-            font-size: .85rem;
         }
 
         button {
@@ -955,7 +978,7 @@
         /* UTILITIES */
 
         .hidden {
-            display: none !important;
+            display: none;
         }
     </style>
 </head>
@@ -970,6 +993,7 @@
     <div class="btn-grp">
         <button data-selected="0" id="bulk-generate" data-panel="table"></button>
         <button data-selected="0" data-panel="table" id="bulk-validate"></button>
+        <button data-selected="0" data-panel="table" id="bulk-test"></button>
     </div>
 </header>
 
@@ -987,7 +1011,7 @@
                 <th>Method</th>
                 <th>Response</th>
                 <th>Examples</th>
-                <th>Validate</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
@@ -996,7 +1020,7 @@
                 th:attr="data-raw-path=${row.rawPath},
                         data-examples=${row.example},
                         data-generate=${row.example != null ? 'success' : ''},
-                        data-valid=${row.example != null ? (row.exampleMismatchReason == null ? 'true' : 'false') : ''}">
+                        data-valid=${row.example != null ? (row.exampleMismatchReason == null ? 'success' : 'failed') : ''}">
                 <td>
                     <input type="checkbox" name="path-row" class="path-row">
                 </td>
@@ -1018,8 +1042,9 @@
                     <span th:if="${row.example != null}" th:text="${row.exampleName}"></span>
                 </td>
                 <td>
-                    <button th:class="${row.example != null ? 'validate' : 'validate hidden'}" aria-label="Validate"></button>
-                    <p th:class="${row.example != null ? '' : 'hidden'}">View Details</p>
+                    <button class="validate hidden" aria-label="Validate"></button>
+                    <button class="test hidden" aria-label="Test"></button>
+                    <span th:class="hidden">View Details</span>
                 </td>
             </tr>
         </tbody>
@@ -1043,8 +1068,10 @@
 
 <script th:inline="javascript">
     const validationDetails = /*[[${validationDetails}]]*/ {};
+    const testDetails = {};
 </script>
 
+</body>
 <script>
     const mainElement = document.querySelector("main");
     const table = document.querySelector("table");
@@ -1054,6 +1081,7 @@
     const alerts = document.getElementById("alert-container");
     const bulkValidateBtn = document.querySelector("button#bulk-validate");
     const bulkGenerateBtn = document.querySelector("button#bulk-generate");
+    const bulkTestBtn = document.querySelector("button#bulk-test");
     const chevronDown = document.querySelector("svg.chevron-down");
 
     let scrollYPosition = 0;
@@ -1062,9 +1090,11 @@
     let blockGenValidate = false;
 
     backBtn.addEventListener("click", () => {
+        examplesOl.replaceChildren();
         mainElement.setAttribute("data-panel", "table");
         bulkValidateBtn.setAttribute("data-panel", "table");
         bulkGenerateBtn.setAttribute("data-panel", "table");
+        bulkTestBtn.setAttribute("data-panel", "table");
         window.scrollTo(0, scrollYPosition);
     });
 
@@ -1080,30 +1110,44 @@
             switch (target.tagName) {
                 case "BUTTON": {
                     if (blockGenValidate) break;
-                    if (target.classList.contains("generate")) {
-                        return await generateRowExamples(nearestTableRow, rowValues);
+                    switch (target.getAttribute("aria-label")) {
+                        case "Generate": {
+                            return await generateRowExamples(nearestTableRow, rowValues);
+                        }
+                        case "Validate": {
+                            return await validateRowExamples(nearestTableRow);
+                        }
+                        default: {
+                            return await testRowExample(nearestTableRow);
+                        }
                     }
-                    return await validateRowExamples(nearestTableRow);
                 }
 
                 case "INPUT": {
                     const valPreSelectCount = Number.parseInt(bulkValidateBtn.getAttribute("data-selected") || 0);
                     const genPreSelectCount = Number.parseInt(bulkGenerateBtn.getAttribute("data-selected") || 0);
+                    const testPreSelectCount = Number.parseInt(bulkTestBtn.getAttribute("data-selected") || 0);
 
                     if (target.matches("th > label > input")) {
                         const totalGeneratedRows = countAllGeneratedRows()
+                        const totalValidatedRows = countAllValidateRows()
                         toggleAllSelects(target.checked);
 
                         if (table.hasAttribute("data-generated") ) {
                             bulkValidateBtn.setAttribute("data-selected", target.checked ? totalGeneratedRows : 0);
+                            bulkTestBtn.setAttribute("data-selected", target.checked ? totalValidatedRows : 0);
                         }
 
                         return bulkGenerateBtn.setAttribute("data-selected", target.checked ? totalRows - totalGeneratedRows : 0);
                     }
 
                     const hasBeenGenerated = nearestTableRow.getAttribute("data-generate") === "success";
+                    const hasBeenValidated = nearestTableRow.getAttribute("data-valid") === "success";
                     if (hasBeenGenerated) {
                         bulkValidateBtn.setAttribute("data-selected", valPreSelectCount + (target.checked ? 1 : -1));
+                        if (hasBeenValidated) {
+                            bulkTestBtn.setAttribute("data-selected", testPreSelectCount + (target.checked ? 1 : -1));
+                        }
                     } else {
                         bulkGenerateBtn.setAttribute("data-selected", genPreSelectCount + (target.checked ? 1 : -1));
                     }
@@ -1131,6 +1175,7 @@
     });
 
     bulkValidateBtn.addEventListener("click", async () => {
+        blockGenValidate = true;
         bulkValidateBtn.setAttribute("data-valid", "processing");
 
         switch (bulkValidateBtn.getAttribute("data-panel")) {
@@ -1148,9 +1193,11 @@
                     absPath: exampleAbsPath,
                     exampleJson: exampleContent,
                     error: validationDetails[Number.parseInt(selectedTableRow.children[1].textContent)] || error,
-                    hasBeenValidated: selectedTableRow.getAttribute("data-valid")
+                    hasBeenValidated: selectedTableRow.hasAttribute("data-valid"),
+                    test: testDetails[Number.parseInt(selectedTableRow.children[1].textContent)]
                 }]);
 
+                bulkTestBtn.classList.toggle("bulk-disabled", selectedTableRow.getAttribute("data-valid") !== "success")
                 examplesOl.replaceChildren(docFragment);
                 break;
             }
@@ -1181,14 +1228,12 @@
             }
         }
 
-        blockGenValidate = false;
         bulkGenerateBtn.removeAttribute("data-generate");
         createAlert("Examples Generated", `${rowsWithNoExamples.length - failedCount} were examples generated`, failedCount !== 0);
         return cleanUpSelections();
     });
 
     async function validateAllSelected() {
-        blockGenValidate = true;
         bulkValidateBtn.setAttribute("data-valid", "processing");
 
         let errorsCount = 0;
@@ -1206,10 +1251,62 @@
             }
         }
 
-        blockGenValidate = false;
         bulkValidateBtn.removeAttribute("data-generate");
         createAlert("Validations Complete", `${errorsCount} out of ${rowsWithExamples.length} are invalid`, errorsCount !== 0);
         return cleanUpSelections();
+    }
+
+    bulkTestBtn.addEventListener("click", async () => {
+        blockGenValidate = true;
+        bulkTestBtn.setAttribute("data-test", "processing");
+
+        switch (bulkValidateBtn.getAttribute("data-panel")) {
+            case "table": {
+                await testAllSelected();
+                break;
+            }
+
+            case "details": {
+                await testRowExample(selectedTableRow);
+                const exampleAbsPath = getExampleData(selectedTableRow);
+                const {example: exampleContent, error} = await getExampleContent(exampleAbsPath);
+
+                const docFragment = createExampleRows([{
+                    absPath: exampleAbsPath,
+                    exampleJson: exampleContent,
+                    error: validationDetails[Number.parseInt(selectedTableRow.children[1].textContent)] || error,
+                    hasBeenValidated: selectedTableRow.hasAttribute("data-valid"),
+                    test: testDetails[Number.parseInt(selectedTableRow.children[1].textContent)]
+                }]);
+
+                examplesOl.replaceChildren(docFragment);
+                break;
+            }
+        }
+
+        bulkTestBtn.removeAttribute("data-test");
+        return cleanUpSelections();
+    });
+
+    async function testAllSelected() {
+        const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
+        const rowsWithValidations = selectedRows.filter(row => row.getAttribute("data-valid") === "success");
+
+        for (const row of rowsWithValidations) {
+            row.setAttribute("data-test", "processing");
+        }
+
+        let failureCount = 0;
+        for (const row of rowsWithValidations) {
+            const result = await testRowExample(row, true);
+
+            if (!result) {
+                failureCount++;
+            }
+        }
+
+        blockGenValidate = false;
+        createAlert("Tests Complete", `${failureCount} out of ${rowsWithValidations.length} have failed`, failureCount !== 0);
     }
 
     function extractRowValues(tableRow) {
@@ -1222,6 +1319,11 @@
     function countAllGeneratedRows() {
         const tableRows = table.querySelectorAll("tr");
         return Array.from(tableRows).filter((row) => row.getAttribute("data-generate") === "success").length;
+    }
+
+    function countAllValidateRows() {
+        const tableRows = table.querySelectorAll("tr");
+        return Array.from(tableRows).filter((row) => row.getAttribute("data-valid") === "success").length;
     }
 
     function toggleAllSelects(isSelected = true) {
@@ -1266,15 +1368,45 @@
         const exampleData = getExampleData(tableRow);
         const { exampleAbsPath, error } = await validateExample(exampleData);
 
-        tableRow.setAttribute("data-valid", !error);
+        tableRow.setAttribute("data-valid", error ? "failed": "success");
         validationDetails[Number.parseInt(tableRow.children[1].textContent)] = error;
+        testDetails[Number.parseInt(tableRow.children[1].textContent)] = null;
 
         if (error) {
             if (!bulkMode) createAlert("Invalid Example", `Example name: ${parseFileName(exampleAbsPath)}`, true);
+            tableRow.removeAttribute("data-test");
             return false;
         }
 
         if (!bulkMode) createAlert("Valid Example", `Example name: ${parseFileName(exampleAbsPath)}`, false);
+        tableRow.removeAttribute("data-test");
+        return true;
+    }
+
+    async function testRowExample(tableRow, bulkMode = false) {
+        tableRow.setAttribute("data-test", "processing");
+
+        const isExampleValid = await validateRowExamples(tableRow, bulkMode);
+        tableRow.setAttribute("data-valid", isExampleValid ? "success": "failed");
+
+        if (!isExampleValid) {
+            return false;
+        }
+
+        const exampleData = getExampleData(tableRow);
+        const {data, error} = await testExample({
+            exampleFile: exampleData
+        });
+
+        tableRow.setAttribute("data-test", (error || data?.result !== "Success") ? "failed": "success");
+        testDetails[Number.parseInt(tableRow.children[1].textContent)] = data;
+
+        if (error || data?.result !== "Success") {
+            if (!bulkMode) createAlert(`Test ${data ? data.result : "Failed"}`, `Example name: ${parseFileName(exampleData)}`, true);
+            return false;
+        }
+
+        if (!bulkMode) createAlert("Test Passed", `Example name: ${parseFileName(exampleData)}`, false);
         return true;
     }
 
@@ -1288,15 +1420,18 @@
                 absPath: exampleAbsPath,
                 exampleJson: example,
                 error: validationDetails[Number.parseInt(tableRow.children[1].textContent)] || error,
-                hasBeenValidated: tableRow.getAttribute("data-valid")
+                hasBeenValidated: tableRow.hasAttribute("data-valid"),
+                test: testDetails[Number.parseInt(tableRow.children[1].textContent)]
             }]);
         }
 
+        bulkTestBtn.classList.toggle("bulk-disabled", tableRow.getAttribute("data-valid") !== "success")
         pathSummaryUl.replaceChildren(createPathSummary(rowValues));
         examplesOl.replaceChildren(docFragment);
         mainElement.setAttribute("data-panel", "details");
         bulkValidateBtn.setAttribute("data-panel", "details");
         bulkGenerateBtn.setAttribute("data-panel", "details");
+        bulkTestBtn.setAttribute("data-panel", "details");
         scrollYPosition = window.scrollY;
         window.scrollTo(0, 0);
     }
@@ -1338,6 +1473,7 @@
         const exampleDiv = document.createElement("div");
         const exampleName = document.createElement("p");
         const exampleBadge = document.createElement("span");
+        const testBadge = document.createElement("span");
 
         exampleDiv.classList.add("example");
         exampleBadge.classList.add("pill", example.hasBeenValidated ? example.error ? "red" : "green" : "blue");
@@ -1352,8 +1488,14 @@
         const expandDiv = document.createElement("div");
         expandDiv.classList.add("expand-info");
         expandDiv.appendChild(exampleBadge);
-        expandDiv.appendChild(chevronDown.cloneNode(true))
 
+        if (example.test) {
+            testBadge.classList.add("pill", example.test.result === "Success" ? "green" : "red");
+            testBadge.textContent = `Test ${example.test.result}`;
+            expandDiv.appendChild(testBadge);
+        }
+
+        expandDiv.appendChild(chevronDown.cloneNode(true))
         exampleDiv.appendChild(exampleName);
         exampleDiv.appendChild(expandDiv);
         return exampleDiv;
@@ -1372,18 +1514,31 @@
         const examplePre = document.createElement("pre");
         const detailsPre = document.createElement("pre");
 
-        examplePre.textContent = example.exampleJson;
         if (example.hasBeenValidated) {
             detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
+            if (example.test) {
+                detailsPre.textContent = `${detailsPre.textContent}\n${example.test.details}`;
+            }
         } else {
             detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
         }
+        examplePre.textContent = example.exampleJson;
 
         const examplePreDiv = document.createElement("div");
         const detailsPreDiv = document.createElement("div");
 
         detailsPreDiv.appendChild(detailsPara);
         detailsPreDiv.appendChild(detailsPre);
+
+        if (example.test) {
+            const testPara = document.createElement("p");
+            testPara.textContent = "Test Log: ";
+            examplePreDiv.appendChild(testPara);
+
+            const testPre = document.createElement("pre");
+            testPre.textContent = example.test.testLog;
+            examplePreDiv.appendChild(testPre);
+        }
 
         examplePreDiv.appendChild(examplePara);
         examplePreDiv.appendChild(examplePre);
@@ -1396,7 +1551,7 @@
 
     async function generateExample(pathInfo) {
         try {
-            const resp = await fetch(getHostPort() + "/_specmatic/examples/generate", {
+            const resp = await fetch(`http://${getHostPort()}/_specmatic/examples/generate`, {
                 method: "POST",
                 body: JSON.stringify(pathInfo),
                 headers: {
@@ -1413,7 +1568,7 @@
 
     async function validateExample(exampleFile) {
         try {
-            const resp = await fetch(getHostPort() + "/_specmatic/examples/validate", {
+            const resp = await fetch(`http://${getHostPort()}/_specmatic/examples/validate`, {
                 method: "POST",
                 body: JSON.stringify({ exampleFile }),
                 headers: {
@@ -1431,7 +1586,7 @@
     async function getExampleContent(example) {
         const exampleFileName = encodeURIComponent(example);
         try {
-            const resp = await fetch(getHostPort() + `/_specmatic/examples/content?fileName=${exampleFileName}`)
+            const resp = await fetch(`http://${getHostPort()}/_specmatic/examples/content?fileName=${exampleFileName}`)
             const data = await resp.json();
 
             if (!resp.ok) {
@@ -1444,21 +1599,36 @@
         }
     }
 
+    async function testExample(exampleData) {
+        try {
+            const resp = await fetch(`http://${getHostPort()}/_specmatic/examples/test`, {
+                method: "POST",
+                body: JSON.stringify(exampleData),
+                headers: {
+                    "Content-Type": "application/json",
+                }
+            });
+            const data = await resp.json();
+
+            return {data, error: data.error}
+        } catch (error) {
+            return {data: null, error: error.message}
+        }
+    }
+
     function parseFileName(absPath) {
-        return absPath.split("\\").pop().split("/").pop().split(".").at(0);
+        const fileName = absPath.split("\\").pop().split("/").pop();
+        const lastIndex = fileName.lastIndexOf(".");
+        return fileName.slice(0, lastIndex);
     }
 
     function getHostPort() {
-        let hostPort = table.getAttribute("data-hostPort");
+        const hostPort = table.getAttribute("data-hostPort");
         return hostPort ? hostPort.replace(/\/$/, '') : hostPort;
     }
 
     function enableValidateBtn(tableRow) {
         table.setAttribute("data-generated", "true");
-
-        for (const child of tableRow.querySelector("td:last-child").children) {
-            child.classList.remove("hidden");
-        }
     }
 
     function createAlert(heading, message, error) {
@@ -1489,9 +1659,10 @@
         }
         bulkGenerateBtn.setAttribute("data-selected", "0");
         bulkValidateBtn.setAttribute("data-selected", "0");
+        bulkTestBtn.setAttribute("data-selected", "0");
+        blockGenValidate = false;
     }
 
     (() => cleanUpSelections())();
 </script>
-</body>
 </html>

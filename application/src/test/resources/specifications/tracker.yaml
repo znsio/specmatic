@@ -15,17 +15,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                  example: "John Doe"
-                address:
-                  type: string
-                  example: "123 Main St, Anytown, USA"
-              required:
-                - name
-                - address
+              $ref: '#/components/schemas/Tracker_FVO'
       responses:
         '200':
           description: Successful response with name, tracker ID, and address
@@ -34,21 +24,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                      example: "John Doe"
-                    trackerId:
-                      type: integer
-                      example: 123456
-                    address:
-                      type: string
-                      example: "123 Main St, Anytown, USA"
-                  required:
-                    - name
-                    - trackerId
-                    - address
+                  $ref: '#/components/schemas/Tracker'
 
     get:
       summary: Generate a response with name, address, and tracker ID using query parameters
@@ -76,21 +52,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                      example: "John Doe"
-                    trackerId:
-                      type: integer
-                      example: 123456
-                    address:
-                      type: string
-                      example: "123 Main St, Anytown, USA"
-                  required:
-                    - name
-                    - trackerId
-                    - address
+                  $ref: '#/components/schemas/Tracker'
   /generate/names/{name}/address/{address}/trackerId/{trackerId}:
     delete:
       summary: Generate a response with name, address, and tracker ID using path parameters
@@ -124,22 +86,32 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                      example: "John Doe"
-                    trackerId:
-                      type: integer
-                      example: 123456
-                    address:
-                      type: string
-                      example: "123 Main St, Anytown, USA"
-                  required:
-                    - name
-                    - trackerId
-                    - address
+                  $ref: '#/components/schemas/Tracker'
 components:
+  schemas:
+    Tracker_FVO:
+      type: object
+      required:
+        - name
+        - address
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+    Tracker:
+      type: object
+      required:
+        - name
+        - trackerId
+        - address
+      properties:
+        name:
+          type: string
+        trackerId:
+          type: integer
+        address:
+          type: string
   securitySchemes:
     apiKey:
       type: apiKey

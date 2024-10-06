@@ -31,12 +31,12 @@ repositories {
 }
 
 def ktor_version = "2.3.12"
-def junit_version = "5.11.1"
+def junit_version = "5.11.2"
 def jgit_version = "7.0.0.202409031743-r"
 
 dependencies {
     // TODO Put library reference overrides here to eliminate vulnerabilities, and remove the override when no longer needed
-    implementation 'io.netty:netty-codec-http:4.1.113.Final' // used by ktor-server-netty-jvm 2.3.9 in core
+    implementation 'io.netty:netty-codec-http:4.1.114.Final' // used by ktor-server-netty-jvm 2.3.9 in core
     implementation 'joda-time:joda-time:2.13.0' // used by swagger-parser 2.1.22
 
 
@@ -44,7 +44,7 @@ dependencies {
     testImplementation 'com.arakelian:java-jq:2.0.0'
 
     implementation 'org.assertj:assertj-core:3.26.3'
-    implementation 'org.junit.jupiter:junit-jupiter-api:5.11.1'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.11.2'
 
     implementation('info.picocli:picocli-spring-boot-starter:4.7.6') {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
@@ -64,8 +64,8 @@ dependencies {
     implementation "io.ktor:ktor-network-tls:$ktor_version"
     implementation "io.ktor:ktor-network-tls-certificates:$ktor_version"
 
-    implementation 'org.junit.platform:junit-platform-launcher:1.11.1'
-    implementation 'org.junit.platform:junit-platform-reporting:1.11.1'
+    implementation 'org.junit.platform:junit-platform-launcher:1.11.2'
+    implementation 'org.junit.platform:junit-platform-reporting:1.11.2'
 
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"

@@ -2,8 +2,8 @@ package application
 
 import io.specmatic.core.Result
 import io.specmatic.core.Results
+import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.loadExternalDictionary
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingleExample
 import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
@@ -53,7 +53,7 @@ class ExamplesCommand : Callable<Int> {
     var verbose = false
 
     @Option(names = ["--dictionary"], description = ["External Dictionary File Path, defaults to dictionary.json"])
-    var dictFile: File? = null
+    var dictionaryFile: File? = null
 
     override fun call(): Int {
         if (contractFile == null) {
@@ -68,12 +68,14 @@ class ExamplesCommand : Callable<Int> {
         configureLogger(this.verbose)
 
         try {
-            val externalDictionary = loadExternalDictionary(dictFile, contractFile)
+            dictionaryFile?.also {
+                System.setProperty(SPECMATIC_STUB_DICTIONARY, it.path)
+            }
+
             ExamplesInteractiveServer.generate(
                 contractFile!!,
                 ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName),
                 extensive,
-                externalDictionary
             )
         } catch (e: Throwable) {
             logger.log(e)
@@ -230,6 +232,9 @@ class ExamplesCommand : Callable<Int> {
         @Option(names = ["--dictionary"], description = ["External Dictionary File Path"])
         var dictFile: File? = null
 
+        @Option(names = ["--testBaseURL"], description = ["The baseURL of the SUT to test"], required = true)
+        lateinit var testBaseURL: String
+
         var server: ExamplesInteractiveServer? = null
 
         override fun call() {
@@ -239,7 +244,7 @@ class ExamplesCommand : Callable<Int> {
                 if (contractFile != null && !contractFile!!.exists())
                     exitWithMessage("Could not find file ${contractFile!!.path}")
 
-                server = ExamplesInteractiveServer("0.0.0.0", 9001, contractFile, filterName, filterNotName, dictFile)
+                server = ExamplesInteractiveServer("0.0.0.0", 9001, testBaseURL, contractFile, filterName, filterNotName, dictFile)
                 addShutdownHook()
 
                 consoleLog(StringLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop."))

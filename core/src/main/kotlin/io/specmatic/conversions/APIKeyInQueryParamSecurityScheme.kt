@@ -16,8 +16,8 @@ data class APIKeyInQueryParamSecurityScheme(val name: String, private val apiKey
         return httpRequest.copy(queryParams = httpRequest.queryParams.minus(name))
     }
 
-    override fun addTo(httpRequest: HttpRequest): HttpRequest {
-        return httpRequest.copy(queryParams = httpRequest.queryParams.plus(name to (apiKey ?: StringPattern().generate(Resolver()).toStringLiteral())))
+    override fun addTo(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
+        return httpRequest.copy(queryParams = httpRequest.queryParams.plus(name to (apiKey ?: resolver.generate("QUERY-PARAMS", name, StringPattern()).toStringLiteral())))
     }
 
     override fun addTo(requestPattern: HttpRequestPattern, row: Row): HttpRequestPattern {

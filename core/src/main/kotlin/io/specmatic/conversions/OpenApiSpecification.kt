@@ -69,7 +69,7 @@ class OpenApiSpecification(
     private val specificationPath: String? = null,
     private val securityConfiguration: SecurityConfiguration? = null,
     private val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    private val dictionary: Map<String, Value> = loadDictionary(openApiFilePath)
+    private val dictionary: Map<String, Value> = loadDictionary(openApiFilePath, specmaticConfig.stub.dictionary)
 ) : IncludedSpecification, ApiSpecification {
     init {
         logger.log(openApiSpecificationInfo(openApiFilePath, parsedOpenApi))
@@ -144,9 +144,9 @@ class OpenApiSpecification(
             )
         }
 
-        fun loadDictionary(openApiFilePath: String): Map<String, Value> {
+        fun loadDictionary(openApiFilePath: String, dictionary: String?): Map<String, Value> {
             val dictionaryFile = File(openApiFilePath).let {
-                Flags.getStringValue(SPECMATIC_STUB_DICTIONARY)?.let { File(it) }
+                (dictionary ?: Flags.getStringValue(SPECMATIC_STUB_DICTIONARY))?.let { File(it) }
                     ?: it.canonicalFile.parentFile.resolve(it.nameWithoutExtension + "_dictionary.json")
             }
 

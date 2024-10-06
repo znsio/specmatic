@@ -11,6 +11,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.specmatic.conversions.ExampleFromFile
+import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesView.Companion.groupEndpoints
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
@@ -49,12 +50,6 @@ class ExamplesInteractiveServer(
         if(inputContractFile != null && inputContractFile.exists()) return inputContractFile
         if(contractFileFromRequest != null && contractFileFromRequest!!.exists()) return contractFileFromRequest!!
         throw ContractException("Invalid contract file provided to the examples interactive server")
-    }
-
-    private fun getContractTests(): List<ContractTest> {
-        return getContractFile().let {
-            parseContractFileToFeature(it.path).loadExternalisedExamples().generateContractTests(emptyList())
-        }.toList()
     }
 
     private fun getServerHostPort(request: ExamplePageRequest? = null) : String {
@@ -203,10 +198,12 @@ class ExamplesInteractiveServer(
                 post ("/_specmatic/examples/test") {
                     val request = call.receive<ExampleTestRequest>()
                     try {
-                        val contractTests = getContractTests()
-                        val (result, testLog) = testExample(
-                            contractTests, request, testBaseUrl
-                        )
+                        val feature = OpenApiSpecification.fromFile(getContractFile().path).toFeature()
+
+                        val contractTest = feature.generateContractTestFromFile(request.exampleFile).value
+
+                        val (result, testLog) = testExample(contractTest, testBaseUrl)
+
                         call.respond(HttpStatusCode.OK, ExampleTestResponse(result, testLog, exampleFile = File(request.exampleFile)))
                     } catch (e: Throwable) {
                         call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "An unexpected error occurred: ${e.message}"))
@@ -309,11 +306,7 @@ class ExamplesInteractiveServer(
             constructor(): this(null, ExampleGenerationStatus.ERROR)
         }
 
-        fun testExample(contractTests: List<ContractTest>, exampleTestRequest: ExampleTestRequest, testBaseUrl: String): Pair<TestResult, String> {
-            val test = contractTests.firstOrNull {
-                it.testDescription().contains(File(exampleTestRequest.exampleFile).nameWithoutExtension)
-            } ?: return Pair(TestResult.Error, "No matching test found")
-
+        fun testExample(test: ContractTest, testBaseUrl: String): Pair<TestResult, String> {
             val testResultRecord = test.runTest(testBaseUrl, timeoutInMilliseconds = DEFAULT_TIMEOUT_IN_MILLISECONDS).let {
                 test.testResultRecord(it.first, it.second)
             } ?: return Pair(TestResult.Error, "No Test Result Record Found")

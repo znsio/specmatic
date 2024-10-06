@@ -360,18 +360,7 @@ data class Feature(
         return generateContractTestScenarios(suggestions, fn).map { (originalScenario, returnValue) ->
             returnValue.realise(
                 hasValue = { concreteTestScenario, comment ->
-                    ScenarioAsTest(
-                        concreteTestScenario,
-                        flagsBased,
-                        concreteTestScenario.sourceProvider,
-                        concreteTestScenario.sourceRepository,
-                        concreteTestScenario.sourceRepositoryBranch,
-                        concreteTestScenario.specification,
-                        concreteTestScenario.serviceType,
-                        comment,
-                        workflow = workflow,
-                        originalScenario = originalScenario
-                    )
+                    scenarioAsTest(concreteTestScenario, comment, workflow, originalScenario)
                 },
                 orFailure = {
                     ScenarioTestGenerationFailure(originalScenario, it.failure)
@@ -382,6 +371,43 @@ data class Feature(
             )
         }
     }
+
+    fun generateContractTestFromFile(filePath: String): ReturnValue<ContractTest> {
+        val scenarioStub = ScenarioStub.readFromFile(File(filePath))
+
+
+        val originalScenario = scenarios.firstOrNull { scenario ->
+            scenario.matches(scenarioStub.request, scenarioStub.response) is Result.Success
+        } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
+
+        val concreteTestScenario = io.specmatic.core.Scenario(
+            name = "",
+            httpRequestPattern = scenarioStub.request.toPattern(),
+            httpResponsePattern = HttpResponsePattern(scenarioStub.response)
+        ).let {
+            it.copy(name = it.apiIdentifier)
+        }
+
+        return HasValue(scenarioAsTest(concreteTestScenario, null, Workflow(), originalScenario))
+    }
+
+    private fun scenarioAsTest(
+        concreteTestScenario: Scenario,
+        comment: String?,
+        workflow: Workflow,
+        originalScenario: Scenario
+    ) = ScenarioAsTest(
+        concreteTestScenario,
+        flagsBased,
+        concreteTestScenario.sourceProvider,
+        concreteTestScenario.sourceRepository,
+        concreteTestScenario.sourceRepositoryBranch,
+        concreteTestScenario.specification,
+        concreteTestScenario.serviceType,
+        comment,
+        workflow = workflow,
+        originalScenario = originalScenario
+    )
 
     private fun getBadRequestsOrDefault(scenario: Scenario): BadRequestOrDefault? {
         val badRequestResponses = scenarios.filter {

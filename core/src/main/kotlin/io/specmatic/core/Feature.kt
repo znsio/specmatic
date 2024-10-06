@@ -372,9 +372,8 @@ data class Feature(
         }
     }
 
-    fun generateContractTestFromFile(filePath: String): ReturnValue<ContractTest> {
+    fun createContractTestFromExampleFile(filePath: String): ReturnValue<ContractTest> {
         val scenarioStub = ScenarioStub.readFromFile(File(filePath))
-
 
         val originalScenario = scenarios.firstOrNull { scenario ->
             scenario.matches(scenarioStub.request, scenarioStub.response) is Result.Success

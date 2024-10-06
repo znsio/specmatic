@@ -200,7 +200,7 @@ class ExamplesInteractiveServer(
                     try {
                         val feature = OpenApiSpecification.fromFile(getContractFile().path).toFeature()
 
-                        val contractTest = feature.generateContractTestFromFile(request.exampleFile).value
+                        val contractTest = feature.createContractTestFromExampleFile(request.exampleFile).value
 
                         val (result, testLog) = testExample(contractTest, testBaseUrl)
 

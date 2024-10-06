@@ -232,7 +232,7 @@ class ExamplesCommand : Callable<Int> {
         @Option(names = ["--dictionary"], description = ["External Dictionary File Path"])
         var dictFile: File? = null
 
-        @Option(names = ["--testBaseURL"], description = ["The baseURL of the SUT to test"], required = false)
+        @Option(names = ["--testBaseURL"], description = ["The baseURL of system to test"], required = false)
         var testBaseURL: String? = null
 
         var server: ExamplesInteractiveServer? = null

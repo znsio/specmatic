@@ -1,6 +1,5 @@
 {
-  "person.addresses[*].street": "Baker Street",
-  "person.past_companies[0].name": "Acme Inc",
-  "person.past_companies[1].name": "Paint Inc",
-  "person.name": "Jackie"
+  "PersonDetails.person.addresses[*].street": "Baker Street",
+  "PersonDetails.person.past_companies[*].name": "Acme Inc",
+  "PersonDetails.person.name": "Jackie"
 }

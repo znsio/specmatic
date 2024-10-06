@@ -4,74 +4,12 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import io.cucumber.messages.internal.com.fasterxml.jackson.databind.ObjectMapper
 import io.cucumber.messages.types.Step
 import io.ktor.util.reflect.*
-import io.specmatic.core.DEFAULT_RESPONSE_CODE
-import io.specmatic.core.Feature
-import io.specmatic.core.HttpHeadersPattern
-import io.specmatic.core.HttpPathPattern
-import io.specmatic.core.HttpQueryParamPattern
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpRequestPattern
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.HttpResponsePattern
-import io.specmatic.core.MatchFailure
-import io.specmatic.core.MatchSuccess
-import io.specmatic.core.MatchingResult
-import io.specmatic.core.MultiPartContentPattern
-import io.specmatic.core.MultiPartFilePattern
-import io.specmatic.core.MultiPartFormDataPattern
-import io.specmatic.core.NoBodyPattern
-import io.specmatic.core.NoBodyValue
-import io.specmatic.core.OMIT
-import io.specmatic.core.Resolver
-import io.specmatic.core.Result
+import io.specmatic.core.*
 import io.specmatic.core.Result.Failure
-import io.specmatic.core.Scenario
-import io.specmatic.core.ScenarioInfo
-import io.specmatic.core.SecurityConfiguration
-import io.specmatic.core.SecuritySchemeConfiguration
-import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.URLPathSegmentPattern
-import io.specmatic.core.handleError
 import io.specmatic.core.log.LogStrategy
 import io.specmatic.core.log.logger
-import io.specmatic.core.otherwise
-import io.specmatic.core.pattern.AnyNonNullJSONValue
-import io.specmatic.core.pattern.AnyPattern
-import io.specmatic.core.pattern.AnythingPattern
-import io.specmatic.core.pattern.Base64StringPattern
-import io.specmatic.core.pattern.BinaryPattern
-import io.specmatic.core.pattern.BooleanPattern
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.DatePattern
-import io.specmatic.core.pattern.DateTimePattern
-import io.specmatic.core.pattern.DeferredPattern
-import io.specmatic.core.pattern.DictionaryPattern
-import io.specmatic.core.pattern.EmailPattern
-import io.specmatic.core.pattern.EnumPattern
-import io.specmatic.core.pattern.ExactValuePattern
-import io.specmatic.core.pattern.Examples
-import io.specmatic.core.pattern.JSONObjectPattern
-import io.specmatic.core.pattern.ListPattern
-import io.specmatic.core.pattern.NullPattern
-import io.specmatic.core.pattern.NumberPattern
-import io.specmatic.core.pattern.Pattern
-import io.specmatic.core.pattern.PatternInStringPattern
-import io.specmatic.core.pattern.QueryParameterArrayPattern
-import io.specmatic.core.pattern.QueryParameterScalarPattern
-import io.specmatic.core.pattern.ResponseExample
-import io.specmatic.core.pattern.ResponseValueExample
-import io.specmatic.core.pattern.Row
-import io.specmatic.core.pattern.StringPattern
-import io.specmatic.core.pattern.TYPE_ATTRIBUTE_NAME
-import io.specmatic.core.pattern.UUIDPattern
-import io.specmatic.core.pattern.XMLPattern
-import io.specmatic.core.pattern.XMLTypeData
-import io.specmatic.core.pattern.attempt
-import io.specmatic.core.pattern.parsedJSON
-import io.specmatic.core.pattern.toJSONObjectPattern
+import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.withoutOptionality
-import io.specmatic.core.then
-import io.specmatic.core.to
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.IGNORE_INLINE_EXAMPLE_WARNINGS
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
@@ -130,7 +68,8 @@ class OpenApiSpecification(
     private val sourceRepositoryBranch: String? = null,
     private val specificationPath: String? = null,
     private val securityConfiguration: SecurityConfiguration? = null,
-    private val specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+    private val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    private val dictionary: Map<String, Value> = loadDictionary(openApiFilePath)
 ) : IncludedSpecification, ApiSpecification {
     init {
         logger.log(openApiSpecificationInfo(openApiFilePath, parsedOpenApi))
@@ -201,8 +140,33 @@ class OpenApiSpecification(
                 sourceRepositoryBranch,
                 specificationPath,
                 securityConfiguration,
-                specmaticConfig
+                specmaticConfig,
             )
+        }
+
+        fun loadDictionary(openApiFilePath: String): Map<String, Value> {
+            val dictionaryFile = File(openApiFilePath).let {
+                Flags.getStringValue(SPECMATIC_STUB_DICTIONARY)?.let { File(it) }
+                    ?: it.canonicalFile.parentFile.resolve(it.nameWithoutExtension + "_dictionary.json")
+            }
+
+            if(!dictionaryFile.exists() || !dictionaryFile.isFile) {
+                logger.log("Found dictionary file ${dictionaryFile.path} but it was empty")
+
+                return emptyMap()
+            }
+
+            try {
+                val dictionary = parsedJSONObject(dictionaryFile.readText()).jsonObject
+                logger.log("Using dictionary file ${dictionaryFile.path}")
+
+                return dictionary
+            } catch(e: Throwable) {
+                logger.log("Could not parse dictionary file ${dictionaryFile.path} due to error")
+                logger.log(e)
+
+                throw e
+            }
         }
 
         private fun printMessages(parseResult: SwaggerParseResult, filePath: String, loggerForErrors: LogStrategy) {
@@ -230,7 +194,7 @@ class OpenApiSpecification(
         val (scenarioInfos, stubsFromExamples) = toScenarioInfos()
 
         return Feature(
-            scenarioInfos.map { Scenario(it) }, name = name, path = openApiFilePath, sourceProvider = sourceProvider,
+            scenarioInfos.map { Scenario(it).copy(dictionary = dictionary) }, name = name, path = openApiFilePath, sourceProvider = sourceProvider,
             sourceRepository = sourceRepository,
             sourceRepositoryBranch = sourceRepositoryBranch,
             specification = specificationPath,
@@ -1394,7 +1358,11 @@ class OpenApiSpecification(
 
                     val oneOfs = schemasWithOneOf.map { oneOfTheSchemas ->
                         val result = oneOfTheSchemas.oneOf.map {
-                            val (componentName, schemaToProcess) = resolveReferenceToSchema(it.`$ref`)
+                            val (componentName, schemaToProcess) = if(it.`$ref` != null) {
+                                resolveReferenceToSchema(it.`$ref`)
+                            } else {
+                                "" to it
+                            }
                             val requiredFields = schemaToProcess.required.orEmpty()
                             componentName to toSchemaProperties(
                                 schemaToProcess,
@@ -1416,7 +1384,7 @@ class OpenApiSpecification(
                     val pattern = if (oneOfs.size == 1)
                         oneOfs.single()
                     else if (oneOfs.size > 1)
-                        AnyPattern(oneOfs)
+                        AnyPattern(oneOfs, typeAlias = "(${patternName})")
                     else if(allDiscriminators.isNotEmpty())
                         AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") }, discriminatorProperty = allDiscriminators.key, discriminatorValues = allDiscriminators.values.toSet())
                     else if(schemaProperties.size > 1)
@@ -1441,7 +1409,12 @@ class OpenApiSpecification(
                     val nullable =
                         if (schema.oneOf.any { nullableEmptyObject(it) }) listOf(NullPattern) else emptyList()
 
-                    AnyPattern(candidatePatterns.plus(nullable), discriminatorProperty =  schema.discriminator?.propertyName, discriminatorValues = schema.discriminator?.let { it.mapping.keys.toSet() }.orEmpty())
+                    AnyPattern(
+                        candidatePatterns.plus(nullable),
+                        discriminatorProperty = schema.discriminator?.propertyName,
+                        discriminatorValues = schema.discriminator?.let { it.mapping.keys.toSet() }.orEmpty(),
+                        typeAlias = "(${patternName})"
+                    )
                 } else if (schema.anyOf != null) {
                     throw UnsupportedOperationException("Specmatic does not support anyOf")
                 } else {
@@ -1743,7 +1716,7 @@ class OpenApiSpecification(
         val schemaProperties = toSchemaProperties(schema, requiredFields, patternName, typeStack)
         val minProperties: Int? = schema.minProperties
         val maxProperties: Int? = schema.maxProperties
-        val jsonObjectPattern = toJSONObjectPattern(schemaProperties, "(${patternName})").copy(
+        val jsonObjectPattern = toJSONObjectPattern(schemaProperties, if(patternName.isNotBlank()) "(${patternName})" else "").copy(
             minProperties = minProperties,
             maxProperties = maxProperties
         )

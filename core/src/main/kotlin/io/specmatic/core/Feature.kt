@@ -16,7 +16,6 @@ import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
 import io.specmatic.core.utilities.*
-import io.specmatic.mock.loadDictionary
 import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.info.Info
@@ -293,11 +292,10 @@ data class Feature(
     fun matchingStub(
         request: HttpRequest,
         response: HttpResponse,
-        mismatchMessages: MismatchMessages = DefaultMismatchMessages,
-        dictionary: Dictionary = Dictionary()
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): HttpStubData {
         try {
-            val results = stubMatchResult(request, response.substituteDictionaryValues(dictionary), mismatchMessages)
+            val results = stubMatchResult(request, response, mismatchMessages)
 
             return results.find {
                 it.first != null
@@ -330,9 +328,9 @@ data class Feature(
                                     )
                                 )
                             HttpStubData(
+                                requestType = requestTypeWithAncestors,
                                 response = resolvedResponse.copy(externalisedResponseCommand = response.externalisedResponseCommand),
                                 resolver = resolver,
-                                requestType = requestTypeWithAncestors,
                                 responsePattern = scenario.httpResponsePattern,
                                 contractPath = this.path,
                                 feature = this,
@@ -468,10 +466,7 @@ data class Feature(
         scenarioStub: ScenarioStub,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): HttpStubData {
-        val dictionaryMap = specmaticConfig.stub.dictionary?.let { loadDictionary(it) } ?: emptyMap()
-        val dictionary = Dictionary(dictionaryMap)
-
-        val scenarioStubWithDictionary = scenarioStub.copy(dictionary = dictionary)
+        val scenarioStubWithDictionary = scenarioStub
 
         if(scenarios.isEmpty())
             throw ContractException("No scenarios found in feature $name ($path)")
@@ -503,11 +498,10 @@ data class Feature(
                     HttpResponse(),
                     matchingScenario.resolver,
                     responsePattern = responseTypeWithAncestors,
+                    examplePath = scenarioStubWithDictionary.filePath,
                     scenario = matchingScenario,
-                    partial = scenarioStubWithDictionary.partial.copy(response = scenarioStubWithDictionary.partial.response.substituteDictionaryValues(scenarioStubWithDictionary.dictionary)),
                     data = scenarioStubWithDictionary.data,
-                    dictionary = scenarioStubWithDictionary.dictionary,
-                    examplePath = scenarioStubWithDictionary.filePath
+                    partial = scenarioStubWithDictionary.partial.copy(response = scenarioStubWithDictionary.partial.response)
                 )
             }
             else {
@@ -519,14 +513,12 @@ data class Feature(
             matchingStub(
                 scenarioStubWithDictionary.request,
                 scenarioStubWithDictionary.response,
-                mismatchMessages,
-                scenarioStubWithDictionary.dictionary
+                mismatchMessages
             ).copy(
                 delayInMilliseconds = scenarioStubWithDictionary.delayInMilliseconds,
                 requestBodyRegex = scenarioStubWithDictionary.requestBodyRegex?.let { Regex(it) },
                 stubToken = scenarioStubWithDictionary.stubToken,
                 data = scenarioStubWithDictionary.data,
-                dictionary = scenarioStubWithDictionary.dictionary,
                 examplePath = scenarioStubWithDictionary.filePath
             )
         }

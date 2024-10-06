@@ -7,13 +7,24 @@ import io.specmatic.core.value.ListValue
 import io.specmatic.core.value.Value
 
 data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null, override val example: List<String?>? = null) : Pattern, SequenceType, HasDefaultExample {
-
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
 
-    override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
+    override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
+        if(concretePattern !is JSONArrayPattern)
+            return concretePattern
+
+        return concretePattern.copy(
+            typeAlias = typeAlias ?: this.typeAlias,
+            pattern = concretePattern.pattern.map { concreteItemPattern ->
+                pattern.addTypeAliasesToConcretePattern(concreteItemPattern, resolver)
+            }
+        )
+    }
+
+    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
         val listValue = value as? JSONArrayValue ?: return HasFailure("Cannot generate a list from partial of type ${value.displayableType()}")
-        val newList = listValue.list.map { pattern.fillInTheBlanks(it, dictionary, resolver) }.listFold()
+        val newList = listValue.list.map { pattern.fillInTheBlanks(it, resolver.plusDictionaryLookupDetails(null, "[*]")) }.listFold()
 
         return newList.ifValue { listValue.copy(list = it) }
     }
@@ -74,7 +85,11 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
     override fun generate(resolver: Resolver): Value {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
 
-        return resolver.resolveExample(example, pattern) ?: generateRandomValue(resolverWithEmptyType)
+        return resolver.resolveExample(example, pattern) ?: dictionaryLookup(resolverWithEmptyType) ?: generateRandomValue(resolverWithEmptyType)
+    }
+
+    private fun dictionaryLookup(resolver: Resolver): Value? {
+        return resolver.generateList(pattern)
     }
 
     private fun generateRandomValue(resolver: Resolver): Value {

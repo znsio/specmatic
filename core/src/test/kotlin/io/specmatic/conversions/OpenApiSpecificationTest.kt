@@ -30,7 +30,6 @@ import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
 import java.math.BigDecimal
@@ -4911,7 +4910,10 @@ paths:
 
         private fun assertMatchesResponseSnippet(path: String, xmlSnippet: String, xmlFeature: Feature) {
             val request = HttpRequest("GET", path)
-            val stubData = xmlFeature.matchingStub(request, HttpResponse(200, headers = mapOf(CONTENT_TYPE to "application/xml"), body = parsedValue(xmlSnippet)))
+            val stubData = xmlFeature.matchingStub(
+                request,
+                HttpResponse(200, headers = mapOf(CONTENT_TYPE to "application/xml"), body = parsedValue(xmlSnippet))
+            )
 
             val stubMatchResult =
                 stubData.responsePattern.body.matches(parsedValue(xmlSnippet), xmlFeature.scenarios.first().resolver)

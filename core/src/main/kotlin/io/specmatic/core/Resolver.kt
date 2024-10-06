@@ -1,5 +1,6 @@
 package io.specmatic.core
 
+import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
@@ -34,7 +35,9 @@ data class Resolver(
     val parseStrategy: (resolver: Resolver, pattern: Pattern, rowValue: String) -> Value = actualParse,
     val cyclePreventionStack: List<Pattern> = listOf(),
     val defaultExampleResolver: DefaultExampleResolver = DoNotUseDefaultExample,
-    val generation: GenerationStrategies = NonGenerativeTests
+    val generation: GenerationStrategies = NonGenerativeTests,
+    val dictionary: Map<String, Value> = emptyMap(),
+    val dictionaryLookupPath: String = ""
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
@@ -128,6 +131,78 @@ data class Resolver(
         }
     }
 
+    fun generate(pattern: Pattern): Value {
+        if(dictionaryLookupPath.isBlank())
+            return pattern.generate(this)
+
+        val value = dictionary[dictionaryLookupPath] ?: return pattern.generate(this)
+
+        val dictionaryValueMatchResult = pattern.matches(value, this)
+
+        dictionaryValueMatchResult.throwOnFailure()
+
+        return value
+    }
+
+    fun generate(typeAlias: String?, rawLookupKey: String, pattern: Pattern): Value {
+        val resolvedPattern = resolvedHop(pattern, this)
+        if(resolvedPattern is ExactValuePattern && !resolvedPattern.hasPatternToken())
+            return pattern.generate(this)
+
+        val lookupKey = withoutOptionality(rawLookupKey)
+
+        if (factStore.has(lookupKey))
+            return generate(lookupKey, pattern)
+
+        val lookupPath = if(typeAlias.isNullOrBlank()) {
+            if(lookupKey.isBlank())
+                ""
+            else if(lookupKey == "[*]")
+                "$dictionaryLookupPath$lookupKey"
+            else
+                "$dictionaryLookupPath.$lookupKey"
+        } else {
+            "${withoutPatternDelimiters(typeAlias)}.$lookupKey"
+        }
+
+        val updatedResolver = if(lookupPath.isNotBlank()) {
+            this.copy(dictionaryLookupPath = lookupPath)
+        } else {
+            this
+        }
+
+        return updatedResolver.generate(pattern)
+    }
+
+    fun generateList(pattern: Pattern): Value {
+        val lookupKey = dictionaryLookupPath.trim() + "[*]"
+
+        val value = dictionary[lookupKey] ?: return this.copy(dictionaryLookupPath = lookupKey).generateRandomList(pattern)
+
+        val matchResult = pattern.matches(value, this)
+
+        if(matchResult.isSuccess())
+            return JSONArrayValue(listOf(value))
+
+        val errorReport = """
+>> $lookupKey
+
+Dictionary value did not match the spec
+
+${matchResult.reportString()}
+        """.trimIndent()
+
+        logger.log(errorReport)
+
+        return generateRandomList(pattern)
+    }
+
+    private fun generateRandomList(pattern: Pattern): Value {
+        return pattern.listOf(0.until(randomNumber(3)).mapIndexed{ index, _ ->
+            attempt(breadCrumb = "[$index (random)]") { pattern.generate(this) }
+        }, this)
+    }
+
     fun generate(factKey: String, pattern: Pattern): Value {
         if (!factStore.has(factKey))
             return pattern.generate(this)
@@ -196,5 +271,34 @@ data class Resolver(
     fun generateKeySubLists(key: String, subList: List<String>): Sequence<List<String>> {
         return generation.generateKeySubLists(key, subList)
     }
+
+    fun plusDictionaryLookupDetails(typeAlias: String?, key: String): Resolver {
+        val newDictionaryLookupPath = addToDictionaryLookupPath(typeAlias, key)
+
+        return this.copy(dictionaryLookupPath = newDictionaryLookupPath)
+    }
+
+    private fun addToDictionaryLookupPath(typeAlias: String?, key: String): String {
+        if(typeAlias.isNullOrBlank()) {
+            if(key.startsWith("["))
+                return "$dictionaryLookupPath$key"
+            else
+                return "$dictionaryLookupPath.$key"
+        }
+
+        return "${withoutPatternDelimiters(typeAlias)}.$key"
+    }
+
+    fun hasDictionaryToken(key: String): Boolean {
+        return key in dictionary
+    }
+
+    fun getDictionaryToken(key: String): Value {
+        return dictionary.getValue(key)
+    }
+}
+
+private fun ExactValuePattern.hasPatternToken(): Boolean {
+    return this.pattern is StringValue && isPatternToken(this.pattern.string)
 }
 

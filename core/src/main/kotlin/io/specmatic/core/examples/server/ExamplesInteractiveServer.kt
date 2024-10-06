@@ -11,6 +11,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.specmatic.conversions.ExampleFromFile
+import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesView.Companion.groupEndpoints
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
@@ -22,6 +23,9 @@ import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.HttpStubData
+import io.specmatic.test.ContractTest
+import io.specmatic.test.TestInteractionsLog
+import io.specmatic.test.TestInteractionsLog.combineLog
 import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
@@ -30,6 +34,7 @@ import kotlin.system.exitProcess
 class ExamplesInteractiveServer(
     private val serverHost: String,
     private val serverPort: Int,
+    private val testBaseUrl: String,
     private val inputContractFile: File? = null,
     private val filterName: String,
     private val filterNotName: String,
@@ -45,6 +50,10 @@ class ExamplesInteractiveServer(
         if(inputContractFile != null && inputContractFile.exists()) return inputContractFile
         if(contractFileFromRequest != null && contractFileFromRequest!!.exists()) return contractFileFromRequest!!
         throw ContractException("Invalid contract file provided to the examples interactive server")
+    }
+
+    private fun getServerHostPort(request: ExamplePageRequest? = null) : String {
+        return request?.hostPort ?: "localhost:$serverPort"
     }
 
     private val environment = applicationEngineEnvironment {
@@ -64,12 +73,21 @@ class ExamplesInteractiveServer(
 
             configureHealthCheckModule()
             routing {
+                get("/_specmatic/examples") {
+                    val contractFile = getContractFileOrBadRequest(call) ?: return@get
+                    try {
+                        respondWithExamplePageHtmlContent(contractFile, getServerHostPort(), call)
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
+                    }
+                }
+
                 post("/_specmatic/examples") {
                     val request = call.receive<ExamplePageRequest>()
                     contractFileFromRequest = File(request.contractFile)
                     val contractFile = getContractFileOrBadRequest(call) ?: return@post
                     try {
-                        respondWithExamplePageHtmlContent(contractFile, request.hostPort, call)
+                        respondWithExamplePageHtmlContent(contractFile,getServerHostPort(request), call)
                     } catch (e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
                     }
@@ -176,6 +194,21 @@ class ExamplesInteractiveServer(
                         mapOf("content" to File(fileName).readText())
                     )
                 }
+
+                post ("/_specmatic/examples/test") {
+                    val request = call.receive<ExampleTestRequest>()
+                    try {
+                        val feature = OpenApiSpecification.fromFile(getContractFile().path).toFeature()
+
+                        val contractTest = feature.createContractTestFromExampleFile(request.exampleFile).value
+
+                        val (result, testLog) = testExample(contractTest, testBaseUrl)
+
+                        call.respond(HttpStatusCode.OK, ExampleTestResponse(result, testLog, exampleFile = File(request.exampleFile)))
+                    } catch (e: Throwable) {
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "An unexpected error occurred: ${e.message}"))
+                    }
+                }
             }
         }
         connector {
@@ -271,6 +304,16 @@ class ExamplesInteractiveServer(
         class ExampleGenerationResult private constructor (val path: String?, val status: ExampleGenerationStatus) {
             constructor(path: String, created: Boolean) : this(path, if(created) ExampleGenerationStatus.CREATED else ExampleGenerationStatus.EXISTED)
             constructor(): this(null, ExampleGenerationStatus.ERROR)
+        }
+
+        fun testExample(test: ContractTest, testBaseUrl: String): Pair<TestResult, String> {
+            val testResultRecord = test.runTest(testBaseUrl, timeoutInMilliseconds = DEFAULT_TIMEOUT_IN_MILLISECONDS).let {
+                test.testResultRecord(it.first, it.second)
+            } ?: return Pair(TestResult.Error, "No Test Result Record Found")
+
+            return testResultRecord.scenarioResult?.let { scenarioResult ->
+                Pair(testResultRecord.result, TestInteractionsLog.testHttpLogMessages.last { it.scenario == scenarioResult.scenario }.combineLog())
+            } ?: Pair(TestResult.Error, "No Log Message Found")
         }
 
         fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean): List<String> {
@@ -535,6 +578,7 @@ enum class ValidateExampleVerdict {
     SUCCESS,
     FAILURE
 }
+
 data class ValidateExampleResponseV2(
     val verdict: ValidateExampleVerdict,
     val message: String,
@@ -551,6 +595,34 @@ data class GenerateExampleRequest(
 data class GenerateExampleResponse(
     val generatedExample: String?
 )
+
+data class ExampleTestRequest(
+    val exampleFile: String
+)
+
+data class ExampleTestResponse(
+    val result: TestResult,
+    val details: String,
+    val testLog: String
+) {
+    constructor(result: TestResult, testLog: String, exampleFile: File): this (
+        result = result,
+        details = resultToDetails(result, exampleFile),
+        testLog = testLog.trim('-', ' ', '\n', '\r')
+    )
+
+    companion object {
+        fun resultToDetails(result: TestResult, exampleFile: File): String {
+            val postFix = when(result) {
+                TestResult.Success -> "has SUCCEEDED"
+                TestResult.Error -> "has ERROR"
+                else -> "has FAILED"
+            }
+
+            return "Example test for ${exampleFile.nameWithoutExtension} $postFix"
+        }
+    }
+}
 
 fun loadExternalExamples(contractFile: File): Pair<File, Map<String, List<ScenarioStub>>> {
     val examplesDir =

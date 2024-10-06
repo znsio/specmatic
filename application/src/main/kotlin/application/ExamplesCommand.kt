@@ -232,6 +232,9 @@ class ExamplesCommand : Callable<Int> {
         @Option(names = ["--dictionary"], description = ["External Dictionary File Path"])
         var dictFile: File? = null
 
+        @Option(names = ["--testBaseURL"], description = ["The baseURL of the SUT to test"], required = true)
+        lateinit var testBaseURL: String
+
         var server: ExamplesInteractiveServer? = null
 
         override fun call() {
@@ -241,7 +244,7 @@ class ExamplesCommand : Callable<Int> {
                 if (contractFile != null && !contractFile!!.exists())
                     exitWithMessage("Could not find file ${contractFile!!.path}")
 
-                server = ExamplesInteractiveServer("0.0.0.0", 9001, contractFile, filterName, filterNotName, dictFile)
+                server = ExamplesInteractiveServer("0.0.0.0", 9001, testBaseURL, contractFile, filterName, filterNotName, dictFile)
                 addShutdownHook()
 
                 consoleLog(StringLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop."))

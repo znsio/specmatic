@@ -8772,6 +8772,97 @@ paths:
         assertThat(responseBody.string).isEqualTo("success")
     }
 
+    @Nested
+    inner class NegativeScenariosForQueryParams {
+        @Test
+        fun `should generate the negative scenarios where the mandatory keys are missing`() {
+            val spec = """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /persons:
+                    get:
+                      parameters:
+                        - in: query
+                          name: id
+                          schema:
+                            type: string
+                          required: true
+                        - in: query
+                          name: name 
+                          schema:
+                            type: string
+                          required: false
+                        - in: query
+                          name: age
+                          schema:
+                            type: string
+                          required: true
+                      responses:
+                        200:
+                          content:
+                            text/plain:
+                              schema:
+                                type: "string"
+            """.trimIndent()
+            val tests =
+                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+            assertThat(tests.size).isEqualTo(2)
+            val firstScenarioQueryParams = tests.first().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
+            val secondScenarioQueryParams = tests.last().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
+            assertThat(firstScenarioQueryParams.keys).doesNotContain("id")
+            assertThat(secondScenarioQueryParams.keys).doesNotContain("age")
+            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.id mandatory query param not sent]")
+            assertThat(tests.last().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.age mandatory query param not sent]")
+        }
+
+        @Test
+        fun `should generate the negative scenario where the mandatory keys of array based query params are missing`() {
+            val spec = """
+                    ---
+                    openapi: "3.0.1"
+                    info:
+                      title: "Array Param API"
+                      version: "1"
+                    paths:
+                      /items:
+                        get:
+                          parameters:
+                            - in: query
+                              name: ids
+                              schema:
+                                type: array
+                                items:
+                                  type: string
+                              required: true
+                            - in: query
+                              name: category 
+                              schema:
+                                type: string
+                              required: false
+                          responses:
+                            200:
+                              content:
+                                text/plain:
+                                  schema:
+                                    type: "string"
+            """.trimIndent()
+
+            val tests =
+                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+
+            assertThat(tests.size).isEqualTo(1)
+
+            val firstScenarioQueryParams = tests.first().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
+
+            assertThat(firstScenarioQueryParams.keys).doesNotContain("ids")
+            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /items -> 4xx [REQUEST.QUERY-PARAM.ids mandatory query param not sent]")
+        }
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

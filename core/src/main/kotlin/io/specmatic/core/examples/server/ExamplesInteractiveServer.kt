@@ -34,7 +34,7 @@ import kotlin.system.exitProcess
 class ExamplesInteractiveServer(
     private val serverHost: String,
     private val serverPort: Int,
-    private val testBaseUrl: String,
+    private val testBaseUrl: String?,
     private val inputContractFile: File? = null,
     private val filterName: String,
     private val filterNotName: String,
@@ -196,6 +196,10 @@ class ExamplesInteractiveServer(
                 }
 
                 post ("/_specmatic/examples/test") {
+                    if (testBaseUrl.isNullOrEmpty()) {
+                        return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request, No Test Base URL provided via command-line"))
+                    }
+
                     val request = call.receive<ExampleTestRequest>()
                     try {
                         val feature = OpenApiSpecification.fromFile(getContractFile().path).toFeature()
@@ -267,7 +271,8 @@ class ExamplesInteractiveServer(
                 "hasExamples" to tableRows.any {it.example != null},
                 "validationDetails" to tableRows.withIndex().associate { (idx, row) ->
                     idx.inc() to row.exampleMismatchReason
-                }
+                },
+                "isTestMode" to (testBaseUrl != null)
             )
         )
     }

@@ -460,10 +460,14 @@
                 }
             }
 
-            .btn-grp {
+            & .btn-grp {
                 display: flex;
                 align-items: center;
                 gap: 1rem;
+
+                &[data-test-mode="false"] > #bulk-test {
+                    display: none;
+                }
             }
 
             & button {
@@ -654,18 +658,6 @@
                 }
             }
 
-            &[data-valid="success"] {
-                & td:last-child {
-                    & button.validate {
-                        display: none;
-                    }
-
-                    & button.test {
-                        display: inline-block;
-                    }
-                }
-            }
-
             &[data-generate="processing"] button.generate, &[data-valid="processing"] button.validate, &[data-test="processing"] button.test {
                 --_padding: 0.15rem 0rem;
 
@@ -692,6 +684,21 @@
 
             & button.test::after {
                 content: var(--_content, "Test");
+            }
+        }
+
+
+        tbody {
+            &[data-test-mode="true"] > tr[data-valid="success"] {
+                & td:last-child {
+                    & button.validate {
+                        display: none;
+                    }
+
+                    & button.test {
+                        display: inline-block;
+                    }
+                }
             }
         }
 
@@ -990,7 +997,7 @@
         <h1 th:text="${contractFile}"></h1>
         <h2 th:text="${contractFilePath}"></h2>
     </div>
-    <div class="btn-grp">
+    <div class="btn-grp" th:attr="data-test-mode=${isTestMode}">
         <button data-selected="0" id="bulk-generate" data-panel="table"></button>
         <button data-selected="0" data-panel="table" id="bulk-validate"></button>
         <button data-selected="0" data-panel="table" id="bulk-test"></button>
@@ -1014,7 +1021,7 @@
                 <th>Action</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody th:attr="data-test-mode=${isTestMode}">
             <tr
                 th:each="row, iter : ${tableRows}"
                 th:attr="data-raw-path=${row.rawPath},

@@ -741,7 +741,7 @@ class StubSubstitutionTest {
 
             println(output)
 
-            assertThat(output).contains(brokenDictionaryPath)
+            assertThat(output).contains(osAgnosticPath(brokenDictionaryPath))
         } finally {
             System.clearProperty(SPECMATIC_STUB_DICTIONARY)
         }

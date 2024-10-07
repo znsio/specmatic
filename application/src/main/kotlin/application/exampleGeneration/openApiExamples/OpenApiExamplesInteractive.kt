@@ -1,9 +1,6 @@
 package application.exampleGeneration.openApiExamples
 
-import application.exampleGeneration.ExamplesInteractiveBase
-import application.exampleGeneration.HtmlTableColumn
-import application.exampleGeneration.TableRow
-import application.exampleGeneration.TableRowGroup
+import application.exampleGeneration.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.specmatic.conversions.convertPathParameterStyle
@@ -17,16 +14,12 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import java.io.File
 
-@Command(
-    name = "interactive",
-    mixinStandardHelpOptions = true,
-    description = ["Generate and validate examples interactively through a Web UI"],
-)
-class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(OpenApiExamplesCommon()) {
+@Command(name = "interactive", description = ["Generate and validate examples interactively through a Web UI"],)
+class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(), OpenApiExamplesGenerateCommon, OpenApiExamplesValidateCommon {
     @Option(names = ["--extensive"], description = ["Display all responses, not just 2xx, in the table."], defaultValue = "false")
     override var extensive: Boolean = false
 
-    override val htmlTableColumns: List<HtmlTableColumn> = listOf(
+    override val htmlTableColumns: List<HtmlTableColumn> = listOf (
         HtmlTableColumn(name = "path", colSpan = 2),
         HtmlTableColumn(name = "method", colSpan = 1),
         HtmlTableColumn(name = "response", colSpan = 1)
@@ -56,8 +49,8 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(Op
         }
     }
 
-    override fun createTableRows(scenarios: List<Scenario>, exampleFiles: List<File>): List<TableRow> {
-        val groupedScenarios = scenarios.sortScenarios().groupScenarios()
+    override fun createTableRows(scenarioExamplePair: List<Pair<Scenario, ExampleValidationResult?>>): List<TableRow> {
+        val groupedScenarios = scenarioExamplePair.sortScenarios().groupScenarios()
 
         return groupedScenarios.flatMap { (_, methodMap) ->
             val pathSpan = methodMap.values.sumOf { it.size }
@@ -65,33 +58,31 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(Op
             var showPath = true
 
             methodMap.flatMap { (method, scenarios) ->
-                scenarios.map {
-                    val existingExample = common.getExistingExampleOrNull(it, exampleFiles)
-
+                scenarios.map { (scenario, example) ->
                     TableRow(
                         columns = listOf(
-                            TableRowGroup("path", convertPathParameterStyle(it.path), rawValue = it.path, rowSpan = pathSpan, showRow = showPath),
-                            TableRowGroup("method", it.method, showRow = !methodSet.contains(method), rowSpan = scenarios.size),
-                            TableRowGroup("response", it.status.toString(), showRow = true, rowSpan = 1, extraInfo = it.httpRequestPattern.headersPattern.contentType)
+                            TableRowGroup("path", convertPathParameterStyle(scenario.path), rawValue = scenario.path, rowSpan = pathSpan, showRow = showPath),
+                            TableRowGroup("method", scenario.method, showRow = !methodSet.contains(method), rowSpan = scenarios.size),
+                            TableRowGroup("response", scenario.status.toString(), showRow = true, rowSpan = 1, extraInfo = scenario.httpRequestPattern.headersPattern.contentType)
                         ),
-                        exampleFilePath = existingExample?.first?.absolutePath,
-                        exampleFileName = existingExample?.first?.nameWithoutExtension,
-                        exampleMismatchReason = existingExample?.second?.reportString().takeIf { reason -> reason?.isNotBlank() == true }
+                        exampleFilePath = example?.exampleFIle?.absolutePath,
+                        exampleFileName = example?.exampleName,
+                        exampleMismatchReason = example?.result?.reportString().takeIf { reason -> reason?.isNotBlank() == true }
                     ).also { methodSet.add(method); showPath = false }
                 }
             }
         }
     }
 
-    private fun List<Scenario>.groupScenarios(): Map<String, Map<String, List<Scenario>>> {
-        return this.groupBy { it.path }.mapValues { pathGroup ->
-            pathGroup.value.groupBy { it.method }
+    private fun List<Pair<Scenario, ExampleValidationResult?>>.groupScenarios(): Map<String, Map<String, List<Pair<Scenario, ExampleValidationResult?>>>> {
+        return this.groupBy { it.first.path }.mapValues { pathGroup ->
+            pathGroup.value.groupBy { it.first.method }
         }
     }
 
-    private fun List<Scenario>.sortScenarios(): List<Scenario> {
+    private fun List<Pair<Scenario, ExampleValidationResult?>>.sortScenarios(): List<Pair<Scenario, ExampleValidationResult?>> {
         return this.sortedBy {
-            "${it.path}_${it.method}_${it.status}"
+            "${it.first.path}_${it.first.method}_${it.first.status}"
         }
     }
 

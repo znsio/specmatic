@@ -21,49 +21,28 @@ import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
 import java.lang.Thread.sleep
-import java.util.concurrent.Callable
 
-abstract class ExamplesInteractiveBase<Feature, Scenario>(val common: ExamplesCommon<Feature, Scenario>): Callable<Int> {
+abstract class ExamplesInteractiveBase<Feature, Scenario>: ExamplesBase<Feature, Scenario>(), ExamplesGenerateCommon<Feature, Scenario>, ExamplesValidateCommon<Feature, Scenario> {
     @Option(names = ["--testBaseURL"], description = ["BaseURL of the SUT"], required = true)
-    lateinit var serverHost: String
+    lateinit var sutBaseUrl: String
 
     @Option(names = ["--contract-file"], description = ["Contract file path"], required = false)
-    var contractFile: File? = null
-
-    @Option(names = ["--debug"], description = ["Debug logs"])
-    var verbose = false
+    override var contractFile: File? = null
 
     @Option(names = ["--dictionary"], description = ["External Dictionary File Path"])
     var dictFile: File? = null
-
-    @Option(names = ["--filter-name"], description = ["Use only APIs with this value in their name, Case sensitive"], defaultValue = "\${env:SPECMATIC_FILTER_NAME}")
-    var filterName: String = ""
-
-    @Option(names = ["--filter-not-name"], description = ["Use only APIs which do not have this value in their name, Case sensitive"], defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}")
-    var filterNotName: String = ""
 
     abstract var extensive: Boolean
     abstract val htmlTableColumns: List<HtmlTableColumn>
     private var cachedContractFileFromRequest: File? = null
 
-    override fun call(): Int {
-        common.configureLogger(verbose)
-
+    override fun execute(contract: File?): Int {
         try {
-            contractFile?.let { contract ->
-                if (!contract.exists()) {
-                    logger.log("Could not find Contract file ${contract.path}")
-                    return 1
-                }
+            if (contract == null) {
+                logger.log("Contract file not provided, Please provide one via HTTP request")
+            }
 
-                if (contract.extension !in common.contractFileExtensions) {
-                    logger.log("Invalid Contract file ${contract.path} - File extension must be one of ${common.contractFileExtensions.joinToString()}")
-                    return 1
-                }
-
-            } ?: logger.log("No contract file provided, Please provide a contract file in the HTTP request.")
-
-            val server = InteractiveServer("0.0.0.0", 9001)
+            val server = InteractiveServer(contract, "0.0.0.0", 9001)
             addShutdownHook(server)
             logger.log("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop.")
             while (true) sleep(10000)
@@ -75,7 +54,7 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>(val common: ExamplesCo
     }
 
     // HOOKS
-    abstract fun createTableRows(scenarios: List<Scenario>, exampleFiles: List<File>): List<TableRow>
+    abstract fun createTableRows(scenarioExamplePair: List<Pair<Scenario, ExampleValidationResult?>>): List<TableRow>
 
     abstract suspend fun getScenarioFromRequestOrNull(call: ApplicationCall, feature: Feature): Scenario?
 
@@ -83,34 +62,29 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>(val common: ExamplesCo
 
     // HELPER METHODS
     private suspend fun generateExample(call: ApplicationCall, contractFile: File): ExampleGenerationResult {
-        val feature = common.contractFileToFeature(contractFile)
-        val dictionary = common.loadExternalDictionary(dictFile, contractFile)
-        val examplesDir = common.getExamplesDirectory(contractFile)
-        val exampleFiles = common.getExternalExampleFiles(examplesDir)
+        val feature = contractFileToFeature(contractFile)
+        val dictionary = loadExternalDictionary(dictFile, contractFile)
+        val examplesDir = getExamplesDirectory(contractFile)
+        val exampleFiles = getExternalExampleFiles(examplesDir)
 
         return getScenarioFromRequestOrNull(call, feature)?.let {
-            common.generateOrGetExistingExample(feature, it, dictionary, exampleFiles, examplesDir)
+            generateOrGetExistingExample(feature, it, dictionary, exampleFiles, examplesDir)
         } ?: throw IllegalArgumentException("No matching scenario found for request")
     }
 
     private fun validateExample(contractFile: File, exampleFile: File): ExampleValidationResult {
-        val feature = common.contractFileToFeature(contractFile)
-        val result = common.validateExternalExample(feature, exampleFile)
+        val feature = contractFileToFeature(contractFile)
+        val result = validateExternalExample(feature, exampleFile)
         return ExampleValidationResult(exampleFile.absolutePath, result.second, ExampleType.EXTERNAL)
     }
 
-    private fun testExample(contractFile: File, exampleFile: File): Pair<TestResult, String> {
-        val feature = common.contractFileToFeature(contractFile)
-        val result = testExternalExample(feature, exampleFile, serverHost)
-        return Pair(result.first, result.second)
+    private fun testExample(contractFile: File, exampleFile: File): ExampleTestResult {
+        val feature = contractFileToFeature(contractFile)
+        val result = testExternalExample(feature, exampleFile, sutBaseUrl)
+        return ExampleTestResult(result.first, result.second, exampleFile)
     }
 
-    private fun getFilteredScenarios(feature: Feature): List<Scenario> {
-        val scenarioFilter = ScenarioFilter(filterName, filterNotName, extensive)
-        return common.getFilteredScenarios(feature, scenarioFilter)
-    }
-
-    private fun getContractFileOrNull(request: ExamplePageRequest? = null): File? {
+    private fun getContractFileOrNull(contractFile: File?, request: ExamplePageRequest? = null): File? {
         return contractFile?.takeIf { it.exists() }?.also { contract ->
             logger.debug("Using Contract file ${contract.path} provided via command line")
         } ?: request?.contractFile?.takeIf { it.exists() }?.also { contract ->
@@ -139,17 +113,23 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>(val common: ExamplesCo
     }
 
     private fun getTableRows(contractFile: File): List<TableRow> {
-        val feature = common.contractFileToFeature(contractFile)
+        val feature = contractFileToFeature(contractFile)
         val scenarios = getFilteredScenarios(feature)
-        val examplesDir = common.getExamplesDirectory(contractFile)
-        val examples = common.getExternalExampleFiles(examplesDir)
-        val tableRows = createTableRows(scenarios, examples)
+        val examplesDir = getExamplesDirectory(contractFile)
+        val examples = getExternalExampleFiles(examplesDir)
+
+        val scenarioExamplePair = scenarios.map {
+            it to getExistingExampleOrNull(it, examples)?.let { exRes ->
+                ExampleValidationResult(exRes.first, exRes.second)
+            }
+        }
+        val tableRows = createTableRows(scenarioExamplePair)
 
         return validateRows(tableRows)
     }
 
     // INTERACTIVE SERVER
-    inner class InteractiveServer(private val serverHost: String, private val serverPort: Int) : Closeable {
+    inner class InteractiveServer(private var contract: File?, private val serverHost: String, private val serverPort: Int) : Closeable {
         private val environment = applicationEngineEnvironment {
             module {
                 install(CORS) {
@@ -220,8 +200,8 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>(val common: ExamplesCo
                         val request = call.receive<ExampleTestRequest>()
                         getValidatedContractFileOrNull()?.let { contract ->
                             getValidatedExampleOrNull(request.exampleFile)?.let { example ->
-                                val (result, testLog) = testExample(contract, example)
-                                call.respond(HttpStatusCode.OK, ExampleTestResponse(result, testLog, example))
+                                val result = testExample(contract, example)
+                                call.respond(HttpStatusCode.OK, ExampleTestResponse(result))
                             }
                         }
                     }
@@ -261,54 +241,6 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>(val common: ExamplesCo
             return htmlContent
         }
 
-        private suspend fun ApplicationCall.respondWithError(httpStatusCode: HttpStatusCode, errorMessage: String) {
-            this.respond(httpStatusCode, mapOf("error" to errorMessage))
-        }
-
-        private suspend fun ApplicationCall.respondWithError(throwable: Throwable, errorMessage: String? = throwable.message) {
-            val statusCode = when (throwable) {
-                is IllegalArgumentException, is FileNotFoundException -> HttpStatusCode.BadRequest
-                else -> HttpStatusCode.InternalServerError
-            }
-            this.respondWithError(statusCode, errorMessage ?: throwable.message ?: "Something went wrong")
-        }
-
-        private suspend fun PipelineContext<Unit, ApplicationCall>.getValidatedContractFileOrNull(request: ExamplePageRequest? = null): File? {
-            val contractFile = getContractFileOrNull(request) ?: run {
-                val errorMessage = "No Contract File Found - Please provide a contract file in the command line or in the HTTP request."
-                logger.log(errorMessage)
-                call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
-                return null
-            }
-
-            return contractFile.takeIf { it.extension in common.contractFileExtensions } ?: run {
-                val errorMessage = "Invalid Contract file ${contractFile.path} - File extension must be one of ${common.contractFileExtensions.joinToString()}"
-                logger.log(errorMessage)
-                call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
-                return null
-            }
-        }
-
-        private suspend fun PipelineContext<Unit, ApplicationCall>.getValidatedExampleOrNull(exampleFile: File): File? {
-            return when {
-                !exampleFile.exists() -> {
-                    val errorMessage = "Could not find Example file ${exampleFile.path}"
-                    logger.log(errorMessage)
-                    call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
-                    return null
-                }
-
-                exampleFile.extension !in common.exampleFileExtensions -> {
-                    val errorMessage = "Invalid Example file ${exampleFile.path} - File extension must be one of ${common.exampleFileExtensions.joinToString()}"
-                    logger.log(errorMessage)
-                    call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
-                    return null
-                }
-
-                else -> exampleFile
-            }
-        }
-
         private fun renderTemplate(contractFile: File, hostPort: String, tableRows: List<TableRow>): String {
             val variables = mapOf(
                 "tableColumns" to htmlTableColumns,
@@ -327,6 +259,54 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>(val common: ExamplesCo
                 variables = variables
             )
         }
+
+        private suspend fun ApplicationCall.respondWithError(httpStatusCode: HttpStatusCode, errorMessage: String) {
+            this.respond(httpStatusCode, mapOf("error" to errorMessage))
+        }
+
+        private suspend fun ApplicationCall.respondWithError(throwable: Throwable, errorMessage: String? = throwable.message) {
+            val statusCode = when (throwable) {
+                is IllegalArgumentException, is FileNotFoundException -> HttpStatusCode.BadRequest
+                else -> HttpStatusCode.InternalServerError
+            }
+            this.respondWithError(statusCode, errorMessage ?: throwable.message ?: "Something went wrong")
+        }
+
+        private suspend fun PipelineContext<Unit, ApplicationCall>.getValidatedContractFileOrNull(request: ExamplePageRequest? = null): File? {
+            val contractFile = getContractFileOrNull(contract, request) ?: run {
+                val errorMessage = "No Contract File Found - Please provide a contract file in the command line or in the HTTP request."
+                logger.log(errorMessage)
+                call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
+                return null
+            }
+
+            return contractFile.takeIf { it.extension in contractFileExtensions } ?: run {
+                val errorMessage = "Invalid Contract file ${contractFile.path} - File extension must be one of ${contractFileExtensions.joinToString()}"
+                logger.log(errorMessage)
+                call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
+                return null
+            }
+        }
+
+        private suspend fun PipelineContext<Unit, ApplicationCall>.getValidatedExampleOrNull(exampleFile: File): File? {
+            return when {
+                !exampleFile.exists() -> {
+                    val errorMessage = "Could not find Example file ${exampleFile.path}"
+                    logger.log(errorMessage)
+                    call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
+                    return null
+                }
+
+                exampleFile.extension !in exampleFileExtensions -> {
+                    val errorMessage = "Invalid Example file ${exampleFile.path} - File extension must be one of ${exampleFileExtensions.joinToString()}"
+                    logger.log(errorMessage)
+                    call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
+                    return null
+                }
+
+                else -> exampleFile
+            }
+        }
     }
 
     private fun addShutdownHook(server: InteractiveServer) {
@@ -344,6 +324,8 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>(val common: ExamplesCo
             }
         })
     }
+
+    data class ExampleTestResult(val result: TestResult, val testLog: String, val exampleFile: File)
 }
 
 data class ExamplePageRequest (
@@ -351,7 +333,7 @@ data class ExamplePageRequest (
     val hostPort: String?
 )
 
-data class GenerateExampleResponse(
+data class GenerateExampleResponse (
     val exampleFilePath: String,
     val status: String
 ) {
@@ -382,15 +364,15 @@ data class ExampleTestRequest (
     val exampleFile: File
 )
 
-data class ExampleTestResponse(
+data class ExampleTestResponse (
     val result: TestResult,
     val details: String,
     val testLog: String
 ) {
-    constructor(result: TestResult, testLog: String, exampleFile: File): this (
-        result = result,
-        details = resultToDetails(result, exampleFile),
-        testLog = testLog.trim('-', ' ', '\n', '\r')
+    constructor(result: ExamplesInteractiveBase.ExampleTestResult): this (
+        result = result.result,
+        details = resultToDetails(result.result, result.exampleFile),
+        testLog = result.testLog.trim('-', ' ', '\n', '\r')
     )
 
     companion object {

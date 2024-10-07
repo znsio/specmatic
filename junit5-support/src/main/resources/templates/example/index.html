@@ -1028,7 +1028,7 @@
                     <input type="checkbox" name="path-row" class="path-row">
                 </td>
                 <td>
-                    <span>[[${iter.index + 1}]]</span>
+                    <p>[[${iter.index + 1}]]</p>
                 </td>
                 <td th:each="group, iter: ${row.columns}"
                     th:attr="colspan=${tableColumns[iter.index].colSpan},
@@ -1375,7 +1375,9 @@
         storeExampleData(tableRow, exampleFilePath, status);
         enableValidateBtn(tableRow);
         const generateColumn = tableRow.querySelector("td:nth-last-child(2)")
-        generateColumn.textContent = parseFileName(exampleFilePath);
+        const examplePara = document.createElement("p");
+        examplePara.textContent = parseFileName(exampleFilePath);
+        generateColumn.replaceChildren(examplePara);
 
         const message = status === "EXISTS" ? "Example Already Exists" : "Example Generated";
         if (!bulkMode) createAlert(message, `Example name: ${parseFileName(exampleFilePath)}`, false);

@@ -1,7 +1,7 @@
 package application
 
 import application.backwardCompatibility.BackwardCompatibilityCheckCommandV2
-import application.exampleGeneration.openApiExamples.OpenApiExamples
+import application.exampleGeneration.openApiExamples.OpenApiExamplesGenerate
 import org.springframework.stereotype.Component
 import picocli.AutoComplete.GenerateCompletion
 import picocli.CommandLine.Command
@@ -13,7 +13,7 @@ import java.util.concurrent.Callable
         mixinStandardHelpOptions = true,
         versionProvider = VersionProvider::class,
         subcommands = [
-            OpenApiExamples::class,
+            OpenApiExamplesGenerate::class,
             BackwardCompatibilityCheckCommandV2::class,
             BackwardCompatibilityCheckCommand::class,
             BundleCommand::class,

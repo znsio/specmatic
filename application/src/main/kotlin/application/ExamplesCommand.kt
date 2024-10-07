@@ -10,6 +10,7 @@ import io.specmatic.core.log.*
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.ScenarioStub
@@ -171,15 +172,11 @@ class ExamplesCommand : Callable<Int> {
 
                 val hasFailures = inlineExampleValidationResults.any { it.value is Result.Failure } || externalExampleValidationResults.any { it.value is Result.Failure }
 
-                if(hasFailures) {
-                    println()
-                    logger.log("=============== Validation Results ===============")
+                printValidationResult(inlineExampleValidationResults, "Inline example")
+                printValidationResult(externalExampleValidationResults, "Example file")
 
-                    printValidationResult(inlineExampleValidationResults, "Inline example")
-                    printValidationResult(externalExampleValidationResults, "Example file")
-
+                if(hasFailures)
                     return 1
-                }
             }
 
             return 0
@@ -189,17 +186,27 @@ class ExamplesCommand : Callable<Int> {
             if(validationResults.isEmpty())
                 return
 
-            validationResults.forEach { (exampleFileName, result) ->
-                if (!result.isSuccess()) {
-                    logger.log(System.lineSeparator() + "$tag $exampleFileName has the following validation error(s):")
-                    logger.log(result.reportString())
+            val hasFailures = validationResults.any { it.value is Result.Failure }
+
+            val titleTag = tag.split(" ").joinToString(" ") { if(it.isBlank()) it else it.capitalizeFirstChar() }
+
+            if(hasFailures) {
+                println()
+                logger.log("=============== $titleTag Validation Results ===============")
+
+                validationResults.forEach { (exampleFileName, result) ->
+                    if (!result.isSuccess()) {
+                        logger.log(System.lineSeparator() + "$tag $exampleFileName has the following validation error(s):")
+                        logger.log(result.reportString())
+                    }
                 }
             }
 
             println()
-            logger.log("=============== Validation Summary ===============")
+            val summaryTitle = "=============== $titleTag Validation Summary ==============="
+            logger.log(summaryTitle)
             logger.log(Results(validationResults.values.toList()).summary())
-            logger.log("""==================================================""")
+            logger.log("=".repeat(summaryTitle.length))
         }
     }
 

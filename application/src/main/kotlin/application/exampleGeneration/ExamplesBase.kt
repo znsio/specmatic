@@ -1,98 +1,131 @@
 package application.exampleGeneration
 
-import io.specmatic.core.*
+import io.specmatic.core.EXAMPLES_DIR_SUFFIX
 import io.specmatic.core.log.*
-import picocli.CommandLine.*
+import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable
 
-abstract class ExamplesBase<Feature, Scenario>(private val common: ExamplesCommon<Feature, Scenario>): Callable<Int> {
-    @Parameters(index = "0", description = ["Contract file path"], arity = "0..1")
-    private var contractFile: File? = null
+abstract class ExamplesBase<Feature, Scenario> : Callable<Int>, ExamplesCommon<Feature, Scenario> {
+    protected abstract var contractFile: File?
 
-    @Option(names = ["--filter-name"], description = ["Use only APIs with this value in their name, Case sensitive"], defaultValue = "\${env:SPECMATIC_FILTER_NAME}")
-    var filterName: String = ""
+    @CommandLine.Option(names = ["--filter-name"], description = ["Use only APIs with this value in their name, Case sensitive"], defaultValue = "\${env:SPECMATIC_FILTER_NAME}")
+    private var filterName: String = ""
 
-    @Option(names = ["--filter-not-name"], description = ["Use only APIs which do not have this value in their name, Case sensitive"], defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}")
-    var filterNotName: String = ""
+    @CommandLine.Option(names = ["--filter-not-name"], description = ["Use only APIs which do not have this value in their name, Case sensitive"], defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}")
+    private var filterNotName: String = ""
 
-    @Option(names = ["--dictionary"], description = ["External Dictionary File Path, defaults to dictionary.json"])
-    private var dictFile: File? = null
-
-    @Option(names = ["--debug"], description = ["Debug logs"])
+    @CommandLine.Option(names = ["--debug"], description = ["Debug logs"])
     private var verbose = false
 
-    abstract var extensive: Boolean
-
     override fun call(): Int {
-        common.configureLogger(this.verbose)
-
-        contractFile?.let { contract ->
-            if (!contract.exists()) {
-                logger.log("Could not find Contract file ${contract.path}")
+        contractFile?.let {
+            if (!it.exists()) {
+                logger.log("Contract file does not exist: ${it.absolutePath}")
                 return 1
             }
 
-            if (contract.extension !in common.contractFileExtensions) {
-                logger.log("Invalid Contract file ${contract.path} - File extension must be one of ${common.contractFileExtensions.joinToString()}")
+            if (it.extension !in contractFileExtensions) {
+                logger.log("Invalid Contract file ${it.path} - File extension must be one of ${contractFileExtensions.joinToString()}")
                 return 1
             }
-
-            try {
-                val externalDictionary = common.loadExternalDictionary(dictFile, contract)
-                val examplesDir = common.getExamplesDirectory(contract)
-                val result = generateExamples(contract, externalDictionary, examplesDir)
-                logGenerationResult(result, examplesDir)
-                return 0
-            } catch (e: Throwable) {
-                logger.log("Example generation failed with error: ${e.message}")
-                logger.debug(e)
-                return 1
-            }
-        } ?: run {
-            logger.log("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
-            return 1
         }
+
+        val exitCode = execute(contractFile)
+        return exitCode
     }
 
-    // GENERATION METHODS
-    private fun getFilteredScenarios(feature: Feature): List<Scenario> {
-        val scenarioFilter = ScenarioFilter(filterName, filterNotName, extensive)
-        return common.getFilteredScenarios(feature, scenarioFilter)
+    // HOOKS
+    abstract fun execute(contract: File?): Int
+
+    // HELPER METHODS
+    fun configureLogger(verbose: Boolean) {
+        val logPrinters = listOf(ConsolePrinter)
+
+        logger = if (verbose)
+            Verbose(CompositePrinter(logPrinters))
+        else
+            NonVerbose(CompositePrinter(logPrinters))
     }
 
-    private fun generateExamples(contractFile: File, externalDictionary: Dictionary, examplesDir: File): List<ExampleGenerationResult> {
-        val feature = common.contractFileToFeature(contractFile)
-        val filteredScenarios = getFilteredScenarios(feature)
+    fun getFilteredScenarios(feature: Feature, extensive: Boolean = false): List<Scenario> {
+        val scenarioFilter = ScenarioFilter(filterName, filterNotName)
+        val scenarios = getScenariosFromFeature(feature, extensive)
+        return getFilteredScenarios(scenarios, scenarioFilter)
+    }
+
+    fun getExamplesDirectory(contractFile: File): File {
+        val examplesDirectory = contractFile.canonicalFile.parentFile.resolve("${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX")
+        if (!examplesDirectory.exists()) {
+            logger.log("Creating examples directory: $examplesDirectory")
+            examplesDirectory.mkdirs()
+        }
+        return examplesDirectory
+    }
+
+    fun getExternalExampleFiles(examplesDirectory: File): List<File> {
+        return examplesDirectory.walk().filter { it.isFile && it.extension in exampleFileExtensions }.toList()
+    }
+
+    fun logSeparator(length: Int, separator: String = "-") {
+        logger.log(separator.repeat(length))
+    }
+
+    fun logFormattedOutput(header: String, summary: String, note: String) {
+        val maxLength = maxOf(summary.length, note.length, 50).let { it + it % 2 }
+        val headerSidePadding = (maxLength - 2 - header.length) / 2
+
+        val paddedHeaderLine = "=".repeat(headerSidePadding) + " $header " + "=".repeat(headerSidePadding)
+        val paddedSummaryLine = summary.padEnd(maxLength)
+        val paddedNoteLine = note.padEnd(maxLength)
+
+        logger.log("\n$paddedHeaderLine")
+        logger.log(paddedSummaryLine)
+        logger.log("=".repeat(maxLength))
+        logger.log(paddedNoteLine)
+    }
+
+    private fun getFilteredScenarios(scenarios: List<Scenario>, scenarioFilter: ScenarioFilter): List<Scenario> {
+        val filteredScenarios = scenarios
+            .filterScenarios(scenarioFilter.filterNameTokens, shouldMatch = true)
+            .filterScenarios(scenarioFilter.filterNotNameTokens, shouldMatch = false)
 
         if (filteredScenarios.isEmpty()) {
-            return emptyList()
+            logger.log("Note: All examples were filtered out by the filter expression")
         }
 
-        val exampleFiles = common.getExternalExampleFiles(examplesDir)
-        return filteredScenarios.map { scenario ->
-            common.generateOrGetExistingExample(feature, scenario, externalDictionary, exampleFiles, examplesDir)
-        }
+        return filteredScenarios
     }
 
-    // HELPERS
-    private fun logGenerationResult(generations: List<ExampleGenerationResult>, examplesDir: File) {
-        val generationGroup = generations.groupBy { it.status }.mapValues { it.value.size }
-        val createdFileCount = generationGroup[ExampleGenerationStatus.CREATED] ?: 0
-        val errorCount = generationGroup[ExampleGenerationStatus.ERROR] ?: 0
-        val existingCount = generationGroup[ExampleGenerationStatus.EXISTS] ?: 0
-        val examplesDirectory = examplesDir.canonicalFile.absolutePath
+    private fun List<Scenario>.filterScenarios(tokens: Set<String>, shouldMatch: Boolean): List<Scenario> {
+        if (tokens.isEmpty()) return this
 
-        common.logFormattedOutput(
-            header = "Example Generation Summary",
-            summary = "$createdFileCount example(s) created, $existingCount example(s) already existed, $errorCount example(s) failed",
-            note = "NOTE: All examples can be found in $examplesDirectory"
-        )
+        return this.filter {
+            val description = getScenarioDescription(it)
+            tokens.any { token ->
+                description.contains(token)
+            } == shouldMatch
+        }
     }
 }
 
-enum class ExampleGenerationStatus {
-    CREATED, ERROR, EXISTS
+interface ExamplesCommon<Feature, Scenario> {
+    val exampleFileExtensions: Set<String>
+    val contractFileExtensions: Set<String>
+
+    fun contractFileToFeature(contractFile: File): Feature
+
+    fun getScenariosFromFeature(feature: Feature, extensive: Boolean) : List<Scenario>
+
+    fun getScenarioDescription(scenario: Scenario): String
 }
 
-data class ExampleGenerationResult(val exampleFile: File? = null, val status: ExampleGenerationStatus)
+class ScenarioFilter(filterName: String, filterNotName: String) {
+    val filterNameTokens = filterToTokens(filterName)
+    val filterNotNameTokens = filterToTokens(filterNotName)
+
+    private fun filterToTokens(filterValue: String): Set<String> {
+        if (filterValue.isBlank()) return emptySet()
+        return filterValue.split(",").map { it.trim() }.toSet()
+    }
+}

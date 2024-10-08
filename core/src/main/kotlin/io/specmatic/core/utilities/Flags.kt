@@ -26,5 +26,19 @@ class Flags {
         fun getBooleanValue(flagName: String, default: Boolean = false) = getStringValue(flagName)?.toBoolean() ?: default
 
         fun getLongValue(flagName: String): Long? = ( getStringValue(flagName))?.toLong()
+
+        fun <T> using(vararg properties: Pair<String, String>, fn: () -> T): T {
+            try {
+                properties.forEach { (key, value) ->
+                    System.setProperty(key, value)
+                }
+
+                return fn()
+            } finally {
+                properties.forEach { (key, value) ->
+                    System.clearProperty(key)
+                }
+            }
+        }
     }
 }

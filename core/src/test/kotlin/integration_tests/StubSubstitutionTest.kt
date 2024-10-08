@@ -12,7 +12,6 @@ import io.specmatic.mock.ScenarioStub
 import io.specmatic.osAgnosticPath
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.captureStandardOutput
-import io.specmatic.stub.createStub
 import io.specmatic.stub.createStubFromContracts
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
@@ -742,7 +741,7 @@ class StubSubstitutionTest {
 
             println(output)
 
-            assertThat(output).contains(brokenDictionaryPath)
+            assertThat(output).contains(osAgnosticPath(brokenDictionaryPath))
         } finally {
             System.clearProperty(SPECMATIC_STUB_DICTIONARY)
         }

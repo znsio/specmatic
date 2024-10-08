@@ -19,8 +19,8 @@ data class APIKeyInHeaderSecurityScheme(val name: String, private val apiKey:Str
         return httpRequest.copy(headers = httpRequest.headers.minus(name))
     }
 
-    override fun addTo(httpRequest: HttpRequest): HttpRequest {
-        return httpRequest.copy(headers = httpRequest.headers.plus(name to (apiKey ?: StringPattern().generate(Resolver()).toStringLiteral())))
+    override fun addTo(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
+        return httpRequest.copy(headers = httpRequest.headers.plus(name to (apiKey ?: resolver.generate("HEADERS", name, StringPattern()).toStringLiteral())))
     }
 
     override fun addTo(requestPattern: HttpRequestPattern, row: Row): HttpRequestPattern {

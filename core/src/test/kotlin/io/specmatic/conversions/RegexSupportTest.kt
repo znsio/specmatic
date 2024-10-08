@@ -5,7 +5,6 @@ import io.specmatic.core.HttpResponse
 import io.specmatic.core.Results
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
-import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub

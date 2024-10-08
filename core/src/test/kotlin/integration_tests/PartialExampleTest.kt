@@ -544,7 +544,7 @@ class PartialExampleTest {
                     assertThat(responseBody.findFirstChildByPath("person.addresses.[0].street")).isEqualTo(StringValue("Baker Street"))
                     assertThat(responseBody.findFirstChildByPath("person.addresses.[1].street")).isEqualTo(StringValue("Baker Street"))
                     assertThat(responseBody.findFirstChildByPath("person.past_companies.[0].name")).isEqualTo(StringValue("Acme Inc"))
-                    assertThat(responseBody.findFirstChildByPath("person.past_companies.[1].name")).isEqualTo(StringValue("Paint Inc"))
+                    assertThat(responseBody.findFirstChildByPath("person.past_companies.[1].name")).isEqualTo(StringValue("Acme Inc"))
                 }
 
             }

@@ -143,7 +143,7 @@ data class HttpResponsePattern(
         return Result.fromResults(listOf(headerResult, bodyResult)).breadCrumb("RESPONSE")
     }
 
-    fun fromResponseExpectation(response: HttpResponse): HttpResponsePattern {
+    fun fromResponseExpectation(response: HttpResponse, resolver: Resolver): HttpResponsePattern {
         val responseHeaders = response.headers.mapValues { stringToPattern(it.value, it.key) }
 
         val contentTypeHeader = if("content-type" !in responseHeaders.keys.map { it.lowercase() } && headersPattern.contentType != null)
@@ -151,10 +151,12 @@ data class HttpResponsePattern(
         else
             emptyMap()
 
+        val bodyWithTypeAliases = response.body.exactMatchElseType().let { body.addTypeAliasesToConcretePattern(it, resolver) }
+
         return HttpResponsePattern(
             HttpHeadersPattern(responseHeaders + contentTypeHeader),
             response.status,
-            response.body.exactMatchElseType()
+            bodyWithTypeAliases
         )
     }
 
@@ -168,9 +170,9 @@ data class HttpResponsePattern(
         )
     }
 
-    fun generateResponse(partial: HttpResponse, dictionary: Dictionary, resolver: Resolver): HttpResponse {
-        val headers = headersPattern.fillInTheBlanks(partial.headers, dictionary, resolver).breadCrumb("HEADERS")
-        val body: ReturnValue<Value> = body.fillInTheBlanks(partial.body, dictionary, resolver).breadCrumb("BODY")
+    fun generateResponse(partial: HttpResponse, resolver: Resolver): HttpResponse {
+        val headers = headersPattern.fillInTheBlanks(partial.headers, resolver).breadCrumb("HEADERS")
+        val body: ReturnValue<Value> = body.fillInTheBlanks(partial.body, resolver).breadCrumb("BODY")
 
         return headers.combine(body) { fullHeaders, fullBody ->
             partial.copy(

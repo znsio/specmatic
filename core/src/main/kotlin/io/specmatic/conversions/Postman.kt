@@ -104,7 +104,10 @@ private fun baseNamedStub(request: JSONObjectValue, scenarioName: String): List<
         logger.log("  Using base url $baseURL")
         val response = HttpClient(baseURL, log = dontPrintToConsole).execute(httpRequest)
 
-        listOf(Pair(hostAndPort(baseURL), NamedStub(scenarioName, ScenarioStub(httpRequest, response.withoutSpecmaticHeaders()))))
+        listOf(Pair(hostAndPort(baseURL), NamedStub(scenarioName, ScenarioStub(
+            httpRequest,
+            response.withoutSpecmaticHeaders()
+        ))))
     } catch (e: Throwable) {
         logger.log(e,"  Failed to generate a response for the Postman request")
         emptyList()

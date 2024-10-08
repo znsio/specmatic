@@ -38,10 +38,10 @@ data class Scenario(
     override val name: String,
     val httpRequestPattern: HttpRequestPattern,
     val httpResponsePattern: HttpResponsePattern,
-    val expectedFacts: Map<String, Value>,
-    val examples: List<Examples>,
-    val patterns: Map<String, Pattern>,
-    val fixtures: Map<String, Value>,
+    val expectedFacts: Map<String, Value> = emptyMap(),
+    val examples: List<Examples> = emptyList(),
+    val patterns: Map<String, Pattern> = emptyMap(),
+    val fixtures: Map<String, Value> = emptyMap(),
     override val ignoreFailure: Boolean = false,
     val references: Map<String, References> = emptyMap(),
     val bindings: Map<String, String> = emptyMap(),
@@ -58,7 +58,8 @@ data class Scenario(
     val generativePrefix: String = "",
     val statusInDescription: String = httpResponsePattern.status.toString(),
     val disambiguate: () -> String = { "" },
-    val descriptionFromPlugin: String? = null
+    val descriptionFromPlugin: String? = null,
+    val dictionary: Map<String, Value> = emptyMap()
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -161,20 +162,9 @@ data class Scenario(
 
     fun generateHttpResponse(actualFacts: Map<String, Value>, requestContext: Context = NoContext): HttpResponse =
         scenarioBreadCrumb(this) {
-            Resolver(emptyMap(), false, patterns)
-            val resolver = Resolver(actualFacts, false, patterns)
             val facts = combineFacts(expectedFacts, actualFacts, resolver)
 
             httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
-        }
-
-    fun generateHttpResponseWithAll(actualFacts: Map<String, Value>, requestContext: Context = NoContext): HttpResponse =
-        scenarioBreadCrumb(this) {
-            Resolver(emptyMap(), false, patterns)
-            val resolver = Resolver(actualFacts, false, patterns)
-            val facts = combineFacts(expectedFacts, actualFacts, resolver)
-
-            httpResponsePattern.generateResponseWithAll(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
         }
 
     private fun combineFacts(
@@ -228,7 +218,7 @@ data class Scenario(
     }
 
     fun generateHttpRequest(flagsBased: FlagsBased = DefaultStrategies): HttpRequest =
-        scenarioBreadCrumb(this) { httpRequestPattern.generate(flagsBased.update(Resolver(expectedFacts, false, patterns))) }
+        scenarioBreadCrumb(this) { httpRequestPattern.generate(flagsBased.update(resolver.copy(factStore = CheckFacts(expectedFacts)))) }
 
     fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
         val resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck).copy(context = RequestContext(httpRequest))
@@ -477,7 +467,7 @@ data class Scenario(
         }
     }
 
-    val resolver: Resolver = Resolver(newPatterns = patterns)
+    val resolver: Resolver = Resolver(newPatterns = patterns, dictionary = dictionary)
 
     val serverState: Map<String, Value>
         get() = expectedFacts
@@ -528,8 +518,7 @@ data class Scenario(
     fun resolverAndResponseForExpectation(response: HttpResponse): Pair<Resolver, HttpResponse> =
         scenarioBreadCrumb(this) {
             attempt(breadCrumb = "RESPONSE") {
-                val resolver = Resolver(expectedFacts, false, patterns)
-                Pair(resolver, httpResponsePattern.fromResponseExpectation(response).generateResponse(resolver))
+                Pair(this.resolver, httpResponsePattern.fromResponseExpectation(response, resolver).generateResponse(this.resolver))
             }
         }
 
@@ -562,15 +551,6 @@ data class Scenario(
             statusInDescription = "4xx",
             generativePrefix = "-ve",
         )
-    }
-
-    fun getStatus(response: HttpResponse?): Int {
-        // TODO: This should return a string so that we can return a 4xx when response is null for a negative scenario
-        return when {
-            response == null -> status
-            isNegative -> response.status
-            else -> status
-        }
     }
 
     fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Scenario {
@@ -620,10 +600,9 @@ data class Scenario(
         request: HttpRequest,
         originalRequest: HttpRequest,
         response: HttpResponse,
-        data: JSONObjectValue,
-        dictionary: Dictionary
+        data: JSONObjectValue
     ): HttpResponse {
-        val substitution = httpRequestPattern.getSubstitution(request, originalRequest, resolver, data, dictionary)
+        val substitution = httpRequestPattern.getSubstitution(request, originalRequest, resolver, data)
         return httpResponsePattern.resolveSubstitutions(substitution, response)
     }
 

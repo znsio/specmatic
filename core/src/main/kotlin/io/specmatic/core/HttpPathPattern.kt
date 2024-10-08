@@ -94,7 +94,7 @@ data class HttpPathPattern(
                     val key = urlPathPattern.key
                     resolver.withCyclePrevention(urlPathPattern.pattern) { cyclePreventedResolver ->
                         if (key != null)
-                            cyclePreventedResolver.generate(key, urlPathPattern.pattern)
+                            cyclePreventedResolver.generate("PATH-PARAMS", key, urlPathPattern.pattern)
                         else urlPathPattern.pattern.generate(cyclePreventedResolver)
                     }
                 }

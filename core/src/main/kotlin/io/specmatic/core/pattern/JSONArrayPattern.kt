@@ -241,11 +241,14 @@ fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =
             resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
                 when (pattern) {
                     is RestPattern -> attempt(breadCrumb = "[$index...${jsonPattern.lastIndex}]") {
-                        val list = pattern.generate(cyclePreventedResolver) as ListValue
+                        val list = cyclePreventedResolver
+                            .generate(null, "[*]", pattern) as ListValue
                         list.list
                     }
 
-                    else -> attempt(breadCrumb = "[$index]") { listOf(pattern.generate(cyclePreventedResolver)) }
+                    else -> attempt(breadCrumb = "[$index]") {
+                        listOf(cyclePreventedResolver.generate(null, "[*]", pattern))
+                    }
                 }
             }
         }.flatten()

@@ -9,8 +9,7 @@ data class HttpStubResponse(
     val contractPath: String = "",
     val examplePath: String? = null,
     val feature: Feature? = null,
-    val scenario: Scenario? = null,
-    val dictionary: Dictionary = Dictionary()
+    val scenario: Scenario? = null
 ) {
     fun resolveSubstitutions(
         request: HttpRequest,
@@ -20,7 +19,7 @@ data class HttpStubResponse(
         if(scenario == null)
             return this
 
-        val updatedResponse = scenario.resolveSubtitutions(request, originalRequest, response, data, dictionary)
+        val updatedResponse = scenario.resolveSubtitutions(request, originalRequest, response, data)
 
         return this.copy(response = updatedResponse)
     }

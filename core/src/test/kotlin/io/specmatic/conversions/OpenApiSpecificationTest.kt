@@ -30,7 +30,6 @@ import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
 import java.math.BigDecimal
@@ -339,6 +338,7 @@ Pet:
         val specmaticConfig = mockk<SpecmaticConfig> {
             every { isResponseValueValidationEnabled() } returns true
             every { ignoreInlineExamples } returns false
+            every { stub.dictionary } returns null
         }
         val openApiSpecification = OpenApiSpecification(
             openApiFilePath = openApiFile,
@@ -4911,7 +4911,10 @@ paths:
 
         private fun assertMatchesResponseSnippet(path: String, xmlSnippet: String, xmlFeature: Feature) {
             val request = HttpRequest("GET", path)
-            val stubData = xmlFeature.matchingStub(request, HttpResponse(200, headers = mapOf(CONTENT_TYPE to "application/xml"), body = parsedValue(xmlSnippet)))
+            val stubData = xmlFeature.matchingStub(
+                request,
+                HttpResponse(200, headers = mapOf(CONTENT_TYPE to "application/xml"), body = parsedValue(xmlSnippet))
+            )
 
             val stubMatchResult =
                 stubData.responsePattern.body.matches(parsedValue(xmlSnippet), xmlFeature.scenarios.first().resolver)
@@ -5923,378 +5926,6 @@ paths:
                 ), HttpResponse.ok("success")
             )
         }.isInstanceOf(NoMatchingScenario::class.java)
-    }
-
-    @Nested
-    inner class Discriminator {
-        val openAPIText = """
-            ---
-            openapi: 3.0.3
-            info:
-              title: Vehicle API
-              version: 1.0.0
-            paths:
-              /car:
-                post:
-                  summary: Add a new vehicle
-                  requestBody:
-                    required: true
-                    content:
-                      application/json:
-                        schema:
-                          ${'$'}ref: '#/components/schemas/Car'
-                  responses:
-                    '201':
-                      description: Vehicle created successfully
-                      content:
-                        application/json:
-                          schema:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                                description: Unique identifier for the newly created vehicle
-                              type:
-                                type: string
-                                description: Type of the vehicle (car or bike)
-              /bike:
-                post:
-                  summary: Add a new vehicle
-                  requestBody:
-                    required: true
-                    content:
-                      application/json:
-                        schema:
-                          ${'$'}ref: '#/components/schemas/Bike'
-                  responses:
-                    '201':
-                      description: Vehicle created successfully
-                      content:
-                        application/json:
-                          schema:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                                description: Unique identifier for the newly created vehicle
-                              type:
-                                type: string
-                                description: Type of the vehicle (car or bike)
-
-            components:
-              schemas:
-                VehicleType:
-                  type: object
-                  properties:
-                    type:
-                      type: string
-            
-                Car:
-                  allOf:
-                    - ${'$'}ref: '#/components/schemas/VehicleType'
-                    - type: object
-                      properties:
-                        type:
-                          type: string
-                        seatingCapacity:
-                          type: integer
-                        trunkSize:
-                          type: string
-                  discriminator:
-                    propertyName: "type"
-                    mapping:
-                      "car": "#/components/schemas/Car"
-            
-                Bike:
-                  allOf:
-                    - ${'$'}ref: '#/components/schemas/VehicleType'
-                    - type: object
-                      properties:
-                        type:
-                          type: string
-                        hasCarrier:
-                          type: boolean
-                  discriminator:
-                    propertyName: "type"
-                    mapping:
-                      "bike": "#/components/schemas/Bike"
-        """.trimIndent()
-        val feature = OpenApiSpecification.fromYAML(openAPIText, "").toFeature()
-
-        @ParameterizedTest
-        @CsvSource(
-            value = [
-                "path, type",
-                "/car, plane",
-                "/bike, plane",
-                "/car, bike",
-                "/bike, car"
-            ],
-            useHeadersInDisplayName = true,
-        )
-        fun `discriminator mismatch`(path: String, type: String) {
-            val body = requestBody(path, type)
-
-            assertThatThrownBy {
-                feature.matchingStub(
-                    HttpRequest(
-                        "POST",
-                        path,
-                        body = body
-                    ),
-                    HttpResponse(
-                        201,
-                        headers = mapOf("Content-Type" to "application/json"),
-                        parsedJSONObject("""{"id": "abc123", "type": "$type"}""")
-                    )
-                )
-            }.isInstanceOf(NoMatchingScenario::class.java)
-        }
-
-        private fun requestBody(path: String, type: String): Value {
-            val body = when (path) {
-                "/car" -> parsedJSON("""{"type": "$type", "seatingCapacity": 4, "trunkSize": "large"}""")
-                "/bike" -> parsedJSON("""{"type": "$type", "hasCarrier": false}""")
-                else -> fail("Path $path not recognized in this test")
-            }
-            return body
-        }
-
-        @ParameterizedTest
-        @CsvSource(
-            value = [
-                "path, type",
-                "/car, car",
-                "/bike, bike"
-            ],
-            useHeadersInDisplayName = true,
-        )
-        fun `happy path tests using discriminator as enum`(path: String, type: String) {
-            val body = requestBody(path, type)
-
-            assertThat(
-                feature.matchingStub(
-                    HttpRequest(
-                        "POST",
-                        path,
-                        body = body
-                    ),
-                    HttpResponse(
-                        201,
-                        headers = mapOf("Content-Type" to "application/json"),
-                        parsedJSONObject("""{"id": "abc123", "type": "$type"}""")
-                    )
-                ).response.headers["X-Specmatic-Result"]
-            ).isEqualTo("success")
-        }
-    }
-
-    @Test
-    fun `discriminator can extend an allOf`() {
-        val feature = OpenApiSpecification.fromYAML("""
-            ---
-            openapi: 3.0.3
-            info:
-              title: Vehicle API
-              version: 1.0.0
-            paths:
-              /vehicle:
-                post:
-                  summary: Add a new vehicle
-                  requestBody:
-                    required: true
-                    content:
-                      application/json:
-                        schema:
-                          ${'$'}ref: '#/components/schemas/Vehicle'
-                  responses:
-                    '201':
-                      description: Vehicle created successfully
-                      content:
-                        text/plain:
-                          schema:
-                            type: string
-
-            components:
-              schemas:
-                VehicleType:
-                  type: object
-                  properties:
-                    type:
-                      type: string
-
-                Vehicle:
-                  allOf:
-                    - ${'$'}ref: '#/components/schemas/VehicleType'
-                    - type: object
-                      properties:
-                        seatingCapacity:
-                          type: integer
-                  discriminator:
-                    propertyName: "type"
-                    mapping:
-                      "car": "#/components/schemas/Transmission"
-                      "bike": "#/components/schemas/SideCar"
-
-                Transmission:
-                  allOf:
-                    - ${'$'}ref: '#/components/schemas/Vehicle'
-                    - type: object
-                      requried:
-                        - gearType
-                      properties:
-                        gearType:
-                          type: string
-
-                SideCar:
-                  allOf:
-                    - ${'$'}ref: '#/components/schemas/Vehicle'
-                    - type: object
-                      requried:
-                        - sidecarAvailable
-                      properties:
-                        sidecarAvailable:
-                          type: boolean
-        """.trimIndent(), "").toFeature()
-
-        HttpStub(feature).use { stub ->
-            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "MT"}"""))).let {
-                assertThat(it.status).isEqualTo(201)
-            }
-
-            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
-                assertThat(it.status).isEqualTo(201)
-            }
-
-            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
-                assertThat(it.status).isEqualTo(400)
-            }
-
-            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 4, "gearType": "MT"}"""))).let {
-                assertThat(it.status).isEqualTo(400)
-            }
-        }
-    }
-
-    @Test
-    @Disabled
-    fun `two discriminator at different levels can extend an allOf`() {
-        val feature = OpenApiSpecification.fromYAML("""
-            ---
-            openapi: 3.0.3
-            info:
-              title: Vehicle API
-              version: 1.0.0
-            paths:
-              /vehicle:
-                post:
-                  summary: Add a new vehicle
-                  requestBody:
-                    required: true
-                    content:
-                      application/json:
-                        schema:
-                          ${'$'}ref: '#/components/schemas/Vehicle'
-                  responses:
-                    '201':
-                      description: Vehicle created successfully
-                      content:
-                        text/plain:
-                          schema:
-                            type: string
-
-            components:
-              schemas:
-                VehicleType:
-                  type: object
-                  properties:
-                    type:
-                      type: string
-
-                Vehicle:
-                  allOf:
-                    - ${'$'}ref: '#/components/schemas/VehicleType'
-                    - type: object
-                      properties:
-                        seatingCapacity:
-                          type: integer
-                  discriminator:
-                    propertyName: "type"
-                    mapping:
-                      "car": "#/components/schemas/Transmission"
-                      "bike": "#/components/schemas/SideCar"
-
-                Transmission:
-                  allOf:
-                    - ${'$'}ref: '#/components/schemas/Vehicle'
-                    - type: object
-                      required:
-                        - gearType
-                      properties:
-                        gearType:
-                          type: string
-                  discriminator:
-                    propertyName: "gearType"
-                    mapping:
-                      "MT": '#/components/schemas/ManualTransmission'
-                      "AT": '#/components/schemas/AutomaticTransmission'
-
-                ManualTransmission:
-                  allOf:
-                    - ${'$'}ref: '#/components/schemas/Transmission'
-                    - type: object
-                      required:
-                        - gearCount
-                      properties:
-                        gearCount:
-                          type: integer
-
-                AutomaticTransmission:
-                  allOf:
-                    - ${'$'}ref: '#/components/schemas/Transmission'
-                    - type: object
-                      required:
-                        - hasSportsMode
-                      properties:
-                        hasSportsMode:
-                          type: boolean
-
-                SideCar:
-                  allOf:
-                    - ${'$'}ref: '#/components/schemas/Vehicle'
-                    - type: object
-                      requried:
-                        - sidecarAvailable
-                      properties:
-                        sidecarAvailable:
-                          type: boolean
-        """.trimIndent(), "").toFeature()
-
-        HttpStub(feature).use { stub ->
-            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "MT", "gearCount": 4}"""))).let {
-                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(201)
-            }
-
-            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "AT", "hasSportsMode": true}"""))).let {
-                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(201)
-            }
-
-            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
-                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(201)
-            }
-
-            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
-                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(400)
-            }
-
-            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 4, "gearType": "MT", "gearCount": 4}"""))).let {
-                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(400)
-            }
-
-            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "AT", "gearCount": 4}"""))).let {
-                assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(400)
-            }
-        }
     }
 
     @Test
@@ -9140,6 +8771,97 @@ paths:
         assertThat(stub.response.body).isInstanceOf(StringValue::class.java)
         val responseBody = stub.response.body as StringValue
         assertThat(responseBody.string).isEqualTo("success")
+    }
+
+    @Nested
+    inner class NegativeScenariosForQueryParams {
+        @Test
+        fun `should generate the negative scenarios where the mandatory keys are missing`() {
+            val spec = """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /persons:
+                    get:
+                      parameters:
+                        - in: query
+                          name: id
+                          schema:
+                            type: string
+                          required: true
+                        - in: query
+                          name: name 
+                          schema:
+                            type: string
+                          required: false
+                        - in: query
+                          name: age
+                          schema:
+                            type: string
+                          required: true
+                      responses:
+                        200:
+                          content:
+                            text/plain:
+                              schema:
+                                type: "string"
+            """.trimIndent()
+            val tests =
+                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+            assertThat(tests.size).isEqualTo(2)
+            val firstScenarioQueryParams = tests.first().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
+            val secondScenarioQueryParams = tests.last().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
+            assertThat(firstScenarioQueryParams.keys).doesNotContain("id")
+            assertThat(secondScenarioQueryParams.keys).doesNotContain("age")
+            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.id mandatory query param not sent]")
+            assertThat(tests.last().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.age mandatory query param not sent]")
+        }
+
+        @Test
+        fun `should generate the negative scenario where the mandatory keys of array based query params are missing`() {
+            val spec = """
+                    ---
+                    openapi: "3.0.1"
+                    info:
+                      title: "Array Param API"
+                      version: "1"
+                    paths:
+                      /items:
+                        get:
+                          parameters:
+                            - in: query
+                              name: ids
+                              schema:
+                                type: array
+                                items:
+                                  type: string
+                              required: true
+                            - in: query
+                              name: category 
+                              schema:
+                                type: string
+                              required: false
+                          responses:
+                            200:
+                              content:
+                                text/plain:
+                                  schema:
+                                    type: "string"
+            """.trimIndent()
+
+            val tests =
+                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+
+            assertThat(tests.size).isEqualTo(1)
+
+            val firstScenarioQueryParams = tests.first().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
+
+            assertThat(firstScenarioQueryParams.keys).doesNotContain("ids")
+            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /items -> 4xx [REQUEST.QUERY-PARAM.ids mandatory query param not sent]")
+        }
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

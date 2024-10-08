@@ -467,7 +467,7 @@ data class HttpRequestPattern(
             }
 
             newRequest = securitySchemes.fold(newRequest) { request, securityScheme ->
-                securityScheme.addTo(request)
+                securityScheme.addTo(request, resolver)
             }
 
             val multipartData = attempt(breadCrumb = "MULTIPART DATA") {
@@ -783,9 +783,8 @@ data class HttpRequestPattern(
         originalRequest: HttpRequest,
         resolver: Resolver,
         data: JSONObjectValue,
-        dictionary: Dictionary
     ): Substitution {
-        return Substitution(runningRequest, originalRequest, httpPathPattern ?: HttpPathPattern(emptyList(), ""), headersPattern, httpQueryParamPattern, body, resolver, data, dictionary)
+        return Substitution(runningRequest, originalRequest, httpPathPattern ?: HttpPathPattern(emptyList(), ""), headersPattern, httpQueryParamPattern, body, resolver, data)
     }
 
 }

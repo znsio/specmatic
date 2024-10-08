@@ -23,43 +23,49 @@ paths:
           content:
             application/json:
               schema:
+                $ref: '#/components/schemas/PersonDetails'
+
+components:
+  schemas:
+    PersonDetails:
+      type: object
+      required:
+        - id
+        - person
+      properties:
+        id:
+          type: integer
+        person:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+            addresses:
+              type: array
+              items:
                 type: object
                 required:
-                  - id
-                  - person
+                  - street
+                  - building
                 properties:
-                  id:
+                  building:
+                    type: string
+                  street:
+                    type: string
+            past_companies:
+              type: array
+              items:
+                type: object
+                required:
+                  - name
+                  - year
+                properties:
+                  name:
+                    type: string
+                  year:
                     type: integer
-                  person:
-                    type: object
-                    required:
-                      - name
-                    properties:
-                      name:
-                        type: string
-                      addresses:
-                        type: array
-                        items:
-                          type: object
-                          required:
-                            - street
-                            - building
-                          properties:
-                            building:
-                              type: string
-                            street:
-                              type: string
-                      past_companies:
-                        type: array
-                        items:
-                          type: object
-                          required:
-                            - name
-                            - year
-                          properties:
-                            name:
-                              type: string
-                            year:
-                              type: integer
-                            duration:
-                              type: string
+                  duration:
+                    type: string
+

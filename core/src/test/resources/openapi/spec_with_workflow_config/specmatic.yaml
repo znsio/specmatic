@@ -1,0 +1,11 @@
+contract_repositories:
+  - type: filesystem
+    test:
+      - spec.yaml
+
+workflow:
+  ids:
+    'POST /orders -> 201':
+      extract: 'BODY.id'
+    '*':
+      use: 'PATH.id'

@@ -8864,6 +8864,56 @@ paths:
         }
     }
 
+    @Test
+    fun `workflow values should not used in negative tests`() {
+        val baseDir = "src/test/resources/openapi/spec_with_workflow_config"
+        val openApiFilePath = "$baseDir/spec.yaml"
+        val specmaticConfig = loadSpecmaticConfig("$baseDir/specmatic.yaml")
+        val feature = OpenApiSpecification
+            .fromFile(openApiFilePath, specmaticConfig)
+            .toFeature()
+            .enableGenerativeTesting()
+
+
+        class NegativeGETTestData(val actualId: Int, val idInRequest: String) {
+            override fun toString(): String {
+                return "actualId: $actualId, idInRequest: $idInRequest"
+            }
+        }
+
+        val negativesSeenOfGET: MutableList<NegativeGETTestData> = mutableListOf()
+
+        feature.executeTests(object : TestExecutor {
+            var isNegative: Boolean = true
+            val id: Int = 10
+
+            override fun execute(request: HttpRequest): HttpResponse {
+                if(isNegative) {
+                    if(request.method == "GET")
+                        negativesSeenOfGET.add(NegativeGETTestData(id, request.path!!.split("/").last()))
+
+                    return HttpResponse(400, "failed")
+                } else {
+                    if(request.method == "POST") {
+                        return HttpResponse(201, parsedJSONObject("""{"id": $id}"""))
+                    } else {
+                        return HttpResponse(200, parsedJSONObject("""{"productId": "pqr", "quantity": 10}"""))
+                    }
+                }
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                isNegative = scenario.isNegative
+            }
+        })
+
+        assertThat(negativesSeenOfGET).isNotEmpty()
+        assertThat(negativesSeenOfGET).allSatisfy {
+            assertThat(it.actualId.toString()).isNotEqualTo(it.idInRequest)
+        }
+
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

@@ -15,7 +15,9 @@ import picocli.CommandLine.Option
 import java.io.File
 
 @Command(name = "interactive", description = ["Generate and validate examples interactively through a Web UI"],)
-class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(), OpenApiExamplesGenerateCommon, OpenApiExamplesValidateCommon {
+class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
+    featureStrategy = OpenApiExamplesFeatureStrategy(), generationStrategy = OpenApiExamplesGenerationStrategy(), validationStrategy = OpenApiExamplesValidationStrategy()
+) {
     @Option(names = ["--extensive"], description = ["Display all responses, not just 2xx, in the table."], defaultValue = "false")
     override var extensive: Boolean = false
 

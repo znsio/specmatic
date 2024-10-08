@@ -22,14 +22,18 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.lang.Thread.sleep
 
-abstract class ExamplesInteractiveBase<Feature, Scenario>: ExamplesBase<Feature, Scenario>(), ExamplesGenerateCommon<Feature, Scenario>, ExamplesValidateCommon<Feature, Scenario> {
-    @Option(names = ["--testBaseURL"], description = ["BaseURL of the SUT"], required = true)
-    lateinit var sutBaseUrl: String
+abstract class ExamplesInteractiveBase<Feature, Scenario> (
+    override val featureStrategy: ExamplesFeatureStrategy<Feature, Scenario>,
+    private val generationStrategy: ExamplesGenerationStrategy<Feature, Scenario>,
+    private val validationStrategy: ExamplesValidationStrategy<Feature, Scenario>
+): ExamplesBase<Feature, Scenario>(featureStrategy) {
+    @Option(names = ["--testBaseURL"], description = ["BaseURL of the the system to test"], required = false)
+    var sutBaseUrl: String? = null
 
     @Option(names = ["--contract-file"], description = ["Contract file path"], required = false)
     override var contractFile: File? = null
 
-    @Option(names = ["--dictionary"], description = ["External Dictionary File Path"])
+    @Option(names = ["--dictionary"], description = ["Path to external dictionary file (default: contract_file_name_dictionary.json or dictionary.json)"])
     var dictFile: File? = null
 
     abstract var extensive: Boolean
@@ -42,7 +46,8 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>: ExamplesBase<Feature,
                 logger.log("Contract file not provided, Please provide one via HTTP request")
             }
 
-            val server = InteractiveServer(contract, "0.0.0.0", 9001)
+            updateDictionaryFile(dictFile)
+            val server = InteractiveServer(contract, sutBaseUrl, "0.0.0.0", 9001)
             addShutdownHook(server)
             logger.log("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop.")
             while (true) sleep(10000)
@@ -62,24 +67,30 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>: ExamplesBase<Feature,
 
     // HELPER METHODS
     private suspend fun generateExample(call: ApplicationCall, contractFile: File): ExampleGenerationResult {
-        val feature = contractFileToFeature(contractFile)
-        val dictionary = loadExternalDictionary(dictFile, contractFile)
+        val feature = featureStrategy.contractFileToFeature(contractFile)
         val examplesDir = getExamplesDirectory(contractFile)
         val exampleFiles = getExternalExampleFiles(examplesDir)
 
         return getScenarioFromRequestOrNull(call, feature)?.let {
-            generateOrGetExistingExample(feature, it, dictionary, exampleFiles, examplesDir)
+            generationStrategy.generateOrGetExistingExample(
+                ExamplesGenerationStrategy.GenerateOrGetExistingExampleArgs(
+                    feature, it,
+                    featureStrategy.getScenarioDescription(it),
+                    exampleFiles, examplesDir,
+                    featureStrategy.exampleFileExtensions
+                )
+            )
         } ?: throw IllegalArgumentException("No matching scenario found for request")
     }
 
     private fun validateExample(contractFile: File, exampleFile: File): ExampleValidationResult {
-        val feature = contractFileToFeature(contractFile)
-        val result = validateExternalExample(feature, exampleFile)
+        val feature = featureStrategy.contractFileToFeature(contractFile)
+        val result = validationStrategy.validateExternalExample(feature, exampleFile)
         return ExampleValidationResult(exampleFile.absolutePath, result.second, ExampleType.EXTERNAL)
     }
 
-    private fun testExample(contractFile: File, exampleFile: File): ExampleTestResult {
-        val feature = contractFileToFeature(contractFile)
+    private fun testExample(contractFile: File, exampleFile: File, sutBaseUrl: String): ExampleTestResult {
+        val feature = featureStrategy.contractFileToFeature(contractFile)
         val result = testExternalExample(feature, exampleFile, sutBaseUrl)
         return ExampleTestResult(result.first, result.second, exampleFile)
     }
@@ -113,13 +124,13 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>: ExamplesBase<Feature,
     }
 
     private fun getTableRows(contractFile: File): List<TableRow> {
-        val feature = contractFileToFeature(contractFile)
+        val feature = featureStrategy.contractFileToFeature(contractFile)
         val scenarios = getFilteredScenarios(feature)
         val examplesDir = getExamplesDirectory(contractFile)
         val examples = getExternalExampleFiles(examplesDir)
 
         val scenarioExamplePair = scenarios.map {
-            it to getExistingExampleOrNull(it, examples)?.let { exRes ->
+            it to generationStrategy.getExistingExampleOrNull(it, examples)?.let { exRes ->
                 ExampleValidationResult(exRes.first, exRes.second)
             }
         }
@@ -129,7 +140,7 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>: ExamplesBase<Feature,
     }
 
     // INTERACTIVE SERVER
-    inner class InteractiveServer(private var contract: File?, private val serverHost: String, private val serverPort: Int) : Closeable {
+    inner class InteractiveServer(private var contract: File?, sutBaseUrl: String?, private val serverHost: String, private val serverPort: Int) : Closeable {
         private val environment = applicationEngineEnvironment {
             module {
                 install(CORS) {
@@ -197,10 +208,14 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>: ExamplesBase<Feature,
                     }
 
                     post("/_specmatic/examples/test") {
+                        if (sutBaseUrl.isNullOrBlank()) {
+                            return@post call.respondWithError(HttpStatusCode.BadRequest, "No SUT URL provided")
+                        }
+
                         val request = call.receive<ExampleTestRequest>()
                         getValidatedContractFileOrNull()?.let { contract ->
                             getValidatedExampleOrNull(request.exampleFile)?.let { example ->
-                                val result = testExample(contract, example)
+                                val result = testExample(contract, example, sutBaseUrl)
                                 call.respond(HttpStatusCode.OK, ExampleTestResponse(result))
                             }
                         }
@@ -251,7 +266,8 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>: ExamplesBase<Feature,
                 "hasExamples" to tableRows.any { it.exampleFilePath != null },
                 "validationDetails" to tableRows.mapIndexed { index, row ->
                     (index + 1) to row.exampleMismatchReason
-                }.toMap()
+                }.toMap(),
+                "isTestMode" to (sutBaseUrl != null)
             )
 
             return HtmlTemplateConfiguration.process(
@@ -280,8 +296,10 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>: ExamplesBase<Feature,
                 return null
             }
 
-            return contractFile.takeIf { it.extension in contractFileExtensions } ?: run {
-                val errorMessage = "Invalid Contract file ${contractFile.path} - File extension must be one of ${contractFileExtensions.joinToString()}"
+            return contractFile.takeIf { it.extension in featureStrategy.contractFileExtensions }?.also {
+                updateDictionaryFile(dictFile, it)
+            } ?: run {
+                val errorMessage = "Invalid Contract file ${contractFile.path} - File extension must be one of ${featureStrategy.contractFileExtensions.joinToString()}"
                 logger.log(errorMessage)
                 call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
                 return null
@@ -297,8 +315,8 @@ abstract class ExamplesInteractiveBase<Feature, Scenario>: ExamplesBase<Feature,
                     return null
                 }
 
-                exampleFile.extension !in exampleFileExtensions -> {
-                    val errorMessage = "Invalid Example file ${exampleFile.path} - File extension must be one of ${exampleFileExtensions.joinToString()}"
+                exampleFile.extension !in featureStrategy.exampleFileExtensions -> {
+                    val errorMessage = "Invalid Example file ${exampleFile.path} - File extension must be one of ${featureStrategy.exampleFileExtensions.joinToString()}"
                     logger.log(errorMessage)
                     call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
                     return null

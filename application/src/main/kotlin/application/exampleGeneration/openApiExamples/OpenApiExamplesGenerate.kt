@@ -1,7 +1,7 @@
 package application.exampleGeneration.openApiExamples
 
+import application.exampleGeneration.ExamplesGenerationStrategy
 import application.exampleGeneration.ExamplesGenerateBase
-import application.exampleGeneration.ExamplesGenerateCommon
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.*
 import io.specmatic.core.utilities.uniqueNameForApiOperation
@@ -15,21 +15,19 @@ import java.io.File
     description = ["Generate JSON Examples with Request and Response from an OpenApi Contract File"],
     subcommands = [OpenApiExamplesValidate::class, OpenApiExamplesInteractive::class]
 )
-class OpenApiExamplesGenerate: ExamplesGenerateBase<Feature, Scenario>(), OpenApiExamplesGenerateCommon {
+class OpenApiExamplesGenerate: ExamplesGenerateBase<Feature, Scenario> (
+    featureStrategy = OpenApiExamplesFeatureStrategy(), generationStrategy = OpenApiExamplesGenerationStrategy()
+) {
     @Option(names = ["--extensive"], description = ["Generate all examples (by default, generates one example per 2xx API)"], defaultValue = "false")
     override var extensive: Boolean = false
 }
 
-interface OpenApiExamplesGenerateCommon: ExamplesGenerateCommon<Feature, Scenario>, OpenApiExamplesCommon {
-    override fun generateExample(feature: Feature, scenario: Scenario, dictionary: Dictionary): Pair<String, String> {
+class OpenApiExamplesGenerationStrategy: ExamplesGenerationStrategy<Feature, Scenario> {
+    override fun generateExample(feature: Feature, scenario: Scenario): Pair<String, String> {
         val request = scenario.generateHttpRequest()
-        val requestHttpPathPattern = scenario.httpRequestPattern.httpPathPattern
-        val updatedRequest = request.substituteDictionaryValues(dictionary, forceSubstitution = true, requestHttpPathPattern)
-
         val response = feature.lookupResponse(scenario).cleanup()
-        val updatedResponse = response.substituteDictionaryValues(dictionary, forceSubstitution = true)
 
-        val scenarioStub = ScenarioStub(updatedRequest, updatedResponse)
+        val scenarioStub = ScenarioStub(request, response)
         val stubJSON = scenarioStub.toJSON().toStringLiteral()
         val uniqueName = uniqueNameForApiOperation(request, "", scenarioStub.response.status)
 

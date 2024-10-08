@@ -2,15 +2,17 @@ package application.exampleGeneration
 
 import io.specmatic.core.*
 import io.specmatic.core.log.*
-import io.specmatic.mock.loadDictionary
 import picocli.CommandLine.*
 import java.io.File
 
-abstract class ExamplesGenerateBase<Feature, Scenario>: ExamplesBase<Feature, Scenario>(), ExamplesGenerateCommon<Feature, Scenario> {
+abstract class ExamplesGenerateBase<Feature, Scenario>(
+    override val featureStrategy: ExamplesFeatureStrategy<Feature, Scenario>,
+    private val generationStrategy: ExamplesGenerationStrategy<Feature, Scenario>
+): ExamplesBase<Feature, Scenario>(featureStrategy) {
     @Parameters(index = "0", description = ["Contract file path"], arity = "0..1")
     override var contractFile: File? = null
 
-    @Option(names = ["--dictionary"], description = ["External Dictionary File Path, defaults to dictionary.json"])
+    @Option(names = ["--dictionary"], description = ["Path to external dictionary file (default: contract_file_name_dictionary.json or dictionary.json)"])
     private var dictFile: File? = null
 
     abstract var extensive: Boolean
@@ -22,9 +24,9 @@ abstract class ExamplesGenerateBase<Feature, Scenario>: ExamplesBase<Feature, Sc
         }
 
         try {
-            val externalDictionary = loadExternalDictionary(dictFile, contract)
+            updateDictionaryFile(dictFile)
             val examplesDir = getExamplesDirectory(contract)
-            val result = generateExamples(contract, externalDictionary, examplesDir)
+            val result = generateExamples(contract, examplesDir)
             logGenerationResult(result, examplesDir)
             return 0
         } catch (e: Throwable) {
@@ -35,8 +37,8 @@ abstract class ExamplesGenerateBase<Feature, Scenario>: ExamplesBase<Feature, Sc
     }
 
     // GENERATOR METHODS
-    private fun generateExamples(contractFile: File, externalDictionary: Dictionary, examplesDir: File): List<ExampleGenerationResult> {
-        val feature = contractFileToFeature(contractFile)
+    private fun generateExamples(contractFile: File, examplesDir: File): List<ExampleGenerationResult> {
+        val feature = featureStrategy.contractFileToFeature(contractFile)
         val filteredScenarios = getFilteredScenarios(feature, extensive)
 
         if (filteredScenarios.isEmpty()) {
@@ -45,9 +47,14 @@ abstract class ExamplesGenerateBase<Feature, Scenario>: ExamplesBase<Feature, Sc
 
         val exampleFiles = getExternalExampleFiles(examplesDir)
         return filteredScenarios.map { scenario ->
-            generateOrGetExistingExample(feature, scenario, externalDictionary, exampleFiles, examplesDir).also {
-                logSeparator(75)
-            }
+            generationStrategy.generateOrGetExistingExample(
+                ExamplesGenerationStrategy.GenerateOrGetExistingExampleArgs(
+                    feature, scenario,
+                    featureStrategy.getScenarioDescription(scenario),
+                    exampleFiles, examplesDir,
+                    featureStrategy.exampleFileExtensions
+                )
+            ).also { logSeparator(75) }
         }
     }
 
@@ -79,49 +86,24 @@ enum class ExampleGenerationStatus(val value: String) {
 
 data class ExampleGenerationResult(val exampleFile: File? = null, val status: ExampleGenerationStatus)
 
-interface ExamplesGenerateCommon<Feature, Scenario> : ExamplesCommon<Feature, Scenario> {
+interface ExamplesGenerationStrategy<Feature, Scenario> {
     fun getExistingExampleOrNull(scenario: Scenario, exampleFiles: List<File>): Pair<File, Result>?
 
-    fun generateExample(feature: Feature, scenario: Scenario, dictionary: Dictionary): Pair<String, String>
+    fun generateExample(feature: Feature, scenario: Scenario): Pair<String, String>
 
-    fun loadExternalDictionary(dictFile: File?, contractFile: File?): Dictionary {
-        val dictFilePath = when(dictFile != null) {
-            true -> {
-                dictFile.takeIf { it.exists() }?.path ?: throw IllegalStateException("Dictionary file not found: ${dictFile.path}")
-            }
-
-            false -> {
-                val contractDictFile = contractFile?.let { contract ->
-                    val contractDictFile = "${contract.nameWithoutExtension}$DICTIONARY_FILE_SUFFIX"
-                    contract.canonicalFile.parentFile.resolve(contractDictFile).takeIf { it.exists() }?.path
-                }
-
-                val currentDirDictFile = File(System.getProperty("user.dir")).resolve("dictionary.json").takeIf {
-                    it.exists()
-                }?.path
-
-                contractDictFile ?: currentDirDictFile
-            }
-        }
-
-        return dictFilePath?.let {
-            Dictionary(loadDictionary(dictFilePath))
-        } ?: Dictionary(emptyMap())
-    }
-
-    fun generateOrGetExistingExample(feature: Feature, scenario: Scenario, externalDictionary: Dictionary, exampleFiles: List<File>, examplesDir: File): ExampleGenerationResult {
+    fun generateOrGetExistingExample(request: GenerateOrGetExistingExampleArgs<Feature, Scenario>): ExampleGenerationResult {
         return try {
-            val existingExample = getExistingExampleOrNull(scenario, exampleFiles)
-            val description = getScenarioDescription(scenario)
+            val existingExample = getExistingExampleOrNull(request.scenario, request.exampleFiles)
+            val scenarioDescription = request.scenarioDescription
 
             if (existingExample != null) {
-                logger.log("Using existing example for $description\nExample File: ${existingExample.first.absolutePath}")
+                logger.log("Using existing example for ${scenarioDescription}\nExample File: ${existingExample.first.absolutePath}")
                 return ExampleGenerationResult(existingExample.first, ExampleGenerationStatus.EXISTS)
             }
 
-            logger.log("Generating example for $description")
-            val (uniqueFileName, exampleContent) = generateExample(feature, scenario, externalDictionary)
-            return writeExampleToFile(exampleContent, uniqueFileName, examplesDir)
+            logger.log("Generating example for $scenarioDescription")
+            val (uniqueFileName, exampleContent) = generateExample(request.feature, request.scenario)
+            return writeExampleToFile(exampleContent, uniqueFileName, request.examplesDir, request.validExampleExtensions)
         } catch (e: Throwable) {
             logger.log("Failed to generate example: ${e.message}")
             logger.debug(e)
@@ -129,10 +111,10 @@ interface ExamplesGenerateCommon<Feature, Scenario> : ExamplesCommon<Feature, Sc
         }
     }
 
-    fun writeExampleToFile(exampleContent: String, exampleFileName: String, examplesDir: File): ExampleGenerationResult {
+    fun writeExampleToFile(exampleContent: String, exampleFileName: String, examplesDir: File, validExampleExtensions: Set<String>): ExampleGenerationResult {
         val exampleFile = examplesDir.resolve(exampleFileName)
 
-        if (exampleFile.extension !in exampleFileExtensions) {
+        if (exampleFile.extension !in validExampleExtensions) {
             logger.log("Invalid example file extension: ${exampleFile.extension}")
             return ExampleGenerationResult(exampleFile, ExampleGenerationStatus.ERROR)
         }
@@ -147,4 +129,13 @@ interface ExamplesGenerateCommon<Feature, Scenario> : ExamplesCommon<Feature, Sc
             return ExampleGenerationResult(exampleFile, ExampleGenerationStatus.ERROR)
         }
     }
+
+    data class GenerateOrGetExistingExampleArgs<Feature, Scenario> (
+        val feature: Feature,
+        val scenario: Scenario,
+        val scenarioDescription: String,
+        val exampleFiles: List<File>,
+        val examplesDir: File,
+        val validExampleExtensions: Set<String>
+    )
 }

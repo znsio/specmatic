@@ -265,4 +265,34 @@ internal class HttpPathPatternTest {
             HttpHeadersPattern(mapOf("X-TraceID" to BooleanPattern())),
         )
     }
+
+    @Tag(GENERATION)
+    @Test
+    fun `should generate negative path params with annotations`() {
+        val pathPattern = buildHttpPathPattern("/pet/(id:number)")
+
+        val negativePathPatterns = pathPattern.negativeBasedOn(Row(mapOf("id" to "10")), Resolver()).toList()
+
+        assertThat(negativePathPatterns).hasSize(2)
+
+        negativePathPatterns.filter {
+            val value = it as? HasValue ?: fail("Expected HasValue but got ${it.javaClass.simpleName}")
+            value.comments()?.contains("mutated to boolean") == true
+        }.let {
+            assertThat(it).hasSize(1)
+        }
+
+        negativePathPatterns.filter {
+            val value = it as? HasValue ?: fail("Expected HasValue but got ${it.javaClass.simpleName}")
+            value.comments()?.contains("mutated to string") == true
+        }.let {
+            assertThat(it).hasSize(1)
+        }
+
+        assertThat(negativePathPatterns).allSatisfy {
+            val value = it as? HasValue ?: fail("Expected HasValue but got ${it.javaClass.simpleName}")
+            println(value.comments())
+            assertThat(value.comments()).contains("PATH.id")
+        }
+    }
 }

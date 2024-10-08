@@ -116,7 +116,8 @@ internal class StubCommandTest {
                     strictMode,
                     any(),
                     httpClientFactory = any(),
-                    workingDirectory = any()
+                    workingDirectory = any(),
+                    gracefulRestartTimeoutInMs = any()
                 )
             }.returns(null)
 
@@ -137,6 +138,7 @@ internal class StubCommandTest {
                     any(),
                     httpClientFactory = any(),
                     workingDirectory = any(),
+                    gracefulRestartTimeoutInMs = any()
                 )
             }
         } finally {
@@ -225,6 +227,7 @@ internal class StubCommandTest {
                     passThroughTargetBase,
                     httpClientFactory = any(),
                     workingDirectory = any(),
+                    gracefulRestartTimeoutInMs = any()
                 )
             }.returns(null)
 
@@ -248,6 +251,7 @@ internal class StubCommandTest {
                     any(),
                     httpClientFactory = any(),
                     workingDirectory = any(),
+                    gracefulRestartTimeoutInMs = any()
                 )
             }
         } finally {

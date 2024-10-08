@@ -1,6 +1,6 @@
 package application.exampleGeneration.openApiExamples
 
-import application.exampleGeneration.ExamplesValidateCommon
+import application.exampleGeneration.ExamplesValidationStrategy
 import application.exampleGeneration.ExamplesValidateBase
 import io.specmatic.core.*
 import io.specmatic.core.utilities.capitalizeFirstChar
@@ -13,7 +13,9 @@ import picocli.CommandLine.Option
 import java.io.File
 
 @Command(name = "validate", description = ["Validate OpenAPI inline and external examples"])
-class OpenApiExamplesValidate: ExamplesValidateBase<Feature, Scenario>(), OpenApiExamplesValidateCommon {
+class OpenApiExamplesValidate: ExamplesValidateBase<Feature, Scenario>(
+    featureStrategy = OpenApiExamplesFeatureStrategy(), validationStrategy = OpenApiExamplesValidationStrategy()
+) {
     @Option(names = ["--validate-external"], description = ["Validate external examples, defaults to true"])
     override var validateExternal: Boolean = true
 
@@ -23,7 +25,7 @@ class OpenApiExamplesValidate: ExamplesValidateBase<Feature, Scenario>(), OpenAp
     override var extensive: Boolean = true
 }
 
-interface OpenApiExamplesValidateCommon: ExamplesValidateCommon<Feature, Scenario>, OpenApiExamplesCommon {
+class OpenApiExamplesValidationStrategy: ExamplesValidationStrategy<Feature, Scenario> {
     override fun updateFeatureForValidation(feature: Feature, filteredScenarios: List<Scenario>): Feature {
         return feature.copy(scenarios = filteredScenarios)
     }

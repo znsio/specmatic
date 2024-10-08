@@ -464,10 +464,14 @@
                 }
             }
 
-            .btn-grp {
+            & .btn-grp {
                 display: flex;
                 align-items: center;
                 gap: 1rem;
+
+                &[data-test-mode="false"] > #bulk-test {
+                    display: none;
+                }
             }
 
             & button {
@@ -649,21 +653,9 @@
                     & button.validate {
                         display: inline-block;
                     }
-                }
 
-                & > span {
-                    display: block;
-                }
-            }
-
-            &[data-valid="success"] {
-                & td:last-child {
-                    & button.validate {
-                        display: none;
-                    }
-
-                    & button.test {
-                        display: inline-block;
+                    & > span {
+                        display: block;
                     }
                 }
             }
@@ -697,21 +689,28 @@
             }
         }
 
+
+        tbody {
+            &[data-test-mode="true"] > tr[data-valid="success"] {
+                & td:last-child {
+                    & button.validate {
+                        display: none;
+                    }
+
+                    & button.test {
+                        display: inline-block;
+                    }
+                }
+            }
+        }
+
         td:nth-child(3) {
             text-align: initial;
             min-width: 10rem;
         }
 
-        td:nth-child(4) {
-            min-width: 2rem;
-        }
-
-        td:last-child {
-            max-width: 9rem;
-        }
-
-        td:nth-last-child(2) {
-            max-width: 15rem;
+        td:last-child, td:nth-last-child(2) {
+            max-width: 10rem;
 
             & p {
                 white-space: normal;
@@ -996,7 +995,7 @@
         <h1 th:text="${contractFileName}"></h1>
         <h2 th:text="${contractFilePath}"></h2>
     </div>
-    <div class="btn-grp">
+    <div class="btn-grp" th:attr="data-test-mode=${isTestMode}">
         <button data-selected="0" id="bulk-generate" data-panel="table"></button>
         <button data-selected="0" data-panel="table" id="bulk-validate"></button>
         <button data-selected="0" data-panel="table" id="bulk-test"></button>
@@ -1018,7 +1017,7 @@
                 <th>Action</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody th:attr="data-test-mode=${isTestMode}">
             <tr
                 th:each="row, iter : ${tableRows}"
                 th:attr="data-examples=${row.exampleFilePath},
@@ -1234,7 +1233,6 @@
             }
         }
 
-        blockGenValidate = false;
         bulkGenerateBtn.removeAttribute("data-generate");
         const message = `${createdCount} out of ${rowsWithNoExamples.length} Example(s) Created\n${existedCount} out of ${rowsWithNoExamples.length} Example(s) Already Existed`;
         createAlert("Generation Complete", message, failedCount !== 0);
@@ -1274,7 +1272,6 @@
     });
 
     async function validateAllSelected() {
-        blockGenValidate = true;
         bulkValidateBtn.setAttribute("data-valid", "processing");
 
         let errorsCount = 0;
@@ -1292,11 +1289,42 @@
             }
         }
 
-        blockGenValidate = false;
         bulkValidateBtn.removeAttribute("data-generate");
         createAlert("Validations Complete", `${errorsCount} out of ${rowsWithExamples.length} are invalid`, errorsCount !== 0);
         return cleanUpSelections();
     }
+
+    bulkTestBtn.addEventListener("click", async () => {
+        blockGenValidate = true;
+        bulkTestBtn.setAttribute("data-test", "processing");
+
+        switch (bulkValidateBtn.getAttribute("data-panel")) {
+            case "table": {
+                await testAllSelected();
+                break;
+            }
+
+            case "details": {
+                await testRowExample(selectedTableRow);
+                const exampleFilePath = getExampleData(selectedTableRow);
+                const {example: exampleContent, error} = await getExampleContent(exampleFilePath);
+
+                const docFragment = createExampleRows([{
+                    exampleFilePath: exampleFilePath,
+                    exampleJson: exampleContent,
+                    error: validationDetails[Number.parseInt(selectedTableRow.children[1].textContent)] || error,
+                    hasBeenValidated: selectedTableRow.hasAttribute("data-valid"),
+                    test: testDetails[Number.parseInt(selectedTableRow.children[1].textContent)]
+                }]);
+
+                examplesOl.replaceChildren(docFragment);
+                break;
+            }
+        }
+
+        bulkTestBtn.removeAttribute("data-test");
+        return cleanUpSelections();
+    });
 
     async function testAllSelected() {
         const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
@@ -1396,13 +1424,14 @@
 
         if (error) {
             if (!bulkMode) createAlert("Invalid Example", `Example name: ${parseFileName(exampleFilePath)}`, true);
+            tableRow.removeAttribute("data-test");
             return false;
         }
 
         if (!bulkMode) createAlert("Valid Example", `Example name: ${parseFileName(exampleFilePath)}`, false);
+        tableRow.removeAttribute("data-test");
         return true;
     }
-
 
     async function testRowExample(tableRow, bulkMode = false) {
         tableRow.setAttribute("data-test", "processing");
@@ -1440,7 +1469,7 @@
                 exampleJson: example,
                 error: validationDetails[Number.parseInt(tableRow.children[1].textContent)] || error,
                 hasBeenValidated: tableRow.hasAttribute("data-valid"),
-                    test: testDetails[Number.parseInt(tableRow.children[1].textContent)]
+                test: testDetails[Number.parseInt(tableRow.children[1].textContent)]
             }]);
         }
 

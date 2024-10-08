@@ -1,12 +1,14 @@
 package application.exampleGeneration
 
+import io.specmatic.core.DICTIONARY_FILE_SUFFIX
 import io.specmatic.core.EXAMPLES_DIR_SUFFIX
+import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.log.*
 import picocli.CommandLine
 import java.io.File
 import java.util.concurrent.Callable
 
-abstract class ExamplesBase<Feature, Scenario> : Callable<Int>, ExamplesCommon<Feature, Scenario> {
+abstract class ExamplesBase<Feature, Scenario>(open val featureStrategy: ExamplesFeatureStrategy<Feature, Scenario>) : Callable<Int> {
     protected abstract var contractFile: File?
 
     @CommandLine.Option(names = ["--filter-name"], description = ["Use only APIs with this value in their name, Case sensitive"], defaultValue = "\${env:SPECMATIC_FILTER_NAME}")
@@ -25,8 +27,8 @@ abstract class ExamplesBase<Feature, Scenario> : Callable<Int>, ExamplesCommon<F
                 return 1
             }
 
-            if (it.extension !in contractFileExtensions) {
-                logger.log("Invalid Contract file ${it.path} - File extension must be one of ${contractFileExtensions.joinToString()}")
+            if (it.extension !in featureStrategy.contractFileExtensions) {
+                logger.log("Invalid Contract file ${it.path} - File extension must be one of ${featureStrategy.contractFileExtensions.joinToString()}")
                 return 1
             }
         }
@@ -50,7 +52,7 @@ abstract class ExamplesBase<Feature, Scenario> : Callable<Int>, ExamplesCommon<F
 
     fun getFilteredScenarios(feature: Feature, extensive: Boolean = false): List<Scenario> {
         val scenarioFilter = ScenarioFilter(filterName, filterNotName)
-        val scenarios = getScenariosFromFeature(feature, extensive)
+        val scenarios = featureStrategy.getScenariosFromFeature(feature, extensive)
         return getFilteredScenarios(scenarios, scenarioFilter)
     }
 
@@ -64,7 +66,9 @@ abstract class ExamplesBase<Feature, Scenario> : Callable<Int>, ExamplesCommon<F
     }
 
     fun getExternalExampleFiles(examplesDirectory: File): List<File> {
-        return examplesDirectory.walk().filter { it.isFile && it.extension in exampleFileExtensions }.toList()
+        return examplesDirectory.walk().filter {
+            it.isFile && it.extension in featureStrategy.exampleFileExtensions
+        }.toList()
     }
 
     fun logSeparator(length: Int, separator: String = "-") {
@@ -85,6 +89,27 @@ abstract class ExamplesBase<Feature, Scenario> : Callable<Int>, ExamplesCommon<F
         logger.log(paddedNoteLine)
     }
 
+    fun updateDictionaryFile(dictFileFromArgs: File? = null, contract: File? = contractFile): File? {
+        val dictFile = when(dictFileFromArgs != null) {
+            true -> {
+                dictFileFromArgs.takeIf { it.exists() } ?: throw Exception("Dictionary file does not exist: ${dictFileFromArgs.absolutePath}")
+            }
+            false -> {
+                val dictInContractFolder = contract?.parentFile?.resolve("${contract.nameWithoutExtension}$DICTIONARY_FILE_SUFFIX")
+                val dictFileInCurDir = File(".").resolve("${contractFile?.nameWithoutExtension}$DICTIONARY_FILE_SUFFIX")
+
+                dictInContractFolder?.takeIf { it.exists() } ?: dictFileInCurDir.takeIf { it.exists() }
+            }
+        }
+
+        dictFile?.let {
+            logger.log("Using Dictionary file: ${it.absolutePath}")
+            System.setProperty(SPECMATIC_STUB_DICTIONARY, it.absolutePath)
+        }
+
+        return dictFile
+    }
+
     private fun getFilteredScenarios(scenarios: List<Scenario>, scenarioFilter: ScenarioFilter): List<Scenario> {
         val filteredScenarios = scenarios
             .filterScenarios(scenarioFilter.filterNameTokens, shouldMatch = true)
@@ -101,7 +126,7 @@ abstract class ExamplesBase<Feature, Scenario> : Callable<Int>, ExamplesCommon<F
         if (tokens.isEmpty()) return this
 
         return this.filter {
-            val description = getScenarioDescription(it)
+            val description = featureStrategy.getScenarioDescription(it)
             tokens.any { token ->
                 description.contains(token)
             } == shouldMatch
@@ -109,7 +134,7 @@ abstract class ExamplesBase<Feature, Scenario> : Callable<Int>, ExamplesCommon<F
     }
 }
 
-interface ExamplesCommon<Feature, Scenario> {
+interface ExamplesFeatureStrategy<Feature, Scenario> {
     val exampleFileExtensions: Set<String>
     val contractFileExtensions: Set<String>
 

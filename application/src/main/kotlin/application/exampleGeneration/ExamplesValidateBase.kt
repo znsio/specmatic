@@ -5,7 +5,10 @@ import io.specmatic.core.log.logger
 import picocli.CommandLine.Option
 import java.io.File
 
-abstract class ExamplesValidateBase<Feature, Scenario>: ExamplesBase<Feature, Scenario>(), ExamplesValidateCommon<Feature, Scenario> {
+abstract class ExamplesValidateBase<Feature, Scenario>(
+    override val featureStrategy: ExamplesFeatureStrategy<Feature, Scenario>,
+    private val validationStrategy: ExamplesValidationStrategy<Feature, Scenario>
+): ExamplesBase<Feature, Scenario>(featureStrategy) {
     @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
     override var contractFile: File? = null
 
@@ -29,8 +32,8 @@ abstract class ExamplesValidateBase<Feature, Scenario>: ExamplesBase<Feature, Sc
                     return 1
                 }
 
-                if (exFile.extension !in exampleFileExtensions) {
-                    logger.log("Invalid Example file ${exFile.path} - File extension must be one of ${exampleFileExtensions.joinToString()}")
+                if (exFile.extension !in featureStrategy.exampleFileExtensions) {
+                    logger.log("Invalid Example file ${exFile.path} - File extension must be one of ${featureStrategy.exampleFileExtensions.joinToString()}")
                     return 1
                 }
 
@@ -57,19 +60,19 @@ abstract class ExamplesValidateBase<Feature, Scenario>: ExamplesBase<Feature, Sc
 
     // VALIDATION METHODS
     private fun getFilteredFeature(contractFile: File): Feature {
-        val feature = contractFileToFeature(contractFile)
+        val feature = featureStrategy.contractFileToFeature(contractFile)
         val filteredScenarios = getFilteredScenarios(feature)
-        return updateFeatureForValidation(feature, filteredScenarios)
+        return validationStrategy.updateFeatureForValidation(feature, filteredScenarios)
     }
 
     private fun validateExampleFile(exampleFile: File, contractFile: File): ExampleValidationResult {
-        val feature = contractFileToFeature(contractFile)
+        val feature = featureStrategy.contractFileToFeature(contractFile)
         return validateExternalExample(exampleFile, feature)
     }
 
     private fun validateExternalExample(exampleFile: File, feature: Feature): ExampleValidationResult {
         return try {
-            val result = validateExternalExample(feature, exampleFile)
+            val result = validationStrategy.validateExternalExample(feature, exampleFile)
             ExampleValidationResult(exampleFile, result.second)
         } catch (e: Throwable) {
             logger.log("Example validation failed with error: ${e.message}")
@@ -157,7 +160,7 @@ data class ExampleValidationResult(val exampleName: String, val result: Result, 
     constructor(exampleFile: File, result: Result) : this(exampleFile.nameWithoutExtension, result, ExampleType.EXTERNAL, exampleFile)
 }
 
-interface ExamplesValidateCommon<Feature, Scenario> : ExamplesCommon<Feature, Scenario> {
+interface ExamplesValidationStrategy<Feature, Scenario> {
     fun updateFeatureForValidation(feature: Feature, filteredScenarios: List<Scenario>): Feature
 
     fun validateExternalExample(feature: Feature, exampleFile: File): Pair<String, Result>

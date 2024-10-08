@@ -1,10 +1,10 @@
 package application.exampleGeneration.openApiExamples
 
-import application.exampleGeneration.ExamplesCommon
+import application.exampleGeneration.ExamplesFeatureStrategy
 import io.specmatic.core.*
 import java.io.File
 
-interface OpenApiExamplesCommon: ExamplesCommon<Feature, Scenario> {
+class OpenApiExamplesFeatureStrategy: ExamplesFeatureStrategy<Feature, Scenario> {
     override val exampleFileExtensions: Set<String> get() = setOf(JSON)
     override val contractFileExtensions: Set<String> get() = OPENAPI_FILE_EXTENSIONS.toSet()
 

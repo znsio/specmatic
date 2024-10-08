@@ -71,6 +71,10 @@ abstract class ExamplesBase<Feature, Scenario>(open val featureStrategy: Example
         }.toList()
     }
 
+    fun getExternalExampleFilesFromContract(contractFile: File): List<File> {
+        return getExternalExampleFiles(getExamplesDirectory(contractFile))
+    }
+
     fun logSeparator(length: Int, separator: String = "-") {
         logger.log(separator.repeat(length))
     }

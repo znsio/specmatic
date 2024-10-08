@@ -10,7 +10,7 @@ abstract class ExamplesGenerateBase<Feature, Scenario>(
     private val generationStrategy: ExamplesGenerationStrategy<Feature, Scenario>
 ): ExamplesBase<Feature, Scenario>(featureStrategy) {
     @Parameters(index = "0", description = ["Contract file path"], arity = "0..1")
-    override var contractFile: File? = null
+    public override var contractFile: File? = null
 
     @Option(names = ["--dictionary"], description = ["Path to external dictionary file (default: contract_file_name_dictionary.json or dictionary.json)"])
     private var dictFile: File? = null

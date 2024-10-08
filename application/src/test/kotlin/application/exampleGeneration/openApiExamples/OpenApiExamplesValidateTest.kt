@@ -1,86 +1,26 @@
-package application
+package application.exampleGeneration.openApiExamples
 
+import application.captureStandardOutput
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-class ExamplesCommandTest {
-    @Test
-    fun `examples validate command should not print an empty error when it sees an inline example for a filtered-out scenario`(@TempDir tempDir: File) {
-        val specFile = tempDir.resolve("spec.yaml")
-        val examplesDir = tempDir.resolve("spec_examples")
-
-        specFile.createNewFile()
-        val spec = """
-openapi: 3.0.0
-info:
-  title: Product API
-  version: 1.0.0
-paths:
-  /product/{id}:
-    get:
-      summary: Get product details
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Product details
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  name:
-                    type: string
-                  price:
-                    type: number
-                    format: float
-        """.trimIndent()
-        specFile.writeText(spec)
-
-        examplesDir.mkdirs()
-        val example = """
-{
-  "http-request": {
-    "method": "GET",
-    "path": "/products/1"
-  },
-  "http-response": {
-    "status": 200,
-    "body": {
-      "id": 1,
-      "name": "Laptop",
-      "price": 1000.99
-    },
-    "headers": {
-      "Content-Type": "application/json"
-    }
-  }
-}
-        """.trimIndent()
-
-        val exampleFile = examplesDir.resolve("example.json")
-        exampleFile.writeText(example)
-
-        val command = ExamplesCommand.Validate().also {
-            it.contractFile = specFile
+class OpenApiExamplesValidateTest {
+    companion object {
+        fun validateExamples(specFile: File): Pair<String, Int> {
+            return OpenApiExamplesValidate().also { it.contractFile = specFile }.let {
+                val (output, exitCode) = captureStandardOutput { it.execute(specFile) }
+                Pair(output, exitCode)
+            }
         }
 
-        val (output, returnValue: Int) = captureStandardOutput {
-            command.call()
+        fun validateSingleExample(specFile: File, exampleFile: File): Pair<String, Int> {
+            return OpenApiExamplesValidate().also { it.contractFile = specFile; it.exampleFile = exampleFile }.let {
+                val (output, exitCode) = captureStandardOutput { it.execute(specFile) }
+                Pair(output, exitCode)
+            }
         }
-
-        println(output)
-
-        assertThat(returnValue).isNotEqualTo(0)
-        assertThat(output).contains("No matching REST stub or contract found")
     }
 
     @Test
@@ -122,7 +62,9 @@ paths:
         """.trimIndent()
         specFile.writeText(spec)
 
+        examplesDir.deleteRecursively()
         examplesDir.mkdirs()
+
         val example = """
 {
   "http-request": {
@@ -142,22 +84,16 @@ paths:
   }
 }
         """.trimIndent()
-
         val exampleFile = examplesDir.resolve("example.json")
         exampleFile.writeText(example)
 
-        val command = ExamplesCommand.Validate().also {
-            it.contractFile = specFile
-        }
+        val (stdOut, exitCode) = validateExamples(specFile)
+        println(stdOut)
 
-        val (output, returnValue: Int) = captureStandardOutput {
-            command.call()
-        }
-
-        println(output)
-
-        assertThat(returnValue).isNotEqualTo(0)
-        assertThat(output).contains("""expected number but example contained""")
+        assertThat(exitCode).isNotEqualTo(0)
+        assertThat(stdOut).contains("example.json has the following validation error(s)")
+            .contains("""expected number but example contained""")
+        assertThat(stdOut).contains("0 example(s) are valid. 1 example(s) are invalid")
     }
 
     @Test
@@ -199,7 +135,9 @@ paths:
         """.trimIndent()
         specFile.writeText(spec)
 
+        examplesDir.deleteRecursively()
         examplesDir.mkdirs()
+
         val example = """
 {
   "http-request": {
@@ -219,26 +157,19 @@ paths:
   }
 }
         """.trimIndent()
-
         val exampleFile = examplesDir.resolve("example.json")
         exampleFile.writeText(example)
 
-        val command = ExamplesCommand.Validate().also {
-            it.contractFile = specFile
-        }
+        val (stdOut, exitCode) = validateExamples(specFile)
+        println(stdOut)
 
-        val (output, returnValue: Int) = captureStandardOutput {
-            command.call()
-        }
-
-        println(output)
-
-        assertThat(returnValue).isEqualTo(0)
-        assertThat(output).contains("are valid")
+        assertThat(exitCode).isEqualTo(0)
+        assertThat(stdOut).contains("example.json is valid")
+        assertThat(stdOut).contains("1 example(s) are valid. 0 example(s) are invalid")
     }
 
     @Test
-    fun `should generate an example if missing`(@TempDir tempDir: File) {
+    fun `should not print an empty error when it sees an inline example for a filtered-out scenario`(@TempDir tempDir: File) {
         val specFile = tempDir.resolve("spec.yaml")
         val examplesDir = tempDir.resolve("spec_examples")
 
@@ -279,19 +210,39 @@ paths:
         examplesDir.deleteRecursively()
         examplesDir.mkdirs()
 
-        ExamplesCommand().also {
-            it.contractFile = specFile
-        }.call()
+        val example = """
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/products/1"
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": 1,
+      "name": "Laptop",
+      "price": 1000.99
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}
+        """.trimIndent()
+        val exampleFile = examplesDir.resolve("example.json")
+        exampleFile.writeText(example)
 
-        val examplesCreated = examplesDir.walk().filter { it.isFile }.toList()
+        val (stdOut, exitCode) = validateExamples(specFile)
+        println(stdOut)
 
-        assertThat(examplesCreated).hasSize(1)
-        assertThat(examplesCreated.single().name).matches("product_[0-9]*_GET_200.json")
-
+        assertThat(exitCode).isNotEqualTo(0)
+        assertThat(stdOut).contains("example.json has the following validation error(s)")
+            .contains("No matching REST stub or contract found")
+        assertThat(stdOut).contains("0 example(s) are valid. 1 example(s) are invalid")
     }
 
     @Test
-    fun `should generate only the missing examples and leave the existing examples as is`(@TempDir tempDir: File) {
+    fun `should only validate the specified example and ignore others`(@TempDir tempDir: File) {
         val specFile = tempDir.resolve("spec.yaml")
         val examplesDir = tempDir.resolve("spec_examples")
 
@@ -302,27 +253,77 @@ info:
   title: Product API
   version: 1.0.0
 paths:
-  /product:
+  /product/{id}:
     get:
       summary: Get product details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
       responses:
         '200':
           description: Product details
           content:
             application/json:
               schema:
-                schema:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      id:
-                        type: integer
-                      name:
-                        type: string
-                      price:
-                        type: number
-                        format: float
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  price:
+                    type: number
+                    format: float
+        '202':
+          description: Request accepted for processing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Request accepted for processing"
+        """.trimIndent()
+        specFile.writeText(spec)
+
+        examplesDir.deleteRecursively()
+        examplesDir.mkdirs()
+
+        val (_, generationExitCode, examples) = OpenApiExamplesGenerateTest.generateExamples(specFile, examplesDir)
+
+        assertThat(generationExitCode).isEqualTo(0)
+        assertThat(examples.size).isEqualTo(2)
+
+        assertThat(examples).allSatisfy{
+            val (stdOut, exitCode) = validateSingleExample(specFile, it)
+            println(stdOut)
+
+            assertThat(exitCode).isEqualTo(0)
+            assertThat(stdOut).contains("${it.name} is valid")
+
+            val otherExamples = examples.filter { exFile -> exFile != it }
+            otherExamples.forEach { otherExample ->
+                assertThat(stdOut).doesNotContain(otherExample.name)
+            }
+        }
+    }
+
+    @Test
+    fun `should fail validation with error on invalid file extension for specified example`(@TempDir tempDir: File) {
+        val specFile = tempDir.resolve("spec.yaml")
+        val examplesDir = tempDir.resolve("spec_examples")
+
+        specFile.createNewFile()
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Product API
+  version: 1.0.0
+paths:
   /product/{id}:
     get:
       summary: Get product details
@@ -353,7 +354,6 @@ paths:
         examplesDir.deleteRecursively()
         examplesDir.mkdirs()
 
-        examplesDir.mkdirs()
         val example = """
 {
   "http-request": {
@@ -373,26 +373,14 @@ paths:
   }
 }
         """.trimIndent()
-
-        val exampleFile = examplesDir.resolve("example.json")
+        val exampleFile = examplesDir.resolve("example.txt")
         exampleFile.writeText(example)
 
-        ExamplesCommand().also {
-            it.contractFile = specFile
-        }.call()
+        val (stdOut, exitCode) = validateSingleExample(specFile, exampleFile)
+        println(stdOut)
 
-        val examplesCreated = examplesDir.walk().filter { it.isFile }.toList()
-
-        assertThat(examplesCreated).hasSize(2)
-        println(examplesCreated.map { it.name })
-        assertThat(examplesCreated.filter { it.name == "example.json" }).hasSize(1)
-        assertThat(examplesCreated.filter { it.name == "product_GET_200.json" }).hasSize(1)
-
-        assertThat(examplesCreated.find { it.name == "example.json" }?.readText() ?: "")
-            .contains(""""name": "Laptop"""")
-            .contains(""""price": 1000.99""")
-
-        val generatedExample = examplesCreated.first { it.name == "product_GET_200.json" }
-        assertThat(generatedExample.readText()).contains(""""path": "/product"""")
+        assertThat(exitCode).isNotEqualTo(0)
+        assertThat(stdOut).contains("Invalid Example file ${exampleFile.absolutePath}")
+            .contains("File extension must be one of json")
     }
 }

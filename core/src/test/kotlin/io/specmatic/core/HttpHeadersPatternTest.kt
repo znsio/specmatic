@@ -224,7 +224,9 @@ internal class HttpHeadersPatternTest {
         val headers = HttpHeadersPattern(mapOf("X-TraceID" to StringPattern()))
         val newHeaders = headers.negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
 
-        assertThat(newHeaders).isEmpty()
+        assertThat(newHeaders).containsExactlyInAnyOrder(
+            HttpHeadersPattern(mapOf())
+        )
     }
 
     @Tag(GENERATION)
@@ -236,6 +238,7 @@ internal class HttpHeadersPatternTest {
         assertThat(newHeaders).containsExactlyInAnyOrder(
             HttpHeadersPattern(mapOf("X-TraceID" to StringPattern())),
             HttpHeadersPattern(mapOf("X-TraceID" to BooleanPattern())),
+            HttpHeadersPattern(mapOf())
         )
     }
 

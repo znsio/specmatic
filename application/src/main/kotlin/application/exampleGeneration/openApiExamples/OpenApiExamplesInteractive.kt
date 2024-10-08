@@ -67,7 +67,7 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
                             TableRowGroup("method", scenario.method, showRow = !methodSet.contains(method), rowSpan = scenarios.size),
                             TableRowGroup("response", scenario.status.toString(), showRow = true, rowSpan = 1, extraInfo = scenario.httpRequestPattern.headersPattern.contentType)
                         ),
-                        exampleFilePath = example?.exampleFIle?.absolutePath,
+                        exampleFilePath = example?.exampleFile?.absolutePath,
                         exampleFileName = example?.exampleName,
                         exampleMismatchReason = example?.result?.reportString().takeIf { reason -> reason?.isNotBlank() == true }
                     ).also { methodSet.add(method); showPath = false }

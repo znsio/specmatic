@@ -10,10 +10,10 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
     private val validationStrategy: ExamplesValidationStrategy<Feature, Scenario>
 ): ExamplesBase<Feature, Scenario>(featureStrategy) {
     @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
-    override var contractFile: File? = null
+    public override var contractFile: File? = null
 
     @Option(names = ["--example-file"], description = ["Example file path"], required = false)
-    private val exampleFile: File? = null
+    var exampleFile: File? = null
 
     abstract var validateExternal: Boolean
     abstract var validateInline: Boolean
@@ -67,7 +67,9 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
 
     private fun validateExampleFile(exampleFile: File, contractFile: File): ExampleValidationResult {
         val feature = featureStrategy.contractFileToFeature(contractFile)
-        return validateExternalExample(exampleFile, feature)
+        return validateExternalExample(exampleFile, feature).also {
+            it.logErrors()
+        }
     }
 
     private fun validateExternalExample(exampleFile: File, feature: Feature): ExampleValidationResult {
@@ -139,10 +141,10 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
         val prefix = index?.let { "$it. " } ?: ""
 
         if (this.result.isSuccess()) {
-            return logger.log("$prefix${this.exampleName} is valid")
+            return logger.log("$prefix${this.exampleFile?.name ?: this.exampleName} is valid")
         }
 
-        logger.log("\n$prefix${this.exampleName} has the following validation error(s):")
+        logger.log("\n$prefix${this.exampleFile?.name ?: this.exampleName} has the following validation error(s):")
         logger.log(this.result.reportString())
     }
 }
@@ -156,7 +158,7 @@ enum class ExampleType(val value: String) {
     }
 }
 
-data class ExampleValidationResult(val exampleName: String, val result: Result, val type: ExampleType, val exampleFIle: File? = null) {
+data class ExampleValidationResult(val exampleName: String, val result: Result, val type: ExampleType, val exampleFile: File? = null) {
     constructor(exampleFile: File, result: Result) : this(exampleFile.nameWithoutExtension, result, ExampleType.EXTERNAL, exampleFile)
 }
 

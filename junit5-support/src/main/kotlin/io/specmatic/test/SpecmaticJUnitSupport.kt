@@ -232,8 +232,6 @@ open class SpecmaticJUnitSupport {
                             suggestionsData,
                             testConfig,
                             specificationPath = it,
-                            filterName = filterName,
-                            filterNotName = filterNotName,
                             specmaticConfig = specmaticConfig
                         )
                     }
@@ -264,8 +262,6 @@ open class SpecmaticJUnitSupport {
                             it.branch,
                             it.specificationPath,
                             specmaticConfig?.security,
-                            filterName,
-                            filterNotName,
                             specmaticConfig = specmaticConfig
                         )
                     }
@@ -426,8 +422,6 @@ open class SpecmaticJUnitSupport {
         sourceRepositoryBranch: String? = null,
         specificationPath: String? = null,
         securityConfiguration: SecurityConfiguration? = null,
-        filterName: String?,
-        filterNotName: String?,
         specmaticConfig: SpecmaticConfig? = null
     ): Pair<Sequence<ContractTest>, List<Endpoint>> {
         if(hasOpenApiFileExtension(path) && !isOpenAPI(path))
@@ -468,15 +462,6 @@ open class SpecmaticJUnitSupport {
         }
 
         val tests: Sequence<ContractTest> = feature
-            .copy(scenarios = selectTestsToRun(feature.scenarios.asSequence(), filterName, filterNotName) { it.testDescription() }.toList())
-            .also {
-                if (it.scenarios.isEmpty())
-                    logger.log("All scenarios were filtered out.")
-                else if (it.scenarios.size < feature.scenarios.size) {
-                    logger.debug("Selected scenarios:")
-                    it.scenarios.forEach { scenario -> logger.debug(scenario.testDescription().prependIndent("  ")) }
-                }
-            }
             .generateContractTests(suggestions)
 
         return Pair(tests, allEndpoints)
@@ -573,6 +558,13 @@ fun <T> selectTestsToRun(
         }
     } else
         filteredByName
+
+    if (filteredByNotName.count()==0)
+        logger.log("All scenarios were filtered out.")
+    else if (filteredByNotName.count() < testScenarios.count()) {
+        logger.debug("Selected scenarios:")
+        filteredByNotName.forEach { scenario -> logger.debug(getTestDescription(scenario).prependIndent("  ")) }
+    }
 
     return filteredByNotName
 }

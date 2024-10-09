@@ -21,6 +21,8 @@ abstract class ExamplesBase<Feature, Scenario>(open val featureStrategy: Example
     private var verbose = false
 
     override fun call(): Int {
+        configureLogger(verbose)
+
         contractFile?.let {
             if (!it.exists()) {
                 logger.log("Contract file does not exist: ${it.absolutePath}")
@@ -106,12 +108,10 @@ abstract class ExamplesBase<Feature, Scenario>(open val featureStrategy: Example
             }
         }
 
-        dictFile?.let {
-            logger.log("Using Dictionary file: ${it.absolutePath}")
+        return dictFile?.let {
             System.setProperty(SPECMATIC_STUB_DICTIONARY, it.absolutePath)
+            it
         }
-
-        return dictFile
     }
 
     private fun getFilteredScenarios(scenarios: List<Scenario>, scenarioFilter: ScenarioFilter): List<Scenario> {

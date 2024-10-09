@@ -15,8 +15,6 @@ abstract class ExamplesGenerateBase<Feature, Scenario>(
     @Option(names = ["--dictionary"], description = ["Path to external dictionary file (default: contract_file_name_dictionary.json or dictionary.json)"])
     private var dictFile: File? = null
 
-    abstract var extensive: Boolean
-
     override fun execute(contract: File?): Int {
         if (contract == null) {
             logger.log("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
@@ -39,7 +37,7 @@ abstract class ExamplesGenerateBase<Feature, Scenario>(
     // GENERATOR METHODS
     private fun generateExamples(contractFile: File, examplesDir: File): List<ExampleGenerationResult> {
         val feature = featureStrategy.contractFileToFeature(contractFile)
-        val filteredScenarios = getFilteredScenarios(feature, extensive)
+        val filteredScenarios = getFilteredScenarios(feature)
 
         if (filteredScenarios.isEmpty()) {
             return emptyList()

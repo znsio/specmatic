@@ -12,7 +12,7 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import java.io.File
 
-@Command(name = "validate", description = ["Validate OpenAPI inline and external examples"])
+@Command(name = "validate", description = ["Validate OpenAPI inline and externalised examples"])
 class OpenApiExamplesValidate: ExamplesValidateBase<Feature, Scenario>(
     featureStrategy = OpenApiExamplesFeatureStrategy(), validationStrategy = OpenApiExamplesValidationStrategy()
 ) {

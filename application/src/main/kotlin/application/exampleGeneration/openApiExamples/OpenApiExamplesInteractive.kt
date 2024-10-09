@@ -14,7 +14,7 @@ import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import java.io.File
 
-@Command(name = "interactive", description = ["Generate and validate examples interactively through a Web UI"],)
+@Command(name = "interactive", description = ["Generate, validate and test examples interactively through a Web UI"])
 class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
     featureStrategy = OpenApiExamplesFeatureStrategy(), generationStrategy = OpenApiExamplesGenerationStrategy(), validationStrategy = OpenApiExamplesValidationStrategy()
 ) {

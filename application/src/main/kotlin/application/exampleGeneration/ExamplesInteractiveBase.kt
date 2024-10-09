@@ -36,7 +36,6 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
     @Option(names = ["--dictionary"], description = ["Path to external dictionary file (default: contract_file_name_dictionary.json or dictionary.json)"])
     var dictFile: File? = null
 
-    abstract var extensive: Boolean
     abstract val htmlTableColumns: List<HtmlTableColumn>
     private var cachedContractFileFromRequest: File? = null
 
@@ -365,7 +364,7 @@ data class ExampleValidationRequest (
     val exampleFile: File
 )
 
-data class ExampleValidationResponse(
+data class ExampleValidationResponse (
     val exampleFilePath: String,
     val error: String? = null
 ) {

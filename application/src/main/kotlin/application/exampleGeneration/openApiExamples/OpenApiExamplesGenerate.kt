@@ -12,7 +12,7 @@ import java.io.File
 
 @Command(
     name = "examples",
-    description = ["Generate JSON Examples with Request and Response from an OpenApi Contract File"],
+    description = ["Generate Externalised Examples from an OpenApi Contract"],
     subcommands = [OpenApiExamplesValidate::class, OpenApiExamplesInteractive::class]
 )
 class OpenApiExamplesGenerate: ExamplesGenerateBase<Feature, Scenario> (

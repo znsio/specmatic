@@ -17,7 +17,6 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
 
     abstract var validateExternal: Boolean
     abstract var validateInline: Boolean
-    abstract var extensive: Boolean
 
     override fun execute(contract: File?): Int {
         if (contract == null) {

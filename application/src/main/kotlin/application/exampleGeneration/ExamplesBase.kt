@@ -20,6 +20,8 @@ abstract class ExamplesBase<Feature, Scenario>(open val featureStrategy: Example
     @CommandLine.Option(names = ["--debug"], description = ["Debug logs"])
     private var verbose = false
 
+    abstract var extensive: Boolean
+
     override fun call(): Int {
         configureLogger(verbose)
 
@@ -43,7 +45,7 @@ abstract class ExamplesBase<Feature, Scenario>(open val featureStrategy: Example
     abstract fun execute(contract: File?): Int
 
     // HELPER METHODS
-    fun configureLogger(verbose: Boolean) {
+    private fun configureLogger(verbose: Boolean) {
         val logPrinters = listOf(ConsolePrinter)
 
         logger = if (verbose)
@@ -52,7 +54,7 @@ abstract class ExamplesBase<Feature, Scenario>(open val featureStrategy: Example
             NonVerbose(CompositePrinter(logPrinters))
     }
 
-    fun getFilteredScenarios(feature: Feature, extensive: Boolean = false): List<Scenario> {
+    fun getFilteredScenarios(feature: Feature): List<Scenario> {
         val scenarioFilter = ScenarioFilter(filterName, filterNotName)
         val scenarios = featureStrategy.getScenariosFromFeature(feature, extensive)
         return getFilteredScenarios(scenarios, scenarioFilter)

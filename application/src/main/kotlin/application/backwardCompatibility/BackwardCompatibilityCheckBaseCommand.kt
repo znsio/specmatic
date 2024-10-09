@@ -102,7 +102,9 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     internal fun getSpecsReferringTo(schemaFiles: Map<String, String>): Set<String> {
         if (schemaFiles.isEmpty()) return emptySet()
 
-        val inputFileNames = schemaFiles.map { File(it.value).name }
+        val inputFileNames = schemaFiles.flatMap { (original, changed) ->
+            listOf(File(original).name, File(changed).name)
+        }
         val result = allSpecFiles().filter {
             it.readText().trim().let { specContent ->
                 inputFileNames.any { inputFileName ->

@@ -5,7 +5,6 @@ import io.specmatic.core.Results
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger
-import io.specmatic.core.utilities.exitWithMessage
 import picocli.CommandLine.Option
 import java.io.File
 import java.nio.file.Paths
@@ -84,12 +83,19 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     }
 
     private fun getChangedSpecsInCurrentBranch(): Map<String, String> {
-        return gitCommand.getFilesChangedInCurrentBranchAsMap(
-            baseBranch()
-        ).filter { (_, changed) ->
+        val changedFiles = gitCommand.getFilesChangedInCurrentBranchAsMap(baseBranch())
+        val deletedFiles = changedFiles.filter { (_, changed) -> File(changed).exists().not() }.values
+        if(deletedFiles.isNotEmpty()) {
+            logger.log("WARNING: Following files were deleted -$newLine ${deletedFiles.joinToString(newLine)}")
+        }
+
+        return changedFiles.filter { (_, changed) ->
             File(changed).exists() && File(changed).isValidSpec()
         }.also {
-            if(it.isEmpty()) exitWithMessage("${newLine}No specs were changed, skipping the check.$newLine")
+            if(it.isEmpty()) {
+                logger.log("${newLine}No existing specs were changed, skipping the check.$newLine")
+                exitProcess(0)
+            }
         }
     }
 

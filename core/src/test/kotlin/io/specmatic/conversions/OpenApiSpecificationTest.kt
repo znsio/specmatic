@@ -8864,6 +8864,54 @@ paths:
         }
     }
 
+    @Nested
+    inner class NegativeScenariosForHeaders {
+        @Test
+        fun `should generate the negative scenarios where the mandatory headers are missing`() {
+            val spec = """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /persons:
+                    get:
+                      parameters:
+                        - in: header
+                          name: X-Required-Header
+                          schema:
+                            type: string
+                          required: true
+                        - in: header
+                          name: X-Optional-Header
+                          schema:
+                            type: string
+                          required: false
+                        - in: header
+                          name: X-Another-Required-Header
+                          schema:
+                            type: string
+                          required: true
+                      responses:
+                        200:
+                          content:
+                            text/plain:
+                              schema:
+                                type: "string"
+            """.trimIndent()
+            val tests =
+                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+            assertThat(tests.size).isEqualTo(2)
+            val firstScenarioHeaders = tests.first().second.value.httpRequestPattern.headersPattern.pattern
+            val secondScenarioHeaders = tests.last().second.value.httpRequestPattern.headersPattern.pattern
+            assertThat(firstScenarioHeaders.keys).doesNotContain("X-Required-Header")
+            assertThat(secondScenarioHeaders.keys).doesNotContain("X-Another-Required-Header")
+            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Required-Header mandatory header not sent]")
+            assertThat(tests.last().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Another-Required-Header mandatory header not sent]")
+        }
+    }
+
     @Test
     fun `workflow values should not used in negative tests`() {
         val baseDir = "src/test/resources/openapi/spec_with_workflow_config"

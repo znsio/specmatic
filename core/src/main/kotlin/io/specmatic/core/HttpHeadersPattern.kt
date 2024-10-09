@@ -214,14 +214,37 @@ data class HttpHeadersPattern(
         }
     }
 
-    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
-        return allOrNothingCombinationIn(pattern, row, null, null) { pattern ->
-            NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver).map { it.breadCrumb("HEADER") }
+    fun negativeBasedOn(
+        row: Row,
+        resolver: Resolver
+    ): Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = "HEADER") {
+        allOrNothingCombinationIn(pattern, row, null, null) { pattern ->
+            NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
         }.map { patternMapR ->
             patternMapR.ifValue { patternMap ->
                 HttpHeadersPattern(
                     patternMap.mapKeys { withoutOptionality(it.key) },
                     contentType = contentType
+                )
+            }
+        }.plus(patternsWithNoRequiredHeaders(pattern))
+    }
+
+    private fun patternsWithNoRequiredHeaders(
+        patternMap: Map<String, Pattern>
+    ): Sequence<ReturnValue<HttpHeadersPattern>> = sequence {
+        patternMap.forEach { (keyToOmit, _) ->
+            if(keyToOmit.endsWith("?").not()) {
+                yield(
+                    HasValue(
+                        HttpHeadersPattern(
+                            patternMap.filterKeys {
+                                key -> key != keyToOmit
+                            }.mapKeys { withoutOptionality(it.key) },
+                            contentType = contentType
+                        ),
+                        "mandatory header not sent"
+                    ).breadCrumb(keyToOmit)
                 )
             }
         }

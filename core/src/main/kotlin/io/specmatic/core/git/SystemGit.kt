@@ -102,6 +102,28 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         return (committedLocalChanges + uncommittedChanges).distinct()
     }
 
+    override fun getFilesChangedInCurrentBranchAsMap(baseBranch: String): Map<String, String> {
+        try {
+            execute(Configuration.gitCommand, "add", ".")
+            val commitedChanges = execute(Configuration.gitCommand, "diff", baseBranch, "HEAD", "--name-status")
+                .split(System.lineSeparator())
+            val uncommittedChanges = execute(Configuration.gitCommand, "diff", "HEAD", "--name-status")
+                .split(System.lineSeparator())
+
+            return (commitedChanges + uncommittedChanges).filter {
+                it.isNotBlank() && it.startsWith("A").not()
+            }.associate {
+                val diffInfo = it.split("\t")
+                if (it.startsWith("R").not()) {
+                    return@associate diffInfo.last().trim() to diffInfo.last().trim()
+                }
+                diffInfo[1].trim() to diffInfo[2].trim()
+            }
+        } finally {
+            execute(Configuration.gitCommand, "reset", ".")
+        }
+    }
+
     override fun getFileInTheBaseBranch(fileName: String, currentBranch: String, baseBranch: String): File? {
         try {
             if(baseBranch != currentBranch) checkout(baseBranch)

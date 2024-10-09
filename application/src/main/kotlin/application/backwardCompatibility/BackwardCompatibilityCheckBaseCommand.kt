@@ -8,8 +8,10 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.exitWithMessage
 import picocli.CommandLine.Option
 import java.io.File
+import java.nio.file.Paths
 import java.util.concurrent.Callable
 import java.util.regex.Pattern
+import kotlin.io.path.pathString
 import kotlin.system.exitProcess
 
 abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
@@ -60,19 +62,19 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         exitProcess(result.exitCode)
     }
 
-    fun getChangedSpecs(logSpecs: Boolean = false): Set<String> {
+    fun getChangedSpecs(logSpecs: Boolean = false): Map<String, String> {
         val filesChangedInCurrentBranch = getChangedSpecsInCurrentBranch().filter {
-            it.contains(targetPath)
-        }.toSet()
-        val filesReferringToChangedSchemaFiles = getSpecsReferringTo(filesChangedInCurrentBranch)
+            it.value.contains(targetPath)
+        }
+        val filesReferringToChangedSchemaFiles = getSpecsReferringTo(filesChangedInCurrentBranch).associateWith { it }
         val specificationsOfChangedExternalisedExamples =
-            getSpecsOfChangedExternalisedExamples(filesChangedInCurrentBranch)
+            getSpecsOfChangedExternalisedExamples(filesChangedInCurrentBranch.values.toSet()).map { it.trim() }.associateWith { it }
 
         if(logSpecs) {
             logFilesToBeCheckedForBackwardCompatibility(
                 filesChangedInCurrentBranch,
-                filesReferringToChangedSchemaFiles,
-                specificationsOfChangedExternalisedExamples
+                filesReferringToChangedSchemaFiles.keys,
+                specificationsOfChangedExternalisedExamples.keys
             )
         }
 
@@ -81,20 +83,20 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
                 specificationsOfChangedExternalisedExamples
     }
 
-    private fun getChangedSpecsInCurrentBranch(): Set<String> {
-        return gitCommand.getFilesChangedInCurrentBranch(
+    private fun getChangedSpecsInCurrentBranch(): Map<String, String> {
+        return gitCommand.getFilesChangedInCurrentBranchAsMap(
             baseBranch()
-        ).filter {
-            File(it).exists() && File(it).isValidSpec()
-        }.toSet().also {
+        ).filter { (_, changed) ->
+            File(changed).exists() && File(changed).isValidSpec()
+        }.also {
             if(it.isEmpty()) exitWithMessage("${newLine}No specs were changed, skipping the check.$newLine")
         }
     }
 
-    internal fun getSpecsReferringTo(schemaFiles: Set<String>): Set<String> {
+    internal fun getSpecsReferringTo(schemaFiles: Map<String, String>): Set<String> {
         if (schemaFiles.isEmpty()) return emptySet()
 
-        val inputFileNames = schemaFiles.map { File(it).name }
+        val inputFileNames = schemaFiles.map { File(it.value).name }
         val result = allSpecFiles().filter {
             it.readText().trim().let { specContent ->
                 inputFileNames.any { inputFileName ->
@@ -105,8 +107,11 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
             }
         }.map { it.path }.toSet()
 
-        return result.flatMap {
-            getSpecsReferringTo(setOf(it)).ifEmpty { setOf(it) }
+        return result.map { it.trim() }.filter {
+            val normalizedPath = Paths.get(it).normalize().pathString
+            schemaFiles.containsKey(normalizedPath).not() && schemaFiles.containsValue(normalizedPath).not()
+        }.flatMap {
+            getSpecsReferringTo(mapOf(it to it)).ifEmpty { setOf(it) }
         }.toSet()
     }
 
@@ -117,14 +122,20 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     }
 
     private fun logFilesToBeCheckedForBackwardCompatibility(
-        changedFiles: Set<String>,
+        changedFiles: Map<String, String>,
         filesReferringToChangedFiles: Set<String>,
         specificationsOfChangedExternalisedExamples: Set<String>
     ) {
 
         println("Checking backward compatibility of the following specs: $newLine")
         println("${ONE_INDENT}Specs that have changed:")
-        changedFiles.forEach { println(it.prependIndent(TWO_INDENTS)) }
+        changedFiles.forEach { (original, changed) ->
+            if(original == changed) {
+                println(changed.prependIndent(TWO_INDENTS))
+            } else {
+                println("${original.prependIndent(TWO_INDENTS)} -> $changed")
+            }
+        }
         println()
 
         if(filesReferringToChangedFiles.isNotEmpty()) {
@@ -143,31 +154,35 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         println()
     }
 
-    private fun runBackwardCompatibilityCheckFor(files: Set<String>, baseBranch: String): CompatibilityReport {
+    private fun runBackwardCompatibilityCheckFor(files: Map<String, String>, baseBranch: String): CompatibilityReport {
         val branchWithChanges = gitCommand.currentBranch()
         val treeishWithChanges = if (branchWithChanges == HEAD) gitCommand.detachedHEAD() else branchWithChanges
 
         try {
-            val results = files.mapIndexed { index, specFilePath ->
+            val results = files.entries.mapIndexed { index, (originalSpecPath, changedSpecPath) ->
                 var areLocalChangesStashed = false
                 try {
-                    println("${index.inc()}. Running the check for $specFilePath:")
+                    val specPathLog = when (originalSpecPath) {
+                        changedSpecPath -> originalSpecPath
+                        else -> "$originalSpecPath -> $changedSpecPath"
+                    }
+                    println("${index.inc()}. Running the check for $specPathLog:")
 
                     // newer => the file with changes on the branch
-                    val newer = getFeatureFromSpecPath(specFilePath)
+                    val newer = getFeatureFromSpecPath(changedSpecPath)
                     val unusedExamples = getUnusedExamples(newer)
 
+                    areLocalChangesStashed = gitCommand.stash()
                     val olderFile = gitCommand.getFileInTheBaseBranch(
-                        specFilePath,
+                        originalSpecPath,
                         treeishWithChanges,
                         baseBranch
                     )
                     if (olderFile == null) {
-                        println("$specFilePath is a new file.$newLine")
+                        println("$originalSpecPath is a new file.$newLine")
                         return@mapIndexed CompatibilityResult.PASSED
                     }
 
-                    areLocalChangesStashed = gitCommand.stash()
                     gitCommand.checkout(baseBranch)
                     // older => the same file on the default (e.g. main) branch
                     val older = getFeatureFromSpecPath(olderFile.path)
@@ -176,7 +191,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
 
                     return@mapIndexed getCompatibilityResult(
                         backwardCompatibilityResult,
-                        specFilePath,
+                        changedSpecPath,
                         newer,
                         unusedExamples
                     )

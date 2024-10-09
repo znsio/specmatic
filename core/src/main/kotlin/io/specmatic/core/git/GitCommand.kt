@@ -32,7 +32,9 @@ interface GitCommand {
     fun revisionsBehindCount(): Int
     fun getRemoteUrl(name: String = "origin"): String
     fun checkIgnore(path: String): String
+    // NOTE - deprecate the following function when the old BCC command is deprecated
     fun getFilesChangedInCurrentBranch(baseBranch: String): List<String>
+    fun getFilesChangedInCurrentBranchAsMap(baseBranch: String): Map<String, String>
     fun getFileInTheBaseBranch(fileName: String, currentBranch: String, baseBranch: String): File?
     fun currentRemoteBranch(): String
     fun currentBranch(): String {

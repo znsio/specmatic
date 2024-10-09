@@ -52,6 +52,8 @@ internal class CompatibleCommandKtTest {
             }
 
             override fun getFilesChangedInCurrentBranch(baseBranch: String) = emptyList<String>()
+            override fun getFilesChangedInCurrentBranchAsMap(baseBranch: String) = emptyMap<String, String>()
+
             override fun getFileInTheBaseBranch(fileName: String, currentBranch: String, baseBranch: String) = null
 
             override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
@@ -85,6 +87,7 @@ internal class CompatibleCommandKtTest {
             override fun getFileInTheBaseBranch(fileName: String, currentBranch: String, baseBranch: String) = null
 
             override fun getFilesChangedInCurrentBranch(baseBranch: String) = emptyList<String>()
+            override fun getFilesChangedInCurrentBranchAsMap(baseBranch: String) = emptyMap<String, String>()
 
             override fun relativeGitPath(newerContractPath: String): Pair<GitCommand, String> {
                 assertThat(newerContractPath).isEqualTo("/Users/fakeuser/newer.$CONTRACT_EXTENSION")
@@ -120,6 +123,8 @@ internal class CompatibleCommandKtTest {
         val fakeGit = object : FakeGit() {
             override fun fileIsInGitDir(newerContractPath: String): Boolean = true
             override fun getFilesChangedInCurrentBranch(baseBranch: String) = emptyList<String>()
+            override fun getFilesChangedInCurrentBranchAsMap(baseBranch: String) = emptyMap<String, String>()
+
             override val workingDirectory: String
                 get() = ""
             override fun getFileInTheBaseBranch(fileName: String, currentBranch: String, baseBranch: String) = null
@@ -157,6 +162,8 @@ internal class CompatibleCommandKtTest {
         val fakeGit = object : FakeGit() {
             override fun fileIsInGitDir(newerContractPath: String): Boolean = true
             override fun getFilesChangedInCurrentBranch(baseBranch: String) = emptyList<String>()
+            override fun getFilesChangedInCurrentBranchAsMap(baseBranch: String) = emptyMap<String, String>()
+
             override val workingDirectory: String
                 get() = ""
             override fun getFileInTheBaseBranch(fileName: String, currentBranch: String, baseBranch: String) = null

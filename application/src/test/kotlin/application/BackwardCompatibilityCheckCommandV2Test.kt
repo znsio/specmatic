@@ -14,7 +14,7 @@ class BackwardCompatibilityCheckCommandV2Test {
     @Test
     fun `getSpecsReferringTo returns empty set when input is empty`() {
         val command = BackwardCompatibilityCheckCommandV2()
-        val result = command.getSpecsReferringTo(emptySet())
+        val result = command.getSpecsReferringTo(emptyMap())
         assertTrue(result.isEmpty())
     }
 
@@ -25,7 +25,7 @@ class BackwardCompatibilityCheckCommandV2Test {
             File("file1.yaml").apply { writeText("content1") },
             File("file2.yaml").apply { writeText("content2") }
         )
-        val result = command.getSpecsReferringTo(setOf("file3.yaml"))
+        val result = command.getSpecsReferringTo(mapOf("file3.yaml" to "file3.yaml"))
         assertTrue(result.isEmpty())
     }
 
@@ -36,7 +36,7 @@ class BackwardCompatibilityCheckCommandV2Test {
             File("file1.yaml").apply { writeText("file3.yaml") },
             File("file2.yaml").apply { writeText("file4.yaml") }
         )
-        val result = command.getSpecsReferringTo(setOf("file3.yaml"))
+        val result = command.getSpecsReferringTo(mapOf("file3.yaml" to "file3.yaml"))
         assertEquals(setOf("file1.yaml"), result)
     }
 
@@ -48,7 +48,7 @@ class BackwardCompatibilityCheckCommandV2Test {
             File("schema_file2.yaml").apply { referTo("schema_file1.yaml") }, // schema within a schema
             File("file2.yaml").apply { referTo("schema_file2.yaml") }
         )
-        val result = command.getSpecsReferringTo(setOf("schema_file1.yaml"))
+        val result = command.getSpecsReferringTo(mapOf("schema_file1.yaml" to "schema_file1.yaml"))
         assertEquals(setOf("file1.yaml", "file2.yaml"), result)
     }
 

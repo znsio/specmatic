@@ -7,6 +7,7 @@ import io.specmatic.core.Feature
 import io.specmatic.core.IFeature
 import io.specmatic.core.Results
 import io.specmatic.core.WSDL
+import io.specmatic.core.log.logger
 import io.specmatic.core.testBackwardCompatibility
 import io.specmatic.stub.isOpenAPI
 import org.springframework.stereotype.Component
@@ -36,7 +37,10 @@ class BackwardCompatibilityCheckCommandV2: BackwardCompatibilityCheckBaseCommand
     }
 
     override fun getFeatureFromSpecPath(path: String): Feature {
-        return OpenApiSpecification.fromFile(path).toFeature()
+        logger.disableInfoLogging()
+        return OpenApiSpecification.fromFile(path).toFeature().also {
+            logger.enableInfoLogging()
+        }
     }
 
     override fun regexForMatchingReferred(schemaFileName: String) = schemaFileName

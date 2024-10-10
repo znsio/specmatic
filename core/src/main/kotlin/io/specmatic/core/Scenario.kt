@@ -399,9 +399,8 @@ data class Scenario(
                     "Error loading example named ${row.name} for ${this.apiDescription.trim()}"
                 }
 
-                listOf(title).plus(errors).joinToString("${System.lineSeparator()}${System.lineSeparator()}")
-                    .also { message ->
-                        logger.log(message)
+                listOf(title).plus(errors).joinToString("${System.lineSeparator()}${System.lineSeparator()}").also { message ->
+                    logger.logError(Exception(message))
 
                         logger.newLine()
                     }

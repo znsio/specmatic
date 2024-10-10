@@ -52,11 +52,6 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
         }
     }
 
-    // HOOKS
-    open fun validateInlineExamples(feature: Feature): List<Pair<String, Result>> {
-        return emptyList()
-    }
-
     // VALIDATION METHODS
     private fun getFilteredFeature(contractFile: File): Feature {
         val feature = featureStrategy.contractFileToFeature(contractFile)
@@ -84,7 +79,7 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
 
     private fun validateInlineExamples(contractFile: File): List<ExampleValidationResult> {
         val feature = getFilteredFeature(contractFile)
-        return validateInlineExamples(feature).mapIndexed { index, it ->
+        return validationStrategy.validateInlineExamples(feature).mapIndexed { index, it ->
             ExampleValidationResult(it.first, it.second, ExampleType.INLINE).also {
                 it.logErrors(index.inc())
                 logSeparator(75)
@@ -165,4 +160,6 @@ interface ExamplesValidationStrategy<Feature, Scenario> {
     fun updateFeatureForValidation(feature: Feature, filteredScenarios: List<Scenario>): Feature
 
     fun validateExternalExample(feature: Feature, exampleFile: File): Pair<String, Result>
+
+    fun validateInlineExamples(feature: Feature): List<Pair<String, Result>> { return emptyList() }
 }

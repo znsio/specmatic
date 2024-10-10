@@ -10,7 +10,6 @@ import io.specmatic.test.reports.coverage.Endpoint
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
@@ -30,9 +29,7 @@ class SpecmaticJunitSupportTest {
             "./src/test/resources/spec_with_parameterized_paths.yaml",
             "",
             "",
-            TestConfig(emptyMap(), emptyMap()),
-            filterName = null,
-            filterNotName = null
+            TestConfig(emptyMap(), emptyMap())
         )
         val specEndpoints = result.second
         assertThat(specEndpoints.count()).isEqualTo(2)

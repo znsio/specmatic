@@ -15,6 +15,7 @@ import kotlin.system.exitProcess
 abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     private val gitCommand: GitCommand = SystemGit()
     private val newLine = System.lineSeparator()
+    private var areLocalChangesStashed = false
 
     @Option(
         names = ["--base-branch"],
@@ -42,6 +43,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     open fun getUnusedExamples(feature: IFeature): Set<String> = emptySet()
 
     final override fun call() {
+        addShutdownHook()
         val filteredSpecs = getChangedSpecs(logSpecs = true)
         val result = try {
             runBackwardCompatibilityCheckFor(
@@ -140,13 +142,16 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         }
     }
 
-    private fun runBackwardCompatibilityCheckFor(files: Set<String>, baseBranch: String): CompatibilityReport {
+    private fun getCurrentBranch(): String {
         val branchWithChanges = gitCommand.currentBranch()
-        val treeishWithChanges = if (branchWithChanges == HEAD) gitCommand.detachedHEAD() else branchWithChanges
+        return if (branchWithChanges == HEAD) gitCommand.detachedHEAD() else branchWithChanges
+    }
+
+    private fun runBackwardCompatibilityCheckFor(files: Set<String>, baseBranch: String): CompatibilityReport {
+        val treeishWithChanges = getCurrentBranch()
 
         try {
             val results = files.mapIndexed { index, specFilePath ->
-                var areLocalChangesStashed = false
                 try {
                     println("${index.inc()}. Running the check for $specFilePath:")
 
@@ -179,7 +184,10 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
                     )
                 } finally {
                     gitCommand.checkout(treeishWithChanges)
-                    if (areLocalChangesStashed) gitCommand.stashPop()
+                    if (areLocalChangesStashed) {
+                        gitCommand.stashPop()
+                        areLocalChangesStashed = false
+                    }
                 }
             }
 
@@ -240,6 +248,15 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
             println()
             return CompatibilityResult.FAILED
         }
+    }
+
+    private fun addShutdownHook() {
+        Runtime.getRuntime().addShutdownHook(object: Thread() {
+            override fun run() {
+                gitCommand.checkout(getCurrentBranch())
+                if(areLocalChangesStashed) gitCommand.stashPop()
+            }
+        })
     }
 
     companion object {

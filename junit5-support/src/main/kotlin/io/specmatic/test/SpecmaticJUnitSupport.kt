@@ -550,7 +550,7 @@ fun <T> selectTestsToRun(
     } else
         testScenarios
 
-    val filteredByNotName: Sequence<T> = if(!filterNotName.isNullOrBlank()) {
+    val filteredScenarios: Sequence<T> = if(!filterNotName.isNullOrBlank()) {
         val filterNotNames = filterNotName.split(",").map { it.trim() }
 
         filteredByName.filterNot { test ->
@@ -559,12 +559,17 @@ fun <T> selectTestsToRun(
     } else
         filteredByName
 
-    if (filteredByNotName.count()==0)
-        logger.log("All scenarios were filtered out.")
-    else if (filteredByNotName.count() < testScenarios.count()) {
-        logger.debug("Selected scenarios:")
-        filteredByNotName.forEach { scenario -> logger.debug(getTestDescription(scenario).prependIndent("  ")) }
+    val filteredScenariosCount = filteredScenarios.count()
+
+    when {
+        filteredScenariosCount == 0 -> logger.log("All scenarios were filtered out.")
+        filteredScenariosCount < testScenarios.count() -> {
+            logger.debug("Selected scenarios:")
+            filteredScenarios.forEach { scenario ->
+                logger.debug(getTestDescription(scenario).prependIndent("  "))
+            }
+        }
     }
 
-    return filteredByNotName
+    return filteredScenarios
 }

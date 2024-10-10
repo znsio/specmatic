@@ -10,14 +10,14 @@ class OpenApiExamplesValidateTest {
     companion object {
         fun validateExamples(specFile: File): Pair<String, Int> {
             return OpenApiExamplesValidate().also { it.contractFile = specFile }.let {
-                val (output, exitCode) = captureStandardOutput { it.execute(specFile) }
+                val (output, exitCode) = captureStandardOutput { it.call() }
                 Pair(output, exitCode)
             }
         }
 
         fun validateSingleExample(specFile: File, exampleFile: File): Pair<String, Int> {
             return OpenApiExamplesValidate().also { it.contractFile = specFile; it.exampleFile = exampleFile }.let {
-                val (output, exitCode) = captureStandardOutput { it.execute(specFile) }
+                val (output, exitCode) = captureStandardOutput { it.call() }
                 Pair(output, exitCode)
             }
         }
@@ -69,14 +69,14 @@ paths:
 {
   "http-request": {
     "method": "GET",
-    "path": "/product/abc123"
+    "path": "/product/abc"
   },
   "http-response": {
     "status": 200,
     "body": {
       "id": 1,
       "name": "Laptop",
-      "price": 1000.99
+      "price": 1000
     },
     "headers": {
       "Content-Type": "application/json"

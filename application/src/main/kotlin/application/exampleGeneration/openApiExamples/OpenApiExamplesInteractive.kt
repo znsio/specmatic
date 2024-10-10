@@ -28,11 +28,7 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
     )
 
     override fun testExternalExample(feature: Feature, exampleFile: File, testBaseUrl: String): Pair<TestResult, String> {
-        val contractTests = feature.loadExternalisedExamples().generateContractTests(emptyList())
-
-        val test = contractTests.firstOrNull {
-            it.testDescription().contains(exampleFile.nameWithoutExtension)
-        } ?: return Pair(TestResult.Error, "Test not found for example ${exampleFile.nameWithoutExtension}")
+        val test = feature.createContractTestFromExampleFile(exampleFile.absolutePath).value
 
         val testResultRecord = test.runTest(testBaseUrl, timeoutInMilliseconds = DEFAULT_TIMEOUT_IN_MILLISECONDS).let {
             test.testResultRecord(it.first, it.second)

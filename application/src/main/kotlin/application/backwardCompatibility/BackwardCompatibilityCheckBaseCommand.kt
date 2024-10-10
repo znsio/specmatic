@@ -57,8 +57,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
             exitProcess(1)
         }
 
-        println()
-        println(result.report)
+        logger.log(result.report)
         exitProcess(result.exitCode)
     }
 
@@ -153,7 +152,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         try {
             val results = files.mapIndexed { index, specFilePath ->
                 try {
-                    println("${index.inc()}. Running the check for $specFilePath:")
+                    logger.log("${index.inc()}. Running the check for $specFilePath:$newLine")
 
                     // newer => the file with changes on the branch
                     val newer = getFeatureFromSpecPath(specFilePath)
@@ -165,7 +164,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
                         baseBranch
                     )
                     if (olderFile == null) {
-                        println("$specFilePath is a new file.$newLine")
+                        logger.log("$ONE_INDENT$specFilePath is a new file.$newLine")
                         return@mapIndexed CompatibilityResult.PASSED
                     }
 
@@ -205,56 +204,70 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         newer: IFeature,
         unusedExamples: Set<String>
     ): CompatibilityResult {
-        if (backwardCompatibilityResult.success()) {
-            println(
-                "$newLine The spec $specFilePath is backward compatible with the corresponding spec from ${baseBranch()}$newLine".prependIndent(
-                    MARGIN_SPACE
-                )
+        if(backwardCompatibilityResult.success().not()) {
+            logger.log("_".repeat(40).prependIndent(ONE_INDENT))
+            logger.log("The Incompatibility Report:$newLine".prependIndent(ONE_INDENT))
+            logger.log(backwardCompatibilityResult.report().prependIndent(TWO_INDENTS))
+            logVerdictFor(
+                specFilePath,
+                "(INCOMPATIBLE) The changes to the spec are NOT backward compatible with the corresponding spec from ${baseBranch()}".prependIndent(ONE_INDENT)
             )
-            println()
-            var errorsFound = false
-
-            if(!areExamplesValid(newer, "newer")) {
-                println(
-                    "$newLine *** Examples in $specFilePath are not valid. ***$newLine".prependIndent(
-                        MARGIN_SPACE
-                    )
-                )
-                println()
-                errorsFound = true
-            }
-
-            if(unusedExamples.isNotEmpty()) {
-                println(
-                    "$newLine *** Some examples for $specFilePath could not be loaded. ***$newLine".prependIndent(
-                        MARGIN_SPACE
-                    )
-                )
-                println()
-                errorsFound = true
-            }
-
-            return if(errorsFound) CompatibilityResult.FAILED
-            else CompatibilityResult.PASSED
-        } else {
-            println("$newLine ${backwardCompatibilityResult.report().prependIndent(
-                MARGIN_SPACE
-            )}")
-            println(
-                "$newLine *** The changes to the spec $specFilePath are NOT backward compatible with the corresponding spec from ${baseBranch()}***$newLine".prependIndent(
-                    MARGIN_SPACE
-                )
-            )
-            println()
             return CompatibilityResult.FAILED
         }
+
+        val errorsFound = printExampleValiditySummaryAndReturnResult(newer, unusedExamples, specFilePath)
+
+        val message = if(errorsFound) {
+            "(INCOMPATIBLE) The spec is backward compatible but the examples are NOT backward compatible or are INVALID."
+        } else {
+            "(COMPATIBLE) The spec is backward compatible with the corresponding spec from ${baseBranch()}"
+        }
+        logVerdictFor(specFilePath, message.prependIndent(ONE_INDENT))
+
+        return if (errorsFound) CompatibilityResult.FAILED
+        else CompatibilityResult.PASSED
+    }
+
+    private fun logVerdictFor(specFilePath: String, message: String) {
+        logger.log(newLine)
+        logger.log("-".repeat(20).prependIndent(ONE_INDENT))
+        logger.log("Verdict for spec $specFilePath:".prependIndent(ONE_INDENT))
+        logger.log("$ONE_INDENT$message")
+        logger.log("-".repeat(20).prependIndent(ONE_INDENT))
+        logger.log(newLine)
+    }
+
+    private fun printExampleValiditySummaryAndReturnResult(
+        newer: IFeature,
+        unusedExamples: Set<String>,
+        specFilePath: String
+    ): Boolean {
+        var errorsFound = false
+        val areExamplesInvalid = areExamplesValid(newer, "newer").not()
+
+        if(areExamplesInvalid || unusedExamples.isNotEmpty()) {
+            logger.log("_".repeat(40).prependIndent(ONE_INDENT))
+            logger.log("The Examples Validity Summary:$newLine".prependIndent(ONE_INDENT))
+        }
+        if (areExamplesInvalid) {
+            logger.log("Examples in $specFilePath are not valid.$newLine".prependIndent(TWO_INDENTS))
+            errorsFound = true
+        }
+
+        if (unusedExamples.isNotEmpty()) {
+            logger.log("Some examples for $specFilePath could not be loaded.$newLine".prependIndent(TWO_INDENTS))
+            errorsFound = true
+        }
+        return errorsFound
     }
 
     private fun addShutdownHook() {
         Runtime.getRuntime().addShutdownHook(object: Thread() {
             override fun run() {
-                gitCommand.checkout(getCurrentBranch())
-                if(areLocalChangesStashed) gitCommand.stashPop()
+                runCatching {
+                    gitCommand.checkout(getCurrentBranch())
+                    if(areLocalChangesStashed) gitCommand.stashPop()
+                }
             }
         })
     }

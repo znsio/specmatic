@@ -360,7 +360,7 @@ data class Scenario(
                 }
 
                 listOf(title).plus(errors).joinToString("${System.lineSeparator()}${System.lineSeparator()}").also { message ->
-                    logger.log(message)
+                    logger.logError(Exception(message))
 
                     logger.newLine()
                 }

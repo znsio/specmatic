@@ -180,7 +180,12 @@ class GitCompatibleCommand : Callable<Int> {
 
 @Command(name = "compatible",
         mixinStandardHelpOptions = true,
-        description = ["Checks if the newer contract is backward compatible with the older one"],
+        description = [
+"""
+Checks if the newer contract is backward compatible with the older one
+DEPRECATED: This command will be removed in the next major release. Use 'backward-compatibility-check' command instead.
+"""
+        ],
         subcommands = [ GitCompatibleCommand::class ])
 internal class CompatibleCommand : Callable<Unit> {
     override fun call() {

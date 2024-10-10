@@ -2,7 +2,10 @@ package io.specmatic.core.log
 
 import io.specmatic.core.utilities.exceptionCauseMessage
 
-class Verbose(override val printer: CompositePrinter = CompositePrinter()) : LogStrategy {
+class Verbose(
+    override val printer: CompositePrinter = CompositePrinter(),
+    override var infoLoggingEnabled: Boolean = true
+) : LogStrategy {
     private val readyMessage = ReadyMessage()
 
     override fun keepReady(msg: LogMessage) {
@@ -32,11 +35,11 @@ class Verbose(override val printer: CompositePrinter = CompositePrinter()) : Log
     }
 
     override fun log(msg: String) {
-        log(StringLog(msg))
+        if (infoLoggingEnabled) log(StringLog(msg))
     }
 
     override fun log(msg: LogMessage) {
-        print(msg)
+        if (infoLoggingEnabled) print(msg)
     }
 
     override fun logError(e: Throwable) {

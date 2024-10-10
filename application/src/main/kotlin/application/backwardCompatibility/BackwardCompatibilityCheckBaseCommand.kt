@@ -34,11 +34,11 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     abstract fun File.isValidSpec(): Boolean
     abstract fun getFeatureFromSpecPath(path: String): IFeature
 
-    abstract fun regexForMatchingReferred(schemaFileName: String): String
     abstract fun getSpecsOfChangedExternalisedExamples(
         filesChangedInCurrentBranch: Set<String>
     ): Set<String>
 
+    open fun regexForMatchingReferred(schemaFileName: String): String = ""
     open fun areExamplesValid(feature: IFeature, which: String): Boolean = true
     open fun getUnusedExamples(feature: IFeature): Set<String> = emptySet()
 
@@ -92,7 +92,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         }
     }
 
-    internal fun getSpecsReferringTo(schemaFiles: Set<String>): Set<String> {
+    open fun getSpecsReferringTo(schemaFiles: Set<String>): Set<String> {
         if (schemaFiles.isEmpty()) return emptySet()
 
         val inputFileNames = schemaFiles.map { File(it).name }

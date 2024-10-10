@@ -152,7 +152,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         try {
             val results = files.mapIndexed { index, specFilePath ->
                 try {
-                    logger.log("${index.inc()}. Running the check for $specFilePath:$newLine")
+                    logger.log("${index.inc()}. Running the check for $specFilePath:")
 
                     // newer => the file with changes on the branch
                     val newer = getFeatureFromSpecPath(specFilePath)
@@ -222,14 +222,14 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         } else {
             "(COMPATIBLE) The spec is backward compatible with the corresponding spec from ${baseBranch()}"
         }
-        logVerdictFor(specFilePath, message.prependIndent(ONE_INDENT))
+        logVerdictFor(specFilePath, message.prependIndent(ONE_INDENT), startWithNewLine = errorsFound)
 
         return if (errorsFound) CompatibilityResult.FAILED
         else CompatibilityResult.PASSED
     }
 
-    private fun logVerdictFor(specFilePath: String, message: String) {
-        logger.log(newLine)
+    private fun logVerdictFor(specFilePath: String, message: String, startWithNewLine: Boolean = true) {
+        if (startWithNewLine) logger.log(newLine)
         logger.log("-".repeat(20).prependIndent(ONE_INDENT))
         logger.log("Verdict for spec $specFilePath:".prependIndent(ONE_INDENT))
         logger.log("$ONE_INDENT$message")

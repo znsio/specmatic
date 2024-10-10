@@ -6231,6 +6231,9 @@ paths:
             val messages = mutableListOf<String>()
             override val printer: CompositePrinter
                 get() = TODO("Not yet implemented")
+            override var infoLoggingEnabled: Boolean
+                get() = true
+                set(value) {}
 
             override fun keepReady(msg: LogMessage) {
                 TODO("Not yet implemented")
@@ -6318,6 +6321,9 @@ paths:
             val messages = mutableListOf<String>()
             override val printer: CompositePrinter
                 get() = TODO("Not yet implemented")
+            override var infoLoggingEnabled: Boolean
+                get() = true
+                set(value) {}
 
             override fun keepReady(msg: LogMessage) {
                 TODO("Not yet implemented")

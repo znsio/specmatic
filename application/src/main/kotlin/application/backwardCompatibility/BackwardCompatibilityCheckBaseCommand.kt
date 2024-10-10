@@ -121,26 +121,23 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         filesReferringToChangedFiles: Set<String>,
         specificationsOfChangedExternalisedExamples: Set<String>
     ) {
+        logger.log("Checking backward compatibility of the following specs:$newLine")
+        changedFiles.printSummaryOfChangedSpecs("Specs that have changed")
+        filesReferringToChangedFiles.printSummaryOfChangedSpecs("Specs referring to the changed specs")
+        specificationsOfChangedExternalisedExamples
+            .printSummaryOfChangedSpecs("Specs whose externalised examples were changed")
+        logger.log("-".repeat(20))
+        logger.log(newLine)
+    }
 
-        println("Checking backward compatibility of the following specs: $newLine")
-        println("${ONE_INDENT}Specs that have changed:")
-        changedFiles.forEach { println(it.prependIndent(TWO_INDENTS)) }
-        println()
-
-        if(filesReferringToChangedFiles.isNotEmpty()) {
-            println("${ONE_INDENT}Specs referring to the changed specs - ")
-            filesReferringToChangedFiles.forEach { println(it.prependIndent(TWO_INDENTS)) }
-            println()
+    private fun Set<String>.printSummaryOfChangedSpecs(message: String) {
+        if(this.isNotEmpty()) {
+            logger.log("${ONE_INDENT}- $message: ")
+            this.forEachIndexed { index, it ->
+                logger.log(it.prependIndent("$TWO_INDENTS${index.inc()}. "))
+            }
+            logger.log(newLine)
         }
-
-        if(specificationsOfChangedExternalisedExamples.isNotEmpty()) {
-            println("${ONE_INDENT}Specs whose externalised examples were changed - ")
-            filesReferringToChangedFiles.forEach { println(it.prependIndent(TWO_INDENTS)) }
-            println()
-        }
-
-        println("-".repeat(20))
-        println()
     }
 
     private fun runBackwardCompatibilityCheckFor(files: Set<String>, baseBranch: String): CompatibilityReport {

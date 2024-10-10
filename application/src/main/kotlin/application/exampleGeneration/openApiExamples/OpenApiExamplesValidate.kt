@@ -35,6 +35,16 @@ class OpenApiExamplesValidationStrategy: ExamplesValidationStrategy<Feature, Sce
         return feature.validateMultipleExamples(examples).first()
     }
 
+    override fun validateInlineExamples(feature: Feature): List<Pair<String, Result>> {
+        val inlineExamples = feature.stubsFromExamples.mapValues {
+            it.value.map { stub ->
+                ScenarioStub(stub.first, stub.second)
+            }
+        }
+
+        return feature.validateMultipleExamples(inlineExamples, inline = true)
+    }
+
     private fun getCleanedUpFailure(failureResults: Results, noMatchingScenario: NoMatchingScenario?): Results {
         return failureResults.toResultIfAny().let {
             if (it.reportString().isBlank())

@@ -374,18 +374,20 @@ data class Feature(
 
     fun createContractTestFromExampleFile(filePath: String): ReturnValue<ContractTest> {
         val scenarioStub = ScenarioStub.readFromFile(File(filePath))
+        return createContractTestFromScenarioStub(scenarioStub, filePath)
+    }
 
+    @Suppress("MemberVisibilityCanBePrivate") // Used by GraphQL when testing examples interactively
+    fun createContractTestFromScenarioStub(scenarioStub: ScenarioStub, filePath: String): ReturnValue<ContractTest> {
         val originalScenario = scenarios.firstOrNull { scenario ->
             scenario.matches(scenarioStub.request, scenarioStub.response) is Result.Success
         } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
 
-        val concreteTestScenario = io.specmatic.core.Scenario(
-            name = "",
+        val concreteTestScenario = Scenario(
+            name = originalScenario.name,
             httpRequestPattern = scenarioStub.request.toPattern(),
             httpResponsePattern = HttpResponsePattern(scenarioStub.response)
-        ).let {
-            it.copy(name = it.apiIdentifier)
-        }
+        )
 
         return HasValue(scenarioAsTest(concreteTestScenario, null, Workflow(), originalScenario))
     }

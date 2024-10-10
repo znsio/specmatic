@@ -19,7 +19,7 @@ class OpenApiExamplesGenerateTest {
     companion object {
         fun generateExamples(specFile: File, examplesDir: File): Triple<String, Int, List<File>> {
             return OpenApiExamplesGenerate().also { it.contractFile = specFile }.let {
-                val (output, exitCode) = captureStandardOutput { it.execute(specFile) }
+                val (output, exitCode) = captureStandardOutput { it.call() }
                 Triple(output, exitCode, examplesDir.listFiles()?.toList() ?: emptyList())
             }
         }
@@ -93,7 +93,7 @@ class OpenApiExamplesGenerateTest {
         println(stdOut)
 
         assertThat(exitCode).isEqualTo(1)
-        assertThat(stdOut).contains("spec.graphqls has an unsupported extension")
+        assertThat(stdOut).contains("spec.graphqls - File extension must be one of yaml, yml, json")
     }
 
     @Test

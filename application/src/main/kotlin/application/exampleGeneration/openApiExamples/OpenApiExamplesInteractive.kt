@@ -4,10 +4,7 @@ import application.exampleGeneration.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.specmatic.conversions.convertPathParameterStyle
-import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
-import io.specmatic.core.Feature
-import io.specmatic.core.Scenario
-import io.specmatic.core.TestResult
+import io.specmatic.core.*
 import io.specmatic.test.TestInteractionsLog
 import io.specmatic.test.TestInteractionsLog.combineLog
 import picocli.CommandLine.Command
@@ -27,16 +24,15 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
         HtmlTableColumn(name = "response", colSpan = 1)
     )
 
-    override fun testExternalExample(feature: Feature, exampleFile: File, testBaseUrl: String): Pair<TestResult, String> {
+    override fun testExternalExample(feature: Feature, exampleFile: File, testBaseUrl: String): Pair<Result, String> {
         val test = feature.createContractTestFromExampleFile(exampleFile.absolutePath).value
 
-        val testResultRecord = test.runTest(testBaseUrl, timeoutInMilliseconds = DEFAULT_TIMEOUT_IN_MILLISECONDS).let {
-            test.testResultRecord(it.first, it.second)
-        } ?: return Pair(TestResult.Error, "TestResult record not found for example ${exampleFile.nameWithoutExtension}")
+        val testResult = test.runTest(testBaseUrl, timeoutInMilliseconds = DEFAULT_TIMEOUT_IN_MILLISECONDS)
+        val testLogs = TestInteractionsLog.testHttpLogMessages.lastOrNull {
+            it.scenario == testResult.first.scenario
+        }?.combineLog() ?: "Test logs not found for example"
 
-        return testResultRecord.scenarioResult?.let { scenarioResult ->
-            Pair(testResultRecord.result, TestInteractionsLog.testHttpLogMessages.last { it.scenario == scenarioResult.scenario }.combineLog())
-        } ?: Pair(TestResult.Error, "Interaction logs not found for example ${exampleFile.nameWithoutExtension}")
+        return testResult.first to testLogs
     }
 
     override suspend fun getScenarioFromRequestOrNull(call: ApplicationCall, feature: Feature): Scenario? {

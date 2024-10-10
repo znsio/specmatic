@@ -12,6 +12,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.pipeline.*
+import io.specmatic.core.Result
 import io.specmatic.core.TestResult
 import io.specmatic.core.log.logger
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
@@ -62,7 +63,7 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
 
     abstract suspend fun getScenarioFromRequestOrNull(call: ApplicationCall, feature: Feature): Scenario?
 
-    abstract fun testExternalExample(feature: Feature, exampleFile: File, testBaseUrl: String): Pair<TestResult, String>
+    abstract fun testExternalExample(feature: Feature, exampleFile: File, testBaseUrl: String): Pair<Result, String>
 
     // HELPER METHODS
     private suspend fun generateExample(call: ApplicationCall, contractFile: File): ExampleGenerationResult {
@@ -342,7 +343,15 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
         })
     }
 
-    data class ExampleTestResult(val result: TestResult, val testLog: String, val exampleFile: File)
+    data class ExampleTestResult(val result: TestResult, val testLog: String, val exampleFile: File) {
+        constructor(result: Result, testLog: String, exampleFile: File): this(
+            result.testResult(),
+            result.takeIf { !it.isSuccess() }?.let {
+                "${it.reportString()}\n\n$testLog"
+            } ?: testLog,
+            exampleFile
+        )
+    }
 }
 
 data class ExamplePageRequest (

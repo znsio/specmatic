@@ -383,10 +383,8 @@ data class Feature(
             scenario.matches(scenarioStub.request, scenarioStub.response) is Result.Success
         } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
 
-        val concreteTestScenario = Scenario(
-            name = originalScenario.name,
-            httpRequestPattern = scenarioStub.request.toPattern(),
-            httpResponsePattern = HttpResponsePattern(scenarioStub.response)
+        val concreteTestScenario = originalScenario.copy(
+            httpRequestPattern = scenarioStub.request.toPattern()
         )
 
         return HasValue(scenarioAsTest(concreteTestScenario, null, Workflow(), originalScenario))

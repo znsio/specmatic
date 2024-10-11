@@ -37,7 +37,8 @@ import javax.xml.transform.stream.StreamResult
 import kotlin.system.exitProcess
 
 fun exitWithMessage(message: String): Nothing {
-    logger.log(message)
+    val newLine = System.lineSeparator()
+    logger.log("$newLine$message$newLine")
     exitProcess(1)
 }
 

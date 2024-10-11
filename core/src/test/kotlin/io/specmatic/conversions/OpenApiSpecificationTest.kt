@@ -8905,8 +8905,12 @@ paths:
             assertThat(tests.size).isEqualTo(2)
             val firstScenarioHeaders = tests.first().second.value.httpRequestPattern.headersPattern.pattern
             val secondScenarioHeaders = tests.last().second.value.httpRequestPattern.headersPattern.pattern
-            assertThat(firstScenarioHeaders.keys).doesNotContain("X-Required-Header")
-            assertThat(secondScenarioHeaders.keys).doesNotContain("X-Another-Required-Header")
+            assertThat(firstScenarioHeaders.keys.toList())
+                .doesNotContain("X-Required-Header")
+                .contains("X-Another-Required-Header")
+            assertThat(secondScenarioHeaders.keys.toList())
+                .contains("X-Required-Header")
+                .doesNotContain("X-Another-Required-Header")
             assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Required-Header mandatory header not sent]")
             assertThat(tests.last().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Another-Required-Header mandatory header not sent]")
         }

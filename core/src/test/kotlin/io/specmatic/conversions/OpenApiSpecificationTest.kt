@@ -8862,6 +8862,65 @@ paths:
             assertThat(firstScenarioQueryParams.keys).doesNotContain("ids")
             assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /items -> 4xx [REQUEST.QUERY-PARAM.ids mandatory query param not sent]")
         }
+
+        @Test
+        fun `should generate the negative scenarios where the mandatory keys are missing even if example is present`() {
+            val spec = """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /persons:
+                    get:
+                      parameters:
+                        - in: query
+                          name: id
+                          schema:
+                            type: string
+                          required: true
+                          examples:
+                            EXAMPLE:  
+                              value: "id" 
+                        - in: query
+                          name: name 
+                          schema:
+                            type: string
+                          required: false
+                          examples:
+                            EXAMPLE:  
+                              value: "name" 
+                        - in: query
+                          name: age
+                          schema:
+                            type: string
+                          required: true
+                          examples:
+                            EXAMPLE:  
+                              value: "age" 
+                      responses:
+                        200:
+                          content:
+                            text/plain:
+                              schema:
+                                type: "string"
+                              examples:
+                                EXAMPLE:  
+                                  value: "response" 
+
+            """.trimIndent()
+            val tests =
+                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+            assertThat(tests.size).isEqualTo(2)
+            val firstScenarioQueryParams = tests.first().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
+            val secondScenarioQueryParams = tests.last().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
+            assertThat(firstScenarioQueryParams.keys.toList()).doesNotContain("id").contains("age")
+            assertThat(secondScenarioQueryParams.keys.toList()).doesNotContain("age").contains("id")
+            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.id mandatory query param not sent] | EX:EXAMPLE")
+            assertThat(tests.last().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.age mandatory query param not sent] | EX:EXAMPLE")
+        }
+
     }
 
     @Nested

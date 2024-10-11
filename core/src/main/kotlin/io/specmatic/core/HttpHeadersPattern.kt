@@ -232,15 +232,12 @@ data class HttpHeadersPattern(
 
     private fun patternsWithNoRequiredHeaders(
         patternMap: Map<String, Pattern>
-    ): Sequence<ReturnValue<HttpHeadersPattern>> = sequence {
-        patternsWithNoRequiredKeys(patternMap, "mandatory header not sent").forEach {
-            yield(
-                it.ifValue { pattern ->
-                    HttpHeadersPattern(pattern, contentType = contentType)
-                }
-            )
+    ): Sequence<ReturnValue<HttpHeadersPattern>> =
+        patternsWithNoRequiredKeys(patternMap, "mandatory header not sent").map {
+            it.ifValue { pattern ->
+                HttpHeadersPattern(pattern, contentType = contentType)
+            }
         }
-    }
 
     fun newBasedOn(resolver: Resolver): Sequence<HttpHeadersPattern> =
         allOrNothingCombinationIn<Pattern>(

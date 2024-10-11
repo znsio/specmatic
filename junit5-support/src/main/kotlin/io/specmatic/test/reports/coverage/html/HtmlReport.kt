@@ -6,9 +6,8 @@ import io.specmatic.core.ReportFormatter
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.SuccessCriteria
 import io.specmatic.core.TestResult
+import io.specmatic.templates.HtmlTemplateConfiguration
 import io.specmatic.test.reports.coverage.console.Remarks
-import io.specmatic.test.reports.coverage.html.HtmlTemplateConfiguration.Companion.configureTemplateEngine
-import org.thymeleaf.context.Context
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -70,9 +69,9 @@ class HtmlReport(private val htmlReportInformation: HtmlReportInformation) {
             "jsonTestData" to dumpTestData(updatedScenarios)
         )
 
-        return configureTemplateEngine().process(
+        return HtmlTemplateConfiguration.process(
             "report/index.html",
-            Context().apply { setVariables(templateVariables) }
+            variables = templateVariables
         )
     }
 

@@ -3,6 +3,8 @@ package application.exampleGeneration
 import io.specmatic.core.Result
 import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.log.consoleLog
+import io.specmatic.examples.ExampleType
+import io.specmatic.examples.ExampleValidationResult
 import picocli.CommandLine.Option
 import java.io.File
 
@@ -54,9 +56,9 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
     }
 
     private fun validateSingleExampleFile(exampleFile: File, contractFile: File): Int {
-        getValidatedExampleFileOrNull(exampleFile)?.let {
+        ensureValidExampleFile(exampleFile).first?.let { exFile ->
             val feature = featureStrategy.contractFileToFeature(contractFile)
-            return validateExternalExample(exampleFile, feature).let {
+            return validateExternalExample(exFile, feature).let {
                 it.logErrors()
                 it.getExitCode()
             }
@@ -138,19 +140,6 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
     private fun ExampleValidationResult.getExitCode(): Int {
         return if (!this.result.isSuccess()) 1 else 0
     }
-}
-
-enum class ExampleType(val value: String) {
-    INLINE("Inline"),
-    EXTERNAL("External");
-
-    override fun toString(): String {
-        return this.value
-    }
-}
-
-data class ExampleValidationResult(val exampleName: String, val result: Result, val type: ExampleType, val exampleFile: File? = null) {
-    constructor(exampleFile: File, result: Result) : this(exampleFile.nameWithoutExtension, result, ExampleType.EXTERNAL, exampleFile)
 }
 
 interface ExamplesValidationStrategy<Feature, Scenario> {

@@ -5,6 +5,7 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
+import io.specmatic.examples.*
 import io.specmatic.test.TestInteractionsLog
 import io.specmatic.test.TestInteractionsLog.combineLog
 import picocli.CommandLine.Command
@@ -18,10 +19,11 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
     @Option(names = ["--extensive"], description = ["Display all responses, not just 2xx, in the table."], defaultValue = "false")
     override var extensive: Boolean = false
 
-    override val htmlTableColumns: List<HtmlTableColumn> = listOf (
-        HtmlTableColumn(name = "path", colSpan = 2),
-        HtmlTableColumn(name = "method", colSpan = 1),
-        HtmlTableColumn(name = "response", colSpan = 1)
+    override val server: ExamplesInteractiveServer = ExamplesInteractiveServer(this)
+    override val exampleTableColumns: List<ExampleTableColumn> = listOf (
+        ExampleTableColumn(name = "path", colSpan = 2),
+        ExampleTableColumn(name = "method", colSpan = 1),
+        ExampleTableColumn(name = "response", colSpan = 1)
     )
 
     override fun testExternalExample(feature: Feature, exampleFile: File, testBaseUrl: String): Pair<Result, String> {
@@ -43,7 +45,7 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
         }
     }
 
-    override fun createTableRows(scenarioExamplePair: List<Pair<Scenario, ExampleValidationResult?>>): List<TableRow> {
+    override fun createTableRows(scenarioExamplePair: List<Pair<Scenario, ExampleValidationResult?>>): List<ExampleTableRow> {
         val groupedScenarios = scenarioExamplePair.sortScenarios().groupScenarios()
 
         return groupedScenarios.flatMap { (_, methodMap) ->
@@ -53,11 +55,11 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
 
             methodMap.flatMap { (method, scenarios) ->
                 scenarios.map { (scenario, example) ->
-                    TableRow(
+                    ExampleTableRow(
                         columns = listOf(
-                            TableRowGroup("path", convertPathParameterStyle(scenario.path), rawValue = scenario.path, rowSpan = pathSpan, showRow = showPath),
-                            TableRowGroup("method", scenario.method, showRow = !methodSet.contains(method), rowSpan = scenarios.size),
-                            TableRowGroup("response", scenario.status.toString(), showRow = true, rowSpan = 1, extraInfo = scenario.httpRequestPattern.headersPattern.contentType)
+                            ExampleRowGroup("path", convertPathParameterStyle(scenario.path), rawValue = scenario.path, rowSpan = pathSpan, showRow = showPath),
+                            ExampleRowGroup("method", scenario.method, showRow = !methodSet.contains(method), rowSpan = scenarios.size),
+                            ExampleRowGroup("response", scenario.status.toString(), showRow = true, rowSpan = 1, extraInfo = scenario.httpRequestPattern.headersPattern.contentType)
                         ),
                         exampleFilePath = example?.exampleFile?.absolutePath,
                         exampleFileName = example?.exampleName,

@@ -2,6 +2,8 @@ package application.exampleGeneration
 
 import io.specmatic.core.*
 import io.specmatic.core.log.*
+import io.specmatic.examples.ExampleGenerationResult
+import io.specmatic.examples.ExampleGenerationStatus
 import picocli.CommandLine.*
 import java.io.File
 
@@ -9,7 +11,7 @@ abstract class ExamplesGenerateBase<Feature, Scenario>(
     override val featureStrategy: ExamplesFeatureStrategy<Feature, Scenario>,
     private val generationStrategy: ExamplesGenerationStrategy<Feature, Scenario>
 ): ExamplesBase<Feature, Scenario>(featureStrategy) {
-    @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
+    @Parameters(paramLabel = "contractFile", description = ["Path to contract file"], arity = "0..1")
     public override var contractFile: File? = null
 
     @Option(names = ["--dictionary"], description = ["Path to external dictionary file (default: contract_file_name_dictionary.json or dictionary.json)"])
@@ -76,18 +78,6 @@ abstract class ExamplesGenerateBase<Feature, Scenario>(
         return if (this.any { it.status == ExampleGenerationStatus.ERROR }) 1 else 0
     }
 }
-
-enum class ExampleGenerationStatus(val value: String) {
-    CREATED("Inline"),
-    ERROR("External"),
-    EXISTS("Exists");
-
-    override fun toString(): String {
-        return this.value
-    }
-}
-
-data class ExampleGenerationResult(val exampleFile: File? = null, val status: ExampleGenerationStatus)
 
 interface ExamplesGenerationStrategy<Feature, Scenario> {
     fun getExistingExampleOrNull(scenario: Scenario, exampleFiles: List<File>): Pair<File, Result>?

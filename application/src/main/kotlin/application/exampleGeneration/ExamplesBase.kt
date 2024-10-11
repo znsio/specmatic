@@ -24,9 +24,9 @@ abstract class ExamplesBase<Feature, Scenario>(protected open val featureStrateg
     override fun call(): Int {
         configureLogger(verbose)
 
-        return contractFile?.let { contract ->
-            getValidatedContractFileOrNull(contract)?.let {
-                execute(it)
+        return contractFile?.let {
+            ensureValidContractFile(it).first?.let { contract ->
+                execute(contract)
             } ?: 1
         } ?: execute(contractFile)
     }
@@ -50,32 +50,30 @@ abstract class ExamplesBase<Feature, Scenario>(protected open val featureStrateg
         return getFilteredScenarios(scenarios, scenarioFilter)
     }
 
-    protected fun getValidatedContractFileOrNull(contractFile: File): File? {
-        if (!contractFile.exists()) {
-            consoleLog("Contract file does not exist: ${contractFile.absolutePath}")
-            return null
+    @Suppress("MemberVisibilityCanBePrivate") // Used By InteractiveServer through ExamplesInteractiveBase
+    fun ensureValidContractFile(contractFile: File): Pair<File?, String?> {
+        val errorMessage = when {
+            !contractFile.exists() -> "Contract file does not exist: ${contractFile.absolutePath}"
+            contractFile.extension !in featureStrategy.contractFileExtensions ->
+                "Invalid Contract file ${contractFile.path} - File extension must be one of ${featureStrategy.contractFileExtensions.joinToString()}"
+            else -> return contractFile to null
         }
 
-        if (contractFile.extension !in featureStrategy.contractFileExtensions) {
-            consoleLog("Invalid Contract file ${contractFile.path} - File extension must be one of ${featureStrategy.contractFileExtensions.joinToString()}")
-            return null
-        }
-
-        return contractFile
+        consoleLog(errorMessage)
+        return null to errorMessage
     }
 
-    protected fun getValidatedExampleFileOrNull(exampleFile: File): File? {
-        if (!exampleFile.exists()) {
-            consoleLog("Example file does not exist: ${exampleFile.absolutePath}")
-            return null
+    @Suppress("MemberVisibilityCanBePrivate") // Used By InteractiveServer through ExamplesInteractiveBase
+    fun ensureValidExampleFile(exampleFile: File): Pair<File?, String?> {
+        val errorMessage = when {
+            !exampleFile.exists() -> "Example file does not exist: ${exampleFile.absolutePath}"
+            exampleFile.extension !in featureStrategy.exampleFileExtensions ->
+                "Invalid Example file ${exampleFile.path} - File extension must be one of ${featureStrategy.exampleFileExtensions.joinToString()}"
+            else -> return exampleFile to null
         }
 
-        if (exampleFile.extension !in featureStrategy.exampleFileExtensions) {
-            consoleLog("Invalid Example file ${exampleFile.path} - File extension must be one of ${featureStrategy.exampleFileExtensions.joinToString()}")
-            return null
-        }
-
-        return exampleFile
+        consoleLog(errorMessage)
+        return null to errorMessage
     }
 
     protected fun getExamplesDirectory(contractFile: File): File {

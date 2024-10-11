@@ -11,7 +11,7 @@ import picocli.CommandLine.Option
 import java.io.File
 
 @Command(
-    name = "examples",
+    name = "examples", mixinStandardHelpOptions = true,
     description = ["Generate Externalised Examples from an OpenApi Contract"],
     subcommands = [OpenApiExamplesValidate::class, OpenApiExamplesInteractive::class]
 )

@@ -1,7 +1,8 @@
 package application.exampleGeneration
 
 import io.specmatic.core.Result
-import io.specmatic.core.log.logger
+import io.specmatic.core.log.consoleDebug
+import io.specmatic.core.log.consoleLog
 import picocli.CommandLine.Option
 import java.io.File
 
@@ -20,34 +21,27 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
 
     override fun execute(contract: File?): Int {
         if (contract == null) {
-            logger.log("No contract file provided, please provide a contract file. Use --help for more details.")
+            consoleLog("No contract file provided, please provide a contract file. Use --help for more details.")
             return 1
         }
 
         try {
             exampleFile?.let { exFile ->
-                if (!exFile.exists()) {
-                    logger.log("Could not find Example file ${exFile.path}")
-                    return 1
-                }
-
-                if (exFile.extension !in featureStrategy.exampleFileExtensions) {
-                    logger.log("Invalid Example file ${exFile.path} - File extension must be one of ${featureStrategy.exampleFileExtensions.joinToString()}")
-                    return 1
-                }
-
-                val validation = validateExampleFile(exFile, contract)
-                return getExitCode(validation)
+                return validateSingleExampleFile(exFile, contract)
             }
 
-            val inlineResults = if (validateInline) validateInlineExamples(contract) else emptyList()
-            val externalResults = if (validateExternal) validateExternalExamples(contract) else emptyList()
+            val inlineResults = if (validateInline)
+                validateInlineExamples(contract).logValidationResult()
+            else emptyList()
 
-            logValidationResult(inlineResults, externalResults)
-            return getExitCode(inlineResults + externalResults)
+            val externalResults = if (validateExternal)
+                validateExternalExamples(contract).logValidationResult()
+            else emptyList()
+
+            return externalResults.getExitCode(inlineResults)
         } catch (e: Throwable) {
-            logger.log("Validation failed with error: ${e.message}")
-            logger.debug(e)
+            consoleLog("Validation failed with error: ${e.message}")
+            consoleDebug(e)
             return 1
         }
     }
@@ -59,11 +53,14 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
         return validationStrategy.updateFeatureForValidation(feature, filteredScenarios)
     }
 
-    private fun validateExampleFile(exampleFile: File, contractFile: File): ExampleValidationResult {
-        val feature = featureStrategy.contractFileToFeature(contractFile)
-        return validateExternalExample(exampleFile, feature).also {
-            it.logErrors()
-        }
+    private fun validateSingleExampleFile(exampleFile: File, contractFile: File): Int {
+        getValidatedExampleFileOrNull(exampleFile)?.let {
+            val feature = featureStrategy.contractFileToFeature(contractFile)
+            return validateExternalExample(exampleFile, feature).let {
+                it.logErrors()
+                it.getExitCode()
+            }
+        } ?: return 1
     }
 
     private fun validateExternalExample(exampleFile: File, feature: Feature): ExampleValidationResult {
@@ -71,8 +68,8 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
             val result = validationStrategy.validateExternalExample(feature, exampleFile)
             ExampleValidationResult(exampleFile, result.second)
         } catch (e: Throwable) {
-            logger.log("Example validation failed with error: ${e.message}")
-            logger.debug(e)
+            consoleLog("Example validation failed with error: ${e.message}")
+            consoleDebug(e)
             ExampleValidationResult(exampleFile, Result.Failure(e.message.orEmpty()))
         }
     }
@@ -101,28 +98,6 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
     }
 
     // HELPER METHODS
-    private fun getExitCode(validations: List<ExampleValidationResult>): Int {
-        return if (validations.any { !it.result.isSuccess() }) 1 else 0
-    }
-
-    private fun getExitCode(validation: ExampleValidationResult): Int {
-        return if (!validation.result.isSuccess()) 1 else 0
-    }
-
-    private fun logValidationResult(inlineResults: List<ExampleValidationResult>, externalResults: List<ExampleValidationResult>) {
-        if (inlineResults.isNotEmpty()) {
-            val successCount = inlineResults.count { it.result.isSuccess() }
-            val failureCount = inlineResults.size - successCount
-            logResultSummary(ExampleType.INLINE, successCount, failureCount)
-        }
-
-        if (externalResults.isNotEmpty()) {
-            val successCount = externalResults.count { it.result.isSuccess() }
-            val failureCount = externalResults.size - successCount
-            logResultSummary(ExampleType.EXTERNAL, successCount, failureCount)
-        }
-    }
-
     private fun logResultSummary(type: ExampleType, successCount: Int, failureCount: Int) {
         logFormattedOutput(
             header = "$type Examples Validation Summary",
@@ -135,11 +110,33 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
         val prefix = index?.let { "$it. " } ?: ""
 
         if (this.result.isSuccess()) {
-            return logger.log("$prefix${this.exampleFile?.name ?: this.exampleName} is valid")
+            return consoleLog("$prefix${this.exampleFile?.name ?: this.exampleName} is valid")
         }
 
-        logger.log("\n$prefix${this.exampleFile?.name ?: this.exampleName} has the following validation error(s):")
-        logger.log(this.result.reportString())
+        consoleLog("\n$prefix${this.exampleFile?.name ?: this.exampleName} has the following validation error(s):")
+        consoleLog(this.result.reportString())
+    }
+
+    private fun List<ExampleValidationResult>.logValidationResult(): List<ExampleValidationResult> {
+        if (this.isNotEmpty()) {
+            require(this.all { it.type == this.first().type }) {
+                "All example validation results must be of the same type"
+            }
+
+            val successCount = this.count { it.result.isSuccess() }
+            val failureCount = this.size - successCount
+            logResultSummary(this.first().type, successCount, failureCount)
+        }
+
+        return this
+    }
+
+    private fun List<ExampleValidationResult>.getExitCode(other: List<ExampleValidationResult>): Int {
+        return if (this.any { !it.result.isSuccess() } || other.any { !it.result.isSuccess() }) 1 else 0
+    }
+
+    private fun ExampleValidationResult.getExitCode(): Int {
+        return if (!this.result.isSuccess()) 1 else 0
     }
 }
 

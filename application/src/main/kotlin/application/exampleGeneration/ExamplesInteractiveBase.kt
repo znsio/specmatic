@@ -14,7 +14,8 @@ import io.ktor.server.routing.*
 import io.ktor.util.pipeline.*
 import io.specmatic.core.Result
 import io.specmatic.core.TestResult
-import io.specmatic.core.log.logger
+import io.specmatic.core.log.consoleDebug
+import io.specmatic.core.log.consoleLog
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.test.reports.coverage.html.HtmlTemplateConfiguration
 import picocli.CommandLine.Option
@@ -29,31 +30,31 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
     private val validationStrategy: ExamplesValidationStrategy<Feature, Scenario>
 ): ExamplesBase<Feature, Scenario>(featureStrategy) {
     @Option(names = ["--testBaseURL"], description = ["BaseURL of the the system to test"], required = false)
-    var sutBaseUrl: String? = null
+    protected var sutBaseUrl: String? = null
 
     @Option(names = ["--contract-file"], description = ["Contract file path"], required = false)
     override var contractFile: File? = null
 
     @Option(names = ["--dictionary"], description = ["Path to external dictionary file (default: contract_file_name_dictionary.json or dictionary.json)"])
-    var dictFile: File? = null
+    protected var dictFile: File? = null
 
-    abstract val htmlTableColumns: List<HtmlTableColumn>
+    protected abstract val htmlTableColumns: List<HtmlTableColumn>
     private var cachedContractFileFromRequest: File? = null
 
     override fun execute(contract: File?): Int {
         try {
             if (contract == null) {
-                logger.log("Contract file not provided, Please provide one via HTTP request")
+                consoleLog("Contract file not provided, Please provide one via HTTP request")
             }
 
             updateDictionaryFile(dictFile)
             val server = InteractiveServer(contract, sutBaseUrl, "0.0.0.0", 9001)
             addShutdownHook(server)
-            logger.log("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop.")
+            consoleLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop.")
             while (true) sleep(10000)
         } catch (e: Throwable) {
-            logger.log("Example Interactive server failed with error: ${e.message}")
-            logger.debug(e)
+            consoleLog("Example Interactive server failed with error: ${e.message}")
+            consoleDebug(e)
             return 1
         }
     }
@@ -97,24 +98,24 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
 
     private fun getContractFileOrNull(contractFile: File?, request: ExamplePageRequest? = null): File? {
         return contractFile?.takeIf { it.exists() }?.also { contract ->
-            logger.debug("Using Contract file ${contract.path} provided via command line")
+            consoleDebug("Using Contract file ${contract.path} provided via command line")
         } ?: request?.contractFile?.takeIf { it.exists() }?.also { contract ->
-            logger.debug("Using Contract file ${contract.path} provided via HTTP request")
+            consoleDebug("Using Contract file ${contract.path} provided via HTTP request")
         } ?: cachedContractFileFromRequest?.takeIf { it.exists() }?.also { contract ->
-            logger.debug("Using Contract file ${contract.path} provided via cached HTTP request")
+            consoleDebug("Using Contract file ${contract.path} provided via cached HTTP request")
         }
     }
 
     private fun validateRows(tableRows: List<TableRow>): List<TableRow> {
         tableRows.forEach { row ->
             require(row.columns.size == htmlTableColumns.size) {
-                logger.debug("Invalid Row: $row")
+                consoleDebug("Invalid Row: $row")
                 throw IllegalArgumentException("Incorrect number of columns in table row. Expected: ${htmlTableColumns.size}, Actual: ${row.columns.size}")
             }
 
             row.columns.forEachIndexed { index, it ->
                 require(it.columnName == htmlTableColumns[index].name) {
-                    logger.debug("Invalid Column Row: $row")
+                    consoleDebug("Invalid Column Row: $row")
                     throw IllegalArgumentException("Incorrect column name in table row. Expected: ${htmlTableColumns[index].name}, Actual: ${it.columnName}")
                 }
             }
@@ -158,7 +159,7 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
 
                 install(StatusPages) {
                     exception<Throwable> { call, cause ->
-                        logger.debug(cause)
+                        consoleDebug(cause)
                         call.respondWithError(cause)
                     }
                 }
@@ -245,9 +246,7 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
         }
 
         private fun getServerHostAndPort(request: ExamplePageRequest? = null): String {
-            return request?.hostPort.takeIf {
-                !it.isNullOrEmpty()
-            } ?: "localhost:$serverPort"
+            return request?.hostPort.takeIf { !it.isNullOrEmpty() } ?: "localhost:$serverPort"
         }
 
         private fun getHtmlContent(contractFile: File, hostPort: String): String {
@@ -291,54 +290,48 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
         private suspend fun PipelineContext<Unit, ApplicationCall>.getValidatedContractFileOrNull(request: ExamplePageRequest? = null): File? {
             val contractFile = getContractFileOrNull(contract, request) ?: run {
                 val errorMessage = "No Contract File Found - Please provide a contract file in the command line or in the HTTP request."
-                logger.log(errorMessage)
+                consoleLog(errorMessage)
                 call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
                 return null
             }
 
-            return contractFile.takeIf { it.extension in featureStrategy.contractFileExtensions }?.also {
-                updateDictionaryFile(dictFile, it)
+            return getValidatedContractFileOrNull(contractFile)?.let { contract ->
+                updateDictionaryFile(dictFile, contract)
+                return contract
             } ?: run {
                 val errorMessage = "Invalid Contract file ${contractFile.path} - File extension must be one of ${featureStrategy.contractFileExtensions.joinToString()}"
-                logger.log(errorMessage)
                 call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
                 return null
             }
         }
 
         private suspend fun PipelineContext<Unit, ApplicationCall>.getValidatedExampleOrNull(exampleFile: File): File? {
-            return when {
-                !exampleFile.exists() -> {
-                    val errorMessage = "Could not find Example file ${exampleFile.path}"
-                    logger.log(errorMessage)
-                    call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
-                    return null
-                }
+            if (!exampleFile.exists()) {
+                val errorMessage = "Example file does not exist: ${exampleFile.absolutePath}"
+                call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
+                return null
+            }
 
-                exampleFile.extension !in featureStrategy.exampleFileExtensions -> {
-                    val errorMessage = "Invalid Example file ${exampleFile.path} - File extension must be one of ${featureStrategy.exampleFileExtensions.joinToString()}"
-                    logger.log(errorMessage)
-                    call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
-                    return null
-                }
-
-                else -> exampleFile
+            return getValidatedExampleFileOrNull(exampleFile) ?: run {
+                val errorMessage = "Invalid Example file ${exampleFile.path} - File extension must be one of ${featureStrategy.exampleFileExtensions.joinToString()}"
+                call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
+                return null
             }
         }
     }
 
     private fun addShutdownHook(server: InteractiveServer) {
         Runtime.getRuntime().addShutdownHook(Thread {
-            logger.log("Shutting down examples interactive server...")
+            consoleLog("Shutting down examples interactive server...")
             try {
                 server.close()
-                logger.log("Server shutdown completed successfully.")
+                consoleLog("Server shutdown completed successfully.")
             } catch (e: InterruptedException) {
                 Thread.currentThread().interrupt()
-                logger.log("Server shutdown interrupted.")
+                consoleLog("Server shutdown interrupted.")
             } catch (e: Throwable) {
-                logger.log("Server shutdown failed with error: ${e.message}")
-                logger.debug(e)
+                consoleLog("Server shutdown failed with error: ${e.message}")
+                consoleDebug(e)
             }
         })
     }

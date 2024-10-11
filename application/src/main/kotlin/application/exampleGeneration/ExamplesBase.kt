@@ -4,45 +4,35 @@ import io.specmatic.core.DICTIONARY_FILE_SUFFIX
 import io.specmatic.core.EXAMPLES_DIR_SUFFIX
 import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.log.*
-import picocli.CommandLine
+import picocli.CommandLine.Option
 import java.io.File
 import java.util.concurrent.Callable
 
-abstract class ExamplesBase<Feature, Scenario>(open val featureStrategy: ExamplesFeatureStrategy<Feature, Scenario>) : Callable<Int> {
-    protected abstract var contractFile: File?
-
-    @CommandLine.Option(names = ["--filter-name"], description = ["Use only APIs with this value in their name, Case sensitive"], defaultValue = "\${env:SPECMATIC_FILTER_NAME}")
+abstract class ExamplesBase<Feature, Scenario>(protected open val featureStrategy: ExamplesFeatureStrategy<Feature, Scenario>) : Callable<Int> {
+    @Option(names = ["--filter-name"], description = ["Use only APIs with this value in their name, Case sensitive"], defaultValue = "\${env:SPECMATIC_FILTER_NAME}")
     private var filterName: String = ""
 
-    @CommandLine.Option(names = ["--filter-not-name"], description = ["Use only APIs which do not have this value in their name, Case sensitive"], defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}")
+    @Option(names = ["--filter-not-name"], description = ["Use only APIs which do not have this value in their name, Case sensitive"], defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}")
     private var filterNotName: String = ""
 
-    @CommandLine.Option(names = ["--debug"], description = ["Debug logs"])
+    @Option(names = ["--debug"], description = ["Debug logs"])
     private var verbose = false
 
-    abstract var extensive: Boolean
+    protected abstract var contractFile: File?
+    protected abstract var extensive: Boolean
 
     override fun call(): Int {
         configureLogger(verbose)
 
-        contractFile?.let {
-            if (!it.exists()) {
-                logger.log("Contract file does not exist: ${it.absolutePath}")
-                return 1
-            }
-
-            if (it.extension !in featureStrategy.contractFileExtensions) {
-                logger.log("Invalid Contract file ${it.path} - File extension must be one of ${featureStrategy.contractFileExtensions.joinToString()}")
-                return 1
-            }
-        }
-
-        val exitCode = execute(contractFile)
-        return exitCode
+        return contractFile?.let { contract ->
+            getValidatedContractFileOrNull(contract)?.let {
+                execute(it)
+            } ?: 1
+        } ?: execute(contractFile)
     }
 
     // HOOKS
-    abstract fun execute(contract: File?): Int
+    protected abstract fun execute(contract: File?): Int
 
     // HELPER METHODS
     private fun configureLogger(verbose: Boolean) {
@@ -54,36 +44,64 @@ abstract class ExamplesBase<Feature, Scenario>(open val featureStrategy: Example
             NonVerbose(CompositePrinter(logPrinters))
     }
 
-    fun getFilteredScenarios(feature: Feature): List<Scenario> {
+    protected fun getFilteredScenarios(feature: Feature): List<Scenario> {
         val scenarioFilter = ScenarioFilter(filterName, filterNotName)
         val scenarios = featureStrategy.getScenariosFromFeature(feature, extensive)
         return getFilteredScenarios(scenarios, scenarioFilter)
     }
 
-    fun getExamplesDirectory(contractFile: File): File {
+    protected fun getValidatedContractFileOrNull(contractFile: File): File? {
+        if (!contractFile.exists()) {
+            consoleLog("Contract file does not exist: ${contractFile.absolutePath}")
+            return null
+        }
+
+        if (contractFile.extension !in featureStrategy.contractFileExtensions) {
+            consoleLog("Invalid Contract file ${contractFile.path} - File extension must be one of ${featureStrategy.contractFileExtensions.joinToString()}")
+            return null
+        }
+
+        return contractFile
+    }
+
+    protected fun getValidatedExampleFileOrNull(exampleFile: File): File? {
+        if (!exampleFile.exists()) {
+            consoleLog("Example file does not exist: ${exampleFile.absolutePath}")
+            return null
+        }
+
+        if (exampleFile.extension !in featureStrategy.exampleFileExtensions) {
+            consoleLog("Invalid Example file ${exampleFile.path} - File extension must be one of ${featureStrategy.exampleFileExtensions.joinToString()}")
+            return null
+        }
+
+        return exampleFile
+    }
+
+    protected fun getExamplesDirectory(contractFile: File): File {
         val examplesDirectory = contractFile.canonicalFile.parentFile.resolve("${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX")
         if (!examplesDirectory.exists()) {
-            logger.log("Creating examples directory: $examplesDirectory")
+            consoleLog("Creating examples directory: $examplesDirectory")
             examplesDirectory.mkdirs()
         }
         return examplesDirectory
     }
 
-    fun getExternalExampleFiles(examplesDirectory: File): List<File> {
+    protected fun getExternalExampleFiles(examplesDirectory: File): List<File> {
         return examplesDirectory.walk().filter {
             it.isFile && it.extension in featureStrategy.exampleFileExtensions
         }.toList()
     }
 
-    fun getExternalExampleFilesFromContract(contractFile: File): List<File> {
+    protected fun getExternalExampleFilesFromContract(contractFile: File): List<File> {
         return getExternalExampleFiles(getExamplesDirectory(contractFile))
     }
 
-    fun logSeparator(length: Int, separator: String = "-") {
-        logger.log(separator.repeat(length))
+    protected fun logSeparator(length: Int, separator: String = "-") {
+        consoleLog(separator.repeat(length))
     }
 
-    fun logFormattedOutput(header: String, summary: String, note: String) {
+    protected fun logFormattedOutput(header: String, summary: String, note: String) {
         val maxLength = maxOf(summary.length, note.length, 50).let { it + it % 2 }
         val headerSidePadding = (maxLength - 2 - header.length) / 2
 
@@ -91,13 +109,13 @@ abstract class ExamplesBase<Feature, Scenario>(open val featureStrategy: Example
         val paddedSummaryLine = summary.padEnd(maxLength)
         val paddedNoteLine = note.padEnd(maxLength)
 
-        logger.log("\n$paddedHeaderLine")
-        logger.log(paddedSummaryLine)
-        logger.log("=".repeat(maxLength))
-        logger.log(paddedNoteLine)
+        consoleLog("\n$paddedHeaderLine")
+        consoleLog(paddedSummaryLine)
+        consoleLog("=".repeat(maxLength))
+        consoleLog(paddedNoteLine)
     }
 
-    fun updateDictionaryFile(dictFileFromArgs: File? = null, contract: File? = contractFile): File? {
+    protected fun updateDictionaryFile(dictFileFromArgs: File? = null, contract: File? = contractFile) {
         val dictFile = when(dictFileFromArgs != null) {
             true -> {
                 dictFileFromArgs.takeIf { it.exists() } ?: throw Exception("Dictionary file does not exist: ${dictFileFromArgs.absolutePath}")
@@ -110,9 +128,8 @@ abstract class ExamplesBase<Feature, Scenario>(open val featureStrategy: Example
             }
         }
 
-        return dictFile?.let {
+        dictFile?.let {
             System.setProperty(SPECMATIC_STUB_DICTIONARY, it.absolutePath)
-            it
         }
     }
 
@@ -122,7 +139,7 @@ abstract class ExamplesBase<Feature, Scenario>(open val featureStrategy: Example
             .filterScenarios(scenarioFilter.filterNotNameTokens, shouldMatch = false)
 
         if (filteredScenarios.isEmpty()) {
-            logger.log("Note: All examples were filtered out by the filter expression")
+            consoleLog("Note: All examples were filtered out by the filter expression")
         }
 
         return filteredScenarios

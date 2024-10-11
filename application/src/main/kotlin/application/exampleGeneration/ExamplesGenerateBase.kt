@@ -9,7 +9,7 @@ abstract class ExamplesGenerateBase<Feature, Scenario>(
     override val featureStrategy: ExamplesFeatureStrategy<Feature, Scenario>,
     private val generationStrategy: ExamplesGenerationStrategy<Feature, Scenario>
 ): ExamplesBase<Feature, Scenario>(featureStrategy) {
-    @Parameters(index = "0", description = ["Contract file path"], arity = "0..1")
+    @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
     public override var contractFile: File? = null
 
     @Option(names = ["--dictionary"], description = ["Path to external dictionary file (default: contract_file_name_dictionary.json or dictionary.json)"])
@@ -17,7 +17,7 @@ abstract class ExamplesGenerateBase<Feature, Scenario>(
 
     override fun execute(contract: File?): Int {
         if (contract == null) {
-            logger.log("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
+            consoleLog("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
             return 1
         }
 
@@ -25,11 +25,10 @@ abstract class ExamplesGenerateBase<Feature, Scenario>(
             updateDictionaryFile(dictFile)
             val examplesDir = getExamplesDirectory(contract)
             val result = generateExamples(contract, examplesDir)
-            logGenerationResult(result, examplesDir)
-            return 0
+            return result.logGenerationResult(examplesDir).getExitCode()
         } catch (e: Throwable) {
-            logger.log("Example generation failed with error: ${e.message}")
-            logger.debug(e)
+            consoleLog("Example generation failed with error: ${e.message}")
+            consoleDebug(e)
             return 1
         }
     }
@@ -57,8 +56,8 @@ abstract class ExamplesGenerateBase<Feature, Scenario>(
     }
 
     // HELPER METHODS
-    private fun logGenerationResult(generations: List<ExampleGenerationResult>, examplesDir: File) {
-        val generationGroup = generations.groupBy { it.status }.mapValues { it.value.size }
+    private fun List<ExampleGenerationResult>.logGenerationResult(examplesDir: File): List<ExampleGenerationResult> {
+        val generationGroup = this.groupBy { it.status }.mapValues { it.value.size }
         val createdFileCount = generationGroup[ExampleGenerationStatus.CREATED] ?: 0
         val errorCount = generationGroup[ExampleGenerationStatus.ERROR] ?: 0
         val existingCount = generationGroup[ExampleGenerationStatus.EXISTS] ?: 0
@@ -69,6 +68,12 @@ abstract class ExamplesGenerateBase<Feature, Scenario>(
             summary = "$createdFileCount example(s) created, $existingCount example(s) already existed, $errorCount example(s) failed",
             note = "NOTE: All examples can be found in $examplesDirectory"
         )
+
+        return this
+    }
+
+    private fun List<ExampleGenerationResult>.getExitCode(): Int {
+        return if (this.any { it.status == ExampleGenerationStatus.ERROR }) 1 else 0
     }
 }
 
@@ -95,16 +100,16 @@ interface ExamplesGenerationStrategy<Feature, Scenario> {
             val scenarioDescription = request.scenarioDescription
 
             if (existingExample != null) {
-                logger.log("Using existing example for ${scenarioDescription}\nExample File: ${existingExample.first.absolutePath}")
+                consoleLog("Using existing example for ${scenarioDescription}\nExample File: ${existingExample.first.absolutePath}")
                 return ExampleGenerationResult(existingExample.first, ExampleGenerationStatus.EXISTS)
             }
 
-            logger.log("Generating example for $scenarioDescription")
+            consoleLog("Generating example for $scenarioDescription")
             val (uniqueFileName, exampleContent) = generateExample(request.feature, request.scenario)
             return writeExampleToFile(exampleContent, uniqueFileName, request.examplesDir, request.validExampleExtensions)
         } catch (e: Throwable) {
-            logger.log("Failed to generate example: ${e.message}")
-            logger.debug(e)
+            consoleLog("Failed to generate example: ${e.message}")
+            consoleDebug(e)
             ExampleGenerationResult(null, ExampleGenerationStatus.ERROR)
         }
     }
@@ -113,17 +118,17 @@ interface ExamplesGenerationStrategy<Feature, Scenario> {
         val exampleFile = examplesDir.resolve(exampleFileName)
 
         if (exampleFile.extension !in validExampleExtensions) {
-            logger.log("Invalid example file extension: ${exampleFile.extension}")
+            consoleLog("Invalid example file extension: ${exampleFile.extension}")
             return ExampleGenerationResult(exampleFile, ExampleGenerationStatus.ERROR)
         }
 
         try {
             exampleFile.writeText(exampleContent)
-            logger.log("Successfully saved example: $exampleFile")
+            consoleLog("Successfully saved example: $exampleFile")
             return ExampleGenerationResult(exampleFile, ExampleGenerationStatus.CREATED)
         } catch (e: Throwable) {
-            logger.log("Failed to save example: $exampleFile")
-            logger.debug(e)
+            consoleLog("Failed to save example: $exampleFile")
+            consoleDebug(e)
             return ExampleGenerationResult(exampleFile, ExampleGenerationStatus.ERROR)
         }
     }

@@ -211,7 +211,7 @@ fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathDa
                     emptyList()
                 }
                 else try {
-                    val feature = parseContractFileToFeature(contractPath, CommandHook(HookName.stub_load_contract), contractSource.provider, contractSource.repository, contractSource.branch, contractSource.specificationPath).copy(specmaticConfig = specmaticConfig)
+                    val feature = parseContractFileToFeature(contractPath, CommandHook(HookName.stub_load_contract), contractSource.provider, contractSource.repository, contractSource.branch, contractSource.specificationPath, specmaticConfig = specmaticConfig)
 
                     val implicitDataDirs = implicitDirsForSpecifications(contractPath)
 

@@ -3,9 +3,7 @@ package io.specmatic.conversions
 import io.specmatic.core.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Row
-import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.pattern.randomString
-import io.ktor.util.*
 import org.apache.http.HttpHeaders.AUTHORIZATION
 import java.util.Base64
 
@@ -40,10 +38,10 @@ data class BasicAuthSecurityScheme(private val token: String? = null) : OpenAPIS
         return httpRequest.copy(headers = httpRequest.headers.minus(AUTHORIZATION))
     }
 
-    override fun addTo(httpRequest: HttpRequest): HttpRequest {
+    override fun addTo(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
         return httpRequest.copy(
             headers = httpRequest.headers.plus(
-                AUTHORIZATION to getAuthorizationHeaderValue()
+                AUTHORIZATION to getAuthorizationHeaderValue(resolver)
             )
         )
     }
@@ -53,14 +51,27 @@ data class BasicAuthSecurityScheme(private val token: String? = null) : OpenAPIS
     }
 
     override fun isInRow(row: Row): Boolean = row.containsField(AUTHORIZATION)
-    private fun getAuthorizationHeaderValue(): String {
-        val validToken = if(token != null)
-            validatedToken(token)
-        else
-            randomBasicAuthCredentials()
+    private fun getAuthorizationHeaderValue(resolver: Resolver): String {
+        val validToken = when {
+            token != null -> {
+                validatedToken(token)
+            }
+            dictionaryHasValidToken(resolver) -> {
+                resolver.getDictionaryToken(AUTHORIZATION).toStringLiteral()
+            }
+            else -> {
+                randomBasicAuthCredentials()
+            }
+        }
 
         return "Basic $validToken"
     }
+
+    private fun dictionaryHasValidToken(resolver: Resolver) =
+        resolver.hasDictionaryToken(AUTHORIZATION) && resolver.getDictionaryToken(AUTHORIZATION).toStringLiteral().let {
+            it.lowercase()
+                .startsWith("basic ") && validateBase64EncodedCredentials(it.substringAfter(" ")) is Result.Success
+        } == true
 
     private fun validatedToken(token: String): String {
         val result = validateBase64EncodedCredentials(token)

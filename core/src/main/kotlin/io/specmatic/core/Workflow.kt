@@ -47,6 +47,9 @@ class Workflow(
     }
 
     fun updateRequest(request: HttpRequest, originalScenario: Scenario): HttpRequest {
+        if(originalScenario.isNegative)
+            return request
+
         val operation = workflow.ids.get(originalScenario.apiDescription) ?: workflow.ids.get("*")
 
         if(operation == null)

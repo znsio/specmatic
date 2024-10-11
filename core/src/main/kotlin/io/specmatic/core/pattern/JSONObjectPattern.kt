@@ -27,25 +27,57 @@ data class JSONObjectPattern(
     val minProperties: Int? = null,
     val maxProperties: Int? = null
 ) : Pattern {
-    override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
+    override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
+        if(concretePattern !is JSONObjectPattern)
+            throw ContractException("Expected json object type but got ${concretePattern.typeName}")
+
+        val updatedPatternMapWithTypeAliases = concretePattern.pattern.mapValues { (key, concreteChildPattern) ->
+            val originalChildPattern =
+                this.pattern[key]
+                    ?: this.pattern["$key?"]
+                    ?: return@mapValues concreteChildPattern
+            originalChildPattern.addTypeAliasesToConcretePattern(concreteChildPattern, resolver)
+        }
+
+        return concretePattern.copy(
+            typeAlias = typeAlias ?: this.typeAlias,
+            pattern = updatedPatternMapWithTypeAliases
+        )
+    }
+
+    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
         val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
 
         val mapWithKeysInPartial = jsonObject.jsonObject.mapValues { (name, value) ->
-            val valuePattern = pattern.get(name) ?: pattern.get("$name?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", name)))
+            val valuePattern = pattern.get(name) ?: pattern.get("$name?") ?: return@mapValues HasFailure<Value>(
+                Result.Failure(
+                    resolver.mismatchMessages.unexpectedKey("header", name)
+                )
+            ).breadCrumb(name)
 
-            val returnValue = if(value is StringValue && isPatternToken(value.string))
-                HasValue(resolver.getPattern(value.string).generate(resolver))
-            else if (value is ScalarValue) {
+            val returnValue = if (value is StringValue && isPatternToken(value.string)) {
+                try {
+                    val generatedValue = resolver.generate(typeAlias, name, resolver.getPattern(value.string))
+                    val matchResult = valuePattern.matches(generatedValue, resolver)
+
+                    if (matchResult is Result.Failure)
+                        HasFailure(matchResult, "Could not generate value for key $name")
+                    else
+                        HasValue(generatedValue)
+                } catch(e: Throwable) {
+                    HasException(e)
+                }
+            } else if (value is ScalarValue) {
                 val matchResult = valuePattern.matches(value, resolver)
 
-                val returnValue: ReturnValue<Value> = if(matchResult is Result.Failure)
+                val returnValue: ReturnValue<Value> = if (matchResult is Result.Failure)
                     HasFailure(matchResult)
                 else
                     HasValue(value)
 
                 returnValue
             } else {
-                valuePattern.fillInTheBlanks(value, dictionary, resolver)
+                valuePattern.fillInTheBlanks(value, resolver.plusDictionaryLookupDetails(typeAlias, name))
             }
 
             returnValue.breadCrumb(name)
@@ -54,15 +86,11 @@ data class JSONObjectPattern(
         val mapWithMissingKeysGenerated = pattern.filterKeys {
             !it.endsWith("?") && it !in jsonObject.jsonObject
         }.mapValues { (name, valuePattern) ->
-            val generatedValue = dictionary.lookup(name)?.let { dictionaryValue ->
-                val matchResult = valuePattern.matches(dictionaryValue, resolver)
-                if(matchResult is Result.Failure)
-                    HasFailure(matchResult)
-                else
-                    HasValue(dictionaryValue)
-            } ?: HasValue(valuePattern.generate(resolver))
-
-            generatedValue.breadCrumb(name)
+            try {
+                HasValue(resolver.generate(typeAlias, name, valuePattern))
+            } catch(e: Throwable) {
+                HasException(e)
+            }.breadCrumb(name)
         }.mapFold()
 
         return mapWithKeysInPartial.combine(mapWithMissingKeysGenerated) { entriesInPartial, missingEntries ->
@@ -250,7 +278,8 @@ data class JSONObjectPattern(
         return JSONObjectValue(
             generate(
                 selectPropertiesWithinMaxAndMin(pattern, minProperties, maxProperties),
-                withNullPattern(resolver)
+                withNullPattern(resolver),
+                typeAlias
             )
         )
     }
@@ -267,7 +296,7 @@ data class JSONObjectPattern(
             it.ifValue {
                 toJSONObjectPattern(it.mapKeys { (key, _) ->
                     withoutOptionality(key)
-                })
+                }, typeAlias)
             }
     }
 
@@ -291,7 +320,7 @@ data class JSONObjectPattern(
     override val typeName: String = "json object"
 }
 
-fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String, Value> {
+fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver, typeAlias: String?): Map<String, Value> {
     val resolverWithNullType = withNullPattern(resolver)
 
     val optionalProps = jsonPattern.keys.filter { isOptional(it) }.map { withoutOptionality(it) }
@@ -302,7 +331,7 @@ fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver): Map<String,
             attempt(breadCrumb = key) {
                 // Handle cycle (represented by null value) by marking this property as removable
                 Optional.ofNullable(resolverWithNullType.withCyclePrevention(pattern, optionalProps.contains(key)) {
-                    it.generate(key, pattern)
+                    it.generate(typeAlias, key, pattern)
                 })
             }
         }

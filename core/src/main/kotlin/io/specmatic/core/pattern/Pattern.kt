@@ -1,6 +1,5 @@
 package io.specmatic.core.pattern
 
-import io.specmatic.core.Dictionary
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.Substitution
@@ -79,10 +78,14 @@ interface Pattern {
             HasValue(emptyMap())
     }
 
-    fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
+    fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
         exception { parse(value.toStringLiteral(), resolver) }?.let { return HasException(it) }
 
         return HasValue(value)
+    }
+
+    fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String? = null): Pattern {
+        return concretePattern
     }
 
     val typeAlias: String?

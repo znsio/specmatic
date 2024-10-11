@@ -1,7 +1,6 @@
 package io.specmatic.conversions
 
 import io.specmatic.core.*
-import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.Row
 import io.specmatic.core.pattern.StringPattern
 import org.apache.http.HttpHeaders.AUTHORIZATION
@@ -28,13 +27,13 @@ data class BearerSecurityScheme(private val configuredToken: String? = null) : O
         return httpRequest.copy(headers = headersWithoutAuthorization)
     }
 
-    override fun addTo(httpRequest: HttpRequest): HttpRequest {
+    override fun addTo(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
         val updatedHeaders = httpRequest.headers.filterKeys {
             !it.equals(
                 AUTHORIZATION,
                 ignoreCase = true
             )
-        } + (AUTHORIZATION to getAuthorizationHeaderValue())
+        } + (AUTHORIZATION to getAuthorizationHeaderValue(resolver))
         return httpRequest.copy(headers = updatedHeaders)
     }
 
@@ -46,7 +45,7 @@ data class BearerSecurityScheme(private val configuredToken: String? = null) : O
         return row.columnNames.any { it.equals(AUTHORIZATION, ignoreCase = true) }
     }
 
-    private fun getAuthorizationHeaderValue(): String {
-        return "Bearer " + (configuredToken ?: StringPattern().generate(Resolver()).toStringLiteral())
+    private fun getAuthorizationHeaderValue(resolver: Resolver): String {
+        return "Bearer " + (configuredToken ?: resolver.generate("HEADERS", AUTHORIZATION, StringPattern()).toStringLiteral())
     }
 }

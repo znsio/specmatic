@@ -92,6 +92,9 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--delay-in-ms"], description = ["Stub response delay in milliseconds"])
     var delayInMilliseconds: Long = 0
 
+    @Option(names = ["--graceful-restart-timeout-in-ms"], description = ["Time to wait for the server to stop before starting it again"])
+    var gracefulRestartTimeoutInMs: Long = 1000
+
     @Autowired
     val watchMaker = WatchMaker()
 
@@ -189,7 +192,7 @@ class StubCommand : Callable<Unit> {
             true -> if (portIsInUse(host, port)) findRandomFreePort() else port
             false -> port
         }
-        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, specmaticConfigPath, httpClientFactory, workingDirectory)
+        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, specmaticConfigPath, httpClientFactory, workingDirectory, gracefulRestartTimeoutInMs)
 
         LogTail.storeSnapshot()
     }

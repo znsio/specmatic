@@ -697,7 +697,7 @@ paths:
         - name: productCategory
           in: query
           description: Category of the product to search for
-          required: true
+          required: false 
           schema:
             type: string
           examples:

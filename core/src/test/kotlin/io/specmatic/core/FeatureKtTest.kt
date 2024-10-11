@@ -240,8 +240,14 @@ class FeatureKtTest {
 
     @Test
     fun `a single scenario with 2 examples should be generated out of 2 stubs with the same structure`() {
-        val stub1 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", queryParametersMap = mapOf("hello" to "world")), HttpResponse.OK))
-        val stub2 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", queryParametersMap = mapOf("hello" to "hello")), HttpResponse.OK))
+        val stub1 = NamedStub("stub", ScenarioStub(
+            HttpRequest("GET", "/", queryParametersMap = mapOf("hello" to "world")),
+            HttpResponse.OK
+        ))
+        val stub2 = NamedStub("stub", ScenarioStub(
+            HttpRequest("GET", "/", queryParametersMap = mapOf("hello" to "hello")),
+            HttpResponse.OK
+        ))
 
         val generatedGherkin = toGherkinFeature("new feature", listOf(stub1, stub2)).trim()
 
@@ -260,8 +266,14 @@ class FeatureKtTest {
 
     @Test
     fun `a single scenario with 2 examples of a multipart file should be generated out of 2 stubs with the same structure`() {
-        val stub1 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", multiPartFormData = listOf(MultiPartFileValue("employees", "employees1.csv", content=MultiPartContent("1,2,3")))), HttpResponse.OK))
-        val stub2 = NamedStub("stub", ScenarioStub(HttpRequest("GET", "/", multiPartFormData = listOf(MultiPartFileValue("employees", "employees2.csv", content=MultiPartContent("1,2,3")))), HttpResponse.OK))
+        val stub1 = NamedStub("stub", ScenarioStub(
+            HttpRequest("GET", "/", multiPartFormData = listOf(MultiPartFileValue("employees", "employees1.csv", content=MultiPartContent("1,2,3")))),
+            HttpResponse.OK
+        ))
+        val stub2 = NamedStub("stub", ScenarioStub(
+            HttpRequest("GET", "/", multiPartFormData = listOf(MultiPartFileValue("employees", "employees2.csv", content=MultiPartContent("1,2,3")))),
+            HttpResponse.OK
+        ))
 
         val generatedGherkin = toGherkinFeature("new feature", listOf(stub1, stub2)).trim()
 
@@ -281,7 +293,10 @@ class FeatureKtTest {
 
     @Test
     fun `an example should have the response Date headers value at the end as a comment`() {
-        val stub = NamedStub("stub", ScenarioStub(HttpRequest("POST", "/", body = StringValue("hello world")), HttpResponse.OK.copy(headers = mapOf("Date" to "Tuesday 1st Jan 2020"))))
+        val stub = NamedStub("stub", ScenarioStub(
+            HttpRequest("POST", "/", body = StringValue("hello world")),
+            HttpResponse.OK.copy(headers = mapOf("Date" to "Tuesday 1st Jan 2020"))
+        ))
 
         val generatedGherkin = toGherkinFeature("new feature", listOf(stub)).trim()
 
@@ -360,7 +375,10 @@ class FeatureKtTest {
             parsedJSONObject("""{id: 10, addresses: [{"street": "Shaeffer Street"}, {"street": "Ransom Street"}]}""")
 
         val stubs = listOf(
-            NamedStub("http://localhost?a=b", ScenarioStub(HttpRequest("GET", "/data", queryParametersMap = mapOf("id" to "10"), body = requestBody), HttpResponse.OK))
+            NamedStub("http://localhost?a=b", ScenarioStub(
+                HttpRequest("GET", "/data", queryParametersMap = mapOf("id" to "10"), body = requestBody),
+                HttpResponse.OK
+            ))
         )
 
         val gherkin = toGherkinFeature("New Feature", stubs)

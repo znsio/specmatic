@@ -17,11 +17,17 @@ data class AnyPattern(
 
     override fun hashCode(): Int = pattern.hashCode()
 
+    override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
+        val matchingPattern = pattern.find { it.matches(concretePattern.generate(resolver), resolver) is Result.Success } ?: return concretePattern
+
+        return matchingPattern.addTypeAliasesToConcretePattern(concretePattern, resolver, this.typeAlias ?: typeAlias)
+    }
+
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
 
-    override fun fillInTheBlanks(value: Value, dictionary: Dictionary, resolver: Resolver): ReturnValue<Value> {
+    override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
         val results = pattern.asSequence().map {
-            it.fillInTheBlanks(value, dictionary, resolver)
+            it.fillInTheBlanks(value, resolver)
         }
 
         val successfulGeneration = results.firstOrNull { it is HasValue }
@@ -200,6 +206,10 @@ data class AnyPattern(
     )
 
     private fun addTypeInfoBreadCrumbs(matchResults: List<AnyPatternMatch>): List<Failure> {
+        if(this.hasNoAmbiguousPatterns()) {
+            return matchResults.map { it.result as Failure }
+        }
+
         val failuresWithUpdatedBreadcrumbs = matchResults.map {
             Pair(it.pattern, it.result as Failure)
         }.mapIndexed { index, (pattern, failure) ->
@@ -250,7 +260,6 @@ data class AnyPattern(
         } ?: NullValue // Terminates cycle gracefully. Only happens if isNullable=true so that it is contract-valid.
     }
 
-
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         resolver.resolveExample(example, pattern)?.let {
             return sequenceOf(HasValue(ExactValuePattern(it)))
@@ -272,7 +281,6 @@ data class AnyPattern(
 
         return newTypesOrExceptionIfNone(patternResults, "Could not generate new tests")
     }
-
 
     private fun newTypesOrExceptionIfNone(patternResults: Sequence<Pair<Sequence<ReturnValue<Pattern>>?, Throwable?>>, message: String): Sequence<ReturnValue<Pattern>> {
         val newPatterns: Sequence<ReturnValue<Pattern>> = patternResults.mapNotNull { it.first }.flatten()
@@ -398,6 +406,10 @@ data class AnyPattern(
 
     override fun toNullable(defaultValue: String?): Pattern {
         return this
+    }
+
+    private fun hasNoAmbiguousPatterns(): Boolean {
+        return this.pattern.count { it !is NullPattern } == 1
     }
 }
 

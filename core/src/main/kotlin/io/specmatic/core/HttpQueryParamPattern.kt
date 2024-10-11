@@ -14,7 +14,7 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         return attempt(breadCrumb = "QUERY-PARAMS") {
             queryPatterns.map { it.key.removeSuffix("?") to it.value }.flatMap { (parameterName, pattern) ->
                 attempt(breadCrumb = parameterName) {
-                    val generatedValue =  resolver.withCyclePrevention(pattern) { it.generate(parameterName, pattern) }
+                    val generatedValue =  resolver.withCyclePrevention(pattern) { it.generate("QUERY-PARAMS", parameterName, pattern) }
                     if(generatedValue is JSONArrayValue) {
                         generatedValue.list.map { parameterName to it.toString() }
                     }
@@ -145,13 +145,17 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         } else ""
     }
 
-    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
-        return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
+    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> = returnValue(breadCrumb = "QUERY-PARAM") {
+        attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
             val queryParams: Map<String, Pattern> = queryPatterns.let {
                 if (additionalProperties != null)
                     it.plus(randomString(5) to additionalProperties)
                 else
                     it
+            }
+            val patternMap = queryParams.mapValues {
+                if(it.value is QueryParameterScalarPattern) return@mapValues it.value.pattern as Pattern
+                (it.value as QueryParameterArrayPattern).pattern.firstOrNull() ?: EmptyStringPattern
             }
 
             forEachKeyCombinationIn(queryParams, row) { entry ->
@@ -159,10 +163,13 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
                     entry.mapKeys { withoutOptionality(it.key) },
                     row,
                     resolver
-                ).map { it.breadCrumb("QUERY-PARAM") }
-            }
+                )
+            }.plus(
+                patternsWithNoRequiredKeys(patternMap, "mandatory query param not sent")
+            )
         }
     }
+
 
     fun matches(uri: URI, queryParams: Map<String, String>, resolver: Resolver = Resolver()): Result {
         return matches(HttpRequest(path = uri.path, queryParametersMap =  queryParams), resolver)
@@ -257,4 +264,22 @@ fun readFrom(patterns: Map<String, Pattern>, row: Row, resolver: Resolver): Sequ
     }
 
     return sequenceOf(rowAsPattern)
+}
+
+fun patternsWithNoRequiredKeys(
+    params: Map<String, Pattern>,
+    omitMessage: String
+): Sequence<ReturnValue<Map<String, Pattern>>> = sequence {
+    params.forEach { (keyToOmit, _) ->
+        if (keyToOmit.endsWith("?").not()) {
+            yield(
+                HasValue(
+                    params.filterKeys { key -> key != keyToOmit }.mapKeys {
+                        withoutOptionality(it.key)
+                    },
+                    omitMessage
+                ).breadCrumb(keyToOmit)
+            )
+        }
+    }
 }

@@ -24,7 +24,7 @@ class NoSecurityScheme : OpenAPISecurityScheme {
         return httpRequest
     }
 
-    override fun addTo(httpRequest: HttpRequest): HttpRequest {
+    override fun addTo(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
         return httpRequest
     }
 

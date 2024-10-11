@@ -164,7 +164,9 @@ data class HttpHeadersPattern(
     fun generate(resolver: Resolver): Map<String, String> {
         val headers = pattern.mapValues { (key, pattern) ->
             attempt(breadCrumb = "HEADERS.$key") {
-                toStringLiteral(resolver.withCyclePrevention(pattern) { it.generate(key, pattern) })
+                toStringLiteral(resolver.withCyclePrevention(pattern) {
+                    it.generate("HEADERS", key, pattern)
+                })
             }
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
         if (contentType.isNullOrBlank()) return headers
@@ -212,9 +214,12 @@ data class HttpHeadersPattern(
         }
     }
 
-    fun negativeBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
-        return allOrNothingCombinationIn(pattern, row, null, null) { pattern ->
-            NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver).map { it.breadCrumb("HEADER") }
+    fun negativeBasedOn(
+        row: Row,
+        resolver: Resolver
+    ): Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = "HEADER") {
+        allOrNothingCombinationIn(pattern, row, null, null) { pattern ->
+            NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
         }.map { patternMapR ->
             patternMapR.ifValue { patternMap ->
                 HttpHeadersPattern(
@@ -222,8 +227,17 @@ data class HttpHeadersPattern(
                     contentType = contentType
                 )
             }
-        }
+        }.plus(patternsWithNoRequiredHeaders(pattern))
     }
+
+    private fun patternsWithNoRequiredHeaders(
+        patternMap: Map<String, Pattern>
+    ): Sequence<ReturnValue<HttpHeadersPattern>> =
+        patternsWithNoRequiredKeys(patternMap, "mandatory header not sent").map {
+            it.ifValue { pattern ->
+                HttpHeadersPattern(pattern, contentType = contentType)
+            }
+        }
 
     fun newBasedOn(resolver: Resolver): Sequence<HttpHeadersPattern> =
         allOrNothingCombinationIn<Pattern>(
@@ -302,7 +316,7 @@ data class HttpHeadersPattern(
         }
     }
 
-    fun fillInTheBlanks(headers: Map<String, String>, dictionary: Dictionary, resolver: Resolver): ReturnValue<Map<String, String>> {
+    fun fillInTheBlanks(headers: Map<String, String>, resolver: Resolver): ReturnValue<Map<String, String>> {
         val headersToConsider = ancestorHeaders?.let {
             headers.filterKeys { key -> key in it || "$key?" in it }
         } ?: headers
@@ -310,14 +324,16 @@ data class HttpHeadersPattern(
         val map: Map<String, ReturnValue<String>> = headersToConsider.mapValues { (headerName, headerValue) ->
             val headerPattern = pattern.get(headerName) ?: pattern.get("$headerName?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
 
-            if(dictionary.contains(headerName)) {
-                val dictionaryValue = dictionary.lookup(headerName)
-                val matchResult = headerPattern.matches(dictionaryValue, resolver)
+            if(isPatternToken(headerValue)) {
+                val generatedValue = resolver.generate("HEADERS", headerName, resolver.getPattern(headerValue))
+                val matchResult = headerPattern.matches(generatedValue, resolver)
 
-                if(matchResult is Result.Failure)
-                    HasFailure(matchResult)
+                val returnValue: ReturnValue<String> = if(matchResult is Result.Failure)
+                    HasFailure(matchResult, "Could not generate value for key $headerName")
                 else
-                    HasValue(dictionaryValue!!.toStringLiteral())
+                    HasValue(generatedValue.toStringLiteral())
+
+                returnValue
             } else {
                 exception { headerPattern.parse(headerValue, resolver) }?.let { return@mapValues HasException(it) }
 
@@ -328,13 +344,7 @@ data class HttpHeadersPattern(
         val headersInPartialR = map.mapFold()
 
         val missingHeadersR = pattern.filterKeys { !it.endsWith("?") && it !in headers }.mapValues { (headerName, headerPattern) ->
-            val generatedValue = dictionary.lookup(headerName)?.let { dictionaryValue ->
-                val matchResult = headerPattern.matches(dictionaryValue, resolver)
-                if(matchResult is Result.Failure)
-                    HasFailure(matchResult)
-                else
-                    HasValue(dictionaryValue.toStringLiteral())
-            } ?: HasValue(headerPattern.generate(resolver).toStringLiteral())
+            val generatedValue = HasValue(resolver.generate("HEADERS", headerName, headerPattern).toStringLiteral())
 
             generatedValue.breadCrumb(headerName)
         }.mapFold()

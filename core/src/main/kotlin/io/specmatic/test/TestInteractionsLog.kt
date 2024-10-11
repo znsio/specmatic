@@ -16,6 +16,13 @@ object TestInteractionsLog {
         stubHttpLogMessages.add(httpLogMessage)
     }
 
+    fun HttpLogMessage.combineLog(): String {
+        val request = this.request.toLogString()
+        val response = this.response?.toLogString() ?: "No response"
+
+        return "$request\n$response"
+    }
+
     fun HttpLogMessage.duration() = (responseTime?.toEpochMillis() ?: requestTime.toEpochMillis()) - requestTime.toEpochMillis()
 
     fun HttpLogMessage.displayName() = scenario?.testDescription()

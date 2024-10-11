@@ -94,7 +94,7 @@ data class HttpPathPattern(
                     val key = urlPathPattern.key
                     resolver.withCyclePrevention(urlPathPattern.pattern) { cyclePreventedResolver ->
                         if (key != null)
-                            cyclePreventedResolver.generate(key, urlPathPattern.pattern)
+                            cyclePreventedResolver.generate("PATH-PARAMS", key, urlPathPattern.pattern)
                         else urlPathPattern.pattern.generate(cyclePreventedResolver)
                     }
                 }
@@ -187,10 +187,15 @@ data class HttpPathPattern(
         return Sequence {
             patterns.map { it to it.negativeBasedOn(row, resolver) }.toMap()
                 .flatMap { (pathSegmentPattern, negativePatterns) ->
-                    negativePatterns.map { negativePattern ->
-                        val newPatterns: List<URLPathSegmentPattern> =
-                            patterns.map { (if (it == pathSegmentPattern) negativePattern.value else it) } as List<URLPathSegmentPattern>
-                        HasValue(newPatterns)
+                    negativePatterns.map { negativePatternR ->
+                        negativePatternR.ifValue { negativePattern ->
+                            patterns.map {
+                                if (it == pathSegmentPattern)
+                                    negativePattern
+                                else
+                                    it
+                            }.filterIsInstance<URLPathSegmentPattern>()
+                        }
                     }
                 }.iterator()
         }

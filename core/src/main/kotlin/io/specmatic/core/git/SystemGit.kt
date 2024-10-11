@@ -102,7 +102,7 @@ class SystemGit(override val workingDirectory: String = ".", private val prefix:
         return (committedLocalChanges + uncommittedChanges).distinct()
     }
 
-    override fun getFileInTheBaseBranch(fileName: String, currentBranch: String, baseBranch: String): File? {
+    override fun getFileInBranch(fileName: String, currentBranch: String, baseBranch: String): File? {
         try {
             if(baseBranch != currentBranch) checkout(baseBranch)
 

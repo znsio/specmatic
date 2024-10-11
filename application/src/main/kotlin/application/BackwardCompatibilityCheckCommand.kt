@@ -11,7 +11,6 @@ import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger
 import io.specmatic.core.testBackwardCompatibility
-import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.stub.isOpenAPI
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
@@ -160,7 +159,7 @@ class BackwardCompatibilityCheckCommand(
                     // newer => the file with changes on the branch
                     val (newer, unusedExamples) = OpenApiSpecification.fromFile(specFilePath).toFeature().loadExternalisedExamplesAndListUnloadableExamples()
 
-                    val olderFile = gitCommand.getFileInTheBaseBranch(
+                    val olderFile = gitCommand.getFileInBranch(
                         specFilePath,
                         treeishWithChanges,
                         gitCommand.defaultBranch()

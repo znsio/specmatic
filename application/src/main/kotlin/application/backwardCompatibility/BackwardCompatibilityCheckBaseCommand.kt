@@ -158,7 +158,7 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
                     val newer = getFeatureFromSpecPath(specFilePath)
                     val unusedExamples = getUnusedExamples(newer)
 
-                    val olderFile = gitCommand.getFileInTheBaseBranch(
+                    val olderFile = gitCommand.getFileInBranch(
                         specFilePath,
                         treeishWithChanges,
                         baseBranch

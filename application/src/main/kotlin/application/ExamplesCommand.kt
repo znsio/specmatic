@@ -2,14 +2,15 @@ package application
 
 import io.specmatic.core.Result
 import io.specmatic.core.Results
+import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.loadExternalDictionary
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingleExample
 import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.ScenarioStub
@@ -53,7 +54,7 @@ class ExamplesCommand : Callable<Int> {
     var verbose = false
 
     @Option(names = ["--dictionary"], description = ["External Dictionary File Path, defaults to dictionary.json"])
-    var dictFile: File? = null
+    var dictionaryFile: File? = null
 
     override fun call(): Int {
         if (contractFile == null) {
@@ -68,12 +69,14 @@ class ExamplesCommand : Callable<Int> {
         configureLogger(this.verbose)
 
         try {
-            val externalDictionary = loadExternalDictionary(dictFile, contractFile)
+            dictionaryFile?.also {
+                System.setProperty(SPECMATIC_STUB_DICTIONARY, it.path)
+            }
+
             ExamplesInteractiveServer.generate(
                 contractFile!!,
                 ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName),
                 extensive,
-                externalDictionary
             )
         } catch (e: Throwable) {
             logger.log(e)
@@ -169,15 +172,11 @@ class ExamplesCommand : Callable<Int> {
 
                 val hasFailures = inlineExampleValidationResults.any { it.value is Result.Failure } || externalExampleValidationResults.any { it.value is Result.Failure }
 
-                if(hasFailures) {
-                    println()
-                    logger.log("=============== Validation Results ===============")
+                printValidationResult(inlineExampleValidationResults, "Inline example")
+                printValidationResult(externalExampleValidationResults, "Example file")
 
-                    printValidationResult(inlineExampleValidationResults, "Inline example")
-                    printValidationResult(externalExampleValidationResults, "Example file")
-
+                if(hasFailures)
                     return 1
-                }
             }
 
             return 0
@@ -187,17 +186,27 @@ class ExamplesCommand : Callable<Int> {
             if(validationResults.isEmpty())
                 return
 
-            validationResults.forEach { (exampleFileName, result) ->
-                if (!result.isSuccess()) {
-                    logger.log(System.lineSeparator() + "$tag $exampleFileName has the following validation error(s):")
-                    logger.log(result.reportString())
+            val hasFailures = validationResults.any { it.value is Result.Failure }
+
+            val titleTag = tag.split(" ").joinToString(" ") { if(it.isBlank()) it else it.capitalizeFirstChar() }
+
+            if(hasFailures) {
+                println()
+                logger.log("=============== $titleTag Validation Results ===============")
+
+                validationResults.forEach { (exampleFileName, result) ->
+                    if (!result.isSuccess()) {
+                        logger.log(System.lineSeparator() + "$tag $exampleFileName has the following validation error(s):")
+                        logger.log(result.reportString())
+                    }
                 }
             }
 
             println()
-            logger.log("=============== Validation Summary ===============")
+            val summaryTitle = "=============== $titleTag Validation Summary ==============="
+            logger.log(summaryTitle)
             logger.log(Results(validationResults.values.toList()).summary())
-            logger.log("""==================================================""")
+            logger.log("=".repeat(summaryTitle.length))
         }
     }
 
@@ -230,6 +239,9 @@ class ExamplesCommand : Callable<Int> {
         @Option(names = ["--dictionary"], description = ["External Dictionary File Path"])
         var dictFile: File? = null
 
+        @Option(names = ["--testBaseURL"], description = ["The baseURL of system to test"], required = false)
+        var testBaseURL: String? = null
+
         var server: ExamplesInteractiveServer? = null
 
         override fun call() {
@@ -239,7 +251,7 @@ class ExamplesCommand : Callable<Int> {
                 if (contractFile != null && !contractFile!!.exists())
                     exitWithMessage("Could not find file ${contractFile!!.path}")
 
-                server = ExamplesInteractiveServer("0.0.0.0", 9001, contractFile, filterName, filterNotName, dictFile)
+                server = ExamplesInteractiveServer("0.0.0.0", 9001, testBaseURL, contractFile, filterName, filterNotName, dictFile)
                 addShutdownHook()
 
                 consoleLog(StringLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop."))

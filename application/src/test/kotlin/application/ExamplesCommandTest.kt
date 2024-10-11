@@ -234,7 +234,7 @@ paths:
         println(output)
 
         assertThat(returnValue).isEqualTo(0)
-        assertThat(output.lines().last()).matches("Validating.*example.json")
+        assertThat(output).contains("are valid")
     }
 
     @Test

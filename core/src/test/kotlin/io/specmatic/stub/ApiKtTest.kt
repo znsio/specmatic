@@ -341,7 +341,10 @@ Feature: Math API
         And response-body (number)
 """.trim())
 
-        val stubInfo = loadContractStubs(listOf(Pair("math.$CONTRACT_EXTENSION", feature)), listOf(Pair("sample.json", ScenarioStub(HttpRequest(method = "POST", path = "/square", body = StringValue("10")), HttpResponse(status = 200, body = "20")))))
+        val stubInfo = loadContractStubs(listOf(Pair("math.$CONTRACT_EXTENSION", feature)), listOf(Pair("sample.json", ScenarioStub(
+            HttpRequest(method = "POST", path = "/square", body = StringValue("10")),
+            HttpResponse(status = 200, body = "20")
+        ))))
         assertThat(stubInfo.single().first).isEqualTo(feature)
 
         val stub = stubInfo.single().second.single()
@@ -364,7 +367,10 @@ Feature: Math API
 """.trim())
 
         val (stdout, stubInfo) =  captureStandardOutput {
-            loadContractStubs(listOf(Pair("math.$CONTRACT_EXTENSION", feature)), listOf(Pair("sample.json", ScenarioStub(HttpRequest(method = "POST", path = "/square", body = StringValue("10")), HttpResponse(status = 200, body = "not a number")))))
+            loadContractStubs(listOf(Pair("math.$CONTRACT_EXTENSION", feature)), listOf(Pair("sample.json", ScenarioStub(
+                HttpRequest(method = "POST", path = "/square", body = StringValue("10")),
+                HttpResponse(status = 200, body = "not a number")
+            ))))
         }
 
         assertThat(stubInfo.single().first).isEqualTo(feature)
@@ -405,7 +411,10 @@ Feature: Cube API
 """.trim())
 
         val features = listOf(Pair("square.$CONTRACT_EXTENSION", squareFeature), Pair("cube.$CONTRACT_EXTENSION", cubeFeature))
-        val rawStubInfo = listOf(Pair("sample.json", ScenarioStub(HttpRequest(method = "POST", path = "/square", body = StringValue("10")), HttpResponse(status = 200, body = "20"))))
+        val rawStubInfo = listOf(Pair("sample.json", ScenarioStub(
+            HttpRequest(method = "POST", path = "/square", body = StringValue("10")),
+            HttpResponse(status = 200, body = "20")
+        )))
         val stubInfo = loadContractStubs(features, rawStubInfo)
         assertThat(stubInfo.map { it.first }).contains(squareFeature)
         assertThat(stubInfo.map { it.first }).contains(cubeFeature)
@@ -432,7 +441,10 @@ Feature: Math API
         And response-body (number)
 """.trim())
 
-        val (output, stubInfo) = captureStandardOutput { loadContractStubs(listOf(Pair("math.$CONTRACT_EXTENSION", feature)), listOf(Pair("sample.json", ScenarioStub(HttpRequest(method = "POST", path = "/square", body = StringValue("""{"number": 10, "unexpected": "data"}""")), HttpResponse(status = 200, body = "20"))))) }
+        val (output, stubInfo) = captureStandardOutput { loadContractStubs(listOf(Pair("math.$CONTRACT_EXTENSION", feature)), listOf(Pair("sample.json", ScenarioStub(
+            HttpRequest(method = "POST", path = "/square", body = StringValue("""{"number": 10, "unexpected": "data"}""")),
+            HttpResponse(status = 200, body = "20")
+        )))) }
         assertThat(stubInfo.single().first).isEqualTo(feature)
         assertThat(stubInfo.single().second).isEmpty()
         assertThat(output).contains("""sample.json didn't match math.$CONTRACT_EXTENSION
@@ -456,7 +468,10 @@ Feature: Math API
         | number | (number) |
 """.trim())
 
-        val (output, stubInfo) = captureStandardOutput {  loadContractStubs(listOf(Pair("math.$CONTRACT_EXTENSION", feature)), listOf(Pair("sample.json", ScenarioStub(HttpRequest(method = "POST", path = "/square", body = StringValue("""10""")), HttpResponse(status = 200, body = """{"number": 10, "unexpected": "data"}"""))))) }
+        val (output, stubInfo) = captureStandardOutput {  loadContractStubs(listOf(Pair("math.$CONTRACT_EXTENSION", feature)), listOf(Pair("sample.json", ScenarioStub(
+            HttpRequest(method = "POST", path = "/square", body = StringValue("""10""")),
+            HttpResponse(status = 200, body = """{"number": 10, "unexpected": "data"}""")
+        )))) }
         assertThat(stubInfo.single().first).isEqualTo(feature)
         assertThat(stubInfo.single().second).isEmpty()
 

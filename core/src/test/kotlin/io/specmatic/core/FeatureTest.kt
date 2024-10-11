@@ -6,16 +6,12 @@ import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
-import io.specmatic.osAgnosticPath
 import io.specmatic.stub.captureStandardOutput
-import io.specmatic.stub.createStub
 import io.specmatic.stub.createStubFromContracts
 import io.specmatic.test.ScenarioTestGenerationException
 import io.specmatic.test.ScenarioTestGenerationFailure
 import io.specmatic.test.TestExecutor
 import io.specmatic.trimmedLinesList
-import org.assertj.core.api.AbstractObjectAssert
-import org.assertj.core.api.AbstractThrowableAssert
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.json.JSONObject
@@ -24,6 +20,7 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
+import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -1427,7 +1424,7 @@ paths:
             contract.enableGenerativeTesting().generateContractTestScenarios(emptyList()).toList()
                 .map { it.second.value }
         val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve") }
-        assertThat(negativeTestScenarios.count()).isEqualTo(10)
+        assertThat(negativeTestScenarios.count()).isEqualTo(12)
     }
 
     @Test
@@ -2470,6 +2467,92 @@ paths:
             assertThat(responseBody.findFirstChildByPath("type")?.toStringLiteral()).isEqualTo("manager")
             assertThat(responseBody.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo("Justin")
         }
+    }
+
+    @Test
+    fun `shoudl be able to create a contract test based on an example`(@TempDir tempDir: File) {
+        val feature = OpenApiSpecification.fromYAML(
+            """
+openapi: 3.0.0
+info:
+  title: Sample Product API
+  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Local
+paths:
+  /products:
+    post:
+      summary: Add Product
+      description: Add Product
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Returns Product With Id
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: integer
+""".trimIndent(), ""
+        ).toFeature()
+
+        val exampleFile = tempDir.resolve("example.json")
+        exampleFile.writeText(
+            """
+            {
+              "http-request": {
+                "method": "POST",
+                "path": "/products",
+                "body": {
+                  "name": "James"
+                },
+                "headers": {
+                  "Content-Type": "application/json"
+                }
+              },
+              "http-response": {
+                "status": 200,
+                "body": {
+                  "id": 10
+                },
+                "headers": {
+                  "Content-Type": "application/json"
+                }
+              }
+            }
+            """.trimIndent()
+        )
+
+        val contractTest = feature.createContractTestFromExampleFile(exampleFile.path).value
+
+        val results = contractTest.runTest(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonRequestBody = request.body as JSONObjectValue
+                assertThat(jsonRequestBody.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo("James")
+                return HttpResponse.ok(parsedJSONObject("""{"id": 10}""")).also {
+                    println(request.toLogString())
+                    println()
+                    println(it.toLogString())
+                }
+            }
+        }).first
+
+        assertThat(results.isSuccess()).isTrue()
     }
 
     companion object {

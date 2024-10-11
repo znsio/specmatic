@@ -233,20 +233,12 @@ data class HttpHeadersPattern(
     private fun patternsWithNoRequiredHeaders(
         patternMap: Map<String, Pattern>
     ): Sequence<ReturnValue<HttpHeadersPattern>> = sequence {
-        patternMap.forEach { (keyToOmit, _) ->
-            if(keyToOmit.endsWith("?").not()) {
-                yield(
-                    HasValue(
-                        HttpHeadersPattern(
-                            patternMap.filterKeys {
-                                key -> key != keyToOmit
-                            }.mapKeys { withoutOptionality(it.key) },
-                            contentType = contentType
-                        ),
-                        "mandatory header not sent"
-                    ).breadCrumb(keyToOmit)
-                )
-            }
+        patternsWithNoRequiredKeys(patternMap, "mandatory header not sent").forEach {
+            yield(
+                it.ifValue { pattern ->
+                    HttpHeadersPattern(pattern, contentType = contentType)
+                }
+            )
         }
     }
 

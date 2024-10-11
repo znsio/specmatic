@@ -8914,6 +8914,69 @@ paths:
             assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Required-Header mandatory header not sent]")
             assertThat(tests.last().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Another-Required-Header mandatory header not sent]")
         }
+
+        @Test
+        fun `should generate the negative scenarios where the mandatory headers are missing even if example is present`() {
+            val spec = """
+                ---
+                openapi: "3.0.1"
+                info:
+                  title: "Person API"
+                  version: "1"
+                paths:
+                  /persons:
+                    get:
+                      parameters:
+                        - in: header
+                          name: X-Required-Header
+                          schema:
+                            type: string
+                          required: true
+                        - in: header
+                          name: X-Optional-Header
+                          schema:
+                            type: string
+                          required: false
+                          examples:
+                            EXAMPLE:  
+                              value: "optional-value" 
+                        - in: header
+                          name: X-Another-Required-Header
+                          schema:
+                            type: string
+                          required: true
+                          examples:
+                            EXAMPLE: 
+                              value: "another-required-value"
+                      responses:
+                        200:
+                          content:
+                            text/plain:
+                              schema:
+                                type: "string"
+                        400:
+                          content:
+                            text/plain:
+                              schema:
+                                type: "string"
+                              examples:
+                                EXAMPLE:
+                                  value: "This is an error response"
+            """.trimIndent()
+            val tests =
+                OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+            assertThat(tests.size).isEqualTo(2)
+            val firstScenarioHeaders = tests.first().second.value.httpRequestPattern.headersPattern.pattern
+            val secondScenarioHeaders = tests.last().second.value.httpRequestPattern.headersPattern.pattern
+            assertThat(firstScenarioHeaders.keys.toList())
+                .doesNotContain("X-Required-Header")
+                .contains("X-Another-Required-Header")
+            assertThat(secondScenarioHeaders.keys.toList())
+                .contains("X-Required-Header")
+                .doesNotContain("X-Another-Required-Header")
+            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Required-Header mandatory header not sent]")
+            assertThat(tests.last().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Another-Required-Header mandatory header not sent]")
+        }
     }
 
     @Test

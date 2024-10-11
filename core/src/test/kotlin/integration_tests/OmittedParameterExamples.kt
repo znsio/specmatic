@@ -306,7 +306,7 @@ components:
     }
 
     @Test
-    fun `mandatory header without example having a 400 response should be generated`() {
+    fun `mandatory header without example having a 400 response should NOT be generated`() {
         val productSpec = OpenApiSpecification.fromYAML("""
 openapi: 3.0.3
 info:
@@ -377,7 +377,11 @@ components:
             var response: HttpResponse = HttpResponse.OK
 
             override fun execute(request: HttpRequest): HttpResponse {
-                assertThat(request.headers.keys).contains("productCategory")
+                if(response.status == 400) {
+                    assertThat(request.headers.keys).doesNotContain("productCategory")
+                } else {
+                    assertThat(request.headers.keys).contains("productCategory")
+                }
                 return response
             }
 
@@ -398,7 +402,7 @@ components:
     }
 
     @Test
-    fun `mandatory header without example having a 500 response should be generated`() {
+    fun `mandatory header without example having a 500 response should NOT be generated`() {
         val productSpec = OpenApiSpecification.fromYAML("""
 openapi: 3.0.3
 info:
@@ -469,7 +473,11 @@ components:
             var response: HttpResponse = HttpResponse.OK
 
             override fun execute(request: HttpRequest): HttpResponse {
-                assertThat(request.headers.keys).contains("productCategory")
+                if(response.status == 500) {
+                    assertThat(request.headers.keys).doesNotContain("productCategory")
+                } else {
+                    assertThat(request.headers.keys).contains("productCategory")
+                }
                 return response
             }
 
@@ -561,7 +569,11 @@ components:
             var response: HttpResponse = HttpResponse.OK
 
             override fun execute(request: HttpRequest): HttpResponse {
-                assertThat(request.queryParams.keys).contains("productCategory")
+                if(response.status == 400) {
+                    assertThat(request.queryParams.keys).doesNotContain("productCategory")
+                } else {
+                    assertThat(request.queryParams.keys).contains("productCategory")
+                }
                 return response
             }
 
@@ -653,7 +665,11 @@ components:
             var response: HttpResponse = HttpResponse.OK
 
             override fun execute(request: HttpRequest): HttpResponse {
-                assertThat(request.queryParams.keys).contains("productCategory")
+                if(response.status == 500) {
+                    assertThat(request.queryParams.keys).doesNotContain("productCategory")
+                } else {
+                    assertThat(request.queryParams.keys).contains("productCategory")
+                }
                 return response
             }
 

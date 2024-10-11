@@ -296,9 +296,12 @@ data class HttpHeadersPattern(
         return matches(this.pattern, row, resolver, "header")
     }
 
-    fun readFrom(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
+    fun readFrom(
+        row: Row,
+        resolver: Resolver,
+    ): Sequence<ReturnValue<HttpHeadersPattern>> {
         return attempt(breadCrumb = HEADERS_BREADCRUMB) {
-            readFrom(this.pattern, row, resolver)
+            readFrom(this.pattern, row, resolver, resolver.isNegative)
         }.map {
             HasValue(HttpHeadersPattern(it, contentType = contentType))
         }

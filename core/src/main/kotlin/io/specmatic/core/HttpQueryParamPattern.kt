@@ -282,7 +282,10 @@ fun readFrom(
             )
             return@fold acc.plus(withoutOptionality to patternValue.exactMatchElseType())
         }
-        if (isOptional(key) || generateMandatoryEntryIfMissing.not()) return@fold acc
+
+        if (isOptional(key) || generateMandatoryEntryIfMissing.not())
+            return@fold acc
+
         acc.plus(withoutOptionality to pattern.generate(resolver).exactMatchElseType())
     }
 

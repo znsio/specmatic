@@ -1,7 +1,7 @@
 {
   "http-request": {
     "method": "GET",
-    "path": "/person/789"
+    "path": "/person/external_id"
   },
   "http-response": {
     "status": 200,

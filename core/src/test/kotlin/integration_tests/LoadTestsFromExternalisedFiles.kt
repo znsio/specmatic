@@ -303,8 +303,8 @@ class LoadTestsFromExternalisedFiles {
             }
         })
 
-        assertThat(idsSeen).contains("789")
-        assertThat(idsSeen).doesNotContain("1000")
+        assertThat(idsSeen).contains("external_id")
+        assertThat(idsSeen).doesNotContain("inline_id")
     }
 
     @Test

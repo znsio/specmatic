@@ -14,14 +14,14 @@ paths:
           required: true
           description: Unique identifier of the person
           schema:
-            type: integer
+            type: string
           examples:
             johnDoe:
               summary: Example ID for John Doe
               value: 123
             get_person:
               summary: Example ID for Unknown
-              value: 1000
+              value: inline_id
       responses:
         '200':
           description: Successful response

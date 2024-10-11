@@ -165,27 +165,11 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
                     resolver
                 )
             }.plus(
-                patternsWithNoRequiredQueryParams(patternMap)
+                patternsWithNoRequiredKeys(patternMap, "mandatory query param not sent")
             )
         }
     }
 
-    private fun patternsWithNoRequiredQueryParams(
-        params: Map<String, Pattern>
-    ): Sequence<ReturnValue<Map<String, Pattern>>> = sequence {
-        params.forEach { (keyToOmit, _) ->
-            if (keyToOmit.endsWith("?").not()) {
-                yield(
-                    HasValue(
-                        params.filterKeys { key -> key != keyToOmit }.mapKeys {
-                            withoutOptionality(it.key)
-                        },
-                        "mandatory query param not sent"
-                    ).breadCrumb(keyToOmit)
-                )
-            }
-        }
-    }
 
     fun matches(uri: URI, queryParams: Map<String, String>, resolver: Resolver = Resolver()): Result {
         return matches(HttpRequest(path = uri.path, queryParametersMap =  queryParams), resolver)
@@ -280,4 +264,22 @@ fun readFrom(patterns: Map<String, Pattern>, row: Row, resolver: Resolver): Sequ
     }
 
     return sequenceOf(rowAsPattern)
+}
+
+fun patternsWithNoRequiredKeys(
+    params: Map<String, Pattern>,
+    omitMessage: String
+): Sequence<ReturnValue<Map<String, Pattern>>> = sequence {
+    params.forEach { (keyToOmit, _) ->
+        if (keyToOmit.endsWith("?").not()) {
+            yield(
+                HasValue(
+                    params.filterKeys { key -> key != keyToOmit }.mapKeys {
+                        withoutOptionality(it.key)
+                    },
+                    omitMessage
+                ).breadCrumb(keyToOmit)
+            )
+        }
+    }
 }

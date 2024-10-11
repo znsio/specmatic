@@ -263,6 +263,7 @@ internal class HttpPathPatternTest {
         assertThat(newHeaders).containsExactlyInAnyOrder(
             HttpHeadersPattern(mapOf("X-TraceID" to StringPattern())),
             HttpHeadersPattern(mapOf("X-TraceID" to BooleanPattern())),
+            HttpHeadersPattern(mapOf())
         )
     }
 

@@ -1424,7 +1424,7 @@ paths:
             contract.enableGenerativeTesting().generateContractTestScenarios(emptyList()).toList()
                 .map { it.second.value }
         val negativeTestScenarios = scenarios.filter { it.testDescription().contains("-ve") }
-        assertThat(negativeTestScenarios.count()).isEqualTo(10)
+        assertThat(negativeTestScenarios.count()).isEqualTo(12)
     }
 
     @Test

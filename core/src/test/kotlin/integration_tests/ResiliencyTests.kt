@@ -248,7 +248,7 @@ class GenerativeTests {
 
         try {
             val results = runGenerativeTests(feature)
-            assertThat(results.results).hasSize(6)
+            assertThat(results.results).hasSize(7)
         } catch (e: ContractException) {
             println(e.report())
             throw e
@@ -703,7 +703,7 @@ class GenerativeTests {
 
         try {
             val results = runGenerativeTests(feature)
-            assertThat(results.results).hasSize(8)
+            assertThat(results.results).hasSize(9)
         } catch (e: ContractException) {
             println(e.report())
             throw e
@@ -2023,7 +2023,7 @@ class GenerativeTests {
 
         assertThat(testsSeen).doesNotContain("-ve" to "BAD_REQUEST")
         assertThat(testsSeen).doesNotContain("-ve" to "SERVER_ERROR")
-        assertThat(results.testCount).isEqualTo(6)
+        assertThat(results.testCount).isEqualTo(7)
     }
 
     @Test

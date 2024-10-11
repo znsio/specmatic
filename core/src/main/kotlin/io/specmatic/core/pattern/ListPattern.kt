@@ -129,9 +129,10 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
     override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
         return pattern.negativeBasedOn(row, resolver, config)
-            .filterIsInstance<HasValue<Pattern>>()
             .filter {
-                it.value !is NullPattern
+                it.withDefault(true) {
+                    it !is NullPattern
+                }
             }
             .flatMap { negativePatternValue ->
                 listOf(

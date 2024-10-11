@@ -7,6 +7,8 @@ import io.specmatic.core.log.*
 import picocli.CommandLine.Option
 import java.io.File
 import java.util.concurrent.Callable
+import kotlin.Result.Companion.success
+import kotlin.Result.Companion.failure
 
 abstract class ExamplesBase<Feature, Scenario>(protected open val featureStrategy: ExamplesFeatureStrategy<Feature, Scenario>) : Callable<Int> {
     @Option(names = ["--filter-name"], description = ["Use only APIs with this value in their name, Case sensitive"], defaultValue = "\${env:SPECMATIC_FILTER_NAME}")
@@ -24,10 +26,11 @@ abstract class ExamplesBase<Feature, Scenario>(protected open val featureStrateg
     override fun call(): Int {
         configureLogger(verbose)
 
-        return contractFile?.let {
-            ensureValidContractFile(it).first?.let { contract ->
-                execute(contract)
-            } ?: 1
+        return contractFile?.let { contract ->
+            ensureValidContractFile(contract).fold(
+                onSuccess = { execute(contract) },
+                onFailure = { 1 }
+            )
         } ?: execute(contractFile)
     }
 
@@ -50,30 +53,24 @@ abstract class ExamplesBase<Feature, Scenario>(protected open val featureStrateg
         return getFilteredScenarios(scenarios, scenarioFilter)
     }
 
-    @Suppress("MemberVisibilityCanBePrivate") // Used By InteractiveServer through ExamplesInteractiveBase
-    fun ensureValidContractFile(contractFile: File): Pair<File?, String?> {
+    private fun ensureValidFile(file: File, validExtensions: Set<String>, fileType: String): Result<File> {
         val errorMessage = when {
-            !contractFile.exists() -> "Contract file does not exist: ${contractFile.absolutePath}"
-            contractFile.extension !in featureStrategy.contractFileExtensions ->
-                "Invalid Contract file ${contractFile.path} - File extension must be one of ${featureStrategy.contractFileExtensions.joinToString()}"
-            else -> return contractFile to null
+            !file.exists() -> "$fileType file does not exist: ${file.absolutePath}"
+            file.extension !in validExtensions -> "Invalid $fileType file ${file.path} - File extension must be one of ${validExtensions.joinToString()}"
+            else -> return success(file)
         }
-
         consoleLog(errorMessage)
-        return null to errorMessage
+        return failure(IllegalArgumentException(errorMessage))
     }
 
     @Suppress("MemberVisibilityCanBePrivate") // Used By InteractiveServer through ExamplesInteractiveBase
-    fun ensureValidExampleFile(exampleFile: File): Pair<File?, String?> {
-        val errorMessage = when {
-            !exampleFile.exists() -> "Example file does not exist: ${exampleFile.absolutePath}"
-            exampleFile.extension !in featureStrategy.exampleFileExtensions ->
-                "Invalid Example file ${exampleFile.path} - File extension must be one of ${featureStrategy.exampleFileExtensions.joinToString()}"
-            else -> return exampleFile to null
-        }
+    fun ensureValidContractFile(contractFile: File): Result<File> {
+        return ensureValidFile(contractFile, featureStrategy.contractFileExtensions, "Contract")
+    }
 
-        consoleLog(errorMessage)
-        return null to errorMessage
+    @Suppress("MemberVisibilityCanBePrivate") // Used By InteractiveServer through ExamplesInteractiveBase
+    fun ensureValidExampleFile(exampleFile: File): Result<File> {
+        return ensureValidFile(exampleFile, featureStrategy.exampleFileExtensions, "Example")
     }
 
     protected fun getExamplesDirectory(contractFile: File): File {

@@ -7,7 +7,7 @@ import io.specmatic.core.log.consoleLog
 import io.specmatic.examples.*
 import picocli.CommandLine.Option
 import java.io.File
-import java.lang.Thread.sleep
+import java.util.concurrent.CountDownLatch
 
 abstract class ExamplesInteractiveBase<Feature, Scenario> (
     override val featureStrategy: ExamplesFeatureStrategy<Feature, Scenario>,
@@ -34,10 +34,13 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
             }
 
             updateDictionaryFile(dictFile)
+
+            val latch = CountDownLatch(1)
             server.start()
-            addShutdownHook(server)
+            addShutdownHook(server, latch)
             consoleLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop.")
-            while (true) sleep(10000)
+            latch.await()
+            return 0
         } catch (e: Throwable) {
             consoleLog("Example Interactive server failed with error: ${e.message}")
             consoleDebug(e)
@@ -96,9 +99,10 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
         return createTableRows(scenarioExamplePair)
     }
 
-    private fun addShutdownHook(server: ExamplesInteractiveServer) {
+    private fun addShutdownHook(server: ExamplesInteractiveServer, latch: CountDownLatch) {
         Runtime.getRuntime().addShutdownHook(Thread {
-            consoleLog("Shutting down examples interactive server...")
+            consoleLog("Shutdown signal received (Ctrl + C).")
+            latch.countDown()
             try {
                 server.close()
                 consoleLog("Server shutdown completed successfully.")

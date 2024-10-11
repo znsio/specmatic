@@ -28,9 +28,7 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
         }
 
         try {
-            exampleFile?.let { exFile ->
-                return validateSingleExampleFile(exFile, contract)
-            }
+            exampleFile?.let { exFile -> return validateSingleExampleFile(exFile, contract) }
 
             val inlineResults = if (validateInline)
                 validateInlineExamples(contract).logValidationResult()
@@ -56,13 +54,16 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
     }
 
     private fun validateSingleExampleFile(exampleFile: File, contractFile: File): Int {
-        ensureValidExampleFile(exampleFile).first?.let { exFile ->
-            val feature = featureStrategy.contractFileToFeature(contractFile)
-            return validateExternalExample(exFile, feature).let {
-                it.logErrors()
-                it.getExitCode()
-            }
-        } ?: return 1
+        return ensureValidExampleFile(exampleFile).fold(
+            onSuccess = {
+                val feature = featureStrategy.contractFileToFeature(contractFile)
+                validateExternalExample(exampleFile, feature).let {
+                    it.logErrors()
+                    it.getExitCode()
+                }
+            },
+            onFailure = { return 1 }
+        )
     }
 
     private fun validateExternalExample(exampleFile: File, feature: Feature): ExampleValidationResult {

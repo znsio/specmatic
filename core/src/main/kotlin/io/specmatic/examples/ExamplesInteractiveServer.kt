@@ -18,6 +18,8 @@ import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHeal
 import io.specmatic.templates.HtmlTemplateConfiguration
 import java.io.File
 import java.io.FileNotFoundException
+import kotlin.Result.Companion.failure
+import kotlin.Result.Companion.success
 
 class ExamplesInteractiveServer(provider: InteractiveServerProvider) : InteractiveServerProvider by provider {
     private var cachedContractFile: File? = null
@@ -80,7 +82,7 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
         return request?.hostPort?.takeIf { it.isNotEmpty() } ?: "localhost:$serverPort"
     }
 
-    private fun getContractFileOrNull(request: ExamplePageRequest? = null): Pair<File?, String?> {
+    private fun getContractFileOrNull(request: ExamplePageRequest? = null): Result<File> {
         val contractFile = contractFile?.also {
             logContractFileUsage("command line", it)
         } ?: request?.contractFile?.takeIf { it.exists() }?.also {
@@ -89,7 +91,13 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
             logContractFileUsage("cached HTTP request", it)
         }
 
-        return contractFile?.let { it to null } ?: (null to "Contract file not provided, Please provide one via HTTP request")
+        return contractFile?.let {
+            success(it)
+        } ?: run {
+            val errorMessage = "Contract file not provided, Please provide one via HTTP request or command line"
+            consoleLog(errorMessage)
+            failure(IllegalArgumentException(errorMessage))
+        }
     }
 
     private fun logContractFileUsage(source: String, contract: File) {
@@ -146,46 +154,36 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
         respondWithError(statusCode, errorMessage ?: "Something went wrong")
     }
 
-    private suspend fun PipelineContext<Unit, ApplicationCall>.getValidatedContractFileOrNull(request: ExamplePageRequest? = null): File? {
-        val (contractFile, nullErrorMessage) = getContractFileOrNull(request)
-        nullErrorMessage?.let {
-            consoleLog(nullErrorMessage)
-            call.respondWithError(HttpStatusCode.BadRequest, it)
-            return null
-        }
-
-        requireNotNull(contractFile) { "Contract file should not be null if there's no error message" }
-        val (contract, errorMessage) = ensureValidContractFile(contractFile)
-        errorMessage?.let {
-            call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
-            return null
-        }
-
-        return requireNotNull(contract) { "Contract file should not be null if there's no error message" }
+    private suspend fun PipelineContext<Unit, ApplicationCall>.handleContractFile(request: ExamplePageRequest? = null, block: suspend (File) -> Unit) {
+        getContractFileOrNull(request).fold(
+            onSuccess = { contract ->
+                ensureValidContractFile(contract).fold(
+                    onSuccess = { block(it) },
+                    onFailure = { call.respondWithError(HttpStatusCode.BadRequest, it.message.orEmpty()) }
+                )
+            },
+            onFailure = { call.respondWithError(HttpStatusCode.BadRequest, it.message.orEmpty()) }
+        )
     }
 
-    private suspend fun PipelineContext<Unit, ApplicationCall>.getValidatedExampleOrNull(exampleFile: File): File? {
-        val (validatedExample, errorMessage) = ensureValidExampleFile(exampleFile)
-
-        errorMessage?.let {
-            call.respondWithError(HttpStatusCode.BadRequest, errorMessage)
-            return null
-        }
-
-        return requireNotNull(validatedExample) { "Example file should not be null if there's no error message" }
+    private suspend fun PipelineContext<Unit, ApplicationCall>.handleExampleFile(exampleFile: File, block: suspend (File) -> Unit) {
+        ensureValidExampleFile(exampleFile).fold(
+            onSuccess = { block(it) },
+            onFailure = { call.respondWithError(HttpStatusCode.BadRequest, it.message.orEmpty()) }
+        )
     }
 
     private fun Routing.getHtmlPageRoute() {
         get("/_specmatic/examples") {
-            getValidatedContractFileOrNull()?.let { contract ->
-                val htmlContent = getHtmlContent(contract, getServerHostAndPort())
+            handleContractFile {
+                val htmlContent = getHtmlContent(it, getServerHostAndPort())
                 call.respondText(htmlContent, contentType = ContentType.Text.Html)
             }
         }
 
         post("/_specmatic/examples") {
             val request = call.receive<ExamplePageRequest>()
-            getValidatedContractFileOrNull(request)?.let { contract ->
+            handleContractFile(request) { contract ->
                 val htmlContent = getHtmlContent(contract, getServerHostAndPort(request))
                 call.respondText(htmlContent, contentType = ContentType.Text.Html)
             }
@@ -194,7 +192,7 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
 
     private fun Routing.generateExampleRoute() {
         post("/_specmatic/examples/generate") {
-            getValidatedContractFileOrNull()?.let { contractFile ->
+            handleContractFile { contractFile ->
                 val result = generateExample(call, contractFile)
                 call.respond(HttpStatusCode.OK, ExampleGenerationResponse(result))
             }
@@ -204,8 +202,8 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
     private fun Routing.validateExampleRoute() {
         post("/_specmatic/examples/validate") {
             val request = call.receive<ExampleValidationRequest>()
-            getValidatedContractFileOrNull()?.let { contract ->
-                getValidatedExampleOrNull(request.exampleFile)?.let { example ->
+            handleContractFile { contract ->
+                handleExampleFile(request.exampleFile) { example ->
                     val result = validateExample(contract, example)
                     call.respond(HttpStatusCode.OK, ExampleValidationResponse(result))
                 }
@@ -216,7 +214,7 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
     private fun Routing.getExampleContentRoute() {
         post("/_specmatic/examples/content") {
             val request = call.receive<ExampleContentRequest>()
-            getValidatedExampleOrNull(request.exampleFile)?.let { example ->
+            handleExampleFile(request.exampleFile) { example ->
                 call.respond(HttpStatusCode.OK, mapOf("content" to example.readText()))
             }
         }
@@ -229,8 +227,8 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
             }
 
             val request = call.receive<ExampleTestRequest>()
-            getValidatedContractFileOrNull()?.let { contract ->
-                getValidatedExampleOrNull(request.exampleFile)?.let { example ->
+            handleContractFile { contract ->
+                handleExampleFile(request.exampleFile) { example ->
                     val result = testExample(contract, example, sutBaseUrl)
                     call.respond(HttpStatusCode.OK, ExampleTestResponse(result))
                 }

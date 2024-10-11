@@ -20,9 +20,9 @@ interface InteractiveServerProvider {
 
     fun getTableRows(contractFile: File): List<ExampleTableRow>
 
-    fun ensureValidContractFile(contractFile: File):  Pair<File?, String?>
+    fun ensureValidContractFile(contractFile: File): Result<File>
 
-    fun ensureValidExampleFile(exampleFile: File): Pair<File?, String?>
+    fun ensureValidExampleFile(exampleFile: File): Result<File>
 }
 
 data class ExamplePageRequest (
@@ -36,7 +36,7 @@ data class ExampleGenerationResponse (
 ) {
     constructor(result: ExampleGenerationResult): this(
         exampleFilePath = result.exampleFile?.absolutePath ?: throw Exception("Failed to generate example file"),
-        status = result.status.toString()
+        status = result.status.name
     )
 }
 

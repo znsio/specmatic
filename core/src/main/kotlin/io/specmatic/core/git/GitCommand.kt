@@ -33,7 +33,7 @@ interface GitCommand {
     fun getRemoteUrl(name: String = "origin"): String
     fun checkIgnore(path: String): String
     fun getFilesChangedInCurrentBranch(baseBranch: String): List<String>
-    fun getFileInTheBaseBranch(fileName: String, currentBranch: String, baseBranch: String): File?
+    fun getFileInBranch(fileName: String, currentBranch: String, baseBranch: String): File?
     fun currentRemoteBranch(): String
     fun currentBranch(): String {
         return ""

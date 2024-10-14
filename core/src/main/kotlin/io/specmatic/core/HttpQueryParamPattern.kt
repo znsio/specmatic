@@ -175,9 +175,13 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
         return matches(HttpRequest(path = uri.path, queryParametersMap =  queryParams), resolver)
     }
 
-    fun readFrom(row: Row, resolver: Resolver): Sequence<ReturnValue<Map<String, Pattern>>> {
+    fun readFrom(
+        row: Row,
+        resolver: Resolver,
+        generateMandatoryEntryIfMissing: Boolean
+    ): Sequence<ReturnValue<Map<String, Pattern>>> {
         return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
-            readFrom(queryPatterns, row, resolver).map { HasValue(it) }
+            readFrom(queryPatterns, row, resolver, generateMandatoryEntryIfMissing).map { HasValue(it) }
         }
     }
     fun matches(row: Row, resolver: Resolver): Result {
@@ -247,20 +251,27 @@ fun matches(patterns: Map<String, Pattern>, row: Row, resolver: Resolver, paramT
     return Result.fromResults(results)
 }
 
-fun readFrom(patterns: Map<String, Pattern>, row: Row, resolver: Resolver): Sequence<Map<String, Pattern>> {
+fun readFrom(
+    patterns: Map<String, Pattern>,
+    row: Row,
+    resolver: Resolver,
+    generateMandatoryEntryIfMissing: Boolean
+): Sequence<Map<String, Pattern>> {
     val rowAsPattern = patterns.entries.fold(emptyMap<String, Pattern>()) { acc, (key, pattern) ->
         val withoutOptionality = withoutOptionality(key)
 
         if (row.containsField(withoutOptionality)) {
-            val value = row.getField(withoutOptionality)
-            val patternValue = resolver.parse(pattern, value)
-
-            acc.plus(withoutOptionality to patternValue.exactMatchElseType())
-        } else if (isOptional(key)) {
-            acc
-        } else {
-            acc.plus(withoutOptionality to pattern.generate(resolver).exactMatchElseType())
+            val patternValue = resolver.parse(
+                pattern,
+                row.getField(withoutOptionality)
+            )
+            return@fold acc.plus(withoutOptionality to patternValue.exactMatchElseType())
         }
+
+        if (isOptional(key) || generateMandatoryEntryIfMissing.not())
+            return@fold acc
+
+        acc.plus(withoutOptionality to pattern.generate(resolver).exactMatchElseType())
     }
 
     return sequenceOf(rowAsPattern)

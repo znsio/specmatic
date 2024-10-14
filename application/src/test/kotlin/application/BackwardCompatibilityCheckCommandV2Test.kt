@@ -37,6 +37,18 @@ class BackwardCompatibilityCheckCommandV2Test {
             .start()
             .waitFor()
 
+        ProcessBuilder("git", "config", "--local", "user.name", "developer")
+            .directory(tempDir)
+            .inheritIO()
+            .start()
+            .waitFor()
+
+        ProcessBuilder("git", "config", "--local", "user.email", "developer@example.com")
+            .directory(tempDir)
+            .inheritIO()
+            .start()
+            .waitFor()
+
         ProcessBuilder("git", "remote", "add", "origin", remoteDir.absolutePath)
             .directory(tempDir)
             .inheritIO()

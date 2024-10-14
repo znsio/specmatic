@@ -10,7 +10,6 @@ import io.ktor.util.*
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
 import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.Value
 
 private const val MULTIPART_FORMDATA_BREADCRUMB = "MULTIPART-FORMDATA"
 const val METHOD_BREAD_CRUMB = "METHOD"
@@ -505,7 +504,11 @@ data class HttpRequestPattern(
                         resolver
                     )
                 } else {
-                    httpQueryParamPattern.readFrom(row, resolver)
+                    httpQueryParamPattern.readFrom(
+                        row,
+                        resolver,
+                        shouldGenerateMandatoryEntryIfMissing(resolver, status)
+                    )
                 }.map { pattern ->
                     pattern.ifValue { HttpQueryParamPattern(pattern.value) }
                 }
@@ -519,7 +522,11 @@ data class HttpRequestPattern(
                         resolver
                     )
                 } else {
-                    headersPattern.readFrom(row, resolver)
+                    headersPattern.readFrom(
+                        row,
+                        resolver,
+                        shouldGenerateMandatoryEntryIfMissing(resolver, status)
+                    )
                 }
             }
 
@@ -624,6 +631,12 @@ data class HttpRequestPattern(
 
     private fun isInvalidRequestResponse(status: Int): Boolean {
         return status in invalidRequestStatuses
+    }
+
+    private fun shouldGenerateMandatoryEntryIfMissing(resolver: Resolver, status: Int): Boolean {
+        if(resolver.isNegative) return true
+        val isNon4xxResponseStatus = status.toString().startsWith("4").not()
+        return isNon4xxResponseStatus
     }
 
     fun newBasedOn(resolver: Resolver): Sequence<HttpRequestPattern> {

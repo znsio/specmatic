@@ -193,10 +193,11 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
 
     fun readFrom(
         row: Row,
-        resolver: Resolver
+        resolver: Resolver,
+        generateMandatoryEntryIfMissing: Boolean
     ): Sequence<ReturnValue<Map<String, Pattern>>> {
         return attempt(breadCrumb = QUERY_PARAMS_BREADCRUMB) {
-            readFrom(queryPatterns, row, resolver, resolver.isNegative).map { HasValue(it) }
+            readFrom(queryPatterns, row, resolver, generateMandatoryEntryIfMissing).map { HasValue(it) }
         }
     }
     fun matches(row: Row, resolver: Resolver): Result {

@@ -1,11 +1,16 @@
 package application
 
-import application.BackwardCompatibilityCheckCommand.CompatibilityResult.*
+import application.BackwardCompatibilityCheckCommand.CompatibilityResult.FAILED
+import application.BackwardCompatibilityCheckCommand.CompatibilityResult.PASSED
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.*
+import io.specmatic.core.CONTRACT_EXTENSION
+import io.specmatic.core.CONTRACT_EXTENSIONS
+import io.specmatic.core.Feature
+import io.specmatic.core.WSDL
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger
+import io.specmatic.core.testBackwardCompatibility
 import io.specmatic.stub.isOpenAPI
 import org.springframework.stereotype.Component
 import picocli.CommandLine.Command
@@ -26,7 +31,12 @@ const val TWO_INDENTS = "${ONE_INDENT}${ONE_INDENT}"
 @Command(
     name = "backwardCompatibilityCheck",
     mixinStandardHelpOptions = true,
-    description = ["Checks backward compatibility of a directory across the current HEAD and the main branch"]
+    description = [
+"""
+Checks backward compatibility of a directory across the current HEAD and the main branch.
+DEPRECATED: This command will be removed in the next major release. Use 'backward-compatibility-check' command instead.
+"""
+    ]
 )
 class BackwardCompatibilityCheckCommand(
     private val gitCommand: GitCommand = SystemGit(),
@@ -149,7 +159,11 @@ class BackwardCompatibilityCheckCommand(
                     // newer => the file with changes on the branch
                     val (newer, unusedExamples) = OpenApiSpecification.fromFile(specFilePath).toFeature().loadExternalisedExamplesAndListUnloadableExamples()
 
-                    val olderFile = gitCommand.getFileInTheDefaultBranch(specFilePath, treeishWithChanges)
+                    val olderFile = gitCommand.getFileInBranch(
+                        specFilePath,
+                        treeishWithChanges,
+                        gitCommand.defaultBranch()
+                    )
                     if (olderFile == null) {
                         println("$specFilePath is a new file.$newLine")
                         return@mapIndexed PASSED
@@ -289,7 +303,9 @@ class BackwardCompatibilityCheckCommand(
     }
 
     private fun getOpenAPISpecFilesChangedInCurrentBranch(): Set<String> {
-        return gitCommand.getFilesChangeInCurrentBranch().filter {
+        return gitCommand.getFilesChangedInCurrentBranch(
+            gitCommand.defaultBranch()
+        ).filter {
             File(it).exists() && File(it).isOpenApiSpec()
         }.toSet()
     }

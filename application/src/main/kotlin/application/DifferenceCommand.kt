@@ -11,7 +11,13 @@ import kotlin.system.exitProcess
 
 @Command(name = "similar",
         mixinStandardHelpOptions = true,
-        description = ["Show the difference between two contracts"])
+        description = [
+"""
+Show the difference between two contracts.
+DEPRECATED: This command will be removed in the next major release. Use 'backward-compatibility-check' command instead.
+"""
+        ]
+)
 class DifferenceCommand : Callable<Unit> {
     @Parameters(index = "0", description = ["Older contract file path"])
     lateinit var olderContractFilePath: String

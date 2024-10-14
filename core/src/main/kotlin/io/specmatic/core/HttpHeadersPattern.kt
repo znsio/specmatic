@@ -311,9 +311,10 @@ data class HttpHeadersPattern(
     fun readFrom(
         row: Row,
         resolver: Resolver,
+        generateMandatoryEntryIfMissing: Boolean,
     ): Sequence<ReturnValue<HttpHeadersPattern>> {
         return attempt(breadCrumb = HEADERS_BREADCRUMB) {
-            readFrom(this.pattern, row, resolver, resolver.isNegative)
+            readFrom(this.pattern, row, resolver, generateMandatoryEntryIfMissing)
         }.map {
             HasValue(HttpHeadersPattern(it, contentType = contentType))
         }

@@ -283,13 +283,13 @@ class LoadTestsFromExternalisedFiles {
     @Test
     fun `external example should override the inline example with the same name and should restrict it from running as a test`() {
         val feature = OpenApiSpecification
-            .fromFile("src/test/resources/openapi/has_inline_and_external_examples.yaml")
+            .fromFile("src/test/resources/openapi/has_overriding_external_examples.yaml")
             .toFeature()
             .loadExternalisedExamples()
 
         val idsSeen = mutableListOf<String>()
 
-        feature.executeTests(object : TestExecutor {
+        val result = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val path = request.path ?: fail("Path expected")
                 idsSeen.add(path.split("/").last())
@@ -303,8 +303,11 @@ class LoadTestsFromExternalisedFiles {
             }
         })
 
-        assertThat(idsSeen).contains("external_id")
-        assertThat(idsSeen).doesNotContain("inline_id")
+        assertThat(idsSeen).contains("overriding_external_id")
+        assertThat(idsSeen).doesNotContain("overridden_inline_id")
+
+        assertThat(idsSeen).hasSize(2)
+        assertThat(result.testCount).isEqualTo(2)
     }
 
     @Test

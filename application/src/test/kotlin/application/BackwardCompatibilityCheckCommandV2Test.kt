@@ -3,13 +3,46 @@ package application
 import application.backwardCompatibility.BackwardCompatibilityCheckCommandV2
 import io.mockk.every
 import io.mockk.spyk
+import io.specmatic.core.git.SystemGit
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.io.File
+import java.nio.file.Files
 
 class BackwardCompatibilityCheckCommandV2Test {
+    private lateinit var tempDir: File
+    private lateinit var remoteDir: File
+
+    @BeforeEach
+    fun setup() {
+        tempDir = Files.createTempDirectory("git-local").toFile()
+        tempDir.deleteOnExit()
+
+        remoteDir = Files.createTempDirectory("git-remote").toFile()
+        remoteDir.deleteOnExit()
+
+        ProcessBuilder("git", "init", "--bare")
+            .directory(remoteDir)
+            .inheritIO()
+            .start()
+            .waitFor()
+
+        ProcessBuilder("git", "init")
+            .directory(tempDir)
+            .inheritIO()
+            .start()
+            .waitFor()
+
+        ProcessBuilder("git", "remote", "add", "origin", remoteDir.absolutePath)
+            .directory(tempDir)
+            .inheritIO()
+            .start()
+            .waitFor()
+    }
 
     @Test
     fun `getSpecsReferringTo returns empty set when input is empty`() {
@@ -52,11 +85,85 @@ class BackwardCompatibilityCheckCommandV2Test {
         assertEquals(setOf("file1.yaml", "file2.yaml"), result)
     }
 
+    @Nested
+    inner class SystemGitTestsSpecificToBackwardCompatibility {
+        @Test
+        fun `getFilesChangedInCurrentBranch returns the uncommitted, unstaged changed file`() {
+            File(tempDir, "file1.txt").writeText("File 1 content")
+            ProcessBuilder("git", "add", "file1.txt")
+                .directory(tempDir)
+                .inheritIO()
+                .start()
+                .waitFor()
+            ProcessBuilder("git", "commit", "-m", "Add file1")
+                .directory(tempDir)
+                .inheritIO()
+                .start()
+                .waitFor()
+            // Push the committed changes to the remote repository
+            ProcessBuilder("git", "push", "origin", "main")
+                .directory(tempDir)
+                .inheritIO()
+                .start()
+                .waitFor()
+
+
+            val uncommittedFile = File(tempDir, "file1.txt")
+            uncommittedFile.writeText("File 1 changed content")
+
+            val gitCommand = SystemGit(tempDir.absolutePath)
+            val result = gitCommand.getFilesChangedInCurrentBranch(
+                gitCommand.currentRemoteBranch()
+            )
+
+            assert(result.contains("file1.txt"))
+        }
+
+        @Test
+        fun `getFilesChangedInCurrentBranch returns the uncommitted, staged changed file`() {
+            File(tempDir, "file1.txt").writeText("File 1 content")
+            ProcessBuilder("git", "add", "file1.txt")
+                .directory(tempDir)
+                .inheritIO()
+                .start()
+                .waitFor()
+            ProcessBuilder("git", "commit", "-m", "Add file1")
+                .directory(tempDir)
+                .inheritIO()
+                .start()
+                .waitFor()
+            // Push the committed changes to the remote repository
+            ProcessBuilder("git", "push", "origin", "main")
+                .directory(tempDir)
+                .inheritIO()
+                .start()
+                .waitFor()
+
+
+            val uncommittedFile = File(tempDir, "file1.txt")
+            uncommittedFile.writeText("File 1 changed content")
+            ProcessBuilder("git", "add", "file1.txt")
+                .directory(tempDir)
+                .inheritIO()
+                .start()
+                .waitFor()
+
+            val gitCommand = SystemGit(tempDir.absolutePath)
+            val result = gitCommand.getFilesChangedInCurrentBranch(
+                gitCommand.currentRemoteBranch()
+            )
+
+            assert(result.contains("file1.txt"))
+        }
+    }
+
     @AfterEach
     fun `cleanup files`() {
         listOf("file1.yaml", "file2.yaml", "file3.yaml", "file4.yaml", "schema_file1.yaml", "schema_file2.yaml").forEach {
             File(it).delete()
         }
+        tempDir.deleteRecursively()
+        remoteDir.deleteRecursively()
     }
 
     private fun File.referTo(schemaFileName: String) {

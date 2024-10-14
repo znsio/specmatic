@@ -76,7 +76,9 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
     override fun validateExample(contractFile: File, exampleFile: File): ExampleValidationResult {
         val feature = featureStrategy.contractFileToFeature(contractFile)
         val result = validationStrategy.validateExternalExample(feature, exampleFile)
-        return ExampleValidationResult(exampleFile.absolutePath, result.second, ExampleType.EXTERNAL)
+        return ExampleValidationResult(exampleFile.absolutePath, result.second, ExampleType.EXTERNAL).also {
+            it.logErrors()
+        }
     }
 
     override fun testExample(contractFile: File, exampleFile: File, sutBaseUrl: String): ExampleTestResult {
@@ -115,4 +117,10 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
             }
         })
     }
+
+    data class ValueWithInfo<T>(
+        val value: T,
+        val rawValue: String,
+        val extraInfo: String?
+    )
 }

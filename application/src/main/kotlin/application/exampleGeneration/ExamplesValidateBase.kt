@@ -109,17 +109,6 @@ abstract class ExamplesValidateBase<Feature, Scenario>(
         )
     }
 
-    private fun ExampleValidationResult.logErrors(index: Int? = null) {
-        val prefix = index?.let { "$it. " } ?: ""
-
-        if (this.result.isSuccess()) {
-            return consoleLog("$prefix${this.exampleFile?.name ?: this.exampleName} is valid")
-        }
-
-        consoleLog("\n$prefix${this.exampleFile?.name ?: this.exampleName} has the following validation error(s):")
-        consoleLog(this.result.reportString())
-    }
-
     private fun List<ExampleValidationResult>.logValidationResult(): List<ExampleValidationResult> {
         if (this.isNotEmpty()) {
             require(this.all { it.type == this.first().type }) {

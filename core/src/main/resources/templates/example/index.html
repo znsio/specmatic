@@ -705,13 +705,14 @@
         }
 
         td:nth-child(3) {
+            & > p {
+                white-space: normal;
+            }
             text-align: initial;
             min-width: 10rem;
         }
 
         td:last-child, td:nth-last-child(2) {
-            max-width: 10rem;
-
             & p {
                 white-space: normal;
                 word-break: break-word;
@@ -1352,8 +1353,11 @@
             const colName = td.getAttribute("data-col-name");
             const rawValue = td.getAttribute("data-raw-value");
 
+            const value = td.querySelector("p")?.textContent;
+            const extraInfo = td.querySelector("span")?.textContent;
+
             if (colName && rawValue) {
-                acc[colName] = rawValue;
+                acc[colName] = { rawValue, extraInfo, value };
             }
 
             return acc;
@@ -1500,7 +1504,7 @@
     function createPathSummary(rowValues) {
         const docFragment = document.createDocumentFragment();
 
-        for (const [key, value] of Object.entries(rowValues)) {
+        for (const [key, {value}] of Object.entries(rowValues)) {
             if (!value) continue;
 
             const li = document.createElement("li");
@@ -1597,11 +1601,11 @@
         return dropDownDiv;
     }
 
-    async function generateExample(pathInfo) {
+    async function generateExample(rowValues) {
         try {
             const resp = await fetch(`http://${getHostPort()}/_specmatic/examples/generate`, {
                 method: "POST",
-                body: JSON.stringify(pathInfo),
+                body: JSON.stringify(rowValues),
                 headers: {
                     "Content-Type": "application/json",
                 }

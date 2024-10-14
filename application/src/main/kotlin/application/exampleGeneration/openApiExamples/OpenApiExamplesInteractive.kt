@@ -40,7 +40,7 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
     override suspend fun getScenarioFromRequestOrNull(call: ApplicationCall, feature: Feature): Scenario? {
         val request = call.receive<ExampleGenerationRequest>()
         return feature.scenarios.firstOrNull {
-            it.method == request.method && it.status == request.response && it.path == request.path
+            it.method == request.method.value && it.status == request.response.value && it.path == request.path.rawValue
                     && (request.contentType == null || it.httpRequestPattern.headersPattern.contentType == request.contentType)
         }
     }
@@ -83,9 +83,10 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
     }
 
     data class ExampleGenerationRequest (
-        val method: String,
-        val path: String,
-        val response: Int,
-        val contentType: String? = null
-    )
+        val method: ValueWithInfo<String>,
+        val path: ValueWithInfo<String>,
+        val response: ValueWithInfo<Int>,
+    ) {
+        val contentType = response.extraInfo
+    }
 }

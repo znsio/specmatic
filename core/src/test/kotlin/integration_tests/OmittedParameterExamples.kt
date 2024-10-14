@@ -398,7 +398,7 @@ components:
         })
 
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
-        assertThat(results.successCount).isEqualTo(2)
+        assertThat(results.testCount).isEqualTo(2)
     }
 
     @Test

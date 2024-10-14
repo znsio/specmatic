@@ -21,7 +21,7 @@ paths:
               value: 123
             get_person:
               summary: Example ID for Unknown
-              value: inline_id
+              value: overridden_inline_id
       responses:
         '200':
           description: Successful response

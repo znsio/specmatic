@@ -1,0 +1,13 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/person/external_id"
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": 789,
+      "name": "John External Doe"
+    }
+  }
+}

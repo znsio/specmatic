@@ -19,6 +19,7 @@ import io.ktor.util.reflect.*
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
+import io.specmatic.test.ScenarioAsTest
 import io.swagger.v3.core.util.Yaml
 import io.swagger.v3.oas.models.OpenAPI
 import org.assertj.core.api.Assertions.*
@@ -8809,15 +8810,40 @@ paths:
                               schema:
                                 type: "string"
             """.trimIndent()
+
             val tests =
                 OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+            val firstScenario = tests.first().second.value
+            val secondScenario = tests.last().second.value
+
             assertThat(tests.size).isEqualTo(2)
-            val firstScenarioQueryParams = tests.first().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
-            val secondScenarioQueryParams = tests.last().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
-            assertThat(firstScenarioQueryParams.keys).doesNotContain("id")
-            assertThat(secondScenarioQueryParams.keys).doesNotContain("age")
-            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.id mandatory query param not sent]")
-            assertThat(tests.last().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.age mandatory query param not sent]")
+
+            val firstScenarioAsTest = ScenarioAsTest(
+                scenario = firstScenario,
+                originalScenario = firstScenario,
+                flagsBased = DefaultStrategies
+            )
+            val secondScenarioAsTest = ScenarioAsTest(
+                scenario = secondScenario,
+                originalScenario = secondScenario,
+                flagsBased = DefaultStrategies
+            )
+
+            firstScenarioAsTest.runTest(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.queryParams.keys.toList()).contains("age").doesNotContain("id")
+                    return HttpResponse.OK
+                }
+            })
+            secondScenarioAsTest.runTest(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.queryParams.keys.toList()).contains("id").doesNotContain("age")
+                    return HttpResponse.OK
+                }
+            })
+
+            assertThat(firstScenario.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.id mandatory query param not sent]")
+            assertThat(secondScenario.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.age mandatory query param not sent]")
         }
 
         @Test
@@ -8857,10 +8883,20 @@ paths:
 
             assertThat(tests.size).isEqualTo(1)
 
-            val firstScenarioQueryParams = tests.first().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
+            val firstScenario = tests.first().second.value
+            val firstScenarioAsTest = ScenarioAsTest(
+                scenario = firstScenario,
+                originalScenario = firstScenario,
+                flagsBased = DefaultStrategies
+            )
+            firstScenarioAsTest.runTest(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.queryParams.keys).doesNotContain("ids")
+                    return HttpResponse.OK
+                }
+            })
 
-            assertThat(firstScenarioQueryParams.keys).doesNotContain("ids")
-            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /items -> 4xx [REQUEST.QUERY-PARAM.ids mandatory query param not sent]")
+            assertThat(firstScenario.testDescription()).isEqualTo(" Scenario: GET /items -> 4xx [REQUEST.QUERY-PARAM.ids mandatory query param not sent]")
         }
 
         @Test
@@ -8912,13 +8948,36 @@ paths:
             """.trimIndent()
             val tests =
                 OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+
             assertThat(tests.size).isEqualTo(2)
-            val firstScenarioQueryParams = tests.first().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
-            val secondScenarioQueryParams = tests.last().second.value.httpRequestPattern.httpQueryParamPattern.queryPatterns
-            assertThat(firstScenarioQueryParams.keys.toList()).doesNotContain("id").contains("age")
-            assertThat(secondScenarioQueryParams.keys.toList()).doesNotContain("age").contains("id")
-            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.id mandatory query param not sent] | EX:EXAMPLE")
-            assertThat(tests.last().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.age mandatory query param not sent] | EX:EXAMPLE")
+
+            val firstScenario = tests.first().second.value
+            val secondScenario = tests.last().second.value
+            val firstScenarioAsTest = ScenarioAsTest(
+                scenario = firstScenario,
+                originalScenario = firstScenario,
+                flagsBased = DefaultStrategies
+            )
+            val secondScenarioAsTest = ScenarioAsTest(
+                scenario = secondScenario,
+                originalScenario = secondScenario,
+                flagsBased = DefaultStrategies
+            )
+            firstScenarioAsTest.runTest(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.queryParams.keys.toList()).contains("age").doesNotContain("id")
+                    return HttpResponse.OK
+                }
+            })
+            secondScenarioAsTest.runTest(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.queryParams.keys.toList()).contains("id").doesNotContain("age")
+                    return HttpResponse.OK
+                }
+            })
+
+            assertThat(firstScenario.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.id mandatory query param not sent] | EX:EXAMPLE")
+            assertThat(secondScenario.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.QUERY-PARAM.age mandatory query param not sent] | EX:EXAMPLE")
         }
 
     }
@@ -8961,17 +9020,42 @@ paths:
             """.trimIndent()
             val tests =
                 OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+
             assertThat(tests.size).isEqualTo(2)
-            val firstScenarioHeaders = tests.first().second.value.httpRequestPattern.headersPattern.pattern
-            val secondScenarioHeaders = tests.last().second.value.httpRequestPattern.headersPattern.pattern
-            assertThat(firstScenarioHeaders.keys.toList())
-                .doesNotContain("X-Required-Header")
-                .contains("X-Another-Required-Header")
-            assertThat(secondScenarioHeaders.keys.toList())
-                .contains("X-Required-Header")
-                .doesNotContain("X-Another-Required-Header")
-            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Required-Header mandatory header not sent]")
-            assertThat(tests.last().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Another-Required-Header mandatory header not sent]")
+
+            val firstScenario = tests.first().second.value
+            val secondScenario = tests.last().second.value
+            val firstScenarioAsTest = ScenarioAsTest(
+                scenario = firstScenario,
+                originalScenario = firstScenario,
+                flagsBased = DefaultStrategies
+            )
+            val secondScenarioAsTest = ScenarioAsTest(
+                scenario = secondScenario,
+                originalScenario = secondScenario,
+                flagsBased = DefaultStrategies
+            )
+
+            firstScenarioAsTest.runTest(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.headers.keys.toList())
+                        .doesNotContain("X-Required-Header")
+                        .contains("X-Another-Required-Header")
+                    return HttpResponse.OK
+                }
+            })
+
+            secondScenarioAsTest.runTest(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.headers.keys.toList())
+                        .contains("X-Required-Header")
+                        .doesNotContain("X-Another-Required-Header")
+                    return HttpResponse.OK
+                }
+            })
+
+            assertThat(firstScenario.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Required-Header mandatory header not sent]")
+            assertThat(secondScenario.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Another-Required-Header mandatory header not sent]")
         }
 
         @Test
@@ -9024,17 +9108,41 @@ paths:
             """.trimIndent()
             val tests =
                 OpenApiSpecification.fromYAML(spec, "").toFeature().negativeTestScenarios().toList()
+
             assertThat(tests.size).isEqualTo(2)
-            val firstScenarioHeaders = tests.first().second.value.httpRequestPattern.headersPattern.pattern
-            val secondScenarioHeaders = tests.last().second.value.httpRequestPattern.headersPattern.pattern
-            assertThat(firstScenarioHeaders.keys.toList())
-                .doesNotContain("X-Required-Header")
-                .contains("X-Another-Required-Header")
-            assertThat(secondScenarioHeaders.keys.toList())
-                .contains("X-Required-Header")
-                .doesNotContain("X-Another-Required-Header")
-            assertThat(tests.first().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Required-Header mandatory header not sent]")
-            assertThat(tests.last().second.value.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Another-Required-Header mandatory header not sent]")
+
+            val firstScenario = tests.first().second.value
+            val secondScenario = tests.last().second.value
+            val firstScenarioAsTest = ScenarioAsTest(
+                scenario = firstScenario,
+                originalScenario = firstScenario,
+                flagsBased = DefaultStrategies
+            )
+            val secondScenarioAsTest = ScenarioAsTest(
+                scenario = secondScenario,
+                originalScenario = secondScenario,
+                flagsBased = DefaultStrategies
+            )
+
+            firstScenarioAsTest.runTest(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.headers.keys.toList())
+                        .doesNotContain("X-Required-Header")
+                        .contains("X-Another-Required-Header")
+                    return HttpResponse.OK
+                }
+            })
+
+            secondScenarioAsTest.runTest(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.headers.keys.toList())
+                        .contains("X-Required-Header")
+                        .doesNotContain("X-Another-Required-Header")
+                    return HttpResponse.OK
+                }
+            })
+            assertThat(firstScenario.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Required-Header mandatory header not sent]")
+            assertThat(secondScenario.testDescription()).isEqualTo(" Scenario: GET /persons -> 4xx [REQUEST.HEADER.X-Another-Required-Header mandatory header not sent]")
         }
     }
 

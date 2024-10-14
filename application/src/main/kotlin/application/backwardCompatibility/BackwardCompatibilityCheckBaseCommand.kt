@@ -27,7 +27,11 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
     )
     var baseBranch: String? = null
 
-    @Option(names = ["--target-path"], description = ["Specification file or folder to run the check against"], required = false)
+    @Option(
+        names = ["--target-path"],
+        description = ["Specify the file or directory to limit the backward compatibility check scope. If omitted, all changed files will be checked."],
+        required = false
+    )
     var targetPath: String = ""
 
     abstract fun checkBackwardCompatibility(oldFeature: IFeature, newFeature: IFeature): Results

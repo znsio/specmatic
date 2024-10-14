@@ -1295,38 +1295,6 @@
         return cleanUpSelections();
     }
 
-    bulkTestBtn.addEventListener("click", async () => {
-        blockGenValidate = true;
-        bulkTestBtn.setAttribute("data-test", "processing");
-
-        switch (bulkValidateBtn.getAttribute("data-panel")) {
-            case "table": {
-                await testAllSelected();
-                break;
-            }
-
-            case "details": {
-                await testRowExample(selectedTableRow);
-                const exampleFilePath = getExampleData(selectedTableRow);
-                const {example: exampleContent, error} = await getExampleContent(exampleFilePath);
-
-                const docFragment = createExampleRows([{
-                    exampleFilePath: exampleFilePath,
-                    exampleJson: exampleContent,
-                    error: validationDetails[Number.parseInt(selectedTableRow.children[1].textContent)] || error,
-                    hasBeenValidated: selectedTableRow.hasAttribute("data-valid"),
-                    test: testDetails[Number.parseInt(selectedTableRow.children[1].textContent)]
-                }]);
-
-                examplesOl.replaceChildren(docFragment);
-                break;
-            }
-        }
-
-        bulkTestBtn.removeAttribute("data-test");
-        return cleanUpSelections();
-    });
-
     async function testAllSelected() {
         const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
         const rowsWithValidations = selectedRows.filter(row => row.getAttribute("data-valid") === "success");

@@ -640,6 +640,14 @@ class AllOfDiscriminatorTest {
             stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
                 assertThat(it.status).isEqualTo(201)
             }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
+                assertThat(it.status).isEqualTo(400)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 4, "gearType": "MT"}"""))).let {
+                assertThat(it.status).isEqualTo(400)
+            }
         }
     }
 

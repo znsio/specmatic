@@ -1167,7 +1167,21 @@ class OpenApiSpecification(
         }
 
         fun plus(newDiscriminator: Discriminator): Discriminator {
-            return this.copy(discriminatorDetails + newDiscriminator.discriminatorDetails)
+            return this.copy(mergeMapOfMaps(discriminatorDetails, newDiscriminator.discriminatorDetails))
+        }
+
+        private fun <T> mergeMapOfMaps(
+            discriminatorDetails1: Map<String, Map<String, T>>,
+            discriminatorDetails2: Map<String, Map<String, T>>
+        ): Map<String, Map<String, T>> {
+            val keys = discriminatorDetails1.keys + discriminatorDetails2.keys
+
+            return keys.map { key ->
+                val detail1 = discriminatorDetails1[key] ?: emptyMap()
+                val detail2 = discriminatorDetails2[key] ?: emptyMap()
+
+                key to (detail1 + detail2)
+            }.toMap()
         }
 
         fun hasValueForKey(propertyName: String?): Boolean {
@@ -1228,7 +1242,7 @@ class OpenApiSpecification(
                     } else {
                         schemaName to (emptyList<Schema<Any>>() to Discriminator())
                     }
-                }
+                }.filterValues { it.second.first.isNotEmpty() }
 
                 val discriminatorsFromResolvedMappingSchemas = mappingWithSchemaListAndDiscriminator.values.map { (possiblePropertyValue, discriminator) ->
                     discriminator.second

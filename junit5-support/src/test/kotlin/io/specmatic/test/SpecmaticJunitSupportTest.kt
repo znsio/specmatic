@@ -159,7 +159,7 @@ class SpecmaticJunitSupportTest {
         System.setProperty(FILTER_NOT_NAME_PROPERTY, "BLACKLISTED")
         val filteredTests = SpecmaticJUnitSupport().contractTest().map { it }.toList()
         assertThat(filteredTests).hasSize(2)
-        filteredTests.forEach{ assertThat(it.displayName).doesNotContain("BLACKLISTED") }
+        assertThat(filteredTests.map { it.displayName }.toString()).doesNotContain("BLACKLISTED")
     }
 
     @Test

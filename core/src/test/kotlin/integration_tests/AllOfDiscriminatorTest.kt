@@ -557,6 +557,93 @@ class AllOfDiscriminatorTest {
     }
 
     @Test
+    fun `the specific discriminator value in an allOf can be in the child schema`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: 3.0.3
+            info:
+              title: Vehicle API
+              version: 1.0.0
+            paths:
+              /vehicle:
+                post:
+                  summary: Add a new vehicle
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Vehicle'
+                  responses:
+                    '201':
+                      description: Vehicle created successfully
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+
+            components:
+              schemas:
+                VehicleType:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+
+                Vehicle:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/VehicleType'
+                    - type: object
+                      properties:
+                        seatingCapacity:
+                          type: integer
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "car": "#/components/schemas/Transmission"
+                      "bike": "#/components/schemas/SideCar"
+
+                Transmission:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      requried:
+                        - gearType
+                      properties:
+                        gearType:
+                          type: string
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "car": "#/components/schemas/Transmission"
+
+                SideCar:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      requried:
+                        - sidecarAvailable
+                      properties:
+                        sidecarAvailable:
+                          type: boolean
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "bike": "#/components/schemas/SideCar"
+        """.trimIndent(), "").toFeature()
+
+        HttpStub(feature).use { stub ->
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "car", "seatingCapacity": 4, "gearType": "MT"}"""))).let {
+                assertThat(it.status).isEqualTo(201)
+            }
+
+            stub.client.execute(HttpRequest("POST", "/vehicle", body = parsedJSONObject("""{"type": "bike", "seatingCapacity": 2, "sidecarAvailable": true}"""))).let {
+                assertThat(it.status).isEqualTo(201)
+            }
+        }
+    }
+
+    @Test
     @Disabled
     fun `two discriminator at different levels can extend an allOf`() {
         val feature = OpenApiSpecification.fromYAML("""

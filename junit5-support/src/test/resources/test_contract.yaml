@@ -1,0 +1,10 @@
+sources:
+  - provider: filesystem
+    provides:
+      - ./src/test/resources/spec_with_parameterized_paths.yaml
+    consumes:
+      - ./src/test/resources/spec_with_parameterized_paths.yaml
+
+test:
+  resiliencyTests:
+    enable: none

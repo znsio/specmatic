@@ -1,6 +1,9 @@
 package io.specmatic.test
 
 import io.specmatic.core.TestConfig
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONFIG_FILE_NAME
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME_PROPERTY
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME_PROPERTY
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.PROTOCOL
@@ -10,7 +13,6 @@ import io.specmatic.test.reports.coverage.Endpoint
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
@@ -30,9 +32,7 @@ class SpecmaticJunitSupportTest {
             "./src/test/resources/spec_with_parameterized_paths.yaml",
             "",
             "",
-            TestConfig(emptyMap(), emptyMap()),
-            filterName = null,
-            filterNotName = null
+            TestConfig(emptyMap(), emptyMap())
         )
         val specEndpoints = result.second
         assertThat(specEndpoints.count()).isEqualTo(2)
@@ -150,6 +150,26 @@ class SpecmaticJunitSupportTest {
             .toMutableList()
 
         assertThat(registeredListeners).contains(ContractExecutionListener::class.java.name)
+    }
+
+    @Test
+    fun`should return the two tests other than the test with example name given in filterNotName` () {
+        System.setProperty(CONFIG_FILE_NAME, "./src/test/resources/test_contract.yaml")
+        System.setProperty(TEST_BASE_URL, "https://test.com")
+        System.setProperty(FILTER_NOT_NAME_PROPERTY, "BLACKLISTED")
+        val filteredTests = SpecmaticJUnitSupport().contractTest().map { it }.toList()
+        assertThat(filteredTests).hasSize(2)
+        assertThat(filteredTests.map { it.displayName }.toString()).doesNotContain("BLACKLISTED")
+    }
+
+    @Test
+    fun`should return only the test with example name given in filterName` () {
+        System.setProperty(CONFIG_FILE_NAME, "./src/test/resources/test_contract.yaml")
+        System.setProperty(TEST_BASE_URL, "https://test.com")
+        System.setProperty(FILTER_NAME_PROPERTY, "BLACKLISTED")
+        val filteredTests = SpecmaticJUnitSupport().contractTest().map { it }.toList()
+        assertThat(filteredTests).hasSize(1)
+        assertThat(filteredTests.map { it.displayName.toString() }[0]).contains("BLACKLISTED")
     }
 
     @AfterEach

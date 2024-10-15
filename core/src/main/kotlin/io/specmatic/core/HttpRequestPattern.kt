@@ -59,6 +59,23 @@ data class HttpRequestPattern(
         }
     }
 
+    fun matchesPathAndMethod(
+        incomingHttpRequest: HttpRequest,
+        resolver: Resolver
+    ): Result {
+        val result = incomingHttpRequest to resolver to
+                ::matchPath then
+                ::matchMethod then
+                ::summarize otherwise
+                ::handleError toResult
+                ::returnResult
+
+        return when (result) {
+            is Failure -> result.breadCrumb("REQUEST")
+            else -> result
+        }
+    }
+
     private fun matchSecurityScheme(parameters: Triple<HttpRequest, Resolver, List<Failure>>): MatchingResult<Triple<HttpRequest, Resolver, List<Failure>>> {
         val (httpRequest, resolver, failures) = parameters
 

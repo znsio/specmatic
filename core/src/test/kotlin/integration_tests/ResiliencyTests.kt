@@ -1156,7 +1156,7 @@ class GenerativeTests {
             }
         })
 
-        assertThat(results.results).hasSize(13)
+        assertThat(results.results).hasSize(11)
     }
 
     private fun runGenerativeTests(

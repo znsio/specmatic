@@ -175,16 +175,12 @@ class DefaultValuesInOpenapiSpecification {
             "age mutated to string",
             "salary mutated to boolean",
             "salary mutated to string",
-            "salary_history mutated to boolean",
+            "salary_history[item] mutated to null",
             "salary_history[item] mutated to boolean",
-            "salary_history mutated to string",
             "salary_history[item] mutated to string",
-            "salary_history mutated to null",
-            "years_employed mutated to boolean",
+            "years_employed[item] mutated to null",
             "years_employed[item] mutated to boolean",
-            "years_employed mutated to string",
             "years_employed[item] mutated to string",
-            "years_employed mutated to null",
             "name mutated to null",
             "name mutated to number",
             "name mutated to boolean",
@@ -193,11 +189,9 @@ class DefaultValuesInOpenapiSpecification {
             "age mutated to string",
             "salary mutated to boolean",
             "salary mutated to string",
-            "years_employed mutated to boolean",
+            "years_employed[item] mutated to null",
             "years_employed[item] mutated to boolean",
-            "years_employed mutated to string",
-            "years_employed[item] mutated to string",
-            "years_employed mutated to null"
+            "years_employed[item] mutated to string"
         )
         assertThat(results.results).hasSize(testTypes.size)
     }

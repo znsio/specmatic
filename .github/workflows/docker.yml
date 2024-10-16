@@ -40,7 +40,7 @@ jobs:
         run: docker build --no-cache -t znsio/specmatic:${{ steps.read_version.outputs.VERSION }} .
         
       - name: Scan Docker Image for Vulnerabilities
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.27.0
         with:
           image-ref: znsio/specmatic:${{ steps.read_version.outputs.VERSION }}
           severity: HIGH,CRITICAL

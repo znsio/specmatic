@@ -554,10 +554,10 @@ data class Scenario(
         )
     }
 
-    fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Scenario {
-        val matchingTestData: Map<OpenApiSpecification.OperationIdentifier, List<Row>> = matchingRows(externalisedJSONExamples)
+    fun useExamples(rawExternalisedExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Scenario {
+        val matchingRawExternalisedEamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>> = matchingRows(rawExternalisedExamples)
 
-        val newExamples: List<Examples> = matchingTestData.map { (operationId, rows) ->
+        val externalisedExamples: List<Examples> = matchingRawExternalisedEamples.map { (operationId, rows) ->
             if(rows.isEmpty())
                 return@map emptyList()
 
@@ -568,7 +568,7 @@ data class Scenario(
             listOf(Examples(columns, rowsWithPathData))
         }.flatten()
 
-        return this.copy(examples = this.examples + newExamples)
+        return this.copy(examples = inlineExamplesThatAreNotOverridden(externalisedExamples) + externalisedExamples)
     }
 
     private fun matchingRows(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Map<OpenApiSpecification.OperationIdentifier, List<Row>> {
@@ -619,6 +619,16 @@ data class Scenario(
 
     fun matchesExample(exampleFile: File): Boolean {
         return examples.any { it.rows.any { row -> row.fileSource == exampleFile.canonicalPath } }
+    }
+
+    private fun inlineExamplesThatAreNotOverridden(externalisedExamples: List<Examples>): List<Examples> {
+        val externalisedExampleNames = externalisedExamples.flatMap { it.rows.map { row -> row.name } }.toSet()
+
+        return this.examples.mapNotNull {
+            val rowsThatAreNotOverridden  = it.rows.filter { row -> row.name !in externalisedExampleNames }
+            if(rowsThatAreNotOverridden.isEmpty()) return@mapNotNull null
+            it.copy(rows = rowsThatAreNotOverridden)
+        }
     }
 }
 

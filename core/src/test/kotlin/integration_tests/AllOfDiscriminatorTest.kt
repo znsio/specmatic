@@ -372,7 +372,7 @@ class AllOfDiscriminatorTest {
         }
 
         @Test
-        fun `error when discriminator key is missing`() {
+        fun `error when discriminator key is missing from a value`() {
             assertThatThrownBy {
                 feature.matchingStub(
                     HttpRequest(

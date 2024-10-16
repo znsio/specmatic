@@ -1235,12 +1235,12 @@ class OpenApiSpecification(
                 val mapping = rawDiscriminator.mapping ?: emptyMap()
 
                 val mappingWithSchemaListAndDiscriminator = mapping.mapValues { (discriminatorValue, refPath) ->
-                    val (schemaName, schema) = resolveReferenceToSchema(refPath)
-                    val componentName = extractComponentName(refPath)
-                    if(componentName !in typeStack) {
-                        schemaName to resolveDeepAllOfs(schema, discriminator, typeStack + componentName)
+                    val (mappedSchemaName, mappedSchema) = resolveReferenceToSchema(refPath)
+                    val mappedComponentName = extractComponentName(refPath)
+                    if(mappedComponentName !in typeStack) {
+                        mappedSchemaName to resolveDeepAllOfs(mappedSchema, discriminator, typeStack + mappedComponentName)
                     } else {
-                        schemaName to (emptyList<Schema<Any>>() to Discriminator())
+                        mappedSchemaName to (emptyList<Schema<Any>>() to Discriminator())
                     }
                 }.filterValues { it.second.first.isNotEmpty() }
 

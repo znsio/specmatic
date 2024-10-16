@@ -27,14 +27,16 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
     )
 
     override fun testExternalExample(feature: Feature, exampleFile: File, testBaseUrl: String): Pair<Result, String> {
-        val test = feature.createContractTestFromExampleFile(exampleFile.absolutePath).value
-
-        val testResult = test.runTest(testBaseUrl, timeoutInMilliseconds = DEFAULT_TIMEOUT_IN_MILLISECONDS)
-        val testLogs = TestInteractionsLog.testHttpLogMessages.lastOrNull {
-            it.scenario == testResult.first.scenario
-        }?.combineLog() ?: "Test logs not found for example"
-
-        return testResult.first to testLogs
+        return feature.createContractTestFromExampleFile(exampleFile).realise(
+            orFailure = { it.toFailure() to "" }, orException = { it.toHasFailure().toFailure() to "" },
+            hasValue = { test, _ ->
+                val testResult = test.runTest(testBaseUrl, timeoutInMilliseconds = DEFAULT_TIMEOUT_IN_MILLISECONDS)
+                val testLogs = TestInteractionsLog.testHttpLogMessages.lastOrNull {
+                    it.scenario == testResult.first.scenario
+                }?.combineLog() ?: "Test logs not found for example"
+                testResult.first to testLogs
+            }
+        )
     }
 
     override suspend fun getScenarioFromRequestOrNull(call: ApplicationCall, feature: Feature): Scenario? {

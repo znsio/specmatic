@@ -372,22 +372,15 @@ data class Feature(
         }
     }
 
-    fun createContractTestFromExampleFile(filePath: String): ReturnValue<ContractTest> {
-        val scenarioStub = ScenarioStub.readFromFile(File(filePath))
-        return createContractTestFromScenarioStub(scenarioStub, filePath)
-    }
+    fun createContractTestFromExampleFile(exampleFile: File): ReturnValue<ScenarioAsTest> {
+        val matchingScenario = scenarios.firstOrNull { it.matchesExample(exampleFile) }
+            ?: return HasFailure(Result.Failure("Could not find an API matching example ${exampleFile.canonicalPath}"))
 
-    @Suppress("MemberVisibilityCanBePrivate") // Used by GraphQL when testing examples interactively
-    fun createContractTestFromScenarioStub(scenarioStub: ScenarioStub, filePath: String): ReturnValue<ContractTest> {
-        val originalScenario = scenarios.firstOrNull { scenario ->
-            scenario.matches(scenarioStub.request, scenarioStub.response) is Result.Success
-        } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
+        val testScenario = matchingScenario.generateTestScenarios(flagsBased)
+            .firstOrNull { it.value.exampleName == exampleFile.nameWithoutExtension }
+            ?.value ?: return HasFailure(Result.Failure("Could not find an API matching example ${exampleFile.canonicalPath}"))
 
-        val concreteTestScenario = originalScenario.copy(
-            httpRequestPattern = scenarioStub.request.toPattern()
-        )
-
-        return HasValue(scenarioAsTest(concreteTestScenario, null, Workflow(), originalScenario))
+        return HasValue(scenarioAsTest(testScenario, null, Workflow(), matchingScenario))
     }
 
     private fun scenarioAsTest(

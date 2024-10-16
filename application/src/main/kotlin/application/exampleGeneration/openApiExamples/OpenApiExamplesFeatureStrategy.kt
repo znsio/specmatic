@@ -9,7 +9,7 @@ class OpenApiExamplesFeatureStrategy: ExamplesFeatureStrategy<Feature, Scenario>
     override val contractFileExtensions: Set<String> get() = OPENAPI_FILE_EXTENSIONS.toSet()
 
     override fun contractFileToFeature(contractFile: File): Feature {
-        return parseContractFileToFeature(contractFile)
+        return parseContractFileToFeature(contractFile).loadExternalisedExamples()
     }
 
     override fun getScenarioDescription(scenario: Scenario): String {

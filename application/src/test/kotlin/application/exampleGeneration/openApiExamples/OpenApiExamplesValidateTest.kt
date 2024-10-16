@@ -439,7 +439,7 @@ paths:
 
             val otherExamples = examples.filter { exFile -> exFile != it }
             otherExamples.forEach { otherExample ->
-                assertThat(stdOut).doesNotContain(otherExample.name)
+                assertThat(stdOut).doesNotContain("${otherExample.name} is valid")
             }
         }
     }

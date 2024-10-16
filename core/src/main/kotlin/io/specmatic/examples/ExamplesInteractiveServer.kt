@@ -94,7 +94,7 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
         return contractFile?.let {
             success(it)
         } ?: run {
-            val errorMessage = "Contract file not provided, Please provide one via HTTP request or command line"
+            val errorMessage = "Contract file not provided or does not exist, Please provide one via HTTP request or command line"
             consoleLog(errorMessage)
             failure(IllegalArgumentException(errorMessage))
         }
@@ -175,8 +175,8 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
 
     private fun Routing.getHtmlPageRoute() {
         get("/_specmatic/examples") {
-            handleContractFile {
-                val htmlContent = getHtmlContent(it, getServerHostAndPort())
+            handleContractFile { contract ->
+                val htmlContent = getHtmlContent(contract, getServerHostAndPort())
                 call.respondText(htmlContent, contentType = ContentType.Text.Html)
             }
         }

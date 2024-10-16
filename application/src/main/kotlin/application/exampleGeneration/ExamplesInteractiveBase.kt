@@ -18,7 +18,7 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
     override var sutBaseUrl: String? = null
 
     @Option(names = ["--contract-file"], description = ["Contract file path"], required = false)
-    override var contractFile: File? = null
+    public override var contractFile: File? = null
 
     @Option(names = ["--dictionary"], description = ["Path to external dictionary file (default: contract_file_name_dictionary.json or dictionary.json)"])
     protected var dictFile: File? = null

@@ -9,6 +9,7 @@ import io.specmatic.core.utilities.nullOrExceptionString
 import io.specmatic.core.value.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.RequestContext
+import java.io.File
 
 object ContractAndStubMismatchMessages : MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
@@ -360,7 +361,7 @@ data class Scenario(
                 }
 
                 listOf(title).plus(errors).joinToString("${System.lineSeparator()}${System.lineSeparator()}").also { message ->
-                    logger.log(message)
+                    logger.logError(Exception(message))
 
                     logger.newLine()
                 }
@@ -614,6 +615,10 @@ data class Scenario(
         val responseMatch = httpResponsePattern.matchesMock(template.response, updatedResolver)
 
         return Result.fromResults(listOf(requestMatch, responseMatch))
+    }
+
+    fun matchesExample(exampleFile: File): Boolean {
+        return examples.any { it.rows.any { row -> row.fileSource == exampleFile.canonicalPath } }
     }
 
     private fun inlineExamplesThatAreNotOverridden(externalisedExamples: List<Examples>): List<Examples> {

@@ -1,11 +1,12 @@
-package io.specmatic.test.reports.coverage.html
+package io.specmatic.templates
 import org.thymeleaf.TemplateEngine
+import org.thymeleaf.context.Context
 import org.thymeleaf.templatemode.TemplateMode
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver
 
 class HtmlTemplateConfiguration {
     companion object {
-        fun configureTemplateEngine(): TemplateEngine {
+        private fun configureTemplateEngine(): TemplateEngine {
             val templateResolver = ClassLoaderTemplateResolver().apply {
                 prefix = "templates/"
                 suffix = ".html"
@@ -16,6 +17,13 @@ class HtmlTemplateConfiguration {
             return TemplateEngine().apply {
                 setTemplateResolver(templateResolver)
             }
+        }
+
+        fun process(templateName: String, variables: Map<String, Any>): String {
+            val templateEngine = configureTemplateEngine()
+            return templateEngine.process(templateName, Context().apply {
+                setVariables(variables)
+            })
         }
     }
 }

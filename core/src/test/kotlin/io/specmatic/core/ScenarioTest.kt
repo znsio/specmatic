@@ -1,8 +1,12 @@
 package io.specmatic.core
 
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import io.specmatic.core.pattern.*
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
+import java.io.File
 import java.util.function.Consumer
 
 class ScenarioTest {
@@ -254,5 +258,46 @@ class ScenarioTest {
                 .hasMessageContaining("string")
                 .hasMessageContaining("REQUEST.BODY.id")
         })
+    }
+
+    @Test
+    fun `should only use canonical paths for matching example file`() {
+        val scenario = Scenario(
+            "",
+            HttpRequestPattern(
+                method = "POST",
+                body = JSONObjectPattern(
+                    pattern = mapOf(
+                        "id" to NumberPattern()
+                    )
+                )
+            ),
+            HttpResponsePattern(
+                status = 200,
+                body = JSONObjectPattern(
+                    pattern = mapOf(
+                        "id" to NumberPattern()
+                    )
+                )
+            ),
+            emptyMap(),
+            listOf<Examples>(
+                Examples(
+                    listOf("(REQUEST-BODY)"),
+                    listOf(Row(
+                        mapOf("(REQUEST-BODY)" to """{"id": "(number)" }""")
+                    ).copy(fileSource = "example.json"))
+                )
+            ),
+            emptyMap(),
+            emptyMap()
+        )
+
+        val mockExampleFile = mockk<File> {
+            every { canonicalPath } returns "example.json"
+        }
+
+        assertThat(scenario.matchesExample(mockExampleFile)).isTrue()
+        verify { mockExampleFile.canonicalPath }
     }
 }

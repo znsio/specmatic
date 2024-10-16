@@ -35,6 +35,25 @@ fun consoleLog(e: Throwable, msg: String) {
     logger.log(e, msg)
 }
 
+fun consoleDebug(event: String) {
+    consoleDebug(StringLog(event))
+}
+
+fun consoleDebug(event: LogMessage) {
+    LogTail.append(event)
+    logger.debug(event)
+}
+
+fun consoleDebug(e: Throwable) {
+    LogTail.append(logger.ofTheException(e))
+    logger.debug(e)
+}
+
+fun consoleDebug(e: Throwable, msg: String) {
+    LogTail.append(logger.ofTheException(e, msg))
+    logger.debug(e, msg)
+}
+
 val dontPrintToConsole = { event: LogMessage ->
     LogTail.append(event)
 }

@@ -51,7 +51,7 @@ data class ScenarioStub(
 
     private fun replaceInRequestBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>, requestTemplatePatterns: Map<String, Pattern>, resolver: Resolver): Value {
         return value.copy(
-            value.jsonObject.mapValues {
+            jsonObject = value.jsonObject.mapValues {
                 replaceInRequestBody(it.key, it.value, substitutions, requestTemplatePatterns, resolver)
             }
         )

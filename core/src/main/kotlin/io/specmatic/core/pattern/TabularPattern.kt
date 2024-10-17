@@ -377,7 +377,7 @@ fun <ValueType> allOrNothingCombinationIn(
 
     val keySets: Sequence<Map<String, ValueType>> = keyLists.map { keySet ->
         patternMap.filterKeys { key -> key in keySet }
-    }.asSequence()
+    }
 
     val keySetValues = keySets.map { newPattern ->
         creator(newPattern)

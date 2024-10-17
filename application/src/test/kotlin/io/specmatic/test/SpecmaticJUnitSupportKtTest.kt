@@ -10,7 +10,7 @@ fun <T> selectTestsToRunWrapper(
     filterNotName: String? = null,
     getTestDescription: (T) -> String
 ): List<T> {
-    return selectTestsToRun(testScenarios.asSequence(), filterName, filterNotName, getTestDescription).toList()
+    return selectTestsToRun(testScenarios, filterName, filterNotName, getTestDescription).toList()
 }
 
 class SpecmaticJUnitSupportKtTest {

@@ -553,6 +553,14 @@ data class Feature(
         serverState = emptyMap()
     }
 
+    fun overrideInlineExamples(externalExampleNames: Set<String>): Feature {
+        return this.copy(
+            stubsFromExamples = this.stubsFromExamples.filterKeys { inlineExampleName ->
+                inlineExampleName !in externalExampleNames
+            }
+        )
+    }
+
     private fun getScenarioWithDescription(scenarioResult: ReturnValue<Scenario>): ReturnValue<Scenario> {
         return scenarioResult.ifHasValue { result: HasValue<Scenario> ->
             val apiDescription = result.value.descriptionFromPlugin ?: result.value.apiDescription

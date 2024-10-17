@@ -336,14 +336,6 @@ fun loadExpectationsForFeatures(
     }
 }
 
-private fun Feature.overrideInlineExamples(externalExampleNames: Set<String>): Feature {
-    return this.copy(
-        stubsFromExamples = this.stubsFromExamples.filterKeys { inlineExampleName ->
-            inlineExampleName !in externalExampleNames
-        }
-    )
-}
-
 private fun printDataFiles(dataFiles: List<File>) {
     if (dataFiles.isNotEmpty()) {
         val dataFilesString = dataFiles.joinToString(System.lineSeparator()) { it.path.prependIndent("  ") }

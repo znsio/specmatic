@@ -1135,9 +1135,7 @@ class OpenApiSpecification(
 
         val values: List<String>
             get() {
-                return discriminatorDetails.entries.firstOrNull()?.let {
-                    it.value.keys.toList()
-                } ?: emptyList()
+                return discriminatorDetails.entries.firstOrNull()?.value?.keys?.toList() ?: emptyList()
             }
 
         val key: String?
@@ -1431,7 +1429,7 @@ class OpenApiSpecification(
                     AnyPattern(
                         candidatePatterns.plus(nullable),
                         discriminatorProperty = schema.discriminator?.propertyName,
-                        discriminatorValues = schema.discriminator?.let { it.mapping.keys.toSet() }.orEmpty(),
+                        discriminatorValues = schema.discriminator?.mapping?.keys?.toSet().orEmpty(),
                         typeAlias = "(${patternName})"
                     )
                 } else if (schema.anyOf != null) {

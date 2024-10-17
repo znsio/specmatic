@@ -107,7 +107,7 @@ sealed class Result {
         }
 
         fun failureCount(): Int {
-            return cause?.let { it.failureCount() } ?: 1
+            return cause?.failureCount() ?: 1
         }
     }
 

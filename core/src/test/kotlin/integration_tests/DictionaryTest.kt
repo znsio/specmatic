@@ -309,24 +309,22 @@ class DictionaryTest {
         println("Tests WITHOUT the dictionary")
 
         val testCountWithoutDictionary = OpenApiSpecification
-            .fromFile(openApiFilePath)
-            .toFeature()
-            .enableGenerativeTesting().let { feature ->
-                feature.executeTests(object : TestExecutor {
-                    override fun execute(request: HttpRequest): HttpResponse {
-                        return HttpResponse.ok("success").also {
-                            println(request.toLogString())
-                            println()
-                            println(it.toLogString())
+    .fromFile(openApiFilePath)
+    .toFeature()
+    .enableGenerativeTesting().let { feature ->
+        feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.ok("success").also {
+                    println(request.toLogString())
+                    println()
+                    println(it.toLogString())
 
-                            println()
-                            println()
-                        }
-                    }
-                })
-            }.let { results ->
-                results.testCount
+                    println()
+                    println()
+                }
             }
+        })
+    }.testCount
 
         println("Tests WITH the dictionary")
 
@@ -334,24 +332,22 @@ class DictionaryTest {
             System.setProperty(SPECMATIC_STUB_DICTIONARY, dictionaryPath)
 
             OpenApiSpecification
-                .fromFile(openApiFilePath)
-                .toFeature()
-                .enableGenerativeTesting().let { feature ->
-                    feature.executeTests(object : TestExecutor {
-                        override fun execute(request: HttpRequest): HttpResponse {
-                            return HttpResponse.ok("success").also {
-                                println(request.toLogString())
-                                println()
-                                println(it.toLogString())
+        .fromFile(openApiFilePath)
+        .toFeature()
+        .enableGenerativeTesting().let { feature ->
+            feature.executeTests(object : TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    return HttpResponse.ok("success").also {
+                        println(request.toLogString())
+                        println()
+                        println(it.toLogString())
 
-                                println()
-                                println()
-                            }
-                        }
-                    })
-                }.let { results ->
-                    results.testCount
+                        println()
+                        println()
+                    }
                 }
+            })
+        }.testCount
         } finally {
             System.clearProperty(SPECMATIC_STUB_DICTIONARY)
         }

@@ -379,7 +379,7 @@ data class Feature(
             scenario.matches(scenarioStub.request, scenarioStub.response) is Result.Success
         } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
 
-        val concreteTestScenario = io.specmatic.core.Scenario(
+        val concreteTestScenario = Scenario(
             name = "",
             httpRequestPattern = scenarioStub.request.toPattern(),
             httpResponsePattern = HttpResponsePattern(scenarioStub.response)

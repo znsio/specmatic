@@ -44,8 +44,8 @@ paths:
 
         println(stub.requestType)
 
-        Assertions.assertThat(stub.requestType.method).isEqualTo("GET")
-        Assertions.assertThat(stub.response.status).isEqualTo(200)
+        assertThat(stub.requestType.method).isEqualTo("GET")
+        assertThat(stub.response.status).isEqualTo(200)
     }
 
     @Test
@@ -81,8 +81,8 @@ paths:
 
         val stub: HttpStubData = feature.matchingStub(request, response)
 
-        Assertions.assertThat(stub.requestType.method).isEqualTo("GET")
-        Assertions.assertThat(stub.response.status).isEqualTo(200)
+        assertThat(stub.requestType.method).isEqualTo("GET")
+        assertThat(stub.response.status).isEqualTo(200)
     }
 
 

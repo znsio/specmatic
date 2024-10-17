@@ -123,7 +123,7 @@ data class QueryParameterArrayPattern(override val pattern: List<Pattern>, val p
         typeStack: TypeStack
     ): Result {
         if(otherPattern !is QueryParameterArrayPattern)
-            return Result.Failure(thisResolver.mismatchMessages.mismatchMessage(this.typeName, otherPattern.typeName))
+            return Failure(thisResolver.mismatchMessages.mismatchMessage(this.typeName, otherPattern.typeName))
 
         return this.pattern.first().encompasses(otherPattern.pattern.first(), thisResolver, otherResolver, typeStack)
     }

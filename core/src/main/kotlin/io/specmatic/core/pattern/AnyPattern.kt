@@ -37,7 +37,7 @@ data class AnyPattern(
 
         val failures = results.toList().filterIsInstance<Failure>()
 
-        return HasFailure(Result.Failure.fromFailures(failures))
+        return HasFailure(Failure.fromFailures(failures))
     }
 
     override fun resolveSubstitutions(
@@ -69,7 +69,7 @@ data class AnyPattern(
             )
         }
 
-        return HasFailure<Value>(Result.Failure.fromFailures(failures))
+        return HasFailure<Value>(Failure.fromFailures(failures))
     }
 
     override fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {
@@ -117,7 +117,7 @@ data class AnyPattern(
 
                 val discriminatorMatched = pattern.matches(discriminatorProbe, resolver).let { probeResult ->
                     probeResult is Result.Success
-                            || (probeResult is Result.Failure && probeResult.hasReason(FailureReason.FailedButDiscriminatorMatched))
+                            || (probeResult is Failure && probeResult.hasReason(FailureReason.FailedButDiscriminatorMatched))
                 }
 
                 if(discriminatorMatched)
@@ -168,7 +168,7 @@ data class AnyPattern(
 
             val objectTypeMatchedButHadSomeOtherMismatch = addTypeInfoBreadCrumbs(failureMatchResults)
 
-            return Result.Failure.fromFailures(objectTypeMatchedButHadSomeOtherMismatch).removeReasonsFromCauses()
+            return Failure.fromFailures(objectTypeMatchedButHadSomeOtherMismatch).removeReasonsFromCauses()
         }
 
         val resolvedPatterns = pattern.map { resolvedHop(it, resolver) }
@@ -295,7 +295,7 @@ data class AnyPattern(
 
             val failures = exceptions.map { it.failure() }
 
-            val failure = Result.Failure.fromFailures(failures.toList())
+            val failure = Failure.fromFailures(failures.toList())
 
             throw ContractException(failure.toFailureReport(message))
         }

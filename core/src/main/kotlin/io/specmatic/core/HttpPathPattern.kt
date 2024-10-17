@@ -64,7 +64,7 @@ data class HttpPathPattern(
                         else -> result.breadCrumb(urlPathPattern.key).breadCrumb(PATH_BREAD_CRUMB)
                     }
                 } else {
-                    Result.Success()
+                    Success()
                 }
             } catch (e: ContractException) {
                 e.failure().breadCrumb("$PATH_BREAD_CRUMB ($path)").let { failure ->
@@ -77,7 +77,7 @@ data class HttpPathPattern(
             }
         }
 
-        val failures = results.filterIsInstance<Result.Failure>()
+        val failures = results.filterIsInstance<Failure>()
 
         val finalMatchResult = Result.fromResults(failures)
 

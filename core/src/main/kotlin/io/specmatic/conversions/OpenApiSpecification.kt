@@ -482,7 +482,7 @@ class OpenApiSpecification(
 
                 val unusedRequestExampleNames = requestExampleNames - usedExamples
 
-                if(Flags.getBooleanValue(IGNORE_INLINE_EXAMPLE_WARNINGS).not()) {
+                if(getBooleanValue(IGNORE_INLINE_EXAMPLE_WARNINGS).not()) {
                     unusedRequestExampleNames.forEach { unusedRequestExampleName ->
                         logger.log(missingResponseExampleErrorMessageForTest(unusedRequestExampleName))
                     }
@@ -830,7 +830,7 @@ class OpenApiSpecification(
         }
 
         val headerExamples =
-            if(specmaticConfig.ignoreInlineExamples || Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
+            if(specmaticConfig.ignoreInlineExamples || getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
                 emptyMap()
             else
                 response.headers.orEmpty().entries.fold(emptyMap<String, Map<String, String>>()) { acc, (headerName, header) ->
@@ -848,7 +848,7 @@ class OpenApiSpecification(
             )
 
             val exampleBodies: Map<String, String?> =
-                if(specmaticConfig.ignoreInlineExamples || Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
+                if(specmaticConfig.ignoreInlineExamples || getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
                     emptyMap()
                 else
                     mediaType.examples?.mapValues {
@@ -994,7 +994,7 @@ class OpenApiSpecification(
                     }
 
                     val allExamples =
-                        if(specmaticConfig.ignoreInlineExamples || Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
+                        if(specmaticConfig.ignoreInlineExamples || getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
                             emptyMap()
                         else
                             exampleRequestBuilder.examplesWithRequestBodies(exampleBodies, contentType)
@@ -1030,7 +1030,7 @@ class OpenApiSpecification(
         operation: Operation,
         parameterType: Class<T>
     ): Map<String, Map<String, String>> {
-        if(specmaticConfig.ignoreInlineExamples || Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
+        if(specmaticConfig.ignoreInlineExamples || getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
             return emptyMap()
 
         return operation.parameters.orEmpty()
@@ -1354,7 +1354,7 @@ class OpenApiSpecification(
 
             is ComposedSchema -> {
                 if (schema.allOf != null) {
-                    val (deepListOfAllOfs, allDiscriminators) = resolveDeepAllOfs(schema, OpenApiSpecification.Discriminator(), emptySet())
+                    val (deepListOfAllOfs, allDiscriminators) = resolveDeepAllOfs(schema, Discriminator(), emptySet())
 
                     val explodedDiscriminators = allDiscriminators.explode()
 

@@ -1,0 +1,4 @@
+sources:
+  - provider: filesystem
+    stub:
+      - src/test/resources/openapi/has_overriding_external_examples.yaml

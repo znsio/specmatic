@@ -28,7 +28,7 @@ class Dictionary(private val map: Map<String, Value> = emptyMap()) {
         val newMap = value.jsonObject.mapValues { (key, value) ->
 
             val updatedPaths = paths.map { path ->
-                path + ".$key"
+                "$path.$key"
             }.ifEmpty { listOf(key) }
 
             val pathFoundInDictionary = updatedPaths.firstOrNull { it in map }

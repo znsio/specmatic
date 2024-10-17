@@ -10,7 +10,7 @@ class HasValueTest {
         val distinct = hasDuplicates.distinct()
 
         assertThat(distinct).hasSize(2)
-        assertThat(distinct.get(0)).isEqualTo(HasValue(StringPattern()))
-        assertThat(distinct.get(1)).isEqualTo(HasValue(NumberPattern()))
+        assertThat(distinct[0]).isEqualTo(HasValue(StringPattern()))
+        assertThat(distinct[1]).isEqualTo(HasValue(NumberPattern()))
     }
 }

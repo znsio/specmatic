@@ -326,7 +326,7 @@ data class HttpHeadersPattern(
         } ?: headers
 
         val map: Map<String, ReturnValue<String>> = headersToConsider.mapValues { (headerName, headerValue) ->
-            val headerPattern = pattern.get(headerName) ?: pattern.get("$headerName?") ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
+            val headerPattern = pattern[headerName] ?: pattern["$headerName?"] ?: return@mapValues HasFailure(Result.Failure(resolver.mismatchMessages.unexpectedKey("header", headerName)))
 
             if(isPatternToken(headerValue)) {
                 val generatedValue = resolver.generate("HEADERS", headerName, resolver.getPattern(headerValue))

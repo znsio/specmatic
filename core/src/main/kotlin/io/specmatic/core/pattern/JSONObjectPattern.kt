@@ -49,7 +49,7 @@ data class JSONObjectPattern(
         val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
 
         val mapWithKeysInPartial = jsonObject.jsonObject.mapValues { (name, value) ->
-            val valuePattern = pattern.get(name) ?: pattern.get("$name?") ?: return@mapValues HasFailure<Value>(
+            val valuePattern = pattern[name] ?: pattern["$name?"] ?: return@mapValues HasFailure<Value>(
                 Result.Failure(
                     resolver.mismatchMessages.unexpectedKey("header", name)
                 )
@@ -113,7 +113,7 @@ data class JSONObjectPattern(
             return HasFailure(Result.Failure("Cannot resolve substitutions, expected object but got ${value.displayableType()}"))
 
         val updatedMap = value.jsonObject.mapValues { (key, value) ->
-            val pattern = attempt("Could not find key in json object", key) { pattern.get(key) ?: pattern.get("$key?") ?: throw MissingDataException("Could not find key $key") }
+            val pattern = attempt("Could not find key in json object", key) { pattern[key] ?: pattern["$key?"] ?: throw MissingDataException("Could not find key $key") }
             pattern.resolveSubstitutions(substitution, value, resolver, key).breadCrumb(key)
         }
 
@@ -129,7 +129,7 @@ data class JSONObjectPattern(
         return pattern.mapKeys {
             withoutOptionality(it.key)
         }.entries.fold(initialValue) { acc, (key, valuePattern) ->
-            value.jsonObject.get(key)?.let { valueInObject ->
+            value.jsonObject[key]?.let { valueInObject ->
                 val additionalTemplateTypes = valuePattern.getTemplateTypes(key, valueInObject, resolver)
                 acc.assimilate(additionalTemplateTypes) { data, additional -> data + additional }
             } ?: acc

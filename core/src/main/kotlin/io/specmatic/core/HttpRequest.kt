@@ -71,11 +71,11 @@ data class HttpRequest(
             updateWith(urlParam)
         } catch (e: URISyntaxException) {
             val pieces = path.split("?", limit = 2)
-            updateWithPathAndQuery(pieces.get(0), pieces.getOrNull(1))
+            updateWithPathAndQuery(pieces[0], pieces.getOrNull(1))
 //            copy(path = path)
         } catch (e: UnsupportedEncodingException) {
             val pieces = path.split("?", limit = 2)
-            updateWithPathAndQuery(pieces.get(0), pieces.getOrNull(1))
+            updateWithPathAndQuery(pieces[0], pieces.getOrNull(1))
 //            copy(path = path)
         }
     }

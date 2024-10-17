@@ -68,7 +68,7 @@ class CombinationSpec<ValueType>(
                         ranOut[key] = true
 
                         val cachedValuesForKey = cachedValues.getValue(key)
-                        val value = cachedValuesForKey.get(ctr % cachedValuesForKey.size)
+                        val value = cachedValuesForKey[ctr % cachedValuesForKey.size]
 
                         value
                     }

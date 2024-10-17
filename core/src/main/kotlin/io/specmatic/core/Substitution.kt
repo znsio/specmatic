@@ -54,7 +54,7 @@ class Substitution(
     }
 
     private fun variablesFromMap(map: Map<String, String>, originalMap: Map<String, String>) = map.entries.map { (key, value) ->
-        val originalValue = originalMap.get(key) ?: return@map null
+        val originalValue = originalMap[key] ?: return@map null
         variableFromString(value, originalValue)
     }.filterNotNull().toMap()
 
@@ -67,7 +67,7 @@ class Substitution(
 
     private fun getVariableValuesFromValue(value: JSONArrayValue, originalValue: JSONArrayValue): Map<String, String> {
         return originalValue.list.foldRightIndexed(emptyMap()) { index: Int, item: Value, acc: Map<String, String> ->
-            val runningItem = value.list.get(index)
+            val runningItem = value.list[index]
             acc + getVariableValuesFromValue(runningItem, item)
         }
     }
@@ -131,7 +131,7 @@ class Substitution(
             else {
                 val substituteValue = substituteVariableValues(value.trim(), key)
 
-                (patternMap.get(key) ?: patternMap.get("$key?"))?.let { pattern ->
+                (patternMap[key] ?: patternMap["$key?"])?.let { pattern ->
                     try {
                         HasValue(pattern.parse(substituteValue, resolver).toStringLiteral())
                     } catch (e: Throwable) {

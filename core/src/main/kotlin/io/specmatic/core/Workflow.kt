@@ -10,7 +10,7 @@ class Workflow(
     var id: Value? = null
 
     fun extractDataFrom(response: HttpResponse, originalScenario: Scenario) {
-        val operation = workflow.ids.get(originalScenario.apiDescription)
+        val operation = workflow.ids[originalScenario.apiDescription]
 
         if(operation == null)
             return
@@ -50,7 +50,7 @@ class Workflow(
         if(originalScenario.isNegative)
             return request
 
-        val operation = workflow.ids.get(originalScenario.apiDescription) ?: workflow.ids.get("*")
+        val operation = workflow.ids[originalScenario.apiDescription] ?: workflow.ids["*"]
 
         if(operation == null)
             return request
@@ -76,7 +76,7 @@ class Workflow(
                 if(path.size > 1)
                     throw ContractException("PATH.<name> must refer to the name of a path parameter")
 
-                val pathParamName = path.get(0)
+                val pathParamName = path[0]
 
                 val pathParamIndex = originalScenario.httpRequestPattern.httpPathPattern?.pathSegmentPatterns?.indexOfFirst { it.key == pathParamName } ?: -1
 

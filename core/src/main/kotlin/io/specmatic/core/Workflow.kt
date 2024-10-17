@@ -27,7 +27,7 @@ class Workflow(
                 "BODY" -> {
                     val responseBody = response.body
 
-                    if(path.size == 0) {
+                    if(path.isEmpty()) {
                         id = responseBody
                     } else if(responseBody is JSONObjectValue) {
                         val data = responseBody.findFirstChildByPath(path.joinToString("."))
@@ -64,7 +64,7 @@ class Workflow(
 
         return when(area.uppercase()) {
             "PATH" -> {
-                if(path.size == 0)
+                if(path.isEmpty())
                     throw ContractException("Cannot use id $useLocation")
 
                 if(path.size > 1)

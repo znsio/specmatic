@@ -1,10 +1,6 @@
 package io.specmatic.conversions
 
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.NoBodyValue
-import io.specmatic.core.QueryParameters
-import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.*
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.URIUtils.parseQuery
@@ -12,7 +8,6 @@ import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.mockFromJSON
-import io.specmatic.stub.httpResponseLog
 import java.io.File
 import java.net.URI
 

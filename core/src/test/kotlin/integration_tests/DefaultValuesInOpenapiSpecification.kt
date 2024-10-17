@@ -1,12 +1,8 @@
 package integration_tests
 
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.unmockkAll
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
-import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.utilities.Flags.Companion.SCHEMA_EXAMPLE_DEFAULT
 import io.specmatic.core.value.*
 import io.specmatic.test.TestExecutor

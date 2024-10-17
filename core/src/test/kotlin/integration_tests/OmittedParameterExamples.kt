@@ -6,7 +6,6 @@ import io.specmatic.core.HttpResponse
 import io.specmatic.core.Scenario
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.Value
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

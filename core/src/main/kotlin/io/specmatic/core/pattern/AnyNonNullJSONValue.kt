@@ -3,7 +3,6 @@ package io.specmatic.core.pattern
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.value.NullValue
-import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
 data class AnyNonNullJSONValue(override val pattern: Pattern = AnythingPattern): Pattern by pattern{

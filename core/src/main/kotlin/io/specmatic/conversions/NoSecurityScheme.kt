@@ -4,7 +4,6 @@ import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpRequestPattern
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
-import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.Row
 
 class NoSecurityScheme : OpenAPISecurityScheme {

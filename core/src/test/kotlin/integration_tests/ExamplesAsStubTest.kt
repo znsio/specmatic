@@ -2,11 +2,8 @@ package integration_tests
 
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpResponse
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
-import io.specmatic.core.value.StringValue
-import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.captureStandardOutput
 import org.assertj.core.api.Assertions.assertThat

@@ -4,11 +4,8 @@ import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpRequestPattern
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
-import io.specmatic.core.pattern.ExactValuePattern
-import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.Row
 import io.specmatic.core.pattern.StringPattern
-import io.specmatic.core.value.StringValue
 
 data class APIKeyInHeaderSecurityScheme(val name: String, private val apiKey:String?) : OpenAPISecurityScheme {
     override fun matches(httpRequest: HttpRequest): Result {

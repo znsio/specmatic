@@ -1,8 +1,6 @@
 package io.specmatic.test
 
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.TestConfig
-import io.specmatic.test.reports.coverage.Endpoint
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

@@ -339,7 +339,7 @@ data class Scenario(
 
         val updatedResolver = flagsBased.update(resolver)
 
-        val errors = rowsToValidate.map { row ->
+        val errors = rowsToValidate.mapNotNull { row ->
             val resolverForExample = resolverForValidation(updatedResolver, row)
 
             val requestError = nullOrExceptionString {
@@ -350,23 +350,24 @@ data class Scenario(
                 validateResponseExample(row, resolverForExample)
             }
 
-            val errors = listOf(requestError, responseError).filterNotNull().map { it.prependIndent("  ") }
+            val errors = listOfNotNull(requestError, responseError).map { it.prependIndent("  ") }
 
-            if(errors.isNotEmpty()) {
-                val title = if(row.fileSource != null) {
+            if (errors.isNotEmpty()) {
+                val title = if (row.fileSource != null) {
                     "Error loading example for ${this.apiDescription.trim()} from ${row.fileSource}"
                 } else {
                     "Error loading example named ${row.name} for ${this.apiDescription.trim()}"
                 }
 
-                listOf(title).plus(errors).joinToString("${System.lineSeparator()}${System.lineSeparator()}").also { message ->
-                    logger.log(message)
+                listOf(title).plus(errors).joinToString("${System.lineSeparator()}${System.lineSeparator()}")
+                    .also { message ->
+                        logger.log(message)
 
-                    logger.newLine()
-                }
+                        logger.newLine()
+                    }
             } else
                 null
-        }.filterNotNull()
+        }
 
         if(errors.isNotEmpty())
             throw ContractException(errors.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))

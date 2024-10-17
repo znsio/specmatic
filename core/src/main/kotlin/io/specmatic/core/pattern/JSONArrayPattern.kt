@@ -221,7 +221,7 @@ fun <ValueType> allOrNothingListCombinations(values: List<Sequence<ValueType?>>)
 
             if (allIteratorsRanOut) break
 
-            val nextArray = nextValuesInArray.map { (value, _) -> value }.filterNotNull()
+            val nextArray = nextValuesInArray.mapNotNull { (value, _) -> value }
 
             yield(nextArray)
         }

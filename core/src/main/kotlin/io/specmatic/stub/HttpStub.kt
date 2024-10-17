@@ -867,9 +867,7 @@ private fun stubThatMatchesRequest(
             )
         }
 
-        val partialMatchResults = httpStubData
-            .map { it.partial?.let { partial -> it to partial } }
-            .filterNotNull()
+        val partialMatchResults = httpStubData.mapNotNull { it.partial?.let { partial -> it to partial } }
             .map { (stubData, partial) ->
                 val (requestPattern, _, resolver) = stubData
 
@@ -1044,12 +1042,18 @@ fun dumpIntoFirstAvailableStringField(jsonObjectValue: JSONObjectValue, stringVa
         )
 
     val newMap = jsonObjectValue.jsonObject.mapValues { (key, value) ->
-        if(value is JSONObjectValue) {
-            dumpIntoFirstAvailableStringField(value, stringValue)
-        } else if(value is JSONArrayValue) {
-            dumpIntoFirstAvailableStringField(value, stringValue)
-        } else {
-            value
+        when (value) {
+            is JSONObjectValue -> {
+                dumpIntoFirstAvailableStringField(value, stringValue)
+            }
+
+            is JSONArrayValue -> {
+                dumpIntoFirstAvailableStringField(value, stringValue)
+            }
+
+            else -> {
+                value
+            }
         }
     }
 
@@ -1069,12 +1073,18 @@ fun dumpIntoFirstAvailableStringField(jsonArrayValue: JSONArrayValue, stringValu
     }
 
     val newList = jsonArrayValue.list.map { value ->
-        if(value is JSONObjectValue) {
-            dumpIntoFirstAvailableStringField(value, stringValue)
-        } else if(value is JSONArrayValue) {
-            dumpIntoFirstAvailableStringField(value, stringValue)
-        } else {
-            value
+        when (value) {
+            is JSONObjectValue -> {
+                dumpIntoFirstAvailableStringField(value, stringValue)
+            }
+
+            is JSONArrayValue -> {
+                dumpIntoFirstAvailableStringField(value, stringValue)
+            }
+
+            else -> {
+                value
+            }
         }
     }
 

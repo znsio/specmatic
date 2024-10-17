@@ -64,11 +64,11 @@ data class HttpLogMessage(
         val contractPathLines = if(contractPath.isNotBlank()) {
             val exampleLine = examplePath?.let { "${linePrefix}Example matched: $examplePath" }
 
-            listOf(
+            listOfNotNull(
                 "${linePrefix}Contract matched: $contractPath",
                 exampleLine,
                 ""
-            ).filterNotNull()
+            )
         } else {
             emptyList()
         }

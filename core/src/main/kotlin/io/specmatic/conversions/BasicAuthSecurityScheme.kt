@@ -71,7 +71,7 @@ data class BasicAuthSecurityScheme(private val token: String? = null) : OpenAPIS
         resolver.hasDictionaryToken(AUTHORIZATION) && resolver.getDictionaryToken(AUTHORIZATION).toStringLiteral().let {
             it.lowercase()
                 .startsWith("basic ") && validateBase64EncodedCredentials(it.substringAfter(" ")) is Result.Success
-        } == true
+        }
 
     private fun validatedToken(token: String): String {
         val result = validateBase64EncodedCredentials(token)

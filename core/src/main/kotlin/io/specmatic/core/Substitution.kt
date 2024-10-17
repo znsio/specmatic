@@ -25,17 +25,18 @@ class Substitution(
         val runningPathPieces = runningRequest.path!!.split('/').filterNot { it.isBlank() }
         val originalPathPieces = originalRequest.path!!.split('/').filterNot { it.isBlank() }
 
-        val variableValuesFromPath = runningPathPieces.zip(originalPathPieces).map { (runningPiece, originalPiece) ->
-            if (!isPatternToken(originalPiece))
-                null
-            else {
-                val pieces = withoutPatternDelimiters(originalPiece).split(':')
-                val name = pieces.getOrNull(0)
-                    ?: throw ContractException("Could not interpret substituion expression $originalPiece")
+        val variableValuesFromPath = runningPathPieces.zip(originalPathPieces)
+            .mapNotNull { (runningPiece, originalPiece) ->
+                if (!isPatternToken(originalPiece))
+                    null
+                else {
+                    val pieces = withoutPatternDelimiters(originalPiece).split(':')
+                    val name = pieces.getOrNull(0)
+                        ?: throw ContractException("Could not interpret substituion expression $originalPiece")
 
-                name to runningPiece
-            }
-        }.filterNotNull().toMap()
+                    name to runningPiece
+                }
+            }.toMap()
 
         val variableValuesFromRequestBody: Map<String, String> = getVariableValuesFromValue(runningRequest.body, originalRequest.body)
 

@@ -1599,14 +1599,14 @@ data class Feature(
     }
 
     fun validateExamplesOrException() {
-        val errors = scenarios.map { scenario ->
+        val errors = scenarios.mapNotNull { scenario ->
             try {
                 scenario.validExamplesOrException(flagsBased.copy(generation = NonGenerativeTests))
                 null
-            } catch(e: Throwable) {
+            } catch (e: Throwable) {
                 exceptionCauseMessage(e)
             }
-        }.filterNotNull()
+        }
 
         if(errors.isNotEmpty())
             throw ContractException(errors.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))

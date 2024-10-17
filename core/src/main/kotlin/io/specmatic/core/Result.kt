@@ -232,9 +232,9 @@ sealed class Result {
             if(this.failureReason == FailureReason.DiscriminatorMismatch)
                 return this
 
-            val causesFilteredByReason: List<FailureCause> = this.causes.map {
+            val causesFilteredByReason: List<FailureCause> = this.causes.mapNotNull {
                 it.filterByReason(failureReason)
-            }.filterNotNull()
+            }
 
             return this.copy(causes = causesFilteredByReason)
         }

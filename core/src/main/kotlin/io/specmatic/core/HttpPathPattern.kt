@@ -184,7 +184,7 @@ data class HttpPathPattern(
         resolver: Resolver
     ): Sequence<ReturnValue<List<URLPathSegmentPattern>>> {
         return Sequence {
-            patterns.map { it to it.negativeBasedOn(row, resolver) }.toMap()
+            patterns.associateWith { it.negativeBasedOn(row, resolver) }
                 .flatMap { (pathSegmentPattern, negativePatterns) ->
                     negativePatterns.map { negativePatternR ->
                         negativePatternR.ifValue { negativePattern ->

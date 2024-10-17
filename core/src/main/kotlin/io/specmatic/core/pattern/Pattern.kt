@@ -94,5 +94,5 @@ interface Pattern {
 }
 
 fun Pattern.isDiscriminator(): Boolean {
-    return this is ExactValuePattern && this.discriminator == true
+    return this is ExactValuePattern && this.discriminator
 }

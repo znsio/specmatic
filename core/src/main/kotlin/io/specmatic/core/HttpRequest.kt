@@ -147,7 +147,7 @@ data class HttpRequest(
 
         val pathString = path ?: "NO_PATH"
         val queryParamString =
-            queryParams.paramPairs.map { "${it.first}=${it.second}" }.joinToString("&").let { if (it.isNotEmpty()) "?$it" else it }
+            queryParams.paramPairs.joinToString("&") { "${it.first}=${it.second}" }.let { if (it.isNotEmpty()) "?$it" else it }
         val urlString = "$pathString$queryParamString"
 
         val firstLine = "$methodString $urlString"
@@ -509,7 +509,7 @@ fun stringMapToValueMap(stringStringMap: Map<String, String>) =
     stringStringMap.mapValues { guessType(parsedValue(it.value)) }
 
 fun queryParamsToValueMap(queryParams: QueryParameters) =
-    queryParams.paramPairs.map { (key, value) -> key to guessType(parsedValue(value)) }.toMap()
+    queryParams.paramPairs.associate { (key, value) -> key to guessType(parsedValue(value)) }
 
 fun bodyToGherkin(
     request: HttpRequest,

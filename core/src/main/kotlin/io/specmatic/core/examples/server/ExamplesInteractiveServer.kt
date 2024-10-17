@@ -140,10 +140,10 @@ class ExamplesInteractiveServer(
                     try {
                         val contractFile = getContractFile()
 
-                        val examples = request.map {
+                        val examples = request.associate {
                             val exampleFilePath = it.exampleFile
                             exampleFilePath to listOf(ScenarioStub.readFromFile(File(exampleFilePath)))
-                        }.toMap()
+                        }
 
                         val results = validateMultipleExamples(contractFile, examples = examples)
 
@@ -462,17 +462,17 @@ class ExamplesInteractiveServer(
             val results = examples.mapValues { (name, exampleList) ->
                 logger.log("Validating $name")
 
-                exampleList.map { example ->
+                exampleList.mapNotNull { example ->
                     try {
                         validateExample(updatedFeature, example)
                         Result.Success()
-                    } catch(e: NoMatchingScenario) {
-                        if(inline && e.results.withoutFluff().hasResults() == false)
+                    } catch (e: NoMatchingScenario) {
+                        if (inline && !e.results.withoutFluff().hasResults())
                             null
                         else
                             e.results.toResultIfAny()
                     }
-                }.filterNotNull().let {
+                }.let {
                     Result.fromResults(it)
                 }
             }

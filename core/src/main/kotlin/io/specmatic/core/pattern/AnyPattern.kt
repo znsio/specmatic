@@ -250,7 +250,7 @@ data class AnyPattern(
             pattern.any { it is NullPattern} &&
             pattern.filterNot { it is NullPattern }.filter { it is ScalarType }.size == 1
         ) {
-            return pattern.filterNot { it is NullPattern }.filter { it is ScalarType }.first().generate(resolver)
+            return pattern.filterNot { it is NullPattern }.first { it is ScalarType }.generate(resolver)
         }
 
         val randomPattern = pattern.random()

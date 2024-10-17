@@ -88,7 +88,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         return resolver.resolveExample(example, pattern) ?: dictionaryLookup(resolverWithEmptyType) ?: generateRandomValue(resolverWithEmptyType)
     }
 
-    private fun dictionaryLookup(resolver: Resolver): Value? {
+    private fun dictionaryLookup(resolver: Resolver): Value {
         return resolver.generateList(pattern)
     }
 

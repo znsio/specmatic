@@ -24,7 +24,7 @@ class HTTPStubEngine {
         httpClientFactory: HttpClientFactory,
         workingDirectory: WorkingDirectory,
         gracefulRestartTimeoutInMs: Long
-    ): HttpStub? {
+    ): HttpStub {
         val features = stubs.map { it.first }
 
         val httpExpectations = contractInfoToHttpExpectations(stubs)

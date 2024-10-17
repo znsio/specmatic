@@ -1167,7 +1167,21 @@ class OpenApiSpecification(
         }
 
         fun plus(newDiscriminator: Discriminator): Discriminator {
-            return this.copy(discriminatorDetails + newDiscriminator.discriminatorDetails)
+            return this.copy(mergeMapOfMaps(discriminatorDetails, newDiscriminator.discriminatorDetails))
+        }
+
+        private fun <T> mergeMapOfMaps(
+            discriminatorDetails1: Map<String, Map<String, T>>,
+            discriminatorDetails2: Map<String, Map<String, T>>
+        ): Map<String, Map<String, T>> {
+            val keys = discriminatorDetails1.keys + discriminatorDetails2.keys
+
+            return keys.map { key ->
+                val detail1 = discriminatorDetails1[key] ?: emptyMap()
+                val detail2 = discriminatorDetails2[key] ?: emptyMap()
+
+                key to (detail1 + detail2)
+            }.toMap()
         }
 
         fun hasValueForKey(propertyName: String?): Boolean {
@@ -1220,15 +1234,16 @@ class OpenApiSpecification(
             rawDiscriminator.propertyName?.let { propertyName ->
                 val mapping = rawDiscriminator.mapping ?: emptyMap()
 
-                val mappingWithSchemaListAndDiscriminator = mapping.mapValues { (discriminatorValue, refPath) ->
-                    val (schemaName, schema) = resolveReferenceToSchema(refPath)
-                    val componentName = extractComponentName(refPath)
-                    if(componentName !in typeStack) {
-                        schemaName to resolveDeepAllOfs(schema, discriminator, typeStack + componentName)
+                val mappingWithSchemaListAndDiscriminator = mapping.entries.map { (discriminatorValue, refPath) ->
+                    val (mappedSchemaName, mappedSchema) = resolveReferenceToSchema(refPath)
+                    val mappedComponentName = extractComponentName(refPath)
+                    if(mappedComponentName !in typeStack) {
+                        val value = mappedSchemaName to resolveDeepAllOfs(mappedSchema, discriminator, typeStack + mappedComponentName)
+                        discriminatorValue to value
                     } else {
-                        schemaName to (emptyList<Schema<Any>>() to Discriminator())
+                        null
                     }
-                }
+                }.filterNotNull().toMap()
 
                 val discriminatorsFromResolvedMappingSchemas = mappingWithSchemaListAndDiscriminator.values.map { (possiblePropertyValue, discriminator) ->
                     discriminator.second
@@ -1339,7 +1354,7 @@ class OpenApiSpecification(
 
             is ComposedSchema -> {
                 if (schema.allOf != null) {
-                    val (deepListOfAllOfs, allDiscriminators) = resolveDeepAllOfs(schema, OpenApiSpecification.Discriminator(), setOf(patternName))
+                    val (deepListOfAllOfs, allDiscriminators) = resolveDeepAllOfs(schema, OpenApiSpecification.Discriminator(), emptySet())
 
                     val explodedDiscriminators = allDiscriminators.explode()
 

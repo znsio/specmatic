@@ -169,4 +169,8 @@ class Waiter(val delayInMilliSeconds: Long, val maximumWaitTime: Long) {
     fun canWaitForMoreTime(): Boolean {
         return totalWaitTime < maximumWaitTime
     }
+
+    fun hasTimeRunOut(): Boolean {
+        return !canWaitForMoreTime()
+    }
 }

@@ -20,7 +20,7 @@ data class DictionaryPattern(val keyPattern: Pattern, val valuePattern: Pattern,
                 HasValue(value)
         }.mapFold()
 
-        return returnValue.ifValue { jsonObject.copy(it) }
+        return returnValue.ifValue { jsonObject.copy(jsonObject = it) }
     }
 
     override fun resolveSubstitutions(

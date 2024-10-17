@@ -1,6 +1,7 @@
 package io.specmatic.core
 
 import io.specmatic.core.log.logger
+import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.ExternalCommand
 import java.io.File
 
@@ -10,7 +11,13 @@ enum class HookName {
 }
 
 class CommandHook(private val name: HookName): Hook {
-    val command: String? = name.let { Configuration.config?.hooks?.get(it.name) }
+    val command: String? = name.let {
+        try {
+            loadSpecmaticConfig().hooks[it.name]
+        } catch (e: ContractException) {
+            null
+        }
+    }
 
     override fun readContract(path: String): String {
         checkExists(File(path))

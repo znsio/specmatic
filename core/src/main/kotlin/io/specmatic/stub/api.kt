@@ -96,7 +96,7 @@ internal fun createStub(
     timeoutMillis: Long,
     strict: Boolean = false
 ): ContractStub {
-    val configFileName = getConfigFileName()
+    val configFileName = getConfigFilePath()
     if(File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
     val contractPathData = contractStubPaths(configFileName)
 
@@ -128,7 +128,7 @@ internal fun createStub(
     dataDirPaths: List<String> = emptyList()
 ): ContractStub {
     val workingDirectory = WorkingDirectory()
-    val configFileName = givenConfigFileName ?: getConfigFileName()
+    val configFileName = givenConfigFileName ?: getConfigFilePath()
     if(File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
 
     val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
@@ -190,7 +190,7 @@ internal fun createStubFromContracts(
         host,
         port,
         ::consoleLog,
-        specmaticConfigPath = File(getGlobalConfigFileName()).canonicalPath,
+        specmaticConfigPath = File(getConfigFilePath()).canonicalPath,
         timeoutMillis = timeoutMillis
     )
 }

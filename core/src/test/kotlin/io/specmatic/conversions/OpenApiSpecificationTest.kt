@@ -8048,10 +8048,10 @@ paths:
 
     @Test
     fun `when a header is missing in an expectation the header from the spec should be used`() {
-        val defaultSpecmaticConfig = Configuration.globalConfigFileName
+        val defaultSpecmaticConfig = Configuration.configFilePath
 
         try {
-            Configuration.globalConfigFileName = "src/test/resources/openapi/response_expectation_missing_content_type/specmatic.yaml"
+            Configuration.configFilePath = "src/test/resources/openapi/response_expectation_missing_content_type/specmatic.yaml"
 
             createStub("localhost", 9000, 1000, false, "src/test/resources/openapi/response_expectation_missing_content_type/specmatic.yaml").use { stub ->
                 val response = stub.client.execute(
@@ -8065,16 +8065,16 @@ paths:
                 assertThat(response.body.toStringLiteral()).isEqualTo("world")
             }
         } finally {
-            Configuration.globalConfigFileName = defaultSpecmaticConfig
+            Configuration.configFilePath = defaultSpecmaticConfig
         }
     }
 
     @Test
     fun `inline example should not be loaded as stub if there exists an externalised example with the same name`() {
-        val defaultSpecmaticConfig = Configuration.globalConfigFileName
+        val defaultSpecmaticConfig = Configuration.configFilePath
 
         try {
-            Configuration.globalConfigFileName = "src/test/resources/overriding_external_example_specmatic.yaml"
+            Configuration.configFilePath = "src/test/resources/overriding_external_example_specmatic.yaml"
 
             createStub(
                 host = "localhost",
@@ -8103,7 +8103,7 @@ paths:
                 }
             }
         } finally {
-            Configuration.globalConfigFileName = defaultSpecmaticConfig
+            Configuration.configFilePath = defaultSpecmaticConfig
         }
     }
 

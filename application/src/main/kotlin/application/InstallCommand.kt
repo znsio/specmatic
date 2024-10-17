@@ -1,7 +1,7 @@
 package application
 
 import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import io.specmatic.core.getConfigFileName
+import io.specmatic.core.getConfigFilePath
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.core.utilities.loadSources
@@ -18,7 +18,7 @@ class InstallCommand: Callable<Unit> {
         val userHome = File(targetDirectory)
         val workingDirectory = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE")
 
-        val sources = try { loadSources(getConfigFileName()) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
+        val sources = try { loadSources(getConfigFilePath()) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
 
         for(source in sources) {
             println("Installing $source")

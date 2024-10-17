@@ -4,7 +4,7 @@ package io.specmatic.core.git
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.core.azure.AzureAuthCredentials
-import io.specmatic.core.getConfigFileName
+import io.specmatic.core.getConfigFilePath
 import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
@@ -143,7 +143,7 @@ fun loadFromPath(json: Value?, path: List<String>): Value? {
 }
 
 fun getBearerToken(): String? {
-    val specmaticConfigFile = File(getConfigFileName())
+    val specmaticConfigFile = File(getConfigFilePath())
 
     return when {
         specmaticConfigFile.exists() ->
@@ -236,7 +236,7 @@ private fun getPersonalAccessTokenProperty(): String? {
 
 private fun readConfig(configFile: File): Value {
     try {
-        val config = loadSpecmaticConfig(configFile.name)
+        val config = loadSpecmaticConfig(configFile.path)
         return parsedJSON(ObjectMapper().writeValueAsString(config))
     } catch(e: Throwable) {
         throw ContractException("Error loading Specmatic configuration: ${e.message}")

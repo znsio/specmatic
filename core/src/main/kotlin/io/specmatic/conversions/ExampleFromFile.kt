@@ -32,7 +32,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
             entry.map { it.key } to entry.map { it.value }
         }
 
-        val responseExample: ResponseExample? = response?.let { httpResponse ->
+        val responseExample: ResponseExample? = response.let { httpResponse ->
             when {
                 specmaticConfig.isResponseValueValidationEnabled() ->
                     ResponseValueExample(httpResponse)

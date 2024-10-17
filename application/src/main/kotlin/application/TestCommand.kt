@@ -6,6 +6,7 @@ import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
 import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.utilities.Flags.Companion.CONFIG_FILE_PATH
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_PARALLELISM
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
@@ -14,7 +15,6 @@ import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.core.utilities.newXMLBuilder
 import io.specmatic.core.utilities.xmlToString
 import io.specmatic.test.SpecmaticJUnitSupport
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONFIG_FILE_NAME
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME_PROPERTY
@@ -117,8 +117,8 @@ class TestCommand : Callable<Unit> {
         }
 
         configFileName?.let {
-            Configuration.globalConfigFileName = it
-            System.setProperty(CONFIG_FILE_NAME, it)
+            Configuration.configFilePath = it
+            System.setProperty(CONFIG_FILE_PATH, it)
         }
 
         if(port == 0) {

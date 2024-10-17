@@ -7,6 +7,7 @@ import io.specmatic.core.log.ignoreLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.*
+import io.specmatic.core.utilities.Flags.Companion.CONFIG_FILE_PATH
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
@@ -51,7 +52,6 @@ open class SpecmaticJUnitSupport {
     companion object {
         const val CONTRACT_PATHS = "contractPaths"
         const val WORKING_DIRECTORY = "workingDirectory"
-        const val CONFIG_FILE_NAME = "manifestFile"
         const val INLINE_SUGGESTIONS = "suggestions"
         const val SUGGESTIONS_PATH = "suggestionsPath"
         const val HOST = "host"
@@ -160,7 +160,7 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        val configFile get() = System.getProperty(CONFIG_FILE_NAME) ?: getConfigFileName()
+        val configFile get() = Flags.getStringValue(CONFIG_FILE_PATH) ?: getConfigFilePath()
 
         private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
     }
@@ -169,7 +169,7 @@ open class SpecmaticJUnitSupport {
         if(envName.isNullOrBlank())
             return JSONObjectValue()
 
-        val configFileName = getConfigFileName()
+        val configFileName = getConfigFilePath()
         if(!File(configFileName).exists())
             throw ContractException("Environment name $envName was specified but config file does not exist in the project root. Either avoid setting envName, or provide the configuration file with the environment settings.")
 

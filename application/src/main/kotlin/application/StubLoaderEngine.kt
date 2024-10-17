@@ -1,7 +1,7 @@
 package application
 
 import io.specmatic.core.Feature
-import io.specmatic.core.getConfigFileName
+import io.specmatic.core.getConfigFilePath
 import io.specmatic.core.loadSpecmaticConfigOrDefault
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.ContractPathData
@@ -25,7 +25,7 @@ class StubLoaderEngine {
             }
         }
 
-        val specmaticConfig = loadSpecmaticConfigOrDefault(specmaticConfigPath ?: getConfigFileName())
+        val specmaticConfig = loadSpecmaticConfigOrDefault(specmaticConfigPath ?: getConfigFilePath())
 
         return when {
             dataDirs.isNotEmpty() -> {

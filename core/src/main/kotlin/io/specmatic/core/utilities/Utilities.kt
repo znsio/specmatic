@@ -11,7 +11,7 @@ import org.w3c.dom.Node
 import org.xml.sax.InputSource
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.*
-import io.specmatic.core.Configuration.Companion.globalConfigFileName
+import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.azure.AzureAuthCredentials
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
@@ -144,12 +144,12 @@ fun loadConfigJSON(configFile: File): JSONObjectValue {
     val configJson = try {
         parsedJSON(configFile.readText())
     } catch (e: Throwable) {
-        throw ContractException("Error reading the $globalConfigFileName: ${exceptionCauseMessage(e)}",
+        throw ContractException("Error reading the $configFilePath: ${exceptionCauseMessage(e)}",
             exceptionCause = e)
     }
 
     if (configJson !is JSONObjectValue)
-        throw ContractException("The contents of $globalConfigFileName must be a json object")
+        throw ContractException("The contents of $configFilePath must be a json object")
 
     return configJson
 }
@@ -219,7 +219,7 @@ fun loadSources(configJson: JSONObjectValue): List<ContractSource> {
                 val testPaths = jsonArray(source, "test")
                 WebSource(testPaths, stubPaths)
             }
-            else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $globalConfigFileName")
+            else -> throw ContractException("Provider ${nativeString(source.jsonObject, "provider")} not recognised in $configFilePath")
         }
     }
 }

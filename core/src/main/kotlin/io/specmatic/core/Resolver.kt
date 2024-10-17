@@ -279,14 +279,11 @@ ${matchResult.reportString()}
     }
 
     private fun addToDictionaryLookupPath(typeAlias: String?, key: String): String {
-        if(typeAlias.isNullOrBlank()) {
-            if(key.startsWith("["))
-                return "$dictionaryLookupPath$key"
-            else
-                return "$dictionaryLookupPath.$key"
+        return when {
+            !typeAlias.isNullOrBlank() -> "${withoutPatternDelimiters(typeAlias)}.$key"
+            key.startsWith("[") -> "$dictionaryLookupPath$key"
+            else -> "$dictionaryLookupPath.$key"
         }
-
-        return "${withoutPatternDelimiters(typeAlias)}.$key"
     }
 
     fun hasDictionaryToken(key: String): Boolean {

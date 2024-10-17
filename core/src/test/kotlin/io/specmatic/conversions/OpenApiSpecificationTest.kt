@@ -9214,10 +9214,10 @@ paths:
 
                     return HttpResponse(400, "failed")
                 } else {
-                    if(request.method == "POST") {
-                        return HttpResponse(201, parsedJSONObject("""{"id": $id}"""))
+                    return if(request.method == "POST") {
+                        HttpResponse(201, parsedJSONObject("""{"id": $id}"""))
                     } else {
-                        return HttpResponse(200, parsedJSONObject("""{"productId": "pqr", "quantity": 10}"""))
+                        HttpResponse(200, parsedJSONObject("""{"productId": "pqr", "quantity": 10}"""))
                     }
                 }
             }

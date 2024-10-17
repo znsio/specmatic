@@ -1,0 +1,15 @@
+{
+  "http-request": {
+    "path": "/items",
+    "method": "GET",
+    "query": {
+      "optional-param": "optional"
+    }
+  },
+  "http-response": {
+    "status": 400,
+    "body": {
+      "message": "required-param is missing. Please provide."
+    }
+  }
+}

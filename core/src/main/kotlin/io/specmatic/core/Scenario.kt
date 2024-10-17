@@ -486,7 +486,10 @@ data class Scenario(
                 mismatchMessages = mismatchMessages
             )
 
-            val requestMatchResult = attempt(breadCrumb = "REQUEST") { httpRequestPattern.matches(request, resolver) }
+            val requestMatchResult = attempt(breadCrumb = "REQUEST") {
+                if(response.status == 400) httpRequestPattern.matchesPathAndMethod(request, resolver)
+                else httpRequestPattern.matches(request, resolver)
+            }
 
             if (requestMatchResult is Result.Failure)
                 requestMatchResult.updateScenario(this)

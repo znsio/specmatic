@@ -158,7 +158,7 @@ fun runningOnWindows(): Boolean {
     return "windows" in osName.lowercase()
 }
 
-class Waiter(val delayInMilliSeconds: Long, val maximumWaitTime: Long) {
+class Waiter(private val delayInMilliSeconds: Long, private val maximumWaitTime: Long) {
     private var totalWaitTime = 0L
 
     fun waitForMoreTime() {

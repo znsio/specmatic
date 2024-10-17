@@ -36,7 +36,7 @@ data class HasFailure<T>(val failure: Result.Failure, val message: String = "") 
         return cast()
     }
 
-    fun toFailure(): Result.Failure {
+    private fun toFailure(): Result.Failure {
         return Result.Failure(message, failure)
     }
 

@@ -105,7 +105,7 @@ class CombinationSpec<ValueType>(
         }
     }
 
-    fun <ValueType> allCombinations(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {
+    private fun <ValueType> allCombinations(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {
         if(patternCollection.isEmpty())
             return sequenceOf(emptyMap())
 

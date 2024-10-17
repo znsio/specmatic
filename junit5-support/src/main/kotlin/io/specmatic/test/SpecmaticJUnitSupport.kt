@@ -394,7 +394,7 @@ open class SpecmaticJUnitSupport {
         Success("This URL is valid");
     }
 
-    fun validateURI(uri: String): URIValidationResult {
+    private fun validateURI(uri: String): URIValidationResult {
         val parsedURI = try {
             URL(uri).toURI()
         } catch (e: URISyntaxException) {

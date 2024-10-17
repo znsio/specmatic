@@ -94,7 +94,7 @@ data class HttpRequest(
         return updateWithPathAndQuery(url.path, url.query)
     }
 
-    fun updateWithPathAndQuery(path: String, query: String?): HttpRequest {
+    private fun updateWithPathAndQuery(path: String, query: String?): HttpRequest {
         val queryParams = parseQuery(query)
         return copy(path = path, queryParams = QueryParameters(queryParams))
     }

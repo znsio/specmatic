@@ -42,7 +42,7 @@ class Dictionary(private val map: Map<String, Value> = emptyMap()) {
         return value.copy(jsonObject = newMap)
     }
 
-    fun substituteDictionaryValues(value: Value, paths: List<String> = emptyList(), forceSubstitution: Boolean = false): Value {
+    private fun substituteDictionaryValues(value: Value, paths: List<String> = emptyList(), forceSubstitution: Boolean = false): Value {
         return when (value) {
             is JSONObjectValue -> {
                 substituteDictionaryValues(value, paths, forceSubstitution)
@@ -60,7 +60,7 @@ class Dictionary(private val map: Map<String, Value> = emptyMap()) {
         }
     }
 
-    fun substituteDictionaryValues(name: String, value: String, forceSubstitution: Boolean = false): String {
+    private fun substituteDictionaryValues(name: String, value: String, forceSubstitution: Boolean = false): String {
         return if((isVanillaPatternToken(value) || forceSubstitution) && name in map) {
             map.getValue(name).toStringLiteral()
         } else value

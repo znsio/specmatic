@@ -5,7 +5,7 @@ import io.specmatic.core.log.HttpLogMessage
 object TestInteractionsLog {
 
     val testHttpLogMessages = mutableListOf<HttpLogMessage>()
-    val stubHttpLogMessages = mutableListOf<HttpLogMessage>()
+    private val stubHttpLogMessages = mutableListOf<HttpLogMessage>()
 
     fun addHttpLog(httpLogMessage: HttpLogMessage) {
         if(httpLogMessage.isTestLog()) {

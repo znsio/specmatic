@@ -19,8 +19,8 @@ class OpenApiCoverageReportInput(
     private val excludedAPIs: MutableList<String> = mutableListOf(),
     private val allEndpoints: MutableList<Endpoint> = mutableListOf(),
     internal var endpointsAPISet: Boolean = false,
-    internal var groupedTestResultRecords: MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>> = mutableMapOf(),
-    internal var apiCoverageRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf()
+    private var groupedTestResultRecords: MutableMap<String, MutableMap<String, MutableMap<Int, MutableList<TestResultRecord>>>> = mutableMapOf(),
+    private var apiCoverageRows: MutableList<OpenApiCoverageConsoleRow> = mutableListOf()
 ) {
     fun addTestReportRecords(testResultRecord: TestResultRecord) {
         testResultRecords.add(testResultRecord)

@@ -115,7 +115,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         return URI(requestPath).path ?: ""
     }
 
-    val testName: String = attempt("Error reading expectation name in file ${file.parentFile.canonicalPath}") {
+    private val testName: String = attempt("Error reading expectation name in file ${file.parentFile.canonicalPath}") {
         json.findFirstChildByPath("name")?.toStringLiteral() ?: file.nameWithoutExtension
     }
 

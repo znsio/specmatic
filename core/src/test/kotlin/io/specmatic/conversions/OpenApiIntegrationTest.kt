@@ -596,7 +596,7 @@ Background:
 
     @Nested
     inner class BasicAuthSecurityTest {
-        val openapiSpecificationWithGETAPIHavingBasicAuth = """
+        private val openapiSpecificationWithGETAPIHavingBasicAuth = """
             openapi: 3.0.0
             info:
               title: Hello world
@@ -628,7 +628,7 @@ Background:
             return OpenApiSpecification.fromYAML(openapiSpecificationWithGETAPIHavingBasicAuth, "").toFeature()
         }
 
-        val credentials = "charlie123:pqrxyz"
+        private val credentials = "charlie123:pqrxyz"
         val base64EncodedCredentials = String(java.util.Base64.getEncoder().encode(credentials.toByteArray()))
 
         @Test

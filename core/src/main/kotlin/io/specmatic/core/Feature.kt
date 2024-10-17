@@ -434,7 +434,7 @@ data class Feature(
             positiveTestScenarios + negativeTestScenarios()
     }
 
-    fun positiveTestScenarios(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =
+    private fun positiveTestScenarios(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =
         scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
         }.flatMap { originalScenario ->
@@ -1488,7 +1488,7 @@ data class Feature(
         return schema
     }
 
-    fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Feature {
+    private fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Feature {
         val scenariosWithExamples: List<Scenario> = scenarios.map {
             it.useExamples(externalisedJSONExamples)
         }

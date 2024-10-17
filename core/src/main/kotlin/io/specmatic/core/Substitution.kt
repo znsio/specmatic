@@ -8,15 +8,14 @@ import io.specmatic.core.value.Value
 
 class Substitution(
     runningRequest: HttpRequest,
-    val originalRequest: HttpRequest,
+    private val originalRequest: HttpRequest,
     val httpPathPattern: HttpPathPattern,
     val headersPattern: HttpHeadersPattern,
-    val httpQueryParamPattern: HttpQueryParamPattern,
     val body: Pattern,
     val resolver: Resolver,
     val data: JSONObjectValue,
 ) {
-    val variableValues: Map<String, String>
+    private val variableValues: Map<String, String>
 
     init {
         val variableValuesFromHeaders = variablesFromMap(runningRequest.headers.filter { it.key in originalRequest.headers }, originalRequest.headers)
@@ -103,7 +102,7 @@ class Substitution(
         }
     }
 
-    fun substituteSimpleVariableLookup(string: String, key: String? = null): String {
+    private fun substituteSimpleVariableLookup(string: String, key: String? = null): String {
         val name = string.trim().removeSurrounding("$(", ")")
         return variableValues[name]
                 ?: throw ContractException("Could not resolve expression $string as no variable by the name $name was found")

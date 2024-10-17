@@ -247,7 +247,7 @@ class AllOfDiscriminatorTest {
 
     @Nested
     inner class Discriminator {
-        val openAPIText = """
+        private val openAPIText = """
             ---
             openapi: 3.0.3
             info:

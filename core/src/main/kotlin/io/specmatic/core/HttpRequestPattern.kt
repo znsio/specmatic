@@ -814,7 +814,15 @@ data class HttpRequestPattern(
         resolver: Resolver,
         data: JSONObjectValue,
     ): Substitution {
-        return Substitution(runningRequest, originalRequest, httpPathPattern ?: HttpPathPattern(emptyList(), ""), headersPattern, httpQueryParamPattern, body, resolver, data)
+        return Substitution(
+            runningRequest,
+            originalRequest,
+            httpPathPattern ?: HttpPathPattern(emptyList(), ""),
+            headersPattern,
+            body,
+            resolver,
+            data
+        )
     }
 
 }

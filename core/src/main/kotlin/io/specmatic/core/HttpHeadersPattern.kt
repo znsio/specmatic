@@ -240,11 +240,11 @@ data class HttpHeadersPattern(
         }
 
     fun newBasedOn(resolver: Resolver): Sequence<HttpHeadersPattern> =
-        allOrNothingCombinationIn<Pattern>(
+        allOrNothingCombinationIn(
             pattern,
             Row(),
             null,
-            null, returnValues<Pattern> { pattern: Map<String, Pattern> ->
+            null, returnValues { pattern: Map<String, Pattern> ->
                 newBasedOn(pattern, resolver)
             }).map { it.value }.map { patternMap ->
             HttpHeadersPattern(

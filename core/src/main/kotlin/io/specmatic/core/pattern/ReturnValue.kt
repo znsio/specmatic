@@ -38,7 +38,7 @@ fun <ReturnType> returnValue(errorMessage: String = "", breadCrumb: String = "",
 }
 
 fun <K, ValueType> Map<K, ReturnValue<ValueType>>.mapFold(): ReturnValue<Map<K, ValueType>> {
-    val initial: ReturnValue<Map<K, ValueType>> = HasValue<Map<K, ValueType>>(emptyMap())
+    val initial: ReturnValue<Map<K, ValueType>> = HasValue(emptyMap())
 
     return this.entries.fold(initial) { accR: ReturnValue<Map<K, ValueType>>, (key: K, valueR: ReturnValue<ValueType>) ->
         accR.assimilate(valueR) { acc, value ->
@@ -48,7 +48,7 @@ fun <K, ValueType> Map<K, ReturnValue<ValueType>>.mapFold(): ReturnValue<Map<K, 
 }
 
 fun <ValueType> List<ReturnValue<ValueType>>.listFold(): ReturnValue<List<ValueType>> {
-    val initial: ReturnValue<List<ValueType>> = HasValue<List<ValueType>>(emptyList())
+    val initial: ReturnValue<List<ValueType>> = HasValue(emptyList())
 
     return this.fold(initial) { accR: ReturnValue<List<ValueType>>, valueR: ReturnValue<ValueType> ->
         accR.assimilate(valueR) { acc, value ->
@@ -72,7 +72,7 @@ fun <T> Sequence<List<ReturnValue<out T>>>.sequenceListFold(): Sequence<ReturnVa
 }
 
 fun <T> Sequence<ReturnValue<T>>.foldIntoReturnValueOfSequence(): ReturnValue<Sequence<T>> {
-    val init: ReturnValue<Sequence<T>> = HasValue(emptySequence<T>())
+    val init: ReturnValue<Sequence<T>> = HasValue(emptySequence())
 
     return this.fold(init) { acc: ReturnValue<Sequence<T>>, item: ReturnValue<T> ->
         acc.assimilate(item) { accValue, itemValue ->

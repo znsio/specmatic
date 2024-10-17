@@ -49,7 +49,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         if(value !is JSONArrayValue)
             return HasFailure(Result.Failure("Cannot resolve data substitutions, expected list but got ${value.displayableType()}"))
 
-        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap<String, Pattern>())
+        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap())
         return value.list.fold(initialValue) { acc, valuePattern ->
             val patterns = pattern.getTemplateTypes("", valuePattern, resolver)
 

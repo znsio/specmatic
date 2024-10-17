@@ -231,7 +231,7 @@ data class HttpRequestPattern(
 
         return if (result is Failure) {
             if(result.failureReason == FailureReason.URLPathMisMatch)
-                MatchFailure<Triple<HttpRequest, Resolver, List<Failure>>>(result)
+                MatchFailure(result)
             else
                 MatchSuccess(Triple(parameters.first, parameters.second, listOf(result)))
         }

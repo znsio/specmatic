@@ -124,7 +124,7 @@ data class JSONObjectPattern(
         if(value !is JSONObjectValue)
             return HasFailure(Result.Failure("Cannot resolve data substitutions, expected object but got ${value.displayableType()}"))
 
-        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap<String, Pattern>())
+        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap())
 
         return pattern.mapKeys {
             withoutOptionality(it.key)
@@ -301,11 +301,11 @@ data class JSONObjectPattern(
     }
 
     override fun newBasedOn(resolver: Resolver): Sequence<JSONObjectPattern> =
-        allOrNothingCombinationIn<Pattern>(
+        allOrNothingCombinationIn(
             pattern.minus("..."),
             Row(),
             null,
-            null, returnValues<Pattern> { pattern: Map<String, Pattern> ->
+            null, returnValues { pattern: Map<String, Pattern> ->
                 newBasedOn(pattern, withNullPattern(resolver))
             }).map { it.value }.map { toJSONObjectPattern(it) }
 

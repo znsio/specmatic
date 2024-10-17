@@ -450,7 +450,7 @@ class ApiCoverageReportTest {
         val endpointsInSpec = mutableListOf(
             Endpoint("/orders", "GET", 200), Endpoint("/orders", "GET", 404)
         )
-        val applicationAPIs = mutableListOf<API>(
+        val applicationAPIs = mutableListOf(
             API("GET", "/orders")
         )
 

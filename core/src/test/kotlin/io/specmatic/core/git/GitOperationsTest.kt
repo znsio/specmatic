@@ -8,7 +8,7 @@ class GitOperationsTest {
     fun shouldNotChangeGitRepoUrlWhenThereAreNoEnvVariables() {
         val gitRepositoryURI = "https://gitlab.com/group/project.git"
         val evaluatedGitRepositoryURI =
-            evaluateEnvVariablesInGitRepoURI(gitRepositoryURI = gitRepositoryURI, emptyMap<String, String>())
+            evaluateEnvVariablesInGitRepoURI(gitRepositoryURI = gitRepositoryURI, emptyMap())
         assertThat(evaluatedGitRepositoryURI).isEqualTo(gitRepositoryURI)
     }
 

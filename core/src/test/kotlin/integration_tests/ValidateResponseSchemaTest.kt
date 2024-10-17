@@ -266,7 +266,7 @@ paths:
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                val headers = mapOf<String, String>(
+                val headers = mapOf(
                     "X-Rate-Limit-Limit" to "10"
                 )
 
@@ -349,7 +349,7 @@ paths:
 
             feature.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    val headers = mapOf<String, String>(
+                    val headers = mapOf(
                         "X-Rate-Limit-Limit" to "10",
                         "X-Rate-Limit-Remaining" to "200"
                     )

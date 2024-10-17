@@ -69,11 +69,11 @@ data class AnyPattern(
             )
         }
 
-        return HasFailure<Value>(Failure.fromFailures(failures))
+        return HasFailure(Failure.fromFailures(failures))
     }
 
     override fun getTemplateTypes(key: String, value: Value, resolver: Resolver): ReturnValue<Map<String, Pattern>> {
-        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap<String, Pattern>())
+        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap())
 
         return pattern.fold(initialValue) { acc, pattern ->
             val templateTypes = pattern.getTemplateTypes("", value, resolver)

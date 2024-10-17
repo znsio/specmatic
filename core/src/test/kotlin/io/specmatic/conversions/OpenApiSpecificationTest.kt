@@ -6472,7 +6472,7 @@ paths:
 
         val feature = OpenApiSpecification.fromYAML(specification, "/file.yaml").toFeature()
 
-        val validAuthStub: ScenarioStub = ScenarioStub(
+        val validAuthStub = ScenarioStub(
             HttpRequest(
                 "POST",
                 "/test",
@@ -6482,7 +6482,7 @@ paths:
             HttpResponse.ok("success")
         )
 
-        val invalidAuthStub: ScenarioStub = ScenarioStub(
+        val invalidAuthStub = ScenarioStub(
             HttpRequest(
                 "POST",
                 "/test",

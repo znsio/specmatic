@@ -67,8 +67,7 @@ data class HttpResponsePattern(
             if(responseExampleMatchResult is Result.Failure)
                 throw ContractException("""Error in response in example "${row.name}": ${responseExampleMatchResult.reportString()}""")
 
-            val expectedResponseValue: HttpResponsePattern =
-                HttpResponsePattern(
+            val expectedResponseValue = HttpResponsePattern(
                     responseExample.headersPattern(),
                     responseExample.responseExample.status,
                     responseExample.bodyPattern()

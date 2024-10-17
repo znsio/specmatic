@@ -87,7 +87,7 @@ private fun jgitClone(gitRepositoryURI: String, cloneDirectory: File) {
     try {
         HttpTransport.setConnectionFactory(InsecureHttpConnectionFactory())
 
-        var evaluatedGitRepoURI = evaluateEnvVariablesInGitRepoURI(gitRepositoryURI, System.getenv())
+        val evaluatedGitRepoURI = evaluateEnvVariablesInGitRepoURI(gitRepositoryURI, System.getenv())
 
         val cloneCommand = Git.cloneRepository().apply {
             setTransportConfigCallback(getTransportCallingCallback())

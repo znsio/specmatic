@@ -746,7 +746,7 @@ components:
 
         """.trimIndent()
 
-        var distantRelativesSeen = mutableListOf<JSONArrayValue>()
+        val distantRelativesSeen = mutableListOf<JSONArrayValue>()
 
         try {
             val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()

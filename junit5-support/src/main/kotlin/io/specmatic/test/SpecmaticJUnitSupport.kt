@@ -193,9 +193,9 @@ open class SpecmaticJUnitSupport {
     @TestFactory
     fun contractTest(): Stream<DynamicTest> {
         val statistics = ContractTestStatistics()
-        var name = ObjectName("io.specmatic:type=ContractTestStatistics")
+        val name = ObjectName("io.specmatic:type=ContractTestStatistics")
 
-        var mbs = ManagementFactory.getPlatformMBeanServer()
+        val mbs = ManagementFactory.getPlatformMBeanServer()
 
         if(!mbs.isRegistered(name))
             mbs.registerMBean(statistics, name)

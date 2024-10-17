@@ -199,7 +199,7 @@ class TestCommand : Callable<Unit> {
         getStringValue(SPECMATIC_TEST_PARALLELISM)?.let { parallelism ->
             validateParallelism(parallelism)
 
-            System.setProperty("junit.jupiter.execution.parallel.enabled", "true");
+            System.setProperty("junit.jupiter.execution.parallel.enabled", "true")
 
             when (parallelism) {
                 "auto" -> {

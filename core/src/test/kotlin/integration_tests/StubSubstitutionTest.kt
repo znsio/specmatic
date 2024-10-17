@@ -397,7 +397,7 @@ class StubSubstitutionTest {
 
             assertThat(response.status).isEqualTo(200)
             val jsonResponse = response.body as JSONObjectValue
-            assertThat(jsonResponse.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo("$location")
+            assertThat(jsonResponse.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo(location)
         }
     }
 
@@ -412,7 +412,7 @@ class StubSubstitutionTest {
 
             assertThat(response.status).isEqualTo(200)
             val jsonResponse = response.body as JSONObjectValue
-            assertThat(jsonResponse.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo("$location")
+            assertThat(jsonResponse.findFirstChildByPath("location")?.toStringLiteral()).isEqualTo(location)
         }
     }
 

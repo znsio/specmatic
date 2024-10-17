@@ -229,13 +229,6 @@ fun <ValueType> allOrNothingListCombinations(values: List<Sequence<ValueType?>>)
     }
 }
 
-private fun keyCombinations(values: List<List<Pattern?>>,
-                            optionalSelector: (List<Pattern?>) -> Pattern?): Sequence<Pattern?> {
-    return values.map {
-        optionalSelector(it)
-    }.asSequence().filterNotNull()
-}
-
 fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =
         jsonPattern.mapIndexed { index, pattern ->
             resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->

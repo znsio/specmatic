@@ -91,7 +91,10 @@ data class AnyPattern(
             else
                 "one of ${discriminatorValues.joinToString(", ")}"
 
-            val actualDiscriminatorValue = sampleData.jsonObject[discriminatorProperty] ?: return discriminatorKeyMissingFailure(discriminatorProperty, discriminatorCsvClause)
+            val actualDiscriminatorValue = sampleData.jsonObject[discriminatorProperty] ?: return discriminatorKeyMissingFailure(
+                discriminatorProperty,
+                discriminatorCsvClause
+            )
 
             if (actualDiscriminatorValue.toStringLiteral() !in discriminatorValues) {
                 val message =
@@ -199,7 +202,7 @@ data class AnyPattern(
         sampleData: Value?
     ) = resolver.mismatchMessages.valueMismatchFailure("json object", sampleData)
 
-    private fun AnyPattern.discriminatorKeyMissingFailure(discriminatorProperty: String, discriminatorCsv: String) = Failure(
+    private fun discriminatorKeyMissingFailure(discriminatorProperty: String, discriminatorCsv: String) = Failure(
         "Discriminator property $discriminatorProperty is missing from the object (it's value should be $discriminatorCsv)",
         breadCrumb = discriminatorProperty,
         failureReason = FailureReason.DiscriminatorMismatch

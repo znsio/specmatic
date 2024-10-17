@@ -434,9 +434,6 @@ class FeatureKtTest {
     private fun deferredToNumberPattern(pattern: Pattern, resolver: Resolver): NumberPattern =
             (pattern as DeferredPattern).resolvePattern(resolver) as NumberPattern
 
-    private fun resolveDeferred(pattern: Pattern, resolver: Resolver): Pattern =
-            (pattern as DeferredPattern).resolvePattern(resolver)
-
     @Test
     fun `should handle multiple types in the response at different levels with the same key and hence the same name`() {
         val stubJSON = """

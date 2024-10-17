@@ -9,7 +9,6 @@ import java.net.URI
 
 val OMIT = listOf("(OMIT)", "(omit)")
 
-val EMPTY_PATH= HttpPathPattern(emptyList(), "")
 const val PATH_BREAD_CRUMB = "PATH"
 
 data class HttpPathPattern(
@@ -199,23 +198,6 @@ data class HttpPathPattern(
                     }
                 }.iterator()
         }
-    }
-
-    private fun positively(
-        patterns: List<URLPathSegmentPattern>,
-        row: Row,
-        resolver: Resolver
-    ): Sequence<ReturnValue<URLPathSegmentPattern>> {
-        if(patterns.isEmpty())
-            return emptySequence()
-
-        val patternToPositively = patterns.first()
-
-        val positively: Sequence<ReturnValue<Pattern>> = patternFromExample(null, row, patternToPositively, resolver)
-
-        return positively.flatMap { positive: ReturnValue<Pattern> ->
-            sequenceOf(positive) + positively(patterns.drop(1), row, resolver)
-        }.map { it.ifValue { it as URLPathSegmentPattern } }
     }
 
     fun negativeBasedOn(

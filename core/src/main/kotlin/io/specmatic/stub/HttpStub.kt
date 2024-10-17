@@ -111,6 +111,7 @@ class HttpStub(
 
     private val requestHandlers: MutableList<RequestHandler> = mutableListOf()
 
+    //used by graphql / plugins
     fun registerHandler(requestHandler: RequestHandler) {
         requestHandlers.add(requestHandler)
     }

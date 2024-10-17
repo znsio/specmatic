@@ -86,9 +86,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
     }
 
     val responseHeaders: JSONObjectValue? = attempt("Error reading response headers in file ${file.parentFile.canonicalPath}") {
-        val headers = json.findFirstChildByPath("http-response.headers")
-        if(headers == null)
-            return@attempt null
+        val headers = json.findFirstChildByPath("http-response.headers") ?: return@attempt null
 
         if(headers !is JSONObjectValue)
             throw ContractException("http-response.headers should be a JSON object, but instead it was ${headers.toStringLiteral()}")

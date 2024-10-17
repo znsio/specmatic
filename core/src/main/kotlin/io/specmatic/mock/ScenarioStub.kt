@@ -59,7 +59,7 @@ data class ScenarioStub(
 
     private fun replaceInRequestBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>, requestTemplatePatterns: Map<String, Pattern>, resolver: Resolver): Value {
         return value.copy(
-            value.list.map {
+            list = value.list.map {
                 replaceInRequestBody(value, substitutions, requestTemplatePatterns, resolver)
             }
         )
@@ -135,7 +135,7 @@ data class ScenarioStub(
 
     private fun replaceInResponseBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
         return value.copy(
-            value.jsonObject.mapValues {
+            jsonObject = value.jsonObject.mapValues {
                 replaceInResponseBody(it.value, substitutions, it.key)
             }
         )
@@ -143,7 +143,7 @@ data class ScenarioStub(
 
     private fun replaceInResponseBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
         return value.copy(
-            value.list.map { item: Value ->
+            list = value.list.map { item: Value ->
                 replaceInResponseBody(item, substitutions, "")
             }
         )

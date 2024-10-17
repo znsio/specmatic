@@ -1159,11 +1159,11 @@ class OpenApiSpecification(
             val updatedDiscriminatorDetails: Map<String, Map<String, Pair<String, List<Schema<Any>>>>> =
                 discriminatorDetails.plus(propertyName to valuesAndSchemas)
 
-            return this.copy(updatedDiscriminatorDetails).plus(newDiscriminator)
+            return this.copy(discriminatorDetails = updatedDiscriminatorDetails).plus(newDiscriminator)
         }
 
         fun plus(newDiscriminator: Discriminator): Discriminator {
-            return this.copy(mergeMapOfMaps(discriminatorDetails, newDiscriminator.discriminatorDetails))
+            return this.copy(discriminatorDetails = mergeMapOfMaps(discriminatorDetails, newDiscriminator.discriminatorDetails))
         }
 
         private fun <T> mergeMapOfMaps(

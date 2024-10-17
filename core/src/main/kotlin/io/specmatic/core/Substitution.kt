@@ -110,7 +110,7 @@ class Substitution(
 
     private fun resolveSubstitutions(value: JSONObjectValue): Value {
         return value.copy(
-            value.jsonObject.mapValues { entry ->
+            jsonObject = value.jsonObject.mapValues { entry ->
                 resolveSubstitutions(entry.value)
             }
         )
@@ -118,7 +118,7 @@ class Substitution(
 
     private fun resolveSubstitutions(value: JSONArrayValue): Value {
         return value.copy(
-            value.list.map {
+            list = value.list.map {
                 resolveSubstitutions(it)
             }
         )

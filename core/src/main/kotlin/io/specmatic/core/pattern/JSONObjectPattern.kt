@@ -94,7 +94,7 @@ data class JSONObjectPattern(
         }.mapFold()
 
         return mapWithKeysInPartial.combine(mapWithMissingKeysGenerated) { entriesInPartial, missingEntries ->
-            jsonObject.copy(entriesInPartial + missingEntries)
+            jsonObject.copy(jsonObject = entriesInPartial + missingEntries)
         }
     }
 

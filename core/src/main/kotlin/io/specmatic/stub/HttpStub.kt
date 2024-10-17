@@ -1057,7 +1057,7 @@ fun dumpIntoFirstAvailableStringField(jsonObjectValue: JSONObjectValue, stringVa
         }
     }
 
-    return jsonObjectValue.copy(newMap)
+    return jsonObjectValue.copy(jsonObject = newMap)
 }
 
 fun dumpIntoFirstAvailableStringField(jsonArrayValue: JSONArrayValue, stringValue: String): JSONArrayValue {

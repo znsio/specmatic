@@ -1167,11 +1167,11 @@ Examples:
 
         val scenarioNames = mutableListOf<String>()
 
-        feature.generateContractTests(emptyList(), { scenario, row ->
+        feature.generateContractTests(emptyList()) { scenario, _ ->
             scenario.copy(
                 name = "Name added in hook"
             )
-        }).forEach {
+        }.forEach {
             it.runTest(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     return HttpResponse.ok("ok")

@@ -50,31 +50,42 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
     override fun createTableRows(scenarioExamplePair: List<Pair<Scenario, ExampleValidationResult?>>): List<ExampleTableRow> {
         val groupedScenarios = scenarioExamplePair.sortScenarios().groupScenarios()
 
-        return groupedScenarios.flatMap { (_, methodMap) ->
-            val pathSpan = methodMap.values.sumOf { it.size }
-            val methodSet: MutableSet<String> = mutableSetOf()
+        return groupedScenarios.flatMap { (path, pathGroup) ->
             var showPath = true
-
-            methodMap.flatMap { (method, scenarios) ->
-                scenarios.map { (scenario, example) ->
-                    ExampleTableRow(
-                        columns = listOf(
-                            ExampleRowGroup("path", convertPathParameterStyle(scenario.path), rawValue = scenario.path, rowSpan = pathSpan, showRow = showPath),
-                            ExampleRowGroup("method", scenario.method, showRow = !methodSet.contains(method), rowSpan = scenarios.size),
-                            ExampleRowGroup("response", scenario.status.toString(), showRow = true, rowSpan = 1, extraInfo = scenario.httpRequestPattern.headersPattern.contentType)
-                        ),
-                        exampleFilePath = example?.exampleFile?.absolutePath,
-                        exampleFileName = example?.exampleName,
-                        exampleMismatchReason = example?.result?.reportString().takeIf { reason -> reason?.isNotBlank() == true }
-                    ).also { methodSet.add(method); showPath = false }
+            pathGroup.methods.flatMap { (method, methodGroup) ->
+                var showMethod = true
+                methodGroup.statuses.flatMap { (status, statusGroup) ->
+                    var showStatus = true
+                    statusGroup.examples.map { (scenario, example) ->
+                        ExampleTableRow(
+                            columns = listOf(
+                                ExampleRowGroup("path", convertPathParameterStyle(path), rawValue = path, rowSpan = pathGroup.count, showRow = showPath),
+                                ExampleRowGroup("method", method, rowSpan = methodGroup.count, showRow = showMethod),
+                                ExampleRowGroup("response", status, rowSpan = statusGroup.count, showRow = showStatus, extraInfo = scenario.httpRequestPattern.headersPattern.contentType)
+                            ),
+                            exampleFilePath = example?.exampleFile?.absolutePath,
+                            exampleFileName = example?.exampleName,
+                            exampleMismatchReason = example?.result?.reportString().takeIf { reason -> reason?.isNotBlank() == true }
+                        ).also { showPath = false; showMethod = false; showStatus = false }
+                    }
                 }
             }
         }
     }
 
-    private fun List<Pair<Scenario, ExampleValidationResult?>>.groupScenarios(): Map<String, Map<String, List<Pair<Scenario, ExampleValidationResult?>>>> {
-        return this.groupBy { it.first.path }.mapValues { pathGroup ->
-            pathGroup.value.groupBy { it.first.method }
+    private fun List<Pair<Scenario, ExampleValidationResult?>>.groupScenarios(): Map<String, PathGroup> {
+        return this.groupBy { it.first.path }.mapValues { (_, pathGroup) ->
+            PathGroup(
+                count = pathGroup.size,
+                methods = pathGroup.groupBy { it.first.method }.mapValues { (_, methodGroup) ->
+                    MethodGroup(
+                        count = methodGroup.size,
+                        statuses = methodGroup.groupBy { it.first.status.toString() }.mapValues { (_, statusGroup) ->
+                            StatusGroup(count = statusGroup.size, examples = statusGroup)
+                        }
+                    )
+                }
+            )
         }
     }
 
@@ -91,4 +102,20 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
     ) {
         val contentType = response.extraInfo
     }
+
+    data class StatusGroup (
+        val count: Int,
+        val examples: List<Pair<Scenario, ExampleValidationResult?>>
+    )
+
+    data class MethodGroup (
+        val count: Int,
+        val statuses: Map<String, StatusGroup>
+    )
+
+    data class PathGroup (
+        val count: Int,
+        val methods: Map<String, MethodGroup>
+    )
+
 }

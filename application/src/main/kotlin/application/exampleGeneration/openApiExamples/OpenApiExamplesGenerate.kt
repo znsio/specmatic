@@ -34,9 +34,9 @@ class OpenApiExamplesGenerationStrategy: ExamplesGenerationStrategy<Feature, Sce
         return Pair("$uniqueName.json", stubJSON)
     }
 
-    override fun getExistingExampleOrNull(scenario: Scenario, exampleFiles: List<File>): Pair<File, Result>? {
+    override fun getExistingExamples(scenario: Scenario, exampleFiles: List<File>): List<Pair<File, Result>> {
         val examples  = exampleFiles.toExamples()
-        return examples.firstNotNullOfOrNull { example ->
+        return examples.mapNotNull { example ->
             val response = example.response
 
             when (val matchResult = scenario.matchesMock(example.request, response)) {

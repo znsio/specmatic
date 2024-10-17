@@ -45,8 +45,8 @@ abstract class ExamplesGenerateBase<Feature, Scenario>(
         }
 
         val exampleFiles = getExternalExampleFiles(examplesDir)
-        return filteredScenarios.map { scenario ->
-            generationStrategy.generateOrGetExistingExample(
+        return filteredScenarios.flatMap { scenario ->
+            generationStrategy.generateOrGetExistingExamples(
                 ExamplesGenerationStrategy.GenerateOrGetExistingExampleArgs(
                     feature, scenario,
                     featureStrategy.getScenarioDescription(scenario),
@@ -80,27 +80,28 @@ abstract class ExamplesGenerateBase<Feature, Scenario>(
 }
 
 interface ExamplesGenerationStrategy<Feature, Scenario> {
-    fun getExistingExampleOrNull(scenario: Scenario, exampleFiles: List<File>): Pair<File, Result>?
+    fun getExistingExamples(scenario: Scenario, exampleFiles: List<File>): List<Pair<File, Result>>
 
     fun generateExample(feature: Feature, scenario: Scenario): Pair<String, String>
 
-    fun generateOrGetExistingExample(request: GenerateOrGetExistingExampleArgs<Feature, Scenario>): ExampleGenerationResult {
+    fun generateOrGetExistingExamples(request: GenerateOrGetExistingExampleArgs<Feature, Scenario>): List<ExampleGenerationResult> {
         return try {
-            val existingExample = getExistingExampleOrNull(request.scenario, request.exampleFiles)
+            val existingExamples = getExistingExamples(request.scenario, request.exampleFiles)
             val scenarioDescription = request.scenarioDescription
 
-            if (existingExample != null) {
-                consoleLog("Using existing example for ${scenarioDescription}\nExample File: ${existingExample.first.absolutePath}")
-                return ExampleGenerationResult(existingExample.first, ExampleGenerationStatus.EXISTS)
+            if (existingExamples.isNotEmpty()) {
+                consoleLog("Using existing example(s) for $scenarioDescription")
+                existingExamples.forEach { consoleLog("Example File: ${it.first.absolutePath}\"") }
+                return existingExamples.map { ExampleGenerationResult(it.first, ExampleGenerationStatus.EXISTS) }
             }
 
             consoleLog("Generating example for $scenarioDescription")
             val (uniqueFileName, exampleContent) = generateExample(request.feature, request.scenario)
-            return writeExampleToFile(exampleContent, uniqueFileName, request.examplesDir, request.validExampleExtensions)
+            return listOf(writeExampleToFile(exampleContent, uniqueFileName, request.examplesDir, request.validExampleExtensions))
         } catch (e: Throwable) {
             consoleLog("Failed to generate example: ${e.message}")
             consoleDebug(e)
-            ExampleGenerationResult(null, ExampleGenerationStatus.ERROR)
+            listOf(ExampleGenerationResult(null, ExampleGenerationStatus.ERROR))
         }
     }
 

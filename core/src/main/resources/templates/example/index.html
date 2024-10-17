@@ -602,7 +602,7 @@
                     background-color: rgb(var(--slate));
                 }
 
-                & > td:nth-child(n+3):nth-last-child(n+4) {
+                &[data-generate="success"] > td:nth-child(n+3):nth-last-child(n+3), & > td:nth-child(n+3):nth-last-child(n+4) {
                     background-color: rgb(var(--white));
                     word-break: break-word;
                     pointer-events: none;
@@ -1019,10 +1019,8 @@
             </tr>
         </thead>
         <tbody th:attr="data-test-mode=${isTestMode}">
-            <tr
-                th:each="row, iter : ${tableRows}"
-                th:attr="data-examples=${row.exampleFilePath},
-                        data-generate=${row.exampleFilePath != null ? 'success' : ''},
+            <tr th:each="row, iter: ${tableRows}"
+                th:attr="data-examples=${row.exampleFilePath}, data-generate=${row.exampleFilePath != null ? 'success' : ''},
                         data-valid=${row.exampleFilePath != null ? (row.exampleMismatchReason == null ? 'success' : 'failed') : ''}">
                 <td>
                     <input type="checkbox" name="path-row" class="path-row">
@@ -1030,10 +1028,9 @@
                 <td>
                     <p>[[${iter.index + 1}]]</p>
                 </td>
-                <td th:each="group, iter: ${row.columns}"
-                    th:attr="colspan=${tableColumns[iter.index].colSpan},
-                        rowSpan=${group.rowSpan}, data-col-name=${group.columnName}, data-raw-value=${group.rawValue},"
-                    th:class="${group.showRow ? '' : 'hidden'}">
+                <td th:each="group, iter: ${row.columns}" th:class="${group.showRow ? '' : 'hidden'}"
+                    th:attr="colspan=${tableColumns[iter.index].colSpan}, rowSpan=${group.rowSpan},
+                        data-col-name=${group.columnName}, data-raw-value=${group.rawValue}" >
                     <p>[[${group.value}]]</p>
                     <span th:if="${group.extraInfo != null}">[[${group.extraInfo}]]</span>
                 </td>

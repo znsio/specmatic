@@ -59,17 +59,10 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
     override suspend fun generateExample(call: ApplicationCall, contractFile: File): ExampleGenerationResult {
         val feature = featureStrategy.contractFileToFeature(contractFile)
         val examplesDir = getExamplesDirectory(contractFile)
-        val exampleFiles = getExternalExampleFiles(examplesDir)
 
         return getScenarioFromRequestOrNull(call, feature)?.let {
-            generationStrategy.generateOrGetExistingExample(
-                ExamplesGenerationStrategy.GenerateOrGetExistingExampleArgs(
-                    feature, it,
-                    featureStrategy.getScenarioDescription(it),
-                    exampleFiles, examplesDir,
-                    featureStrategy.exampleFileExtensions
-                )
-            )
+            val (exampleFileName, exampleContent) = generationStrategy.generateExample(feature, scenario = it)
+            generationStrategy.writeExampleToFile(exampleContent, exampleFileName, examplesDir, featureStrategy.exampleFileExtensions)
         } ?: throw IllegalArgumentException("No matching scenario found for request")
     }
 
@@ -93,10 +86,10 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
         val examplesDir = getExamplesDirectory(contractFile)
         val examples = getExternalExampleFiles(examplesDir)
 
-        val scenarioExamplePair = scenarios.map {
-            it to generationStrategy.getExistingExampleOrNull(it, examples)?.let { exRes ->
-                ExampleValidationResult(exRes.first, exRes.second)
-            }
+        val scenarioExamplePair = scenarios.flatMap {
+            generationStrategy.getExistingExamples(it, examples).map { exRes ->
+                it to ExampleValidationResult(exRes.first, exRes.second)
+            }.ifEmpty { listOf(it to null) }
         }
         return createTableRows(scenarioExamplePair)
     }

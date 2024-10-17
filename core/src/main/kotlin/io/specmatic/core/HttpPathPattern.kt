@@ -255,7 +255,7 @@ data class HttpPathPattern(
         }
 
         else -> returnValueSequence {
-            val positives: Sequence<Pattern> = urlPathPattern.newBasedOn_Wrapper(row, resolver)
+            val positives: Sequence<Pattern> = urlPathPattern.newBasedOnWrapper(row, resolver)
             val negatives: Sequence<ReturnValue<Pattern>> = urlPathPattern.negativeBasedOn(row, resolver)
 
             positives.map { HasValue(it) } + negatives

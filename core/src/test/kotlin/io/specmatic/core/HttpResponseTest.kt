@@ -195,11 +195,6 @@ internal class HttpResponseTest {
 
             assertThat(httpResponse.isNotEmpty()).isEqualTo(true)
         }
-
-        @Test
-        fun `should pretty print by default`() {
-
-        }
     }
 
     @Test

@@ -7,7 +7,7 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
 class Substitution(
-    val runningRequest: HttpRequest,
+    runningRequest: HttpRequest,
     val originalRequest: HttpRequest,
     val httpPathPattern: HttpPathPattern,
     val headersPattern: HttpHeadersPattern,

@@ -166,7 +166,7 @@ class AllOfDiscriminatorTest {
         )
 
         val discriminatorProperty = "type"
-        assertThat(result.reportString()).contains("Discriminator property ${discriminatorProperty} is missing from the object")
+        assertThat(result.reportString()).contains("Discriminator property $discriminatorProperty is missing from the object")
     }
 
     @Test

@@ -152,7 +152,7 @@ class GenerativeTests {
         val negativeGenerativeAll = 3 + 3
         val negativeGenerativeNothing = 3
 
-        var optionalKeyOccurrence: Int = 0
+        var optionalKeyOccurrence = 0
 
         val OPTIONAL_KEY = "description"
 

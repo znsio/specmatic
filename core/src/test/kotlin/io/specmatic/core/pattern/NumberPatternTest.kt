@@ -275,7 +275,7 @@ internal class NumberPatternTest {
     }
 
     @Test
-    fun `test`() {
+    fun `it should match the lowest min`() {
         val pointZeroOne = ".01"
         val minimumPointZeroOne = NumberPattern(minimum = BigDecimal(pointZeroOne))
         val result = minimumPointZeroOne.matches(NumberValue(convertToNumber(pointZeroOne)), Resolver())

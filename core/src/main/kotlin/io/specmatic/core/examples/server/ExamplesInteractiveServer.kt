@@ -38,7 +38,7 @@ class ExamplesInteractiveServer(
     private val inputContractFile: File? = null,
     private val filterName: String,
     private val filterNotName: String,
-    private val externalDictionaryFile: File? = null
+    externalDictionaryFile: File? = null
 ) : Closeable {
     private var contractFileFromRequest: File? = null
 
@@ -460,7 +460,7 @@ class ExamplesInteractiveServer(
             val updatedFeature = scenarioFilter.filter(feature)
 
             val results = examples.mapValues { (name, exampleList) ->
-                logger.log("Validating ${name}")
+                logger.log("Validating $name")
 
                 exampleList.map { example ->
                     try {

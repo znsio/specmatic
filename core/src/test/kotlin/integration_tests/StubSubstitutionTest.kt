@@ -473,7 +473,7 @@ class StubSubstitutionTest {
             try {
                 val stub = createStubFromContracts(listOf(osAgnosticPath("src/test/resources/openapi/substitutions/spec_with_non_existent_data_key.yaml")), timeoutMillis = 0)
                 stub.close()
-            } catch(e: Throwable) {
+            } catch(_: Throwable) {
 
             }
         }
@@ -493,13 +493,12 @@ class StubSubstitutionTest {
             try {
                 val stub = createStubFromContracts(listOf(("src/test/resources/openapi/substitutions/spec_with_example_missing_the_data_section.yaml")), timeoutMillis = 0)
                 stub.close()
-            } catch(e: Throwable) {
+            } catch(_: Throwable) {
 
             }
         }
 
-        assertThat(output)
-            .contains("@department")
+        assertThat(output).contains("@department")
     }
 
     @Test

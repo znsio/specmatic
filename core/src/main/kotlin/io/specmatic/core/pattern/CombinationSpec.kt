@@ -20,7 +20,7 @@ package io.specmatic.core.pattern
  */
 class CombinationSpec<ValueType>(
     keyToCandidatesOrig: Map<String, Sequence<ReturnValue<ValueType>>>,
-    private val maxCombinations: Int
+    maxCombinations: Int
 ) {
     companion object {
         fun <ValueType> from(keyToCandidates: Map<String, Sequence<ValueType>>, maxCombinations: Int): CombinationSpec<ValueType> {

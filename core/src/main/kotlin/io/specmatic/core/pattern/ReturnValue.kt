@@ -5,7 +5,7 @@ import io.specmatic.core.Result
 sealed interface ReturnValue<T> {
     val value: T
 
-    abstract fun <U> withDefault(default: U, fn: (T) -> U): U
+    fun <U> withDefault(default: U, fn: (T) -> U): U
 
     fun <U, V> withDefault(default: U, other: ReturnValue<V>, fn: (T, V) -> U): U {
         if(this !is HasValue && other !is HasValue)
@@ -14,8 +14,8 @@ sealed interface ReturnValue<T> {
         return fn(this.value, other.value)
     }
 
-    abstract fun <U> ifValue(fn: (T) -> U): ReturnValue<U>
-    abstract fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U>
+    fun <U> ifValue(fn: (T) -> U): ReturnValue<U>
+    fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U>
     fun update(fn: (T) -> T): ReturnValue<T>
     fun <U> assimilate(acc: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T>
     fun <U, V> combine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V>

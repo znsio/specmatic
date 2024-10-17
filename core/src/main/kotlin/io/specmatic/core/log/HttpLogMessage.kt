@@ -51,11 +51,11 @@ data class HttpLogMessage(
 
         val commentLines = if(comment != null) {
             listOf(
-                "${linePrefix}",
+                "$linePrefix",
                 "${comment.prependIndent(linePrefix)}",
-                "${linePrefix}",
+                "$linePrefix",
                 "${linePrefix}-----",
-                "${linePrefix}")
+                "$linePrefix")
         } else {
             emptyList()
         }

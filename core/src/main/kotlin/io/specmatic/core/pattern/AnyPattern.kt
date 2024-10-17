@@ -128,7 +128,7 @@ data class AnyPattern(
 
             if(!discriminatorMatchOccurred) {
                 return Failure(
-                    "Discriminator property ${discriminatorProperty} is missing from the spec",
+                    "Discriminator property $discriminatorProperty is missing from the spec",
                     breadCrumb = discriminatorProperty,
                     failureReason = FailureReason.DiscriminatorMismatch
                 )
@@ -200,7 +200,7 @@ data class AnyPattern(
     ) = resolver.mismatchMessages.valueMismatchFailure("json object", sampleData)
 
     private fun AnyPattern.discriminatorKeyMissingFailure(discriminatorProperty: String, discriminatorCsv: String) = Failure(
-        "Discriminator property ${discriminatorProperty} is missing from the object (it's value should be $discriminatorCsv)",
+        "Discriminator property $discriminatorProperty is missing from the object (it's value should be $discriminatorCsv)",
         breadCrumb = discriminatorProperty,
         failureReason = FailureReason.DiscriminatorMismatch
     )

@@ -388,7 +388,7 @@ class OpenApiSpecification(
 
                     val requestMediaTypes = httpRequestPatternDataGroupedByContentType.keys
 
-                    val requestResponsePairs = httpResponsePatternsGrouped.flatMap { (status, responses) ->
+                    val requestResponsePairs = httpResponsePatternsGrouped.flatMap { (_, responses) ->
                         val responsesGrouped = responses.groupBy {
                             it.responsePattern.headersPattern.contentType
                         }
@@ -410,7 +410,7 @@ class OpenApiSpecification(
 
                     val scenarioInfos = requestResponsePairs.map { (requestPatternData, responsePatternData) ->
                         val (httpRequestPattern, requestExamples: Map<String, List<HttpRequest>>, openApiRequest) = requestPatternData
-                        val (response, responseMediaType: MediaType, httpResponsePattern, responseExamples: Map<String, HttpResponse>) = responsePatternData
+                        val (response, _: MediaType, httpResponsePattern, responseExamples: Map<String, HttpResponse>) = responsePatternData
 
                         val specmaticExampleRows: List<Row> =
                             testRowsFromExamples(responseExamples, requestExamples, operation, openApiRequest, first2xxResponseStatus)
@@ -520,7 +520,7 @@ class OpenApiSpecification(
         )
         val examplesOfResponseThatReturnsNoValues: Map<String, List<Pair<HttpRequest, HttpResponse>>> =
             requestExamples.filterKeys { it in unusedRequestExampleNames }
-                .mapValues { (key, examples) ->
+                .mapValues { (_, examples) ->
                     examples.map { it to emptyResponse }
                 }
 

@@ -1105,7 +1105,7 @@ Examples:
     fun `test should load an example for a spec with pattern as a path param`() {
         val feature: Feature = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_path_param.yaml").toFeature().loadExternalisedExamples()
 
-        var itemSeen: String = ""
+        var itemSeen = ""
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {

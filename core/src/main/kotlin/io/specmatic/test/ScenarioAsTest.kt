@@ -9,7 +9,7 @@ import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.Value
 
 data class ScenarioAsTest(
-    val scenario: Scenario,
+    override val scenario: Scenario,
     private val flagsBased: FlagsBased,
     private val sourceProvider: String? = null,
     private val sourceRepository: String? = null,

@@ -5,5 +5,6 @@ data class ScenarioMetadata(
     val path: String,
     val statusCode: Int,
     val header: Set<String>,
-    val query: Set<String>
+    val query: Set<String>,
+    val exampleName: String
 )

@@ -5,5 +5,6 @@ enum class ScenarioFilterTags(val key: String) {
     PATH("path"),
     STATUS_CODE("status-code"),
     HEADER("header"),
-    QUERY("query")
+    QUERY("query"),
+    EXAMPLE_NAME("example-name")
 }

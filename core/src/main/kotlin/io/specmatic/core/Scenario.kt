@@ -637,7 +637,8 @@ data class Scenario(
             path = this.path,
             statusCode = this.status,
             header = this.httpRequestPattern.getHeaderKeys(),
-            query = this.httpRequestPattern.getQueryParamKeys()
+            query = this.httpRequestPattern.getQueryParamKeys(),
+            exampleName = this.exampleName.orEmpty()
         )
     }
 }

@@ -3,6 +3,7 @@ package io.specmatic.test
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
+import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.log.ignoreLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
@@ -63,6 +64,8 @@ open class SpecmaticJUnitSupport {
         const val VARIABLES_FILE_NAME = "variablesFileName"
         const val FILTER_NAME_PROPERTY = "filterName"
         const val FILTER_NOT_NAME_PROPERTY = "filterNotName"
+        const val FILTER = "filter"
+        const val FILTER_NOT = "filterNot"
         const val FILTER_NAME_ENVIRONMENT_VARIABLE = "FILTER_NAME"
         const val FILTER_NOT_NAME_ENVIRONMENT_VARIABLE = "FILTER_NOT_NAME"
         private const val ENDPOINTS_API = "endpointsAPI"
@@ -283,7 +286,15 @@ open class SpecmaticJUnitSupport {
                 }
             }
             openApiCoverageReportInput.addEndpoints(allEndpoints)
-            selectTestsToRun(testScenarios, filterName, filterNotName) { it.testDescription() }
+
+            val filteredTestsBasedOnMetadata = selectTestsToRun(
+                contractTests = testScenarios,
+                scenarioMetadataFilter = ScenarioMetadataFilter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty()),
+                scenarioMetadataExclusionFilter = ScenarioMetadataFilter.from(
+                    readEnvVarOrProperty(FILTER_NOT, FILTER_NOT).orEmpty()
+                )
+            )
+            selectTestsToRun(filteredTestsBasedOnMetadata, filterName, filterNotName) { it.testDescription() }
         } catch(e: ContractException) {
             return loadExceptionAsTestError(e)
         } catch(e: Throwable) {
@@ -580,4 +591,16 @@ fun <T> selectTestsToRun(
         filteredByName
 
     return filteredByNotName
+}
+
+fun selectTestsToRun(
+    contractTests: Sequence<ContractTest>,
+    scenarioMetadataFilter: ScenarioMetadataFilter,
+    scenarioMetadataExclusionFilter: ScenarioMetadataFilter
+): Sequence<ContractTest> {
+    return contractTests.filter {
+        scenarioMetadataFilter.isSatisfiedByAll(it.scenario.toScenarioMetadata())
+    }.filterNot {
+        scenarioMetadataExclusionFilter.isSatisfiedByAtLeastOne(it.scenario.toScenarioMetadata())
+    }
 }

@@ -9,6 +9,7 @@ interface ResponseValidator {
 }
 
 interface ContractTest {
+    val scenario: Scenario
     fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord?
     fun testDescription(): String
     fun runTest(testBaseURL: String, timeoutInMilliseconds: Long): Pair<Result, HttpResponse?>

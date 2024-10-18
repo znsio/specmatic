@@ -17,7 +17,9 @@ import io.specmatic.core.utilities.xmlToString
 import io.specmatic.test.SpecmaticJUnitSupport
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME_PROPERTY
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME_PROPERTY
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
@@ -82,6 +84,47 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--filter-not-name"], description = ["Run only tests which do not have this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}")
     var filterNotName: String = ""
 
+    @Option(
+        names= ["--filter"],
+        description = [
+           """
+Filter tests matching the specified filtering criteria
+
+You can filter tests based on the following keys:
+- `method`: HTTP methods (e.g., GET, POST)
+- `path`: Request paths (e.g., /users, /product)
+- `status-code`: HTTP response status codes (e.g., 200, 400)
+- `query`: Query parameters (e.g., status, productId)
+- `header`: Request headers (e.g., Accept, X-Request-ID)
+
+To specify multiple values for the same filter, separate them with commas. 
+For example, to filter by HTTP methods: 
+--filter "method=GET,POST"
+
+You can combine multiple filters using a semicolon. 
+For example:
+--filter "method=GET,POST;path=/users;status-code=200,400;header=Accept"
+           """
+        ],
+        required = false
+    )
+    var filter: String = ""
+
+    @Option(
+        names= ["--filterNot"],
+        description = [
+           """
+Filter tests not matching the specified criteria
+
+This option supports the same filtering keys and syntax as the --filter option.
+For example:
+--filterNot "status-code=400;header.Content-Type=application/xml"
+           """
+        ],
+        required = false
+    )
+    var filterNot: String = ""
+
     @Option(names = ["--env"], description = ["Environment name"])
     var envName: String = ""
 
@@ -143,6 +186,8 @@ class TestCommand : Callable<Unit> {
         System.setProperty(INLINE_SUGGESTIONS, suggestions)
         System.setProperty(ENV_NAME, envName)
         System.setProperty("protocol", protocol)
+        System.setProperty(FILTER, filter)
+        System.setProperty(FILTER_NOT, filterNot)
 
         if(exampleDirs.isNotEmpty()) {
             System.setProperty(EXAMPLE_DIRECTORIES, exampleDirs.joinToString(","))

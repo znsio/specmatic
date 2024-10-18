@@ -6,7 +6,12 @@ import io.specmatic.core.Scenario
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.exceptionCauseMessage
 
-class ScenarioTestGenerationException(val scenario: Scenario, val e: Throwable, val message: String, val breadCrumb: String?) : ContractTest {
+class ScenarioTestGenerationException(
+    override val scenario: Scenario,
+    val e: Throwable,
+    val message: String,
+    val breadCrumb: String?
+) : ContractTest {
     override fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord? {
         return null
     }

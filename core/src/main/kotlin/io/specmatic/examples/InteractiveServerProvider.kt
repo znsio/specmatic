@@ -8,11 +8,12 @@ interface InteractiveServerProvider {
     val serverHost: String
     val serverPort: Int
     val sutBaseUrl: String?
+    val multiGenerate: Boolean
 
     val contractFile: File?
     val exampleTableColumns: List<ExampleTableColumn>
 
-    suspend fun generateExample(call: ApplicationCall, contractFile: File): ExampleGenerationResult
+    suspend fun generateExample(call: ApplicationCall, contractFile: File): List<ExampleGenerationResult>
 
     fun validateExample(contractFile: File, exampleFile: File): ExampleValidationResult
 
@@ -31,13 +32,23 @@ data class ExamplePageRequest (
 )
 
 data class ExampleGenerationResponse (
-    val exampleFilePath: String,
+    val exampleFile: String,
     val status: String
 ) {
     constructor(result: ExampleGenerationResult): this(
-        exampleFilePath = result.exampleFile?.absolutePath ?: throw Exception("Failed to generate example file"),
+        exampleFile = result.exampleFile?.absolutePath ?: throw Exception("Failed to generate example file"),
         status = result.status.name
     )
+}
+
+data class ExampleGenerationResponseList (
+    val examples: List<ExampleGenerationResponse>
+) {
+    companion object {
+        fun from(results: List<ExampleGenerationResult>): ExampleGenerationResponseList {
+            return ExampleGenerationResponseList(results.map { ExampleGenerationResponse(it) })
+        }
+    }
 }
 
 data class ExampleValidationRequest (
@@ -45,11 +56,11 @@ data class ExampleValidationRequest (
 )
 
 data class ExampleValidationResponse (
-    val exampleFilePath: String,
+    val exampleFile: String,
     val error: String? = null
 ) {
     constructor(result: ExampleValidationResult): this(
-        exampleFilePath = result.exampleName, error = result.result.reportString().takeIf { it.isNotBlank() }
+        exampleFile = result.exampleName, error = result.result.reportString().takeIf { it.isNotBlank() }
     )
 }
 
@@ -103,5 +114,8 @@ data class ExampleTableRow (
     val columns: List<ExampleRowGroup>,
     val exampleFilePath: String? = null,
     val exampleFileName: String? = null,
-    val exampleMismatchReason: String? = null
+    val exampleMismatchReason: String? = null,
+    val isGenerated: Boolean = exampleFileName != null,
+    val isValid: Boolean = isGenerated && exampleMismatchReason == null,
+    val uniqueKey: String = columns.joinToString("-") { it.rawValue }
 )

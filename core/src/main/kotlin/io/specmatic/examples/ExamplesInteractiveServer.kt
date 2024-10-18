@@ -134,9 +134,10 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
             "contractFileName" to contractFile.name,
             "contractFilePath" to contractFile.absolutePath,
             "hostPort" to hostPort,
-            "hasExamples" to tableRows.any { it.exampleFilePath != null },
-            "validationDetails" to tableRows.mapIndexed { index, row -> index.inc() to row.exampleMismatchReason }.toMap(),
-            "isTestMode" to (sutBaseUrl != null)
+            "hasExamples" to tableRows.any { it.isGenerated },
+            "exampleDetails" to tableRows.transform(),
+            "isTestMode" to (sutBaseUrl != null),
+            "multiGenerate" to multiGenerate
         )
 
         return HtmlTemplateConfiguration.process("example/index.html", variables)
@@ -194,7 +195,7 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
         post("/_specmatic/examples/generate") {
             handleContractFile { contractFile ->
                 val result = generateExample(call, contractFile)
-                call.respond(HttpStatusCode.OK, ExampleGenerationResponse(result))
+                call.respond(HttpStatusCode.OK, ExampleGenerationResponseList.from(result))
             }
         }
     }
@@ -233,6 +234,12 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
                     call.respond(HttpStatusCode.OK, ExampleTestResponse(result))
                 }
             }
+        }
+    }
+
+    private fun List<ExampleTableRow>.transform(): Map<String, Map<String, String?>> {
+        return this.groupBy { it.uniqueKey }.mapValues { (_, keyGroup) ->
+            keyGroup.associateBy({ it.exampleFilePath ?: "null" }, { it.exampleMismatchReason })
         }
     }
 }

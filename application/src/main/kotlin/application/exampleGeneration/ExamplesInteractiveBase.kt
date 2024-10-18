@@ -23,6 +23,7 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
     @Option(names = ["--dictionary"], description = ["Path to external dictionary file (default: contract_file_name_dictionary.json or dictionary.json)"])
     protected var dictFile: File? = null
 
+    override val multiGenerate: Boolean = false
     override val serverHost: String = "0.0.0.0"
     override val serverPort: Int = 9001
     abstract val server: ExamplesInteractiveServer
@@ -56,14 +57,24 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
     abstract fun testExternalExample(feature: Feature, exampleFile: File, testBaseUrl: String): Pair<Result, String>
 
     // HELPER METHODS
-    override suspend fun generateExample(call: ApplicationCall, contractFile: File): ExampleGenerationResult {
+    override suspend fun generateExample(call: ApplicationCall, contractFile: File): List<ExampleGenerationResult> {
         val feature = featureStrategy.contractFileToFeature(contractFile)
         val examplesDir = getExamplesDirectory(contractFile)
+        val exampleFiles = getExternalExampleFiles(examplesDir)
+        val scenario = getScenarioFromRequestOrNull(call, feature)
+            ?: throw IllegalArgumentException("No scenario found for request")
 
-        return getScenarioFromRequestOrNull(call, feature)?.let {
-            val (exampleFileName, exampleContent) = generationStrategy.generateExample(feature, scenario = it)
-            generationStrategy.writeExampleToFile(exampleContent, exampleFileName, examplesDir, featureStrategy.exampleFileExtensions)
-        } ?: throw IllegalArgumentException("No matching scenario found for request")
+        val examples = generationStrategy.generateOrGetExistingExamples(
+            ExamplesGenerationStrategy.GenerateOrGetExistingExampleArgs(
+                feature = feature, scenario = scenario,
+                scenarioDescription = featureStrategy.getScenarioDescription(scenario),
+                exampleFiles = exampleFiles, examplesDir = examplesDir,
+                validExampleExtensions = featureStrategy.exampleFileExtensions
+            )
+        )
+
+        val anyCreatedOrFailed = examples.any { it.status != ExampleGenerationStatus.EXISTS }
+        return examples.takeIf { anyCreatedOrFailed } ?: examples.plus(generateExampleSkipChecking(feature, scenario, examplesDir))
     }
 
     override fun validateExample(contractFile: File, exampleFile: File): ExampleValidationResult {
@@ -87,11 +98,16 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
         val examples = getExternalExampleFiles(examplesDir)
 
         val scenarioExamplePair = scenarios.flatMap {
-            generationStrategy.getExistingExamples(it, examples).map { exRes ->
+            listOf(it to null) + generationStrategy.getExistingExamples(it, examples).map { exRes ->
                 it to ExampleValidationResult(exRes.first, exRes.second)
-            }.ifEmpty { listOf(it to null) }
+            }
         }
         return createTableRows(scenarioExamplePair)
+    }
+
+    private fun generateExampleSkipChecking(feature: Feature, scenario: Scenario, examplesDir: File): ExampleGenerationResult {
+        val (fileName, exampleContent) = generationStrategy.generateExample(feature, scenario)
+        return generationStrategy.writeExampleToFile(exampleContent, fileName, examplesDir, featureStrategy.exampleFileExtensions)
     }
 
     private fun addShutdownHook(server: ExamplesInteractiveServer, latch: CountDownLatch) {

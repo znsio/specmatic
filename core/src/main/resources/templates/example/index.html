@@ -493,7 +493,7 @@
                     --_content: "Validate Selected";
 
                     &[data-panel="details"] {
-                        --_content: "Validate Examples";
+                        --_content: "Validate Example";
                     }
                 }
 
@@ -528,7 +528,7 @@
                     --_content: "Test Selected";
 
                     &[data-panel="details"] {
-                        --_content: "Test Examples";
+                        --_content: "Test Example";
                     }
                 }
 
@@ -562,6 +562,7 @@
             table-layout: auto;
             text-align: center;
             font-size: 0.99rem;
+            counter-reset: Serial;
         }
 
         thead {
@@ -602,7 +603,7 @@
                     background-color: rgb(var(--slate));
                 }
 
-                &[data-generate="success"] > td:nth-child(n+3):nth-last-child(n+3), & > td:nth-child(n+3):nth-last-child(n+4) {
+                & > td:nth-child(n+3):nth-last-child(n+3) {
                     background-color: rgb(var(--white));
                     word-break: break-word;
                     pointer-events: none;
@@ -631,6 +632,11 @@
                 &:hover {
                     --_background-color: var(--blue-dark);
                 }
+            }
+
+            & > td:nth-child(2)::before {
+                content: counter(Serial);
+                counter-increment: Serial;
             }
 
             & > td:last-child {
@@ -700,6 +706,12 @@
                     & button.test {
                         display: inline-block;
                     }
+                }
+            }
+
+            &[data-multi-gen="false"] > tr > td:nth-last-child(3) {
+                & > button {
+                    display: none;
                 }
             }
         }
@@ -1018,25 +1030,25 @@
                 <th>Action</th>
             </tr>
         </thead>
-        <tbody th:attr="data-test-mode=${isTestMode}">
-            <tr th:each="row, iter: ${tableRows}"
-                th:attr="data-examples=${row.exampleFilePath}, data-generate=${row.exampleFilePath != null ? 'success' : ''},
-                        data-valid=${row.exampleFilePath != null ? (row.exampleMismatchReason == null ? 'success' : 'failed') : ''}">
+        <tbody th:attr="data-test-mode=${isTestMode}, data-multi-gen=${multiGenerate}">
+            <tr th:each="row: ${tableRows}"
+                th:attr="data-generate=${row.isGenerated ? 'success' : ''},
+                    data-key=${row.uniqueKey}, data-example=${row.exampleFilePath},
+                    data-valid=${row.isGenerated ? (row.isValid ? 'success' : 'failure') : ''}">
                 <td>
                     <input type="checkbox" name="path-row" class="path-row">
                 </td>
-                <td>
-                    <p>[[${iter.index + 1}]]</p>
-                </td>
+                <td></td>
                 <td th:each="group, iter: ${row.columns}" th:class="${group.showRow ? '' : 'hidden'}"
                     th:attr="colspan=${tableColumns[iter.index].colSpan}, rowSpan=${group.rowSpan},
                         data-col-name=${group.columnName}, data-raw-value=${group.rawValue}" >
                     <p>[[${group.value}]]</p>
                     <span th:if="${group.extraInfo != null}">[[${group.extraInfo}]]</span>
+                    <button th:if="${iter.last}" class="multigen" aria-label="Generate More"></button>
                 </td>
                 <td>
-                    <button th:if="${row.exampleFilePath == null}" class="generate" aria-label="Generate"></button>
-                    <p th:if="${row.exampleFilePath != null}" th:text="${row.exampleFileName}"></p>
+                    <button th:unless="${row.isGenerated}" class="generate" aria-label="Generate"></button>
+                    <p th:if="${row.isGenerated}" th:text="${row.exampleFileName}"></p>
                 </td>
                 <td>
                     <button class="validate hidden" aria-label="Validate"></button>
@@ -1064,93 +1076,86 @@
 </svg>
 
 <script th:inline="javascript">
-    const validationDetails = /*[[${validationDetails}]]*/ {};
+    const exampleDetails = /*[[${exampleDetails}]]*/ {};
     const testDetails = {};
 </script>
 
 <script>
     const mainElement = document.querySelector("main");
-    const table = document.querySelector("table");
+    const examplesTable = document.querySelector("table");
+    const alertContainer = document.getElementById("alert-container");
     const backBtn = document.querySelector("button#back");
     const pathSummaryUl = document.querySelector("ul#path-summary");
     const examplesOl = document.querySelector("ol#examples");
-    const alerts = document.getElementById("alert-container");
     const bulkValidateBtn = document.querySelector("button#bulk-validate");
     const bulkGenerateBtn = document.querySelector("button#bulk-generate");
     const bulkTestBtn = document.querySelector("button#bulk-test");
-    const chevronDown = document.querySelector("svg.chevron-down");
+    const chevronDownIcon = document.querySelector("svg.chevron-down");
 
+    // VARIABLES
+    const actionMappings = {
+        "generate": {
+            button: bulkGenerateBtn, func: generateRowExamples, title: "Generations",
+            message: ({failedCount, totalCount, successCount, existedCount}) => `${successCount} Example(s) Created\n${existedCount} Example(s) Existed\n${failedCount} Example(s) Failed`
+        },
+        "validate": {
+            button: bulkValidateBtn, func: validateRowExample, title: "Validations",
+            message: ({failedCount, totalCount}) => `${failedCount} out of ${totalCount} Example(s) are invalid`
+        },
+        "test": {
+            button: bulkTestBtn, func: testRowExample, title: "Tests",
+            message: ({failedCount, totalCount}) => `${failedCount} out of ${totalCount} Example(s) have failed`
+        }
+    };
     let scrollYPosition = 0;
     let selectedTableRow = null;
-    const totalRows = table.querySelectorAll("tbody > tr").length;
     let blockGenValidate = false;
 
-    backBtn.addEventListener("click", () => {
-        examplesOl.replaceChildren();
-        mainElement.setAttribute("data-panel", "table");
-        bulkValidateBtn.setAttribute("data-panel", "table");
-        bulkGenerateBtn.setAttribute("data-panel", "table");
-        bulkTestBtn.setAttribute("data-panel", "table");
-        window.scrollTo(0, scrollYPosition);
+    // LISTENERS
+    backBtn.addEventListener("click", () => setPanel());
+
+    bulkGenerateBtn.addEventListener("click", () => processAllSelected("generate"));
+
+    bulkValidateBtn.addEventListener("click", async (event) => {
+        switch(bulkValidateBtn.getAttribute("data-panel")) {
+            case "table": {
+                return processAllSelected("validate")
+            }
+            case "details": {
+                await validateRowExample(selectedTableRow);
+                return await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
+            }
+        }
     });
 
-    table.addEventListener("click", async (event) => {
+    bulkTestBtn.addEventListener("click", async (event) => {
+        switch(bulkValidateBtn.getAttribute("data-panel")) {
+            case "table": {
+                return processAllSelected("test")
+            }
+            case "details": {
+                await testRowExample(selectedTableRow);
+                return await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
+            }
+        }
+    });
+
+    examplesTable.addEventListener("click", async (event) => {
         const target = event.target;
         const nearestTableRow = target.closest("tr");
 
         if (nearestTableRow) {
             selectedTableRow = nearestTableRow;
-            const rowValues = extractRowValues(nearestTableRow);
             event.stopPropagation();
+            const rowValues = extractRowValues(nearestTableRow);
 
             switch (target.tagName) {
                 case "BUTTON": {
-                    if (blockGenValidate) break;
-                    switch (target.getAttribute("aria-label")) {
-                        case "Generate": {
-                            return await generateRowExamples(nearestTableRow, rowValues);
-                        }
-                        case "Validate": {
-                            return await validateRowExamples(nearestTableRow);
-                        }
-                        default: {
-                            return await testRowExample(nearestTableRow);
-                        }
-                    }
+                    return await handleTableButtons(target, nearestTableRow, rowValues);
                 }
-
                 case "INPUT": {
-                    const valPreSelectCount = Number.parseInt(bulkValidateBtn.getAttribute("data-selected") || 0);
-                    const genPreSelectCount = Number.parseInt(bulkGenerateBtn.getAttribute("data-selected") || 0);
-                    const testPreSelectCount = Number.parseInt(bulkTestBtn.getAttribute("data-selected") || 0);
-
-                    if (target.matches("th > label > input")) {
-                        const totalGeneratedRows = countAllGeneratedRows()
-                        const totalValidatedRows = countAllValidateRows()
-                        toggleAllSelects(target.checked);
-
-                        if (table.hasAttribute("data-generated") ) {
-                            bulkValidateBtn.setAttribute("data-selected", target.checked ? totalGeneratedRows : 0);
-                            bulkTestBtn.setAttribute("data-selected", target.checked ? totalValidatedRows : 0);
-                        }
-
-                        return bulkGenerateBtn.setAttribute("data-selected", target.checked ? totalRows - totalGeneratedRows : 0);
-                    }
-
-                    const hasBeenGenerated = nearestTableRow.getAttribute("data-generate") === "success";
-                    const hasBeenValidated = nearestTableRow.getAttribute("data-valid") === "success";
-
-                    if (hasBeenGenerated) {
-                        bulkValidateBtn.setAttribute("data-selected", valPreSelectCount + (target.checked ? 1 : -1));
-                        if (hasBeenValidated) {
-                            bulkTestBtn.setAttribute("data-selected", testPreSelectCount + (target.checked ? 1 : -1));
-                        }
-                    } else {
-                        bulkGenerateBtn.setAttribute("data-selected", genPreSelectCount + (target.checked ? 1 : -1));
-                    }
-                    return;
+                    return handleInputs(target, nearestTableRow);
                 }
-
                 default: {
                     if (!target.matches("tr > *:first-child, tr > *:first-child *") && nearestTableRow.getAttribute("data-generate") === "success") {
                         return await goToDetails(nearestTableRow, rowValues);
@@ -1158,7 +1163,7 @@
                 }
             }
         }
-    });
+    })
 
     examplesOl.addEventListener("click", (event) => {
         const target = event.target;
@@ -1171,350 +1176,298 @@
         }
     });
 
-    bulkValidateBtn.addEventListener("click", async () => {
-        blockGenValidate = true;
-        bulkValidateBtn.setAttribute("data-valid", "processing");
-
-        switch (bulkValidateBtn.getAttribute("data-panel")) {
-            case "table": {
-                await validateAllSelected();
-                break;
+    // LISTENERS HELPERS
+    async function handleTableButtons(target, tableRow, rowValues) {
+        switch (target.getAttribute("aria-label")) {
+            case "Generate": {
+                return await generateRowExamples(tableRow, rowValues);
             }
-
-            case "details": {
-                await validateRowExamples(selectedTableRow);
-                const exampleFilePath = getExampleData(selectedTableRow);
-                const {example: exampleContent, error} = await getExampleContent(exampleFilePath);
-
-                const docFragment = createExampleRows([{
-                    exampleFilePath: exampleFilePath,
-                    exampleJson: exampleContent,
-                    error: validationDetails[Number.parseInt(selectedTableRow.children[1].textContent)] || error,
-                    hasBeenValidated: selectedTableRow.hasAttribute("data-valid"),
-                    test: testDetails[Number.parseInt(selectedTableRow.children[1].textContent)]
-                }]);
-
-                bulkTestBtn.classList.toggle("bulk-disabled", selectedTableRow.getAttribute("data-valid") !== "success")
-                examplesOl.replaceChildren(docFragment);
-                break;
+            case "Validate": {
+                return await validateRowExample(tableRow, rowValues);
+            }
+            default: {
+                return await testRowExample(tableRow, rowValues);
             }
         }
+    }
 
-        bulkValidateBtn.removeAttribute("data-valid");
-        return cleanUpSelections();
-    });
-
-    bulkGenerateBtn.addEventListener("click", async () => {
-        blockGenValidate = true;
-        bulkGenerateBtn.setAttribute("data-generate", "processing");
-
-        const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
-        const rowsWithNoExamples = selectedRows.filter(row => !row.getAttribute("data-generate"));
-
-        for (const row of rowsWithNoExamples) {
-            row.setAttribute("data-generate", "processing");
+    function handleInputs(target, tableRow) {
+        if (target.matches("th > label > input")) {
+            return handleAllSelect(target.checked);
         }
 
-        let failedCount = 0;
-        let createdCount = 0;
-        let existedCount = 0;
-        for (const row of rowsWithNoExamples) {
+        const preSelectCounts = {
+            validate: Number.parseInt(bulkValidateBtn.getAttribute("data-selected") || 0),
+            generate: Number.parseInt(bulkGenerateBtn.getAttribute("data-selected") || 0),
+            test: Number.parseInt(bulkTestBtn.getAttribute("data-selected") || 0)
+        };
+
+        handleSelect(target.checked, tableRow, preSelectCounts);
+    }
+
+    function handleAllSelect(checked) {
+        const totalRows = countTotalRows()
+        const totalGeneratedRows = countGeneratedRows()
+        const totalValidatedRows = countValidateRows()
+        toggleAllSelects(checked);
+
+        if (examplesTable.hasAttribute("data-generated") ) {
+            bulkValidateBtn.setAttribute("data-selected", checked ? totalGeneratedRows : 0);
+            bulkTestBtn.setAttribute("data-selected", checked ? totalValidatedRows : 0);
+        }
+
+        bulkGenerateBtn.setAttribute("data-selected", checked ? totalRows - totalGeneratedRows : 0);
+    }
+
+    function handleSelect(checked, tableRow, preSelectCounts) {
+        const hasBeenGenerated = tableRow.getAttribute("data-generate") === "success";
+        const hasBeenValidated = tableRow.getAttribute("data-valid") === "success";
+
+        if (hasBeenGenerated) {
+            preSelectCounts.validate += checked ? 1 : -1;
+            if (hasBeenValidated) {
+                preSelectCounts.test += checked ? 1 : -1;
+            }
+            bulkValidateBtn.setAttribute("data-selected", preSelectCounts.validate);
+            bulkTestBtn.setAttribute("data-selected", preSelectCounts.test);
+        } else {
+            bulkGenerateBtn.setAttribute("data-selected", preSelectCounts.generate + (checked ? 1 : -1));
+        }
+    }
+
+    // BULK ACTIONS
+    async function processAllSelected(action) {
+        const {button, func, title, message} = actionMappings[action];
+        button.setAttribute(`data-${action}`, "processing");
+
+        const selectedRows = Array.from(examplesTable.querySelectorAll("td > input[type=checkbox]:checked")).map(checkbox => checkbox.closest("tr"));
+        const relevantRows = selectedRows.filter(row =>
+            action === "generate" ? !row.hasAttribute("data-generate")
+                : row.getAttribute(`data-${action === "validate" ? "generate" : "valid"}`) === "success"
+        );
+
+        for (const row of relevantRows) {
+            row.setAttribute(`data-${action}`, "processing");
+        }
+
+        let failedCount = 0, successCount = 0, existedCount = 0, totalCount = relevantRows.length;
+        for (const row of relevantRows) {
             const rowValues = extractRowValues(row);
-            const {error, status} = await generateRowExamples(row, rowValues, true);
+            const {successIncrement = 0, failureIncrement = 0, existedIncrement = 0} = await func(row, rowValues, true);
 
-            if (error) {
-                failedCount++;
-            } else if (status === "CREATED") {
-                createdCount++;
-            } else if (status === "EXISTS") {
-                existedCount++;
-            }
+            successCount += successIncrement;
+            failedCount += failureIncrement;
+            existedCount += existedIncrement;
         }
 
-        bulkGenerateBtn.removeAttribute("data-generate");
-        const message = `${createdCount} out of ${rowsWithNoExamples.length} Example(s) Created\n${existedCount} out of ${rowsWithNoExamples.length} Example(s) Already Existed`;
-        createAlert("Generation Complete", message, failedCount !== 0);
-        return cleanUpSelections();
-    });
+        button.removeAttribute(`data-${action}`);
+        const alertTitle = `${title} Complete (${successCount + existedCount + failedCount} Examples)`;
+        const alertMessage = message({failedCount, totalCount, successCount, existedCount});
+        createAlert(alertTitle, alertMessage, failedCount !== 0);
 
-    bulkTestBtn.addEventListener("click", async () => {
-        blockGenValidate = true;
-        bulkTestBtn.setAttribute("data-test", "processing");
-
-        switch (bulkValidateBtn.getAttribute("data-panel")) {
-            case "table": {
-                await testAllSelected();
-                break;
-            }
-
-            case "details": {
-                await testRowExample(selectedTableRow);
-                const exampleFilePath = getExampleData(selectedTableRow);
-                const {example: exampleContent, error} = await getExampleContent(exampleFilePath);
-
-                const docFragment = createExampleRows([{
-                    exampleFilePath: exampleFilePath,
-                    exampleJson: exampleContent,
-                    error: validationDetails[Number.parseInt(selectedTableRow.children[1].textContent)] || error,
-                    hasBeenValidated: selectedTableRow.hasAttribute("data-valid"),
-                    test: testDetails[Number.parseInt(selectedTableRow.children[1].textContent)]
-                }]);
-
-                examplesOl.replaceChildren(docFragment);
-                break;
-            }
-        }
-
-        bulkTestBtn.removeAttribute("data-test");
-        return cleanUpSelections();
-    });
-
-    async function validateAllSelected() {
-        bulkValidateBtn.setAttribute("data-valid", "processing");
-
-        let errorsCount = 0;
-        const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
-        const rowsWithExamples = selectedRows.filter(row => row.getAttribute("data-generate") === "success");
-
-        for (const row of rowsWithExamples) {
-            row.setAttribute("data-valid", "processing");
-        }
-
-        for (const row of rowsWithExamples) {
-            const success = await validateRowExamples(row, true);
-            if (!success) {
-                errorsCount++;
-            }
-        }
-
-        bulkValidateBtn.removeAttribute("data-generate");
-        createAlert("Validations Complete", `${errorsCount} out of ${rowsWithExamples.length} are invalid`, errorsCount !== 0);
-        return cleanUpSelections();
+        cleanUpSelections();
     }
 
-    async function testAllSelected() {
-        const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
-        const rowsWithValidations = selectedRows.filter(row => row.getAttribute("data-valid") === "success");
-
-        for (const row of rowsWithValidations) {
-            row.setAttribute("data-test", "processing");
-        }
-
-        let failureCount = 0;
-        for (const row of rowsWithValidations) {
-            const result = await testRowExample(row, true);
-
-            if (!result) {
-                failureCount++;
-            }
-        }
-
-        blockGenValidate = false;
-        createAlert("Tests Complete", `${failureCount} out of ${rowsWithValidations.length} have failed`, failureCount !== 0);
-    }
-
-    function extractRowValues(tableRow) {
-        const groups = [...tableRow.children].slice(2, -2).reduce((acc, td) => {
-            const colName = td.getAttribute("data-col-name");
-            const rawValue = td.getAttribute("data-raw-value");
-
-            const value = td.querySelector("p")?.textContent;
-            const extraInfo = td.querySelector("span")?.textContent;
-
-            if (colName && rawValue) {
-                acc[colName] = { rawValue, extraInfo, value };
-            }
-
-            return acc;
-        }, {});
-
-        return groups;
-    }
-
-    function countAllGeneratedRows() {
-        const tableRows = table.querySelectorAll("tr");
-        return Array.from(tableRows).filter((row) => row.getAttribute("data-generate") === "success").length;
-    }
-
-    function countAllValidateRows() {
-        const tableRows = table.querySelectorAll("tr");
-        return Array.from(tableRows).filter((row) => row.getAttribute("data-valid") === "success").length;
-    }
-
-    function toggleAllSelects(isSelected = true) {
-        const checkboxes = table.querySelectorAll("input[type=checkbox]");
-        for (const checkbox of checkboxes) {
-            checkbox.checked = isSelected;
-        }
-    }
-
-    function storeExampleData(tableRow, exampleFilePath, status) {
-        tableRow.setAttribute("data-examples", exampleFilePath);
-        tableRow.setAttribute("data-example-status", status);
-        return exampleFilePath;
-    }
-
-    function getExampleData(tableRow) {
-        const exampleFilePath = tableRow.getAttribute("data-examples");
-        return exampleFilePath;
-    }
-
+    // ROW ACTIONS
     async function generateRowExamples(tableRow, rowValues, bulkMode = false) {
         tableRow.setAttribute("data-generate", "processing");
-        const { exampleFilePath, status, error } = await generateExample(rowValues);
-        tableRow.setAttribute("data-generate", error ? "failed": "success");
+        const { examples, error } = await generateExample(rowValues);
+        const {createdCount, failedCount, existedCount, totalCount} = getExamplesCount(examples);
+        tableRow.removeAttribute("data-generate");
 
         if (error) {
             if (!bulkMode) createAlert("Example Generation Failed", error, true);
-            return {error, status: null};
+            return {failureIncrement: failedCount};
         }
 
-        storeExampleData(tableRow, exampleFilePath, status);
-        enableValidateBtn(tableRow);
-        const generateColumn = tableRow.querySelector("td:nth-last-child(2)")
-        const examplePara = document.createElement("p");
-        examplePara.textContent = parseFileName(exampleFilePath);
-        generateColumn.replaceChildren(examplePara);
+        const newExamples = getOnlyNewExamples(tableRow, examples);
+        const newRows = newExamples.map((ex) => exampleToRow(tableRow, ex));
+        updateSpans(tableRow, rowValues, newRows.length);
+        newRows.forEach(row => tableRow.parentElement.insertBefore(row, tableRow.nextElementSibling));
 
-        const message = status === "EXISTS" ? "Example Already Exists" : "Example Generated";
-        if (!bulkMode) createAlert(message, `Example name: ${parseFileName(exampleFilePath)}`, false);
-        return {error: null, status};
+        if (!bulkMode) {
+            const allExist = newExamples.every(example => example.status === "EXISTS");
+            const alertTitle = allExist ? "Example(s) Already Existed" : "Example(s) Generated";
+            const alertMessage = `Example name(s): ${newExamples.map(example => parseFileName(example.exampleFile)).join("\n")}`;
+            createAlert(alertTitle, alertMessage, false)
+        };
+
+        return {successIncrement: createdCount, failureIncrement: failedCount, existedIncrement: existedCount, totalCount};
     }
 
-    async function validateRowExamples(tableRow, bulkMode = false) {
+    async function validateRowExample(tableRow, rowValues, bulkMode = false) {
         tableRow.setAttribute("data-valid", "processing");
-        const exampleFilePathFromRow = getExampleData(tableRow);
-        const { exampleFilePath, error } = await validateExample(exampleFilePathFromRow);
+        const exampleFile = getExampleData(tableRow);
+        const { error } = await validateExample(exampleFile);
 
-        tableRow.setAttribute("data-valid", error ? "failed": "success");
-        validationDetails[Number.parseInt(tableRow.children[1].textContent)] = error;
-        testDetails[Number.parseInt(tableRow.children[1].textContent)] = null;
-        tableRow.removeAttribute("data-test");
+        tableRow.setAttribute("data-valid", error ? "failed" : "success");
+        storeExampleValidationData(tableRow, error);
+        clearExampleTestData(tableRow);
 
         if (error) {
-            if (!bulkMode) createAlert("Invalid Example", `Example name: ${parseFileName(exampleFilePath)}`, true);
-            tableRow.removeAttribute("data-test");
-            return false;
+            if (!bulkMode) createAlert("Invalid Example", `Example name: ${parseFileName(exampleFile)}`, true);
+            return {failureIncrement: 1};
         }
 
-        if (!bulkMode) createAlert("Valid Example", `Example name: ${parseFileName(exampleFilePath)}`, false);
-        tableRow.removeAttribute("data-test");
-        return true;
+        if (!bulkMode) createAlert("Valid Example", `Example name: ${parseFileName(exampleFile)}`, false);
+        return {successIncrement: 1};
     }
 
-    async function testRowExample(tableRow, bulkMode = false) {
+    async function testRowExample(tableRow, rowValues, bulkMode = false) {
         tableRow.setAttribute("data-test", "processing");
+        const { successIncrement } = await validateRowExample(tableRow, rowValues, true);
+        const exampleFile = getExampleData(tableRow);
 
-        const isExampleValid = await validateRowExamples(tableRow, true);
-        tableRow.setAttribute("data-valid", isExampleValid ? "success": "failed");
-
-        if (!isExampleValid) {
-            return false;
+        if (!successIncrement) {
+            createAlert("Invalid Example", `Example name: ${parseFileName(exampleFile)}`, true);
+            return {failureIncrement: 1};
         }
 
-        const exampleFilePath = getExampleData(tableRow);
-        const {data, error} = await testExample(exampleFilePath);
-
-        tableRow.setAttribute("data-test", (error || data?.result !== "Success") ? "failed": "success");
-        testDetails[Number.parseInt(tableRow.children[1].textContent)] = data;
+        const {data, error} = await testExample(exampleFile);
+        storeExampleTestData(tableRow, data);
+        tableRow.setAttribute("data-test", error || data?.result !== "Success" ? "failed" : "success");
 
         if (error || data?.result !== "Success") {
-            if (!bulkMode) createAlert(`Test ${data ? data.result : "Failed"}`, `Example name: ${parseFileName(exampleFilePath)}`, true);
-            return false;
+            if (!bulkMode) createAlert(`Test ${data ? data.result : "Failed"}`, `Example name: ${parseFileName(exampleFile)}`, true);
+            return {failureIncrement: 1};
         }
 
-        if (!bulkMode) createAlert("Test Passed", `Example name: ${parseFileName(exampleFilePath)}`, false);
-        return true;
+        if (!bulkMode) createAlert("Test Passed", `Example name: ${parseFileName(exampleFile)}`, false);
+        return {successIncrement: 1};
     }
 
     async function goToDetails(tableRow, rowValues) {
-        const exampleFilePath = getExampleData(tableRow);
-        let docFragment = [];
-
-        if (exampleFilePath) {
-            const {example, error} = await getExampleContent(exampleFilePath);
-            docFragment = createExampleRows([{
-                exampleFilePath: exampleFilePath,
-                exampleJson: example,
-                error: validationDetails[Number.parseInt(tableRow.children[1].textContent)] || error,
-                hasBeenValidated: tableRow.hasAttribute("data-valid"),
-                test: testDetails[Number.parseInt(tableRow.children[1].textContent)]
-            }]);
-        }
-
-        bulkTestBtn.classList.toggle("bulk-disabled", tableRow.getAttribute("data-valid") !== "success")
+        const docFragment = await createExampleList(tableRow);
+        bulkTestBtn.classList.toggle("bulk-disabled", tableRow.getAttribute("data-valid") !== "success");
         pathSummaryUl.replaceChildren(createPathSummary(rowValues));
-        examplesOl.replaceChildren(docFragment);
-        mainElement.setAttribute("data-panel", "details");
-        bulkValidateBtn.setAttribute("data-panel", "details");
-        bulkGenerateBtn.setAttribute("data-panel", "details");
-        bulkTestBtn.setAttribute("data-panel", "details");
+
         scrollYPosition = window.scrollY;
-        window.scrollTo(0, 0);
+        setPanel("details", 0, docFragment);
     }
 
-    function createExampleRows(examples) {
-        const docFragment = document.createDocumentFragment();
-        for (const example of examples) {
-            const exampleLi = document.createElement("li");
-            exampleLi.setAttribute("data-expand", "false");
-            exampleLi.appendChild(createExampleSummary(example));
-            exampleLi.appendChild(createExampleDropDown(example));
-            docFragment.appendChild(exampleLi);
-        }
+    // ACTION HELPERS
+    function getExamplesCount(examples) {
+        return examples.reduce((counts, example) => {
+            switch (example.status) {
+                case 'CREATED':
+                    counts.createdCount++;
+                    break;
+                case 'FAILED':
+                    counts.failedCount++;
+                    break;
+                case 'EXISTS':
+                    counts.existedCount++;
+                    break;
+            }
+            return counts;
+        }, { createdCount: 0, failedCount: 0, existedCount: 0, totalCount: examples.length });
+    }
 
-        return docFragment;
+    function getOnlyNewExamples(tableRow, examples) {
+        const existingExamples = new Set(getAllSameGroupExamples(tableRow));
+        return examples.filter(example => !existingExamples.has(example.exampleFile));
+    }
+
+    function exampleToRow(tableRow, example) {
+        const newRow = tableRow.cloneNode(true);
+        storeExampleData(newRow, example.exampleFile, example.status);
+        insertExampleIntoRow(example.exampleFile, newRow);
+        Array.from(newRow.children).slice(2, -2).forEach(cell => cell.classList.add("hidden"));
+        newRow.setAttribute("data-generate", "success");
+        enableValidateBtn(newRow);
+        return newRow;
+    }
+
+    function insertExampleIntoRow(exampleFile, tableRow) {
+        const examplePara = document.createElement("p");
+        examplePara.textContent = parseFileName(exampleFile);
+        const generateColumn = tableRow.querySelector("td:nth-last-child(2)")
+        generateColumn.replaceChildren(examplePara);
+    }
+
+    function updateSpans(tableRow, rowValues, increment = 1) {
+        const origMainValues = Object.values(rowValues).map(group => group.value);
+        let curRow = tableRow;
+
+        while (curRow) {
+            const curRowValues = Object.values(extractRowValues(curRow)).map(group => group.value);
+
+            if (curRowValues[0] !== origMainValues[0]) break;
+
+            const cells = Array.from(curRow.children).slice(2, -2);
+            let isMatchingCell = true;
+
+            for (let i = 0; i < cells.length; i++) {
+                isMatchingCell = isMatchingCell && curRowValues[i] === origMainValues[i];
+                if (isMatchingCell) {
+                    cells[i].rowSpan += increment;
+                }
+            }
+
+            curRow = curRow.previousElementSibling;
+        }
+    }
+
+    async function createExampleList(tableRow) {
+        const exampleFile = getExampleData(tableRow);
+        const { content, error } = await getExampleContent(exampleFile);
+        return createExampleLi({
+            exampleFile: exampleFile,
+            exampleJson: content,
+            error: getExampleValidationData(tableRow) || error,
+            hasBeenValidated: tableRow.hasAttribute("data-valid"),
+            test: getExampleTestData(tableRow),
+        });
+    }
+
+    function createExampleLi(example) {
+        const exampleLi = document.createElement("li");
+        exampleLi.setAttribute("data-expand", "false");
+        exampleLi.appendChild(createExampleSummary(example));
+        exampleLi.appendChild(createExampleDropDown(example));
+        return exampleLi;
     }
 
     function createPathSummary(rowValues) {
         const docFragment = document.createDocumentFragment();
 
-        for (const [key, {value}] of Object.entries(rowValues)) {
-            if (!value) continue;
-
-            const li = document.createElement("li");
-            const keySpan = document.createElement("span");
-            const valueSpan = document.createElement("span");
-
-            keySpan.textContent = key;
-            valueSpan.textContent = value;
-            li.appendChild(keySpan);
-            li.appendChild(valueSpan);
-
-            docFragment.appendChild(li);
+        for (const [key, { value }] of Object.entries(rowValues)) {
+            if (value) {
+                const li = document.createElement("li");
+                li.innerHTML = `<span>${key}</span><span>${value}</span>`;
+                docFragment.appendChild(li);
+            }
         }
         return docFragment;
     }
 
     function createExampleSummary(example) {
         const exampleDiv = document.createElement("div");
-        const exampleName = document.createElement("p");
-        const exampleBadge = document.createElement("span");
-        const testBadge = document.createElement("span");
-
         exampleDiv.classList.add("example");
-        exampleBadge.classList.add("pill", example.hasBeenValidated ? example.error ? "red" : "green" : "blue");
-        exampleName.textContent = example.exampleFilePath;
 
-        if (example.hasBeenValidated) {
-            exampleBadge.textContent = `${example.error ? "Invalid" : "Valid"} Example`;
-        } else {
-            exampleBadge.textContent = "Example";
-        }
+        const exampleName = document.createElement("p");
+        exampleName.textContent = example.exampleFile;
+
+        const exampleBadge = document.createElement("span");
+        const badgeClass = example.hasBeenValidated ? example.error ? "pill red" : "pill green": "pill blue";
+        exampleBadge.textContent = example.hasBeenValidated ? `${example.error ? "Invalid" : "Valid"} Example`: "Example";
+        exampleBadge.className = badgeClass;
 
         const expandDiv = document.createElement("div");
         expandDiv.classList.add("expand-info");
         expandDiv.appendChild(exampleBadge);
 
         if (example.test) {
-            testBadge.classList.add("pill", example.test.result === "Success" ? "green" : "red");
+            const testBadge = document.createElement("span");
+            testBadge.className = `pill ${example.test.result === "Success" ? "green" : "red"}`;
             testBadge.textContent = `Test ${example.test.result}`;
             expandDiv.appendChild(testBadge);
         }
 
-        expandDiv.appendChild(chevronDown.cloneNode(true))
+        expandDiv.appendChild(chevronDownIcon.cloneNode(true));
         exampleDiv.appendChild(exampleName);
         exampleDiv.appendChild(expandDiv);
+
         return exampleDiv;
     }
 
@@ -1523,125 +1476,179 @@
         dropDownDiv.classList.add("dropdown");
 
         const examplePara = document.createElement("p");
-        const detailsPara = document.createElement("p");
-
         examplePara.textContent = "Example: ";
-        detailsPara.textContent = "Details: ";
 
         const examplePre = document.createElement("pre");
-        const detailsPre = document.createElement("pre");
+        examplePre.textContent = example.exampleJson;
 
-        if (example.hasBeenValidated) {
-            detailsPre.textContent = example.error ? example.error : `${parseFileName(example.exampleFilePath)} IS VALID`;
-            if (example.test) {
-                detailsPre.textContent = `${detailsPre.textContent}\n${example.test.details}`;
-            }
-        } else {
-            detailsPre.textContent = `${parseFileName(example.exampleFilePath)} HAS NOT YET BEEN VALIDATED`;
+        const detailsPara = document.createElement("p");
+        detailsPara.textContent = "Details: ";
+
+        const detailsPre = document.createElement("pre");
+        detailsPre.textContent = example.hasBeenValidated ? (example.error || `${parseFileName(example.exampleFile)} IS VALID`) : `${parseFileName(example.exampleFile)} HAS NOT YET BEEN VALIDATED`;
+
+        if (example.hasBeenValidated && example.test) {
+            detailsPre.textContent += `\n${example.test.details}`;
         }
 
-        examplePre.textContent = example.exampleJson;
-        const examplePreDiv = document.createElement("div");
         const detailsPreDiv = document.createElement("div");
+        detailsPreDiv.append(detailsPara, detailsPre);
 
-        detailsPreDiv.appendChild(detailsPara);
-        detailsPreDiv.appendChild(detailsPre);
-
+        const examplePreDiv = document.createElement("div");
         if (example.test) {
             const testPara = document.createElement("p");
             testPara.textContent = "Test Log: ";
-            examplePreDiv.appendChild(testPara);
 
             const testPre = document.createElement("pre");
             testPre.textContent = example.test.testLog;
-            examplePreDiv.appendChild(testPre);
+            examplePreDiv.append(testPara, testPre);
         }
+        examplePreDiv.append(examplePara, examplePre);
 
-        examplePreDiv.appendChild(examplePara);
-        examplePreDiv.appendChild(examplePre);
-
-        dropDownDiv.appendChild(detailsPreDiv);
-        dropDownDiv.appendChild(examplePreDiv);
+        dropDownDiv.append(detailsPreDiv, examplePreDiv);
 
         return dropDownDiv;
     }
 
-    async function generateExample(rowValues) {
+    // FETCH CALLS
+    async function fetchFromBackend(endpoint, body) {
         try {
-            const resp = await fetch(`http://${getHostPort()}/_specmatic/examples/generate`, {
+            const resp = await fetch(`http://${getHostPort()}/_specmatic/examples/${endpoint}`, {
                 method: "POST",
-                body: JSON.stringify(rowValues),
-                headers: {
-                    "Content-Type": "application/json",
-                }
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
             });
-            const data = await resp.json();
-
-            return { exampleFilePath: data.exampleFilePath, error: data.error, status: data.status };
+            return await resp.json();
         } catch (error) {
-            return { error: error.message, exampleFilePath: null, status: null };
+            return { error: error.message };
         }
     }
 
-    async function validateExample(exampleFilePath) {
-        try {
-            const resp = await fetch(`http://${getHostPort()}/_specmatic/examples/validate`, {
-                method: "POST",
-                body: JSON.stringify({ exampleFile: exampleFilePath }),
-                headers: {
-                    "Content-Type": "application/json",
-                }
-            });
-            const data = await resp.json();
-
-            return { exampleFilePath: data.exampleFilePath, error: data.error };
-        } catch (error) {
-            return { error: error.message, exampleFilePath: null };
-        }
+    async function generateExample(groupValues) {
+        const data = await fetchFromBackend('generate', groupValues);
+        return { examples: data.examples ?? null, error: data.error ?? null };
     }
 
-    async function getExampleContent(exampleFilePath) {
-        try {
-            const resp = await fetch(`http://${getHostPort()}/_specmatic/examples/content`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ exampleFile: exampleFilePath })
-            })
-            const data = await resp.json();
+    async function validateExample(exampleFile) {
+        const data = await fetchFromBackend('validate', { exampleFile });
+        return { exampleFile: data.exampleFile ?? null, error: data.error ?? null };
+    }
 
-            if (!resp.ok) {
-                throw new Error(data.error);
+    async function getExampleContent(exampleFile) {
+        const data = await fetchFromBackend('content', { exampleFile });
+        return { content: data.content ?? null, error: data.error ?? null };
+    }
+
+    async function testExample(exampleFile) {
+        const data = await fetchFromBackend('test', { exampleFile });
+        return { data: data ?? null, error: data.error ?? null };
+    }
+
+    // TABLE ROW HELPERS
+    function extractRowValues(tableRow) {
+        return [...tableRow.children].slice(2, -2).reduce((acc, td) => {
+            const colName = td.getAttribute("data-col-name");
+            const rawValue = td.getAttribute("data-raw-value");
+
+            if (colName && rawValue) {
+                acc[colName] = {
+                    rawValue,
+                    value: td.querySelector("p")?.textContent,
+                    extraInfo: td.querySelector("span")?.textContent
+                };
             }
+            return acc;
+        }, {});
+    }
 
-            return {example: data.content, error: null};
-        } catch (e) {
-            return {example: null, error: e.message}
+    function countTotalRows() {
+        return examplesTable.querySelectorAll("tbody > tr").length;
+    }
+
+    function countRowsByAttribute(attribute, value = "success") {
+        return Array.from(examplesTable.querySelectorAll("tr")).filter(row => row.getAttribute(attribute) === value).length;
+    }
+
+    function countGeneratedRows() {
+        return countRowsByAttribute("data-generate");
+    }
+
+    function countValidateRows() {
+        return countRowsByAttribute("data-valid");
+    }
+
+    function toggleAllSelects(isSelected = true) {
+        examplesTable.querySelectorAll("input[type=checkbox]").forEach(cb => cb.checked = isSelected);
+    }
+
+    // EXAMPLE HELPERS
+    // TODO: Fix these to use Arrays as well
+    function storeExampleData(tableRow, exampleFile) {
+        const key = tableRow.getAttribute("data-key");
+        tableRow.setAttribute("data-example", exampleFile);
+        exampleDetails[key][exampleFile] = null;
+        return exampleFile;
+    }
+
+    function getExampleData(tableRow) {
+        return tableRow.getAttribute("data-example");
+    }
+
+    function getAllSameGroupExamples(tableRow) {
+        const rowKey = tableRow.getAttribute("data-key");
+        const examplePairs = exampleDetails[rowKey];
+        return Object.keys(examplePairs).filter(value => value !== "null");
+    }
+
+    function storeExampleValidationData(tableRow, result) {
+        const key = tableRow.getAttribute("data-key");
+        exampleDetails[key][tableRow.getAttribute("data-example")] = result;
+    }
+
+    function getExampleValidationData(tableRow) {
+        const key = tableRow.getAttribute("data-key");
+        return exampleDetails[key][getExampleData(tableRow)];
+    }
+
+    function storeExampleTestData(tableRow, data) {
+        const key = tableRow.getAttribute("data-key");
+        const exampleData = getExampleData(tableRow);
+
+        if (!testDetails[key]) {
+            testDetails[key] = {};
+        }
+
+        testDetails[key][exampleData] = data;
+    }
+
+    function getExampleTestData(tableRow) {
+        const key = tableRow.getAttribute("data-key");
+
+        if (!testDetails[key]) {
+            return null;
+        }
+
+        return testDetails[key][getExampleData(tableRow)];
+    }
+
+    function clearExampleTestData(tableRow) {
+        tableRow.removeAttribute("data-test");
+        const key = tableRow.getAttribute("data-key");
+        const exampleData = getExampleData(tableRow);
+        if (testDetails[key] && testDetails[key][exampleData]) {
+            delete testDetails[key][exampleData];
         }
     }
 
-    async function testExample(exampleFilePath) {
-        try {
-            const resp = await fetch(`http://${getHostPort()}/_specmatic/examples/test`, {
-                method: "POST",
-                body: JSON.stringify({ exampleFile: exampleFilePath }),
-                headers: {
-                    "Content-Type": "application/json",
-                }
-            });
-            const data = await resp.json();
-
-            return {data, error: data.error}
-        } catch (error) {
-            return {data: null, error: error.message}
-        }
-    }
-
-    function parseFileName(exampleFilePath) {
-        const fileName = exampleFilePath.split("\\").pop().split("/").pop();
+    function parseFileName(exampleFile) {
+        const fileName = exampleFile.split("\\").pop().split("/").pop();
         const extensionIndex = fileName.lastIndexOf(".");
         return extensionIndex === -1 ? fileName : fileName.slice(0, extensionIndex);
+    }
+
+    // HELPERS
+    function enableValidateBtn(tableRow) {
+        examplesTable.setAttribute("data-generated", "true");
     }
 
     function getHostPort() {
@@ -1649,43 +1656,46 @@
         return hostPort.endsWith("/") ? hostPort.slice(0, -1) : hostPort;
     }
 
-    function enableValidateBtn(tableRow) {
-        table.setAttribute("data-generated", "true");
-    }
-
-    function createAlert(heading, message, error) {
+    function createAlert(title, message, isError, timeout = 3000) {
         const alertBox = document.createElement("div");
-        alertBox.classList.add("alert-msg", "slide-in", error ? "red" : "green");
+        alertBox.classList.add("alert-msg", "slide-in", isError ? "red" : "green");
 
         const alertTitle = document.createElement("p");
-        alertTitle.textContent = heading;
+        alertTitle.textContent = title;
 
         const alertMsg = document.createElement("pre");
         alertMsg.textContent = message;
 
         alertBox.appendChild(alertTitle);
         alertBox.appendChild(alertMsg);
-        alerts.replaceChildren(alertBox);
+        alertContainer.replaceChildren(alertBox);
 
         setTimeout(() => {
             alertBox.classList.add("slide-out");
-            setTimeout(() => {
-                alertBox.remove();
-            }, 250);
-        }, 3000);
+            setTimeout(() => alertBox.remove(), 250);
+        }, timeout);
     }
 
     function cleanUpSelections() {
-        for (const checkbox of table.querySelectorAll("input[type=checkbox]")) {
+        for (const checkbox of examplesTable.querySelectorAll("input[type=checkbox]")) {
             checkbox.checked = false;
         }
+        blockGenValidate = false;
         bulkGenerateBtn.setAttribute("data-selected", "0");
         bulkValidateBtn.setAttribute("data-selected", "0");
         bulkTestBtn.setAttribute("data-selected", "0");
-        blockGenValidate = false;
     }
 
-    (() => cleanUpSelections())();
+    function setPanel(panel = "table", yPos = 0, exampleChildren = document.createDocumentFragment()) {
+        examplesOl.replaceChildren(exampleChildren);
+        mainElement.setAttribute("data-panel", panel);
+        bulkValidateBtn.setAttribute("data-panel", panel);
+        bulkGenerateBtn.setAttribute("data-panel", panel);
+        bulkTestBtn.setAttribute("data-panel", panel);
+        window.scrollTo(0, yPos);
+    }
+
+    (() => {setPanel(); cleanUpSelections()})();
 </script>
 </body>
 </html>

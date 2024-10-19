@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
 import io.specmatic.core.filters.ScenarioMetadataFilter
+import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterTestsUsing
 import io.specmatic.core.log.ignoreLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
@@ -287,7 +288,7 @@ open class SpecmaticJUnitSupport {
             }
             openApiCoverageReportInput.addEndpoints(allEndpoints)
 
-            val filteredTestsBasedOnMetadata = selectTestsToRun(
+            val filteredTestsBasedOnMetadata = filterTestsUsing(
                 contractTests = testScenarios,
                 scenarioMetadataFilter = ScenarioMetadataFilter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty()),
                 scenarioMetadataExclusionFilter = ScenarioMetadataFilter.from(
@@ -598,14 +599,3 @@ fun <T> selectTestsToRun(
     return filteredByNotName
 }
 
-fun selectTestsToRun(
-    contractTests: Sequence<ContractTest>,
-    scenarioMetadataFilter: ScenarioMetadataFilter,
-    scenarioMetadataExclusionFilter: ScenarioMetadataFilter
-): Sequence<ContractTest> {
-    return contractTests.filter {
-        scenarioMetadataFilter.isSatisfiedByAll(it.scenario.toScenarioMetadata())
-    }.filterNot {
-        scenarioMetadataExclusionFilter.isSatisfiedByAtLeastOne(it.scenario.toScenarioMetadata())
-    }
-}

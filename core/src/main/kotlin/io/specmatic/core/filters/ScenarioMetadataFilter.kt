@@ -52,27 +52,16 @@ data class ScenarioMetadataFilter(
             )
         }
 
-        fun filterTestsUsing(
-            contractTests: Sequence<ContractTest>,
+        fun <T> filterUsing(
+            items: Sequence<T>,
             scenarioMetadataFilter: ScenarioMetadataFilter,
-            scenarioMetadataExclusionFilter: ScenarioMetadataFilter
-        ): Sequence<ContractTest> {
-            return contractTests.filter {
-                scenarioMetadataFilter.isSatisfiedByAll(it.scenario.toScenarioMetadata())
+            scenarioMetadataExclusionFilter: ScenarioMetadataFilter,
+            toScenarioMetadata: (T) -> ScenarioMetadata
+        ): Sequence<T> {
+            return items.filter {
+                scenarioMetadataFilter.isSatisfiedByAll(toScenarioMetadata(it))
             }.filterNot {
-                scenarioMetadataExclusionFilter.isSatisfiedByAtLeastOne(it.scenario.toScenarioMetadata())
-            }
-        }
-
-        fun filterScenariosUsing(
-            scenarios: Sequence<Scenario>,
-            scenarioMetadataFilter: ScenarioMetadataFilter,
-            scenarioMetadataExclusionFilter: ScenarioMetadataFilter
-        ): Sequence<Scenario> {
-            return scenarios.filter {
-                scenarioMetadataFilter.isSatisfiedByAll(it.toScenarioMetadata())
-            }.filterNot {
-                scenarioMetadataExclusionFilter.isSatisfiedByAtLeastOne(it.toScenarioMetadata())
+                scenarioMetadataExclusionFilter.isSatisfiedByAtLeastOne(toScenarioMetadata(it))
             }
         }
 

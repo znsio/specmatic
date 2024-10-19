@@ -2,7 +2,7 @@ package io.specmatic.core.filters
 
 import io.mockk.every
 import io.mockk.mockk
-import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterTestsUsing
+import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.test.ContractTest
 import io.specmatic.test.ScenarioAsTest
 import org.assertj.core.api.Assertions.assertThat
@@ -132,7 +132,7 @@ class ScenarioMetadataFilterTest {
     }
 
     @Nested
-    inner class CreateFilterUsingFromTests {
+    inner class FilterStringToScenarioMetadataTests {
         @Test
         fun `should create the scenario metadata filter from the filter string`() {
             val filterString = "METHOD=POST,GET;STATUS-CODE=200;PATH=/users,/products"
@@ -169,7 +169,7 @@ class ScenarioMetadataFilterTest {
     }
 
     @Nested
-    inner class TestsForFilterTestsUsingFunction {
+    inner class TestsForFilterUsingFunction {
 
         private fun getScenarioAsTestReturning(scenarioMetadata: ScenarioMetadata): ScenarioAsTest {
             return mockk<ScenarioAsTest> {
@@ -194,7 +194,7 @@ class ScenarioMetadataFilterTest {
                 )
             )
             val filter = ScenarioMetadataFilter()
-            val result = filterTestsUsing(tests, filter, filter)
+            val result = filterUsing(tests, filter, filter) { it.scenario.toScenarioMetadata() }
 
             assertEquals(tests.toList(), result.toList())
         }
@@ -226,7 +226,9 @@ class ScenarioMetadataFilterTest {
             val includeFilter = ScenarioMetadataFilter(methods = setOf("GET"), paths = setOf("/path1"))
             val excludeFilter = ScenarioMetadataFilter()  // No exclusion
 
-            val result = filterTestsUsing(tests, includeFilter, excludeFilter).toList()
+            val result = filterUsing(tests, includeFilter, excludeFilter) {
+                it.scenario.toScenarioMetadata()
+            }.toList()
 
             assertEquals(result.size, 1)
             assertThat(result.single()).isEqualTo(tests.first())
@@ -269,7 +271,9 @@ class ScenarioMetadataFilterTest {
             val includeFilter = ScenarioMetadataFilter()
             val excludeFilter = ScenarioMetadataFilter(statusCodes = setOf("200"))  // Exclude status code 200
 
-            val result = filterTestsUsing(tests, includeFilter, excludeFilter).toList()
+            val result = filterUsing(tests, includeFilter, excludeFilter) {
+                it.scenario.toScenarioMetadata()
+            }.toList()
 
             assertEquals(
                 tests.filterIndexed { index, _ -> index > 0 }.toList(),
@@ -314,7 +318,9 @@ class ScenarioMetadataFilterTest {
             val includeFilter = ScenarioMetadataFilter(methods = setOf("GET")) // Include GET methods
             val excludeFilter = ScenarioMetadataFilter(statusCodes = setOf("400"))  // Exclude 400 status codes
 
-            val result = filterTestsUsing(tests, includeFilter, excludeFilter).toList()
+            val result = filterUsing(tests, includeFilter, excludeFilter) {
+                it.scenario.toScenarioMetadata()
+            }.toList()
 
             assertEquals(result.size, 1)
             assertThat(result.single()).isEqualTo(tests.first())
@@ -347,7 +353,9 @@ class ScenarioMetadataFilterTest {
             val includeFilter = ScenarioMetadataFilter(methods = setOf("PUT"))
             val excludeFilter = ScenarioMetadataFilter(exampleNames = setOf("example3"))
 
-            val result = filterTestsUsing(tests, includeFilter, excludeFilter)
+            val result = filterUsing(tests, includeFilter, excludeFilter) {
+                it.scenario.toScenarioMetadata()
+            }.toList()
 
             assertEquals(emptyList<ContractTest>(), result.toList())
         }

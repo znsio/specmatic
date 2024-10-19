@@ -4,8 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
 import io.specmatic.core.filters.ScenarioMetadataFilter
-import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterTestsUsing
-import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterScenariosUsing
+import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.ignoreLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
@@ -300,7 +299,9 @@ open class SpecmaticJUnitSupport {
                 filterNotName
             ) { it.testDescription() }
 
-            filterTestsUsing(filteredTestsBasedOnName, scenarioMetadataFilter, scenarioMetadataExclusionFilter)
+            filterUsing(filteredTestsBasedOnName, scenarioMetadataFilter, scenarioMetadataExclusionFilter) {
+                it.scenario.toScenarioMetadata()
+            }
         } catch(e: ContractException) {
             return loadExceptionAsTestError(e)
         } catch(e: Throwable) {
@@ -499,11 +500,11 @@ open class SpecmaticJUnitSupport {
             filterName,
             filterNotName
         ) { it.testDescription() }
-        val filteredScenarios = filterScenariosUsing(
+        val filteredScenarios = filterUsing(
             filteredScenariosBasedOnName,
             scenarioMetadataFilter,
             scenarioMetadataExclusionFilter
-        )
+        ) { it.toScenarioMetadata() }
         val tests: Sequence<ContractTest> = feature
             .copy(scenarios = filteredScenarios.toList())
             .also {

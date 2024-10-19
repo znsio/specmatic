@@ -189,8 +189,19 @@ data class HttpHeadersPattern(
     }
 
     fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
+        // First, apply the original filtering logic
+        val filteredPattern = row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver)
+
+        // Now, extend the filtered pattern with any additional headers from the example
+        val extendedPattern = filteredPattern.toMutableMap()
+        row.requestExample?.headers?.keys?.forEach { header ->
+            if (!extendedPattern.containsKey(header)) {
+                    extendedPattern[header] = StringPattern() // or any default pattern you prefer
+            }
+        }
+
         val basedOnExamples = forEachKeyCombinationGivenRowIn(
-            row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver),
+            extendedPattern,
             row,
             resolver
         ) { pattern ->

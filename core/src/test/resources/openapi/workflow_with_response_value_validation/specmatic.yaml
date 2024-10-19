@@ -2,3 +2,10 @@ contract_repositories:
   - type: filesystem
     test:
       - products.yaml
+
+workflow:
+  ids:
+    'POST /products -> 201':
+      extract: 'BODY.id'
+    '*':
+      use: 'PATH.id'

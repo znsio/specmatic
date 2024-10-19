@@ -38,7 +38,11 @@ class ResponseValueValidation {
             }
         })
 
-        assertThat(results.report()).contains("Values sent in the request to POST /products were not returned")
         assertThat(results.success()).withFailMessage(results.report()).isFalse()
+
+//        assertThat(results.report()).contains("Values sent in the request to POST /products were not returned")
+        assertThat(results.report()).contains("Not all request values were returned in the response")
+
+        println(results.report())
     }
 }

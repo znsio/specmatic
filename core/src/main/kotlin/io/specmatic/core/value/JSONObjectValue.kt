@@ -86,6 +86,22 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
 
     fun findFirstChildByName(name: String): Value? =
         jsonObject[name]
+
+    fun without(key: String): JSONObjectValue {
+        return this.copy(jsonObject = this.jsonObject - key)
+    }
+
+    val scalarValues: Map<String, ScalarValue>
+        get() {
+            return jsonObject.entries.map {
+                val (key, value) = it
+
+                if(value is ScalarValue)
+                    key to (value as ScalarValue)
+                else
+                    null
+            }.filterNotNull().toMap()
+        }
 }
 
 internal fun dictionaryToDeclarations(jsonObject: Map<String, Value>, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Triple<Map<String, DeferredPattern>, Map<String, Pattern>, ExampleDeclarations> {

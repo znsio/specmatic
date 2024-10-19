@@ -90,14 +90,18 @@ data class ScenarioAsTest(
 
             testExecutor.preExecuteScenario(testScenario, request)
 
+            workflow.updateState(request)
             val response = testExecutor.execute(request)
 
             workflow.extractDataFrom(response, originalScenario)
 
             val validatorResult = validators.asSequence().map { it.validate(scenario, response) }.filterNotNull().firstOrNull()
-            val result = validatorResult ?: testResult(request, response, testScenario, flagsBased)
+            val responseValidationResult = validatorResult ?: testResult(request, response, testScenario, flagsBased)
+            val workflowValidationResult = workflow.validateState(response).updateScenario(scenario)
 
-            Pair(result.withBindings(testScenario.bindings, response), response)
+            val overallResult = Result.fromResults(listOf(responseValidationResult, workflowValidationResult))
+
+            Pair(overallResult.withBindings(testScenario.bindings, response), response)
         } catch (exception: Throwable) {
             Pair(
                 Result.Failure(exceptionCauseMessage(exception))

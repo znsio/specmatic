@@ -2,12 +2,15 @@ package io.specmatic.core
 
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.ScalarValue
 import io.specmatic.core.value.Value
 
 class Workflow(
-    val workflow: WorkflowConfiguration = WorkflowConfiguration(),
+    val workflow: WorkflowConfiguration = WorkflowConfiguration()
 ) {
     var id: Value? = null
+    var request: HttpRequest? = null
+    var scalarRequestValues: Map<String, ScalarValue> = emptyMap()
 
     fun extractDataFrom(response: HttpResponse, originalScenario: Scenario) {
         val operation = workflow.ids[originalScenario.apiDescription] ?: return
@@ -97,5 +100,22 @@ class Workflow(
                 throw ContractException("Cannot extract data from $area yet")
             }
         }
+    }
+
+    fun updateState(request: HttpRequest) {
+        if(workflow.ids.isNotEmpty())
+            this.request = request
+    }
+
+    fun validateState(response: HttpResponse): Result {
+        val jsonRequestBody = request?.body as? JSONObjectValue ?: return Result.Success()
+        val jsonResponseBody = response.body as? JSONObjectValue ?: return Result.Failure("Expected JSON object in the response but got ${response.body.displayableType()}")
+
+        val cleanedUpResponse = jsonResponseBody.without("id")
+
+        if(cleanedUpResponse == jsonRequestBody)
+            return Result.Success()
+
+        return Result.Failure("Not all request values were returned in the response")
     }
 }

@@ -91,24 +91,25 @@ class TestCommand : Callable<Unit> {
 Filter tests matching the specified filtering criteria
 
 You can filter tests based on the following keys:
-- `method`: HTTP methods (e.g., GET, POST)
-- `path`: Request paths (e.g., /users, /product)
-- `status-code`: HTTP response status codes (e.g., 200, 400)
-- `query`: Query parameters (e.g., status, productId)
-- `header`: Request headers (e.g., Accept, X-Request-ID)
+- `METHOD`: HTTP methods (e.g., GET, POST)
+- `PATH`: Request paths (e.g., /users, /product)
+- `STATUS-CODE`: HTTP response status codes (e.g., 200, 400)
+- `HEADERS`: Request headers (e.g., Accept, X-Request-ID)
+- `QUERY-PARAM`: Query parameters (e.g., status, productId)
+- `EXAMPLE-NAME`: Example name (e.g., create-product, active-status)
 
 To specify multiple values for the same filter, separate them with commas. 
 For example, to filter by HTTP methods: 
---filter "method=GET,POST"
+--filter="METHOD=GET,POST"
 
-You can combine multiple filters using a semicolon. 
+You can supply multiple filters as well. 
 For example:
---filter "method=GET,POST;path=/users;status-code=200,400;header=Accept"
+--filter="METHOD=GET,POST" --filter="PATH=/users"
            """
         ],
         required = false
     )
-    var filter: String = ""
+    var filter: List<String> = emptyList()
 
     @Option(
         names= ["--filterNot"],
@@ -118,12 +119,12 @@ Filter tests not matching the specified criteria
 
 This option supports the same filtering keys and syntax as the --filter option.
 For example:
---filterNot "status-code=400;header.Content-Type=application/xml"
+--filterNot="STATUS-CODE=400" --filterNot="METHOD=PATCH,PUT"
            """
         ],
         required = false
     )
-    var filterNot: String = ""
+    var filterNot: List<String> = emptyList()
 
     @Option(names = ["--env"], description = ["Environment name"])
     var envName: String = ""
@@ -186,8 +187,8 @@ For example:
         System.setProperty(INLINE_SUGGESTIONS, suggestions)
         System.setProperty(ENV_NAME, envName)
         System.setProperty("protocol", protocol)
-        System.setProperty(FILTER, filter)
-        System.setProperty(FILTER_NOT, filterNot)
+        System.setProperty(FILTER, filter.joinToString(";"))
+        System.setProperty(FILTER_NOT, filterNot.joinToString(";"))
 
         if(exampleDirs.isNotEmpty()) {
             System.setProperty(EXAMPLE_DIRECTORIES, exampleDirs.joinToString(","))

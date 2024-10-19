@@ -1,5 +1,6 @@
 package io.specmatic.core.filters
 
+import io.specmatic.core.Scenario
 import io.specmatic.test.ContractTest
 
 data class ScenarioMetadataFilter(
@@ -60,6 +61,18 @@ data class ScenarioMetadataFilter(
                 scenarioMetadataFilter.isSatisfiedByAll(it.scenario.toScenarioMetadata())
             }.filterNot {
                 scenarioMetadataExclusionFilter.isSatisfiedByAtLeastOne(it.scenario.toScenarioMetadata())
+            }
+        }
+
+        fun filterScenariosUsing(
+            scenarios: Sequence<Scenario>,
+            scenarioMetadataFilter: ScenarioMetadataFilter,
+            scenarioMetadataExclusionFilter: ScenarioMetadataFilter
+        ): Sequence<Scenario> {
+            return scenarios.filter {
+                scenarioMetadataFilter.isSatisfiedByAll(it.toScenarioMetadata())
+            }.filterNot {
+                scenarioMetadataExclusionFilter.isSatisfiedByAtLeastOne(it.toScenarioMetadata())
             }
         }
 

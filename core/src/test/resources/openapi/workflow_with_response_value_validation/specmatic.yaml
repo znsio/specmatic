@@ -1,0 +1,4 @@
+contract_repositories:
+  - type: filesystem
+    test:
+      - products.yaml

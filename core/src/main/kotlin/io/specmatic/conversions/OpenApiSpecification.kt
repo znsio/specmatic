@@ -97,6 +97,11 @@ class OpenApiSpecification(
             return OpenApiSpecification(openApiFilePath, getParsedOpenApi(openApiFilePath), specmaticConfig = specmaticConfig)
         }
 
+        fun fromFileAndConfig(openApiFilePath: String, configFilePath: String): OpenApiSpecification {
+            val specmaticConfig = loadSpecmaticConfig(configFilePath)
+            return OpenApiSpecification(openApiFilePath, getParsedOpenApi(openApiFilePath), specmaticConfig = specmaticConfig)
+        }
+
         fun getParsedOpenApi(openApiFilePath: String): OpenAPI {
             return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences())
         }

@@ -5,6 +5,7 @@ import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterTestsUsing
+import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterScenariosUsing
 import io.specmatic.core.log.ignoreLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
@@ -74,6 +75,11 @@ open class SpecmaticJUnitSupport {
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfig: SpecmaticConfig? = null
         val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
+        private val scenarioMetadataFilter = ScenarioMetadataFilter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty())
+        private val scenarioMetadataExclusionFilter = ScenarioMetadataFilter.from(
+            readEnvVarOrProperty(FILTER_NOT, FILTER_NOT).orEmpty()
+        )
+
 
         private val threads: Vector<String> = Vector<String>()
 
@@ -288,14 +294,13 @@ open class SpecmaticJUnitSupport {
             }
             openApiCoverageReportInput.addEndpoints(allEndpoints)
 
-            val filteredTestsBasedOnMetadata = filterTestsUsing(
-                contractTests = testScenarios,
-                scenarioMetadataFilter = ScenarioMetadataFilter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty()),
-                scenarioMetadataExclusionFilter = ScenarioMetadataFilter.from(
-                    readEnvVarOrProperty(FILTER_NOT, FILTER_NOT).orEmpty()
-                )
-            )
-            selectTestsToRun(filteredTestsBasedOnMetadata, filterName, filterNotName) { it.testDescription() }
+            val filteredTestsBasedOnName = selectTestsToRun(
+                testScenarios,
+                filterName,
+                filterNotName
+            ) { it.testDescription() }
+
+            filterTestsUsing(filteredTestsBasedOnName, scenarioMetadataFilter, scenarioMetadataExclusionFilter)
         } catch(e: ContractException) {
             return loadExceptionAsTestError(e)
         } catch(e: Throwable) {
@@ -489,8 +494,18 @@ open class SpecmaticJUnitSupport {
             )
         }
 
+        val filteredScenariosBasedOnName = selectTestsToRun(
+            feature.scenarios.asSequence(),
+            filterName,
+            filterNotName
+        ) { it.testDescription() }
+        val filteredScenarios = filterScenariosUsing(
+            filteredScenariosBasedOnName,
+            scenarioMetadataFilter,
+            scenarioMetadataExclusionFilter
+        )
         val tests: Sequence<ContractTest> = feature
-            .copy(scenarios = selectTestsToRun(feature.scenarios.asSequence(), filterName, filterNotName) { it.testDescription() }.toList())
+            .copy(scenarios = filteredScenarios.toList())
             .also {
                 if (it.scenarios.isEmpty())
                     logger.log("All scenarios were filtered out.")

@@ -8,7 +8,6 @@ interface InteractiveServerProvider {
     val serverHost: String
     val serverPort: Int
     val sutBaseUrl: String?
-    val multiGenerate: Boolean
 
     val contractFile: File?
     val exampleTableColumns: List<ExampleTableColumn>

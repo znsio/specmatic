@@ -23,7 +23,6 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
     @Option(names = ["--dictionary"], description = ["Path to external dictionary file (default: contract_file_name_dictionary.json or dictionary.json)"])
     protected var dictFile: File? = null
 
-    override val multiGenerate: Boolean = false
     override val serverHost: String = "0.0.0.0"
     override val serverPort: Int = 9001
     abstract val server: ExamplesInteractiveServer
@@ -98,9 +97,9 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
         val examples = getExternalExampleFiles(examplesDir)
 
         val scenarioExamplePair = scenarios.flatMap {
-            listOf(it to null) + generationStrategy.getExistingExamples(it, examples).map { exRes ->
+             generationStrategy.getExistingExamples(it, examples).map { exRes ->
                 it to ExampleValidationResult(exRes.first, exRes.second)
-            }
+            }.ifEmpty { listOf(it to null) }
         }
         return createTableRows(scenarioExamplePair)
     }

@@ -620,14 +620,17 @@
                 --_padding: 0.5rem 0rem;
                 --_background-color: var(--blue);
                 --_text-color: var(--white);
+                --_width: 7rem;
+                --_font-size: 1rem;
+                --_radius: 0.5rem;
 
                 padding: var(--_padding);
                 display: inline-block;
-                width: 7rem;
-                border-radius: 0.5rem;
+                width: var(--_width);
+                border-radius: var(--_radius);
                 color: rgb(var(--_text-color));
                 background-color: rgba(var(--_background-color));
-                font-size: 1rem;
+                font-size: var(--_font-size);
 
                 &:hover {
                     --_background-color: var(--blue-dark);
@@ -693,6 +696,21 @@
             & button.test::after {
                 content: var(--_content, "Test");
             }
+
+            &[data-generate="success"] > td:nth-last-child(3) {
+                pointer-events: all;
+
+                & > button.multigen {
+                    --_padding: 0.35rem 0.35rem;
+                    --_font-size: 0.75rem;
+                    --_radius: 0.35rem;
+                    display: inline-block;
+
+                    &::after {
+                        content: var(--_content, "Generate More");
+                    }
+                }
+            }
         }
 
 
@@ -706,12 +724,6 @@
                     & button.test {
                         display: inline-block;
                     }
-                }
-            }
-
-            &[data-multi-gen="false"] > tr > td:nth-last-child(3) {
-                & > button {
-                    display: none;
                 }
             }
         }
@@ -1030,7 +1042,7 @@
                 <th>Action</th>
             </tr>
         </thead>
-        <tbody th:attr="data-test-mode=${isTestMode}, data-multi-gen=${multiGenerate}">
+        <tbody th:attr="data-test-mode=${isTestMode}">
             <tr th:each="row: ${tableRows}"
                 th:attr="data-generate=${row.isGenerated ? 'success' : ''},
                     data-key=${row.uniqueKey}, data-example=${row.exampleFilePath},
@@ -1044,7 +1056,8 @@
                         data-col-name=${group.columnName}, data-raw-value=${group.rawValue}" >
                     <p>[[${group.value}]]</p>
                     <span th:if="${group.extraInfo != null}">[[${group.extraInfo}]]</span>
-                    <button th:if="${iter.last}" class="multigen" aria-label="Generate More"></button>
+                    <br th:if="${group.extraInfo != null}"/>
+                    <button th:if="${iter.last}" class="multigen hidden" aria-label="Generate More"></button>
                 </td>
                 <td>
                     <button th:unless="${row.isGenerated}" class="generate" aria-label="Generate"></button>
@@ -1179,7 +1192,8 @@
     // LISTENERS HELPERS
     async function handleTableButtons(target, tableRow, rowValues) {
         switch (target.getAttribute("aria-label")) {
-            case "Generate": {
+            case "Generate":
+            case "Generate More": {
                 return await generateRowExamples(tableRow, rowValues);
             }
             case "Validate": {
@@ -1270,10 +1284,12 @@
 
     // ROW ACTIONS
     async function generateRowExamples(tableRow, rowValues, bulkMode = false) {
+        const originalState = tableRow.getAttribute("data-generate");
+
         tableRow.setAttribute("data-generate", "processing");
         const { examples, error } = await generateExample(rowValues);
         const {createdCount, failedCount, existedCount, totalCount} = getExamplesCount(examples);
-        tableRow.removeAttribute("data-generate");
+        tableRow.setAttribute("data-generate", originalState);
 
         if (error) {
             if (!bulkMode) createAlert("Example Generation Failed", error, true);
@@ -1281,9 +1297,17 @@
         }
 
         const newExamples = getOnlyNewExamples(tableRow, examples);
-        const newRows = newExamples.map((ex) => exampleToRow(tableRow, ex));
-        updateSpans(tableRow, rowValues, newRows.length);
-        newRows.forEach(row => tableRow.parentElement.insertBefore(row, tableRow.nextElementSibling));
+        const thisRowIsGenerated = tableRow.getAttribute("data-generate") === "success";
+        const newRows = newExamples.map((ex, idx) => updateRowWithExample(tableRow, thisRowIsGenerated || idx > 0, ex));
+
+        const rowsToBeAdded = newRows.filter((row, idx) => idx > 0 || thisRowIsGenerated);
+        const exampleFragment = document.createDocumentFragment();
+        rowsToBeAdded.forEach(row => exampleFragment.appendChild(row))
+
+        withViewTransitionOrAnimationFrame(() => {
+            updateSpans(tableRow, rowValues, thisRowIsGenerated ? newExamples.length : newExamples.length - 1);
+            tableRow.parentElement.insertBefore(exampleFragment, tableRow.nextElementSibling);
+        })
 
         if (!bulkMode) {
             const allExist = newExamples.every(example => example.status === "EXISTS");
@@ -1368,11 +1392,16 @@
         return examples.filter(example => !existingExamples.has(example.exampleFile));
     }
 
-    function exampleToRow(tableRow, example) {
-        const newRow = tableRow.cloneNode(true);
+    function updateRowWithExample(tableRow, shouldClone, example) {
+        const newRow = shouldClone ? tableRow.cloneNode(true) : tableRow;
         storeExampleData(newRow, example.exampleFile, example.status);
         insertExampleIntoRow(example.exampleFile, newRow);
-        Array.from(newRow.children).slice(2, -2).forEach(cell => cell.classList.add("hidden"));
+
+        if (shouldClone) {
+            newRow.removeAttribute("data-valid"); newRow.removeAttribute("data-test");
+            Array.from(newRow.children).slice(2, -2).forEach(cell => cell.classList.add("hidden"));
+        }
+
         newRow.setAttribute("data-generate", "success");
         enableValidateBtn(newRow);
         return newRow;
@@ -1647,6 +1676,16 @@
     }
 
     // HELPERS
+    function withViewTransitionOrAnimationFrame(fn) {
+        if (!document.startViewTransition) {
+            return requestAnimationFrame(fn);
+        }
+
+        document.startViewTransition(() => {
+            return fn();
+        })
+    }
+
     function enableValidateBtn(tableRow) {
         examplesTable.setAttribute("data-generated", "true");
     }

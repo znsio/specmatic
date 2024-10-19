@@ -136,8 +136,7 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
             "hostPort" to hostPort,
             "hasExamples" to tableRows.any { it.isGenerated },
             "exampleDetails" to tableRows.transform(),
-            "isTestMode" to (sutBaseUrl != null),
-            "multiGenerate" to multiGenerate
+            "isTestMode" to (sutBaseUrl != null)
         )
 
         return HtmlTemplateConfiguration.process("example/index.html", variables)

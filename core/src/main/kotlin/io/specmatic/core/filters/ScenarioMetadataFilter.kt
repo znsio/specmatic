@@ -1,5 +1,7 @@
 package io.specmatic.core.filters
 
+import io.specmatic.test.ContractTest
+
 data class ScenarioMetadataFilter(
     val methods: Set<String> = emptySet(),
     val paths: Set<String> = emptySet(),
@@ -12,8 +14,7 @@ data class ScenarioMetadataFilter(
         return methods.contains(metadata.method, false) &&
                 paths.contains(metadata.path, false) &&
                 statusCodes.contains(metadata.statusCode.toString(), false) &&
-                (metadata.exampleName.isNotBlank()
-                        && exampleNames.contains(metadata.exampleName, false)) &&
+                exampleNames.contains(metadata.exampleName, false) &&
                 (headers.isEmpty() || metadata.header.any { headers.contains(it, false) }) &&
                 (queryParams.isEmpty() || metadata.query.any { queryParams.contains(it, false) })
     }
@@ -22,8 +23,7 @@ data class ScenarioMetadataFilter(
         return methods.contains(metadata.method, true) ||
                 paths.contains(metadata.path, true) ||
                 statusCodes.contains(metadata.statusCode.toString(), true) ||
-                (metadata.exampleName.isNotBlank()
-                        && exampleNames.contains(metadata.exampleName, true)) ||
+                exampleNames.contains(metadata.exampleName, true) ||
                 (headers.isNotEmpty() && metadata.header.any { headers.contains(it, true) }) ||
                 (queryParams.isNotEmpty() && metadata.query.any { queryParams.contains(it, true) })
     }
@@ -49,6 +49,18 @@ data class ScenarioMetadataFilter(
                 queryParams = filters.getFiltersWithTag(ScenarioFilterTags.QUERY),
                 exampleNames = filters.getFiltersWithTag(ScenarioFilterTags.EXAMPLE_NAME)
             )
+        }
+
+        fun filterTestsUsing(
+            contractTests: Sequence<ContractTest>,
+            scenarioMetadataFilter: ScenarioMetadataFilter,
+            scenarioMetadataExclusionFilter: ScenarioMetadataFilter
+        ): Sequence<ContractTest> {
+            return contractTests.filter {
+                scenarioMetadataFilter.isSatisfiedByAll(it.scenario.toScenarioMetadata())
+            }.filterNot {
+                scenarioMetadataExclusionFilter.isSatisfiedByAtLeastOne(it.scenario.toScenarioMetadata())
+            }
         }
 
         private fun List<String>.getFiltersWithTag(tag: ScenarioFilterTags): Set<String> {

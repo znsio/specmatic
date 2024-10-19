@@ -79,7 +79,7 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
     }
 
     private fun getServerHostAndPort(request: ExamplePageRequest? = null): String {
-        return request?.hostPort?.takeIf { it.isNotEmpty() } ?: "localhost:$serverPort"
+        return request?.hostPort ?: "http://localhost:$serverPort"
     }
 
     private fun getContractFileOrNull(request: ExamplePageRequest? = null): Result<File> {
@@ -184,6 +184,7 @@ class ExamplesInteractiveServer(provider: InteractiveServerProvider) : Interacti
         post("/_specmatic/examples") {
             val request = call.receive<ExamplePageRequest>()
             handleContractFile(request) { contract ->
+                cachedContractFile = contract
                 val htmlContent = getHtmlContent(contract, getServerHostAndPort(request))
                 call.respondText(htmlContent, contentType = ContentType.Text.Html)
             }

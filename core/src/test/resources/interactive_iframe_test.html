@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Interactive Test</title>
+        <style>
+            body {
+                text-align: center;
+            }
+            .iframe-container {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+            }
+            iframe {
+                height: 100vh;
+                width: 50vw;
+                border: 1px solid red;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Interactive Server POST Request Test</h1>
+        <h2>Ensure that you delete the generated example files in the resource folder if the already specified contract file is utilized.</h2>
+        <div class="iframe-container">
+            <iframe id="iframe-window" frameborder="0"></iframe>
+        </div>
+
+        <script>
+            const data = {
+                contractFile: "core/src/test/resources/openapi/petstore-expanded.yaml",
+                hostPort: "http://localhost:9001"
+            };
+
+            fetch("http://localhost:9001/_specmatic/examples", {
+                method: "POST",
+                body: JSON.stringify(data),
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById("iframe-window").srcdoc = html;
+            })
+            .catch(error => console.error('Error:', error));
+        </script>
+    </body>
+</html>

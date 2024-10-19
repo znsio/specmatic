@@ -1542,7 +1542,7 @@
     // FETCH CALLS
     async function fetchFromBackend(endpoint, body) {
         try {
-            const resp = await fetch(`http://${getHostPort()}/_specmatic/examples/${endpoint}`, {
+            const resp = await fetch(`${getHostPort()}/_specmatic/examples/${endpoint}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body)

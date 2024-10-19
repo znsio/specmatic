@@ -66,14 +66,3 @@ data class ScenarioMetadataFilter(
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-

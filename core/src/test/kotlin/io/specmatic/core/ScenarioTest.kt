@@ -1,5 +1,6 @@
 package io.specmatic.core
 
+import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.pattern.*
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -254,5 +255,35 @@ class ScenarioTest {
                 .hasMessageContaining("string")
                 .hasMessageContaining("REQUEST.BODY.id")
         })
+    }
+
+    @Test
+    fun `api description is as per the format required by the workflow feature`() {
+        val scenario = Scenario(
+            "",
+            HttpRequestPattern(
+                method = "POST",
+                httpPathPattern = buildHttpPathPattern("/products"),
+                body = JSONObjectPattern(
+                    pattern = mapOf(
+                        "id" to NumberPattern()
+                    )
+                )
+            ),
+            HttpResponsePattern(
+                status = 201,
+                body = JSONObjectPattern(
+                    pattern = mapOf(
+                        "id" to NumberPattern()
+                    )
+                )
+            ),
+            emptyMap(),
+            emptyList(),
+            emptyMap(),
+            emptyMap()
+        )
+
+        assertThat(scenario.apiDescription).isEqualTo("POST /products -> 201")
     }
 }

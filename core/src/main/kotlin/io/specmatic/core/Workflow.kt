@@ -6,7 +6,7 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.ScalarValue
 import io.specmatic.core.value.Value
 
-data class IDDetails(val identifier: String, val value: Value)
+data class IDDetails(val propertyName: String, val propertyValue: Value)
 
 class Workflow(
     val workflow: WorkflowConfiguration = WorkflowConfiguration()
@@ -114,25 +114,27 @@ class Workflow(
         if(requestMethod != "GET")
             return Result.Success()
 
-        if(idDetails == null)
-            return Result.Success()
+        val (idPropertyName, idPropertyValue) = idDetails ?: return Result.Success()
 
         val storedResponse = responseBody as? JSONObjectValue ?: return Result.Success()
 
         return when(response.body) {
             is JSONObjectValue -> {
-                compare(storedResponse, response.body)
+                compare(storedResponse, response.body, null) ?: Result.Success()
             }
 
             is JSONArrayValue -> {
                 val results = response.body.list.mapIndexed { index, responseBodyListItem ->
                     val result = if(responseBodyListItem is JSONObjectValue)
-                        compare(storedResponse, responseBodyListItem)
+                        compare(storedResponse, responseBodyListItem, idDetails)
                     else
                         Result.Success()
 
-                    result.breadCrumb("[$index]")
-                }
+                    result?.breadCrumb("[$index]")
+                }.filterNotNull()
+
+                if(results.isEmpty())
+                    return Result.Failure("""None of the objects returned had a property "$idPropertyName" with the value ${idPropertyValue.displayableValue()}""")
 
                 Result.fromResults(results)
             }
@@ -141,7 +143,22 @@ class Workflow(
         }
     }
 
-    private fun compare(storedResponse: JSONObjectValue, responseBody: JSONObjectValue): Result {
+    private fun compare(
+        storedResponse: JSONObjectValue,
+        responseBody: JSONObjectValue,
+        idDetails: IDDetails?
+    ): Result? {
+        if(idDetails != null) {
+            val (propertyName, idValue) = idDetails
+            val idInResponse = responseBody.findFirstChildByPath(propertyName)
+
+            if (idInResponse == null)
+                return Result.Failure("""ID property "$propertyName" not found""")
+
+            if (idInResponse != idValue)
+                return null
+        }
+
         return if(storedResponse == responseBody)
             Result.Success()
         else

@@ -1020,7 +1020,7 @@
                 th:attr="data-raw-path=${row.rawPath}, data-key=${row.uniqueKey},
                         data-example=${row.example},
                         data-generate=${row.isGenerated ? 'success' : ''},
-                        data-valid=${row.isGenerated ? (row.isValid ? 'success' : 'failure') : ''}">
+                        data-valid=${row.isGenerated ? (row.isValid ? 'success' : 'failed') : ''}">
                 <td>
                     <input type="checkbox" name="path-row" class="path-row">
                 </td>

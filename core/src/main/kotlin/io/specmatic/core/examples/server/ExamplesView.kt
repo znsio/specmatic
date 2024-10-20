@@ -16,17 +16,17 @@ class ExamplesView {
     companion object {
         fun getEndpoints(feature: Feature, examplesDir: File): List<Endpoint> {
             val examples = examplesDir.getExamplesFromDir()
-            val scenarioExPairList = getScenarioExamplesPairs(feature.scenarios, examples)
+            val scenarioExamplesPairList = getScenarioExamplesPairs(feature.scenarios, examples)
 
-            return scenarioExPairList.map { (scenario, ex) ->
+            return scenarioExamplesPairList.map { (scenario, example) ->
                 Endpoint(
                     path = convertPathParameterStyle(scenario.path),
                     rawPath = scenario.path,
                     method = scenario.method,
                     responseStatus = scenario.httpResponsePattern.status,
                     contentType = scenario.httpRequestPattern.headersPattern.contentType,
-                    exampleFile = ex?.first,
-                    exampleMismatchReason = ex?.second
+                    exampleFile = example?.first,
+                    exampleMismatchReason = example?.second
                 )
             }.filterEndpoints()
         }

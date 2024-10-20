@@ -17,10 +17,10 @@ object TestInteractionsLog {
     }
 
     fun HttpLogMessage.combineLog(): String {
-        val request = this.request.toLogString()
-        val response = this.response?.toLogString() ?: "No response"
+        val request = this.request.toLogString().trim('\n')
+        val response = this.response?.toLogString()?.trim('\n') ?: "No response"
 
-        return "$request\n$response"
+        return "$request\n\n$response"
     }
 
     fun HttpLogMessage.duration() = (responseTime?.toEpochMillis() ?: requestTime.toEpochMillis()) - requestTime.toEpochMillis()

@@ -205,18 +205,24 @@ class ResponseValueValidation {
         val requestsSeen = mutableListOf<String>()
 
         val results = feature.executeTests(object : TestExecutor {
-            var entity = parsedJSONObject("""{"id": "abc123", "name": "product name", "description": "product description", price: 10.0}""")
+            var entity = JSONObjectValue()
 
             override fun execute(request: HttpRequest): HttpResponse {
                 requestsSeen.add("${request.method} ${request.path!!}")
 
                 val response = when (request.method) {
                     "POST" -> {
-                        val jsonRequestBody = request.body as JSONObjectValue
+                        val newEntityValue = request.body as JSONObjectValue
+                        val entityMap = newEntityValue.jsonObject
+                        val idEntry = "id" to StringValue("abc123")
 
                         assertThat(
-                            jsonRequestBody.findFirstChildByPath("name")?.toStringLiteral()
+                            newEntityValue.findFirstChildByPath("name")?.toStringLiteral()
                         ).isEqualTo("Sample Product")
+
+                        entity = JSONObjectValue(
+                            entityMap + idEntry
+                        )
 
                         HttpResponse(201, body = entity)
                     }
@@ -224,12 +230,9 @@ class ResponseValueValidation {
                         val newEntityValue = request.body as JSONObjectValue
                         val entityMap = newEntityValue.jsonObject
 
-                        val newProductName = "name" to StringValue("new product name")
-                        val id = "id" to StringValue("abc123")
+                        val idEntry = "id" to StringValue("abc123")
 
-                        val newEntityMap = entityMap
-                            .plus(newProductName)
-                            .plus(id)
+                        val newEntityMap = entityMap.plus(idEntry)
 
                         entity = JSONObjectValue(newEntityMap)
                         HttpResponse(200, body = entity)
@@ -250,6 +253,8 @@ class ResponseValueValidation {
 
         assertThat(requestsSeen).containsExactly("POST /products", "GET /products/abc123", "PATCH /products/abc123", "GET /products/abc123")
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
+
+        println(results.summary())
     }
 
     @Test
@@ -264,18 +269,22 @@ class ResponseValueValidation {
         val requestsSeen = mutableListOf<String>()
 
         val results = feature.executeTests(object : TestExecutor {
-            val entity = parsedJSONObject("""{"id": "abc123", "name": "product name", "description": "product description", price: 10.0}""")
+            var entity = JSONObjectValue()
 
             override fun execute(request: HttpRequest): HttpResponse {
                 requestsSeen.add("${request.method} ${request.path!!}")
 
                 val response = when (request.method) {
                     "POST" -> {
-                        val jsonRequestBody = request.body as JSONObjectValue
+                        val newEntityValue = request.body as JSONObjectValue
+                        val entityMap = newEntityValue.jsonObject
+                        val idEntry = "id" to StringValue("abc123")
 
                         assertThat(
-                            jsonRequestBody.findFirstChildByPath("name")?.toStringLiteral()
+                            newEntityValue.findFirstChildByPath("name")?.toStringLiteral()
                         ).isEqualTo("Sample Product")
+
+                        entity = JSONObjectValue(entityMap + idEntry)
 
                         HttpResponse(201, body = entity)
                     }
@@ -283,12 +292,9 @@ class ResponseValueValidation {
                         val newEntityValue = request.body as JSONObjectValue
                         val entityMap = newEntityValue.jsonObject
 
-                        val newProductName = "name" to StringValue("new product name")
                         val id = "id" to StringValue("abc123")
 
-                        val newEntityMap = entityMap
-                            .plus(newProductName)
-                            .plus(id)
+                        val newEntityMap = entityMap.plus(id)
 
                         HttpResponse(200, body = JSONObjectValue(newEntityMap))
                     }
@@ -308,5 +314,8 @@ class ResponseValueValidation {
 
         assertThat(requestsSeen).isEqualTo(listOf("POST /products", "GET /products/abc123", "PATCH /products/abc123", "GET /products/abc123"))
         assertThat(results.success()).withFailMessage(results.report()).isFalse()
+
+        println("------------------")
+        println(results.report())
     }
 }

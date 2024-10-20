@@ -132,8 +132,8 @@ paths:
             examples:
               MODIFY_PRODUCT:
                 value:
-                  name: "Sample Product"
-                  description: "This is a sample product description."
+                  name: "New Sample Product"
+                  description: "This is a new sample product description."
                   price: 19.99
       responses:
         '200':

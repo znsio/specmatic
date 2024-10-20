@@ -1,6 +1,7 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.key
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.ScalarValue
@@ -143,12 +144,27 @@ class Workflow(
         }
     }
 
+    val entityMismatchMessages = object : MismatchMessages {
+        override fun mismatchMessage(expected: String, actual: String): String {
+            return "Expected $expected as per the entity created but was $actual"
+        }
+
+        override fun unexpectedKey(keyLabel: String, keyName: String): String {
+            return "$keyLabel $keyName in response entity was unexpected"
+        }
+
+        override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+            return "$keyLabel $keyName in response entity was unexpected"
+        }
+
+    }
+
     private fun compare(
         storedResponse: JSONObjectValue,
         responseBody: JSONObjectValue,
         idDetails: IDDetails?
     ): Result? {
-        if(idDetails != null) {
+        if (idDetails != null) {
             val (propertyName, idValue) = idDetails
             val idInResponse = responseBody.findFirstChildByPath(propertyName)
 
@@ -159,9 +175,7 @@ class Workflow(
                 return null
         }
 
-        return if(storedResponse == responseBody)
-            Result.Success()
-        else
-            Result.Failure("Not all request values were returned in the response")
+        val storedResponsePattern = storedResponse.exactMatchElseType()
+        return storedResponsePattern.matches(responseBody, Resolver(mismatchMessages = entityMismatchMessages))
     }
 }

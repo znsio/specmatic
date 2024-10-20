@@ -66,10 +66,7 @@ class ResponseValueValidation {
         })
 
         assertThat(results.success()).withFailMessage(results.report()).isFalse()
-
-        assertThat(results.report()).contains("Not all request values were returned in the response")
-
-        println(results.report())
+        assertThat(results.report()).withFailMessage(results.report()).contains("""Expected "1000" as per the entity created but was "2000"""")
     }
 
     @Test
@@ -127,7 +124,7 @@ class ResponseValueValidation {
 
         assertThat(results.success()).withFailMessage(results.report()).isFalse()
 
-        assertThat(results.report()).contains("Not all request values were returned in the response")
+        assertThat(results.report()).contains("""Expected "product name" as per the entity created but was "another product name"""")
 
         println(results.report())
     }

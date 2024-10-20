@@ -20,6 +20,8 @@ data class HttpHeadersPattern(
         }
     }
 
+    val headerNames = pattern.keys
+
     fun isEmpty(): Boolean {
         return pattern.isEmpty()
     }

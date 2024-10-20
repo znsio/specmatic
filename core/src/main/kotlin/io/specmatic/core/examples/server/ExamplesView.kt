@@ -55,7 +55,7 @@ class ExamplesView {
                         MethodGroup(
                             count = methodGroup.size,
                             statuses = methodGroup.groupBy { it.responseStatus.toString() }.mapValues { (_, statusGroup) ->
-                                StatusGroup(count = statusGroup.size, examples = statusGroup)
+                                StatusGroup(count = statusGroup.size, examples = statusGroup.groupBy { it.contentType })
                             }
                         )
                     }
@@ -70,24 +70,26 @@ class ExamplesView {
                 pathGroup.methods.flatMap { (_, methodGroup) ->
                     var showMethod = true
                     methodGroup.statuses.flatMap { (_, statusGroup) ->
-                        var showStatus = true
-                        statusGroup.examples.map {
-                            TableRow(
-                                rawPath = it.rawPath,
-                                path = it.path,
-                                method = it.method,
-                                responseStatus = it.responseStatus.toString(),
-                                pathSpan = pathGroup.count,
-                                methodSpan = methodGroup.count,
-                                statusSpan = statusGroup.count,
-                                showPath = showPath,
-                                showMethod = showMethod,
-                                showStatus = showStatus,
-                                contentType = it.contentType,
-                                example = it.exampleFile?.absolutePath,
-                                exampleName = it.exampleFile?.nameWithoutExtension,
-                                exampleMismatchReason = it.exampleMismatchReason?.takeIf { reason ->  reason.isNotBlank() }
-                            ).also { showPath = false; showMethod = false; showStatus = false }
+                        statusGroup.examples.flatMap { (_, examples) ->
+                            var showStatus = true
+                            examples.map {
+                                TableRow(
+                                    rawPath = it.rawPath,
+                                    path = it.path,
+                                    method = it.method,
+                                    responseStatus = it.responseStatus.toString(),
+                                    pathSpan = pathGroup.count,
+                                    methodSpan = methodGroup.count,
+                                    statusSpan = examples.size,
+                                    showPath = showPath,
+                                    showMethod = showMethod,
+                                    showStatus = showStatus,
+                                    contentType = it.contentType,
+                                    example = it.exampleFile?.absolutePath,
+                                    exampleName = it.exampleFile?.nameWithoutExtension,
+                                    exampleMismatchReason = it.exampleMismatchReason?.takeIf { reason ->  reason.isNotBlank() }
+                                ).also { showPath = false; showMethod = false; showStatus = false }
+                            }
                         }
                     }
                 }
@@ -116,9 +118,9 @@ data class TableRow(
     val uniqueKey: String = "${path}_${method}_${responseStatus}"
 )
 
-data class StatusGroup (
+data class StatusGroup(
     val count: Int,
-    val examples: List<Endpoint>
+    val examples: Map<String?, List<Endpoint>>
 )
 
 data class MethodGroup (

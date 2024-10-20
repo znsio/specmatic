@@ -405,7 +405,6 @@
         html {
             scroll-behavior: smooth;
             scrollbar-gutter: stable;
-            text-wrap: balance;
         }
 
         body {
@@ -849,6 +848,7 @@
 
             & > p {
                 word-break: break-all;
+                margin-right: 4rem;
                 flex: 1;
             }
 
@@ -1328,7 +1328,7 @@
 
         requestAnimationFrame(() => {
             rowsToBeAdded.forEach(row => tableRow.parentElement.insertBefore(row, tableRow.nextSibling));
-            updateSpans(tableRow, rowValues,rowsToBeAdded.length);
+            updateSpans(tableRow, rowValues, rowsToBeAdded.length);
         })
 
         if (!bulkMode) {
@@ -1420,10 +1420,10 @@
     }
 
     function insertExampleIntoRow(example, tableRow) {
-        const examplePara = document.createElement("p");
-        examplePara.textContent = parseFileName(example.exampleFilePath);
+        const exampleSpan = document.createElement("span");
+        exampleSpan.textContent = parseFileName(example.exampleFilePath);
         const generateColumn = tableRow.querySelector("td:nth-last-child(2)")
-        generateColumn.replaceChildren(examplePara);
+        generateColumn.replaceChildren(exampleSpan);
     }
 
     function updateSpans(tableRow, rowValues, increment) {
@@ -1439,6 +1439,9 @@
 
             for (let i = 0; i < cells.length; i++) {
                 isMatchingCell = isMatchingCell && curRowValues[i] === origMainValues[i];
+                if (i == cells.length - 1) {
+                    isMatchingCell = isMatchingCell && curRowValues[i + 1] == origMainValues[i + 1];
+                }
                 if (isMatchingCell) {
                     cells[i].rowSpan += increment;
                 }

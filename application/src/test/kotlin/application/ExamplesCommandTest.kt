@@ -1,11 +1,18 @@
 package application
 
+import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
 class ExamplesCommandTest {
+    @AfterEach
+    fun resetCounter() {
+        ExamplesInteractiveServer.resetCounter()
+    }
+
     @Test
     fun `examples validate command should not print an empty error when it sees an inline example for a filtered-out scenario`(@TempDir tempDir: File) {
         val specFile = tempDir.resolve("spec.yaml")
@@ -286,7 +293,7 @@ paths:
         val examplesCreated = examplesDir.walk().filter { it.isFile }.toList()
 
         assertThat(examplesCreated).hasSize(1)
-        assertThat(examplesCreated.single().name).matches("product_[0-9]*_GET_200.json")
+        assertThat(examplesCreated.single().name).matches("product_[0-9]*_GET_200_1.json")
 
     }
 
@@ -386,13 +393,13 @@ paths:
         assertThat(examplesCreated).hasSize(2)
         println(examplesCreated.map { it.name })
         assertThat(examplesCreated.filter { it.name == "example.json" }).hasSize(1)
-        assertThat(examplesCreated.filter { it.name == "product_GET_200.json" }).hasSize(1)
+        assertThat(examplesCreated.filter { it.name == "product_GET_200_1.json" }).hasSize(1)
 
         assertThat(examplesCreated.find { it.name == "example.json" }?.readText() ?: "")
             .contains(""""name": "Laptop"""")
             .contains(""""price": 1000.99""")
 
-        val generatedExample = examplesCreated.first { it.name == "product_GET_200.json" }
+        val generatedExample = examplesCreated.first { it.name == "product_GET_200_1.json" }
         assertThat(generatedExample.readText()).contains(""""path": "/product"""")
     }
 }

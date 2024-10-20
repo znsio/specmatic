@@ -372,22 +372,15 @@ data class Feature(
         }
     }
 
-    fun createContractTestFromExampleFile(filePath: String): ReturnValue<ContractTest> {
-        val scenarioStub = ScenarioStub.readFromFile(File(filePath))
+    fun createContractTestFromExampleFile(exampleFile: File): ReturnValue<ScenarioAsTest> {
+        val matchingScenario = scenarios.firstOrNull { it.matchesExample(exampleFile) }
+            ?: return HasFailure(Result.Failure("Could not find an API matching example ${exampleFile.canonicalPath}"))
 
-        val originalScenario = scenarios.firstOrNull { scenario ->
-            scenario.matches(scenarioStub.request, scenarioStub.response) is Result.Success
-        } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
+        val testScenario = matchingScenario.generateTestScenarios(flagsBased)
+            .firstOrNull { it.value.exampleName == exampleFile.nameWithoutExtension }
+            ?.value ?: return HasFailure(Result.Failure("Could not find an API matching example ${exampleFile.canonicalPath}"))
 
-        val concreteTestScenario = Scenario(
-            name = "",
-            httpRequestPattern = scenarioStub.request.toPattern(),
-            httpResponsePattern = HttpResponsePattern(scenarioStub.response)
-        ).let {
-            it.copy(name = it.apiIdentifier)
-        }
-
-        return HasValue(scenarioAsTest(concreteTestScenario, null, Workflow(), originalScenario))
+        return HasValue(scenarioAsTest(testScenario, null, Workflow(), matchingScenario))
     }
 
     private fun scenarioAsTest(

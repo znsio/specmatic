@@ -4,6 +4,8 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.pattern.NumberPattern
 import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
 import io.specmatic.stub.captureStandardOutput
@@ -2470,47 +2472,7 @@ paths:
     }
 
     @Test
-    fun `shoudl be able to create a contract test based on an example`(@TempDir tempDir: File) {
-        val feature = OpenApiSpecification.fromYAML(
-            """
-openapi: 3.0.0
-info:
-  title: Sample Product API
-  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-  version: 0.1.9
-servers:
-  - url: http://localhost:8080
-    description: Local
-paths:
-  /products:
-    post:
-      summary: Add Product
-      description: Add Product
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - name
-              properties:
-                name:
-                  type: string
-      responses:
-        '200':
-          description: Returns Product With Id
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - id
-                properties:
-                  id:
-                    type: integer
-""".trimIndent(), ""
-        ).toFeature()
-
+    fun `should be able to create a contract test based on an example`(@TempDir tempDir: File) {
         val exampleFile = tempDir.resolve("example.json")
         exampleFile.writeText(
             """
@@ -2538,13 +2500,55 @@ paths:
             """.trimIndent()
         )
 
-        val contractTest = feature.createContractTestFromExampleFile(exampleFile.path).value
+        val feature = Flags.using(EXAMPLE_DIRECTORIES to tempDir.canonicalPath) {
+            OpenApiSpecification.fromYAML(
+                    """
+    openapi: 3.0.0
+    info:
+      title: Sample Product API
+      description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
+      version: 0.1.9
+    servers:
+      - url: http://localhost:8080
+        description: Local
+    paths:
+      /products:
+        post:
+          summary: Add Product
+          description: Add Product
+          requestBody:
+            content:
+              application/json:
+                schema:
+                  type: object
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+          responses:
+            '200':
+              description: Returns Product With Id
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    required:
+                      - id
+                    properties:
+                      id:
+                        type: integer
+    """.trimIndent(), ""
+            ).toFeature().loadExternalisedExamples()
+        }
+
+        val contractTest = feature.createContractTestFromExampleFile(exampleFile).value
 
         val results = contractTest.runTest(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val jsonRequestBody = request.body as JSONObjectValue
                 assertThat(jsonRequestBody.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo("James")
-                return HttpResponse.ok(parsedJSONObject("""{"id": 10}""")).also {
+                return HttpResponse.ok(parsedJSONObject("""{"id": 99}""")).also {
                     println(request.toLogString())
                     println()
                     println(it.toLogString())

@@ -90,14 +90,13 @@ data class ScenarioAsTest(
 
             testExecutor.preExecuteScenario(testScenario, request)
 
-            workflow.updateState(request)
             val response = testExecutor.execute(request)
 
             workflow.extractDataFrom(response, originalScenario)
 
             val validatorResult = validators.asSequence().map { it.validate(scenario, response) }.filterNotNull().firstOrNull()
             val responseValidationResult = validatorResult ?: testResult(request, response, testScenario, flagsBased)
-            val workflowValidationResult = workflow.validateState(response).updateScenario(scenario)
+            val workflowValidationResult = workflow.validateEntityResponse(request.method, response).updateScenario(scenario)
 
             val overallResult = Result.fromResults(listOf(responseValidationResult, workflowValidationResult))
 

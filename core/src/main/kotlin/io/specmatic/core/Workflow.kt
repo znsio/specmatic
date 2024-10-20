@@ -1,15 +1,20 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.ScalarValue
 import io.specmatic.core.value.Value
+
+data class IDDetails(val identifier: String, val value: Value)
 
 class Workflow(
     val workflow: WorkflowConfiguration = WorkflowConfiguration()
 ) {
     var id: Value? = null
-    var request: HttpRequest? = null
+    var idDetails: IDDetails? = null
+
+    var responseBody: Value? = null
     var scalarRequestValues: Map<String, ScalarValue> = emptyMap()
 
     fun extractDataFrom(response: HttpResponse, originalScenario: Scenario) {
@@ -30,12 +35,18 @@ class Workflow(
                 "BODY" -> {
                     val responseBody = response.body
 
+                    this.responseBody = responseBody
+
                     if(path.isEmpty()) {
                         id = responseBody
+                        idDetails = IDDetails("", responseBody)
                     } else if(responseBody is JSONObjectValue) {
-                        val data = responseBody.findFirstChildByPath(path.joinToString("."))
-                        if(data != null)
+                        val idPath = path.joinToString(".")
+                        val data = responseBody.findFirstChildByPath(idPath)
+                        if(data != null) {
                             id = data
+                            idDetails = IDDetails(idPath, data)
+                        }
                     }
                 }
                 else -> {
@@ -85,8 +96,8 @@ class Workflow(
 
                     val indexToUpdate = if(updatedPath.getOrNull(0) == "") pathParamIndex + 1 else pathParamIndex
 
-                    id?.let {
-                        updatedPath.set(indexToUpdate, it.toStringLiteral())
+                    idDetails?.let { (_, value) ->
+                        updatedPath.set(indexToUpdate, value.toStringLiteral())
                     }
 
                     val result = originalScenario.httpRequestPattern.httpPathPattern?.matches(updatedPath.joinToString("/"), originalScenario.resolver)
@@ -102,20 +113,41 @@ class Workflow(
         }
     }
 
-    fun updateState(request: HttpRequest) {
-        if(workflow.ids.isNotEmpty())
-            this.request = request
-    }
-
-    fun validateState(response: HttpResponse): Result {
-        val jsonRequestBody = request?.body as? JSONObjectValue ?: return Result.Success()
-        val jsonResponseBody = response.body as? JSONObjectValue ?: return Result.Failure("Expected JSON object in the response but got ${response.body.displayableType()}")
-
-        val cleanedUpResponse = jsonResponseBody.without("id")
-
-        if(cleanedUpResponse == jsonRequestBody)
+    fun validateEntityResponse(requestMethod: String?, response: HttpResponse): Result {
+        if(requestMethod != "GET")
             return Result.Success()
 
-        return Result.Failure("Not all request values were returned in the response")
+        if(idDetails == null)
+            return Result.Success()
+
+        val storedResponse = responseBody as? JSONObjectValue ?: return Result.Success()
+
+        return when(response.body) {
+            is JSONObjectValue -> {
+                compare(storedResponse, response.body)
+            }
+
+            is JSONArrayValue -> {
+                val results = response.body.list.mapIndexed { index, responseBodyListItem ->
+                    val result = if(responseBodyListItem is JSONObjectValue)
+                        compare(storedResponse, responseBodyListItem)
+                    else
+                        Result.Success()
+
+                    result.breadCrumb("[$index]")
+                }
+
+                Result.fromResults(results)
+            }
+
+            else -> return Result.Failure("Expected JSON object or array in the response but got ${response.body.displayableType()}")
+        }
+    }
+
+    private fun compare(storedResponse: JSONObjectValue, responseBody: JSONObjectValue): Result {
+        return if(storedResponse == responseBody)
+            Result.Success()
+        else
+            Result.Failure("Not all request values were returned in the response")
     }
 }

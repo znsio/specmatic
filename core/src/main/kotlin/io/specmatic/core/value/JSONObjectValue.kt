@@ -87,10 +87,6 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
     fun findFirstChildByName(name: String): Value? =
         jsonObject[name]
 
-    fun without(key: String): JSONObjectValue {
-        return this.copy(jsonObject = this.jsonObject - key)
-    }
-
     val scalarValues: Map<String, ScalarValue>
         get() {
             return jsonObject.entries.map {

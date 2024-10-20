@@ -8124,7 +8124,7 @@ paths:
         content:
           application/json:
             schema:
-              ${"$"}ref: '#/components/schemas/Order'
+              ${"$"}ref: '#/components/schemas/OrderDetails'
             examples:
               SUCCESSFUL_ORDER:
                 value:
@@ -8136,16 +8136,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - id
-                properties:
-                  id:
-                    type: string
+                ${"$"}ref: '#/components/schemas/Order'
               examples:
                 SUCCESSFUL_ORDER:
                   value:
                     id: "pqr123"
+                    productid: "abc123"
+                    quantity: 10
   /orders/{orderId}:
     get:
       summary: Get order details
@@ -8168,17 +8165,32 @@ paths:
               examples:
                 GET_ORDER:
                   value:
+                    id: "xyzabc"
                     productid: "abc123"
                     quantity: 10
 
 components:
   schemas:
-    Order:
+    OrderDetails:
       type: object
       required:
         - productId
         - quantity
       properties:
+        productid:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+    Order:
+      type: object
+      required:
+        - id
+        - productId
+        - quantity
+      properties:
+        id:
+          type: string
         productid:
           type: string
         quantity:
@@ -8201,16 +8213,16 @@ components:
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 if(request.method == "POST")
-                    return HttpResponse(201, body = parsedJSONObject("""{"id": "xyzabc"}"""))
+                    return HttpResponse(201, body = parsedJSONObject("""{"id": "xyzabc", "productid": "pqr123", "quantity": 10}"""))
                 else {
                     path = request.path!!
-                    return HttpResponse(200, parsedJSONObject("""{"productid": "pqr123", "quantity": 10}"""))
+                    return HttpResponse(200, parsedJSONObject("""{"id": "xyzabc", "productid": "pqr123", "quantity": 10}"""))
                 }
             }
         })
 
         assertThat(path).endsWith("/xyzabc")
-        assertThat(results.success()).isTrue()
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 
     @Test

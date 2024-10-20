@@ -188,20 +188,21 @@ data class HttpHeadersPattern(
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
     }
 
+    /**
+     * Return HttpHeadersPattern based on
+     *  1. **Filtering Existing Patterns**: Removes headers that should be omitted based on the resolver's logic.
+     *  2. **Extending Patterns**: Calculates additional headers from the `example` that are not part of the filtered pattern.
+     *  3. **Combining Patterns**: Creates a sequence of header patterns by combining the filtered and additional patterns.
+     *  4. **Filling Missing Patterns**: Ensures that any headers without examples are filled using the resolver's generation logic.
+     */
     fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
-        // First, apply the original filtering logic
+
         val filteredPattern = row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver)
 
-        // Now, extend the filtered pattern with any additional headers from the example
-        val extendedPattern = filteredPattern.toMutableMap()
-        row.requestExample?.headers?.keys?.forEach { header ->
-            if (!extendedPattern.containsKey(header)) {
-                    extendedPattern[header] = StringPattern() // or any default pattern you prefer
-            }
-        }
+        val additionalHeadersPattern = calculateExtendedPattern(filteredPattern, row)
 
         val basedOnExamples = forEachKeyCombinationGivenRowIn(
-            extendedPattern,
+            filteredPattern + additionalHeadersPattern,
             row,
             resolver
         ) { pattern ->
@@ -223,6 +224,21 @@ data class HttpHeadersPattern(
                 HttpHeadersPattern(it, contentType = contentType)
             }
         }
+    }
+
+    /**
+     * Extracts headers from example, which are not part of the spec.
+     */
+    private fun calculateExtendedPattern(specPattern : Map<String, Pattern>, row: Row): Map<String, Pattern> {
+
+        val additionalHeadersPattern = if (row.requestExample != null) {
+            row.requestExample.headers.keys
+                .filter { header -> !specPattern.containsKey(header) }.associateWith { StringPattern() }
+        } else {
+            emptyMap()
+        }
+
+        return additionalHeadersPattern
     }
 
     fun negativeBasedOn(

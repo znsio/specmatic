@@ -112,7 +112,7 @@ For example:
     var filter: List<String> = emptyList()
 
     @Option(
-        names= ["--filterNot"],
+        names= ["--filter-not"],
         description = [
            """
 Filter tests not matching the specified criteria

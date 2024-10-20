@@ -10,6 +10,8 @@ const val QUERY_PARAMS_BREADCRUMB = "QUERY-PARAMS"
 
 data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val additionalProperties: Pattern? = null) {
 
+    val queryKeyNames = queryPatterns.keys
+
     fun generate(resolver: Resolver): List<Pair<String, String>> {
         return attempt(breadCrumb = "QUERY-PARAMS") {
             queryPatterns.map { it.key.removeSuffix("?") to it.value }.flatMap { (parameterName, pattern) ->

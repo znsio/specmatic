@@ -11,7 +11,6 @@ data class IDDetails(val identifier: String, val value: Value)
 class Workflow(
     val workflow: WorkflowConfiguration = WorkflowConfiguration()
 ) {
-    var id: Value? = null
     var idDetails: IDDetails? = null
 
     var responseBody: Value? = null
@@ -38,13 +37,11 @@ class Workflow(
                     this.responseBody = responseBody
 
                     if(path.isEmpty()) {
-                        id = responseBody
                         idDetails = IDDetails("", responseBody)
                     } else if(responseBody is JSONObjectValue) {
                         val idPath = path.joinToString(".")
                         val data = responseBody.findFirstChildByPath(idPath)
                         if(data != null) {
-                            id = data
                             idDetails = IDDetails(idPath, data)
                         }
                     }

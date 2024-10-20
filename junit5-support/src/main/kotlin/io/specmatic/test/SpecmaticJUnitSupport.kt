@@ -295,7 +295,7 @@ open class SpecmaticJUnitSupport {
             ) { it.testDescription() }
 
             filterUsing(filteredTestsBasedOnName, scenarioMetadataFilter, scenarioMetadataExclusionFilter) {
-                it.scenario.toScenarioMetadata()
+                it.toScenarioMetadata()
             }
         } catch(e: ContractException) {
             return loadExceptionAsTestError(e)

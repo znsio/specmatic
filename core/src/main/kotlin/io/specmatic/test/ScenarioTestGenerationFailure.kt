@@ -3,11 +3,14 @@ package io.specmatic.test
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.Result
 import io.specmatic.core.Scenario
+import io.specmatic.core.filters.ScenarioMetadata
 
 class ScenarioTestGenerationFailure(
-    override val scenario: Scenario,
+    val scenario: Scenario,
     val failure: Result.Failure
 ): ContractTest {
+    override fun toScenarioMetadata() = scenario.toScenarioMetadata()
+
     override fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord? {
         return null
     }

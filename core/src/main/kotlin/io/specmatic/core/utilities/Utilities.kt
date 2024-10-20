@@ -334,9 +334,7 @@ fun saveJsonFile(jsonString: String, path: String, fileName: String) {
 }
 
 fun readEnvVarOrProperty(envVarName: String, propertyName: String): String? {
-    if(System.getenv(envVarName).isNullOrEmpty().not()) return System.getenv(envVarName)
-    if(System.getProperty(propertyName).isNullOrEmpty().not()) return System.getProperty(propertyName)
-    return null
+    return System.getenv(envVarName) ?: System.getProperty(propertyName)
 }
 
 fun examplesDirFor(openApiFilePath: String, alternateSuffix: String): File {

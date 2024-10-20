@@ -83,7 +83,11 @@ data class WorkflowIDOperation(
 
 data class WorkflowConfiguration(
     val ids: Map<String, WorkflowIDOperation> = emptyMap()
-)
+) {
+    fun hasEntityConfig(): Boolean {
+        return ids.isNotEmpty()
+    }
+}
 
 data class SpecmaticConfig(
     @field:JsonAlias("contract_repositories")

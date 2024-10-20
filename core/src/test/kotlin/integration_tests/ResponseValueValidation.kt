@@ -7,6 +7,7 @@ import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.StringValue
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -189,6 +190,123 @@ class ResponseValueValidation {
         })
 
         assertThat(results.report()).withFailMessage(results.report()).contains("""None of the objects returned had a property "id" with the value "1000"""")
+        assertThat(results.success()).withFailMessage(results.report()).isFalse()
+    }
+
+    @Test
+    fun `run retrieve test after PATCH operation on entity`() {
+        val basePath = "src/test/resources/openapi/workflow_with_response_value_validation_for_patch"
+
+        val feature = OpenApiSpecification.fromFileAndConfig(
+            "$basePath/products.yaml",
+            "$basePath/specmatic.yaml"
+        ).toFeature()
+
+        val requestsSeen = mutableListOf<String>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            var entity = parsedJSONObject("""{"id": "abc123", "name": "product name", "description": "product description", price: 10.0}""")
+
+            override fun execute(request: HttpRequest): HttpResponse {
+                requestsSeen.add("${request.method} ${request.path!!}")
+
+                val response = when (request.method) {
+                    "POST" -> {
+                        val jsonRequestBody = request.body as JSONObjectValue
+
+                        assertThat(
+                            jsonRequestBody.findFirstChildByPath("name")?.toStringLiteral()
+                        ).isEqualTo("Sample Product")
+
+                        HttpResponse(201, body = entity)
+                    }
+                    "PATCH" -> {
+                        val newEntityValue = request.body as JSONObjectValue
+                        val entityMap = newEntityValue.jsonObject
+
+                        val newProductName = "name" to StringValue("new product name")
+                        val id = "id" to StringValue("abc123")
+
+                        val newEntityMap = entityMap
+                            .plus(newProductName)
+                            .plus(id)
+
+                        entity = JSONObjectValue(newEntityMap)
+                        HttpResponse(200, body = entity)
+                    }
+                    else ->
+                        HttpResponse(200, body = entity)
+                }
+
+                println(request.toLogString())
+                println()
+                println(response.toLogString())
+                println()
+                println()
+
+                return response
+            }
+        })
+
+        assertThat(requestsSeen).containsExactly("POST /products", "GET /products/abc123", "PATCH /products/abc123", "GET /products/abc123")
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `retrieve test after PATCH operation on entity fails if the new value is not retrieved`() {
+        val basePath = "src/test/resources/openapi/workflow_with_response_value_validation_for_patch"
+
+        val feature = OpenApiSpecification.fromFileAndConfig(
+            "$basePath/products.yaml",
+            "$basePath/specmatic.yaml"
+        ).toFeature()
+
+        val requestsSeen = mutableListOf<String>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            val entity = parsedJSONObject("""{"id": "abc123", "name": "product name", "description": "product description", price: 10.0}""")
+
+            override fun execute(request: HttpRequest): HttpResponse {
+                requestsSeen.add("${request.method} ${request.path!!}")
+
+                val response = when (request.method) {
+                    "POST" -> {
+                        val jsonRequestBody = request.body as JSONObjectValue
+
+                        assertThat(
+                            jsonRequestBody.findFirstChildByPath("name")?.toStringLiteral()
+                        ).isEqualTo("Sample Product")
+
+                        HttpResponse(201, body = entity)
+                    }
+                    "PATCH" -> {
+                        val newEntityValue = request.body as JSONObjectValue
+                        val entityMap = newEntityValue.jsonObject
+
+                        val newProductName = "name" to StringValue("new product name")
+                        val id = "id" to StringValue("abc123")
+
+                        val newEntityMap = entityMap
+                            .plus(newProductName)
+                            .plus(id)
+
+                        HttpResponse(200, body = JSONObjectValue(newEntityMap))
+                    }
+                    else ->
+                        HttpResponse(200, body = entity)
+                }
+
+                println(request.toLogString())
+                println()
+                println(response.toLogString())
+                println()
+                println()
+
+                return response
+            }
+        })
+
+        assertThat(requestsSeen).isEqualTo(listOf("POST /products", "GET /products/abc123", "PATCH /products/abc123", "GET /products/abc123"))
         assertThat(results.success()).withFailMessage(results.report()).isFalse()
     }
 }

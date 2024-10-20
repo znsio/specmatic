@@ -1,0 +1,166 @@
+openapi: 3.0.0
+info:
+  title: Product API
+  version: 1.0.0
+paths:
+  /products:
+    post:
+      summary: Create a new product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: number
+                  format: float
+              required:
+                - name
+                - price
+                - description
+            examples:
+              ADD_PRODUCT:
+                value:
+                  name: "Sample Product"
+                  description: "This is a sample product description."
+                  price: 19.99
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                  - price
+                  - description
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  price:
+                    type: number
+                    format: float
+              examples:
+                ADD_PRODUCT:
+                  value:
+                    id: "abc123"
+                    name: "Sample Product"
+                    description: "This is a sample product description."
+                    price: 19.99
+  /products/{id}:
+    get:
+      summary: Get a product by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            FETCH_PRODUCT:
+              value: "abc123"
+      responses:
+        '200':
+          description: Product retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                  - price
+                  - description
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  price:
+                    type: number
+                    format: float
+              examples:
+                FETCH_PRODUCT:
+                  value:
+                    id: "abc123"
+                    name: "Sample Product"
+                    description: "This is a sample product description."
+                    price: 19.99
+    patch:
+      summary: Modify a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            MODIFY_PRODUCT:
+              value: "abc123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: number
+                  format: float
+              required:
+                - name
+                - price
+                - description
+            examples:
+              MODIFY_PRODUCT:
+                value:
+                  name: "Sample Product"
+                  description: "This is a sample product description."
+                  price: 19.99
+      responses:
+        '200':
+          description: Product modified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                  - price
+                  - description
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  price:
+                    type: number
+                    format: float
+              examples:
+                MODIFY_PRODUCT:
+                  value:
+                    id: "abc123"
+                    name: "Sample Product"
+                    description: "This is a sample product description."
+                    price: 19.99

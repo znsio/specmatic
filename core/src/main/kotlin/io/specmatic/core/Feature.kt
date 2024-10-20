@@ -443,6 +443,18 @@ data class Feature(
             else
                 flagsBased.withoutGenerativeTests()
 
+            val scenarioForPatchTestingWorkflow =
+                findScenarioToTestPatchResult(originalScenario)?.let { retrieveEntityScenario ->
+                    val testScenario = retrieveEntityScenario.generateTestScenarios(
+                        resolverStrategies,
+                        testVariables,
+                        testBaseURLs,
+                        fn
+                    ).first().let { getScenarioWithDescription(it) }
+
+                    listOf(Pair(retrieveEntityScenario.copy(generativePrefix = flagsBased.positivePrefix), testScenario))
+                } ?: emptyList()
+
             originalScenario.generateTestScenarios(
                 resolverStrategies,
                 testVariables,
@@ -452,8 +464,24 @@ data class Feature(
                 getScenarioWithDescription(it)
             }.map {
                 Pair(originalScenario.copy(generativePrefix = flagsBased.positivePrefix), it)
-            }
+            }.plus(scenarioForPatchTestingWorkflow)
         }
+
+    private fun findScenarioToTestPatchResult(originalScenario: Scenario): Scenario? {
+        if (!isPatchSuccessOperation(originalScenario))
+            return null
+
+        val scenarioToTestPatchOperation = scenarios.find { candidateScenario ->
+            candidateScenario.method == "GET" && candidateScenario.path == originalScenario.path && candidateScenario.status == originalScenario.status
+        } ?: return null
+
+        return scenarioToTestPatchOperation
+    }
+
+    private fun isPatchSuccessOperation(originalScenario: Scenario) =
+        originalScenario.method == "PATCH" &&
+                specmaticConfig.workflow?.hasEntityConfig() == true &&
+                originalScenario.status.toString().startsWith("2")
 
     fun negativeTestScenarios(): Sequence<Pair<Scenario, ReturnValue<Scenario>>> {
         return scenarios.asSequence().filter {

@@ -4,6 +4,7 @@ import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
+import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getDictionaryFromInlineExamples
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingleExample
 import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
@@ -18,12 +19,13 @@ import picocli.CommandLine.*
 import java.io.File
 import java.lang.Thread.sleep
 import java.util.concurrent.Callable
+import kotlin.system.exitProcess
 
 @Command(
     name = "examples",
     mixinStandardHelpOptions = true,
     description = ["Generate externalised JSON example files with API requests and responses"],
-    subcommands = [ExamplesCommand.Validate::class, ExamplesCommand.Interactive::class]
+    subcommands = [ExamplesCommand.Validate::class, ExamplesCommand.Interactive::class, ExamplesCommand.Dictionary::class]
 )
 class ExamplesCommand : Callable<Int> {
     @Option(
@@ -276,6 +278,26 @@ class ExamplesCommand : Callable<Int> {
                 }
             })
         }
+    }
+
+    @Command(
+        name = "dictionary",
+        mixinStandardHelpOptions = true,
+        description = ["Export the inline examples data to an external dictionary"]
+    )
+    class Dictionary: Callable<Unit> {
+        @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
+        lateinit var contractFile: File
+        override fun call() {
+            try {
+                val dictionaryFile = getDictionaryFromInlineExamples(contractFile)
+                consoleLog("${System.lineSeparator()}The inline examples were successfully exported to the dictionary: $dictionaryFile")
+                exitProcess(0)
+            } catch (e: Exception) {
+                exitWithMessage("Failed while exporting the inline examples to dictionary from ${contractFile.nameWithoutExtension}:\n${e.message}")
+            }
+        }
+
     }
 }
 

@@ -1,5 +1,6 @@
 package io.specmatic.core.examples.server
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
@@ -19,6 +20,7 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.*
+import io.specmatic.core.value.Value
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
@@ -548,6 +550,21 @@ class ExamplesInteractiveServer(
             return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
         }
 
+        fun getDictionaryFromInlineExamples(contractFile: File) : File {
+            val dictionary =  parseContractFileToFeature(contractFile).dictionaryFromInlineExamples
+            return writeDictionaryToFile(contractFile, dictionary)
+        }
+
+        private fun writeDictionaryToFile(contractFile: File, dictionary: Map<String, Value>): File {
+            val examplesDir = getExamplesDirPath(contractFile)
+            if(examplesDir.exists().not()) examplesDir.mkdirs()
+
+            val outputFile = contractFile.canonicalFile.parentFile.resolve("dictionary.json")
+            println("Writing to file: ${outputFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
+            jacksonObjectMapper().writeValue(outputFile, dictionary)
+
+            return outputFile
+        }
     }
 }
 

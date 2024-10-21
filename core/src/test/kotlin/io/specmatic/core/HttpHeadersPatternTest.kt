@@ -422,4 +422,72 @@ internal class HttpHeadersPatternTest {
         val headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern()), contentType = "application/json")
         assertThat(headersPattern.matches(mapOf("X-Data" to "10", "Content-Type" to "text/plain"), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
+
+    @Nested
+    inner class NewBasedOnTests {
+        @Test
+        fun `newBasedOn should include additional headers from example`() {
+            val headers = HttpHeadersPattern(mapOf("X-Existing" to StringPattern()))
+            val row = Row(
+                requestExample = HttpRequest(headers = mapOf(
+                    "X-Existing" to "existingValue",
+                    "X-New" to "newValue"
+                ))
+            )
+
+            val newHeaders = headers.newBasedOn(row, Resolver()).toList()
+
+            assertThat(newHeaders).hasSize(1)
+            val newHeader = newHeaders[0].value
+            assertThat(newHeader.pattern).containsKeys("X-Existing", "X-New")
+        }
+
+        @Test
+        fun `newBasedOn should handle multiple additional headers`() {
+            val headers = HttpHeadersPattern(mapOf("X-Existing" to StringPattern()))
+            val row = Row(
+                requestExample = HttpRequest(headers = mapOf(
+                    "X-Existing" to "existingValue",
+                    "X-New1" to "newValue1",
+                    "X-New2" to "newValue2"
+                ))
+            )
+
+            val newHeaders = headers.newBasedOn(row, Resolver()).toList()
+
+            assertThat(newHeaders).hasSize(1)
+            val newHeader = newHeaders[0].value
+            assertThat(newHeader.pattern).containsKeys("X-Existing", "X-New1", "X-New2")
+        }
+
+        @Test
+        fun `newBasedOn should not add additional headers when no new headers in example`() {
+            val headers = HttpHeadersPattern(mapOf("X-Existing" to StringPattern()))
+            val row = Row(
+                requestExample = HttpRequest(headers = mapOf(
+                    "X-Existing" to "existingValue"
+                ))
+            )
+
+            val newHeaders = headers.newBasedOn(row, Resolver()).toList()
+
+            assertThat(newHeaders).hasSize(1)
+            val newHeader = newHeaders[0].value
+            assertThat(newHeader.pattern).containsOnlyKeys("X-Existing")
+        }
+
+        @Test
+        fun `newBasedOn should handle row without requestExample`() {
+            val headers = HttpHeadersPattern(mapOf("X-Existing" to StringPattern()))
+            val row = Row()
+
+            val newHeaders = headers.newBasedOn(row, Resolver()).toList()
+
+            assertThat(newHeaders).hasSize(1)
+            val newHeader = newHeaders[0].value
+            assertThat(newHeader.pattern).containsOnlyKeys("X-Existing")
+            assertThat(newHeader.pattern["X-Existing"]).isInstanceOf(StringPattern::class.java)
+        }
+    }
 }
+

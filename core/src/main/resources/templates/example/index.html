@@ -405,7 +405,6 @@
         html {
             scroll-behavior: smooth;
             scrollbar-gutter: stable;
-            text-wrap: balance;
         }
 
         body {
@@ -414,17 +413,6 @@
             flex-direction: column;
             min-height: 100vh;
             min-width: 100vw;
-
-            & > .chevron-down {
-                display: none;
-            }
-        }
-
-        .chevron-down {
-            width: 2rem;
-            height: 2rem;
-            transition: all 0.25s ease-in-out;
-            flex-shrink: 0;
         }
 
         main {
@@ -847,21 +835,7 @@
                 border-radius: 0.25rem;
                 border: 1px solid rgba(var(--smoky-black), 0.25);
                 box-shadow: var(--shadow-md);
-
-                &[data-expand="false"] .dropdown {
-                    height: 0px;
-                }
-
-                &[data-expand="true"] {
-                    .dropdown {
-                        height: auto;
-                        padding: 0rem 1rem 1rem 1rem;
-                    }
-
-                    & .chevron-down {
-                        transform: rotate(180deg);
-                    }
-                }
+                padding: 0rem 1rem 1rem 1rem;
             }
         }
 
@@ -869,11 +843,11 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0.5rem 0.5rem 0.5rem 1rem;
-            cursor: pointer;
+            padding: 0.5rem;
 
             & > p {
                 word-break: break-all;
+                margin-right: 4rem;
                 flex: 1;
             }
 
@@ -885,11 +859,6 @@
         }
 
         div.dropdown {
-            --_anim-duration: 0.25s;
-
-            transition: all var(--_anim-duration) ease-in-out;
-            overflow: hidden;
-
             & > div:nth-child(2) > p {
                 margin: 1rem 0 0.5rem 0;
             }
@@ -1084,9 +1053,6 @@
 </main>
 
 <div id="alert-container"></div>
-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="chevron-down">
-    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 5.25 7.5 7.5 7.5-7.5m-15 6 7.5 7.5 7.5-7.5" />
-</svg>
 
 <script th:inline="javascript">
     const exampleDetails = /*[[${exampleDetails}]]*/ {};
@@ -1103,7 +1069,6 @@
     const bulkValidateBtn = document.querySelector("button#bulk-validate");
     const bulkGenerateBtn = document.querySelector("button#bulk-generate");
     const bulkTestBtn = document.querySelector("button#bulk-test");
-    const chevronDownIcon = document.querySelector("svg.chevron-down");
 
     // VARIABLES
     const actionMappings = {
@@ -1125,7 +1090,7 @@
     let blockGenValidate = false;
 
     // LISTENERS
-    backBtn.addEventListener("click", () => setPanel());
+    backBtn.addEventListener("click", () => setPanel("table", scrollYPosition));
 
     bulkGenerateBtn.addEventListener("click", () => processAllSelected("generate"));
 
@@ -1136,7 +1101,9 @@
             }
             case "details": {
                 await validateRowExample(selectedTableRow);
-                return await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
+                const originalScrollYPosition = scrollYPosition;
+                await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
+                scrollYPosition = originalScrollYPosition;
             }
         }
     });
@@ -1148,7 +1115,9 @@
             }
             case "details": {
                 await testRowExample(selectedTableRow);
-                return await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
+                const originalScrollYPosition = scrollYPosition;
+                await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
+                scrollYPosition = originalScrollYPosition;
             }
         }
     });
@@ -1177,17 +1146,6 @@
             }
         }
     })
-
-    examplesOl.addEventListener("click", (event) => {
-        const target = event.target;
-        const nearestLi = target.closest("li");
-
-        if (nearestLi && target.matches(".example, .example *")) {
-            const currentExpandState = nearestLi.getAttribute("data-expand");
-            const newExpandState = currentExpandState === "true" ? "false" : "true";
-            nearestLi.setAttribute("data-expand", newExpandState);
-        }
-    });
 
     // LISTENERS HELPERS
     async function handleTableButtons(target, tableRow, rowValues) {
@@ -1220,17 +1178,15 @@
     }
 
     function handleAllSelect(checked) {
-        const totalRows = countTotalRows()
-        const totalGeneratedRows = countGeneratedRows()
-        const totalValidatedRows = countValidateRows()
+        const {totalCount, generatedCount, validatedCount} = countRowsByAttribute();
         toggleAllSelects(checked);
 
         if (examplesTable.hasAttribute("data-generated") ) {
-            bulkValidateBtn.setAttribute("data-selected", checked ? totalGeneratedRows : 0);
-            bulkTestBtn.setAttribute("data-selected", checked ? totalValidatedRows : 0);
+            bulkValidateBtn.setAttribute("data-selected", checked ? generatedCount : 0);
+            bulkTestBtn.setAttribute("data-selected", checked ? validatedCount : 0);
         }
 
-        bulkGenerateBtn.setAttribute("data-selected", checked ? totalRows - totalGeneratedRows : 0);
+        bulkGenerateBtn.setAttribute("data-selected", checked ? totalCount - generatedCount : 0);
     }
 
     function handleSelect(checked, tableRow, preSelectCounts) {
@@ -1292,6 +1248,7 @@
         tableRow.setAttribute("data-generate", originalState);
 
         if (error) {
+            tableRow.setAttribute("data-generate", "failed");
             if (!bulkMode) createAlert("Example Generation Failed", error, true);
             return {failureIncrement: failedCount};
         }
@@ -1310,8 +1267,7 @@
         })
 
         if (!bulkMode) {
-            const allExist = newExamples.every(example => example.status === "EXISTS");
-            const alertTitle = allExist ? "Example(s) Already Existed" : "Example(s) Generated";
+            const alertTitle = `Example(s) Generated, ${existedCount} already exist`;
             const alertMessage = `Example name(s): ${newExamples.map(example => parseFileName(example.exampleFile)).join("\n")}`;
             createAlert(alertTitle, alertMessage, false)
         };
@@ -1364,7 +1320,6 @@
         const docFragment = await createExampleList(tableRow);
         bulkTestBtn.classList.toggle("bulk-disabled", tableRow.getAttribute("data-valid") !== "success");
         pathSummaryUl.replaceChildren(createPathSummary(rowValues));
-
         scrollYPosition = window.scrollY;
         setPanel("details", 0, docFragment);
     }
@@ -1415,19 +1370,19 @@
     }
 
     function updateSpans(tableRow, rowValues, increment = 1) {
-        const origMainValues = Object.values(rowValues).map(group => group.value);
+        const origMainValues = Object.values(rowValues)
         let curRow = tableRow;
 
         while (curRow) {
-            const curRowValues = Object.values(extractRowValues(curRow)).map(group => group.value);
+            const curRowValues = Object.values(extractRowValues(curRow))
 
-            if (curRowValues[0] !== origMainValues[0]) break;
+            if (curRowValues[0].rawValue !== origMainValues[0].rawValue) break;
 
             const cells = Array.from(curRow.children).slice(2, -2);
             let isMatchingCell = true;
 
             for (let i = 0; i < cells.length; i++) {
-                isMatchingCell = isMatchingCell && curRowValues[i] === origMainValues[i];
+                isMatchingCell = isMatchingCell && valuesMatch(origMainValues, curRowValues, i);
                 if (isMatchingCell) {
                     cells[i].rowSpan += increment;
                 }
@@ -1435,6 +1390,12 @@
 
             curRow = curRow.previousElementSibling;
         }
+    }
+
+    function valuesMatch(rowValues, otherRowValues, index) {
+        const valueMatches = rowValues[index].rawValue === otherRowValues[index].rawValue;
+        const extraInfoMatches = rowValues[index].extraInfo === otherRowValues[index].extraInfo;
+        return valueMatches && extraInfoMatches;
     }
 
     async function createExampleList(tableRow) {
@@ -1493,7 +1454,6 @@
             expandDiv.appendChild(testBadge);
         }
 
-        expandDiv.appendChild(chevronDownIcon.cloneNode(true));
         exampleDiv.appendChild(exampleName);
         exampleDiv.appendChild(expandDiv);
 
@@ -1590,20 +1550,16 @@
         }, {});
     }
 
-    function countTotalRows() {
-        return examplesTable.querySelectorAll("tbody > tr").length;
-    }
+    function countRowsByAttribute() {
+        const tableRows = Array.from(examplesTable.querySelectorAll("tbody > tr"));
+        return tableRows.reduce((acc, row) => {
+            const isGenerated = row.getAttribute("data-generate") === "success";
+            const isValidated = row.getAttribute("data-valid") === "success";
+            if (isGenerated) acc.generatedCount++;
+            if (isValidated) acc.validatedCount++;
+            return acc;
 
-    function countRowsByAttribute(attribute, value = "success") {
-        return Array.from(examplesTable.querySelectorAll("tr")).filter(row => row.getAttribute(attribute) === value).length;
-    }
-
-    function countGeneratedRows() {
-        return countRowsByAttribute("data-generate");
-    }
-
-    function countValidateRows() {
-        return countRowsByAttribute("data-valid");
+        }, { generatedCount: 0, validatedCount: 0, totalCount: tableRows.length });
     }
 
     function toggleAllSelects(isSelected = true) {
@@ -1611,7 +1567,6 @@
     }
 
     // EXAMPLE HELPERS
-    // TODO: Fix these to use Arrays as well
     function storeExampleData(tableRow, exampleFile) {
         const key = tableRow.getAttribute("data-key");
         tableRow.setAttribute("data-example", exampleFile);

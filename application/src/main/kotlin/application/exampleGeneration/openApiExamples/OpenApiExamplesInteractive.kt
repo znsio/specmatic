@@ -55,18 +55,20 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
             pathGroup.methods.flatMap { (method, methodGroup) ->
                 var showMethod = true
                 methodGroup.statuses.flatMap { (status, statusGroup) ->
-                    var showStatus = true
-                    statusGroup.examples.map { (scenario, example) ->
-                        ExampleTableRow(
-                            columns = listOf(
-                                ExampleRowGroup("path", convertPathParameterStyle(path), rawValue = path, rowSpan = pathGroup.count, showRow = showPath),
-                                ExampleRowGroup("method", method, rowSpan = methodGroup.count, showRow = showMethod),
-                                ExampleRowGroup("response", status, rowSpan = statusGroup.count, showRow = showStatus, extraInfo = scenario.httpRequestPattern.headersPattern.contentType)
-                            ),
-                            exampleFilePath = example?.exampleFile?.absolutePath,
-                            exampleFileName = example?.exampleName,
-                            exampleMismatchReason = example?.result?.reportString().takeIf { reason -> reason?.isNotBlank() == true }
-                        ).also { showPath = false; showMethod = false; showStatus = false }
+                    statusGroup.examples.flatMap { (_, scenarioExamplePair) ->
+                        var showStatus = true
+                        scenarioExamplePair.map { (scenario, example) ->
+                            ExampleTableRow(
+                                columns = listOf(
+                                    ExampleRowGroup("path", convertPathParameterStyle(path), rawValue = path, rowSpan = pathGroup.count, showRow = showPath),
+                                    ExampleRowGroup("method", method, rowSpan = methodGroup.count, showRow = showMethod),
+                                    ExampleRowGroup("response", status, rowSpan = scenarioExamplePair.size, showRow = showStatus, extraInfo = scenario.httpRequestPattern.headersPattern.contentType)
+                                ),
+                                exampleFilePath = example?.exampleFile?.absolutePath,
+                                exampleFileName = example?.exampleName,
+                                exampleMismatchReason = example?.result?.reportString().takeIf { reason -> reason?.isNotBlank() == true }
+                            ).also { showPath = false; showMethod = false; showStatus = false }
+                        }
                     }
                 }
             }
@@ -81,7 +83,7 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
                     MethodGroup(
                         count = methodGroup.size,
                         statuses = methodGroup.groupBy { it.first.status.toString() }.mapValues { (_, statusGroup) ->
-                            StatusGroup(count = statusGroup.size, examples = statusGroup)
+                            StatusGroup(count = statusGroup.size, examples = statusGroup.groupBy { it.first.httpRequestPattern.headersPattern.contentType })
                         }
                     )
                 }
@@ -103,9 +105,9 @@ class OpenApiExamplesInteractive : ExamplesInteractiveBase<Feature, Scenario>(
         val contentType = response.extraInfo
     }
 
-    data class StatusGroup (
+    data class StatusGroup(
         val count: Int,
-        val examples: List<Pair<Scenario, ExampleValidationResult?>>
+        val examples: Map<String?, List<Pair<Scenario, ExampleValidationResult?>>>
     )
 
     data class MethodGroup (

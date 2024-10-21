@@ -9,6 +9,7 @@ import io.specmatic.mock.ScenarioStub
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 
 @Command(
     name = "examples", mixinStandardHelpOptions = true,
@@ -23,6 +24,8 @@ class OpenApiExamplesGenerate: ExamplesGenerateBase<Feature, Scenario> (
 }
 
 class OpenApiExamplesGenerationStrategy: ExamplesGenerationStrategy<Feature, Scenario> {
+    override val atomicCounter: AtomicInteger = AtomicInteger(1)
+
     override fun generateExample(feature: Feature, scenario: Scenario): Pair<String, String> {
         val request = scenario.generateHttpRequest()
         val response = feature.lookupResponse(scenario).cleanup()
@@ -31,7 +34,7 @@ class OpenApiExamplesGenerationStrategy: ExamplesGenerationStrategy<Feature, Sce
         val stubJSON = scenarioStub.toJSON().toStringLiteral()
         val uniqueName = uniqueNameForApiOperation(request, "", scenarioStub.response.status)
 
-        return Pair("$uniqueName.json", stubJSON)
+        return Pair("${uniqueName}_${atomicCounter.getAndIncrement()}.json", stubJSON)
     }
 
     override fun getExistingExamples(scenario: Scenario, exampleFiles: List<File>): List<Pair<File, Result>> {

@@ -6,6 +6,7 @@ import io.specmatic.examples.ExampleGenerationResult
 import io.specmatic.examples.ExampleGenerationStatus
 import picocli.CommandLine.*
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 
 abstract class ExamplesGenerateBase<Feature, Scenario>(
     override val featureStrategy: ExamplesFeatureStrategy<Feature, Scenario>,
@@ -80,6 +81,8 @@ abstract class ExamplesGenerateBase<Feature, Scenario>(
 }
 
 interface ExamplesGenerationStrategy<Feature, Scenario> {
+    val atomicCounter: AtomicInteger
+
     fun getExistingExamples(scenario: Scenario, exampleFiles: List<File>): List<Pair<File, Result>>
 
     fun generateExample(feature: Feature, scenario: Scenario): Pair<String, String>

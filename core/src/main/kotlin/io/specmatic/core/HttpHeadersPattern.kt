@@ -247,7 +247,11 @@ data class HttpHeadersPattern(
         row: Row,
         resolver: Resolver
     ): Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = "HEADER") {
-        allOrNothingCombinationIn(pattern, row, null, null) { pattern ->
+        val additionalHeadersPattern = calculateExtendedPattern(pattern, row)
+
+        val combinedPattern = pattern + additionalHeadersPattern
+
+        allOrNothingCombinationIn(combinedPattern, row, null, null) { pattern ->
             NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
         }.map { patternMapR ->
             patternMapR.ifValue { patternMap ->

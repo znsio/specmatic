@@ -135,7 +135,7 @@ class ScenarioMetadataFilterTest {
     inner class FilterStringToScenarioMetadataTests {
         @Test
         fun `should create the scenario metadata filter from the filter string`() {
-            val filterString = "METHOD=POST,GET;STATUS-CODE=200;PATH=/users,/products"
+            val filterString = "METHOD=POST,GET;STATUS=200;PATH=/users,/products"
             val filter = ScenarioMetadataFilter.from(filterString)
 
             assertThat(filter.methods).containsExactlyInAnyOrder("POST", "GET")

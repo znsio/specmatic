@@ -93,7 +93,7 @@ Filter tests matching the specified filtering criteria
 You can filter tests based on the following keys:
 - `METHOD`: HTTP methods (e.g., GET, POST)
 - `PATH`: Request paths (e.g., /users, /product)
-- `STATUS-CODE`: HTTP response status codes (e.g., 200, 400)
+- `STATUS`: HTTP response status codes (e.g., 200, 400)
 - `HEADERS`: Request headers (e.g., Accept, X-Request-ID)
 - `QUERY-PARAM`: Query parameters (e.g., status, productId)
 - `EXAMPLE-NAME`: Example name (e.g., create-product, active-status)
@@ -119,7 +119,7 @@ Filter tests not matching the specified criteria
 
 This option supports the same filtering keys and syntax as the --filter option.
 For example:
---filterNot="STATUS-CODE=400" --filterNot="METHOD=PATCH,PUT"
+--filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
            """
         ],
         required = false

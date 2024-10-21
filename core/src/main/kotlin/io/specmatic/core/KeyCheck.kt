@@ -13,7 +13,7 @@ data class KeyCheck(val patternKeyCheck: KeyErrorCheck = CheckOnlyPatternKeys,
 
     fun withUnexpectedKeyCheck(unexpectedKeyCheck: UnexpectedKeyCheck): KeyCheck {
         return overrideUnexpectedKeyCheck?.invoke(this, unexpectedKeyCheck)
-            ?: this.copy(unexpectedKeyCheck = unexpectedKeyCheck)
+            ?: this
     }
 
     fun validate(

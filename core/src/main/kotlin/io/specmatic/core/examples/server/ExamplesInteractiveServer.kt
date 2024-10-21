@@ -15,6 +15,7 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesView.Companion.groupEndpoints
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
+import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
@@ -420,18 +421,13 @@ class ExamplesInteractiveServer(
             if (existingExampleFile != null) return ExamplePathInfo(existingExampleFile.first.absolutePath, false)
             else examplesDir.mkdirs()
 
-            val request = scenario.generateHttpRequest()
-
-            val response = feature.lookupResponse(scenario).cleanup()
-
-            val scenarioStub = ScenarioStub(request, response)
-            val stubJSON = scenarioStub.toJSON()
-            val uniqueNameForApiOperation =
-                uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
-
-            val file = examplesDir.resolve("${uniqueNameForApiOperation}.json")
-            println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
-            file.writeText(stubJSON.toStringLiteral())
+            val file = writeToExampleFile(
+                ScenarioStub(
+                    request = scenario.generateHttpRequest(),
+                    response = feature.lookupResponse(scenario).cleanup()
+                ),
+                contractFile
+            )
             return ExamplePathInfo(file.absolutePath, true)
         }
 
@@ -548,6 +544,34 @@ class ExamplesInteractiveServer(
             return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
         }
 
+        fun externaliseInlineExamples(contractFile: File): File {
+            val feature = parseContractFileToFeature(contractFile)
+            val inlineStubs: List<ScenarioStub> = feature.stubsFromExamples.flatMap {
+                it.value.map { (request, response) -> ScenarioStub(request, response) }
+            }
+            try {
+                inlineStubs.forEach { writeToExampleFile(it, contractFile) }
+            } catch(e: Exception) {
+                consoleLog(e)
+            }
+            return getExamplesDirPath(contractFile)
+        }
+
+        private fun writeToExampleFile(
+            scenarioStub: ScenarioStub,
+            contractFile: File
+        ): File {
+            val examplesDir = getExamplesDirPath(contractFile)
+            if(examplesDir.exists().not()) examplesDir.mkdirs()
+            val stubJSON = scenarioStub.toJSON()
+            val uniqueNameForApiOperation =
+                uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
+
+            val file = examplesDir.resolve("${uniqueNameForApiOperation}.json")
+            println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
+            file.writeText(stubJSON.toStringLiteral())
+            return file
+        }
     }
 }
 

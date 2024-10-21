@@ -1,23 +1,29 @@
 package io.specmatic.core
 
-import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.CONFIG_FILE_PATH
+import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import java.io.File
 
 //TODO: This is a temporary solution need to delete this from Kafka and other dependencies
 fun getConfigFileName(): String = getConfigFilePath()
 fun getConfigFilePath(): String {
-    Flags.getStringValue(CONFIG_FILE_PATH)?.let {
-        return it
+    return getStringValue(CONFIG_FILE_PATH)?.takeIf { File(it).exists() }
+        ?: getConfigFilePathFromClasspath()?.takeIf { File(it).exists() }
+        ?: getConfigFilePath(".${File.separator}")
+}
+
+private fun getConfigFilePathFromClasspath(): String? {
+    return CONFIG_EXTENSIONS.firstNotNullOfOrNull {
+        Configuration::class.java.getResource("/$CONFIG_FILE_NAME_WITHOUT_EXT.$it")?.path
     }
-    val configFileNameWithoutExtension = ".${File.separator}${APPLICATION_NAME_LOWER_CASE}"
-    val supportedExtensions = listOf(JSON, YAML, YML)
+}
 
-    val configFileExtension = supportedExtensions.firstOrNull { extension ->
-        File("$configFileNameWithoutExtension.$extension").exists()
-    } ?: JSON
-
-    return "$configFileNameWithoutExtension.$configFileExtension"
+private fun getConfigFilePath(filePathPrefix: String): String {
+    val configFileNameWithoutExtension = "$filePathPrefix${CONFIG_FILE_NAME_WITHOUT_EXT}"
+    return CONFIG_EXTENSIONS.firstNotNullOfOrNull {
+        val filePath = "$configFileNameWithoutExtension.$it"
+        filePath.takeIf { File(filePath).exists() }
+    } ?: "$configFileNameWithoutExtension.$YAML"
 }
 
 class Configuration {

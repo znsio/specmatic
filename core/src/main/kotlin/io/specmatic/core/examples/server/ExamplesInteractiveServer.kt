@@ -53,7 +53,7 @@ class ExamplesInteractiveServer(
     }
 
     private fun getServerHostPort(request: ExamplePageRequest? = null) : String {
-        return request?.hostPort ?: "localhost:$serverPort"
+        return request?.hostPort ?: "http://localhost:$serverPort"
     }
 
     private val environment = applicationEngineEnvironment {

@@ -9,7 +9,8 @@ import io.specmatic.core.log.ignoreLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.*
-import io.specmatic.core.utilities.Flags.Companion.CONFIG_FILE_PATH
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
+import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
@@ -169,7 +170,7 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        val configFile get() = Flags.getStringValue(CONFIG_FILE_PATH) ?: getConfigFilePath()
+        val configFile get() = getConfigFilePath()
 
         private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
     }
@@ -216,7 +217,11 @@ open class SpecmaticJUnitSupport {
 
         specmaticConfig = getSpecmaticConfig()
 
-        val timeoutInMilliseconds = specmaticConfig?.test?.timeoutInMilliseconds ?: try { Flags.getLongValue(Flags.SPECMATIC_TEST_TIMEOUT) } catch(e: NumberFormatException) { throw ContractException("${Flags.SPECMATIC_TEST_TIMEOUT} should be a value of type long") } ?:  DEFAULT_TIMEOUT_IN_MILLISECONDS
+        val timeoutInMilliseconds = specmaticConfig?.test?.timeoutInMilliseconds ?: try {
+            getLongValue(SPECMATIC_TEST_TIMEOUT)
+        } catch (e: NumberFormatException) {
+            throw ContractException("$SPECMATIC_TEST_TIMEOUT should be a value of type long")
+        } ?: DEFAULT_TIMEOUT_IN_MILLISECONDS
 
         val suggestionsData = System.getProperty(INLINE_SUGGESTIONS) ?: ""
         val suggestionsPath = System.getProperty(SUGGESTIONS_PATH) ?: ""

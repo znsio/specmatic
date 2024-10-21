@@ -11,7 +11,7 @@ data class ScenarioMetadataFilter(
     fun isSatisfiedByAll(metadata: ScenarioMetadata): Boolean {
         return methods.contains(metadata.method, false) &&
                 paths.contains(metadata.path, false) &&
-                isStatusCodeMatch(metadata.statusCode, false) &&
+                isStatusCodeFilterSatisfied(metadata.statusCode, false) &&
                 exampleNames.contains(metadata.exampleName, false) &&
                 (headers.isEmpty() || metadata.header.any { headers.contains(it, false) }) &&
                 (queryParams.isEmpty() || metadata.query.any { queryParams.contains(it, false) })
@@ -20,7 +20,7 @@ data class ScenarioMetadataFilter(
     fun isSatisfiedByAtLeastOne(metadata: ScenarioMetadata): Boolean {
         return methods.contains(metadata.method, true) ||
                 paths.contains(metadata.path, true) ||
-                isStatusCodeMatch(metadata.statusCode, true) ||
+                isStatusCodeFilterSatisfied(metadata.statusCode, true) ||
                 exampleNames.contains(metadata.exampleName, true) ||
                 (headers.isNotEmpty() && metadata.header.any { headers.contains(it, true) }) ||
                 (queryParams.isNotEmpty() && metadata.query.any { queryParams.contains(it, true) })
@@ -31,7 +31,7 @@ data class ScenarioMetadataFilter(
         return (this.isEmpty() || element in this)
     }
 
-    private fun isStatusCodeMatch(statusCode: Int, strict: Boolean): Boolean {
+    private fun isStatusCodeFilterSatisfied(statusCode: Int, strict: Boolean): Boolean {
         val hasMatchingStatusCode = statusCodes.any { statusCodePattern ->
             when {
                 statusCodePattern.length == 3 && statusCodePattern.endsWith("xx") ->

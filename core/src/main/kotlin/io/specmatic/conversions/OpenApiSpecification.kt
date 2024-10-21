@@ -7,6 +7,7 @@ import io.ktor.util.reflect.*
 import io.specmatic.core.*
 import io.specmatic.core.Result.Failure
 import io.specmatic.core.log.LogStrategy
+import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.withoutOptionality
@@ -195,7 +196,7 @@ class OpenApiSpecification(
     fun toFeature(): Feature {
         val name = File(openApiFilePath).name
 
-        val (scenarioInfos, stubsFromExamples) = toScenarioInfos()
+        val (scenarioInfos, stubsFromExamples, _, dictionaryFromInlineExamples) = toScenarioInfosWithExamples()
 
         return Feature(
             scenarioInfos.map { Scenario(it).copy(dictionary = dictionary) }, name = name, path = openApiFilePath, sourceProvider = sourceProvider,
@@ -204,7 +205,8 @@ class OpenApiSpecification(
             specification = specificationPath,
             serviceType = SERVICE_TYPE_HTTP,
             stubsFromExamples = stubsFromExamples,
-            specmaticConfig = specmaticConfig
+            specmaticConfig = specmaticConfig,
+            dictionaryFromInlineExamples = dictionaryFromInlineExamples
         )
     }
 
@@ -215,6 +217,12 @@ class OpenApiSpecification(
         ) = openApiToScenarioInfos()
 
         return scenarioInfos.filter { it.httpResponsePattern.status > 0 } to examplesAsExpectations
+    }
+
+    fun toScenarioInfosWithExamples(): ScenariosAndExamples {
+        return openApiToScenarioInfos().copy(
+            scenarioInfos = openApiToScenarioInfos().scenarioInfos.filter { it.httpResponsePattern.status > 0 },
+        )
     }
 
     override fun matches(
@@ -345,8 +353,8 @@ class OpenApiSpecification(
 
     data class RequestPatternsData(val requestPattern: HttpRequestPattern, val examples: Map<String, List<HttpRequest>>, val original: Pair<String, MediaType>? = null)
 
-    private fun openApiToScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
-        val data: List<Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>>> =
+    private fun openApiToScenarioInfos(): ScenariosAndExamples {
+        val data: List<ScenariosAndExamples> =
             openApiPaths().map { (openApiPath, pathItem) ->
                 val scenariosAndExamples = openApiOperations(pathItem).map { (httpMethod, openApiOperation) ->
                     try {
@@ -364,6 +372,17 @@ class OpenApiSpecification(
                         attempt(breadCrumb = "$httpMethod $openApiPath -> RESPONSE") {
                             toHttpResponsePatterns(operation.responses)
                         }
+
+                    val responseExamples = httpResponsePatterns.flatMap { responsePattern ->
+                        responsePattern.examples.entries.map { it.toPair() }
+                    }.toMap()
+
+                    val dictionaryFromInlineExamples = try {
+                        getDictionaryFromInlineExamples(operation, responseExamples)
+                    } catch(e: Exception) {
+                        consoleLog("Warning: Failed while creating dictionary from inline examples")
+                        emptyMap()
+                    }
 
                     val first2xxResponseStatus =
                         httpResponsePatterns.filter { it.responsePattern.status.toString().startsWith("2") }
@@ -473,12 +492,17 @@ class OpenApiSpecification(
                                 else -> emptyMap<String, List<Pair<HttpRequest, HttpResponse>>>() to scenarioInfos
                             }
 
-                    Triple(updatedScenarios, examples + additionalExamples, requestExampleNames)
+                    ScenariosAndExamples(
+                        updatedScenarios,
+                        examples + additionalExamples,
+                        requestExampleNames,
+                        dictionaryFromInlineExamples
+                    )
                 }
 
-                val requestExampleNames = scenariosAndExamples.flatMap { it.third }.toSet()
+                val requestExampleNames = scenariosAndExamples.flatMap { it.requestExampleNames }.toSet()
 
-                val usedExamples = scenariosAndExamples.flatMap { it.second.keys }.toSet()
+                val usedExamples = scenariosAndExamples.flatMap { it.examples.keys }.toSet()
 
                 val unusedRequestExampleNames = requestExampleNames - usedExamples
 
@@ -488,22 +512,85 @@ class OpenApiSpecification(
                     }
                 }
 
-                scenariosAndExamples.map {
-                    it.first to it.second
-                }
+                scenariosAndExamples
             }.flatten()
 
 
-        val scenarioInfos = data.map { it.first }.flatten()
+        val scenarioInfos = data.map { it.scenarioInfos }.flatten()
         val examples: Map<String, List<Pair<HttpRequest, HttpResponse>>> =
-            data.map { it.second }.foldRight(emptyMap()) { acc, map ->
+            data.map { it.examples }.foldRight(emptyMap()) { acc, map ->
                 acc.plus(map)
             }
 
         logger.newLine()
-        return scenarioInfos to examples
+        return ScenariosAndExamples(
+            scenarioInfos = scenarioInfos,
+            examples = examples,
+            requestExampleNames = emptySet(),
+            dictionaryFromInlineExamples = data.flatMap {
+                it.dictionaryFromInlineExamples.entries
+            }.associate { it.toPair() }
+        )
+//        return scenarioInfos to examples
     }
 
+    // TODO - move this out of this class
+    data class ScenariosAndExamples(
+        val scenarioInfos: List<ScenarioInfo>,
+        val examples: Map<String, List<Pair<HttpRequest, HttpResponse>>>,
+        val requestExampleNames: Set<String>,
+        val dictionaryFromInlineExamples: Map<String, Value>
+    )
+
+    private fun getDictionaryFromInlineExamples(
+        operation: Operation,
+        responseExamples: Map<String, HttpResponse>
+    ): Map<String, Value> {
+        val exampleNameToSchemaMap = operation.responses.entries.flatMap { (_, response) ->
+            response.content.values.map {
+                it.examples.keys.first() to extractComponentName(it.schema.`$ref`)
+            }
+        }.toMap()
+        return exampleNameToSchemaMap.flatMap { (exampleName, schemaName) ->
+            val responseExample = responseExamples[exampleName] ?: return@flatMap emptyList()
+            val responseValue = responseExample.body as? JSONObjectValue ?: return@flatMap emptyList()
+
+            getDictionaryFrom(schemaName, responseValue).entries
+        }.associate { it.toPair() }
+    }
+
+    private fun getObjectWithNestedKeys(value: Value, prefix: String = ""): Map<String, Value> {
+        // TODO - handle arrays
+        if (value !is JSONObjectValue) return mapOf(prefix to value)
+
+        return value.jsonObject.flatMap { (key, value) ->
+            getObjectWithNestedKeys(value, "$prefix.$key").entries
+        }.associate { it.toPair() }
+    }
+
+    private fun getDictionaryFrom(
+        schemaName: String,
+        responseValue: JSONObjectValue
+    ): Map<String, Value> {
+        val schema = parsedOpenApi.components.schemas[schemaName] ?: return emptyMap()
+        return schema.properties.flatMap { (property, propertySchema) ->
+            val response = responseValue.jsonObject[property] ?: return@flatMap emptyList()
+
+            // TODO - handle condition when there is a ref but response is not a JSONObjectValue
+            if (propertySchema.`$ref` != null && response is JSONObjectValue) {
+                return@flatMap getDictionaryFrom(
+                    extractComponentName(propertySchema.`$ref`),
+                    response
+                ).entries
+            }
+            if (propertySchema is ObjectSchema && response is JSONObjectValue) {
+                return@flatMap getObjectWithNestedKeys(response, property).mapKeys {
+                    "$schemaName.${it.key}"
+                }.entries
+            }
+            return@flatMap mapOf("$schemaName.$property" to response).entries
+        }.associate { it.toPair() }
+    }
 
     private fun getUpdatedScenarioInfosWithNoBodyResponseExamples(
         responseThatReturnsNoValues: ResponsePatternData,

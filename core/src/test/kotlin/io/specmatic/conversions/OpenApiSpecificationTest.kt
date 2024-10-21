@@ -9234,6 +9234,14 @@ paths:
 
     }
 
+    @Test
+    fun `should generate dictionary map from inline examples and store it in the Feature as dictionaryFromInlineExamples`() {
+        val openAPISpec = OpenApiSpecification.fromFile(
+            "src/test/resources/openapi/has_nested_response_body_schema.yaml"
+        )
+        openAPISpec.toFeature()
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

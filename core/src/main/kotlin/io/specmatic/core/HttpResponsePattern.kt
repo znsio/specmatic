@@ -6,6 +6,7 @@ import io.specmatic.core.value.Value
 import io.specmatic.stub.softCastValueToXML
 
 const val DEFAULT_RESPONSE_CODE = 1000
+const val STATUS_BREAD_CRUMB = "STATUS"
 
 data class HttpResponsePattern(
     val headersPattern: HttpHeadersPattern = HttpHeadersPattern(),

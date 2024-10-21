@@ -1,6 +1,7 @@
 package io.specmatic.core
 
 import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.filters.ScenarioMetadata
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.capitalizeFirstChar
@@ -628,6 +629,17 @@ data class Scenario(
             if(rowsThatAreNotOverridden.isEmpty()) return@mapNotNull null
             it.copy(rows = rowsThatAreNotOverridden)
         }
+    }
+
+    fun toScenarioMetadata(): ScenarioMetadata {
+        return ScenarioMetadata(
+            method = this.method,
+            path = this.path,
+            statusCode = this.status,
+            header = this.httpRequestPattern.getHeaderKeys(),
+            query = this.httpRequestPattern.getQueryParamKeys(),
+            exampleName = this.exampleName.orEmpty()
+        )
     }
 }
 

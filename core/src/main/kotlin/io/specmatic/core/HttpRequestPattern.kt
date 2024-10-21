@@ -30,6 +30,10 @@ data class HttpRequestPattern(
     val multiPartFormDataPattern: List<MultiPartFormDataPattern> = emptyList(),
     val securitySchemes: List<OpenAPISecurityScheme> = listOf(NoSecurityScheme())
 ) {
+    fun getHeaderKeys() = headersPattern.headerNames
+
+    fun getQueryParamKeys() = httpQueryParamPattern.queryKeyNames
+
     fun matches(incomingHttpRequest: HttpRequest, resolver: Resolver, headersResolver: Resolver? = null, requestBodyReqex: Regex? = null): Result {
         val result = incomingHttpRequest to resolver to
                 ::matchPath then

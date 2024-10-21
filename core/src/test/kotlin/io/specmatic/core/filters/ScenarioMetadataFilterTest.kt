@@ -40,6 +40,22 @@ class ScenarioMetadataFilterTest {
         }
 
         @Test
+        fun `should satisfy the pattern based status code filter when all criteria match`() {
+            val filter = ScenarioMetadataFilter(
+                statusCodes = setOf("2xx"),
+            )
+            val metadata = ScenarioMetadata(
+                method = "GET",
+                path = "/users",
+                statusCode = 200,
+                header = setOf("Authorization"),
+                query = setOf("userId"),
+                exampleName = "example1"
+            )
+            assertThat(filter.isSatisfiedByAll(metadata)).isTrue()
+        }
+
+        @Test
         fun `should satisfy all filters with multiple headers and query params in metadata`() {
             val filter = ScenarioMetadataFilter(
                 methods = setOf("GET"),
@@ -86,6 +102,22 @@ class ScenarioMetadataFilterTest {
                 headers = setOf("Authorization"),
                 queryParams = setOf("userId"),
                 exampleNames = setOf("example2")
+            )
+            val metadata = ScenarioMetadata(
+                method = "GET",
+                path = "/users",
+                statusCode = 404,
+                header = emptySet(),
+                query = emptySet(),
+                exampleName = "example3"
+            )
+            assertThat(filter.isSatisfiedByAtLeastOne(metadata)).isFalse()
+        }
+
+        @Test
+        fun `should not satisfy at least one pattern based status code filter when no criteria match`() {
+            val filter = ScenarioMetadataFilter(
+                statusCodes = setOf("5xx")
             )
             val metadata = ScenarioMetadata(
                 method = "GET",

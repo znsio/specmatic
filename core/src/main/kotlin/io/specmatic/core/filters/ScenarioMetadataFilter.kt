@@ -1,8 +1,5 @@
 package io.specmatic.core.filters
 
-import io.specmatic.core.Scenario
-import io.specmatic.test.ContractTest
-
 data class ScenarioMetadataFilter(
     val methods: Set<String> = emptySet(),
     val paths: Set<String> = emptySet(),
@@ -14,7 +11,7 @@ data class ScenarioMetadataFilter(
     fun isSatisfiedByAll(metadata: ScenarioMetadata): Boolean {
         return methods.contains(metadata.method, false) &&
                 paths.contains(metadata.path, false) &&
-                statusCodes.contains(metadata.statusCode.toString(), false) &&
+                isStatusCodeMatch(metadata.statusCode, false) &&
                 exampleNames.contains(metadata.exampleName, false) &&
                 (headers.isEmpty() || metadata.header.any { headers.contains(it, false) }) &&
                 (queryParams.isEmpty() || metadata.query.any { queryParams.contains(it, false) })
@@ -23,7 +20,7 @@ data class ScenarioMetadataFilter(
     fun isSatisfiedByAtLeastOne(metadata: ScenarioMetadata): Boolean {
         return methods.contains(metadata.method, true) ||
                 paths.contains(metadata.path, true) ||
-                statusCodes.contains(metadata.statusCode.toString(), true) ||
+                isStatusCodeMatch(metadata.statusCode, true) ||
                 exampleNames.contains(metadata.exampleName, true) ||
                 (headers.isNotEmpty() && metadata.header.any { headers.contains(it, true) }) ||
                 (queryParams.isNotEmpty() && metadata.query.any { queryParams.contains(it, true) })
@@ -32,6 +29,19 @@ data class ScenarioMetadataFilter(
     private fun Set<String>.contains(element: String, strict: Boolean): Boolean {
         if(strict) return (this.isNotEmpty() && element in this)
         return (this.isEmpty() || element in this)
+    }
+
+    private fun isStatusCodeMatch(statusCode: Int, strict: Boolean): Boolean {
+        val hasMatchingStatusCode = statusCodes.any { statusCodePattern ->
+            when {
+                statusCodePattern.length == 3 && statusCodePattern.endsWith("xx") ->
+                    statusCode.toString().startsWith(statusCodePattern.first())
+                else ->
+                    statusCode.toString() == statusCodePattern
+            }
+        }
+        return if (strict) statusCodes.isNotEmpty() && hasMatchingStatusCode
+        else statusCodes.isEmpty() || hasMatchingStatusCode
     }
 
     companion object {

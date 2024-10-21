@@ -78,10 +78,14 @@ abstract class ExamplesGenerateBase<Feature, Scenario>(
     private fun List<ExampleGenerationResult>.getExitCode(): Int {
         return if (this.any { it.status == ExampleGenerationStatus.ERROR }) 1 else 0
     }
+
+    fun resetExampleFileNameCounter() {
+        generationStrategy.exampleFileNamePostfixCounter.set(0)
+    }
 }
 
 interface ExamplesGenerationStrategy<Feature, Scenario> {
-    val atomicCounter: AtomicInteger
+    val exampleFileNamePostfixCounter: AtomicInteger
 
     fun getExistingExamples(scenario: Scenario, exampleFiles: List<File>): List<Pair<File, Result>>
 

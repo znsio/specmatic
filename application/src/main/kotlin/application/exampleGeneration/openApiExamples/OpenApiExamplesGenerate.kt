@@ -24,7 +24,7 @@ class OpenApiExamplesGenerate: ExamplesGenerateBase<Feature, Scenario> (
 }
 
 class OpenApiExamplesGenerationStrategy: ExamplesGenerationStrategy<Feature, Scenario> {
-    override val atomicCounter: AtomicInteger = AtomicInteger(1)
+    override val exampleFileNamePostfixCounter: AtomicInteger = AtomicInteger(0)
 
     override fun generateExample(feature: Feature, scenario: Scenario): Pair<String, String> {
         val request = scenario.generateHttpRequest()
@@ -34,7 +34,7 @@ class OpenApiExamplesGenerationStrategy: ExamplesGenerationStrategy<Feature, Sce
         val stubJSON = scenarioStub.toJSON().toStringLiteral()
         val uniqueName = uniqueNameForApiOperation(request, "", scenarioStub.response.status)
 
-        return Pair("${uniqueName}_${atomicCounter.getAndIncrement()}.json", stubJSON)
+        return Pair("${uniqueName}_${exampleFileNamePostfixCounter.incrementAndGet()}.json", stubJSON)
     }
 
     override fun getExistingExamples(scenario: Scenario, exampleFiles: List<File>): List<Pair<File, Result>> {

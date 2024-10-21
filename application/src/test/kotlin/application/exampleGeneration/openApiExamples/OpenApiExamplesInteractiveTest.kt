@@ -4,6 +4,7 @@ import io.ktor.http.*
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.test.HttpClient
@@ -144,6 +145,7 @@ class OpenApiExamplesInteractiveTest {
             examplesFolder.listFiles()?.forEach { it.delete() }
             examplesFolder.delete()
         }
+        execCommand.resetExampleFileNameCounter()
     }
 
     @Test
@@ -155,8 +157,12 @@ class OpenApiExamplesInteractiveTest {
         assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
 
         val responseBody = response.body as JSONObjectValue
-        assertThat(responseBody.findFirstChildByPath("exampleFilePath")?.toStringLiteral()).contains("generate_POST_200.json")
-        assertThat(responseBody.findFirstChildByPath("status")?.toStringLiteral()).isEqualTo("CREATED")
+        val examples = responseBody.findFirstChildByPath("examples") as JSONArrayValue
+        assertThat(examples.list).hasSize(1)
+
+        val example = examples.list.first() as JSONObjectValue
+        assertThat(example.findFirstChildByPath("exampleFile")!!.toStringLiteral()).contains("generate_POST_200_1.json")
+        assertThat(example.findFirstChildByPath("status")?.toStringLiteral()).isEqualTo("CREATED")
     }
 
     @Test
@@ -168,7 +174,10 @@ class OpenApiExamplesInteractiveTest {
         assertThat(generateResponse.body).isInstanceOf(JSONObjectValue::class.java)
 
         val generateResponseBody = generateResponse.body as JSONObjectValue
-        val exampleFilePath = generateResponseBody.findFirstChildByPath("exampleFilePath")!!
+        val examples = generateResponseBody.findFirstChildByPath("examples") as JSONArrayValue
+        assertThat(examples.list).hasSize(1)
+        val exampleFilePath = (examples.list.first() as JSONObjectValue).findFirstChildByPath("exampleFile")!!
+
         val validateJsonRequest = """
             {
                 "exampleFile": ${exampleFilePath.displayableValue()}
@@ -180,7 +189,7 @@ class OpenApiExamplesInteractiveTest {
         assertThat(validateResponse.body).isInstanceOf(JSONObjectValue::class.java)
 
         val validateResponseBody = validateResponse.body as JSONObjectValue
-        assertThat(validateResponseBody.findFirstChildByPath("exampleFilePath")).isEqualTo(exampleFilePath)
+        assertThat(validateResponseBody.findFirstChildByPath("exampleFile")).isEqualTo(exampleFilePath)
         assertThat(validateResponseBody.findFirstChildByPath("error")?.toStringLiteral()).isBlank()
     }
 
@@ -192,7 +201,12 @@ class OpenApiExamplesInteractiveTest {
         assertThat(generateResponse.body).isInstanceOf(JSONObjectValue::class.java)
 
         val generateResponseBody = generateResponse.body as JSONObjectValue
-        val exampleFilePath = generateResponseBody.findFirstChildByPath("exampleFilePath")!!
+        val examples = generateResponseBody.findFirstChildByPath("examples") as JSONArrayValue
+        assertThat(examples.list).hasSize(1)
+
+        val example = examples.list.first() as JSONObjectValue
+        val exampleFilePath = example.findFirstChildByPath("exampleFile")!!
+
         val getExampleContentJsonRequest = """
             {
                 "exampleFile": ${exampleFilePath.displayableValue()}
@@ -242,12 +256,15 @@ class OpenApiExamplesInteractiveTest {
         assertThat(generateResponse.body).isInstanceOf(JSONObjectValue::class.java)
 
         val generateResponseBody = generateResponse.body as JSONObjectValue
-        val exampleFilePath = generateResponseBody.findFirstChildByPath("exampleFilePath")!!
-        val example = ExampleFromFile(File(exampleFilePath.toStringLiteral()))
+        val examples = generateResponseBody.findFirstChildByPath("examples") as JSONArrayValue
+        assertThat(examples.list).hasSize(1)
+
+        val exampleFile = (examples.list.first() as JSONObjectValue).findFirstChildByPath("exampleFile")!!
+        val example = ExampleFromFile(File(exampleFile.toStringLiteral()))
 
         val testJsonRequest = """
             {
-                "exampleFile": ${exampleFilePath.displayableValue()}
+                "exampleFile": ${exampleFile.displayableValue()}
             }
         """.trimIndent()
         val testResponse = exampleTestRequest(trackerContract, testServerHostPort, testJsonRequest)
@@ -255,7 +272,7 @@ class OpenApiExamplesInteractiveTest {
 
         val testResponseBody = testResponse.body as JSONObjectValue
         assertThat(testResponseBody.findFirstChildByPath("result")?.toStringLiteral()).isEqualTo("Failed")
-        assertThat(testResponseBody.findFirstChildByPath("details")?.toStringLiteral()).contains("Example test for generate_POST_200 has FAILED")
+        assertThat(testResponseBody.findFirstChildByPath("details")?.toStringLiteral()).contains("Example test for generate_POST_200_1 has FAILED")
         assertThat(testResponseBody.findFirstChildByPath("testLog")?.toStringLiteral())
             .contains("POST /generate").contains(example.request.body.toStringLiteral())
     }
@@ -268,14 +285,21 @@ class OpenApiExamplesInteractiveTest {
         assertThat(generateResponse.body).isInstanceOf(JSONObjectValue::class.java)
 
         val generateResponseBody = generateResponse.body as JSONObjectValue
-        val exampleFilePath = generateResponseBody.findFirstChildByPath("exampleFilePath")!!
-        assertThat(exampleFilePath.toStringLiteral()).isNotBlank()
+        val examples = generateResponseBody.findFirstChildByPath("examples") as JSONArrayValue
+        assertThat(examples.list).allSatisfy { example ->
+            example as JSONObjectValue
+            assertThat(example.findFirstChildByPath("exampleFile")!!.toStringLiteral()).isNotBlank()
+            assertThat(example.findFirstChildByPath("status")!!.toStringLiteral()).isEqualTo("CREATED")
+        }
 
         val htmlPageResponse = exampleHtmlPageRequest(trackerContract)
         val htmlText = (htmlPageResponse.body as StringValue).toStringLiteral()
 
         assertThat(htmlText).contains(trackerContract.name).contains(trackerContract.absolutePath)
-        assertThat(htmlText).contains(exampleFilePath.toStringLiteral())
+        assertThat(examples.list).allSatisfy { example ->
+            example as JSONObjectValue
+            assertThat(htmlText).contains(example.findFirstChildByPath("exampleFile")!!.toStringLiteral())
+        }
     }
 
     @Test
@@ -414,5 +438,38 @@ paths:
         val invalidSpecBody = invalidSpecResponse.body as JSONObjectValue
         assertThat(invalidSpecBody.findFirstChildByPath("error")!!.toStringLiteral())
             .isEqualTo("Invalid Contract file ${invalidSpec.absolutePath} - File extension must be one of yaml, yml, json")
+    }
+
+    @Test
+    fun `should include existing examples with newly generated example on generate request`() {
+        val generateJsonRequest = createJsonGenerateRequest("/generate", "POST", "200")
+
+        val initialGenerateResponse = exampleGenerateRequest(trackerContract, generateJsonRequest)
+        assertThat(initialGenerateResponse.status).isEqualTo(HttpStatusCode.OK.value)
+        assertThat(initialGenerateResponse.body).isInstanceOf(JSONObjectValue::class.java)
+
+        val firstGenerateResponseBody = initialGenerateResponse.body as JSONObjectValue
+        val initialExamples = firstGenerateResponseBody.findFirstChildByPath("examples") as JSONArrayValue
+        assertThat(initialExamples.list).hasSize(1)
+
+        val secondGenerateResponse = exampleGenerateRequest(trackerContract, generateJsonRequest)
+        assertThat(secondGenerateResponse.status).isEqualTo(HttpStatusCode.OK.value)
+        assertThat(secondGenerateResponse.body).isInstanceOf(JSONObjectValue::class.java)
+
+        val secondGenerateResponseBody = secondGenerateResponse.body as JSONObjectValue
+        val examples = secondGenerateResponseBody.findFirstChildByPath("examples") as JSONArrayValue
+        assertThat(examples.list).hasSize(2)
+
+        val existingFileName = (initialExamples.list.first() as JSONObjectValue).findFirstChildByPath("exampleFile")!!.toStringLiteral()
+        assertThat(examples.list).allSatisfy { example ->
+            example as JSONObjectValue
+            val fileName = (example.findFirstChildByPath("exampleFile") as StringValue).toStringLiteral()
+            val exampleStatus = (example.findFirstChildByPath("status") as StringValue).toStringLiteral()
+
+            assertThat(example).satisfiesAnyOf(
+                { assertThat(fileName).isEqualTo(existingFileName); assertThat(exampleStatus).isEqualTo("EXISTS") },
+                { assertThat(fileName).isNotBlank(); assertThat(exampleStatus).isEqualTo("CREATED") }
+            )
+        }
     }
 }

@@ -126,6 +126,10 @@ abstract class ExamplesInteractiveBase<Feature, Scenario> (
         })
     }
 
+    fun resetExampleFileNameCounter() {
+        generationStrategy.exampleFileNamePostfixCounter.set(0)
+    }
+
     data class ValueWithInfo<T>(
         val value: T,
         val rawValue: String,

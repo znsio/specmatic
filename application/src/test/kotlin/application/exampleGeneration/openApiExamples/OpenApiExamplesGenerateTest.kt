@@ -145,7 +145,7 @@ paths:
         assertThat(stdOut).contains("1 example(s) created, 0 example(s) already existed, 0 example(s) failed")
 
         assertThat(examples).hasSize(1)
-        assertThat(examples.single().name).matches("product_[0-9]*_GET_200.json")
+        assertThat(examples.single().name).matches("product_[0-9]*_GET_200_1.json")
     }
 
     @Test
@@ -237,16 +237,17 @@ paths:
         println(stdOut)
 
         assertThat(exitCode).isEqualTo(0)
-        assertThat(stdOut).contains("Using existing example for GET /product/(id:number) -> 200")
+        assertThat(stdOut).contains("Using existing example(s) for GET /product/(id:number) -> 200")
+            .contains(exampleFile.absolutePath)
             .contains("1 example(s) created, 1 example(s) already existed, 0 example(s) failed")
 
         assertThat(examples).hasSize(2)
-        assertThat(examples.map { it.name }).containsExactlyInAnyOrder("example.json", "product_GET_200.json")
+        assertThat(examples.map { it.name }).containsExactlyInAnyOrder("example.json", "product_GET_200_1.json")
         assertThat(examples.find { it.name == "example.json" }?.readText() ?: "")
             .contains(""""name": "Laptop"""")
             .contains(""""price": 1000.99""")
 
-        val generatedExample = examples.first { it.name == "product_GET_200.json" }
+        val generatedExample = examples.first { it.name == "product_GET_200_1.json" }
         assertThat(generatedExample.readText()).contains(""""path": "/product"""")
     }
 

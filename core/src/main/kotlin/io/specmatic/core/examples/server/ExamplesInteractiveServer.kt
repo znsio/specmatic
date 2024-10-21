@@ -306,13 +306,13 @@ class ExamplesInteractiveServer(
     }
 
     companion object {
-        private val atomicCounter = AtomicInteger(0)
+        private val exampleFileNamePostFixCounter = AtomicInteger(0)
         enum class ExampleGenerationStatus {
             CREATED, EXISTED, ERROR
         }
 
-        fun resetCounter() {
-            atomicCounter.set(0)
+        fun resetExampleFileNameCounter() {
+            exampleFileNamePostFixCounter.set(0)
         }
 
         class ExampleGenerationResult private constructor (val path: String?, val status: ExampleGenerationStatus) {
@@ -436,7 +436,7 @@ class ExamplesInteractiveServer(
             val stubJSON = scenarioStub.toJSON()
             val uniqueNameForApiOperation = uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
 
-            val file = examplesDir.resolve("${uniqueNameForApiOperation}_${atomicCounter.incrementAndGet()}.json")
+            val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
             println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
             file.writeText(stubJSON.toStringLiteral())
             return ExamplePathInfo(file.absolutePath, true)

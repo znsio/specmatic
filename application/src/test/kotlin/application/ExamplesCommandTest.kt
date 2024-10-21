@@ -10,7 +10,7 @@ import java.io.File
 class ExamplesCommandTest {
     @AfterEach
     fun resetCounter() {
-        ExamplesInteractiveServer.resetCounter()
+        ExamplesInteractiveServer.resetExampleFileNameCounter()
     }
 
     @Test

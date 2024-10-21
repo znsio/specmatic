@@ -11,9 +11,6 @@ data class KeyCheck(val patternKeyCheck: KeyErrorCheck = CheckOnlyPatternKeys,
         return KeyCheck(patternKeyCheck, unexpectedKeyCheck, null)
     }
 
-    /**
-     * Uses if available otherwise update KeyCheck with unexpectedKeyCheck argument received as input and returns a copy.
-     */
     fun withUnexpectedKeyCheck(unexpectedKeyCheck: UnexpectedKeyCheck): KeyCheck {
         return overrideUnexpectedKeyCheck?.invoke(this, unexpectedKeyCheck)
             ?: this.copy(unexpectedKeyCheck = unexpectedKeyCheck)

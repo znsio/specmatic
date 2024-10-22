@@ -190,18 +190,11 @@ data class HttpHeadersPattern(
         }.map { (key, value) -> withoutOptionality(key) to value }.toMap()
     }
 
-    /**
-     * Return HttpHeadersPattern based on
-     *  1. **Filtering Existing Patterns**: Removes headers that should be omitted based on the resolver's logic.
-     *  2. **Extending Patterns**: Calculates additional headers from the `example` that are not part of the filtered pattern.
-     *  3. **Combining Patterns**: Creates a sequence of header patterns by combining the filtered and additional patterns.
-     *  4. **Filling Missing Patterns**: Ensures that any headers without examples are filled using the resolver's generation logic.
-     */
     fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<HttpHeadersPattern>> {
 
         val filteredPattern = row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver)
 
-        val additionalHeadersPattern = calculateExtendedPattern(filteredPattern, row)
+        val additionalHeadersPattern = extractFromExampleHeadersNotInSpec(filteredPattern, row)
 
         val basedOnExamples = forEachKeyCombinationGivenRowIn(
             filteredPattern + additionalHeadersPattern,
@@ -228,11 +221,7 @@ data class HttpHeadersPattern(
         }
     }
 
-    /**
-     * Extracts headers from example, which are not part of the spec.
-     */
-    private fun calculateExtendedPattern(specPattern : Map<String, Pattern>, row: Row): Map<String, Pattern> {
-
+    private fun extractFromExampleHeadersNotInSpec(specPattern : Map<String, Pattern>, row: Row): Map<String, Pattern> {
         val additionalHeadersPattern = if (row.requestExample != null) {
             row.requestExample.headers.keys
                 .filter { header -> !specPattern.containsKey(header) }.associateWith { StringPattern() }
@@ -247,7 +236,7 @@ data class HttpHeadersPattern(
         row: Row,
         resolver: Resolver
     ): Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = "HEADER") {
-        val additionalHeadersPattern = calculateExtendedPattern(pattern, row)
+        val additionalHeadersPattern = extractFromExampleHeadersNotInSpec(pattern, row)
 
         val combinedPattern = pattern + additionalHeadersPattern
 

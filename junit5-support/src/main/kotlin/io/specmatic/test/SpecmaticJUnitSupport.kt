@@ -439,10 +439,6 @@ open class SpecmaticJUnitSupport {
 
     private fun portNotSpecified(parsedURI: URI) = parsedURI.port == -1
 
-    /**
-     * 1. Parses contract file and creates a Feature object.
-     * 2. Loads external examples into the Feature object.
-     */
     fun loadTestScenarios(
         path: String,
         suggestionsPath: String,
@@ -473,7 +469,6 @@ open class SpecmaticJUnitSupport {
                 specmaticConfig = specmaticConfig ?: SpecmaticConfig()
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
-        // For validation of inline & external examples
         feature.validateExamplesOrException()
 
         val suggestions = when {

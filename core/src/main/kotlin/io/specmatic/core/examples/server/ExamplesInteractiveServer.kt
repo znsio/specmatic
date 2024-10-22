@@ -20,6 +20,9 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.*
+import io.specmatic.core.value.BooleanValue
+import io.specmatic.core.value.NumberValue
+import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
@@ -552,18 +555,30 @@ class ExamplesInteractiveServer(
 
         fun getDictionaryFromInlineExamples(contractFile: File) : File {
             val dictionary =  parseContractFileToFeature(contractFile).dictionaryFromInlineExamples
-            return writeDictionaryToFile(contractFile, dictionary)
+            return writeDictionaryToFile(contractFile, flattenDictionaryValues(dictionary))
         }
 
-        private fun writeDictionaryToFile(contractFile: File, dictionary: Map<String, Value>): File {
-            val examplesDir = getExamplesDirPath(contractFile)
-            if(examplesDir.exists().not()) examplesDir.mkdirs()
+        private fun writeDictionaryToFile(contractFile: File, dictionary: Map<String, Any>): File {
+            val dictionaryFileName = "${contractFile.nameWithoutExtension}_dictionary.json"
+            val outputFile = contractFile.canonicalFile.parentFile.resolve(dictionaryFileName)
 
-            val outputFile = contractFile.canonicalFile.parentFile.resolve("dictionary.json")
             println("Writing to file: ${outputFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
             jacksonObjectMapper().writeValue(outputFile, dictionary)
 
             return outputFile
+        }
+
+        private fun flattenDictionaryValues(dictionary: Map<String, Value>) : Map<String, Any> {
+            return dictionary.mapValues { (_, value) ->
+                when (value.displayableType()) {
+                    "number" -> (value as NumberValue).nativeValue
+                    "string" -> (value as StringValue).nativeValue
+                    "boolean" -> (value as BooleanValue).booleanValue
+                    else -> {
+                        value
+                    }
+                }
+            }
         }
     }
 }

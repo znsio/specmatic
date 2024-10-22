@@ -252,7 +252,7 @@ data class HttpHeadersPattern(
         val combinedPattern = pattern + additionalHeadersPattern
 
         allOrNothingCombinationIn(combinedPattern, row, null, null) { pattern ->
-            NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
+            NegativeNonStringlyPatterns().negativeBasedOn(combinedPattern, row, resolver)
         }.map { patternMapR ->
             patternMapR.ifValue { patternMap ->
                 HttpHeadersPattern(

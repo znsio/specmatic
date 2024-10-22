@@ -380,7 +380,6 @@ class OpenApiSpecification(
                     val dictionaryFromInlineExamples = try {
                         getDictionaryFromInlineExamples(operation, responseExamples)
                     } catch(e: Exception) {
-                        consoleLog("Warning: Failed while creating dictionary from inline examples")
                         emptyMap()
                     }
 

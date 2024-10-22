@@ -1,6 +1,8 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.*
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.ListValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.stub.softCastValueToXML
@@ -25,6 +27,20 @@ data class HttpResponsePattern(
                 else headers
             }
             HttpResponse(status, headers, value)
+        }
+    }
+
+    fun generateResponseV2(resolver: Resolver): Map<String, HttpResponse> {
+        return attempt(breadCrumb = "RESPONSE") {
+            generateDiscriminatorBasedValues(resolver, body).map { (discriminatorKey, value) ->
+                val generatedBody = softCastValueToXML(value)
+                val headers = headersPattern.generate(resolver).plus(SPECMATIC_RESULT_HEADER to "success").let { headers ->
+                    if ((headers.containsKey("Content-Type").not() && generatedBody.httpContentType.isBlank().not()))
+                        headers.plus("Content-Type" to generatedBody.httpContentType)
+                    else headers
+                }
+                discriminatorKey to HttpResponse(status, headers, generatedBody)
+            }.toMap()
         }
     }
 
@@ -178,6 +194,25 @@ data class HttpResponsePattern(
                 body = fullBody
             )
         }.breadCrumb("RESPONSE").value
+    }
+}
+
+fun generateDiscriminatorBasedValues(resolver: Resolver, pattern: Pattern): Map<String, Value> {
+    return resolver.withCyclePrevention(pattern) { updatedResolver ->
+        val resolvedPattern = resolvedHop(pattern, updatedResolver)
+
+        if(resolvedPattern is ListPattern) {
+            val listValuePattern = resolvedHop(resolvedPattern.pattern, updatedResolver)
+            if(listValuePattern is AnyPattern && listValuePattern.isDiscriminatorPresent()) {
+                val values = listValuePattern.generateForEveryDiscriminatorValue(updatedResolver)
+                return@withCyclePrevention values.mapValues { JSONArrayValue(listOf(it.value)) }
+            }
+        }
+
+        if(resolvedPattern !is AnyPattern || resolvedPattern.isDiscriminatorPresent().not()) {
+            return@withCyclePrevention mapOf("" to resolvedPattern.generate(updatedResolver))
+        }
+        resolvedPattern.generateForEveryDiscriminatorValue(updatedResolver)
     }
 }
 

@@ -168,6 +168,13 @@ data class Scenario(
             httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
         }
 
+    fun generateHttpResponseV2(actualFacts: Map<String, Value>, requestContext: Context = NoContext): Map<String, HttpResponse> =
+        scenarioBreadCrumb(this) {
+            val facts = combineFacts(expectedFacts, actualFacts, resolver)
+
+            httpResponsePattern.generateResponseV2(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
+        }
+
     private fun combineFacts(
         expected: Map<String, Value>,
         actual: Map<String, Value>,
@@ -219,7 +226,14 @@ data class Scenario(
     }
 
     fun generateHttpRequest(flagsBased: FlagsBased = DefaultStrategies): HttpRequest =
-        scenarioBreadCrumb(this) { httpRequestPattern.generate(flagsBased.update(resolver.copy(factStore = CheckFacts(expectedFacts)))) }
+        scenarioBreadCrumb(this) {
+            httpRequestPattern.generate(flagsBased.update(resolver.copy(factStore = CheckFacts(expectedFacts))))
+        }
+
+    fun generateHttpRequestV2(flagsBased: FlagsBased = DefaultStrategies): Map<String, HttpRequest> =
+        scenarioBreadCrumb(this) {
+            httpRequestPattern.generateV2(flagsBased.update(resolver.copy(factStore = CheckFacts(expectedFacts))))
+        }
 
     fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
         val resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck).copy(context = RequestContext(httpRequest))

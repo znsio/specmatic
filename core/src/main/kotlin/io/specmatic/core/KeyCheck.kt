@@ -3,16 +3,18 @@ package io.specmatic.core
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.value.StringValue
 
-data class KeyCheck(val patternKeyCheck: KeyErrorCheck = CheckOnlyPatternKeys,
-               var unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys,
-               val overrideUnexpectedKeyCheck: OverrideUnexpectedKeyCheck? = ::overrideUnexpectedKeyCheck
+data class KeyCheck(
+    val patternKeyCheck: KeyErrorCheck = CheckOnlyPatternKeys,
+    var unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys,
+    val overrideUnexpectedKeyCheck: OverrideUnexpectedKeyCheck? = ::overrideUnexpectedKeyCheck
 ) {
     fun disableOverrideUnexpectedKeycheck(): KeyCheck {
         return KeyCheck(patternKeyCheck, unexpectedKeyCheck, null)
     }
 
     fun withUnexpectedKeyCheck(unexpectedKeyCheck: UnexpectedKeyCheck): KeyCheck {
-        return this.overrideUnexpectedKeyCheck?.invoke(this, unexpectedKeyCheck) ?: this
+        return this.overrideUnexpectedKeyCheck?.invoke(this, unexpectedKeyCheck)
+            ?: this.copy(unexpectedKeyCheck = unexpectedKeyCheck)
     }
 
     fun validate(
@@ -30,7 +32,8 @@ data class KeyCheck(val patternKeyCheck: KeyErrorCheck = CheckOnlyPatternKeys,
     }
 
     fun validateAllCaseInsensitive(pattern: Map<String, Pattern>, actual: Map<String, StringValue>): List<KeyError> {
-        return patternKeyCheck.validateListCaseInsensitive(pattern, actual).plus(unexpectedKeyCheck.validateListCaseInsensitive(pattern, actual))
+        return patternKeyCheck.validateListCaseInsensitive(pattern, actual)
+            .plus(unexpectedKeyCheck.validateListCaseInsensitive(pattern, actual))
     }
 
 }

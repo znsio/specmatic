@@ -1,0 +1,52 @@
+openapi: 3.0.0
+info:
+  title: Order API
+  version: '1.0'
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: WIP
+    description: API still under development
+paths:
+  /products:
+    summary: Create a new product
+    post:
+      parameters:
+        - in: header
+          name: X-Req-ID
+          schema:
+            type: string
+          examples:
+            SUCCESS:
+              value: 1
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+            examples:
+              SUCCESS:
+                value:
+                  name: iPhone
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: integer
+              examples:
+                SUCCESS:
+                  value:
+                    id: 1

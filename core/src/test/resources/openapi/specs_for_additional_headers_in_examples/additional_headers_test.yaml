@@ -1,0 +1,55 @@
+openapi: 3.0.0
+info:
+  title: User API
+  version: 1.0.0
+paths:
+  /use/{id}:
+    get:
+      summary: Get a user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: X-API-Key
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Accept-Language
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          headers:
+            X-Rate-Limit-Limit:
+              schema:
+                type: integer
+              description: The number of allowed requests in the current period
+            X-Rate-Limit-Remaining:
+              schema:
+                type: integer
+              description: The number of remaining requests in the current period
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        department:
+          type: string
+        designation:
+          type: string
+      required:
+        - id

@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.ktor.util.reflect.*
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
@@ -488,6 +490,60 @@ internal class HttpHeadersPatternTest {
             assertThat(newHeader.pattern).containsOnlyKeys("X-Existing")
             assertThat(newHeader.pattern["X-Existing"]).isInstanceOf(StringPattern::class.java)
         }
+    }
+
+    @Test
+    fun `test fix for, +ve post scenario duplication, due to additional headers, for content-type`() {
+        var positiveCount = 0
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/specs_for_additional_headers_in_examples/additional_headers_test_content_type.yaml").toFeature().enableGenerativeTesting()
+        feature.executeTests(object : TestExecutor{
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
+                return HttpResponse.OK
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                if(!scenario.isNegative) positiveCount++
+                println(scenario.testDescription())
+            }
+        })
+        assertThat(positiveCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `test fix for, +ve post scenario duplication, due to additional headers, for security headers`() {
+        var positiveCount = 0
+        var securityHeadersFound = false
+
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/specs_for_additional_headers_in_examples/additional_headers_test_security_scheme.yaml")
+            .toFeature()
+            .enableGenerativeTesting()
+
+        feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
+
+                // Check for automatically added security headers
+                val hasAuthHeader = request.headers.any {
+                    it.key.equals("Authorization", ignoreCase = true)
+                }
+
+                if (hasAuthHeader) {
+                    securityHeadersFound = true
+                }
+
+                return HttpResponse.OK
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                if (!scenario.isNegative) positiveCount++
+                println(scenario.testDescription())
+            }
+        })
+
+        assertThat(positiveCount).isEqualTo(1)
+        assertThat(securityHeadersFound).isTrue()
     }
 }
 

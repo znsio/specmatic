@@ -224,7 +224,9 @@ data class HttpHeadersPattern(
     private fun extractFromExampleHeadersNotInSpec(specPattern : Map<String, Pattern>, row: Row): Map<String, Pattern> {
         val additionalHeadersPattern = if (row.requestExample != null) {
             row.requestExample.headers.keys
-                .filter { header -> !specPattern.containsKey(header) }.associateWith { StringPattern() }
+                .filter { header -> !specPattern.containsKey(header) }
+                .filter { header -> header.lowercase() !in getHeadersToExcludeNotInExamples() }
+                .associateWith { StringPattern() }
         } else {
             emptyMap()
         }
@@ -232,16 +234,19 @@ data class HttpHeadersPattern(
         return additionalHeadersPattern
     }
 
+    private fun getHeadersToExcludeNotInExamples() = setOf(
+        "content-type",
+        "authorization"
+    )
+
+
     fun negativeBasedOn(
         row: Row,
         resolver: Resolver
     ): Sequence<ReturnValue<HttpHeadersPattern>> = returnValue(breadCrumb = "HEADER") {
-        val additionalHeadersPattern = extractFromExampleHeadersNotInSpec(pattern, row)
 
-        val combinedPattern = pattern + additionalHeadersPattern
-
-        allOrNothingCombinationIn(combinedPattern, row, null, null) { pattern ->
-            NegativeNonStringlyPatterns().negativeBasedOn(combinedPattern, row, resolver)
+        allOrNothingCombinationIn(pattern, row, null, null) { pattern ->
+            NegativeNonStringlyPatterns().negativeBasedOn(pattern, row, resolver)
         }.map { patternMapR ->
             patternMapR.ifValue { patternMap ->
                 HttpHeadersPattern(

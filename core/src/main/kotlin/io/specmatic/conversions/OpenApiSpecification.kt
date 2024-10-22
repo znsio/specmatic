@@ -7,7 +7,6 @@ import io.ktor.util.reflect.*
 import io.specmatic.core.*
 import io.specmatic.core.Result.Failure
 import io.specmatic.core.log.LogStrategy
-import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.withoutOptionality
@@ -15,11 +14,7 @@ import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.IGNORE_INLINE_EXAMPLE_WARNINGS
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.capitalizeFirstChar
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.NullValue
-import io.specmatic.core.value.NumberValue
-import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 import io.specmatic.core.wsdl.parser.message.MULTIPLE_ATTRIBUTE_VALUE
 import io.specmatic.core.wsdl.parser.message.OCCURS_ATTRIBUTE_NAME
 import io.specmatic.core.wsdl.parser.message.OPTIONAL_ATTRIBUTE_VALUE
@@ -545,15 +540,21 @@ class OpenApiSpecification(
         operation: Operation,
         responseExamples: Map<String, HttpResponse>
     ): Map<String, Value> {
-        val exampleNameToSchemaMap = operation.responses.entries.flatMap { (_, response) ->
-            response.content.values.map {
-                it.examples.keys.first() to extractComponentName(it.schema.`$ref`)
+        val exampleNameToSchemaMap = operation.responses.values.flatMap { response ->
+            response.content.values.mapNotNull { content ->
+                content.examples.keys.firstOrNull()?.let { exampleName ->
+                    val ref = content.schema.`$ref` ?: content.schema.items?.`$ref`
+                    ref?.let { exampleName to extractComponentName(it) }
+                }
             }
         }.toMap()
         return exampleNameToSchemaMap.flatMap { (exampleName, schemaName) ->
             val responseExample = responseExamples[exampleName] ?: return@flatMap emptyList()
-            val responseValue = responseExample.body as? JSONObjectValue ?: return@flatMap emptyList()
-
+            val responseValue = when (val body = responseExample.body) {
+                is JSONArrayValue -> body.list.firstOrNull() as? JSONObjectValue ?: return@flatMap emptyList()
+                is JSONObjectValue -> body
+                else -> return@flatMap emptyList()
+            }
             getDictionaryFrom(schemaName, responseValue).entries
         }.associate { it.toPair() }
     }

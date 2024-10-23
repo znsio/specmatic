@@ -64,6 +64,23 @@ fun createStub(
     return createStub(dataDirPaths, host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT, strict = strict)
 }
 
+fun createStub(
+    configFilePath: String,
+    dataDirPaths: List<String> = emptyList(),
+    host: String = "localhost",
+    port: Int = 9000,
+    strict: Boolean = false,
+): ContractStub {
+    return createStub(
+        host,
+        port,
+        timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT,
+        strict = strict,
+        givenConfigFileName = configFilePath,
+        dataDirPaths = dataDirPaths
+    )
+}
+
 fun createStubFromContracts(
     contractPaths: List<String>,
     dataDirPaths: List<String>,

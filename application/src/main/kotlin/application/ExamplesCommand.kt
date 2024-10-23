@@ -23,7 +23,7 @@ import java.util.concurrent.Callable
     name = "examples",
     mixinStandardHelpOptions = true,
     description = ["Generate externalised JSON example files with API requests and responses"],
-    subcommands = [ExamplesCommand.Validate::class, ExamplesCommand.Interactive::class]
+    subcommands = [ExamplesCommand.Validate::class, ExamplesCommand.Interactive::class, ExamplesCommand.Dictionary::class]
 )
 class ExamplesCommand : Callable<Int> {
     @Option(
@@ -275,6 +275,24 @@ class ExamplesCommand : Callable<Int> {
                     }
                 }
             })
+        }
+    }
+
+    @Command(
+        name = "dictionary",
+        mixinStandardHelpOptions = true,
+        description = ["Run the example generation interactively"]
+    )
+    class Dictionary : Callable<Unit> {
+        @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
+        var contractFile: File? = null
+
+        @Option(names = ["--example-file"], description = ["Example file path"], required = true)
+        var exampleFile: File? = null
+
+        override fun call() {
+            if(contractFile == null || exampleFile == null) return
+            ExamplesInteractiveServer.createDictionaryFrom(contractFile!!, exampleFile!!)
         }
     }
 }

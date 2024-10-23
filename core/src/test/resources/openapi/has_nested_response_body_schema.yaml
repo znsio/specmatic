@@ -1,0 +1,115 @@
+openapi: 3.0.0
+info:
+  title: Employees
+  version: '1.0'
+servers: []
+paths:
+  '/employees':
+    patch:
+      summary: Update employee details
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeDetails'
+            examples:
+              PATCH_EMPLOYEE_SUCCESS:
+                value:
+                  name: John Doe
+                  employeeCode: E12345
+                  department: Engineering
+                  designation: Software Engineer
+      responses:
+        '200':
+          description: Employee Created Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+              examples:
+                PATCH_EMPLOYEE_SUCCESS:
+                  value:
+                    id: 1
+                    name: John Doe
+                    employer:
+                      name: Specmatic
+                      employerAddress:
+                        city: Mumbai
+                        zipCode: 400001
+                    address:
+                      location:
+                        street: 123 Main St
+                        city: Metropolis
+                    contactDetails:
+                      phoneNumber: "+1234567890"
+                      email: johndoe@example.com
+components:
+  schemas:
+    Employee:
+      type: object
+      required:
+        - id
+        - name
+        - address
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        employer:
+          type: object
+          properties:
+            name:
+              type: string
+            employerAddress:
+              type: object
+              properties:
+                city:
+                  type: string
+                zipCode:
+                  type: string
+        address:
+          $ref: '#/components/schemas/Address'
+        contactDetails:
+          $ref: '#/components/schemas/ContactDetails'
+
+    EmployeeDetails:
+      type: object
+      required:
+        - name
+        - department
+        - designation
+      properties:
+        name:
+          type: string
+        employeeCode:
+          type: string
+
+    Address:
+      type: object
+      required:
+        - location
+      properties:
+        location:
+          $ref: '#/components/schemas/Location'
+
+    Location:
+      type: object
+      required:
+        - street
+        - city
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+
+    ContactDetails:
+      type: object
+      properties:
+        phoneNumber:
+          type: string
+          format: phone
+        email:
+          type: string
+          format: email

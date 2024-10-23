@@ -16,8 +16,12 @@ import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.JSONObjectPattern
+import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.*
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.Value
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
@@ -553,6 +557,36 @@ class ExamplesInteractiveServer(
 
         fun File.getExamplesFromDir(): List<ExampleFromFile> {
             return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
+        }
+
+        fun createDictionaryFrom(contractFile: File, exampleFile: File) {
+            val feature = parseContractFileToFeature(contractFile.absolutePath)
+            val consolidatedPatterns = feature.scenarios.fold(emptyMap<String, Pattern>()) { map, scenario ->
+                map.plus(scenario.resolver.newPatterns)
+            }
+            val resolver = Resolver(newPatterns = consolidatedPatterns)
+            val exampleFromFile = ExampleFromFile(exampleFile)
+
+            // TODO - confirm this, need not be JSONObjectValue always
+            val responseBody = exampleFromFile.responseBody as JSONObjectValue
+
+            val requestBody = exampleFromFile.requestBody as JSONObjectValue
+            val requestBodyPattern = requestBody.deepPattern() as JSONObjectPattern
+
+            // requestBodyPattern.pattern
+            // requestBody.jsonObject
+            // Traverse through the above two maps in parallel and generate an object with nested keys
+            // If you encounter a typeAlias, make sure your prefix is reset to the typeAlias and ignores the
+            // previously accumulated prefix value.
+
+        }
+
+        private fun getObjectWithNestedKeys(value: Value, prefix: String = ""): Map<String, Value> {
+            // TODO - handle arrays
+            if (value !is JSONObjectValue) return mapOf(prefix to value)
+            return value.jsonObject.flatMap { (key, value) ->
+                getObjectWithNestedKeys(value, "$prefix.$key").entries
+            }.associate { it.toPair() }
         }
 
     }

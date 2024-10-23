@@ -1,0 +1,40 @@
+{
+  "http-request": {
+    "path": "/employees",
+    "method": "PATCH",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "name": "John Doe",
+      "employeeCode": "E12345",
+      "department": "Engineering",
+      "designation": "Software Engineer"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": 1,
+      "name": "John Doe",
+      "employer": {
+        "name": "Specmatic",
+        "employerAddress": {
+          "city": "Mumbai",
+          "zipCode": 400001
+        }
+      },
+      "address": {
+        "location": {
+          "street": "123 Main St",
+          "city": "Metropolis"
+        }
+      },
+      "contactDetails": {
+        "phoneNumber": "+1234567890",
+        "email": "johndoe@example.com"
+      }
+    },
+    "status-text": "OK"
+  }
+}

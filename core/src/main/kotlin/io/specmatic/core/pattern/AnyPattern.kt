@@ -350,7 +350,8 @@ data class AnyPattern(
             }
             val discriminatorPattern = it.pattern[discriminatorProperty]
             if(discriminatorPattern !is ExactValuePattern) return@firstOrNull false
-            discriminatorPattern.pattern.toStringLiteral() == discriminatorValue
+            discriminatorPattern.discriminator
+                    && discriminatorPattern.pattern.toStringLiteral() == discriminatorValue
         }
     }
 

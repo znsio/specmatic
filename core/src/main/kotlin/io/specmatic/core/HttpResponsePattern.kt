@@ -1,8 +1,8 @@
 package io.specmatic.core
 
+import io.specmatic.core.discriminator.DiscriminatorBasedValueGenerationStrategy
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.ListValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.stub.softCastValueToXML
@@ -19,27 +19,19 @@ data class HttpResponsePattern(
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body.exactMatchElseType())
 
     fun generateResponse(resolver: Resolver): HttpResponse {
-        return attempt(breadCrumb = "RESPONSE") {
-            val value = softCastValueToXML(resolver.withCyclePrevention(body, body::generate))
-            val headers = headersPattern.generate(resolver).plus(SPECMATIC_RESULT_HEADER to "success").let { headers ->
-                if ((headers.containsKey("Content-Type").not() && value.httpContentType.isBlank().not()))
-                    headers.plus("Content-Type" to value.httpContentType)
-                else headers
-            }
-            HttpResponse(status, headers, value)
-        }
+        return generateResponseWith(
+            value = resolver.withCyclePrevention(body, body::generate),
+            resolver = resolver
+        )
     }
 
     fun generateResponseV2(resolver: Resolver): Map<String, HttpResponse> {
         return attempt(breadCrumb = "RESPONSE") {
-            generateDiscriminatorBasedValues(resolver, body).map { (discriminatorKey, value) ->
-                val generatedBody = softCastValueToXML(value)
-                val headers = headersPattern.generate(resolver).plus(SPECMATIC_RESULT_HEADER to "success").let { headers ->
-                    if ((headers.containsKey("Content-Type").not() && generatedBody.httpContentType.isBlank().not()))
-                        headers.plus("Content-Type" to generatedBody.httpContentType)
-                    else headers
-                }
-                discriminatorKey to HttpResponse(status, headers, generatedBody)
+            DiscriminatorBasedValueGenerationStrategy.generateDiscriminatorBasedValues(
+                resolver,
+                body
+            ).map { (discriminatorKey, value) ->
+                discriminatorKey to generateResponseWith(value, resolver)
             }.toMap()
         }
     }
@@ -195,24 +187,17 @@ data class HttpResponsePattern(
             )
         }.breadCrumb("RESPONSE").value
     }
-}
 
-fun generateDiscriminatorBasedValues(resolver: Resolver, pattern: Pattern): Map<String, Value> {
-    return resolver.withCyclePrevention(pattern) { updatedResolver ->
-        val resolvedPattern = resolvedHop(pattern, updatedResolver)
-
-        if(resolvedPattern is ListPattern) {
-            val listValuePattern = resolvedHop(resolvedPattern.pattern, updatedResolver)
-            if(listValuePattern is AnyPattern && listValuePattern.isDiscriminatorPresent()) {
-                val values = listValuePattern.generateForEveryDiscriminatorValue(updatedResolver)
-                return@withCyclePrevention values.mapValues { JSONArrayValue(listOf(it.value)) }
+    private fun generateResponseWith(value: Value, resolver: Resolver): HttpResponse {
+        return attempt(breadCrumb = "RESPONSE") {
+            val generatedBody = softCastValueToXML(value)
+            val headers = headersPattern.generate(resolver).plus(SPECMATIC_RESULT_HEADER to "success").let { headers ->
+                if ((headers.containsKey("Content-Type").not() && generatedBody.httpContentType.isBlank().not()))
+                    headers.plus("Content-Type" to generatedBody.httpContentType)
+                else headers
             }
+            HttpResponse(status, headers, generatedBody)
         }
-
-        if(resolvedPattern !is AnyPattern || resolvedPattern.isDiscriminatorPresent().not()) {
-            return@withCyclePrevention mapOf("" to resolvedPattern.generate(updatedResolver))
-        }
-        resolvedPattern.generateForEveryDiscriminatorValue(updatedResolver)
     }
 }
 

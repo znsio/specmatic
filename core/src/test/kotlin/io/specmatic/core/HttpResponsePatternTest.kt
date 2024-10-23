@@ -3,7 +3,10 @@ package io.specmatic.core
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import io.specmatic.core.pattern.*
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
+import org.junit.jupiter.api.Nested
 
 internal class HttpResponsePatternTest {
     @Test
@@ -69,5 +72,98 @@ internal class HttpResponsePatternTest {
         assertThat(response.status).isEqualTo(203)
         assertThat(response.headers["Content-Type"]).isNull()
         assertThat(response.body).isEqualTo(NoBodyValue)
+    }
+
+    @Nested
+    inner class GenerateResponseV2Tests {
+
+        @Test
+        fun `should generate responses for a list pattern based response body with discriminator`() {
+            val savingsAccountPattern = JSONObjectPattern(
+                pattern = mapOf(
+                    "@type" to ExactValuePattern(StringValue("savings"), discriminator = true),
+                    "accountId" to StringPattern(),
+                    "accountHolderName" to StringPattern(),
+                    "balance" to NumberPattern(),
+                    "minimumBalance" to NumberPattern()
+                )
+            )
+
+            val currentAccountPattern = JSONObjectPattern(
+                pattern = mapOf(
+                    "@type" to ExactValuePattern(StringValue("current"), discriminator = true),
+                    "accountId" to StringPattern(),
+                    "accountHolderName" to StringPattern(),
+                    "balance" to NumberPattern(),
+                    "overdraftLimit" to NumberPattern()
+                )
+            )
+
+            val listPattern = ListPattern(
+                AnyPattern(
+                    listOf(savingsAccountPattern, currentAccountPattern),
+                    discriminatorProperty = "@type",
+                    discriminatorValues = setOf("savings", "current")
+                )
+            )
+
+            val httpResponsePattern = HttpResponsePattern(
+                body = listPattern
+            )
+
+            val responses = httpResponsePattern.generateResponseV2(Resolver())
+
+            assertThat(responses.size).isEqualTo(2)
+            assertThat(responses.keys).containsExactlyInAnyOrder("savings", "current")
+
+
+            val savingsAccountRequestBody = (responses["savings"]?.body as JSONArrayValue).list.first() as JSONObjectValue
+            val currentAccountRequestBody = (responses["current"]?.body as JSONArrayValue).list.first() as JSONObjectValue
+            assertThat(savingsAccountRequestBody.jsonObject["@type"]?.toStringLiteral()).isEqualTo("savings")
+            assertThat(currentAccountRequestBody.jsonObject["@type"]?.toStringLiteral()).isEqualTo("current")
+        }
+
+        @Test
+        fun `should generate responses for a non-list pattern based response body with discriminator`() {
+            val savingsAccountPattern = JSONObjectPattern(
+                pattern = mapOf(
+                    "@type" to ExactValuePattern(StringValue("savings"), discriminator = true),
+                    "accountId" to StringPattern(),
+                    "accountHolderName" to StringPattern(),
+                    "balance" to NumberPattern(),
+                    "minimumBalance" to NumberPattern()
+                )
+            )
+
+            val currentAccountPattern = JSONObjectPattern(
+                pattern = mapOf(
+                    "@type" to ExactValuePattern(StringValue("current"), discriminator = true),
+                    "accountId" to StringPattern(),
+                    "accountHolderName" to StringPattern(),
+                    "balance" to NumberPattern(),
+                    "overdraftLimit" to NumberPattern()
+                )
+            )
+
+            val bodyPattern = AnyPattern(
+                listOf(savingsAccountPattern, currentAccountPattern),
+                discriminatorProperty = "@type",
+                discriminatorValues = setOf("savings", "current")
+            )
+
+            val httpResponsePattern = HttpResponsePattern(
+                body = bodyPattern
+            )
+
+            val responses = httpResponsePattern.generateResponseV2(Resolver())
+
+            assertThat(responses.size).isEqualTo(2)
+            assertThat(responses.keys).containsExactlyInAnyOrder("savings", "current")
+
+            val savingsAccountRequestBody = (responses["savings"]?.body as JSONObjectValue)
+            val currentAccountRequestBody = (responses["current"]?.body as JSONObjectValue)
+            assertThat(savingsAccountRequestBody.jsonObject["@type"]?.toStringLiteral()).isEqualTo("savings")
+            assertThat(currentAccountRequestBody.jsonObject["@type"]?.toStringLiteral()).isEqualTo("current")
+        }
     }
 }

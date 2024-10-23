@@ -1,5 +1,7 @@
 package io.specmatic.core
 
+import io.mockk.every
+import io.mockk.mockk
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.pattern.NumberPattern
 import io.specmatic.core.pattern.StringPattern
@@ -18,6 +20,7 @@ import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import org.junit.jupiter.api.io.TempDir
@@ -2553,6 +2556,71 @@ paths:
         }).first
 
         assertThat(results.isSuccess()).isTrue()
+    }
+
+    @Nested
+    inner class GenerateRequestResponsePairsTest {
+        private val feature = Feature(name = "feature")
+        private val scenario = mockk<Scenario>()
+
+        @Test
+        fun `should generate request-response pairs correctly when requests exceed responses`() {
+            val request1 = HttpRequest()
+            val request2 = HttpRequest()
+            val request3 = HttpRequest()
+            val response1 = HttpResponse()
+            val response2 = HttpResponse()
+
+            every { scenario.generateHttpRequestV2() } returns mapOf(
+                "discriminator1" to request1,
+                "discriminator2" to request2,
+                "discriminator3" to request3
+            )
+
+            every { scenario.generateHttpResponseV2(any()) } returns mapOf(
+                "discriminator1" to response1,
+                "random" to response2
+            )
+
+            val pairs = feature.generateRequestResponsePairs(scenario)
+
+            assertEquals(3, pairs.size)
+            assertTrue(pairs.any { it.request == request1 && it.response == response1 })
+            assertTrue(pairs.any { it.request == request2 && it.response == response1 })
+            assertTrue(pairs.any { it.request == request3 && it.response == response1 })
+        }
+
+        @Test
+        fun `should generate request-response pairs correctly when responses exceed requests`() {
+            val request1 = HttpRequest()
+            val response1 = HttpResponse()
+            val response2 = HttpResponse()
+
+            every { scenario.generateHttpRequestV2() } returns mapOf(
+                "discriminator1" to request1
+            )
+
+            every { scenario.generateHttpResponseV2(any()) } returns mapOf(
+                "discriminator1" to response1,
+                "discriminator2" to response2
+            )
+
+            val pairs = feature.generateRequestResponsePairs(scenario)
+
+            assertEquals(2, pairs.size)
+            assertTrue(pairs.any { it.request == request1 && it.response == response1 })
+            assertTrue(pairs.any { it.request == request1 && it.response == response2 })
+        }
+
+        @Test
+        fun `should return empty list when both requests and responses are empty`() {
+            every { scenario.generateHttpRequestV2() } returns emptyMap()
+            every { scenario.generateHttpResponseV2(any()) } returns emptyMap()
+
+            val pairs = feature.generateRequestResponsePairs(scenario)
+
+            assertTrue(pairs.isEmpty())
+        }
     }
 
     companion object {

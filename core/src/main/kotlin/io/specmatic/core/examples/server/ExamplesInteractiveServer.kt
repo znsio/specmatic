@@ -451,7 +451,7 @@ class ExamplesInteractiveServer(
             val examplesDir = getExamplesDirPath(contractFile)
             if(!examplesDir.exists()) examplesDir.mkdirs()
 
-            val generatedRequestResponses = feature.generateRequestResponses(scenario).map {
+            val generatedRequestResponses = feature.generateRequestResponsePairs(scenario).map {
                 it.copy(response = it.response.cleanup())
             }
 

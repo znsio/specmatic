@@ -147,37 +147,30 @@ data class Feature(
         }
     }
 
-    fun generateRequestResponses(scenario: Scenario): List<GeneratedRequestResponse> {
+    fun generateRequestResponsePairs(scenario: Scenario): List<RequestResponsePair> {
         try {
             val requests = scenario.generateHttpRequestV2()
             val responses = scenario.generateHttpResponseV2(serverState)
 
-            val generatedRequestResponses = if(requests.size > responses.size) {
+            val requestResponsePairs = if(requests.size > responses.size) {
                 requests.map { (discriminator, request) ->
                     val response = if(responses.containsKey(discriminator)) responses.getValue(discriminator)
                     else responses.values.first()
-                    GeneratedRequestResponse(request, response, discriminator)
+                    RequestResponsePair(request, response, discriminator)
                 }
             } else {
                 responses.map { (discriminator, response) ->
                     val request = if(requests.containsKey(discriminator)) requests.getValue(discriminator)
                         else requests.values.first()
-                    GeneratedRequestResponse(request, response, discriminator)
+                    RequestResponsePair(request, response, discriminator)
                 }
             }
 
-            return generatedRequestResponses
+            return requestResponsePairs
         } finally {
             serverState = emptyMap()
         }
     }
-
-    // Better name
-    data class GeneratedRequestResponse(
-        val request: HttpRequest,
-        val response: HttpResponse,
-        val requestKind: String
-    )
 
     fun stubResponse(
         httpRequest: HttpRequest,
@@ -2223,3 +2216,9 @@ fun similarURLPath(baseScenario: Scenario, newScenario: Scenario): Boolean {
 fun isInteger(
     base: URLPathSegmentPattern
 ) = base.pattern is ExactValuePattern && base.pattern.pattern.toStringLiteral().toIntOrNull() != null
+
+data class RequestResponsePair(
+    val request: HttpRequest,
+    val response: HttpResponse,
+    val discriminator: String
+)

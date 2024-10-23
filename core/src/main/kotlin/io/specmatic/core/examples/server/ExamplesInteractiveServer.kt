@@ -416,7 +416,7 @@ class ExamplesInteractiveServer(
 
             return getExistingExampleFiles(scenario, examples).map {
                 ExamplePathInfo(it.first.absolutePath, false)
-            }.plus(generateExampleFile(contractFile, feature, scenario))
+            }.plus(generateExampleFiles(contractFile, feature, scenario))
         }
 
         data class ExamplePathInfo(val path: String, val created: Boolean)
@@ -440,6 +440,35 @@ class ExamplesInteractiveServer(
             println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
             file.writeText(stubJSON.toStringLiteral())
             return ExamplePathInfo(file.absolutePath, true)
+        }
+
+
+        private fun generateExampleFiles(
+            contractFile: File,
+            feature: Feature,
+            scenario: Scenario,
+        ): List<ExamplePathInfo> {
+            val examplesDir = getExamplesDirPath(contractFile)
+            if(!examplesDir.exists()) examplesDir.mkdirs()
+
+            val generatedRequestResponses = feature.generateRequestResponses(scenario).map {
+                it.copy(response = it.response.cleanup())
+            }
+
+            return generatedRequestResponses.map { (request, response, kind) ->
+                val scenarioStub = ScenarioStub(request, response)
+                val stubJSON = scenarioStub.toJSON()
+                val uniqueNameForApiOperation = uniqueNameForApiOperation(
+                    scenarioStub.request,
+                    "",
+                    scenarioStub.response.status
+                )  + if (kind.isNotEmpty()) "_$kind" else ""
+
+                val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
+                println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
+                file.writeText(stubJSON.toStringLiteral())
+                ExamplePathInfo(file.absolutePath, true)
+            }
         }
 
         fun validateSingleExample(contractFile: File, exampleFile: File): Result {

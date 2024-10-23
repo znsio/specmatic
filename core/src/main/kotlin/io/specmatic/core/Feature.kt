@@ -147,6 +147,38 @@ data class Feature(
         }
     }
 
+    fun generateRequestResponses(scenario: Scenario): List<GeneratedRequestResponse> {
+        try {
+            val requests = scenario.generateHttpRequestV2()
+            val responses = scenario.generateHttpResponseV2(serverState)
+
+            val generatedRequestResponses = if(requests.size > responses.size) {
+                requests.map { (discriminator, request) ->
+                    val response = if(responses.containsKey(discriminator)) responses.getValue(discriminator)
+                    else responses.values.first()
+                    GeneratedRequestResponse(request, response, discriminator)
+                }
+            } else {
+                responses.map { (discriminator, response) ->
+                    val request = if(requests.containsKey(discriminator)) requests.getValue(discriminator)
+                        else requests.values.first()
+                    GeneratedRequestResponse(request, response, discriminator)
+                }
+            }
+
+            return generatedRequestResponses
+        } finally {
+            serverState = emptyMap()
+        }
+    }
+
+    // Better name
+    data class GeneratedRequestResponse(
+        val request: HttpRequest,
+        val response: HttpResponse,
+        val requestKind: String
+    )
+
     fun stubResponse(
         httpRequest: HttpRequest,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages

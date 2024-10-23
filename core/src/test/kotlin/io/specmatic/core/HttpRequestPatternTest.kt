@@ -752,10 +752,10 @@ internal class HttpRequestPatternTest {
             val requests =  httpRequestPattern.generateV2(Resolver())
 
             assertThat(requests.size).isEqualTo(2)
-            assertThat(requests.keys).containsExactlyInAnyOrder("savings", "current")
+            assertThat(requests.map { it.discriminatorValue }).containsExactlyInAnyOrder("savings", "current")
 
-            val savingsAccountRequestBody = (requests["savings"]?.body as JSONArrayValue).list.first() as JSONObjectValue
-            val currentAccountRequestBody = (requests["current"]?.body as JSONArrayValue).list.first() as JSONObjectValue
+            val savingsAccountRequestBody = (requests.first { it.discriminatorValue == "savings" }.value.body as JSONArrayValue).list.first() as JSONObjectValue
+            val currentAccountRequestBody = (requests.first { it.discriminatorValue == "current" }.value.body as JSONArrayValue).list.first() as JSONObjectValue
             assertThat(savingsAccountRequestBody.jsonObject["@type"]?.toStringLiteral()).isEqualTo("savings")
             assertThat(currentAccountRequestBody.jsonObject["@type"]?.toStringLiteral()).isEqualTo("current")
         }
@@ -797,10 +797,10 @@ internal class HttpRequestPatternTest {
             val requests =  httpRequestPattern.generateV2(Resolver())
 
             assertThat(requests.size).isEqualTo(2)
-            assertThat(requests.keys).containsExactlyInAnyOrder("savings", "current")
+            assertThat(requests.map { it.discriminatorValue }).containsExactlyInAnyOrder("savings", "current")
 
-            val savingsAccountRequestBody = (requests["savings"]?.body as JSONObjectValue)
-            val currentAccountRequestBody = (requests["current"]?.body as JSONObjectValue)
+            val savingsAccountRequestBody = (requests.first { it.discriminatorValue ==  "savings"}.value.body as JSONObjectValue)
+            val currentAccountRequestBody = (requests.first { it.discriminatorValue ==  "current"}.value.body as JSONObjectValue)
             assertThat(savingsAccountRequestBody.jsonObject["@type"]?.toStringLiteral()).isEqualTo("savings")
             assertThat(currentAccountRequestBody.jsonObject["@type"]?.toStringLiteral()).isEqualTo("current")
         }

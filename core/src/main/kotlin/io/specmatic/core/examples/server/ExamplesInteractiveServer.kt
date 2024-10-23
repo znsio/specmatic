@@ -13,6 +13,8 @@ import io.ktor.server.routing.*
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
+import io.specmatic.core.discriminator.DiscriminatorExampleInjector
+import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
@@ -451,22 +453,28 @@ class ExamplesInteractiveServer(
             val examplesDir = getExamplesDirPath(contractFile)
             if(!examplesDir.exists()) examplesDir.mkdirs()
 
-            val generatedRequestResponses = feature.generateRequestResponsePairs(scenario).map {
-                it.copy(response = it.response.cleanup())
-            }
+            val discriminatorBasedRequestResponses = feature
+                .generateDiscriminatorBasedRequestResponseList(scenario).map {
+                    it.copy(response = it.response.cleanup())
+                }
 
-            return generatedRequestResponses.map { (request, response, kind) ->
+            return discriminatorBasedRequestResponses.map { (request, response, requestDiscriminator, responseDiscriminator) ->
                 val scenarioStub = ScenarioStub(request, response)
-                val stubJSON = scenarioStub.toJSON()
-                val uniqueNameForApiOperation = uniqueNameForApiOperation(
-                    scenarioStub.request,
-                    "",
-                    scenarioStub.response.status
-                )  + if (kind.isNotEmpty()) "_$kind" else ""
+                val jsonWithDiscriminator = DiscriminatorExampleInjector(
+                    stubJSON = scenarioStub.toJSON(),
+                    requestDiscriminator = requestDiscriminator,
+                    responseDiscriminator = responseDiscriminator
+                ).getExampleWithDiscriminator()
+
+                val uniqueNameForApiOperation = getExampleFileNameBasedOn(
+                    requestDiscriminator,
+                    responseDiscriminator,
+                    scenarioStub
+                )
 
                 val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
                 println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
-                file.writeText(stubJSON.toStringLiteral())
+                file.writeText(jsonWithDiscriminator.toStringLiteral())
                 ExamplePathInfo(file.absolutePath, true)
             }
         }
@@ -584,6 +592,21 @@ class ExamplesInteractiveServer(
             return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
         }
 
+        private fun getExampleFileNameBasedOn(
+            requestDiscriminator: DiscriminatorMetadata,
+            responseDiscriminator: DiscriminatorMetadata,
+            scenarioStub: ScenarioStub
+        ): String {
+            val discriminatorValue = requestDiscriminator.discriminatorValue.ifBlank {
+                responseDiscriminator.discriminatorValue
+            }
+            val discriminatorName = if (discriminatorValue.isNotEmpty()) "${discriminatorValue}_" else ""
+            return discriminatorName + uniqueNameForApiOperation(
+                scenarioStub.request,
+                "",
+                scenarioStub.response.status
+            )
+        }
     }
 }
 

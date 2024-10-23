@@ -8,9 +8,9 @@ import io.specmatic.core.pattern.resolvedHop
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.Value
 
-object DiscriminatorBasedValueGenerationStrategy {
+object DiscriminatorBasedValueGenerator {
 
-    fun generateDiscriminatorBasedValues(resolver: Resolver, pattern: Pattern): Map<String, Value> {
+    fun generateDiscriminatorBasedValues(resolver: Resolver, pattern: Pattern): List<DiscriminatorBasedItem<Value>> {
         return resolver.withCyclePrevention(pattern) { updatedResolver ->
             val resolvedPattern = resolvedHop(pattern, updatedResolver)
 
@@ -18,12 +18,22 @@ object DiscriminatorBasedValueGenerationStrategy {
                 val listValuePattern = resolvedHop(resolvedPattern.pattern, updatedResolver)
                 if (listValuePattern is AnyPattern && listValuePattern.isDiscriminatorPresent()) {
                     val values = listValuePattern.generateForEveryDiscriminatorValue(updatedResolver)
-                    return@withCyclePrevention values.mapValues { JSONArrayValue(listOf(it.value)) }
+                    return@withCyclePrevention values.map {
+                        it.copy(value = JSONArrayValue(listOf(it.value)))
+                    }
                 }
             }
 
             if (resolvedPattern !is AnyPattern || resolvedPattern.isDiscriminatorPresent().not()) {
-                return@withCyclePrevention mapOf("" to resolvedPattern.generate(updatedResolver))
+                return@withCyclePrevention listOf(
+                    DiscriminatorBasedItem(
+                        discriminator = DiscriminatorMetadata(
+                            discriminatorProperty = "",
+                            discriminatorValue = "",
+                        ),
+                        value = resolvedPattern.generate(updatedResolver)
+                    )
+                )
             }
             resolvedPattern.generateForEveryDiscriminatorValue(updatedResolver)
         }

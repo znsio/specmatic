@@ -3,21 +3,18 @@ package io.specmatic.core.discriminator
 import io.specmatic.core.Resolver
 import io.specmatic.core.pattern.AnyPattern
 import io.specmatic.core.pattern.DeferredPattern
-import io.specmatic.core.pattern.EmptyStringPattern
 import io.specmatic.core.pattern.ExactValuePattern
 import io.specmatic.core.pattern.JSONObjectPattern
 import io.specmatic.core.pattern.ListPattern
-import io.specmatic.core.pattern.NullPattern
 import io.specmatic.core.pattern.NumberPattern
 import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-class DiscriminatorBasedValueGenerationStrategyTest {
+class DiscriminatorBasedItemGeneratorTest {
     
     @Test
     fun `should generate discriminator based values for AnyPattern in ListPattern`() {
@@ -49,18 +46,18 @@ class DiscriminatorBasedValueGenerationStrategyTest {
             )
         )
 
-        val values = DiscriminatorBasedValueGenerationStrategy.generateDiscriminatorBasedValues(
+        val values = DiscriminatorBasedValueGenerator.generateDiscriminatorBasedValues(
             Resolver(),
             listPattern
         )
 
         assertThat(values).hasSize(2)
-        assertThat(values.keys).containsExactlyInAnyOrder("savings", "current")
+        assertThat(values.map { it.discriminatorValue }).containsExactlyInAnyOrder("savings", "current")
 
         val currentType =
-            ((values["current"] as JSONArrayValue).list.first() as JSONObjectValue).jsonObject["@type"]?.toStringLiteral()
+            ((values.first { it.discriminatorValue == "current" }.value as JSONArrayValue).list.first() as JSONObjectValue).jsonObject["@type"]?.toStringLiteral()
         val savingsType =
-            ((values["savings"] as JSONArrayValue).list.first() as JSONObjectValue).jsonObject["@type"]?.toStringLiteral()
+            ((values.first { it.discriminatorValue == "savings" }.value as JSONArrayValue).list.first() as JSONObjectValue).jsonObject["@type"]?.toStringLiteral()
 
         assertThat(currentType).isEqualTo("current")
         assertThat(savingsType).isEqualTo("savings")
@@ -99,18 +96,18 @@ class DiscriminatorBasedValueGenerationStrategyTest {
                 discriminatorValues = setOf("savings", "current")
             )
         )
-        val values = DiscriminatorBasedValueGenerationStrategy.generateDiscriminatorBasedValues(
+        val values = DiscriminatorBasedValueGenerator.generateDiscriminatorBasedValues(
             Resolver(newPatterns = deferredPattern),
             listPattern
         )
 
         assertThat(values).hasSize(2)
-        assertThat(values.keys).containsExactlyInAnyOrder("savings", "current")
+        assertThat(values.map { it.discriminatorValue }).containsExactlyInAnyOrder("savings", "current")
 
         val currentType =
-            ((values["current"] as JSONArrayValue).list.first() as JSONObjectValue).jsonObject["@type"]?.toStringLiteral()
+            ((values.first { it.discriminatorValue == "current" }.value as JSONArrayValue).list.first() as JSONObjectValue).jsonObject["@type"]?.toStringLiteral()
         val savingsType =
-            ((values["savings"] as JSONArrayValue).list.first() as JSONObjectValue).jsonObject["@type"]?.toStringLiteral()
+            ((values.first { it.discriminatorValue == "savings" }.value as JSONArrayValue).list.first() as JSONObjectValue).jsonObject["@type"]?.toStringLiteral()
 
         assertThat(currentType).isEqualTo("current")
         assertThat(savingsType).isEqualTo("savings")
@@ -126,11 +123,11 @@ class DiscriminatorBasedValueGenerationStrategyTest {
 
         val listPattern = ListPattern(simplePattern)
 
-        val values = DiscriminatorBasedValueGenerationStrategy
+        val values = DiscriminatorBasedValueGenerator
             .generateDiscriminatorBasedValues(Resolver(), listPattern)
 
         assertThat(values).hasSize(1)
-        assertThat(values.keys).containsExactly("")
+        assertThat(values.map { it.discriminatorValue }).containsExactly("")
     }
 
     @Test
@@ -151,11 +148,11 @@ class DiscriminatorBasedValueGenerationStrategyTest {
         )
 
         val values =
-            DiscriminatorBasedValueGenerationStrategy.generateDiscriminatorBasedValues(Resolver(), accountPattern)
+            DiscriminatorBasedValueGenerator.generateDiscriminatorBasedValues(Resolver(), accountPattern)
 
         assertThat(values).hasSize(1)
-        assertThat(values.keys).containsExactly("savings")
-        assertThat((values["savings"] as JSONObjectValue).jsonObject["@type"]?.toStringLiteral()).isEqualTo("savings")
+        assertThat(values.map { it.discriminatorValue }).containsExactly("savings")
+        assertThat((values.first { it.discriminatorValue == "savings" }.value as JSONObjectValue).jsonObject["@type"]?.toStringLiteral()).isEqualTo("savings")
     }
 
     @Test
@@ -179,12 +176,12 @@ class DiscriminatorBasedValueGenerationStrategyTest {
             )
         )
         val values =
-            DiscriminatorBasedValueGenerationStrategy
+            DiscriminatorBasedValueGenerator
                 .generateDiscriminatorBasedValues(Resolver(newPatterns = deferredPattern), accountPattern)
 
         assertThat(values).hasSize(1)
-        assertThat(values.keys).containsExactly("savings")
-        assertThat((values["savings"] as JSONObjectValue).jsonObject["@type"]?.toStringLiteral()).isEqualTo("savings")
+        assertThat(values.map { it.discriminatorValue }).containsExactly("savings")
+        assertThat((values.first { it.discriminatorValue == "savings" }.value as JSONObjectValue).jsonObject["@type"]?.toStringLiteral()).isEqualTo("savings")
     }
 
     @Test
@@ -196,10 +193,10 @@ class DiscriminatorBasedValueGenerationStrategyTest {
         )
 
         val values =
-            DiscriminatorBasedValueGenerationStrategy.generateDiscriminatorBasedValues(Resolver(), simplePattern)
+            DiscriminatorBasedValueGenerator.generateDiscriminatorBasedValues(Resolver(), simplePattern)
 
         assertThat(values).hasSize(1)
-        assertThat(values.keys).containsExactly("")
+        assertThat(values.map { it.discriminatorValue }).containsExactly("")
     }
 
 }

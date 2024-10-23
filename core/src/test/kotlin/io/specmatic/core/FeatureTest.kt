@@ -3,6 +3,8 @@ package io.specmatic.core
 import io.mockk.every
 import io.mockk.mockk
 import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.discriminator.DiscriminatorBasedItem
+import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.pattern.NumberPattern
 import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.pattern.parsedJSONObject
@@ -2559,7 +2561,7 @@ paths:
     }
 
     @Nested
-    inner class GenerateRequestResponsePairsTest {
+    inner class GenerateDiscriminatorBasedRequestResponsePairsTest {
         private val feature = Feature(name = "feature")
         private val scenario = mockk<Scenario>()
 
@@ -2571,18 +2573,36 @@ paths:
             val response1 = HttpResponse()
             val response2 = HttpResponse()
 
-            every { scenario.generateHttpRequestV2() } returns mapOf(
-                "discriminator1" to request1,
-                "discriminator2" to request2,
-                "discriminator3" to request3
+            val requestList = listOf(
+                DiscriminatorBasedItem(
+                    discriminator = DiscriminatorMetadata("type", "discriminator1"),
+                    value = request1
+                ),
+                DiscriminatorBasedItem(
+                    discriminator = DiscriminatorMetadata("type", "discriminator2"),
+                    value = request2
+                ),
+                DiscriminatorBasedItem(
+                    discriminator = DiscriminatorMetadata("type", "discriminator3"),
+                    value = request3
+                )
             )
 
-            every { scenario.generateHttpResponseV2(any()) } returns mapOf(
-                "discriminator1" to response1,
-                "random" to response2
+            val responseList = listOf(
+                DiscriminatorBasedItem(
+                    discriminator = DiscriminatorMetadata("type", "discriminator1"),
+                    value = response1
+                ),
+                DiscriminatorBasedItem(
+                    discriminator = DiscriminatorMetadata("type", "random"),
+                    value = response2
+                )
             )
+            every { scenario.generateHttpRequestV2() } returns requestList
 
-            val pairs = feature.generateRequestResponsePairs(scenario)
+            every { scenario.generateHttpResponseV2(any()) } returns responseList
+
+            val pairs = feature.generateDiscriminatorBasedRequestResponseList(scenario)
 
             assertEquals(3, pairs.size)
             assertTrue(pairs.any { it.request == request1 && it.response == response1 })
@@ -2595,17 +2615,29 @@ paths:
             val request1 = HttpRequest()
             val response1 = HttpResponse()
             val response2 = HttpResponse()
-
-            every { scenario.generateHttpRequestV2() } returns mapOf(
-                "discriminator1" to request1
+            val requestList = listOf(
+                DiscriminatorBasedItem(
+                    discriminator = DiscriminatorMetadata("type", "discriminator1"),
+                    value = request1
+                )
             )
 
-            every { scenario.generateHttpResponseV2(any()) } returns mapOf(
-                "discriminator1" to response1,
-                "discriminator2" to response2
+            val responseList = listOf(
+                DiscriminatorBasedItem(
+                    discriminator = DiscriminatorMetadata("type", "discriminator1"),
+                    value = response1
+                ),
+                DiscriminatorBasedItem(
+                    discriminator = DiscriminatorMetadata("type", "discriminator2"),
+                    value = response2
+                )
             )
 
-            val pairs = feature.generateRequestResponsePairs(scenario)
+            every { scenario.generateHttpRequestV2() } returns requestList
+
+            every { scenario.generateHttpResponseV2(any()) } returns responseList
+
+            val pairs = feature.generateDiscriminatorBasedRequestResponseList(scenario)
 
             assertEquals(2, pairs.size)
             assertTrue(pairs.any { it.request == request1 && it.response == response1 })
@@ -2614,10 +2646,10 @@ paths:
 
         @Test
         fun `should return empty list when both requests and responses are empty`() {
-            every { scenario.generateHttpRequestV2() } returns emptyMap()
-            every { scenario.generateHttpResponseV2(any()) } returns emptyMap()
+            every { scenario.generateHttpRequestV2() } returns emptyList()
+            every { scenario.generateHttpResponseV2(any()) } returns emptyList()
 
-            val pairs = feature.generateRequestResponsePairs(scenario)
+            val pairs = feature.generateDiscriminatorBasedRequestResponseList(scenario)
 
             assertTrue(pairs.isEmpty())
         }

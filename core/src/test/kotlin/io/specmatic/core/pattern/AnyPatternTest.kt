@@ -332,11 +332,11 @@ internal class AnyPatternTest {
                 discriminatorValues =  setOf("current", "savings")
             )
 
-            val discriminatorToValueMap = pattern.generateForEveryDiscriminatorValue(Resolver())
+            val discriminatorToValues = pattern.generateForEveryDiscriminatorValue(Resolver())
 
             val commonKeys = setOf("@type", "accountId", "accountHolderName", "balance")
-            val currentAccount = discriminatorToValueMap["current"] as JSONObjectValue
-            val savingsAccount = discriminatorToValueMap["savings"] as JSONObjectValue
+            val currentAccount = discriminatorToValues.first { it.discriminatorValue == "current" }.value as JSONObjectValue
+            val savingsAccount = discriminatorToValues.first { it.discriminatorValue == "savings" }.value as JSONObjectValue
 
             assertThat(currentAccount.jsonObject["@type"]?.toStringLiteral()).isEqualTo("current")
             assertThat(currentAccount.jsonObject.keys).isEqualTo(commonKeys.plus("overdraftLimit"))
@@ -354,9 +354,9 @@ internal class AnyPatternTest {
 
             val values = pattern.generateForEveryDiscriminatorValue(Resolver())
             assertThat(values).isNotEmpty
-            assertThat(values.keys.toList()).containsExactlyInAnyOrder("current", "savings")
-            assertThat(values.values.first()).isInstanceOf(Value::class.java)
-            assertThat(values.values.last()).isInstanceOf(Value::class.java)
+            assertThat(values.map { it.discriminatorValue }).containsExactlyInAnyOrder("current", "savings")
+            assertThat(values.map { it.value }.first()).isInstanceOf(Value::class.java)
+            assertThat(values.map { it.value }.last()).isInstanceOf(Value::class.java)
         }
 
         @Test
@@ -373,7 +373,7 @@ internal class AnyPatternTest {
                 discriminatorValues = setOf("nonexistent")
             )
 
-            val values = (pattern.generateForEveryDiscriminatorValue(Resolver()).values.single()) as JSONObjectValue
+            val values = (pattern.generateForEveryDiscriminatorValue(Resolver()).single().value) as JSONObjectValue
 
             assertThat(values.jsonObject.size).isEqualTo(1)
             assertThat(values.jsonObject.keys.single()).isEqualTo("fallbackField")

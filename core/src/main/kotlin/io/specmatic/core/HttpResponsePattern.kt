@@ -1,8 +1,9 @@
 package io.specmatic.core
 
-import io.specmatic.core.discriminator.DiscriminatorBasedValueGenerationStrategy
+import io.specmatic.core.discriminator.DiscriminatorBasedItem
+import io.specmatic.core.discriminator.DiscriminatorBasedValueGenerator
+import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.pattern.*
-import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.stub.softCastValueToXML
@@ -25,14 +26,20 @@ data class HttpResponsePattern(
         )
     }
 
-    fun generateResponseV2(resolver: Resolver): Map<String, HttpResponse> {
+    fun generateResponseV2(resolver: Resolver): List<DiscriminatorBasedItem<HttpResponse>> {
         return attempt(breadCrumb = "RESPONSE") {
-            DiscriminatorBasedValueGenerationStrategy.generateDiscriminatorBasedValues(
+            DiscriminatorBasedValueGenerator.generateDiscriminatorBasedValues(
                 resolver,
                 body
-            ).map { (discriminatorKey, value) ->
-                discriminatorKey to generateResponseWith(value, resolver)
-            }.toMap()
+            ).map {
+                DiscriminatorBasedItem(
+                    discriminator = DiscriminatorMetadata(
+                        discriminatorProperty = it.discriminatorProperty,
+                        discriminatorValue = it.discriminatorValue,
+                    ),
+                    value = generateResponseWith(it.value, resolver)
+                )
+            }
         }
     }
 

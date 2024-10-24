@@ -1,6 +1,7 @@
 package io.specmatic.core
 
 import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.filters.ScenarioMetadata
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
@@ -168,7 +169,10 @@ data class Scenario(
             httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
         }
 
-    fun generateHttpResponseV2(actualFacts: Map<String, Value>, requestContext: Context = NoContext): Map<String, HttpResponse> =
+    fun generateHttpResponseV2(
+        actualFacts: Map<String, Value>,
+        requestContext: Context = NoContext
+    ): List<DiscriminatorBasedItem<HttpResponse>> =
         scenarioBreadCrumb(this) {
             val facts = combineFacts(expectedFacts, actualFacts, resolver)
 
@@ -230,7 +234,7 @@ data class Scenario(
             httpRequestPattern.generate(flagsBased.update(resolver.copy(factStore = CheckFacts(expectedFacts))))
         }
 
-    fun generateHttpRequestV2(flagsBased: FlagsBased = DefaultStrategies): Map<String, HttpRequest> =
+    fun generateHttpRequestV2(flagsBased: FlagsBased = DefaultStrategies): List<DiscriminatorBasedItem<HttpRequest>> =
         scenarioBreadCrumb(this) {
             httpRequestPattern.generateV2(flagsBased.update(resolver.copy(factStore = CheckFacts(expectedFacts))))
         }

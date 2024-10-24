@@ -16,6 +16,7 @@ import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.ScenarioStub
 import picocli.CommandLine.*
 import java.io.File
+import java.io.IOException
 import java.lang.Thread.sleep
 import java.util.concurrent.Callable
 
@@ -292,7 +293,13 @@ class ExamplesCommand : Callable<Int> {
 
         override fun call() {
             if(contractFile == null || exampleFile == null) return
-            ExamplesInteractiveServer.createDictionaryFrom(contractFile!!, exampleFile!!)
+            try {
+                val dictionaryOutputFile = ExamplesInteractiveServer.createDictionaryFrom(contractFile!!, exampleFile!!)
+                println("Dictionary has been written to: $dictionaryOutputFile")
+            }
+            catch (ex: IOException) {
+                logger.log(ex)
+            }
         }
     }
 }

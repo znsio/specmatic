@@ -1,5 +1,6 @@
 package io.specmatic.core.examples.server
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
@@ -16,12 +17,12 @@ import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.DeferredPattern
 import io.specmatic.core.pattern.JSONObjectPattern
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.*
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
@@ -559,7 +560,7 @@ class ExamplesInteractiveServer(
             return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
         }
 
-        fun createDictionaryFrom(contractFile: File, exampleFile: File) {
+        fun createDictionaryFrom(contractFile: File, exampleFile: File) : File {
             val feature = parseContractFileToFeature(contractFile.absolutePath)
             val consolidatedPatterns = feature.scenarios.fold(emptyMap<String, Pattern>()) { map, scenario ->
                 map.plus(scenario.resolver.newPatterns)
@@ -571,24 +572,60 @@ class ExamplesInteractiveServer(
             val responseBody = exampleFromFile.responseBody as JSONObjectValue
 
             val requestBody = exampleFromFile.requestBody as JSONObjectValue
-            val requestBodyPattern = requestBody.deepPattern() as JSONObjectPattern
-
-            // requestBodyPattern.pattern
-            // requestBody.jsonObject
-            // Traverse through the above two maps in parallel and generate an object with nested keys
-            // If you encounter a typeAlias, make sure your prefix is reset to the typeAlias and ignores the
-            // previously accumulated prefix value.
-
+            val requestPair = matchSchemaNames(requestBody, resolver)
+            val responsePair = matchSchemaNames(responseBody, resolver)
+            var requestResults = getObjectWithNestedKeys(requestPair.values.first(), requestPair.keys.first(), resolver = resolver,
+                requestPair.keys.first().typeAlias?.removeSurrounding("(", ")") ?: ""
+            )
+            var responseResults = getObjectWithNestedKeys(responsePair.values.first(), responsePair.keys.first(), resolver = resolver,
+                responsePair.keys.first().typeAlias?.removeSurrounding("(", ")") ?: ""
+            )
+            val result = requestResults + responseResults
+            return writeDictionaryToFile(contractFile, flattenDictionaryValues(result))
         }
 
-        private fun getObjectWithNestedKeys(value: Value, prefix: String = ""): Map<String, Value> {
-            // TODO - handle arrays
-            if (value !is JSONObjectValue) return mapOf(prefix to value)
-            return value.jsonObject.flatMap { (key, value) ->
-                getObjectWithNestedKeys(value, "$prefix.$key").entries
+        private fun matchSchemaNames(value: JSONObjectValue, resolver: Resolver) : Map<Pattern, Value> {
+            var result: Map<Pattern, Value> = emptyMap()
+            val patterns = resolver.newPatterns
+            patterns.forEach { (_, pattern) ->
+                if (pattern.matches(value, resolver).isSuccess())
+                    result = mapOf(pattern to value)
+            }
+            return result
+        }
+
+        private fun getObjectWithNestedKeys(value: Value, pattern: Pattern, resolver: Resolver, name: String = ""): Map<String, Value> {
+            if (value !is JSONObjectValue) return mapOf(name to value)
+            if(pattern is DeferredPattern)
+                return getObjectWithNestedKeys(value, resolver.newPatterns[pattern.typeAlias]!!, resolver, pattern.typeName)
+            val res = value.jsonObject.flatMap { (key, value) ->
+                if((pattern.pattern as Map<*, *>).containsKey(key))
+                    getObjectWithNestedKeys(value, (pattern.pattern as Map<*,*>)[key] as Pattern, resolver, "$name.$key").entries
+                else getObjectWithNestedKeys(value, (pattern.pattern as Map<*,*>)["$key?"] as Pattern, resolver, "$name.$key").entries
             }.associate { it.toPair() }
+            return res
         }
 
+        private fun flattenDictionaryValues(dictionary: Map<String, Value>) : Map<String, Any> {
+            return dictionary.mapValues { (_, value) ->
+                when (value.displayableType()) {
+                    "number" -> (value as NumberValue).nativeValue
+                    "string" -> (value as StringValue).nativeValue
+                    "boolean" -> (value as BooleanValue).booleanValue
+                    else -> {
+                        value
+                    }
+                }
+            }
+        }
+
+        private fun writeDictionaryToFile(contractFile: File, dictionary: Map<String, Any>): File {
+            val dictionaryFileName = "${contractFile.nameWithoutExtension}_dictionary.json"
+            val outputFile = contractFile.canonicalFile.parentFile.resolve(dictionaryFileName)
+            println("Writing to file: ${outputFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
+            jacksonObjectMapper().writeValue(outputFile, dictionary)
+            return outputFile
+        }
     }
 }
 

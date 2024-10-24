@@ -172,4 +172,40 @@ internal class KeyCheckTest {
         assertThat(errors[0].name).isEqualTo("key1")
         assertThat(errors[1].name).isEqualTo("key2")
     }
+
+    @Test
+    fun `withUnexpectedKeyCheck should return new instance`() {
+        // Arrange
+        val originalCheck = KeyCheck()
+        val newUnexpectedKeyCheck = IgnoreUnexpectedKeys
+
+        // Act
+        val updatedCheck = originalCheck.withUnexpectedKeyCheck(newUnexpectedKeyCheck)
+
+        // Assert
+        assertThat(updatedCheck).isNotSameAs(originalCheck)
+        assertThat(updatedCheck.unexpectedKeyCheck).isSameAs(newUnexpectedKeyCheck)
+        assertThat(originalCheck.unexpectedKeyCheck).isSameAs(ValidateUnexpectedKeys)
+    }
+
+    @Test
+    fun `withUnexpectedKeyCheck should preserve pattern check in new instance`() {
+        // Arrange
+        val customPatternCheck = object : KeyErrorCheck {
+            override fun validate(pattern: Map<String, Any>, actual: Map<String, Any>): KeyError? = null
+            override fun validateList(pattern: Map<String, Any>, actual: Map<String, Any>): List<KeyError> = emptyList()
+            override fun validateListCaseInsensitive(
+                pattern: Map<String, Pattern>,
+                actual: Map<String, StringValue>
+            ): List<KeyError> = emptyList()
+        }
+
+        val originalCheck = KeyCheck(patternKeyCheck = customPatternCheck)
+
+        // Act
+        val updatedCheck = originalCheck.withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
+
+        // Assert
+        assertThat(updatedCheck.patternKeyCheck).isSameAs(customPatternCheck)
+    }
 }

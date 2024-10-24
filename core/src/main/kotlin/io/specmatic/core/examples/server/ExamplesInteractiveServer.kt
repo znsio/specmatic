@@ -14,6 +14,8 @@ import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
+import io.specmatic.core.filters.ScenarioMetadataFilter
+import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
@@ -38,6 +40,8 @@ class ExamplesInteractiveServer(
     private val inputContractFile: File? = null,
     private val filterName: String,
     private val filterNotName: String,
+    private val filter: List<String>,
+    private val filterNot: List<String>,
     externalDictionaryFile: File? = null
 ) : Closeable {
     private var contractFileFromRequest: File? = null
@@ -256,7 +260,7 @@ class ExamplesInteractiveServer(
     }
 
     private fun getExamplePageHtmlContent(contractFile: File, hostPort: String): String {
-        val feature = ScenarioFilter(filterName, filterNotName).filter(parseContractFileToFeature(contractFile))
+        val feature = ScenarioFilter(filterName, filterNotName, filter, filterNot).filter(parseContractFileToFeature(contractFile))
 
         val endpoints = ExamplesView.getEndpoints(feature, getExamplesDirPath(contractFile))
         val tableRows = endpoints.toTableRows()
@@ -281,7 +285,10 @@ class ExamplesInteractiveServer(
         }
     }
 
-    class ScenarioFilter(filterName: String = "", filterNotName: String = "") {
+    class ScenarioFilter(filterName: String = "", filterNotName: String = "", filterClauses: List<String> = emptyList(), private val filterNotClauses: List<String> = emptyList()) {
+        private val filter = filterClauses.joinToString(";")
+        private val filterNot = filterNotClauses.joinToString(";")
+
         private val filterNameTokens = if(filterName.isNotBlank()) {
             filterName.trim().split(",").map { it.trim() }
         } else emptyList()
@@ -291,7 +298,7 @@ class ExamplesInteractiveServer(
         } else emptyList()
 
         fun filter(feature: Feature): Feature {
-            val scenarios = feature.scenarios.filter { scenario ->
+            val scenariosFilteredByOlderSyntax = feature.scenarios.filter { scenario ->
                 if(filterNameTokens.isNotEmpty()) {
                     filterNameTokens.any { name -> scenario.testDescription().contains(name) }
                 } else true
@@ -301,7 +308,15 @@ class ExamplesInteractiveServer(
                 } else true
             }
 
-            return feature.copy(scenarios = scenarios)
+            val scenarioInclusionFilter = ScenarioMetadataFilter.from(filter)
+            val scenarioExclusionFilter = ScenarioMetadataFilter.from(filterNot)
+
+            val filteredScenarios = filterUsing(scenariosFilteredByOlderSyntax.asSequence(), scenarioInclusionFilter, scenarioExclusionFilter) {
+                it.toScenarioMetadata()
+            }.toList()
+
+
+            return feature.copy(scenarios = filteredScenarios)
         }
     }
 

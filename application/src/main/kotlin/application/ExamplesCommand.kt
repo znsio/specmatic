@@ -89,7 +89,7 @@ Filter tests not matching the specified criteria
 
 This option supports the same filtering keys and syntax as the --filter option.
 For example:
---filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
+--filter-not="STATUS=400" --filter-not="METHOD=PATCH,PUT"
            """
         ],
         required = false
@@ -167,7 +167,7 @@ Filter tests not matching the specified criteria
 
 This option supports the same filtering keys and syntax as the --filter option.
 For example:
---filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
+--filter-not="STATUS=400" --filter-not="METHOD=PATCH,PUT"
            """
             ],
             required = false
@@ -333,7 +333,7 @@ Filter tests not matching the specified criteria
 
 This option supports the same filtering keys and syntax as the --filter option.
 For example:
---filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
+--filter-not="STATUS=400" --filter-not="METHOD=PATCH,PUT"
            """
             ],
             required = false

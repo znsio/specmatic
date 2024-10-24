@@ -105,6 +105,9 @@ For example, to filter by HTTP methods:
 You can supply multiple filters as well. 
 For example:
 --filter="METHOD=GET,POST" --filter="PATH=/users"
+
+You can supply composite filters too as follows:
+--filter="PATH=/users&METHOD=POST" --filter="PATH=/products&METHOD=GET"
            """
         ],
         required = false
@@ -119,7 +122,7 @@ Filter tests not matching the specified criteria
 
 This option supports the same filtering keys and syntax as the --filter option.
 For example:
---filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
+--filter-not="STATUS=400" --filter-not="METHOD=PATCH,PUT"
            """
         ],
         required = false

@@ -7,6 +7,9 @@ import io.specmatic.core.Result.Success
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
 import io.ktor.util.*
+import io.specmatic.core.discriminator.DiscriminatorBasedItem
+import io.specmatic.core.discriminator.DiscriminatorBasedValueGenerator
+import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
 import io.specmatic.core.value.JSONObjectValue
@@ -454,22 +457,22 @@ data class HttpRequestPattern(
         }
     }
 
-    fun generateV2(resolver: Resolver): Map<String, HttpRequest> {
+    fun generateV2(resolver: Resolver): List<DiscriminatorBasedItem<HttpRequest>> {
         return attempt(breadCrumb = "REQUEST") {
-            if (method == null) {
-                throw missingParam("HTTP method")
-            }
-            val baseRequest = HttpRequest()
-                .updateMethod(method)
-                .generateAndUpdateURL(resolver)
-                .generateAndUpdateHeaders(resolver)
-                .generateAndUpdateFormFieldsValues(resolver)
-                .generateAndUpdateSecuritySchemes(resolver)
-                .generateAndUpdateMultiPartData(resolver)
+            val baseRequest = generate(resolver)
 
-            generateDiscriminatorBasedValues(resolver, body).map { (discriminatorKey, generatedBody) ->
-                discriminatorKey to baseRequest.updateBody(generatedBody)
-            }.toMap()
+            DiscriminatorBasedValueGenerator.generateDiscriminatorBasedValues(
+                resolver,
+                body
+            ).map {
+                DiscriminatorBasedItem(
+                    discriminator = DiscriminatorMetadata(
+                        discriminatorProperty = it.discriminatorProperty,
+                        discriminatorValue = it.discriminatorValue,
+                    ),
+                    value = baseRequest.updateBody(it.value)
+                )
+            }
         }
     }
 

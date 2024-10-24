@@ -2,6 +2,8 @@ package io.specmatic.core.pattern
 
 import io.specmatic.core.*
 import io.specmatic.core.Result.Failure
+import io.specmatic.core.discriminator.DiscriminatorBasedItem
+import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.*
 
@@ -315,9 +317,15 @@ data class AnyPattern(
 
     fun isDiscriminatorPresent() = discriminatorProperty != null && discriminatorValues.isNotEmpty()
 
-    fun generateForEveryDiscriminatorValue(resolver: Resolver): Map<String, Value> {
-        return discriminatorValues.associateWith { discriminatorValue ->
-            generateValue(resolver, discriminatorValue)
+    fun generateForEveryDiscriminatorValue(resolver: Resolver): List<DiscriminatorBasedItem<Value>> {
+        return discriminatorValues.map { discriminatorValue ->
+            DiscriminatorBasedItem(
+                discriminator = DiscriminatorMetadata(
+                    discriminatorProperty = discriminatorProperty.orEmpty(),
+                    discriminatorValue = discriminatorValue,
+                ),
+                value = generateValue(resolver, discriminatorValue)
+            )
         }
     }
 
@@ -350,7 +358,8 @@ data class AnyPattern(
             }
             val discriminatorPattern = it.pattern[discriminatorProperty]
             if(discriminatorPattern !is ExactValuePattern) return@firstOrNull false
-            discriminatorPattern.pattern.toStringLiteral() == discriminatorValue
+            discriminatorPattern.discriminator
+                    && discriminatorPattern.pattern.toStringLiteral() == discriminatorValue
         }
     }
 

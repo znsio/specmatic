@@ -288,7 +288,7 @@ class ExamplesCommand : Callable<Int> {
         @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
         var contractFile: File? = null
 
-        @Option(names = ["--example-file"], description = ["Example file path"], required = true)
+        @Option(names = ["--example-file"], description = ["Example file/folder path"], required = true)
         var exampleFile: File? = null
 
         override fun call() {

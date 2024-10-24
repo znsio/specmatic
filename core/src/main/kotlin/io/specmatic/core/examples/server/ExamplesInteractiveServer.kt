@@ -16,10 +16,7 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.DeferredPattern
-import io.specmatic.core.pattern.JSONObjectPattern
-import io.specmatic.core.pattern.Pattern
+import io.specmatic.core.pattern.*
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.*
 import io.specmatic.core.value.*
@@ -30,6 +27,7 @@ import io.specmatic.stub.HttpStubData
 import io.specmatic.test.ContractTest
 import io.specmatic.test.TestInteractionsLog
 import io.specmatic.test.TestInteractionsLog.combineLog
+import org.apache.commons.collections4.map.SingletonMap
 import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
@@ -566,25 +564,65 @@ class ExamplesInteractiveServer(
                 map.plus(scenario.resolver.newPatterns)
             }
             val resolver = Resolver(newPatterns = consolidatedPatterns)
-            val exampleFromFile = ExampleFromFile(exampleFile)
 
-            // TODO - confirm this, need not be JSONObjectValue always
-            val responseBody = exampleFromFile.responseBody as JSONObjectValue
+            val result : MutableMap<String, Value> = emptyMap<String, Value>().toMutableMap()
 
-            val requestBody = exampleFromFile.requestBody as JSONObjectValue
-            val requestPair = matchSchemaNames(requestBody, resolver)
-            val responsePair = matchSchemaNames(responseBody, resolver)
-            var requestResults = getObjectWithNestedKeys(requestPair.values.first(), requestPair.keys.first(), resolver = resolver,
-                requestPair.keys.first().typeAlias?.removeSurrounding("(", ")") ?: ""
-            )
-            var responseResults = getObjectWithNestedKeys(responsePair.values.first(), responsePair.keys.first(), resolver = resolver,
-                responsePair.keys.first().typeAlias?.removeSurrounding("(", ")") ?: ""
-            )
-            val result = requestResults + responseResults
+            if (exampleFile.isDirectory) {
+                exampleFile.listFiles { file -> file.extension == "json" }?.forEach { jsonFile ->
+                    val exampleFromFile = ExampleFromFile(jsonFile)
+                    println("processing example file: $jsonFile")
+                    processExampleFile(exampleFromFile, resolver, result)
+                }
+            } else if (exampleFile.isFile) {
+                val exampleFromFile = ExampleFromFile(exampleFile)
+                processExampleFile(exampleFromFile, resolver, result)
+            } else {
+                throw IllegalArgumentException("Provided input is neither a file nor a directory.")
+            }
+
             return writeDictionaryToFile(contractFile, flattenDictionaryValues(result))
         }
 
-        private fun matchSchemaNames(value: JSONObjectValue, resolver: Resolver) : Map<Pattern, Value> {
+        private fun processExampleFile(exampleFromFile: ExampleFromFile, resolver: Resolver, result: MutableMap<String, Value>) {
+            if (exampleFromFile.responseBody != null) {
+                result += processBody(exampleFromFile.responseBody, resolver)
+            }
+
+            if (exampleFromFile.requestBody != null) {
+                result += processBody(exampleFromFile.requestBody, resolver)
+            }
+        }
+
+        private fun processBody(body: Value, resolver: Resolver): Map<String, Value> {
+            return when (body) {
+                is JSONArrayValue -> {
+                    body.list.flatMap {
+                        getDictionaryForExample(it, resolver).entries
+                    }.associate { it.toPair() }
+                }
+                is JSONObjectValue -> {
+                    getDictionaryForExample(body, resolver)
+                }
+                else -> emptyMap()
+            }
+        }
+
+        private fun getDictionaryForExample(body: Value, resolver: Resolver): Map<String, Value> {
+            val schemaToExampleMap = getSchemaToExampleMap(body as JSONObjectValue, resolver)
+            val bodySchemaName = schemaToExampleMap.keys.first().typeAlias?.removeSurrounding(
+                "(",
+                ")"
+            )?: ((schemaToExampleMap.keys.first().pattern as List<*>).first() as Pattern).typeAlias
+                ?.removeSurrounding("(", ")")
+            return getObjectWithNestedKeys(
+                schemaToExampleMap.values.first(),
+                schemaToExampleMap.keys.first(),
+                resolver = resolver,
+                bodySchemaName?:""
+            )
+        }
+
+        private fun getSchemaToExampleMap(value: JSONObjectValue, resolver: Resolver) : Map<Pattern, Value> {
             var result: Map<Pattern, Value> = emptyMap()
             val patterns = resolver.newPatterns
             patterns.forEach { (_, pattern) ->
@@ -596,26 +634,48 @@ class ExamplesInteractiveServer(
 
         private fun getObjectWithNestedKeys(value: Value, pattern: Pattern, resolver: Resolver, name: String = ""): Map<String, Value> {
             if (value !is JSONObjectValue) return mapOf(name to value)
+
             if(pattern is DeferredPattern)
                 return getObjectWithNestedKeys(value, resolver.newPatterns[pattern.typeAlias]!!, resolver, pattern.typeName)
-            val res = value.jsonObject.flatMap { (key, value) ->
-                if((pattern.pattern as Map<*, *>).containsKey(key))
-                    getObjectWithNestedKeys(value, (pattern.pattern as Map<*,*>)[key] as Pattern, resolver, "$name.$key").entries
-                else getObjectWithNestedKeys(value, (pattern.pattern as Map<*,*>)["$key?"] as Pattern, resolver, "$name.$key").entries
+
+            return value.jsonObject.flatMap { (key, value) ->
+                val resolvedPattern: Pattern = when (pattern.pattern) {
+                    is List<*> -> {
+                        (pattern.pattern as List<*>).first() as Pattern
+                    }
+
+                    is SingletonMap<*,*> -> (pattern.pattern as SingletonMap<*,*>)[0] as Pattern
+                    is AnythingPattern -> return getObjectWithNestedKeys(value, AnythingPattern, resolver, "$name.$key")
+                    else -> pattern
+                }
+                if((resolvedPattern.pattern as Map<*, *>).containsKey(key))
+                    getObjectWithNestedKeys(value, (resolvedPattern.pattern as Map<*,*>)[key] as Pattern, resolver, "$name.$key").entries
+                else getObjectWithNestedKeys(value, (resolvedPattern.pattern as Map<*,*>)["$key?"] as Pattern, resolver, "$name.$key").entries
             }.associate { it.toPair() }
-            return res
         }
 
-        private fun flattenDictionaryValues(dictionary: Map<String, Value>) : Map<String, Any> {
+        private fun flattenDictionaryValues(dictionary: Map<String, Value>): Map<String, Any> {
             return dictionary.mapValues { (_, value) ->
-                when (value.displayableType()) {
-                    "number" -> (value as NumberValue).nativeValue
-                    "string" -> (value as StringValue).nativeValue
-                    "boolean" -> (value as BooleanValue).booleanValue
-                    else -> {
-                        value
-                    }
+                flattenValue(value)
+            }
+        }
+
+        private fun flattenObjectValue(value: JSONObjectValue): Any {
+            return value.jsonObject.mapValues { (_, objectValue) ->
+                flattenValue(objectValue)
+            }
+        }
+
+        private fun flattenValue(value: Value): Any {
+            return when (value.displayableType()) {
+                "number" -> (value as NumberValue).nativeValue
+                "string" -> (value as StringValue).nativeValue
+                "boolean" -> (value as BooleanValue).booleanValue
+                "json object" -> flattenObjectValue(value as JSONObjectValue)
+                "json array" -> (value as ListValue).list.map {
+                    flattenValue(it)
                 }
+                else -> value.displayableValue() // Fallback for other cases
             }
         }
 

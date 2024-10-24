@@ -6,6 +6,7 @@ import io.specmatic.core.pattern.JSONObjectPattern
 import io.specmatic.core.pattern.ListPattern
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.resolvedHop
+import io.specmatic.core.pattern.withoutOptionality
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
@@ -71,7 +72,7 @@ object DiscriminatorBasedValueGenerator {
 
             // assuming there is a single key and that key has a discriminator value associated with it
             val patternWithDiscriminator = resolvedEventPattern.pattern.entries.first().value
-            val patternWithDiscriminatorKey = resolvedEventPattern.pattern.entries.first().key
+            val patternWithDiscriminatorKey = withoutOptionality(resolvedEventPattern.pattern.entries.first().key)
 
             val discriminatorBasedValues = generateDiscriminatorBasedValues(
                 updatedResolver,

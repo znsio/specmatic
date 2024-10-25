@@ -149,10 +149,18 @@ data class Feature(
         }
     }
 
-    fun generateDiscriminatorBasedRequestResponseList(scenario: Scenario): List<DiscriminatorBasedRequestResponse> {
+    fun generateDiscriminatorBasedRequestResponseList(
+        scenario: Scenario,
+        allowOnlyMandatoryKeysInJSONObject: Boolean = false
+    ): List<DiscriminatorBasedRequestResponse> {
         try {
-            val requests = scenario.generateHttpRequestV2()
-            val responses = scenario.generateHttpResponseV2(serverState)
+            val requests = scenario.generateHttpRequestV2(
+                allowOnlyMandatoryKeysInJSONObject = allowOnlyMandatoryKeysInJSONObject
+            )
+            val responses = scenario.generateHttpResponseV2(
+                serverState,
+                allowOnlyMandatoryKeysInJSONObject = allowOnlyMandatoryKeysInJSONObject
+            )
 
             val discriminatorBasedRequestResponseList = if (requests.size > responses.size) {
                 requests.map { (requestDiscriminator, request) ->

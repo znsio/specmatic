@@ -44,7 +44,8 @@ class ExamplesInteractiveServer(
     private val filterNotName: String,
     private val filter: List<String>,
     private val filterNot: List<String>,
-    externalDictionaryFile: File? = null
+    externalDictionaryFile: File? = null,
+    private val allowOnlyMandatoryKeysInJSONObject: Boolean
 ) : Closeable {
     private var contractFileFromRequest: File? = null
 
@@ -110,6 +111,7 @@ class ExamplesInteractiveServer(
                             request.path,
                             request.responseStatusCode,
                             request.contentType,
+                            allowOnlyMandatoryKeysInJSONObject
                         )
 
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse.from(generatedExample))
@@ -420,6 +422,7 @@ class ExamplesInteractiveServer(
             path: String,
             responseStatusCode: Int,
             contentType: String? = null,
+            allowOnlyMandatoryKeysInJSONObject: Boolean
         ): List<ExamplePathInfo> {
             val feature = parseContractFileToFeature(contractFile)
             val scenario: Scenario? = feature.scenarios.firstOrNull {
@@ -433,7 +436,7 @@ class ExamplesInteractiveServer(
 
             return getExistingExampleFiles(scenario, examples).map {
                 ExamplePathInfo(it.first.absolutePath, false)
-            }.plus(generateExampleFiles(contractFile, feature, scenario))
+            }.plus(generateExampleFiles(contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject))
         }
 
         data class ExamplePathInfo(val path: String, val created: Boolean)
@@ -464,12 +467,16 @@ class ExamplesInteractiveServer(
             contractFile: File,
             feature: Feature,
             scenario: Scenario,
+            allowOnlyMandatoryKeysInJSONObject: Boolean
         ): List<ExamplePathInfo> {
             val examplesDir = getExamplesDirPath(contractFile)
             if(!examplesDir.exists()) examplesDir.mkdirs()
 
             val discriminatorBasedRequestResponses = feature
-                .generateDiscriminatorBasedRequestResponseList(scenario).map {
+                .generateDiscriminatorBasedRequestResponseList(
+                    scenario,
+                    allowOnlyMandatoryKeysInJSONObject = allowOnlyMandatoryKeysInJSONObject
+                ).map {
                     it.copy(response = it.response.cleanup())
                 }
 

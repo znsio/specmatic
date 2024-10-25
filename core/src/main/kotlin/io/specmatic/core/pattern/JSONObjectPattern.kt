@@ -275,6 +275,12 @@ data class JSONObjectPattern(
     }
 
     override fun generate(resolver: Resolver): JSONObjectValue {
+        val pattern = if (resolver.allowOnlyMandatoryKeysInJsonObject) {
+            getPatternWithOmittedOptionalFields(this.pattern)
+        } else {
+            this.pattern
+        }
+
         return JSONObjectValue(
             generate(
                 selectPropertiesWithinMaxAndMin(pattern, minProperties, maxProperties),
@@ -282,6 +288,18 @@ data class JSONObjectPattern(
                 typeAlias
             )
         )
+    }
+
+    private fun getPatternWithOmittedOptionalFields(pattern: Map<String, Pattern>): Map<String, Pattern> {
+        return pattern.filterKeys { it.endsWith("?").not() }.map {
+            if(it.value !is JSONObjectPattern) {
+                return@map it.toPair()
+            }
+            val childJSONObjectPattern = it.value as JSONObjectPattern
+            it.key to childJSONObjectPattern.copy(
+                pattern = getPatternWithOmittedOptionalFields(childJSONObjectPattern.pattern)
+            )
+        }.toMap()
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> =

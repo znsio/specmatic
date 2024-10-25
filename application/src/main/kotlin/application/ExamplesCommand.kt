@@ -366,6 +366,14 @@ For example:
         @Option(names = ["--testBaseURL"], description = ["The baseURL of system to test"], required = false)
         var testBaseURL: String? = null
 
+        @Option(
+            names = ["--allow-only-mandatory-keys-in-json"],
+            description = ["Allow only mandatory keys in the json request and response objects"],
+            required = false
+        )
+        var allowOnlyMandatoryKeysInJSONObject: Boolean = false
+
+
         var server: ExamplesInteractiveServer? = null
 
         override fun call() {
@@ -375,7 +383,18 @@ For example:
                 if (contractFile != null && !contractFile!!.exists())
                     exitWithMessage("Could not find file ${contractFile!!.path}")
 
-                server = ExamplesInteractiveServer("0.0.0.0", 9001, testBaseURL, contractFile, filterName, filterNotName, filter, filterNot, dictFile)
+                server = ExamplesInteractiveServer(
+                    "0.0.0.0",
+                    9001,
+                    testBaseURL,
+                    contractFile,
+                    filterName,
+                    filterNotName,
+                    filter,
+                    filterNot,
+                    dictFile,
+                    allowOnlyMandatoryKeysInJSONObject
+                )
                 addShutdownHook()
 
                 consoleLog(StringLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop."))

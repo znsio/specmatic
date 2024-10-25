@@ -15,6 +15,8 @@ import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
+import io.specmatic.core.discriminator.DiscriminatorBasedItem
+import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.*
 import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.headers.Header
@@ -142,6 +144,44 @@ data class Feature(
     fun lookupResponse(scenario: Scenario): HttpResponse {
         try {
             return scenario.generateHttpResponse(serverState)
+        } finally {
+            serverState = emptyMap()
+        }
+    }
+
+    fun generateDiscriminatorBasedRequestResponseList(scenario: Scenario): List<DiscriminatorBasedRequestResponse> {
+        try {
+            val requests = scenario.generateHttpRequestV2()
+            val responses = scenario.generateHttpResponseV2(serverState)
+
+            val discriminatorBasedRequestResponseList = if (requests.size > responses.size) {
+                requests.map { (requestDiscriminator, request) ->
+                    val (responseDiscriminator, response) = if (responses.containsDiscriminatorValueAs(requestDiscriminator.discriminatorValue))
+                        responses.getDiscriminatorItemWith(requestDiscriminator.discriminatorValue)
+                    else
+                        responses.first()
+                    DiscriminatorBasedRequestResponse(
+                        request,
+                        response,
+                        requestDiscriminator,
+                        responseDiscriminator
+                    )
+                }
+            } else {
+                responses.map { (responseDiscriminator, response) ->
+                    val (requestDiscriminator, request) = if (requests.containsDiscriminatorValueAs(responseDiscriminator.discriminatorValue))
+                        requests.getDiscriminatorItemWith(responseDiscriminator.discriminatorValue)
+                    else requests.first()
+                    DiscriminatorBasedRequestResponse(
+                        request,
+                        response,
+                        responseDiscriminator,
+                        requestDiscriminator
+                    )
+                }
+            }
+
+            return discriminatorBasedRequestResponseList
         } finally {
             serverState = emptyMap()
         }
@@ -1612,6 +1652,19 @@ data class Feature(
             throw ContractException(errors.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))
     }
 
+    private fun<T> List<DiscriminatorBasedItem<T>>.containsDiscriminatorValueAs(
+        discriminatorValue: String
+    ): Boolean {
+        return this.any { it.discriminatorValue == discriminatorValue }
+    }
+
+    private fun <T> List<DiscriminatorBasedItem<T>>.getDiscriminatorItemWith(
+        discriminatorValue: String
+    ): DiscriminatorBasedItem<T> {
+        return this.first { it.discriminatorValue == discriminatorValue }
+    }
+
+
     companion object {
 
         private fun getTestsDirectory(contractFile: File): File? {
@@ -2191,3 +2244,10 @@ fun similarURLPath(baseScenario: Scenario, newScenario: Scenario): Boolean {
 fun isInteger(
     base: URLPathSegmentPattern
 ) = base.pattern is ExactValuePattern && base.pattern.pattern.toStringLiteral().toIntOrNull() != null
+
+data class DiscriminatorBasedRequestResponse(
+    val request: HttpRequest,
+    val response: HttpResponse,
+    val requestDiscriminator: DiscriminatorMetadata,
+    val responseDiscriminator: DiscriminatorMetadata
+)

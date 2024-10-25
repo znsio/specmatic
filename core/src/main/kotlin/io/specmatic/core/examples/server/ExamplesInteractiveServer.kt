@@ -13,7 +13,11 @@ import io.ktor.server.routing.*
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
+import io.specmatic.core.discriminator.DiscriminatorExampleInjector
+import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
+import io.specmatic.core.filters.ScenarioMetadataFilter
+import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
@@ -38,6 +42,8 @@ class ExamplesInteractiveServer(
     private val inputContractFile: File? = null,
     private val filterName: String,
     private val filterNotName: String,
+    private val filter: List<String>,
+    private val filterNot: List<String>,
     externalDictionaryFile: File? = null
 ) : Closeable {
     private var contractFileFromRequest: File? = null
@@ -256,7 +262,7 @@ class ExamplesInteractiveServer(
     }
 
     private fun getExamplePageHtmlContent(contractFile: File, hostPort: String): String {
-        val feature = ScenarioFilter(filterName, filterNotName).filter(parseContractFileToFeature(contractFile))
+        val feature = ScenarioFilter(filterName, filterNotName, filter, filterNot).filter(parseContractFileToFeature(contractFile))
 
         val endpoints = ExamplesView.getEndpoints(feature, getExamplesDirPath(contractFile))
         val tableRows = endpoints.toTableRows()
@@ -281,7 +287,10 @@ class ExamplesInteractiveServer(
         }
     }
 
-    class ScenarioFilter(filterName: String = "", filterNotName: String = "") {
+    class ScenarioFilter(filterName: String = "", filterNotName: String = "", filterClauses: List<String> = emptyList(), private val filterNotClauses: List<String> = emptyList()) {
+        private val filter = filterClauses.joinToString(";")
+        private val filterNot = filterNotClauses.joinToString(";")
+
         private val filterNameTokens = if(filterName.isNotBlank()) {
             filterName.trim().split(",").map { it.trim() }
         } else emptyList()
@@ -291,7 +300,7 @@ class ExamplesInteractiveServer(
         } else emptyList()
 
         fun filter(feature: Feature): Feature {
-            val scenarios = feature.scenarios.filter { scenario ->
+            val scenariosFilteredByOlderSyntax = feature.scenarios.filter { scenario ->
                 if(filterNameTokens.isNotEmpty()) {
                     filterNameTokens.any { name -> scenario.testDescription().contains(name) }
                 } else true
@@ -301,7 +310,15 @@ class ExamplesInteractiveServer(
                 } else true
             }
 
-            return feature.copy(scenarios = scenarios)
+            val scenarioInclusionFilter = ScenarioMetadataFilter.from(filter)
+            val scenarioExclusionFilter = ScenarioMetadataFilter.from(filterNot)
+
+            val filteredScenarios = filterUsing(scenariosFilteredByOlderSyntax.asSequence(), scenarioInclusionFilter, scenarioExclusionFilter) {
+                it.toScenarioMetadata()
+            }.toList()
+
+
+            return feature.copy(scenarios = filteredScenarios)
         }
     }
 
@@ -416,7 +433,7 @@ class ExamplesInteractiveServer(
 
             return getExistingExampleFiles(scenario, examples).map {
                 ExamplePathInfo(it.first.absolutePath, false)
-            }.plus(generateExampleFile(contractFile, feature, scenario))
+            }.plus(generateExampleFiles(contractFile, feature, scenario))
         }
 
         data class ExamplePathInfo(val path: String, val created: Boolean)
@@ -440,6 +457,41 @@ class ExamplesInteractiveServer(
             println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
             file.writeText(stubJSON.toStringLiteral())
             return ExamplePathInfo(file.absolutePath, true)
+        }
+
+
+        private fun generateExampleFiles(
+            contractFile: File,
+            feature: Feature,
+            scenario: Scenario,
+        ): List<ExamplePathInfo> {
+            val examplesDir = getExamplesDirPath(contractFile)
+            if(!examplesDir.exists()) examplesDir.mkdirs()
+
+            val discriminatorBasedRequestResponses = feature
+                .generateDiscriminatorBasedRequestResponseList(scenario).map {
+                    it.copy(response = it.response.cleanup())
+                }
+
+            return discriminatorBasedRequestResponses.map { (request, response, requestDiscriminator, responseDiscriminator) ->
+                val scenarioStub = ScenarioStub(request, response)
+                val jsonWithDiscriminator = DiscriminatorExampleInjector(
+                    stubJSON = scenarioStub.toJSON(),
+                    requestDiscriminator = requestDiscriminator,
+                    responseDiscriminator = responseDiscriminator
+                ).getExampleWithDiscriminator()
+
+                val uniqueNameForApiOperation = getExampleFileNameBasedOn(
+                    requestDiscriminator,
+                    responseDiscriminator,
+                    scenarioStub
+                )
+
+                val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
+                println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
+                file.writeText(jsonWithDiscriminator.toStringLiteral())
+                ExamplePathInfo(file.absolutePath, true)
+            }
         }
 
         fun validateSingleExample(contractFile: File, exampleFile: File): Result {
@@ -555,6 +607,21 @@ class ExamplesInteractiveServer(
             return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
         }
 
+        private fun getExampleFileNameBasedOn(
+            requestDiscriminator: DiscriminatorMetadata,
+            responseDiscriminator: DiscriminatorMetadata,
+            scenarioStub: ScenarioStub
+        ): String {
+            val discriminatorValue = requestDiscriminator.discriminatorValue.ifBlank {
+                responseDiscriminator.discriminatorValue
+            }
+            val discriminatorName = if (discriminatorValue.isNotEmpty()) "${discriminatorValue}_" else ""
+            return discriminatorName + uniqueNameForApiOperation(
+                scenarioStub.request,
+                "",
+                scenarioStub.response.status
+            )
+        }
     }
 }
 

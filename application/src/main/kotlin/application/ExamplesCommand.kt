@@ -6,13 +6,11 @@ import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingleExample
 import io.specmatic.core.examples.server.loadExternalExamples
+import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.log.*
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.utilities.Flags
-import io.specmatic.core.utilities.capitalizeFirstChar
-import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.utilities.exitWithMessage
+import io.specmatic.core.utilities.*
 import io.specmatic.mock.ScenarioStub
 import picocli.CommandLine.*
 import java.io.File
@@ -56,6 +54,48 @@ class ExamplesCommand : Callable<Int> {
     @Option(names = ["--dictionary"], description = ["External Dictionary File Path, defaults to dictionary.json"])
     var dictionaryFile: File? = null
 
+    @Option(
+        names= ["--filter"],
+        description = [
+            """
+Filter tests matching the specified filtering criteria
+
+You can filter tests based on the following keys:
+- `METHOD`: HTTP methods (e.g., GET, POST)
+- `PATH`: Request paths (e.g., /users, /product)
+- `STATUS`: HTTP response status codes (e.g., 200, 400)
+- `HEADERS`: Request headers (e.g., Accept, X-Request-ID)
+- `QUERY-PARAM`: Query parameters (e.g., status, productId)
+- `EXAMPLE-NAME`: Example name (e.g., create-product, active-status)
+
+To specify multiple values for the same filter, separate them with commas. 
+For example, to filter by HTTP methods: 
+--filter="METHOD=GET,POST"
+
+You can supply multiple filters as well. 
+For example:
+--filter="METHOD=GET,POST" --filter="PATH=/users"
+           """
+        ],
+        required = false
+    )
+    var filter: List<String> = emptyList()
+
+    @Option(
+        names= ["--filter-not"],
+        description = [
+            """
+Filter tests not matching the specified criteria
+
+This option supports the same filtering keys and syntax as the --filter option.
+For example:
+--filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
+           """
+        ],
+        required = false
+    )
+    var filterNot: List<String> = emptyList()
+
     override fun call(): Int {
         if (contractFile == null) {
             println("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
@@ -75,7 +115,7 @@ class ExamplesCommand : Callable<Int> {
 
             ExamplesInteractiveServer.generate(
                 contractFile!!,
-                ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName),
+                ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter, filterNot),
                 extensive,
             )
         } catch (e: Throwable) {
@@ -92,6 +132,48 @@ class ExamplesCommand : Callable<Int> {
         description = ["Validate the examples"]
     )
     class Validate : Callable<Int> {
+        @Option(
+            names= ["--filter"],
+            description = [
+                """
+Filter tests matching the specified filtering criteria
+
+You can filter tests based on the following keys:
+- `METHOD`: HTTP methods (e.g., GET, POST)
+- `PATH`: Request paths (e.g., /users, /product)
+- `STATUS`: HTTP response status codes (e.g., 200, 400)
+- `HEADERS`: Request headers (e.g., Accept, X-Request-ID)
+- `QUERY-PARAM`: Query parameters (e.g., status, productId)
+- `EXAMPLE-NAME`: Example name (e.g., create-product, active-status)
+
+To specify multiple values for the same filter, separate them with commas. 
+For example, to filter by HTTP methods: 
+--filter="METHOD=GET,POST"
+
+You can supply multiple filters as well. 
+For example:
+--filter="METHOD=GET,POST" --filter="PATH=/users"
+           """
+            ],
+            required = false
+        )
+        var filter: List<String> = emptyList()
+
+        @Option(
+            names= ["--filter-not"],
+            description = [
+                """
+Filter tests not matching the specified criteria
+
+This option supports the same filtering keys and syntax as the --filter option.
+For example:
+--filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
+           """
+            ],
+            required = false
+        )
+        var filterNot: List<String> = emptyList()
+
         @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
         lateinit var contractFile: File
 
@@ -134,7 +216,7 @@ class ExamplesCommand : Callable<Int> {
                     return 1
                 }
             } else {
-                val scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName)
+                val scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter, filterNot)
 
                 val (validateInline, validateExternal) = if(!Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") && !Flags.getBooleanValue("IGNORE_INLINE_EXAMPLES")) {
                     true to true
@@ -216,6 +298,48 @@ class ExamplesCommand : Callable<Int> {
         description = ["Run the example generation interactively"]
     )
     class Interactive : Callable<Unit> {
+        @Option(
+            names= ["--filter"],
+            description = [
+                """
+Filter tests matching the specified filtering criteria
+
+You can filter tests based on the following keys:
+- `METHOD`: HTTP methods (e.g., GET, POST)
+- `PATH`: Request paths (e.g., /users, /product)
+- `STATUS`: HTTP response status codes (e.g., 200, 400)
+- `HEADERS`: Request headers (e.g., Accept, X-Request-ID)
+- `QUERY-PARAM`: Query parameters (e.g., status, productId)
+- `EXAMPLE-NAME`: Example name (e.g., create-product, active-status)
+
+To specify multiple values for the same filter, separate them with commas. 
+For example, to filter by HTTP methods: 
+--filter="METHOD=GET,POST"
+
+You can supply multiple filters as well. 
+For example:
+--filter="METHOD=GET,POST" --filter="PATH=/users"
+           """
+            ],
+            required = false
+        )
+        var filter: List<String> = emptyList()
+
+        @Option(
+            names= ["--filter-not"],
+            description = [
+                """
+Filter tests not matching the specified criteria
+
+This option supports the same filtering keys and syntax as the --filter option.
+For example:
+--filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
+           """
+            ],
+            required = false
+        )
+        var filterNot: List<String> = emptyList()
+
         @Option(names = ["--contract-file"], description = ["Contract file path"], required = false)
         var contractFile: File? = null
 
@@ -251,7 +375,7 @@ class ExamplesCommand : Callable<Int> {
                 if (contractFile != null && !contractFile!!.exists())
                     exitWithMessage("Could not find file ${contractFile!!.path}")
 
-                server = ExamplesInteractiveServer("0.0.0.0", 9001, testBaseURL, contractFile, filterName, filterNotName, dictFile)
+                server = ExamplesInteractiveServer("0.0.0.0", 9001, testBaseURL, contractFile, filterName, filterNotName, filter, filterNot, dictFile)
                 addShutdownHook()
 
                 consoleLog(StringLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop."))

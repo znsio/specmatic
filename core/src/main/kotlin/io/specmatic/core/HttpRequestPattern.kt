@@ -7,6 +7,9 @@ import io.specmatic.core.Result.Success
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
 import io.ktor.util.*
+import io.specmatic.core.discriminator.DiscriminatorBasedItem
+import io.specmatic.core.discriminator.DiscriminatorBasedValueGenerator
+import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
 import io.specmatic.core.value.JSONObjectValue
@@ -439,70 +442,109 @@ data class HttpRequestPattern(
     }
 
     fun generate(resolver: Resolver): HttpRequest {
-        var newRequest = HttpRequest()
-
         return attempt(breadCrumb = "REQUEST") {
             if (method == null) {
                 throw missingParam("HTTP method")
             }
-            if (httpPathPattern == null) {
-                throw missingParam("URL path")
-            }
-            newRequest = newRequest.updateMethod(method)
-            attempt(breadCrumb = "URL") {
-                newRequest = newRequest.updatePath(httpPathPattern.generate(resolver))
-                val queryParams = httpQueryParamPattern.generate(resolver)
-                for (queryParam in queryParams) {
-                    newRequest = newRequest.updateQueryParam(queryParam.first, queryParam.second)
-                }
-            }
-            val headers = headersPattern.generate(resolver)
+            HttpRequest()
+                .updateMethod(method)
+                .generateAndUpdateURL(resolver)
+                .generateAndUpdateBody(resolver, body)
+                .generateAndUpdateHeaders(resolver)
+                .generateAndUpdateFormFieldsValues(resolver)
+                .generateAndUpdateSecuritySchemes(resolver)
+                .generateAndUpdateMultiPartData(resolver)
+        }
+    }
 
-            val body = body
-            attempt(breadCrumb = "BODY") {
-                resolver.withCyclePrevention(body) {cyclePreventedResolver ->
-                    body.generate(cyclePreventedResolver).let { value ->
-                        newRequest = newRequest.updateBody(value)
-                    }
-                }
-            }
+    fun generateV2(resolver: Resolver): List<DiscriminatorBasedItem<HttpRequest>> {
+        return attempt(breadCrumb = "REQUEST") {
+            val baseRequest = generate(resolver)
 
-            newRequest = newRequest.copy(headers = headers)
-
-            val formFieldsValue = attempt(breadCrumb = "FORM FIELDS") {
-                formFieldsPattern.mapValues { (key, pattern) ->
-                    attempt(breadCrumb = key) {
-                        resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
-                            cyclePreventedResolver.generate(key, pattern)
-                        }.toString()
-                    }
-                }
-            }
-            newRequest = when (formFieldsValue.size) {
-                0 -> newRequest
-                else -> newRequest.copy(
-                    formFields = formFieldsValue,
-                    headers = newRequest.headers.plus(CONTENT_TYPE to "application/x-www-form-urlencoded")
-                )
-            }
-
-            newRequest = securitySchemes.fold(newRequest) { request, securityScheme ->
-                securityScheme.addTo(request, resolver)
-            }
-
-            val multipartData = attempt(breadCrumb = "MULTIPART DATA") {
-                multiPartFormDataPattern.mapIndexed { index, multiPartFormDataPattern ->
-                    attempt(breadCrumb = "[$index]") { multiPartFormDataPattern.generate(resolver) }
-                }
-            }
-            when (multipartData.size) {
-                0 -> newRequest
-                else -> newRequest.copy(
-                    multiPartFormData = multipartData,
-                    headers = newRequest.headers.plus(CONTENT_TYPE to "multipart/form-data")
+            DiscriminatorBasedValueGenerator.generateDiscriminatorBasedValues(
+                resolver,
+                body
+            ).map {
+                DiscriminatorBasedItem(
+                    discriminator = DiscriminatorMetadata(
+                        discriminatorProperty = it.discriminatorProperty,
+                        discriminatorValue = it.discriminatorValue,
+                    ),
+                    value = baseRequest.updateBody(it.value)
                 )
             }
         }
+    }
+
+    private fun HttpRequest.generateAndUpdatePath(resolver: Resolver): HttpRequest {
+        if (httpPathPattern == null) {
+            throw missingParam("URL path")
+        }
+        return this.updatePath(httpPathPattern.generate(resolver))
+    }
+
+    private fun HttpRequest.generateAndUpdateQueryParam(resolver: Resolver): HttpRequest {
+        val queryParams = httpQueryParamPattern.generate(resolver)
+        return queryParams.fold(this) { request, queryParam ->
+            request.updateQueryParam(queryParam.first, queryParam.second)
+        }
+    }
+
+    private fun HttpRequest.generateAndUpdateURL(resolver: Resolver): HttpRequest {
+        return attempt(breadCrumb = "URL") {
+            this.generateAndUpdatePath(resolver)
+                .generateAndUpdateQueryParam(resolver)
+        }
+    }
+
+    private fun HttpRequest.generateAndUpdateBody(resolver: Resolver, body: Pattern): HttpRequest {
+        return attempt(breadCrumb = "BODY") {
+            resolver.withCyclePrevention(body) {cyclePreventedResolver ->
+                body.generate(cyclePreventedResolver).let { value ->
+                    this.updateBody(value)
+                }
+            }
+        }
+    }
+
+    private fun HttpRequest.generateAndUpdateHeaders(resolver: Resolver): HttpRequest {
+        return this.copy(headers = headersPattern.generate(resolver))
+    }
+
+    private fun HttpRequest.generateAndUpdateFormFieldsValues(resolver: Resolver): HttpRequest {
+        val formFieldsValue = attempt(breadCrumb = "FORM FIELDS") {
+            formFieldsPattern.mapValues { (key, pattern) ->
+                attempt(breadCrumb = key) {
+                    resolver.withCyclePrevention(pattern) { cyclePreventedResolver ->
+                        cyclePreventedResolver.generate(key, pattern)
+                    }.toString()
+                }
+            }
+        }
+        if(formFieldsValue.isEmpty()) return this
+        return this.copy(
+            formFields = formFieldsValue,
+            headers = this.headers.plus(CONTENT_TYPE to "application/x-www-form-urlencoded")
+        )
+    }
+
+    private fun HttpRequest.generateAndUpdateSecuritySchemes(resolver: Resolver): HttpRequest {
+        return securitySchemes.fold(this) { request, securityScheme ->
+            securityScheme.addTo(request, resolver)
+        }
+    }
+
+    private fun HttpRequest.generateAndUpdateMultiPartData(resolver: Resolver): HttpRequest {
+        val multipartData = attempt(breadCrumb = "MULTIPART DATA") {
+            multiPartFormDataPattern.mapIndexed { index, multiPartFormDataPattern ->
+                attempt(breadCrumb = "[$index]") { multiPartFormDataPattern.generate(resolver) }
+            }
+        }
+        if(multipartData.isEmpty()) return this
+        return this.copy(
+            multiPartFormData = multipartData,
+            headers = this.headers.plus(CONTENT_TYPE to "multipart/form-data")
+        )
     }
 
     fun newBasedOn(row: Row, initialResolver: Resolver, status: Int = 0): Sequence<ReturnValue<HttpRequestPattern>> {

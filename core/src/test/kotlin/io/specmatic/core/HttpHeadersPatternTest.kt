@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.ktor.util.reflect.*
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
@@ -422,4 +424,126 @@ internal class HttpHeadersPatternTest {
         val headersPattern = HttpHeadersPattern(mapOf("X-Data" to NumberPattern()), contentType = "application/json")
         assertThat(headersPattern.matches(mapOf("X-Data" to "10", "Content-Type" to "text/plain"), Resolver())).isInstanceOf(Result.Failure::class.java)
     }
+
+    @Nested
+    inner class NewBasedOnTests {
+        @Test
+        fun `newBasedOn should include additional headers from example`() {
+            val headers = HttpHeadersPattern(mapOf("X-Existing" to StringPattern()))
+            val row = Row(
+                requestExample = HttpRequest(headers = mapOf(
+                    "X-Existing" to "existingValue",
+                    "X-New" to "newValue"
+                ))
+            )
+
+            val newHeaders = headers.newBasedOn(row, Resolver()).toList()
+
+            assertThat(newHeaders).hasSize(1)
+            val newHeader = newHeaders[0].value
+            assertThat(newHeader.pattern).containsKeys("X-Existing", "X-New")
+        }
+
+        @Test
+        fun `newBasedOn should handle multiple additional headers`() {
+            val headers = HttpHeadersPattern(mapOf("X-Existing" to StringPattern()))
+            val row = Row(
+                requestExample = HttpRequest(headers = mapOf(
+                    "X-Existing" to "existingValue",
+                    "X-New1" to "newValue1",
+                    "X-New2" to "newValue2"
+                ))
+            )
+
+            val newHeaders = headers.newBasedOn(row, Resolver()).toList()
+
+            assertThat(newHeaders).hasSize(1)
+            val newHeader = newHeaders[0].value
+            assertThat(newHeader.pattern).containsKeys("X-Existing", "X-New1", "X-New2")
+        }
+
+        @Test
+        fun `newBasedOn should not add additional headers when no new headers in example`() {
+            val headers = HttpHeadersPattern(mapOf("X-Existing" to StringPattern()))
+            val row = Row(
+                requestExample = HttpRequest(headers = mapOf(
+                    "X-Existing" to "existingValue"
+                ))
+            )
+
+            val newHeaders = headers.newBasedOn(row, Resolver()).toList()
+
+            assertThat(newHeaders).hasSize(1)
+            val newHeader = newHeaders[0].value
+            assertThat(newHeader.pattern).containsOnlyKeys("X-Existing")
+        }
+
+        @Test
+        fun `newBasedOn should handle row without requestExample`() {
+            val headers = HttpHeadersPattern(mapOf("X-Existing" to StringPattern()))
+            val row = Row()
+
+            val newHeaders = headers.newBasedOn(row, Resolver()).toList()
+
+            assertThat(newHeaders).hasSize(1)
+            val newHeader = newHeaders[0].value
+            assertThat(newHeader.pattern).containsOnlyKeys("X-Existing")
+            assertThat(newHeader.pattern["X-Existing"]).isInstanceOf(StringPattern::class.java)
+        }
+    }
+
+    @Test
+    fun `test fix for, +ve post scenario duplication, due to additional headers, for content-type`() {
+        var positiveCount = 0
+        val feature = OpenApiSpecification.fromFile("src/test/resources/openapi/specs_for_additional_headers_in_examples/additional_headers_test_content_type.yaml").toFeature().enableGenerativeTesting()
+        feature.executeTests(object : TestExecutor{
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
+                return HttpResponse.OK
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                if(!scenario.isNegative) positiveCount++
+                println(scenario.testDescription())
+            }
+        })
+        assertThat(positiveCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `test fix for, +ve post scenario duplication, due to additional headers, for security headers`() {
+        var positiveCount = 0
+        var securityHeadersFound = false
+
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/specs_for_additional_headers_in_examples/additional_headers_test_security_scheme.yaml")
+            .toFeature()
+            .enableGenerativeTesting()
+
+        feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
+
+                // Check for automatically added security headers
+                val hasAuthHeader = request.headers.any {
+                    it.key.equals("Authorization", ignoreCase = true)
+                }
+
+                if (hasAuthHeader) {
+                    securityHeadersFound = true
+                }
+
+                return HttpResponse.OK
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                if (!scenario.isNegative) positiveCount++
+                println(scenario.testDescription())
+            }
+        })
+
+        assertThat(positiveCount).isEqualTo(1)
+        assertThat(securityHeadersFound).isTrue()
+    }
 }
+

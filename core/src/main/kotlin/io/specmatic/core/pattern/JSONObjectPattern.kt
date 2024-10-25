@@ -276,7 +276,7 @@ data class JSONObjectPattern(
 
     override fun generate(resolver: Resolver): JSONObjectValue {
         val pattern = if (resolver.allowOnlyMandatoryKeysInJsonObject) {
-            getPatternWithOmittedOptionalFields(this.pattern)
+            getPatternWithOmittedOptionalFields(this.pattern, resolver)
         } else {
             this.pattern
         }
@@ -290,15 +290,19 @@ data class JSONObjectPattern(
         )
     }
 
-    private fun getPatternWithOmittedOptionalFields(pattern: Map<String, Pattern>): Map<String, Pattern> {
-        return pattern.filterKeys { it.endsWith("?").not() }.map {
-            if(it.value !is JSONObjectPattern) {
-                return@map it.toPair()
+    private fun getPatternWithOmittedOptionalFields(pattern: Map<String, Pattern>, resolver: Resolver): Map<String, Pattern> {
+        return pattern.filterKeys { it.endsWith("?").not() }.map { entry ->
+            val (key, valuePattern) = entry
+
+            resolvedHop(valuePattern, resolver).let { resolvedValuePattern ->
+                if (resolvedValuePattern !is JSONObjectPattern) {
+                    return@map entry.toPair()
+                }
+
+                key to resolvedValuePattern.copy(
+                    pattern = getPatternWithOmittedOptionalFields(resolvedValuePattern.pattern, resolver)
+                )
             }
-            val childJSONObjectPattern = it.value as JSONObjectPattern
-            it.key to childJSONObjectPattern.copy(
-                pattern = getPatternWithOmittedOptionalFields(childJSONObjectPattern.pattern)
-            )
         }.toMap()
     }
 

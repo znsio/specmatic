@@ -367,8 +367,8 @@ For example:
         var testBaseURL: String? = null
 
         @Option(
-            names = ["--allow-only-mandatory-keys-in-json"],
-            description = ["Allow only mandatory keys in the json request and response objects"],
+            names = ["--allow-only-mandatory-keys-in-payload"],
+            description = ["Generate examples with only mandatory keys in the json request and response payloads"],
             required = false
         )
         var allowOnlyMandatoryKeysInJSONObject: Boolean = false

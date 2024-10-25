@@ -1,10 +1,12 @@
 package io.specmatic.mock
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.core.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
 import java.io.File
@@ -16,6 +18,11 @@ fun loadDictionary(fileName: String): Map<String,Value> {
         throw ContractException("Error loading $fileName: ${exceptionCauseMessage(e)}")
     }
 }
+
+// move elsewhere
+data class AdditionalExampleParams(
+    val headers: Map<String, String>
+)
 
 data class ScenarioStub(
     val request: HttpRequest = HttpRequest(),
@@ -34,6 +41,28 @@ data class ScenarioStub(
         mockInteraction[MOCK_HTTP_RESPONSE] = response.toJSON()
 
         return JSONObjectValue(mockInteraction)
+    }
+
+    fun getRequestWithAdditionalParamsIfAny(): HttpRequest {
+        try {
+            val additionalExampleParamsFilePath = readEnvVarOrProperty(
+                "ADDITIONAL_EXAMPLE_PARAMS_FILE",
+                "ADDITIONAL_EXAMPLE_PARAMS_FILE"
+            )
+
+            if (additionalExampleParamsFilePath != null && File(additionalExampleParamsFilePath).exists()) {
+                val additionalExampleParams = ObjectMapper().readValue(
+                    File(additionalExampleParamsFilePath).readText(),
+                    Map::class.java
+                ) as Map<String, Any>
+                val additionalHeaders = (additionalExampleParams["headers"] ?: emptyMap<String, String>()) as Map<String, String>
+                val updatedHeaders = request.headers.plus(additionalHeaders)
+                return request.copy(headers = updatedHeaders)
+            }
+            return request
+        } catch (e: Exception) {
+            return request
+        }
     }
 
     fun findPatterns(input: String): Set<String> {

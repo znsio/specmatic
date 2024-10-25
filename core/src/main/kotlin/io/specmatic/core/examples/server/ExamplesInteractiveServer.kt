@@ -609,17 +609,19 @@ class ExamplesInteractiveServer(
 
         private fun getDictionaryForExample(body: Value, resolver: Resolver): Map<String, Value> {
             val schemaToExampleMap = getSchemaToExampleMap(body as JSONObjectValue, resolver)
-            val bodySchemaName = schemaToExampleMap.keys.first().typeAlias?.removeSurrounding(
-                "(",
-                ")"
-            )?: ((schemaToExampleMap.keys.first().pattern as List<*>).first() as Pattern).typeAlias
-                ?.removeSurrounding("(", ")")
-            return getObjectWithNestedKeys(
-                schemaToExampleMap.values.first(),
-                schemaToExampleMap.keys.first(),
-                resolver = resolver,
-                bodySchemaName?:""
-            )
+            if (schemaToExampleMap.isNotEmpty()) {
+                val bodySchemaName = schemaToExampleMap.keys.first().typeAlias?.removeSurrounding(
+                    "(",
+                    ")"
+                )?: ((schemaToExampleMap.keys.first().pattern as List<*>).first() as Pattern).typeAlias
+                    ?.removeSurrounding("(", ")")
+                return getObjectWithNestedKeys(
+                    schemaToExampleMap.values.first(),
+                    schemaToExampleMap.keys.first(),
+                    resolver = resolver,
+                    bodySchemaName?:""
+                )
+            } else return emptyMap()
         }
 
         private fun getSchemaToExampleMap(value: JSONObjectValue, resolver: Resolver) : Map<Pattern, Value> {

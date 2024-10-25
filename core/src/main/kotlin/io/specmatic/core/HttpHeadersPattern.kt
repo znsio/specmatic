@@ -224,8 +224,8 @@ data class HttpHeadersPattern(
     private fun extractFromExampleHeadersNotInSpec(specPattern : Map<String, Pattern>, row: Row): Map<String, Pattern> {
         val additionalHeadersPattern = if (row.requestExample != null) {
             row.requestExample.headers.keys
-                .filter { header -> !specPattern.containsKey(header) }
-                .filter { header -> header.lowercase() !in getHeadersToExcludeNotInExamples() }
+                .filter { exampleHeaderName -> !specPattern.containsKey(exampleHeaderName) && !specPattern.containsKey("${exampleHeaderName}?") }
+                .filter { exampleHeaderName -> exampleHeaderName.lowercase() !in getHeadersToExcludeNotInExamples() }
                 .associateWith { StringPattern() }
         } else {
             emptyMap()

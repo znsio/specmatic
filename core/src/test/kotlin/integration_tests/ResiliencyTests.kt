@@ -1166,7 +1166,8 @@ class GenerativeTests {
                     return HttpResponse.OK
                 }
 
-                override fun setServerState(serverState: Map<String, Value>) {
+                override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                    println(scenario.testDescription())
                 }
             })
         } finally {

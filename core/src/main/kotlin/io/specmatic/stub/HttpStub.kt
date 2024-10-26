@@ -21,13 +21,13 @@ import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheck
 import io.specmatic.core.utilities.*
 import io.specmatic.core.value.*
 import io.specmatic.mock.*
-import io.specmatic.stub.report.StubEndpoint
-import io.specmatic.stub.report.StubUsageReport
+import io.specmatic.stub.report.*
 import io.specmatic.test.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
@@ -594,10 +594,61 @@ class HttpStub(
             val json = Json {
                 encodeDefaults = false
             }
-            val reportJson = json.encodeToString(stubUsageReport.generate())
+            val generatedReport = stubUsageReport.generate()
+            var reportJson: String
+
+            val reportFile = File(JSON_REPORT_PATH).resolve(JSON_REPORT_FILE_NAME)
+            if (reportFile.exists()) {
+                try {
+                    val existingReport = Json.decodeFromString(reportFile.readText()) as StubUsageReportJson
+                    reportJson = json.encodeToString(appendUsageReport(generatedReport, existingReport))
+                } catch (exception: SerializationException) {
+                    logger.log("The existing report file is not a valid Stub Usage Report. ${exception.message}")
+                    reportJson = json.encodeToString(generatedReport)
+                }
+            } else
+                reportJson = json.encodeToString(generatedReport)
+
             saveJsonFile(reportJson, JSON_REPORT_PATH, JSON_REPORT_FILE_NAME)
         }
     }
+
+    private fun appendUsageReport(report1: StubUsageReportJson, report2: StubUsageReportJson): StubUsageReportJson {
+        val mergedStubUsage = mutableListOf<StubUsageReportRow>()
+
+        val allStubUsageRows = (report1.stubUsage + report2.stubUsage).groupBy {
+            Triple(it.type, it.repository, it.specification)
+        }
+
+        for ((_, rows) in allStubUsageRows) {
+            val mergedOperations = mutableListOf<StubUsageReportOperation>()
+
+            rows.flatMap { it.operations }.groupBy { op ->
+                Triple(op.path, op.method, op.responseCode)
+            }.forEach { (_, ops) ->
+                val combinedCount = ops.sumOf { it.count }
+                val sampleOp = ops.first()
+                mergedOperations += sampleOp.copy(count = combinedCount)
+            }
+
+            val firstRow = rows.first()
+            mergedStubUsage += StubUsageReportRow(
+                type = firstRow.type,
+                repository = firstRow.repository,
+                branch = firstRow.branch,
+                specification = firstRow.specification,
+                serviceType = firstRow.serviceType,
+                operations = mergedOperations
+            )
+        }
+
+        return StubUsageReportJson(
+            specmaticConfigPath = report1.specmaticConfigPath,
+            stubUsage = mergedStubUsage
+        )
+    }
+
+
 }
 
 class CouldNotParseRequest(innerException: Throwable) : Exception(exceptionCauseMessage(innerException))

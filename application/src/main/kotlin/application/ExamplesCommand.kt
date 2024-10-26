@@ -1,12 +1,13 @@
 package application
 
+import io.specmatic.core.Feature
 import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingleExample
+import io.specmatic.core.examples.server.implicitExternalExampleDirFrom
 import io.specmatic.core.examples.server.loadExternalExamples
-import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.log.*
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
@@ -16,6 +17,7 @@ import picocli.CommandLine.*
 import java.io.File
 import java.lang.Thread.sleep
 import java.util.concurrent.Callable
+import kotlin.system.exitProcess
 
 @Command(
     name = "examples",
@@ -174,11 +176,17 @@ For example:
         )
         var filterNot: List<String> = emptyList()
 
-        @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
-        lateinit var contractFile: File
+        @Option(names = ["--contract-file", "--spec-file"], description = ["Contract file path"], required = false)
+        var contractFile: File? = null
 
         @Option(names = ["--example-file"], description = ["Example file path"], required = false)
         val exampleFile: File? = null
+
+        @Option(names = ["--spec-dir"], description = ["Specs directory path"], required = false)
+        val specsDir: File? = null
+
+        @Option(names = ["--example-dir"], description = ["Examples directory path"], required = false)
+        val examplesDir: File? = null
 
         @Option(names = ["--debug"], description = ["Debug logs"])
         var verbose = false
@@ -198,6 +206,29 @@ For example:
         var filterNotName: String = ""
 
         override fun call(): Int {
+            if(contractFile != null && exampleFile != null) return validateExampleFile(contractFile!!, exampleFile)
+
+            if (contractFile != null && examplesDir != null) {
+                val (exitCode, validationResults) = validateExamplesDir(contractFile!!, examplesDir)
+
+                printValidationResult(validationResults, "Example directory")
+                if (exitCode == 1) return 1
+                if (validationResults.containsFailure()) return 1
+                return 0
+            }
+
+            if(contractFile != null) return validateImplicitExamplesFrom(contractFile!!)
+
+            if(specsDir != null && examplesDir != null) {
+                val exitCode = validateAllExamplesAssociatedToEachSpecIn(specsDir, examplesDir)
+                return exitCode
+            }
+
+            logger.log("No valid options provided.")
+            return 1
+        }
+
+        private fun validateExampleFile(contractFile: File, exampleFile: File): Int {
             if (!contractFile.exists()) {
                 logger.log("Could not find file ${contractFile.path}")
                 return 1
@@ -205,74 +236,124 @@ For example:
 
             configureLogger(this.verbose)
 
-            if (exampleFile != null) {
-                try {
-                    validateSingleExample(contractFile, exampleFile).throwOnFailure()
+            try {
+                validateSingleExample(contractFile, exampleFile).throwOnFailure()
 
-                    logger.log("The provided example ${exampleFile.name} is valid.")
-                } catch (e: ContractException) {
-                    logger.log("The provided example ${exampleFile.name} is invalid. Reason:\n")
-                    logger.log(exceptionCauseMessage(e))
-                    return 1
-                }
-            } else {
-                val scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter, filterNot)
-
-                val (validateInline, validateExternal) = if(!Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") && !Flags.getBooleanValue("IGNORE_INLINE_EXAMPLES")) {
-                    true to true
-                } else {
-                    Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") to Flags.getBooleanValue("IGNORE_INLINE_EXAMPLES")
-                }
-
-                val feature = parseContractFileToFeature(contractFile)
-
-                val inlineExampleValidationResults = if(validateInline) {
-                    val inlineExamples = feature.stubsFromExamples.mapValues {
-                        it.value.map {
-                            ScenarioStub(it.first, it.second)
-                        }
-                    }
-
-                    ExamplesInteractiveServer.validateMultipleExamples(feature, examples = inlineExamples, inline = true, scenarioFilter = scenarioFilter)
-                } else emptyMap()
-
-                val externalExampleValidationResults = if(validateExternal) {
-                    val (externalExampleDir, externalExamples) = loadExternalExamples(contractFile)
-
-                    if(!externalExampleDir.exists()) {
-                        logger.log("$externalExampleDir does not exist, did not find any files to validate")
-                        return 1
-                    }
-
-                    if(externalExamples.none()) {
-                        logger.log("No example files found in $externalExampleDir")
-                        return 1
-                    }
-
-                    ExamplesInteractiveServer.validateMultipleExamples(feature, examples = externalExamples, scenarioFilter = scenarioFilter)
-                } else emptyMap()
-
-                val hasFailures = inlineExampleValidationResults.any { it.value is Result.Failure } || externalExampleValidationResults.any { it.value is Result.Failure }
-
-                printValidationResult(inlineExampleValidationResults, "Inline example")
-                printValidationResult(externalExampleValidationResults, "Example file")
-
-                if(hasFailures)
-                    return 1
+                logger.log("The provided example ${exampleFile.name} is valid.")
+                return 0
+            } catch (e: ContractException) {
+                logger.log("The provided example ${exampleFile.name} is invalid. Reason:\n")
+                logger.log(exceptionCauseMessage(e))
+                return 1
             }
+        }
 
+        private fun validateExamplesDir(contractFile: File, examplesDir: File): Pair<Int, Map<String, Result>> {
+            val feature = parseContractFileToFeature(contractFile)
+            val (externalExampleDir, externalExamples) = loadExternalExamples(
+                examplesDir = examplesDir,
+                specFileName = contractFile.nameWithoutExtension
+            )
+            if (!externalExampleDir.exists()) {
+                logger.log("$externalExampleDir does not exist, did not find any files to validate")
+                return 1 to emptyMap()
+            }
+            if (externalExamples.none()) {
+                logger.log("No example files found in $externalExampleDir")
+                return 1 to emptyMap()
+            }
+            return 0 to validateExternalExamples(feature, externalExamples)
+        }
+
+        private fun validateAllExamplesAssociatedToEachSpecIn(
+            specsDir: File,
+            examplesDir: File
+        ): Int {
+            val validationResults = specsDir.walk().flatMap {
+                validateExamplesDir(it, examplesDir).second.entries.map { entry ->
+                    entry.toPair()
+                }
+            }.toMap()
+            printValidationResult(validationResults, "Example directory")
+            if (validationResults.containsFailure()) return 1
             return 0
         }
 
+        private fun validateImplicitExamplesFrom(contractFile: File): Int {
+            val feature = parseContractFileToFeature(contractFile)
+
+            val (validateInline, validateExternal) = getValidateInlineAndValidateExternalFlags()
+
+            val inlineExampleValidationResults = if (!validateInline) emptyMap()
+            else validateImplicitInlineExamples(feature)
+
+            val externalExampleValidationResults = if (!validateExternal) emptyMap()
+            else {
+                val (exitCode, validationResults)
+                        = validateExamplesDir(contractFile, implicitExternalExampleDirFrom(contractFile))
+                if(exitCode == 1) exitProcess(1)
+                validationResults
+            }
+
+            val hasFailures =
+                inlineExampleValidationResults.containsFailure() || externalExampleValidationResults.containsFailure()
+
+            printValidationResult(inlineExampleValidationResults, "Inline example")
+            printValidationResult(externalExampleValidationResults, "Example file")
+
+            if (hasFailures) return 1
+            return 0
+        }
+
+        private fun validateImplicitInlineExamples(feature: Feature): Map<String, Result> {
+            return ExamplesInteractiveServer.validateMultipleExamples(
+                feature,
+                examples = feature.stubsFromExamples.mapValues {
+                    it.value.map { ScenarioStub(it.first, it.second) }
+                },
+                inline = true,
+                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(
+                    filterName,
+                    filterNotName,
+                    filter,
+                    filterNot
+                )
+            )
+        }
+
+        private fun validateExternalExamples(
+            feature: Feature,
+            externalExamples: Map<String, List<ScenarioStub>>
+        ): Map<String, Result> {
+            return ExamplesInteractiveServer.validateMultipleExamples(
+                feature,
+                examples = externalExamples,
+                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(
+                    filterName,
+                    filterNotName,
+                    filter,
+                    filterNot
+                )
+            )
+        }
+
+        private fun getValidateInlineAndValidateExternalFlags(): Pair<Boolean, Boolean> {
+            return when {
+                !Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") && !Flags.getBooleanValue(
+                    "IGNORE_INLINE_EXAMPLES"
+                ) -> true to true
+
+                else -> Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") to Flags.getBooleanValue("IGNORE_INLINE_EXAMPLES")
+            }
+        }
+
         private fun printValidationResult(validationResults: Map<String, Result>, tag: String) {
-            if(validationResults.isEmpty())
+            if (validationResults.isEmpty())
                 return
 
-            val hasFailures = validationResults.any { it.value is Result.Failure }
+            val titleTag = tag.split(" ").joinToString(" ") { if (it.isBlank()) it else it.capitalizeFirstChar() }
 
-            val titleTag = tag.split(" ").joinToString(" ") { if(it.isBlank()) it else it.capitalizeFirstChar() }
-
-            if(hasFailures) {
+            if (validationResults.containsFailure()) {
                 println()
                 logger.log("=============== $titleTag Validation Results ===============")
 
@@ -289,6 +370,10 @@ For example:
             logger.log(summaryTitle)
             logger.log(Results(validationResults.values.toList()).summary())
             logger.log("=".repeat(summaryTitle.length))
+        }
+
+        private fun Map<String, Result>.containsFailure(): Boolean {
+            return this.any { it.value is Result.Failure }
         }
     }
 

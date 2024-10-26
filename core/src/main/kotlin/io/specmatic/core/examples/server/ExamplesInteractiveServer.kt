@@ -717,20 +717,25 @@ data class ExampleTestResponse(
     }
 }
 
-fun loadExternalExamples(contractFile: File): Pair<File, Map<String, List<ScenarioStub>>> {
-    val examplesDir =
-        contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
+fun loadExternalExamples(
+    examplesDir: File,
+    specFileName: String
+): Pair<File, Map<String, List<ScenarioStub>>> {
     if (!examplesDir.isDirectory) {
         logger.log("$examplesDir does not exist, did not find any files to validate")
         exitProcess(1)
     }
 
     return examplesDir to examplesDir.walk().mapNotNull {
-        if (it.isFile)
-            Pair(it.path, it)
-        else
-            null
+        if (it.isFile.not()) return@mapNotNull null
+        if (it.nameWithoutExtension != "${specFileName}_examples") return@mapNotNull null
+
+        Pair(it.path, it)
     }.toMap().mapValues {
         listOf(ScenarioStub.readFromFile(it.value))
     }
+}
+
+fun implicitExternalExampleDirFrom(contractFile: File): File {
+    return contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
 }

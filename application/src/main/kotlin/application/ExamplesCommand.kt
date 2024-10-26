@@ -182,18 +182,18 @@ For example:
         @Option(names = ["--example-file"], description = ["Example file path"], required = false)
         val exampleFile: File? = null
 
-        @Option(names = ["--example-dir"], description = ["Examples directory path associated to a single spec"], required = false)
-        val exampleDir: File? = null
+        @Option(names = ["--examples-dir"], description = ["Examples directory path associated to a single spec"], required = false)
+        val examplesDir: File? = null
 
         @Option(names = ["--specs-dir"], description = ["Specs directory path"], required = false)
         val specsDir: File? = null
 
         @Option(
-            names = ["--examples-dir"],
+            names = ["--examples-base-dir"],
             description = ["Examples directory path containing multiple example directories associated to multiple specs"],
             required = false
         )
-        val examplesDir: File? = null
+        val examplesBaseDir: File? = null
 
         @Option(names = ["--debug"], description = ["Debug logs"])
         var verbose = false
@@ -213,10 +213,10 @@ For example:
         var filterNotName: String = ""
 
         override fun call(): Int {
-            if(contractFile != null && exampleFile != null) return validateExampleFile(contractFile!!, exampleFile)
+            if (contractFile != null && exampleFile != null) return validateExampleFile(contractFile!!, exampleFile)
 
-            if (contractFile != null && exampleDir != null) {
-                val (exitCode, validationResults) = validateExamplesDir(contractFile!!, exampleDir)
+            if (contractFile != null && examplesDir != null) {
+                val (exitCode, validationResults) = validateExamplesDir(contractFile!!, examplesDir)
 
                 printValidationResult(validationResults, "Example directory")
                 if (exitCode == 1) return 1
@@ -224,10 +224,14 @@ For example:
                 return 0
             }
 
-            if(contractFile != null) return validateImplicitExamplesFrom(contractFile!!)
+            if (contractFile != null) return validateImplicitExamplesFrom(contractFile!!)
 
-            if(specsDir != null && examplesDir != null) {
-                val exitCode = validateAllExamplesAssociatedToEachSpecIn(specsDir, examplesDir)
+            if (specsDir != null && examplesBaseDir != null) {
+                val exitCode = validateAllExamplesAssociatedToEachSpecIn(specsDir, examplesBaseDir)
+                return exitCode
+            }
+            if (specsDir != null) {
+                val exitCode = validateAllExamplesAssociatedToEachSpecIn(specsDir, specsDir)
                 return exitCode
             }
 

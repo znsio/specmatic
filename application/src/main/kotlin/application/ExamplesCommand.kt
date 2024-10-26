@@ -6,7 +6,7 @@ import io.specmatic.core.Results
 import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingleExample
-import io.specmatic.core.examples.server.implicitExternalExampleDirFrom
+import io.specmatic.core.examples.server.defaultExternalExampleDirFrom
 import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
 import io.specmatic.core.parseContractFileToFeature
@@ -18,6 +18,9 @@ import java.io.File
 import java.lang.Thread.sleep
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
+
+private const val SUCCESS_EXIT_CODE = 0
+private const val FAILURE_EXIT_CODE = 1
 
 @Command(
     name = "examples",
@@ -101,11 +104,11 @@ For example:
     override fun call(): Int {
         if (contractFile == null) {
             println("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
-            return 1
+            return FAILURE_EXIT_CODE
         }
         if (!contractFile!!.exists()) {
             logger.log("Could not find file ${contractFile!!.path}")
-            return 1
+            return FAILURE_EXIT_CODE
         }
 
         configureLogger(this.verbose)
@@ -122,10 +125,10 @@ For example:
             )
         } catch (e: Throwable) {
             logger.log(e)
-            return 1
+            return FAILURE_EXIT_CODE
         }
 
-        return 0
+        return SUCCESS_EXIT_CODE
     }
 
     @Command(
@@ -182,15 +185,15 @@ For example:
         @Option(names = ["--example-file"], description = ["Example file path"], required = false)
         val exampleFile: File? = null
 
-        @Option(names = ["--examples-dir"], description = ["Examples directory path associated to a single spec"], required = false)
+        @Option(names = ["--examples-dir"], description = ["External examples directory path for a single API specification (If you are not following the default naming convention for external examples directory)"], required = false)
         val examplesDir: File? = null
 
-        @Option(names = ["--specs-dir"], description = ["Specs directory path"], required = false)
+        @Option(names = ["--specs-dir"], description = ["Directory with the API specification files"], required = false)
         val specsDir: File? = null
 
         @Option(
             names = ["--examples-base-dir"],
-            description = ["Examples directory path containing multiple example directories associated to multiple specs"],
+            description = ["Base directory which contains multiple external examples directories each named as per the Specmatic naming convention to associate them with the corresponding API specification"],
             required = false
         )
         val examplesBaseDir: File? = null
@@ -219,9 +222,9 @@ For example:
                 val (exitCode, validationResults) = validateExamplesDir(contractFile!!, examplesDir)
 
                 printValidationResult(validationResults, "Example directory")
-                if (exitCode == 1) return 1
-                if (validationResults.containsFailure()) return 1
-                return 0
+                if (exitCode == 1) return FAILURE_EXIT_CODE
+                if (validationResults.containsFailure()) return FAILURE_EXIT_CODE
+                return SUCCESS_EXIT_CODE
             }
 
             if (contractFile != null) return validateImplicitExamplesFrom(contractFile!!)
@@ -235,14 +238,14 @@ For example:
                 return exitCode
             }
 
-            logger.log("No valid options provided.")
-            return 1
+            logger.log("Invalid combination of CLI options. Please refer to the help section using --help command to understand how to use this command")
+            return FAILURE_EXIT_CODE
         }
 
         private fun validateExampleFile(contractFile: File, exampleFile: File): Int {
             if (!contractFile.exists()) {
                 logger.log("Could not find file ${contractFile.path}")
-                return 1
+                return FAILURE_EXIT_CODE
             }
 
             configureLogger(this.verbose)
@@ -251,11 +254,11 @@ For example:
                 validateSingleExample(contractFile, exampleFile).throwOnFailure()
 
                 logger.log("The provided example ${exampleFile.name} is valid.")
-                return 0
+                return SUCCESS_EXIT_CODE
             } catch (e: ContractException) {
                 logger.log("The provided example ${exampleFile.name} is invalid. Reason:\n")
                 logger.log(exceptionCauseMessage(e))
-                return 1
+                return FAILURE_EXIT_CODE
             }
         }
 
@@ -264,21 +267,21 @@ For example:
             val (externalExampleDir, externalExamples) = loadExternalExamples(examplesDir = examplesDir)
             if (!externalExampleDir.exists()) {
                 logger.log("$externalExampleDir does not exist, did not find any files to validate")
-                return 1 to emptyMap()
+                return FAILURE_EXIT_CODE to emptyMap()
             }
             if (externalExamples.none()) {
                 logger.log("No example files found in $externalExampleDir")
-                return 1 to emptyMap()
+                return FAILURE_EXIT_CODE to emptyMap()
             }
-            return 0 to validateExternalExamples(feature, externalExamples, enableLogging)
+            return SUCCESS_EXIT_CODE to validateExternalExamples(feature, externalExamples, enableLogging)
         }
 
         private fun validateAllExamplesAssociatedToEachSpecIn(
             specsDir: File,
-            examplesDir: File
+            examplesBaseDir: File
         ): Int {
             val validationResults = specsDir.walk().filter { it.isFile }.flatMapIndexed { index, it ->
-                val associatedExamplesDir = examplesDir.getAssociatedExampleDirFor(it) ?: return@flatMapIndexed emptyList()
+                val associatedExamplesDir = examplesBaseDir.associatedExampleDirFor(it) ?: return@flatMapIndexed emptyList()
 
                 logger.log("${index.inc()}. Validating examples in ${associatedExamplesDir.name} associated to ${it.name}...${System.lineSeparator()}")
                 val results = validateExamplesDir(it, associatedExamplesDir, false).second.entries.map { entry ->
@@ -291,8 +294,8 @@ For example:
             }.toMap()
             logger.log("Summary:")
             printValidationResult(validationResults, "Overall")
-            if (validationResults.containsFailure()) return 1
-            return 0
+            if (validationResults.containsFailure()) return FAILURE_EXIT_CODE
+            return SUCCESS_EXIT_CODE
         }
 
         private fun validateImplicitExamplesFrom(contractFile: File): Int {
@@ -301,12 +304,12 @@ For example:
             val (validateInline, validateExternal) = getValidateInlineAndValidateExternalFlags()
 
             val inlineExampleValidationResults = if (!validateInline) emptyMap()
-            else validateImplicitInlineExamples(feature)
+            else validateInlineExamples(feature)
 
             val externalExampleValidationResults = if (!validateExternal) emptyMap()
             else {
                 val (exitCode, validationResults)
-                        = validateExamplesDir(contractFile, implicitExternalExampleDirFrom(contractFile))
+                        = validateExamplesDir(contractFile, defaultExternalExampleDirFrom(contractFile))
                 if(exitCode == 1) exitProcess(1)
                 validationResults
             }
@@ -317,15 +320,17 @@ For example:
             printValidationResult(inlineExampleValidationResults, "Inline example")
             printValidationResult(externalExampleValidationResults, "Example file")
 
-            if (hasFailures) return 1
-            return 0
+            if (hasFailures) return FAILURE_EXIT_CODE
+            return SUCCESS_EXIT_CODE
         }
 
-        private fun validateImplicitInlineExamples(feature: Feature): Map<String, Result> {
-            return ExamplesInteractiveServer.validateMultipleExamples(
+        private fun validateInlineExamples(feature: Feature): Map<String, Result> {
+            return ExamplesInteractiveServer.validateExamples(
                 feature,
-                examples = feature.stubsFromExamples.mapValues {
-                    it.value.map { ScenarioStub(it.first, it.second) }
+                examples = feature.stubsFromExamples.mapValues { (_, stub) ->
+                    stub.map { (request, response) ->
+                        ScenarioStub(request, response)
+                    }
                 },
                 inline = true,
                 scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(
@@ -342,7 +347,7 @@ For example:
             externalExamples: Map<String, List<ScenarioStub>>,
             enableLogging: Boolean = true
         ): Map<String, Result> {
-            return ExamplesInteractiveServer.validateMultipleExamples(
+            return ExamplesInteractiveServer.validateExamples(
                 feature,
                 examples = externalExamples,
                 scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(
@@ -394,7 +399,7 @@ For example:
             return this.any { it.value is Result.Failure }
         }
 
-        private fun File.getAssociatedExampleDirFor(specFile: File): File? {
+        private fun File.associatedExampleDirFor(specFile: File): File? {
             return this.walk().firstOrNull { exampleDir ->
                 exampleDir.isFile.not() && exampleDir.nameWithoutExtension == "${specFile.nameWithoutExtension}_examples"
             }

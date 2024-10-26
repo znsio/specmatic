@@ -151,7 +151,7 @@ class ExamplesInteractiveServer(
                             exampleFilePath to listOf(ScenarioStub.readFromFile(File(exampleFilePath)))
                         }
 
-                        val results = validateMultipleExamples(contractFile, examples = examples)
+                        val results = validateExamples(contractFile, examples = examples)
 
                         val validationResults = results.map { (exampleFilePath, result) ->
                             try {
@@ -510,12 +510,12 @@ class ExamplesInteractiveServer(
             }
         }
 
-        fun validateMultipleExamples(contractFile: File, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+        fun validateExamples(contractFile: File, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
             val feature = parseContractFileToFeature(contractFile)
-            return validateMultipleExamples(feature, examples, false, scenarioFilter)
+            return validateExamples(feature, examples, false, scenarioFilter)
         }
 
-        fun validateMultipleExamples(
+        fun validateExamples(
             feature: Feature,
             examples: Map<String, List<ScenarioStub>> = emptyMap(),
             inline: Boolean = false,
@@ -739,6 +739,6 @@ fun loadExternalExamples(
     }
 }
 
-fun implicitExternalExampleDirFrom(contractFile: File): File {
+fun defaultExternalExampleDirFrom(contractFile: File): File {
     return contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
 }

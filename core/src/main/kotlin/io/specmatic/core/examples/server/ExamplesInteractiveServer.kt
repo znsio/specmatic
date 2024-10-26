@@ -515,11 +515,17 @@ class ExamplesInteractiveServer(
             return validateMultipleExamples(feature, examples, false, scenarioFilter)
         }
 
-        fun validateMultipleExamples(feature: Feature, examples: Map<String, List<ScenarioStub>> = emptyMap(), inline: Boolean = false, scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+        fun validateMultipleExamples(
+            feature: Feature,
+            examples: Map<String, List<ScenarioStub>> = emptyMap(),
+            inline: Boolean = false,
+            scenarioFilter: ScenarioFilter = ScenarioFilter(),
+            enableLogging: Boolean = true
+        ): Map<String, Result> {
             val updatedFeature = scenarioFilter.filter(feature)
 
             val results = examples.mapValues { (name, exampleList) ->
-                logger.log("Validating $name")
+                if(enableLogging) logger.log("Validating $name")
 
                 exampleList.mapNotNull { example ->
                     try {
@@ -718,8 +724,7 @@ data class ExampleTestResponse(
 }
 
 fun loadExternalExamples(
-    examplesDir: File,
-    specFileName: String
+    examplesDir: File
 ): Pair<File, Map<String, List<ScenarioStub>>> {
     if (!examplesDir.isDirectory) {
         logger.log("$examplesDir does not exist, did not find any files to validate")
@@ -728,8 +733,6 @@ fun loadExternalExamples(
 
     return examplesDir to examplesDir.walk().mapNotNull {
         if (it.isFile.not()) return@mapNotNull null
-        if (it.nameWithoutExtension != "${specFileName}_examples") return@mapNotNull null
-
         Pair(it.path, it)
     }.toMap().mapValues {
         listOf(ScenarioStub.readFromFile(it.value))

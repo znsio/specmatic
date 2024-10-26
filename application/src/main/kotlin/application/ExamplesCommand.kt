@@ -182,10 +182,17 @@ For example:
         @Option(names = ["--example-file"], description = ["Example file path"], required = false)
         val exampleFile: File? = null
 
-        @Option(names = ["--spec-dir"], description = ["Specs directory path"], required = false)
+        @Option(names = ["--example-dir"], description = ["Examples directory path associated to a single spec"], required = false)
+        val exampleDir: File? = null
+
+        @Option(names = ["--specs-dir"], description = ["Specs directory path"], required = false)
         val specsDir: File? = null
 
-        @Option(names = ["--example-dir"], description = ["Examples directory path"], required = false)
+        @Option(
+            names = ["--examples-dir"],
+            description = ["Examples directory path containing multiple example directories associated to multiple specs"],
+            required = false
+        )
         val examplesDir: File? = null
 
         @Option(names = ["--debug"], description = ["Debug logs"])
@@ -208,8 +215,8 @@ For example:
         override fun call(): Int {
             if(contractFile != null && exampleFile != null) return validateExampleFile(contractFile!!, exampleFile)
 
-            if (contractFile != null && examplesDir != null) {
-                val (exitCode, validationResults) = validateExamplesDir(contractFile!!, examplesDir)
+            if (contractFile != null && exampleDir != null) {
+                val (exitCode, validationResults) = validateExamplesDir(contractFile!!, exampleDir)
 
                 printValidationResult(validationResults, "Example directory")
                 if (exitCode == 1) return 1
@@ -248,12 +255,9 @@ For example:
             }
         }
 
-        private fun validateExamplesDir(contractFile: File, examplesDir: File): Pair<Int, Map<String, Result>> {
+        private fun validateExamplesDir(contractFile: File, examplesDir: File, enableLogging: Boolean = true): Pair<Int, Map<String, Result>> {
             val feature = parseContractFileToFeature(contractFile)
-            val (externalExampleDir, externalExamples) = loadExternalExamples(
-                examplesDir = examplesDir,
-                specFileName = contractFile.nameWithoutExtension
-            )
+            val (externalExampleDir, externalExamples) = loadExternalExamples(examplesDir = examplesDir)
             if (!externalExampleDir.exists()) {
                 logger.log("$externalExampleDir does not exist, did not find any files to validate")
                 return 1 to emptyMap()
@@ -262,19 +266,27 @@ For example:
                 logger.log("No example files found in $externalExampleDir")
                 return 1 to emptyMap()
             }
-            return 0 to validateExternalExamples(feature, externalExamples)
+            return 0 to validateExternalExamples(feature, externalExamples, enableLogging)
         }
 
         private fun validateAllExamplesAssociatedToEachSpecIn(
             specsDir: File,
             examplesDir: File
         ): Int {
-            val validationResults = specsDir.walk().flatMap {
-                validateExamplesDir(it, examplesDir).second.entries.map { entry ->
+            val validationResults = specsDir.walk().filter { it.isFile }.flatMapIndexed { index, it ->
+                val associatedExamplesDir = examplesDir.getAssociatedExampleDirFor(it) ?: return@flatMapIndexed emptyList()
+
+                logger.log("${index.inc()}. Validating examples in ${associatedExamplesDir.name} associated to ${it.name}...${System.lineSeparator()}")
+                val results = validateExamplesDir(it, associatedExamplesDir, false).second.entries.map { entry ->
                     entry.toPair()
                 }
+
+                printValidationResult(results.toMap(), "The ${associatedExamplesDir.name} Directory")
+                logger.log(System.lineSeparator())
+                results
             }.toMap()
-            printValidationResult(validationResults, "Example directory")
+            logger.log("Summary:")
+            printValidationResult(validationResults, "Overall")
             if (validationResults.containsFailure()) return 1
             return 0
         }
@@ -323,7 +335,8 @@ For example:
 
         private fun validateExternalExamples(
             feature: Feature,
-            externalExamples: Map<String, List<ScenarioStub>>
+            externalExamples: Map<String, List<ScenarioStub>>,
+            enableLogging: Boolean = true
         ): Map<String, Result> {
             return ExamplesInteractiveServer.validateMultipleExamples(
                 feature,
@@ -333,7 +346,8 @@ For example:
                     filterNotName,
                     filter,
                     filterNot
-                )
+                ),
+                enableLogging = enableLogging
             )
         }
 
@@ -374,6 +388,12 @@ For example:
 
         private fun Map<String, Result>.containsFailure(): Boolean {
             return this.any { it.value is Result.Failure }
+        }
+
+        private fun File.getAssociatedExampleDirFor(specFile: File): File? {
+            return this.walk().firstOrNull { exampleDir ->
+                exampleDir.isFile.not() && exampleDir.nameWithoutExtension == "${specFile.nameWithoutExtension}_examples"
+            }
         }
     }
 

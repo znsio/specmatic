@@ -44,7 +44,8 @@ class ExamplesInteractiveServer(
     private val filterNotName: String,
     private val filter: List<String>,
     private val filterNot: List<String>,
-    externalDictionaryFile: File? = null
+    externalDictionaryFile: File? = null,
+    private val allowOnlyMandatoryKeysInJSONObject: Boolean
 ) : Closeable {
     private var contractFileFromRequest: File? = null
 
@@ -110,6 +111,7 @@ class ExamplesInteractiveServer(
                             request.path,
                             request.responseStatusCode,
                             request.contentType,
+                            allowOnlyMandatoryKeysInJSONObject
                         )
 
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse.from(generatedExample))
@@ -151,7 +153,7 @@ class ExamplesInteractiveServer(
                             exampleFilePath to listOf(ScenarioStub.readFromFile(File(exampleFilePath)))
                         }
 
-                        val results = validateMultipleExamples(contractFile, examples = examples)
+                        val results = validateExamples(contractFile, examples = examples)
 
                         val validationResults = results.map { (exampleFilePath, result) ->
                             try {
@@ -420,6 +422,7 @@ class ExamplesInteractiveServer(
             path: String,
             responseStatusCode: Int,
             contentType: String? = null,
+            allowOnlyMandatoryKeysInJSONObject: Boolean
         ): List<ExamplePathInfo> {
             val feature = parseContractFileToFeature(contractFile)
             val scenario: Scenario? = feature.scenarios.firstOrNull {
@@ -433,7 +436,7 @@ class ExamplesInteractiveServer(
 
             return getExistingExampleFiles(scenario, examples).map {
                 ExamplePathInfo(it.first.absolutePath, false)
-            }.plus(generateExampleFiles(contractFile, feature, scenario))
+            }.plus(generateExampleFiles(contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject))
         }
 
         data class ExamplePathInfo(val path: String, val created: Boolean)
@@ -464,12 +467,16 @@ class ExamplesInteractiveServer(
             contractFile: File,
             feature: Feature,
             scenario: Scenario,
+            allowOnlyMandatoryKeysInJSONObject: Boolean
         ): List<ExamplePathInfo> {
             val examplesDir = getExamplesDirPath(contractFile)
             if(!examplesDir.exists()) examplesDir.mkdirs()
 
             val discriminatorBasedRequestResponses = feature
-                .generateDiscriminatorBasedRequestResponseList(scenario).map {
+                .generateDiscriminatorBasedRequestResponseList(
+                    scenario,
+                    allowOnlyMandatoryKeysInJSONObject = allowOnlyMandatoryKeysInJSONObject
+                ).map {
                     it.copy(response = it.response.cleanup())
                 }
 
@@ -510,16 +517,22 @@ class ExamplesInteractiveServer(
             }
         }
 
-        fun validateMultipleExamples(contractFile: File, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+        fun validateExamples(contractFile: File, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
             val feature = parseContractFileToFeature(contractFile)
-            return validateMultipleExamples(feature, examples, false, scenarioFilter)
+            return validateExamples(feature, examples, false, scenarioFilter)
         }
 
-        fun validateMultipleExamples(feature: Feature, examples: Map<String, List<ScenarioStub>> = emptyMap(), inline: Boolean = false, scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+        fun validateExamples(
+            feature: Feature,
+            examples: Map<String, List<ScenarioStub>> = emptyMap(),
+            inline: Boolean = false,
+            scenarioFilter: ScenarioFilter = ScenarioFilter(),
+            enableLogging: Boolean = true
+        ): Map<String, Result> {
             val updatedFeature = scenarioFilter.filter(feature)
 
             val results = examples.mapValues { (name, exampleList) ->
-                logger.log("Validating $name")
+                if(enableLogging) logger.log("Validating $name")
 
                 exampleList.mapNotNull { example ->
                     try {
@@ -717,20 +730,22 @@ data class ExampleTestResponse(
     }
 }
 
-fun loadExternalExamples(contractFile: File): Pair<File, Map<String, List<ScenarioStub>>> {
-    val examplesDir =
-        contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
+fun loadExternalExamples(
+    examplesDir: File
+): Pair<File, Map<String, List<ScenarioStub>>> {
     if (!examplesDir.isDirectory) {
         logger.log("$examplesDir does not exist, did not find any files to validate")
         exitProcess(1)
     }
 
     return examplesDir to examplesDir.walk().mapNotNull {
-        if (it.isFile)
-            Pair(it.path, it)
-        else
-            null
+        if (it.isFile.not()) return@mapNotNull null
+        Pair(it.path, it)
     }.toMap().mapValues {
         listOf(ScenarioStub.readFromFile(it.value))
     }
+}
+
+fun defaultExternalExampleDirFrom(contractFile: File): File {
+    return contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
 }

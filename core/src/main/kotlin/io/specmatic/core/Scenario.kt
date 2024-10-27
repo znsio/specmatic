@@ -171,12 +171,21 @@ data class Scenario(
 
     fun generateHttpResponseV2(
         actualFacts: Map<String, Value>,
-        requestContext: Context = NoContext
+        requestContext: Context = NoContext,
+        allowOnlyMandatoryKeysInJSONObject: Boolean = false
     ): List<DiscriminatorBasedItem<HttpResponse>> =
         scenarioBreadCrumb(this) {
             val facts = combineFacts(expectedFacts, actualFacts, resolver)
+            val updatedResolver = if(allowOnlyMandatoryKeysInJSONObject) {
+                resolver.copy(
+                    factStore = CheckFacts(facts),
+                    context = requestContext
+                ).withOnlyMandatoryKeysInJSONObject()
+            } else {
+                resolver.copy(factStore = CheckFacts(facts), context = requestContext)
+            }
 
-            httpResponsePattern.generateResponseV2(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
+            httpResponsePattern.generateResponseV2(updatedResolver)
         }
 
     private fun combineFacts(
@@ -234,9 +243,21 @@ data class Scenario(
             httpRequestPattern.generate(flagsBased.update(resolver.copy(factStore = CheckFacts(expectedFacts))))
         }
 
-    fun generateHttpRequestV2(flagsBased: FlagsBased = DefaultStrategies): List<DiscriminatorBasedItem<HttpRequest>> =
+    fun generateHttpRequestV2(
+        flagsBased: FlagsBased = DefaultStrategies,
+        allowOnlyMandatoryKeysInJSONObject: Boolean = false
+    ): List<DiscriminatorBasedItem<HttpRequest>> =
         scenarioBreadCrumb(this) {
-            httpRequestPattern.generateV2(flagsBased.update(resolver.copy(factStore = CheckFacts(expectedFacts))))
+            val updatedResolver = if(allowOnlyMandatoryKeysInJSONObject) {
+                flagsBased.update(
+                    resolver.copy(factStore = CheckFacts(expectedFacts))
+                ).withOnlyMandatoryKeysInJSONObject()
+            } else {
+                flagsBased.update(
+                    resolver.copy(factStore = CheckFacts(expectedFacts))
+                )
+            }
+            httpRequestPattern.generateV2(updatedResolver)
         }
 
     fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {

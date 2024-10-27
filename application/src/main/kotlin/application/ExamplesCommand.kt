@@ -1,12 +1,13 @@
 package application
 
+import io.specmatic.core.Feature
 import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingleExample
+import io.specmatic.core.examples.server.defaultExternalExampleDirFrom
 import io.specmatic.core.examples.server.loadExternalExamples
-import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.log.*
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
@@ -16,6 +17,10 @@ import picocli.CommandLine.*
 import java.io.File
 import java.lang.Thread.sleep
 import java.util.concurrent.Callable
+import kotlin.system.exitProcess
+
+private const val SUCCESS_EXIT_CODE = 0
+private const val FAILURE_EXIT_CODE = 1
 
 @Command(
     name = "examples",
@@ -99,11 +104,11 @@ For example:
     override fun call(): Int {
         if (contractFile == null) {
             println("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
-            return 1
+            return FAILURE_EXIT_CODE
         }
         if (!contractFile!!.exists()) {
             logger.log("Could not find file ${contractFile!!.path}")
-            return 1
+            return FAILURE_EXIT_CODE
         }
 
         configureLogger(this.verbose)
@@ -120,10 +125,10 @@ For example:
             )
         } catch (e: Throwable) {
             logger.log(e)
-            return 1
+            return FAILURE_EXIT_CODE
         }
 
-        return 0
+        return SUCCESS_EXIT_CODE
     }
 
     @Command(
@@ -174,11 +179,24 @@ For example:
         )
         var filterNot: List<String> = emptyList()
 
-        @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
-        lateinit var contractFile: File
+        @Option(names = ["--contract-file", "--spec-file"], description = ["Contract file path"], required = false)
+        var contractFile: File? = null
 
         @Option(names = ["--example-file"], description = ["Example file path"], required = false)
         val exampleFile: File? = null
+
+        @Option(names = ["--examples-dir"], description = ["External examples directory path for a single API specification (If you are not following the default naming convention for external examples directory)"], required = false)
+        val examplesDir: File? = null
+
+        @Option(names = ["--specs-dir"], description = ["Directory with the API specification files"], required = false)
+        val specsDir: File? = null
+
+        @Option(
+            names = ["--examples-base-dir"],
+            description = ["Base directory which contains multiple external examples directories each named as per the Specmatic naming convention to associate them with the corresponding API specification"],
+            required = false
+        )
+        val examplesBaseDir: File? = null
 
         @Option(names = ["--debug"], description = ["Debug logs"])
         var verbose = false
@@ -198,81 +216,167 @@ For example:
         var filterNotName: String = ""
 
         override fun call(): Int {
+            if (contractFile != null && exampleFile != null) return validateExampleFile(contractFile!!, exampleFile)
+
+            if (contractFile != null && examplesDir != null) {
+                val (exitCode, validationResults) = validateExamplesDir(contractFile!!, examplesDir)
+
+                printValidationResult(validationResults, "Example directory")
+                if (exitCode == 1) return FAILURE_EXIT_CODE
+                if (validationResults.containsFailure()) return FAILURE_EXIT_CODE
+                return SUCCESS_EXIT_CODE
+            }
+
+            if (contractFile != null) return validateImplicitExamplesFrom(contractFile!!)
+
+            if (specsDir != null && examplesBaseDir != null) {
+                val exitCode = validateAllExamplesAssociatedToEachSpecIn(specsDir, examplesBaseDir)
+                return exitCode
+            }
+            if (specsDir != null) {
+                val exitCode = validateAllExamplesAssociatedToEachSpecIn(specsDir, specsDir)
+                return exitCode
+            }
+
+            logger.log("Invalid combination of CLI options. Please refer to the help section using --help command to understand how to use this command")
+            return FAILURE_EXIT_CODE
+        }
+
+        private fun validateExampleFile(contractFile: File, exampleFile: File): Int {
             if (!contractFile.exists()) {
                 logger.log("Could not find file ${contractFile.path}")
-                return 1
+                return FAILURE_EXIT_CODE
             }
 
             configureLogger(this.verbose)
 
-            if (exampleFile != null) {
-                try {
-                    validateSingleExample(contractFile, exampleFile).throwOnFailure()
+            try {
+                validateSingleExample(contractFile, exampleFile).throwOnFailure()
 
-                    logger.log("The provided example ${exampleFile.name} is valid.")
-                } catch (e: ContractException) {
-                    logger.log("The provided example ${exampleFile.name} is invalid. Reason:\n")
-                    logger.log(exceptionCauseMessage(e))
-                    return 1
+                logger.log("The provided example ${exampleFile.name} is valid.")
+                return SUCCESS_EXIT_CODE
+            } catch (e: ContractException) {
+                logger.log("The provided example ${exampleFile.name} is invalid. Reason:\n")
+                logger.log(exceptionCauseMessage(e))
+                return FAILURE_EXIT_CODE
+            }
+        }
+
+        private fun validateExamplesDir(contractFile: File, examplesDir: File, enableLogging: Boolean = true): Pair<Int, Map<String, Result>> {
+            val feature = parseContractFileToFeature(contractFile)
+            val (externalExampleDir, externalExamples) = loadExternalExamples(examplesDir = examplesDir)
+            if (!externalExampleDir.exists()) {
+                logger.log("$externalExampleDir does not exist, did not find any files to validate")
+                return FAILURE_EXIT_CODE to emptyMap()
+            }
+            if (externalExamples.none()) {
+                logger.log("No example files found in $externalExampleDir")
+                return FAILURE_EXIT_CODE to emptyMap()
+            }
+            return SUCCESS_EXIT_CODE to validateExternalExamples(feature, externalExamples, enableLogging)
+        }
+
+        private fun validateAllExamplesAssociatedToEachSpecIn(
+            specsDir: File,
+            examplesBaseDir: File
+        ): Int {
+            val validationResults = specsDir.walk().filter { it.isFile }.flatMapIndexed { index, it ->
+                val associatedExamplesDir = examplesBaseDir.associatedExampleDirFor(it) ?: return@flatMapIndexed emptyList()
+
+                logger.log("${index.inc()}. Validating examples in ${associatedExamplesDir.name} associated to ${it.name}...${System.lineSeparator()}")
+                val results = validateExamplesDir(it, associatedExamplesDir, false).second.entries.map { entry ->
+                    entry.toPair()
                 }
-            } else {
-                val scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter, filterNot)
 
-                val (validateInline, validateExternal) = if(!Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") && !Flags.getBooleanValue("IGNORE_INLINE_EXAMPLES")) {
-                    true to true
-                } else {
-                    Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") to Flags.getBooleanValue("IGNORE_INLINE_EXAMPLES")
-                }
+                printValidationResult(results.toMap(), "The ${associatedExamplesDir.name} Directory")
+                logger.log(System.lineSeparator())
+                results
+            }.toMap()
+            logger.log("Summary:")
+            printValidationResult(validationResults, "Overall")
+            if (validationResults.containsFailure()) return FAILURE_EXIT_CODE
+            return SUCCESS_EXIT_CODE
+        }
 
-                val feature = parseContractFileToFeature(contractFile)
+        private fun validateImplicitExamplesFrom(contractFile: File): Int {
+            val feature = parseContractFileToFeature(contractFile)
 
-                val inlineExampleValidationResults = if(validateInline) {
-                    val inlineExamples = feature.stubsFromExamples.mapValues {
-                        it.value.map {
-                            ScenarioStub(it.first, it.second)
-                        }
-                    }
+            val (validateInline, validateExternal) = getValidateInlineAndValidateExternalFlags()
 
-                    ExamplesInteractiveServer.validateMultipleExamples(feature, examples = inlineExamples, inline = true, scenarioFilter = scenarioFilter)
-                } else emptyMap()
+            val inlineExampleValidationResults = if (!validateInline) emptyMap()
+            else validateInlineExamples(feature)
 
-                val externalExampleValidationResults = if(validateExternal) {
-                    val (externalExampleDir, externalExamples) = loadExternalExamples(contractFile)
-
-                    if(!externalExampleDir.exists()) {
-                        logger.log("$externalExampleDir does not exist, did not find any files to validate")
-                        return 1
-                    }
-
-                    if(externalExamples.none()) {
-                        logger.log("No example files found in $externalExampleDir")
-                        return 1
-                    }
-
-                    ExamplesInteractiveServer.validateMultipleExamples(feature, examples = externalExamples, scenarioFilter = scenarioFilter)
-                } else emptyMap()
-
-                val hasFailures = inlineExampleValidationResults.any { it.value is Result.Failure } || externalExampleValidationResults.any { it.value is Result.Failure }
-
-                printValidationResult(inlineExampleValidationResults, "Inline example")
-                printValidationResult(externalExampleValidationResults, "Example file")
-
-                if(hasFailures)
-                    return 1
+            val externalExampleValidationResults = if (!validateExternal) emptyMap()
+            else {
+                val (exitCode, validationResults)
+                        = validateExamplesDir(contractFile, defaultExternalExampleDirFrom(contractFile))
+                if(exitCode == 1) exitProcess(1)
+                validationResults
             }
 
-            return 0
+            val hasFailures =
+                inlineExampleValidationResults.containsFailure() || externalExampleValidationResults.containsFailure()
+
+            printValidationResult(inlineExampleValidationResults, "Inline example")
+            printValidationResult(externalExampleValidationResults, "Example file")
+
+            if (hasFailures) return FAILURE_EXIT_CODE
+            return SUCCESS_EXIT_CODE
+        }
+
+        private fun validateInlineExamples(feature: Feature): Map<String, Result> {
+            return ExamplesInteractiveServer.validateExamples(
+                feature,
+                examples = feature.stubsFromExamples.mapValues { (_, stub) ->
+                    stub.map { (request, response) ->
+                        ScenarioStub(request, response)
+                    }
+                },
+                inline = true,
+                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(
+                    filterName,
+                    filterNotName,
+                    filter,
+                    filterNot
+                )
+            )
+        }
+
+        private fun validateExternalExamples(
+            feature: Feature,
+            externalExamples: Map<String, List<ScenarioStub>>,
+            enableLogging: Boolean = true
+        ): Map<String, Result> {
+            return ExamplesInteractiveServer.validateExamples(
+                feature,
+                examples = externalExamples,
+                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(
+                    filterName,
+                    filterNotName,
+                    filter,
+                    filterNot
+                ),
+                enableLogging = enableLogging
+            )
+        }
+
+        private fun getValidateInlineAndValidateExternalFlags(): Pair<Boolean, Boolean> {
+            return when {
+                !Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") && !Flags.getBooleanValue(
+                    "IGNORE_INLINE_EXAMPLES"
+                ) -> true to true
+
+                else -> Flags.getBooleanValue("VALIDATE_INLINE_EXAMPLES") to Flags.getBooleanValue("IGNORE_INLINE_EXAMPLES")
+            }
         }
 
         private fun printValidationResult(validationResults: Map<String, Result>, tag: String) {
-            if(validationResults.isEmpty())
+            if (validationResults.isEmpty())
                 return
 
-            val hasFailures = validationResults.any { it.value is Result.Failure }
+            val titleTag = tag.split(" ").joinToString(" ") { if (it.isBlank()) it else it.capitalizeFirstChar() }
 
-            val titleTag = tag.split(" ").joinToString(" ") { if(it.isBlank()) it else it.capitalizeFirstChar() }
-
-            if(hasFailures) {
+            if (validationResults.containsFailure()) {
                 println()
                 logger.log("=============== $titleTag Validation Results ===============")
 
@@ -289,6 +393,16 @@ For example:
             logger.log(summaryTitle)
             logger.log(Results(validationResults.values.toList()).summary())
             logger.log("=".repeat(summaryTitle.length))
+        }
+
+        private fun Map<String, Result>.containsFailure(): Boolean {
+            return this.any { it.value is Result.Failure }
+        }
+
+        private fun File.associatedExampleDirFor(specFile: File): File? {
+            return this.walk().firstOrNull { exampleDir ->
+                exampleDir.isFile.not() && exampleDir.nameWithoutExtension == "${specFile.nameWithoutExtension}_examples"
+            }
         }
     }
 
@@ -366,6 +480,14 @@ For example:
         @Option(names = ["--testBaseURL"], description = ["The baseURL of system to test"], required = false)
         var testBaseURL: String? = null
 
+        @Option(
+            names = ["--allow-only-mandatory-keys-in-payload"],
+            description = ["Generate examples with only mandatory keys in the json request and response payloads"],
+            required = false
+        )
+        var allowOnlyMandatoryKeysInJSONObject: Boolean = false
+
+
         var server: ExamplesInteractiveServer? = null
 
         override fun call() {
@@ -375,7 +497,18 @@ For example:
                 if (contractFile != null && !contractFile!!.exists())
                     exitWithMessage("Could not find file ${contractFile!!.path}")
 
-                server = ExamplesInteractiveServer("0.0.0.0", 9001, testBaseURL, contractFile, filterName, filterNotName, filter, filterNot, dictFile)
+                server = ExamplesInteractiveServer(
+                    "0.0.0.0",
+                    9001,
+                    testBaseURL,
+                    contractFile,
+                    filterName,
+                    filterNotName,
+                    filter,
+                    filterNot,
+                    dictFile,
+                    allowOnlyMandatoryKeysInJSONObject
+                )
                 addShutdownHook()
 
                 consoleLog(StringLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop."))

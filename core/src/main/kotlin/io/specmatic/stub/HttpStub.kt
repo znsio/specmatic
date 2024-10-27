@@ -601,7 +601,7 @@ class HttpStub(
             if (reportFile.exists()) {
                 try {
                     val existingReport = Json.decodeFromString(reportFile.readText()) as StubUsageReportJson
-                    reportJson = json.encodeToString(appendUsageReport(generatedReport, existingReport))
+                    reportJson = json.encodeToString(generatedReport.append(existingReport))
                 } catch (exception: SerializationException) {
                     logger.log("The existing report file is not a valid Stub Usage Report. ${exception.message}")
                     reportJson = json.encodeToString(generatedReport)
@@ -612,43 +612,6 @@ class HttpStub(
             saveJsonFile(reportJson, JSON_REPORT_PATH, JSON_REPORT_FILE_NAME)
         }
     }
-
-    private fun appendUsageReport(report1: StubUsageReportJson, report2: StubUsageReportJson): StubUsageReportJson {
-        val mergedStubUsage = mutableListOf<StubUsageReportRow>()
-
-        val allStubUsageRows = (report1.stubUsage + report2.stubUsage).groupBy {
-            Triple(it.type, it.repository, it.specification)
-        }
-
-        for ((_, rows) in allStubUsageRows) {
-            val mergedOperations = mutableListOf<StubUsageReportOperation>()
-
-            rows.flatMap { it.operations }.groupBy { op ->
-                Triple(op.path, op.method, op.responseCode)
-            }.forEach { (_, ops) ->
-                val combinedCount = ops.sumOf { it.count }
-                val sampleOp = ops.first()
-                mergedOperations += sampleOp.copy(count = combinedCount)
-            }
-
-            val firstRow = rows.first()
-            mergedStubUsage += StubUsageReportRow(
-                type = firstRow.type,
-                repository = firstRow.repository,
-                branch = firstRow.branch,
-                specification = firstRow.specification,
-                serviceType = firstRow.serviceType,
-                operations = mergedOperations
-            )
-        }
-
-        return StubUsageReportJson(
-            specmaticConfigPath = report1.specmaticConfigPath,
-            stubUsage = mergedStubUsage
-        )
-    }
-
-
 }
 
 class CouldNotParseRequest(innerException: Throwable) : Exception(exceptionCauseMessage(innerException))

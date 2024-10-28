@@ -15,7 +15,7 @@ import org.springframework.web.client.RestTemplate
 import java.io.File
 import kotlin.concurrent.thread
 
-class HttpStubStubCoverageTest {
+class HttpStubUsageReportTest {
     companion object {
         private val stubUsageReportFile = File("./build/reports/specmatic/stub_usage_report.json")
 

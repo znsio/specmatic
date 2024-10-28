@@ -34,7 +34,7 @@ class StubUsageReportJsonTest {
             )
         )
 
-        val mergedReport = newReport.append(existingReport)
+        val mergedReport = newReport.merge(existingReport)
 
         assertThat(mergedReport).isEqualTo(expectedMergedReport)
     }
@@ -74,7 +74,7 @@ class StubUsageReportJsonTest {
             )
         )
 
-        val mergedReport = newReport.append(existingReport)
+        val mergedReport = newReport.merge(existingReport)
 
         assertThat(mergedReport).isEqualTo(expectedMergedReport)
     }
@@ -115,7 +115,7 @@ class StubUsageReportJsonTest {
             )
         )
 
-        val mergedReport = newReport.append(existingReport)
+        val mergedReport = newReport.merge(existingReport)
 
         assertThat(mergedReport).isEqualTo(expectedMergedReport)
     }
@@ -160,7 +160,7 @@ class StubUsageReportJsonTest {
             )
         )
 
-        val mergedReport = newReport.append(existingReport)
+        val mergedReport = newReport.merge(existingReport)
 
         assertThat(mergedReport).isEqualTo(expectedMergedReport)
     }
@@ -201,7 +201,7 @@ class StubUsageReportJsonTest {
             )
         )
 
-        val mergedReport = newReport.append(existingReport)
+        val mergedReport = newReport.merge(existingReport)
 
         assertThat(mergedReport).isEqualTo(expectedMergedReport)
     }
@@ -242,7 +242,7 @@ class StubUsageReportJsonTest {
             )
         )
 
-        val mergedReport = newReport.append(existingReport)
+        val mergedReport = newReport.merge(existingReport)
 
         assertThat(mergedReport).isEqualTo(expectedMergedReport)
     }

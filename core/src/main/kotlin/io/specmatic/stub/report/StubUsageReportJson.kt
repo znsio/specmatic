@@ -7,42 +7,25 @@ data class StubUsageReportJson (
     val specmaticConfigPath:String,
     val stubUsage:List<StubUsageReportRow>
 ) {
-    fun append(other: StubUsageReportJson): StubUsageReportJson {
-        val mergedStubUsage = mutableListOf<StubUsageReportRow>()
+    fun merge(other: StubUsageReportJson): StubUsageReportJson {
+        val mergedStubUsageRows: MutableList<StubUsageReportRow> = mutableListOf<StubUsageReportRow>()
 
         val allStubUsageRows = (other.stubUsage + this.stubUsage)
 
-        for (row in allStubUsageRows) {
-            val existingRow = mergedStubUsage.find { it.isSameAs(row) }
+        for (stubUsageReportRow in allStubUsageRows) {
+            val existingRow = mergedStubUsageRows.find { it.hasSameRowIdentifiers(stubUsageReportRow) }
 
             if (existingRow == null) {
-                mergedStubUsage += row
+                mergedStubUsageRows.add(stubUsageReportRow)
                 continue
             }
 
-            val allOperations = existingRow.operations + row.operations
-
-            val mergedOperations = mutableListOf<StubUsageReportOperation>()
-
-            for (operation in allOperations) {
-                val existingOperation = mergedOperations.find { it.isSameAs(operation) }
-
-                if (existingOperation != null) {
-                    mergedOperations[mergedOperations.indexOf(existingOperation)] =
-                        existingOperation.merge(operation)
-                } else {
-                    mergedOperations += operation
-                }
-            }
-
-            mergedStubUsage[mergedStubUsage.indexOf(existingRow)] = existingRow.copy(
-                operations = mergedOperations
-            )
+            mergedStubUsageRows[mergedStubUsageRows.indexOf(existingRow)] = existingRow.merge(stubUsageReportRow)
         }
 
         return StubUsageReportJson(
             specmaticConfigPath = other.specmaticConfigPath,
-            stubUsage = mergedStubUsage
+            stubUsage = mergedStubUsageRows
         )
     }
 }

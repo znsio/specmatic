@@ -7,15 +7,20 @@ data class StubUsageReportJson (
     val specmaticConfigPath:String,
     val stubUsage:List<StubUsageReportRow>
 ) {
-    fun append(anotherStubUsageReport: StubUsageReportJson): StubUsageReportJson {
+    fun append(other: StubUsageReportJson): StubUsageReportJson {
         val mergedStubUsage = mutableListOf<StubUsageReportRow>()
 
-        val allStubUsageRows = (anotherStubUsageReport.stubUsage + this.stubUsage).groupBy {
-            Triple(it.type, it.repository, it.specification)
-        }
+        val allStubUsageRows = (other.stubUsage + this.stubUsage)
 
-        for ((_, rows) in allStubUsageRows) {
-            val allOperations = rows.flatMap { it.operations }
+        for (row in allStubUsageRows) {
+            val existingRow = mergedStubUsage.find { it.isSameAs(row) }
+
+            if (existingRow == null) {
+                mergedStubUsage += row
+                continue
+            }
+
+            val allOperations = existingRow.operations + row.operations
 
             val mergedOperations = mutableListOf<StubUsageReportOperation>()
 
@@ -24,25 +29,19 @@ data class StubUsageReportJson (
 
                 if (existingOperation != null) {
                     mergedOperations[mergedOperations.indexOf(existingOperation)] =
-                        existingOperation.copy(count = existingOperation.count + operation.count)
+                        existingOperation.merge(operation)
                 } else {
                     mergedOperations += operation
                 }
             }
 
-            val firstRow = rows.first()
-            mergedStubUsage += StubUsageReportRow(
-                type = firstRow.type,
-                repository = firstRow.repository,
-                branch = firstRow.branch,
-                specification = firstRow.specification,
-                serviceType = firstRow.serviceType,
+            mergedStubUsage[mergedStubUsage.indexOf(existingRow)] = existingRow.copy(
                 operations = mergedOperations
             )
         }
 
         return StubUsageReportJson(
-            specmaticConfigPath = anotherStubUsageReport.specmaticConfigPath,
+            specmaticConfigPath = other.specmaticConfigPath,
             stubUsage = mergedStubUsage
         )
     }

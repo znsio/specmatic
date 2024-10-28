@@ -12,4 +12,8 @@ data class StubUsageReportOperation (
     fun isSameAs(other: StubUsageReportOperation): Boolean {
         return this.path.equals(other.path) && this.method.equals(other.method) && this.responseCode == other.responseCode
     }
+
+    fun merge(other: StubUsageReportOperation): StubUsageReportOperation {
+        return this.copy(count = this.count + other.count)
+    }
 }

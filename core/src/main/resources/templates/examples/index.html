@@ -643,7 +643,7 @@
                 --_background-color: var(--green);
             }
 
-            &[data-generate="success"] {
+            &[data-generate="success"], &[data-example] {
                 & td:last-child {
                     & button.validate {
                         display: inline-block;
@@ -655,8 +655,9 @@
                 }
             }
 
-            &[data-generate="processing"] button.generate, &[data-valid="processing"] button.validate, &[data-test="processing"] button.test {
+            &[data-generate="processing"] button, &[data-valid="processing"] button.validate, &[data-test="processing"] button.test {
                 --_padding: 0.15rem 0rem;
+                --_background-color: var(--blue) !important;
 
                 &::after {
                     --_content: "";
@@ -1018,7 +1019,7 @@
             <tr
                 th:each="row, iter : ${tableRows}"
                 th:attr="data-raw-path=${row.rawPath}, data-key=${row.uniqueKey},
-                        data-example=${row.example},
+                        data-example=${row.example}, data-main=${row.isMainRow}, data-disc=${row.isDiscriminatorBased},
                         data-generate=${row.isGenerated ? 'success' : ''},
                         data-valid=${row.isGenerated ? (row.isValid ? 'success' : 'failed') : ''}">
                 <td>
@@ -1132,21 +1133,7 @@
                         return bulkGenerateBtn.setAttribute("data-selected", target.checked ? totalCount - generatedCount : 0);
                     }
 
-                    const valPreSelectCount = Number.parseInt(bulkValidateBtn.getAttribute("data-selected") || 0);
-                    const genPreSelectCount = Number.parseInt(bulkGenerateBtn.getAttribute("data-selected") || 0);
-                    const testPreSelectCount = Number.parseInt(bulkTestBtn.getAttribute("data-selected") || 0);
-                    const hasBeenGenerated = nearestTableRow.getAttribute("data-generate") === "success";
-                    const hasBeenValidated = nearestTableRow.getAttribute("data-valid") === "success";
-
-                    if (hasBeenGenerated) {
-                        bulkValidateBtn.setAttribute("data-selected", valPreSelectCount + (target.checked ? 1 : -1));
-                        if (hasBeenValidated) {
-                            bulkTestBtn.setAttribute("data-selected", testPreSelectCount + (target.checked ? 1 : -1));
-                        }
-                    } else {
-                        bulkGenerateBtn.setAttribute("data-selected", genPreSelectCount + (target.checked ? 1 : -1));
-                    }
-                    return;
+                    return handleSingleInput(nearestTableRow, target.checked);
                 }
 
                 default: {
@@ -1157,6 +1144,33 @@
             }
         }
     });
+
+    function handleSingleInput(nearestTableRow, checked) {
+        const getPreSelectCount = (btn, attr) => Number.parseInt(btn.getAttribute(attr) || 0);
+
+        const valPreSelectCount = getPreSelectCount(bulkValidateBtn, "data-selected");
+        const genPreSelectCount = getPreSelectCount(bulkGenerateBtn, "data-selected");
+        const testPreSelectCount = getPreSelectCount(bulkTestBtn, "data-selected");
+
+        const hasBeenGenerated = nearestTableRow.getAttribute("data-generate") === "success";
+        const hasBeenValidated = nearestTableRow.getAttribute("data-valid") === "success";
+        const isDiscriminatorRow = nearestTableRow.getAttribute("data-disc") === "true";
+        const isMainRow = nearestTableRow.getAttribute("data-main") === "true";
+
+        const countAdjustment = checked ? 1 : -1;
+
+        if (hasBeenGenerated) {
+            bulkValidateBtn.setAttribute("data-selected", valPreSelectCount + countAdjustment);
+            if (isDiscriminatorRow && isMainRow) {
+                bulkGenerateBtn.setAttribute("data-selected", genPreSelectCount + countAdjustment);
+            }
+            if (hasBeenValidated) {
+                bulkTestBtn.setAttribute("data-selected", testPreSelectCount + countAdjustment);
+            }
+        } else if (isMainRow) {
+            bulkGenerateBtn.setAttribute("data-selected", genPreSelectCount + countAdjustment);
+        }
+    }
 
     bulkValidateBtn.addEventListener("click", async () => {
         blockGenValidate = true;
@@ -1187,13 +1201,11 @@
 
         let failedCount = 0; createdCount = 0; existedCount = 0;
         const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
-        const rowsWithNoExamples = selectedRows.filter(row => !row.getAttribute("data-generate"));
+        const rowsWithNoExamplesOrDiscriminator = selectedRows.filter(row =>
+            row.getAttribute("data-main") === "true" && (!row.getAttribute("data-generate") || row.getAttribute("data-disc") === "true")
+        );
 
-        for (const row of rowsWithNoExamples) {
-            row.setAttribute("data-generate", "processing");
-        }
-
-        for (const row of rowsWithNoExamples) {
+        for (const row of rowsWithNoExamplesOrDiscriminator) {
             const rowValues = extractRowValues(row);
             const {success, created, existed, count} = await generateRowExamples(row, rowValues, true);
 
@@ -1308,7 +1320,7 @@
         const originalState = tableRow.getAttribute("data-generate");
 
         tableRow.setAttribute("data-generate", "processing");
-        const { examples, error } = await generateExample(rowValues);
+        const { examples, error } = await generateExample(rowValues, bulkMode);
         tableRow.setAttribute("data-generate", originalState);
 
         if (error) {
@@ -1410,7 +1422,7 @@
         insertExampleIntoRow(example, newRow);
 
         if (shouldClone) {
-            newRow.removeAttribute("data-valid"); newRow.removeAttribute("data-test");
+            ["data-valid", "data-test", "data-main"].forEach(attr => newRow.removeAttribute(attr));
             Array.from(newRow.children).slice(2, -2).forEach(cell => cell.classList.add("hidden"));
         }
 
@@ -1636,11 +1648,11 @@
         return testDetails[key][getExampleData(tableRow)];
     }
 
-    async function generateExample(pathInfo) {
+    async function generateExample(pathInfo, bulkMode) {
         try {
             const resp = await fetch(`${getHostPort()}/_specmatic/examples/generate`, {
                 method: "POST",
-                body: JSON.stringify(pathInfo),
+                body: JSON.stringify({...pathInfo, bulkMode }),
                 headers: {
                     "Content-Type": "application/json",
                 }
@@ -1741,9 +1753,11 @@
     }
 
     function cleanUpSelections() {
-        for (const checkbox of table.querySelectorAll("input[type=checkbox]")) {
-            checkbox.checked = false;
-        }
+        requestAnimationFrame(() => {
+            for (const checkbox of table.querySelectorAll("input[type=checkbox]")) {
+                checkbox.checked = false;
+            }
+        });
         bulkGenerateBtn.setAttribute("data-selected", "0");
         bulkValidateBtn.setAttribute("data-selected", "0");
         bulkTestBtn.setAttribute("data-selected", "0");

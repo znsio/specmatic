@@ -194,10 +194,10 @@ data class HttpHeadersPattern(
 
         val filteredPattern = row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver)
 
-        val additionalHeadersPattern = extractFromExampleHeadersNotInSpec(filteredPattern, row)
+        //val additionalHeadersPattern = extractFromExampleHeadersNotInSpec(filteredPattern, row)
 
         val basedOnExamples = forEachKeyCombinationGivenRowIn(
-            filteredPattern + additionalHeadersPattern,
+            filteredPattern, //+ additionalHeadersPattern,
             row,
             resolver
         ) { pattern ->

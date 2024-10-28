@@ -595,19 +595,19 @@ class HttpStub(
                 encodeDefaults = false
             }
             val generatedReport = stubUsageReport.generate()
-            val reportJson: String
-
-            val reportFile = File(JSON_REPORT_PATH).resolve(JSON_REPORT_FILE_NAME)
-            if (reportFile.exists()) {
-                reportJson = try {
-                    val existingReport = Json.decodeFromString(reportFile.readText()) as StubUsageReportJson
-                    json.encodeToString(generatedReport.merge(existingReport))
-                } catch (exception: SerializationException) {
-                    logger.log("The existing report file is not a valid Stub Usage Report. ${exception.message}")
+            val reportJson: String = File(JSON_REPORT_PATH).resolve(JSON_REPORT_FILE_NAME).let { reportFile ->
+                if (reportFile.exists()) {
+                    try {
+                        val existingReport = Json.decodeFromString<StubUsageReportJson>(reportFile.readText())
+                        json.encodeToString(generatedReport.merge(existingReport))
+                    } catch (exception: SerializationException) {
+                        logger.log("The existing report file is not a valid Stub Usage Report. ${exception.message}")
+                        json.encodeToString(generatedReport)
+                    }
+                } else {
                     json.encodeToString(generatedReport)
                 }
-            } else
-                reportJson = json.encodeToString(generatedReport)
+            }
 
             saveJsonFile(reportJson, JSON_REPORT_PATH, JSON_REPORT_FILE_NAME)
         }

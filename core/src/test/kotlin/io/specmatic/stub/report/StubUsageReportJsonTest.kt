@@ -40,7 +40,7 @@ class StubUsageReportJsonTest {
     }
 
     @Test
-    fun `append an new report wit existing report with additional counts sums the count`() {
+    fun `append an new report with existing report with additional counts sums the count`() {
         val newReport = StubUsageReportJson(
             specmaticConfigPath = "./specmatic.yaml",
             stubUsage = listOf(

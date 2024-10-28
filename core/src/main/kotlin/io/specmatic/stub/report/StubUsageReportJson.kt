@@ -15,14 +15,19 @@ data class StubUsageReportJson (
         }
 
         for ((_, rows) in allStubUsageRows) {
+            val allOperations = rows.flatMap { it.operations }
+
             val mergedOperations = mutableListOf<StubUsageReportOperation>()
 
-            rows.flatMap { it.operations }.groupBy { op ->
-                Triple(op.path, op.method, op.responseCode)
-            }.forEach { (_, ops) ->
-                val combinedCount = ops.sumOf { it.count }
-                val sampleOp = ops.first()
-                mergedOperations += sampleOp.copy(count = combinedCount)
+            for (operation in allOperations) {
+                val existingOperation = mergedOperations.find { it.isSameAs(operation) }
+
+                if (existingOperation != null) {
+                    mergedOperations[mergedOperations.indexOf(existingOperation)] =
+                        existingOperation.copy(count = existingOperation.count + operation.count)
+                } else {
+                    mergedOperations += operation
+                }
             }
 
             val firstRow = rows.first()

@@ -9,6 +9,7 @@ import io.specmatic.stub.report.StubUsageReportRow
 import kotlinx.serialization.json.Json
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.springframework.web.client.RestTemplate
 import java.io.File
@@ -18,9 +19,10 @@ class HttpStubStubCoverageTest {
     companion object {
         private val stubUsageReportFile = File("./build/reports/specmatic/stub_usage_report.json")
 
+        @BeforeAll
         @AfterAll
         @JvmStatic
-        fun tearDownAll() {
+        fun cleanUpAnyExistingReports() {
             stubUsageReportFile.delete()
         }
 

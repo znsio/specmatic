@@ -18,11 +18,11 @@ class OverlayParserTest {
                   newField: updated value
         """.trimIndent()
 
-        val map = OverlayParser.parseAndReturnUpdateMap(overlayContent)
+        val (updateMap, _) = OverlayParser.parse(overlayContent)
 
-        assertThat(map["${'$'}.node1"]).isEqualTo("new content for node1")
-        assertThat(map["${'$'}.node2.subnode"]).isEqualTo("new additional content for subnode")
-        assertThat(map["${'$'}.node3"]).isEqualTo(
+        assertThat(updateMap["${'$'}.node1"]).isEqualTo("new content for node1")
+        assertThat(updateMap["${'$'}.node2.subnode"]).isEqualTo("new additional content for subnode")
+        assertThat(updateMap["${'$'}.node3"]).isEqualTo(
             mapOf(
                 "newField" to "updated value"
             )

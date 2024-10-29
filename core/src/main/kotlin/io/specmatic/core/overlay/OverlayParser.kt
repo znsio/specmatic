@@ -6,35 +6,37 @@ import io.specmatic.core.log.logger
 
 class OverlayParser {
     companion object {
-        fun parseAndReturnUpdateMap(yamlContent: String): Map<String, Any> {
+
+        fun parse(yamlContent: String): Overlay {
+            return Overlay(
+                updateMap = parseAndReturnUpdateMap(yamlContent),
+                removalMap = parseAndReturnRemovalMap(yamlContent)
+            )
+        }
+
+        private fun parseAndReturnUpdateMap(content: String): Map<String, Any?> {
             try {
-                val rootNode = yamlContent.rootNode()
+                val targetMap = mutableMapOf<String, Any?>()
 
-                val actions = rootNode["actions"] as? List<Map<String, Any>>? ?: emptyList()
-                val targetMap = mutableMapOf<String, Any>()
-
-                actions.forEach { action ->
+                content.actions().forEach { action ->
                     val target = action["target"] as? String
                     val update = action["update"]
 
-                    if (target != null && update != null) targetMap[target] = update
+                    if (target != null && action.containsKey("update")) targetMap[target] = update
                 }
 
                 return targetMap
-            } catch(e: Exception) {
+            } catch (e: Exception) {
                 logger.log("Skipped overlay based transformation for the specification because of an error occurred while parsing the update map: ${e.message}")
                 return mutableMapOf()
             }
         }
 
-        fun parseAndReturnRemovalMap(yamlContent: String): Map<String, Boolean> {
+        private fun parseAndReturnRemovalMap(content: String): Map<String, Boolean> {
             try {
-                val rootNode = yamlContent.rootNode()
-
-                val actions = rootNode["actions"] as? List<Map<String, Any>>? ?: emptyList()
                 val targetMap = mutableMapOf<String, Boolean>()
 
-                actions.forEach { action ->
+                content.actions().forEach { action ->
                     val target = action["target"] as? String
                     val remove = action["remove"] as? Boolean ?: false
 
@@ -42,15 +44,17 @@ class OverlayParser {
                 }
 
                 return targetMap
-            } catch(e: Exception) {
+            } catch (e: Exception) {
                 logger.log("Skipped overlay based transformation for the specification because of an error occurred while parsing the removal map: ${e.message}")
                 return mutableMapOf()
             }
         }
 
-        private fun String.rootNode(): Map<String, Any> {
-            return ObjectMapper(YAMLFactory())
+        private fun String.actions(): List<Map<String, Any>> {
+            val rootNode = ObjectMapper(YAMLFactory())
                 .readValue(this, Map::class.java) as Map<String, Any>
+
+            return rootNode["actions"] as? List<Map<String, Any>>? ?: emptyList()
         }
     }
 }

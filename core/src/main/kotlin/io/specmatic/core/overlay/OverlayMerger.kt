@@ -12,14 +12,18 @@ class OverlayMerger {
 
     fun merge(
         baseContent: String,
-        updateMap: Map<String, Any>,
-        removalMap: Map<String, Boolean>
+        overlay: Overlay
     ): String {
         try {
             val yamlMapper = ObjectMapper(
                 YAMLFactory().disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER)
             )
             val rootNode = yamlMapper.readTree(baseContent) as ObjectNode
+            val originalDocumentContext = JsonPath.using(
+                Configuration.builder().options(Option.ALWAYS_RETURN_LIST).build()
+            ).parse(
+                ObjectMapper().writeValueAsString(rootNode)
+            )
 
             val documentContext = JsonPath.using(
                 Configuration.builder().options(Option.ALWAYS_RETURN_LIST).build()
@@ -27,8 +31,27 @@ class OverlayMerger {
                 ObjectMapper().writeValueAsString(rootNode)
             )
 
-            updateMap.forEach { (jsonPath, content) -> documentContext.set(jsonPath, content) }
-            removalMap.filter { it.value }.forEach { (jsonPath, _) ->
+
+            overlay.updateMap.forEach { (jsonPath, content) ->
+                val targetNodes = originalDocumentContext.read<List<Any>>(jsonPath)
+                val existingNode = if (targetNodes.isNotEmpty()) targetNodes[0] else null
+
+                when (existingNode) {
+                    is Map<*, *> -> {
+                        val mergedContent = (existingNode as Map<String, Any?>).toMutableMap()
+                        (content as Map<String, Any?>).forEach { (key, value) ->
+                            mergedContent[key] = value
+                        }
+                        documentContext.set(jsonPath, mergedContent)
+                    }
+
+                    is List<*> -> documentContext.add(jsonPath, content)
+
+                    else -> documentContext.set(jsonPath, content)
+                }
+            }
+
+            overlay.removalMap.filter { it.value }.forEach { (jsonPath, _) ->
                 documentContext.delete(jsonPath)
             }
 

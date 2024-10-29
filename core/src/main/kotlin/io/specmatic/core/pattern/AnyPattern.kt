@@ -315,6 +315,15 @@ data class AnyPattern(
         return this
     }
 
+    fun markAllFieldsOptionalExcept(fieldsToBeMadeMandatory: List<String>, resolver: Resolver): Pattern {
+        if(this.hasNoAmbiguousPatterns().not()) return this
+        val pattern = this.pattern.first { it !is NullPattern }
+        if(pattern is JSONObjectPattern) return pattern.markAllFieldsOptionalExcept(fieldsToBeMadeMandatory)
+        if(pattern is ListPattern) return pattern.markAllFieldsOptionalExcept(fieldsToBeMadeMandatory, resolver)
+        if(pattern is DeferredPattern) return pattern.markAllFieldsOptionalExcept(fieldsToBeMadeMandatory, resolver)
+        return this
+    }
+
     fun isDiscriminatorPresent() = discriminatorProperty != null && discriminatorValues.isNotEmpty()
 
     fun generateForEveryDiscriminatorValue(resolver: Resolver): List<DiscriminatorBasedItem<Value>> {

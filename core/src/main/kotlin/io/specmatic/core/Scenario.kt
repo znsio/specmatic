@@ -679,6 +679,45 @@ data class Scenario(
             exampleName = this.exampleName.orEmpty()
         )
     }
+
+    fun updateOptionalityOfResponseFields(
+        attributeSelectionQueryParamKey: String,
+        attributeSelectionDefaultMandatoryFields: List<String>,
+        request: HttpRequest
+    ): Scenario {
+        val fieldsToBeMadeMandatory: List<String> =
+            request.queryParams.getValues(attributeSelectionQueryParamKey).flatMap {
+                it.split(",")
+            }.plus(attributeSelectionDefaultMandatoryFields)
+
+        when (httpResponsePattern.body) {
+            is JSONObjectPattern -> return this.copy(
+                httpResponsePattern = this.httpResponsePattern.copy(
+                    body = httpResponsePattern.body.markAllFieldsOptionalExcept(fieldsToBeMadeMandatory)
+                )
+            )
+
+            is DeferredPattern -> return this.copy(
+                httpResponsePattern = this.httpResponsePattern.copy(
+                    body = httpResponsePattern.body.markAllFieldsOptionalExcept(fieldsToBeMadeMandatory, resolver)
+                )
+            )
+
+            is ListPattern -> return this.copy(
+                httpResponsePattern = this.httpResponsePattern.copy(
+                    body = httpResponsePattern.body.markAllFieldsOptionalExcept(fieldsToBeMadeMandatory, resolver)
+                )
+            )
+
+            is AnyPattern -> return this.copy(
+                httpResponsePattern = this.httpResponsePattern.copy(
+                    body = httpResponsePattern.body.markAllFieldsOptionalExcept(fieldsToBeMadeMandatory, resolver)
+                )
+            )
+
+            else -> return this
+        }
+    }
 }
 
 fun newExpectedServerStateBasedOn(

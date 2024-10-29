@@ -2,11 +2,11 @@ package io.specmatic.test
 
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
-import io.specmatic.core.filters.ScenarioMetadata
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.Value
 
 data class ScenarioAsTest(
@@ -118,7 +118,15 @@ data class ScenarioAsTest(
         val result = when {
             response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral())
                 .updateScenario(testScenario)
-            else -> testScenario.matches(request, response, ContractAndResponseMismatch, flagsBased?.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
+            else -> {
+                val updatedTestScenario = getScenarioUpdatedAsPerAttributeSelection(testScenario, request)
+                updatedTestScenario.matches(
+                    request,
+                    response,
+                    ContractAndResponseMismatch,
+                    flagsBased?.unexpectedKeyCheck ?: ValidateUnexpectedKeys
+                )
+            }
         }
 
         if (result is Result.Success && result.isPartialSuccess()) {
@@ -127,6 +135,33 @@ data class ScenarioAsTest(
         }
 
         return result
+    }
+
+    private fun getScenarioUpdatedAsPerAttributeSelection(testScenario: Scenario, request: HttpRequest): Scenario {
+        val isAttributeSelectionPatternEnabled = readEnvVarOrProperty(
+            "ENABLE_ATTRIBUTE_SELECTION",
+            "ENABLE_ATTRIBUTE_SELECTION"
+        ).orEmpty()
+        val attributeSelectionQueryParamKey = readEnvVarOrProperty(
+            "ATTRIBUTE_SELECTION_QUERY_PARAM_KEY",
+            "ATTRIBUTE_SELECTION_QUERY_PARAM_KEY"
+        ).orEmpty()
+        val attributeSelectionDefaultMandatoryFields = readEnvVarOrProperty(
+            "ATTRIBUTE_SELECTION_DEFAULT_MANDATORY_FIELDS",
+            "ATTRIBUTE_SELECTION_DEFAULT_MANDATORY_FIELDS"
+        ).orEmpty().split(",")
+
+        if(isAttributeSelectionPatternEnabled == "true" &&
+            attributeSelectionQueryParamKey.isBlank().not() &&
+            attributeSelectionDefaultMandatoryFields.isNotEmpty()) {
+            return testScenario.updateOptionalityOfResponseFields(
+                attributeSelectionQueryParamKey,
+                attributeSelectionDefaultMandatoryFields,
+                request
+            )
+        }
+
+        return testScenario
     }
 
 }

@@ -6,7 +6,11 @@ import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.ListValue
 import io.specmatic.core.value.Value
 
-data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null, override val example: List<String?>? = null) : Pattern, SequenceType, HasDefaultExample {
+data class ListPattern(
+    override val pattern: Pattern,
+    override val typeAlias: String? = null,
+    override val example: List<String?>? = null
+) : Pattern, SequenceType, HasDefaultExample {
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
 
@@ -178,6 +182,24 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
     }
 
     override val typeName: String = "list of ${pattern.typeName}"
+
+    fun markAllFieldsOptionalExcept(fieldsToBeMadeMandatory: List<String>, resolver: Resolver): Pattern {
+        val resolvedPattern = resolver.withCyclePrevention(this) { updatedResolver ->
+            resolvedHop(this.pattern, updatedResolver)
+        }
+        return when (resolvedPattern) {
+            is JSONObjectPattern -> this.copy(
+                pattern = resolvedPattern.markAllFieldsOptionalExcept(fieldsToBeMadeMandatory)
+            )
+            is ListPattern -> this.copy(
+                pattern = resolvedPattern.markAllFieldsOptionalExcept(fieldsToBeMadeMandatory, resolver)
+            )
+            is AnyPattern -> this.copy(
+                pattern = resolvedPattern.markAllFieldsOptionalExcept(fieldsToBeMadeMandatory, resolver)
+            )
+            else -> this
+        }
+    }
 }
 
 private fun withEmptyType(pattern: Pattern, resolver: Resolver): Resolver {

@@ -7,13 +7,31 @@ import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.Value
 
-data class DeferredPattern(override val pattern: String, val key: String? = null) : Pattern {
+data class DeferredPattern(
+    override val pattern: String,
+    val key: String? = null
+) : Pattern {
     override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
         return resolvePattern(resolver).addTypeAliasesToConcretePattern(concretePattern, resolver, null)
     }
 
     override fun fillInTheBlanks(value: Value, resolver: Resolver): ReturnValue<Value> {
         return resolvePattern(resolver).fillInTheBlanks(value, resolver)
+    }
+
+    fun markAllFieldsOptionalExcept(
+        fieldsToBeMadeMandatory: List<String>,
+        resolver: Resolver
+    ): Pattern {
+        val resolvedPattern = resolver.withCyclePrevention(this) { updatedResolver ->
+            resolvedHop(this, updatedResolver)
+        }
+        return when (resolvedPattern) {
+            is JSONObjectPattern -> resolvedPattern.markAllFieldsOptionalExcept(fieldsToBeMadeMandatory)
+            is ListPattern -> resolvedPattern.markAllFieldsOptionalExcept(fieldsToBeMadeMandatory, resolver)
+            is AnyPattern -> resolvedPattern.markAllFieldsOptionalExcept(fieldsToBeMadeMandatory, resolver)
+            else -> this
+        }
     }
 
     override fun equals(other: Any?): Boolean = when(other) {

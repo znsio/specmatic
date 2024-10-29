@@ -339,6 +339,15 @@ data class JSONObjectPattern(
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)
     override fun hashCode(): Int = pattern.hashCode()
 
+    fun markAllFieldsOptionalExcept(fieldsToBeMadeMandatory: List<String>): Pattern {
+        val updatedPatternMap = this.pattern.mapKeys { (key, _) ->
+            if(key.removeSuffix("?") in fieldsToBeMadeMandatory) return@mapKeys key.removeSuffix("?")
+            if(key.endsWith("?")) return@mapKeys key
+            key.plus("?")
+        }
+        return this.copy(pattern = updatedPatternMap)
+    }
+
     override val typeName: String = "json object"
 }
 

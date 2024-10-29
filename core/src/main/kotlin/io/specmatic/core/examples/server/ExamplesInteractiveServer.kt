@@ -22,6 +22,12 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.*
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
+import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
@@ -326,6 +332,8 @@ class ExamplesInteractiveServer(
 
     companion object {
         private val exampleFileNamePostFixCounter = AtomicInteger(0)
+        private val extendedFieldsMap = mapOf("SAMPLE_EXTRA_FIELD_FOR_EXTENDED_SCHEMA" to "SAMPLE_VALUE").toValueMap()
+
         enum class ExampleGenerationStatus {
             CREATED, EXISTED, ERROR
         }
@@ -481,7 +489,7 @@ class ExamplesInteractiveServer(
                 }
 
             return discriminatorBasedRequestResponses.map { (request, response, requestDiscriminator, responseDiscriminator) ->
-                val scenarioStub = ScenarioStub(request, response)
+                val scenarioStub = ScenarioStub(request, response).addExtendedFields(extendedFieldsMap)
                 val jsonWithDiscriminator = DiscriminatorExampleInjector(
                     stubJSON = scenarioStub.toJSON(),
                     requestDiscriminator = requestDiscriminator,
@@ -634,6 +642,29 @@ class ExamplesInteractiveServer(
                 "",
                 scenarioStub.response.status
             )
+        }
+
+        private fun ScenarioStub.addExtendedFields(extendedFieldsMap: Map<String, Value>): ScenarioStub {
+            if (!getBooleanValue(EXTENSIBLE_SCHEMA)) {
+                return this
+            }
+
+            return this.copy(
+                request = this.request.updateBody(insertFieldsInValue(this.request.body, extendedFieldsMap)),
+                response = this.response.updateBody(insertFieldsInValue(this.response.body, extendedFieldsMap))
+            )
+        }
+
+        private fun insertFieldsInValue(value: Value, extendedFieldsMap: Map<String, Value>): Value {
+            return when (value) {
+                is JSONObjectValue -> JSONObjectValue(value.jsonObject.plus(extendedFieldsMap))
+                is JSONArrayValue -> JSONArrayValue(value.list.map { insertFieldsInValue(it, extendedFieldsMap) })
+                else -> value
+            }
+        }
+
+        private fun Map<String, String>.toValueMap(): Map<String, Value> {
+            return this.mapValues { StringValue(it.value) }
         }
     }
 }

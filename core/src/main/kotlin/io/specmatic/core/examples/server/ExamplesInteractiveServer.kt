@@ -332,6 +332,7 @@ class ExamplesInteractiveServer(
 
     companion object {
         private val exampleFileNamePostFixCounter = AtomicInteger(0)
+        private val extendedFieldsDescription = mapOf("description" to "Example with extra fields for extended schema").toValueMap()
         private val extendedFieldsMap = mapOf("SAMPLE_EXTRA_FIELD_FOR_EXTENDED_SCHEMA" to "SAMPLE_VALUE").toValueMap()
 
         enum class ExampleGenerationStatus {
@@ -489,9 +490,9 @@ class ExamplesInteractiveServer(
                 }
 
             return discriminatorBasedRequestResponses.map { (request, response, requestDiscriminator, responseDiscriminator) ->
-                val scenarioStub = ScenarioStub(request, response).addExtendedFields(extendedFieldsMap)
+                val scenarioStub = ScenarioStub(request, response)
                 val jsonWithDiscriminator = DiscriminatorExampleInjector(
-                    stubJSON = scenarioStub.toJSON(),
+                    stubJSON = scenarioStub.toJSONWithExtendedFields(extendedFieldsDescription, extendedFieldsMap),
                     requestDiscriminator = requestDiscriminator,
                     responseDiscriminator = responseDiscriminator
                 ).getExampleWithDiscriminator()
@@ -644,20 +645,20 @@ class ExamplesInteractiveServer(
             )
         }
 
-        private fun ScenarioStub.addExtendedFields(extendedFieldsMap: Map<String, Value>): ScenarioStub {
+        private fun ScenarioStub.toJSONWithExtendedFields(extendedFieldsDescription:  Map<String, Value>, extendedFieldsMap: Map<String, Value>): JSONObjectValue {
             if (!getBooleanValue(EXTENSIBLE_SCHEMA)) {
-                return this
+                return this.toJSON()
             }
 
             return this.copy(
                 request = this.request.updateBody(insertFieldsInValue(this.request.body, extendedFieldsMap)),
                 response = this.response.updateBody(insertFieldsInValue(this.response.body, extendedFieldsMap))
-            )
+            ).toJSON().let { it.copy(jsonObject = extendedFieldsDescription.plus(it.jsonObject)) }
         }
 
         private fun insertFieldsInValue(value: Value, extendedFieldsMap: Map<String, Value>): Value {
             return when (value) {
-                is JSONObjectValue -> JSONObjectValue(value.jsonObject.plus(extendedFieldsMap))
+                is JSONObjectValue -> JSONObjectValue(extendedFieldsMap.plus(value.jsonObject))
                 is JSONArrayValue -> JSONArrayValue(value.list.map { insertFieldsInValue(it, extendedFieldsMap) })
                 else -> value
             }

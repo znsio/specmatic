@@ -24,10 +24,9 @@ import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHeal
 import io.specmatic.core.utilities.*
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
+import io.specmatic.mock.MOCK_HTTP_REQUEST
+import io.specmatic.mock.MOCK_HTTP_RESPONSE
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
@@ -332,8 +331,14 @@ class ExamplesInteractiveServer(
 
     companion object {
         private val exampleFileNamePostFixCounter = AtomicInteger(0)
-        private val extendedFieldsDescription = mapOf("description" to "Example with extra fields for extended schema").toValueMap()
+
+        private val extendedExampleDescription = mapOf("description" to "Example with extra fields for extended schema").toValueMap()
         private val extendedFieldsMap = mapOf("SAMPLE_EXTRA_FIELD_FOR_EXTENDED_SCHEMA" to "SAMPLE_VALUE").toValueMap()
+
+        private val extendedKeys = extendedFieldsMap.keys.joinToString(", ")
+        private val extendedPayloadDescription = mapOf(
+            "description" to "This is an example of a payload that includes additional fields for an extended schema, as indicated by the following keys: $extendedKeys.",
+        ).toValueMap()
 
         enum class ExampleGenerationStatus {
             CREATED, EXISTED, ERROR
@@ -443,9 +448,12 @@ class ExamplesInteractiveServer(
             val examplesDir = getExamplesDirPath(contractFile)
             val examples = examplesDir.getExamplesFromDir()
 
-            return getExistingExampleFiles(scenario, examples).map {
-                ExamplePathInfo(it.first.absolutePath, false)
-            }.plus(generateExampleFiles(contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject))
+            val existingExamples = getExistingExampleFiles(scenario, examples)
+            val generatedExamples = generateExampleFiles(contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject)
+
+            return existingExamples.map { ExamplePathInfo(it.first.absolutePath, true) }.ifEmpty {
+                listOfNotNull(generateExtendedExample(contractFile, File(generatedExamples.random().path), examplesDir))
+            }.plus(generatedExamples)
         }
 
         data class ExamplePathInfo(val path: String, val created: Boolean)
@@ -492,7 +500,7 @@ class ExamplesInteractiveServer(
             return discriminatorBasedRequestResponses.map { (request, response, requestDiscriminator, responseDiscriminator) ->
                 val scenarioStub = ScenarioStub(request, response)
                 val jsonWithDiscriminator = DiscriminatorExampleInjector(
-                    stubJSON = scenarioStub.toJSONWithExtendedFields(extendedFieldsDescription, extendedFieldsMap),
+                    stubJSON = scenarioStub.toJSON(),
                     requestDiscriminator = requestDiscriminator,
                     responseDiscriminator = responseDiscriminator
                 ).getExampleWithDiscriminator()
@@ -645,22 +653,56 @@ class ExamplesInteractiveServer(
             )
         }
 
-        private fun ScenarioStub.toJSONWithExtendedFields(extendedFieldsDescription:  Map<String, Value>, extendedFieldsMap: Map<String, Value>): JSONObjectValue {
-            if (!getBooleanValue(EXTENSIBLE_SCHEMA)) {
-                return this.toJSON()
-            }
+        private fun generateExtendedExample(contractFile: File, generateExampleFile: File, exampleDir: File): ExamplePathInfo? {
+            if (!getBooleanValue(EXTENSIBLE_SCHEMA)) return null
 
-            return this.copy(
-                request = this.request.updateBody(insertFieldsInValue(this.request.body, extendedFieldsMap)),
-                response = this.response.updateBody(insertFieldsInValue(this.response.body, extendedFieldsMap))
-            ).toJSON().let { it.copy(jsonObject = extendedFieldsDescription.plus(it.jsonObject)) }
+            val scenarioStub = ScenarioStub.readFromFile(generateExampleFile)
+            if (scenarioStub.request.body.isScalarOrEmpty() && scenarioStub.response.body.isScalarOrEmpty()) return null
+
+            val requestJSON = scenarioStub.request.insertIfBodyNotScalar(extendedFieldsMap) { request ->
+                request.toJSON().insertFieldsInValue(extendedPayloadDescription) as JSONObjectValue
+            } ?: scenarioStub.request.toJSON()
+
+            val responseJSON = scenarioStub.response.insertIfBodyNotScalar(extendedFieldsMap) { response ->
+                response.toJSON().insertFieldsInValue(extendedPayloadDescription) as JSONObjectValue
+            } ?: scenarioStub.response.toJSON()
+
+            val extendedExampleJson = JSONObjectValue(extendedExampleDescription.plus(
+                mapOf(
+                    MOCK_HTTP_REQUEST to requestJSON,
+                    MOCK_HTTP_RESPONSE to responseJSON,
+                )
+            ))
+
+            val file = exampleDir.resolve(generateExampleFile.nameWithoutExtension + "_extended.json")
+            println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
+            file.writeText(extendedExampleJson.toStringLiteral())
+            return ExamplePathInfo(file.absolutePath, true)
         }
 
-        private fun insertFieldsInValue(value: Value, extendedFieldsMap: Map<String, Value>): Value {
-            return when (value) {
-                is JSONObjectValue -> JSONObjectValue(extendedFieldsMap.plus(value.jsonObject))
-                is JSONArrayValue -> JSONArrayValue(value.list.map { insertFieldsInValue(it, extendedFieldsMap) })
-                else -> value
+        private fun HttpRequest.insertIfBodyNotScalar(extendedFieldsMap: Map<String, Value>, block: (request: HttpRequest) -> JSONObjectValue) : JSONObjectValue? {
+            if (this.body.isScalarOrEmpty()) return null
+
+            val updatedRequest = this.updateBody(this.body.insertFieldsInValue(extendedFieldsMap))
+            return block(updatedRequest)
+        }
+
+        private fun HttpResponse.insertIfBodyNotScalar(extendedFieldsMap: Map<String, Value>, block: (response: HttpResponse) -> JSONObjectValue ): JSONObjectValue? {
+            if (this.body.isScalarOrEmpty()) return null
+
+            val updatedResponse = this.updateBody(this.body.insertFieldsInValue(extendedFieldsMap))
+            return block(updatedResponse)
+        }
+
+        private fun Value.isScalarOrEmpty(): Boolean {
+            return this is ScalarValue || this is NoBodyValue
+        }
+
+        private fun Value.insertFieldsInValue(extendedFieldsMap: Map<String, Value>): Value {
+            return when (this) {
+                is JSONObjectValue -> JSONObjectValue(extendedFieldsMap.plus(this.jsonObject))
+                is JSONArrayValue -> JSONArrayValue(this.list.map {value ->  value.insertFieldsInValue(extendedFieldsMap) })
+                else -> this
             }
         }
 

@@ -11,6 +11,7 @@ import io.ktor.http.*
 import io.ktor.http.content.*
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_PRETTY_PRINT
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
+import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.apache.http.client.utils.URLEncodedUtils
 import org.apache.http.message.BasicNameValuePair
 import java.io.File
@@ -31,6 +32,8 @@ fun urlToQueryParams(uri: URI): Map<String, String> {
     }
 }
 
+data class HttpRequestMetadata(val securityHeaderNames: Set<String> = emptySet())
+
 data class HttpRequest(
     val method: String? = null,
     val path: String? = null,
@@ -38,7 +41,8 @@ data class HttpRequest(
     val body: Value = EmptyString,
     val queryParams: QueryParameters = QueryParameters(),
     val formFields: Map<String, String> = emptyMap(),
-    val multiPartFormData: List<MultiPartFormDataValue> = emptyList()
+    val multiPartFormData: List<MultiPartFormDataValue> = emptyList(),
+    val metadata: HttpRequestMetadata = HttpRequestMetadata()
 ) {
     constructor(method: String, uri: URI) : this(method, uri.path, queryParametersMap = urlToQueryParams(uri))
     constructor(
@@ -49,7 +53,8 @@ data class HttpRequest(
         queryParametersMap: Map<String, String> = emptyMap(),
         formFields: Map<String, String> = emptyMap(),
         multiPartFormData: List<MultiPartFormDataValue> = emptyList(),
-        marker: String = "Dummy"
+        marker: String = "Dummy",
+        metadata: HttpRequestMetadata = HttpRequestMetadata()
     ) : this(
         method = method,
         path = path,
@@ -58,6 +63,7 @@ data class HttpRequest(
         queryParams = QueryParameters(queryParametersMap),
         formFields = formFields,
         multiPartFormData = multiPartFormData,
+        metadata = metadata
     )
 
     fun updateQueryParams(otherQueryParams: Map<String, String>): HttpRequest =
@@ -363,6 +369,22 @@ data class HttpRequest(
     }
 
     fun withoutDynamicHeaders(): HttpRequest = copy(headers = headers.withoutDynamicHeaders())
+
+    fun addSecurityHeader(headerName: String, headerValue: String): HttpRequest {
+        val updatedMetadata = metadata.copy(securityHeaderNames = metadata.securityHeaderNames.plus(headerName))
+
+        val updatedHeaders = headers.filterKeys { key ->
+            !key.equals(
+                headerName,
+                ignoreCase = true
+            )
+        } + (headerName to headerValue)
+
+        return this.copy(
+            headers = updatedHeaders,
+            metadata = updatedMetadata
+        )
+    }
 }
 
 private fun setIfNotEmpty(dest: MutableMap<String, Value>, key: String, data: Map<String, String>) {

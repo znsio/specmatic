@@ -126,7 +126,7 @@ data class Scenario(
         mismatchMessages: MismatchMessages = DefaultMismatchMessages,
         unexpectedKeyCheck: UnexpectedKeyCheck? = null
     ): Result {
-        val resolver = Resolver(serverState, false, patterns).copy(mismatchMessages = mismatchMessages).let {
+        val resolver = resolver.copy(mismatchMessages = mismatchMessages).let {
             if(unexpectedKeyCheck != null) {
                 val keyCheck = it.findKeyErrorCheck
                 it.copy(findKeyErrorCheck = keyCheck.copy(unexpectedKeyCheck = unexpectedKeyCheck))

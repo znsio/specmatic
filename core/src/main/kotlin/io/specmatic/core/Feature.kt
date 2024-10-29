@@ -318,23 +318,41 @@ data class Feature(
         } != null
     }
 
-    fun matchResult(request: HttpRequest, response: HttpResponse): Result {
+    fun matchResult(scenarioStub: ScenarioStub, ignoreExtraKeys: Boolean): Result {
+        val results = matchResult(scenarioStub.request, scenarioStub.response, ignoreExtraKeys)
+
+        return Results(results).withoutFluff().toResultIfAny()
+    }
+
+    private fun matchResult(request: HttpRequest, response: HttpResponse, ignoreExtraKeys: Boolean): List<Result> {
         if(scenarios.isEmpty())
-            return Result.Failure("No operations found")
+            return listOf(Result.Failure("No operations found"))
+
+        val unexpectedKeyCheck =
+            if(ignoreExtraKeys)
+                IgnoreUnexpectedKeys
+            else
+                ValidateUnexpectedKeys
 
         val matchResults = scenarios.map {
             it.matches(
                 request,
-                serverState
-            ) to it.matches(response)
+                serverState,
+                unexpectedKeyCheck = unexpectedKeyCheck
+            ) to it.matches(response, unexpectedKeyCheck = unexpectedKeyCheck)
         }
 
         if (matchResults.any {
-            it.first is Result.Success && it.second is Result.Success
-        })
-            return Result.Success()
+                it.first is Result.Success && it.second is Result.Success
+            })
+            return listOf(Result.Success())
 
-        return Result.fromResults(matchResults.flatMap { it.toList() })
+        return matchResults.flatMap { it.toList() }
+
+    }
+
+    fun matchResult(request: HttpRequest, response: HttpResponse): Result {
+        return Result.fromResults(matchResult(request, response, false))
     }
 
     fun matchingStub(

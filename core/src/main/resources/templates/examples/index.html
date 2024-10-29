@@ -1126,7 +1126,7 @@
                         toggleAllSelects(target.checked);
 
                         if (table.hasAttribute("data-generated") ) {
-                            bulkValidateBtn.setAttribute("data-selected", target.checked ? generatedCount : 0);
+                            bulkValidateBtn.setAttribute("data-selected", target.checked ? validatedCount : 0);
                             bulkTestBtn.setAttribute("data-selected", target.checked ? validatedCount : 0);
                         }
 
@@ -1298,7 +1298,7 @@
     function getRowsCount() {
         const tableRows = table.querySelectorAll("tbody > tr");
         return Array.from(tableRows).reduce((acc, row) => {
-            const isRowGenerated = row.getAttribute("data-generate") === "success";
+            const isRowGenerated = (row.getAttribute("data-main") === "true" && row.getAttribute("data-disc") === "true") ? false : row.getAttribute("data-generate") === "success";
             const isRowValidated = row.getAttribute("data-valid") === "success";
 
             acc.validatedCount += isRowValidated ? 1 : 0;

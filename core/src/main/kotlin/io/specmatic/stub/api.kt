@@ -96,7 +96,7 @@ internal fun createStub(
     timeoutMillis: Long,
     strict: Boolean = false
 ): ContractStub {
-    val configFileName = getConfigFileName()
+    val configFileName = getConfigFilePath()
     if(File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
     val contractPathData = contractStubPaths(configFileName)
 
@@ -119,13 +119,24 @@ internal fun createStub(
     )
 }
 
-internal fun createStub(host: String = "localhost", port: Int = 9000, timeoutMillis: Long, strict: Boolean = false, givenConfigFileName: String? = null): ContractStub {
+internal fun createStub(
+    host: String = "localhost",
+    port: Int = 9000,
+    timeoutMillis: Long,
+    strict: Boolean = false,
+    givenConfigFileName: String? = null,
+    dataDirPaths: List<String> = emptyList()
+): ContractStub {
     val workingDirectory = WorkingDirectory()
-    val configFileName = givenConfigFileName ?: getConfigFileName()
+    val configFileName = givenConfigFileName ?: getConfigFilePath()
     if(File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
 
     val specmaticConfig = loadSpecmaticConfigOrDefault(configFileName)
-    val stubs = loadContractStubsFromImplicitPaths(contractStubPaths(configFileName), specmaticConfig)
+    val stubs = if(dataDirPaths.isEmpty()) {
+        loadContractStubsFromImplicitPaths(contractStubPaths(configFileName), specmaticConfig)
+    } else {
+        loadContractStubsFromFiles(contractStubPaths(configFileName), dataDirPaths, specmaticConfig, strict)
+    }
     val features = stubs.map { it.first }
     val expectations = contractInfoToHttpExpectations(stubs)
 
@@ -179,7 +190,7 @@ internal fun createStubFromContracts(
         host,
         port,
         ::consoleLog,
-        specmaticConfigPath = File(getGlobalConfigFileName()).canonicalPath,
+        specmaticConfigPath = File(getConfigFilePath()).canonicalPath,
         timeoutMillis = timeoutMillis
     )
 }
@@ -318,7 +329,11 @@ fun loadExpectationsForFeatures(
         }
     }
 
-    return loadContractStubs(features, mockData, strictMode)
+    val externalExampleNames = dataFiles.map { it.nameWithoutExtension }.toSet()
+
+    return loadContractStubs(features, mockData, strictMode).map {
+        it.copy(first = it.first.overrideInlineExamples(externalExampleNames))
+    }
 }
 
 private fun printDataFiles(dataFiles: List<File>) {
@@ -395,7 +410,7 @@ fun loadContractStubs(
                 feature.matchingStub(stub, ContractAndStubMismatchMessages)
                 StubMatchResults(feature, null)
             } catch (e: NoMatchingScenario) {
-                StubMatchResults(null, StubMatchErrorReport(StubMatchExceptionReport(stub.partial?.let { it.request } ?: stub.request, e), specFile))
+                StubMatchResults(null, StubMatchErrorReport(StubMatchExceptionReport(stub.partial?.request ?: stub.request, e), specFile))
             }
         }
 

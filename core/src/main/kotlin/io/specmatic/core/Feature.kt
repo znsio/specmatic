@@ -15,6 +15,8 @@ import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
+import io.specmatic.core.discriminator.DiscriminatorBasedItem
+import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.*
 import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.headers.Header
@@ -34,7 +36,8 @@ fun parseContractFileToFeature(
     sourceRepositoryBranch: String? = null,
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    overlayContent: String = ""
 ): Feature {
     return parseContractFileToFeature(
         File(contractPath),
@@ -44,7 +47,8 @@ fun parseContractFileToFeature(
         sourceRepositoryBranch,
         specificationPath,
         securityConfiguration,
-        specmaticConfig
+        specmaticConfig,
+        overlayContent
     )
 }
 
@@ -61,12 +65,22 @@ fun parseContractFileToFeature(
     sourceRepositoryBranch: String? = null,
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    overlayContent: String = ""
 ): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
-
     return when (file.extension) {
-        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath, securityConfiguration = securityConfiguration, specmaticConfig = specmaticConfig).toFeature()
+        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(
+            hook.readContract(file.path),
+            file.path,
+            sourceProvider = sourceProvider,
+            sourceRepository = sourceRepository,
+            sourceRepositoryBranch = sourceRepositoryBranch,
+            specificationPath = specificationPath,
+            securityConfiguration = securityConfiguration,
+            specmaticConfig = specmaticConfig,
+            overlayContent = overlayContent
+        ).toFeature()
         WSDL -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
         else -> throw unsupportedFileExtensionContractException(file.path, file.extension)
@@ -106,7 +120,7 @@ data class Feature(
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
     val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig)
-) {
+): IFeature {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         val updatedSpecmaticConfig = specmaticConfig.copy(
             test = specmaticConfig.test?.copy(
@@ -142,6 +156,52 @@ data class Feature(
     fun lookupResponse(scenario: Scenario): HttpResponse {
         try {
             return scenario.generateHttpResponse(serverState)
+        } finally {
+            serverState = emptyMap()
+        }
+    }
+
+    fun generateDiscriminatorBasedRequestResponseList(
+        scenario: Scenario,
+        allowOnlyMandatoryKeysInJSONObject: Boolean = false
+    ): List<DiscriminatorBasedRequestResponse> {
+        try {
+            val requests = scenario.generateHttpRequestV2(
+                allowOnlyMandatoryKeysInJSONObject = allowOnlyMandatoryKeysInJSONObject
+            )
+            val responses = scenario.generateHttpResponseV2(
+                serverState,
+                allowOnlyMandatoryKeysInJSONObject = allowOnlyMandatoryKeysInJSONObject
+            )
+
+            val discriminatorBasedRequestResponseList = if (requests.size > responses.size) {
+                requests.map { (requestDiscriminator, request) ->
+                    val (responseDiscriminator, response) = if (responses.containsDiscriminatorValueAs(requestDiscriminator.discriminatorValue))
+                        responses.getDiscriminatorItemWith(requestDiscriminator.discriminatorValue)
+                    else
+                        responses.first()
+                    DiscriminatorBasedRequestResponse(
+                        request,
+                        response,
+                        requestDiscriminator,
+                        responseDiscriminator
+                    )
+                }
+            } else {
+                responses.map { (responseDiscriminator, response) ->
+                    val (requestDiscriminator, request) = if (requests.containsDiscriminatorValueAs(responseDiscriminator.discriminatorValue))
+                        requests.getDiscriminatorItemWith(responseDiscriminator.discriminatorValue)
+                    else requests.first()
+                    DiscriminatorBasedRequestResponse(
+                        request,
+                        response,
+                        responseDiscriminator,
+                        requestDiscriminator
+                    )
+                }
+            }
+
+            return discriminatorBasedRequestResponseList
         } finally {
             serverState = emptyMap()
         }
@@ -379,7 +439,7 @@ data class Feature(
             scenario.matches(scenarioStub.request, scenarioStub.response) is Result.Success
         } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
 
-        val concreteTestScenario = io.specmatic.core.Scenario(
+        val concreteTestScenario = Scenario(
             name = "",
             httpRequestPattern = scenarioStub.request.toPattern(),
             httpResponsePattern = HttpResponsePattern(scenarioStub.response)
@@ -434,7 +494,7 @@ data class Feature(
             positiveTestScenarios + negativeTestScenarios()
     }
 
-    fun positiveTestScenarios(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =
+    private fun positiveTestScenarios(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =
         scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
             it.newBasedOn(suggestions)
         }.flatMap { originalScenario ->
@@ -491,14 +551,12 @@ data class Feature(
         scenarioStub: ScenarioStub,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): HttpStubData {
-        val scenarioStubWithDictionary = scenarioStub
-
         if(scenarios.isEmpty())
             throw ContractException("No scenarios found in feature $name ($path)")
 
-        return if(scenarioStubWithDictionary.partial != null) {
+        return if(scenarioStub.partial != null) {
             val results = scenarios.asSequence().map { scenario ->
-                scenario.matchesPartial(scenarioStubWithDictionary.partial) to scenario
+                scenario.matchesPartial(scenarioStub.partial) to scenario
             }
 
             val matchingScenario = results.filter { it.first is Result.Success }.map { it.second }.firstOrNull()
@@ -523,34 +581,42 @@ data class Feature(
                     HttpResponse(),
                     matchingScenario.resolver,
                     responsePattern = responseTypeWithAncestors,
-                    examplePath = scenarioStubWithDictionary.filePath,
+                    examplePath = scenarioStub.filePath,
                     scenario = matchingScenario,
-                    data = scenarioStubWithDictionary.data,
-                    partial = scenarioStubWithDictionary.partial.copy(response = scenarioStubWithDictionary.partial.response)
+                    data = scenarioStub.data,
+                    partial = scenarioStub.partial.copy(response = scenarioStub.partial.response)
                 )
             }
             else {
                 val failures = Results(results.map { it.first }.filterIsInstance<Result.Failure>().toList()).withoutFluff()
 
-                throw NoMatchingScenario(failures, msg = "Could not load partial example ${scenarioStubWithDictionary.filePath}")
+                throw NoMatchingScenario(failures, msg = "Could not load partial example ${scenarioStub.filePath}")
             }
         } else {
             matchingStub(
-                scenarioStubWithDictionary.request,
-                scenarioStubWithDictionary.response,
+                scenarioStub.request,
+                scenarioStub.response,
                 mismatchMessages
             ).copy(
-                delayInMilliseconds = scenarioStubWithDictionary.delayInMilliseconds,
-                requestBodyRegex = scenarioStubWithDictionary.requestBodyRegex?.let { Regex(it) },
-                stubToken = scenarioStubWithDictionary.stubToken,
-                data = scenarioStubWithDictionary.data,
-                examplePath = scenarioStubWithDictionary.filePath
+                delayInMilliseconds = scenarioStub.delayInMilliseconds,
+                requestBodyRegex = scenarioStub.requestBodyRegex?.let { Regex(it) },
+                stubToken = scenarioStub.stubToken,
+                data = scenarioStub.data,
+                examplePath = scenarioStub.filePath
             )
         }
     }
 
     fun clearServerState() {
         serverState = emptyMap()
+    }
+
+    fun overrideInlineExamples(externalExampleNames: Set<String>): Feature {
+        return this.copy(
+            stubsFromExamples = this.stubsFromExamples.filterKeys { inlineExampleName ->
+                inlineExampleName !in externalExampleNames
+            }
+        )
     }
 
     private fun getScenarioWithDescription(scenarioResult: ReturnValue<Scenario>): ReturnValue<Scenario> {
@@ -1482,7 +1548,7 @@ data class Feature(
         return schema
     }
 
-    fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Feature {
+    private fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Feature {
         val scenariosWithExamples: List<Scenario> = scenarios.map {
             it.useExamples(externalisedJSONExamples)
         }
@@ -1593,18 +1659,31 @@ data class Feature(
     }
 
     fun validateExamplesOrException() {
-        val errors = scenarios.map { scenario ->
+        val errors = scenarios.mapNotNull { scenario ->
             try {
                 scenario.validExamplesOrException(flagsBased.copy(generation = NonGenerativeTests))
                 null
-            } catch(e: Throwable) {
+            } catch (e: Throwable) {
                 exceptionCauseMessage(e)
             }
-        }.filterNotNull()
+        }
 
         if(errors.isNotEmpty())
             throw ContractException(errors.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))
     }
+
+    private fun<T> List<DiscriminatorBasedItem<T>>.containsDiscriminatorValueAs(
+        discriminatorValue: String
+    ): Boolean {
+        return this.any { it.discriminatorValue == discriminatorValue }
+    }
+
+    private fun <T> List<DiscriminatorBasedItem<T>>.getDiscriminatorItemWith(
+        discriminatorValue: String
+    ): DiscriminatorBasedItem<T> {
+        return this.first { it.discriminatorValue == discriminatorValue }
+    }
+
 
     companion object {
 
@@ -2185,3 +2264,10 @@ fun similarURLPath(baseScenario: Scenario, newScenario: Scenario): Boolean {
 fun isInteger(
     base: URLPathSegmentPattern
 ) = base.pattern is ExactValuePattern && base.pattern.pattern.toStringLiteral().toIntOrNull() != null
+
+data class DiscriminatorBasedRequestResponse(
+    val request: HttpRequest,
+    val response: HttpResponse,
+    val requestDiscriminator: DiscriminatorMetadata,
+    val responseDiscriminator: DiscriminatorMetadata
+)

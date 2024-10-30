@@ -53,7 +53,7 @@ class ResponseBuilderTest {
                 TODO("Not yet implemented")
             }
 
-            override val typeAlias: String?
+            override val typeAlias: String
                 get() = TODO("Not yet implemented")
             override val typeName: String
                 get() = TODO("Not yet implemented")

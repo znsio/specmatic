@@ -23,6 +23,10 @@ val alwaysReturnStringValue: (resolver: Resolver, pattern: Pattern, rowValue: St
     StringValue(rowValue)
 }
 
+data class JSONObjectResolver(
+    val allowOnlyMandatoryKeys: Boolean = false
+)
+
 data class Resolver(
     val factStore: FactStore = CheckFacts(),
     val mockMode: Boolean = false,
@@ -37,7 +41,8 @@ data class Resolver(
     val defaultExampleResolver: DefaultExampleResolver = DoNotUseDefaultExample,
     val generation: GenerationStrategies = NonGenerativeTests,
     val dictionary: Map<String, Value> = emptyMap(),
-    val dictionaryLookupPath: String = ""
+    val dictionaryLookupPath: String = "",
+    val jsonObjectResolver: JSONObjectResolver = JSONObjectResolver()
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
@@ -47,8 +52,17 @@ data class Resolver(
             return builtInPatterns.plus(newPatterns)
         }
 
+    val allowOnlyMandatoryKeysInJsonObject: Boolean
+        get() {
+            return this.jsonObjectResolver.allowOnlyMandatoryKeys
+        }
+
     fun withUnexpectedKeyCheck(unexpectedKeyCheck: UnexpectedKeyCheck): Resolver {
         return this.copy(findKeyErrorCheck = this.findKeyErrorCheck.withUnexpectedKeyCheck(unexpectedKeyCheck))
+    }
+
+    fun withOnlyMandatoryKeysInJSONObject(): Resolver {
+        return this.copy(jsonObjectResolver = this.jsonObjectResolver.copy(allowOnlyMandatoryKeys = true))
     }
 
     fun disableOverrideUnexpectedKeycheck(): Resolver {
@@ -279,14 +293,11 @@ ${matchResult.reportString()}
     }
 
     private fun addToDictionaryLookupPath(typeAlias: String?, key: String): String {
-        if(typeAlias.isNullOrBlank()) {
-            if(key.startsWith("["))
-                return "$dictionaryLookupPath$key"
-            else
-                return "$dictionaryLookupPath.$key"
+        return when {
+            !typeAlias.isNullOrBlank() -> "${withoutPatternDelimiters(typeAlias)}.$key"
+            key.startsWith("[") -> "$dictionaryLookupPath$key"
+            else -> "$dictionaryLookupPath.$key"
         }
-
-        return "${withoutPatternDelimiters(typeAlias)}.$key"
     }
 
     fun hasDictionaryToken(key: String): Boolean {

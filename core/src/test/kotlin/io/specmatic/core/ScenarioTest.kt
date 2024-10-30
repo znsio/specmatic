@@ -1,5 +1,7 @@
 package io.specmatic.core
 
+import io.mockk.every
+import io.mockk.mockk
 import io.specmatic.core.pattern.*
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -28,7 +30,7 @@ class ScenarioTest {
                 )
             ),
             emptyMap(),
-            listOf<Examples>(
+            listOf(
                 Examples(
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
@@ -72,7 +74,7 @@ class ScenarioTest {
                 )
             ),
             emptyMap(),
-            listOf<Examples>(
+            listOf(
                 Examples(
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
@@ -114,7 +116,7 @@ class ScenarioTest {
                 )
             ),
             emptyMap(),
-            listOf<Examples>(
+            listOf(
                 Examples(
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
@@ -152,7 +154,7 @@ class ScenarioTest {
                 )
             ),
             emptyMap(),
-            listOf<Examples>(
+            listOf(
                 Examples(
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
@@ -191,7 +193,7 @@ class ScenarioTest {
                 )
             ),
             emptyMap(),
-            listOf<Examples>(
+            listOf(
                 Examples(
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
@@ -235,7 +237,7 @@ class ScenarioTest {
                 )
             ),
             emptyMap(),
-            listOf<Examples>(
+            listOf(
                 Examples(
                     listOf("(REQUEST-BODY)"),
                     listOf(Row(
@@ -254,5 +256,35 @@ class ScenarioTest {
                 .hasMessageContaining("string")
                 .hasMessageContaining("REQUEST.BODY.id")
         })
+    }
+
+    @Test
+    fun `should return scenarioMetadata from scenario`() {
+        val httpRequestPattern = mockk<HttpRequestPattern> {
+            every {
+                getHeaderKeys()
+            } returns setOf("Authorization", "X-Request-ID")
+
+            every {
+                getQueryParamKeys()
+            } returns setOf("productId", "orderId")
+
+            every { method } returns "POST"
+            every { httpPathPattern } returns HttpPathPattern(emptyList(), "/createProduct")
+        }
+
+        val scenarioMetadata = Scenario(
+            "",
+            httpRequestPattern,
+            HttpResponsePattern(status = 200),
+            exampleName = "example"
+        ).toScenarioMetadata()
+
+        assertThat(scenarioMetadata.method).isEqualTo("POST")
+        assertThat(scenarioMetadata.path).isEqualTo("/createProduct")
+        assertThat(scenarioMetadata.query).isEqualTo(setOf("productId", "orderId"))
+        assertThat(scenarioMetadata.header).isEqualTo(setOf("Authorization", "X-Request-ID"))
+        assertThat(scenarioMetadata.statusCode).isEqualTo(200)
+        assertThat(scenarioMetadata.exampleName).isEqualTo("example")
     }
 }

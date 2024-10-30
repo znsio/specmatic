@@ -5,7 +5,7 @@ import io.specmatic.core.Result
 sealed interface ReturnValue<T> {
     val value: T
 
-    abstract fun <U> withDefault(default: U, fn: (T) -> U): U
+    fun <U> withDefault(default: U, fn: (T) -> U): U
 
     fun <U, V> withDefault(default: U, other: ReturnValue<V>, fn: (T, V) -> U): U {
         if(this !is HasValue && other !is HasValue)
@@ -14,8 +14,8 @@ sealed interface ReturnValue<T> {
         return fn(this.value, other.value)
     }
 
-    abstract fun <U> ifValue(fn: (T) -> U): ReturnValue<U>
-    abstract fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U>
+    fun <U> ifValue(fn: (T) -> U): ReturnValue<U>
+    fun <U> ifHasValue(fn: (HasValue<T>) -> ReturnValue<U>): ReturnValue<U>
     fun update(fn: (T) -> T): ReturnValue<T>
     fun <U> assimilate(acc: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T>
     fun <U, V> combine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V>
@@ -38,7 +38,7 @@ fun <ReturnType> returnValue(errorMessage: String = "", breadCrumb: String = "",
 }
 
 fun <K, ValueType> Map<K, ReturnValue<ValueType>>.mapFold(): ReturnValue<Map<K, ValueType>> {
-    val initial: ReturnValue<Map<K, ValueType>> = HasValue<Map<K, ValueType>>(emptyMap())
+    val initial: ReturnValue<Map<K, ValueType>> = HasValue(emptyMap())
 
     return this.entries.fold(initial) { accR: ReturnValue<Map<K, ValueType>>, (key: K, valueR: ReturnValue<ValueType>) ->
         accR.assimilate(valueR) { acc, value ->
@@ -48,7 +48,7 @@ fun <K, ValueType> Map<K, ReturnValue<ValueType>>.mapFold(): ReturnValue<Map<K, 
 }
 
 fun <ValueType> List<ReturnValue<ValueType>>.listFold(): ReturnValue<List<ValueType>> {
-    val initial: ReturnValue<List<ValueType>> = HasValue<List<ValueType>>(emptyList())
+    val initial: ReturnValue<List<ValueType>> = HasValue(emptyList())
 
     return this.fold(initial) { accR: ReturnValue<List<ValueType>>, valueR: ReturnValue<ValueType> ->
         accR.assimilate(valueR) { acc, value ->
@@ -72,7 +72,7 @@ fun <T> Sequence<List<ReturnValue<out T>>>.sequenceListFold(): Sequence<ReturnVa
 }
 
 fun <T> Sequence<ReturnValue<T>>.foldIntoReturnValueOfSequence(): ReturnValue<Sequence<T>> {
-    val init: ReturnValue<Sequence<T>> = HasValue(emptySequence<T>())
+    val init: ReturnValue<Sequence<T>> = HasValue(emptySequence())
 
     return this.fold(init) { acc: ReturnValue<Sequence<T>>, item: ReturnValue<T> ->
         acc.assimilate(item) { accValue, itemValue ->

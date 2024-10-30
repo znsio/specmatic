@@ -19,7 +19,7 @@ data class URLPathSegmentPattern(override val pattern: Pattern, override val key
         }
     }
 
-    fun newBasedOn_Wrapper(row: Row, resolver: Resolver): Sequence<Pattern> {
+    fun newBasedOnWrapper(row: Row, resolver: Resolver): Sequence<Pattern> {
         return newBasedOn(row, resolver).map { it.value }
     }
 

@@ -1,13 +1,14 @@
 package io.specmatic.core
 
 import com.fasterxml.jackson.annotation.JsonAlias
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import io.specmatic.core.Configuration.Companion.globalConfigFileName
+import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.Flags
@@ -26,12 +27,14 @@ import java.io.File
 
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
+const val CONFIG_FILE_NAME_WITHOUT_EXT = "specmatic"
 const val DEFAULT_TIMEOUT_IN_MILLISECONDS: Long = 6000L
 const val CONTRACT_EXTENSION = "spec"
 const val YAML = "yaml"
 const val WSDL = "wsdl"
 const val YML = "yml"
 const val JSON = "json"
+val CONFIG_EXTENSIONS = listOf(YAML, YML, JSON)
 val OPENAPI_FILE_EXTENSIONS = listOf(YAML, YML, JSON)
 val CONTRACT_EXTENSIONS = listOf(CONTRACT_EXTENSION, WSDL) + OPENAPI_FILE_EXTENSIONS
 const val DATA_DIR_SUFFIX = "_data"
@@ -98,20 +101,21 @@ data class SpecmaticConfig(
     val stub: StubConfiguration = StubConfiguration(),
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
     val workflow: WorkflowConfiguration? = null,
-    val ignoreInlineExamples: Boolean = Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES)
+    val ignoreInlineExamples: Boolean = getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES)
 ) {
+    @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {
         return (test?.allowExtensibleSchema == true)
     }
-
+    @JsonIgnore
     fun isResiliencyTestingEnabled(): Boolean {
         return (test?.resiliencyTests?.enable != ResiliencyTestSuite.none)
     }
-
+    @JsonIgnore
     fun isOnlyPositiveTestingEnabled(): Boolean {
         return (test?.resiliencyTests?.enable == ResiliencyTestSuite.positiveOnly)
     }
-
+    @JsonIgnore
     fun isResponseValueValidationEnabled(): Boolean {
         return (test?.validateResponseValues == true)
     }
@@ -298,7 +302,7 @@ fun loadSpecmaticConfigOrDefault(configFileName: String? = null): SpecmaticConfi
 }
 
 fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
-    val configFile = File(configFileName ?: globalConfigFileName)
+    val configFile = File(configFileName ?: configFilePath)
     if (!configFile.exists()) {
         throw ContractException("Could not find the Specmatic configuration at path ${configFile.canonicalPath}")
     }
@@ -308,7 +312,7 @@ fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
         logger.log(e, "A dependency version conflict has been detected. If you are using Spring in a maven project, a common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.")
         throw e
     } catch (e: Throwable) {
-        logger.log(e, "Your configuration file may have some missing configuration sections. Please ensure that the $configFileName file adheres to the schema described at: https://specmatic.io/documentation/specmatic_json.html")
-        throw Exception("Your configuration file may have some missing configuration sections. Please ensure that the $configFileName file adheres to the schema described at: https://specmatic.io/documentation/specmatic_json.html", e)
+        logger.log(e, "Your configuration file may have some missing configuration sections. Please ensure that the ${configFile.path} file adheres to the schema described at: https://specmatic.io/documentation/specmatic_json.html")
+        throw Exception("Your configuration file may have some missing configuration sections. Please ensure that the ${configFile.path} file adheres to the schema described at: https://specmatic.io/documentation/specmatic_json.html", e)
     }
 }

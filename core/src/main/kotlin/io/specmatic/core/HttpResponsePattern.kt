@@ -1,11 +1,15 @@
 package io.specmatic.core
 
+import io.specmatic.core.discriminator.DiscriminatorBasedItem
+import io.specmatic.core.discriminator.DiscriminatorBasedValueGenerator
+import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.pattern.*
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.stub.softCastValueToXML
 
 const val DEFAULT_RESPONSE_CODE = 1000
+const val STATUS_BREAD_CRUMB = "STATUS"
 
 data class HttpResponsePattern(
     val headersPattern: HttpHeadersPattern = HttpHeadersPattern(),
@@ -16,14 +20,26 @@ data class HttpResponsePattern(
     constructor(response: HttpResponse) : this(HttpHeadersPattern(response.headers.mapValues { stringToPattern(it.value, it.key) }), response.status, response.body.exactMatchElseType())
 
     fun generateResponse(resolver: Resolver): HttpResponse {
+        return generateResponseWith(
+            value = resolver.withCyclePrevention(body, body::generate),
+            resolver = resolver
+        )
+    }
+
+    fun generateResponseV2(resolver: Resolver): List<DiscriminatorBasedItem<HttpResponse>> {
         return attempt(breadCrumb = "RESPONSE") {
-            val value = softCastValueToXML(resolver.withCyclePrevention(body, body::generate))
-            val headers = headersPattern.generate(resolver).plus(SPECMATIC_RESULT_HEADER to "success").let { headers ->
-                if ((headers.containsKey("Content-Type").not() && value.httpContentType.isBlank().not()))
-                    headers.plus("Content-Type" to value.httpContentType)
-                else headers
+            DiscriminatorBasedValueGenerator.generateDiscriminatorBasedValues(
+                resolver,
+                body
+            ).map {
+                DiscriminatorBasedItem(
+                    discriminator = DiscriminatorMetadata(
+                        discriminatorProperty = it.discriminatorProperty,
+                        discriminatorValue = it.discriminatorValue,
+                    ),
+                    value = generateResponseWith(it.value, resolver)
+                )
             }
-            HttpResponse(status, headers, value)
         }
     }
 
@@ -41,9 +57,7 @@ data class HttpResponsePattern(
     }
 
     fun matches(response: HttpResponse, resolver: Resolver): Result {
-        val result = matchesResponse(response, resolver)
-
-        return when(result) {
+        return when(val result = matchesResponse(response, resolver)) {
             is Result.Failure -> result.breadCrumb("RESPONSE")
             else -> result
         }
@@ -69,8 +83,7 @@ data class HttpResponsePattern(
             if(responseExampleMatchResult is Result.Failure)
                 throw ContractException("""Error in response in example "${row.name}": ${responseExampleMatchResult.reportString()}""")
 
-            val expectedResponseValue: HttpResponsePattern =
-                HttpResponsePattern(
+            val expectedResponseValue = HttpResponsePattern(
                     responseExample.headersPattern(),
                     responseExample.responseExample.status,
                     responseExample.bodyPattern()
@@ -180,6 +193,18 @@ data class HttpResponsePattern(
                 body = fullBody
             )
         }.breadCrumb("RESPONSE").value
+    }
+
+    private fun generateResponseWith(value: Value, resolver: Resolver): HttpResponse {
+        return attempt(breadCrumb = "RESPONSE") {
+            val generatedBody = softCastValueToXML(value)
+            val headers = headersPattern.generate(resolver).plus(SPECMATIC_RESULT_HEADER to "success").let { headers ->
+                if ((headers.containsKey("Content-Type").not() && generatedBody.httpContentType.isBlank().not()))
+                    headers.plus("Content-Type" to generatedBody.httpContentType)
+                else headers
+            }
+            HttpResponse(status, headers, generatedBody)
+        }
     }
 }
 

@@ -2,9 +2,7 @@ package io.specmatic.core
 
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.parsedJSONArray
-import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.Value
-import kotlin.collections.Map
 
 data class QueryParameters(val paramPairs: List<Pair<String, String>> = emptyList())  {
 

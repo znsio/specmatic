@@ -7,20 +7,13 @@ import io.specmatic.core.value.XMLNode
 import io.specmatic.core.value.localName
 
 class AttributeElement(xmlNode: XMLNode) {
-    val name: String
-    val type: Value
-    private val mandatory: Boolean
-    val nameWithOptionality: String
-
-    init {
-        name = fromNameAttribute(xmlNode)
-            ?: throw ContractException("'name' not defined for attribute: ${xmlNode.oneLineDescription}")
-        type = elementTypeValue(xmlNode)
-        mandatory = isMandatory(xmlNode) ?: false
-        nameWithOptionality = when (mandatory) {
-            true -> name
-            else -> "${name}${XML_ATTR_OPTIONAL_SUFFIX}"
-        }
+    val name: String = fromNameAttribute(xmlNode)
+        ?: throw ContractException("'name' not defined for attribute: ${xmlNode.oneLineDescription}")
+    val type: Value = elementTypeValue(xmlNode)
+    private val mandatory: Boolean = isMandatory(xmlNode) ?: false
+    val nameWithOptionality: String = when (mandatory) {
+        true -> name
+        else -> "${name}${XML_ATTR_OPTIONAL_SUFFIX}"
     }
 }
 

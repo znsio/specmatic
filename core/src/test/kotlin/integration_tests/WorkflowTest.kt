@@ -27,7 +27,7 @@ class WorkflowTest {
             )
             .toFeature()
 
-        var idInRequest: String = ""
+        var idInRequest = ""
 
         feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {

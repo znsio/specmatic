@@ -71,11 +71,11 @@ data class HttpRequest(
             updateWith(urlParam)
         } catch (e: URISyntaxException) {
             val pieces = path.split("?", limit = 2)
-            updateWithPathAndQuery(pieces.get(0), pieces.getOrNull(1))
+            updateWithPathAndQuery(pieces[0], pieces.getOrNull(1))
 //            copy(path = path)
         } catch (e: UnsupportedEncodingException) {
             val pieces = path.split("?", limit = 2)
-            updateWithPathAndQuery(pieces.get(0), pieces.getOrNull(1))
+            updateWithPathAndQuery(pieces[0], pieces.getOrNull(1))
 //            copy(path = path)
         }
     }
@@ -94,7 +94,7 @@ data class HttpRequest(
         return updateWithPathAndQuery(url.path, url.query)
     }
 
-    fun updateWithPathAndQuery(path: String, query: String?): HttpRequest {
+    private fun updateWithPathAndQuery(path: String, query: String?): HttpRequest {
         val queryParams = parseQuery(query)
         return copy(path = path, queryParams = QueryParameters(queryParams))
     }
@@ -147,7 +147,7 @@ data class HttpRequest(
 
         val pathString = path ?: "NO_PATH"
         val queryParamString =
-            queryParams.paramPairs.map { "${it.first}=${it.second}" }.joinToString("&").let { if (it.isNotEmpty()) "?$it" else it }
+            queryParams.paramPairs.joinToString("&") { "${it.first}=${it.second}" }.let { if (it.isNotEmpty()) "?$it" else it }
         val urlString = "$pathString$queryParamString"
 
         val firstLine = "$methodString $urlString"
@@ -509,7 +509,7 @@ fun stringMapToValueMap(stringStringMap: Map<String, String>) =
     stringStringMap.mapValues { guessType(parsedValue(it.value)) }
 
 fun queryParamsToValueMap(queryParams: QueryParameters) =
-    queryParams.paramPairs.map { (key, value) -> key to guessType(parsedValue(value)) }.toMap()
+    queryParams.paramPairs.associate { (key, value) -> key to guessType(parsedValue(value)) }
 
 fun bodyToGherkin(
     request: HttpRequest,

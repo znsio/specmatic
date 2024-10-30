@@ -221,19 +221,12 @@ fun <ValueType> allOrNothingListCombinations(values: List<Sequence<ValueType?>>)
 
             if (allIteratorsRanOut) break
 
-            val nextArray = nextValuesInArray.map { (value, _) -> value }.filterNotNull()
+            val nextArray = nextValuesInArray.mapNotNull { (value, _) -> value }
 
             yield(nextArray)
         }
 
     }
-}
-
-private fun keyCombinations(values: List<List<Pattern?>>,
-                            optionalSelector: (List<Pattern?>) -> Pattern?): Sequence<Pattern?> {
-    return values.map {
-        optionalSelector(it)
-    }.asSequence().filterNotNull()
 }
 
 fun generate(jsonPattern: List<Pattern>, resolver: Resolver): List<Value> =

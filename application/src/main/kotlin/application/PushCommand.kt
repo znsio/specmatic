@@ -2,7 +2,7 @@ package application
 
 import picocli.CommandLine
 import io.specmatic.core.*
-import io.specmatic.core.Configuration.Companion.globalConfigFileName
+import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.git.NonZeroExitError
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.git.loadFromPath
@@ -18,12 +18,21 @@ import kotlin.system.exitProcess
 
 private const val pipelineKeyInSpecmaticConfig = "pipeline"
 
-@CommandLine.Command(name = "push", description = ["Check the new contract for backward compatibility with the specified version, then overwrite the old one with it."], mixinStandardHelpOptions = true)
+@CommandLine.Command(
+    name = "push",
+    description = [
+"""
+Check the new contract for backward compatibility with the specified version, then overwrite the old one with it.
+DEPRECATED: This command will be removed in the next major release. Use 'backward-compatibility-check' command instead.
+"""
+    ],
+    mixinStandardHelpOptions = true
+)
 class PushCommand: Callable<Unit> {
     override fun call() {
         val userHome = File(System.getProperty("user.home"))
         val workingDirectory = userHome.resolve(".$APPLICATION_NAME_LOWER_CASE/repos")
-        val manifestFile = File(globalConfigFileName)
+        val manifestFile = File(configFilePath)
         val manifestData = try { loadConfigJSON(manifestFile) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
         val sources = try { loadSources(manifestData) } catch(e: ContractException) { exitWithMessage(e.failure().toReport().toText()) }
 

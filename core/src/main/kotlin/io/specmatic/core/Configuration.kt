@@ -1,56 +1,40 @@
 package io.specmatic.core
 
+import io.specmatic.core.utilities.Flags.Companion.CONFIG_FILE_PATH
+import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import java.io.File
 
-// moved here because when it's inside, for some reason when SpecmaticJUnitSupport.configFile
-// calls globalConfigFileName, it results in a call to the config var and we don't know why,
-// and if the configuration file is invalid, an exception is thrown and eaten silently by JUnit's
-// test discovery functionality.
-// Moving it here so we can use a function to read it which is not inside Configuration
-private var innerGlobalConfigFileName: String = ".${File.separator}${Configuration.DEFAULT_CONFIG_FILE_NAME}"
-fun getGlobalConfigFileName(): String = innerGlobalConfigFileName
-fun getConfigFileName(): String {
-    val configFileNameWithoutExtension = ".${File.separator}${APPLICATION_NAME_LOWER_CASE}"
-    val supportedExtensions = listOf(JSON, YAML, YML)
+//TODO: This is a temporary solution need to delete this from Kafka and other dependencies
+fun getConfigFileName(): String = getConfigFilePath()
+fun getConfigFilePath(): String {
+    return getStringValue(CONFIG_FILE_PATH)?.takeIf { File(it).exists() }
+        ?: getConfigFilePathFromClasspath()?.takeIf { File(it).exists() }
+        ?: getConfigFilePath(".${File.separator}")
+}
 
-    val configFileExtension = supportedExtensions.firstOrNull { extension ->
-        File("$configFileNameWithoutExtension.$extension").exists()
-    } ?: JSON
+private fun getConfigFilePathFromClasspath(): String? {
+    return CONFIG_EXTENSIONS.firstNotNullOfOrNull {
+        Configuration::class.java.getResource("/$CONFIG_FILE_NAME_WITHOUT_EXT.$it")?.path
+    }
+}
 
-    return "$configFileNameWithoutExtension.$configFileExtension"
+private fun getConfigFilePath(filePathPrefix: String): String {
+    val configFileNameWithoutExtension = "$filePathPrefix${CONFIG_FILE_NAME_WITHOUT_EXT}"
+    return CONFIG_EXTENSIONS.firstNotNullOfOrNull {
+        val filePath = "$configFileNameWithoutExtension.$it"
+        filePath.takeIf { File(filePath).exists() }
+    } ?: "$configFileNameWithoutExtension.$YAML"
 }
 
 class Configuration {
     companion object {
         var gitCommand: String = System.getProperty("gitCommandPath") ?: System.getenv("SPECMATIC_GIT_COMMAND_PATH") ?: "git"
         const val TEST_BUNDLE_RELATIVE_PATH = ".${APPLICATION_NAME_LOWER_CASE}_test_bundle"
-        const val DEFAULT_CONFIG_FILE_NAME = "$APPLICATION_NAME_LOWER_CASE.json"
 
-        var globalConfigFileName: String
-            get() = getGlobalConfigFileName()
-
+        var configFilePath: String
+            get() = getConfigFilePath()
             set(value) {
-                innerGlobalConfigFileName = value
-                _config = if(File(innerGlobalConfigFileName).exists())
-                    loadSpecmaticConfig(innerGlobalConfigFileName)
-                else
-                    null
-
-            }
-
-        private var _config: SpecmaticConfig? =
-            if(File(innerGlobalConfigFileName).exists())
-                loadSpecmaticConfig(innerGlobalConfigFileName)
-            else
-                null
-
-        var config: SpecmaticConfig?
-            get() {
-                return _config
-            }
-
-            set(value) {
-                _config = value
+                System.setProperty(CONFIG_FILE_PATH, value)
             }
 
         private const val ALL_IPV4_ADDRESS_ON_LOCAL_MACHINE = "0.0.0.0"

@@ -1940,6 +1940,25 @@ components:
         }
     }
 
+    @Test
+    fun `should use the 400 response code based externalised example and respond accordingly`() {
+        createStubFromContracts(
+            contractPaths = listOf("src/test/resources/openapi/has_400_example_for_stub.yaml"),
+            dataDirPaths = listOf("src/test/resources/openapi/has_400_example_for_stub_examples")
+        ).use { stub ->
+            val request = HttpRequest(
+                "GET",
+                "/items",
+                queryParametersMap = mapOf(
+                    "optional-param" to "optional"
+                )
+            )
+            val response = (stub.client.execute(request).body as JSONObjectValue).jsonObject
+
+            assertThat(response["message"]?.toStringLiteral()).isEqualTo("required-param is missing. Please provide.")
+        }
+    }
+
     @ParameterizedTest
     @CsvSource(
         "Expected, Actual, Status",

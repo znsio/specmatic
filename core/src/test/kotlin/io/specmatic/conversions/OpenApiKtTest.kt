@@ -2079,7 +2079,7 @@ components:
         try {
             contract.executeTests(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
-                    val dataHeaderValue: String? = request.queryParams.getValues("data").first()
+                    val dataHeaderValue: String = request.queryParams.getValues("data").first()
 
                     if (dataHeaderValue == "hello")
                         contractInvalidValueReceived = true

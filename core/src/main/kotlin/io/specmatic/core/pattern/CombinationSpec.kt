@@ -20,7 +20,7 @@ package io.specmatic.core.pattern
  */
 class CombinationSpec<ValueType>(
     keyToCandidatesOrig: Map<String, Sequence<ReturnValue<ValueType>>>,
-    private val maxCombinations: Int
+    maxCombinations: Int
 ) {
     companion object {
         fun <ValueType> from(keyToCandidates: Map<String, Sequence<ValueType>>, maxCombinations: Int): CombinationSpec<ValueType> {
@@ -68,7 +68,7 @@ class CombinationSpec<ValueType>(
                         ranOut[key] = true
 
                         val cachedValuesForKey = cachedValues.getValue(key)
-                        val value = cachedValuesForKey.get(ctr % cachedValuesForKey.size)
+                        val value = cachedValuesForKey[ctr % cachedValuesForKey.size]
 
                         value
                     }
@@ -105,7 +105,7 @@ class CombinationSpec<ValueType>(
         }
     }
 
-    fun <ValueType> allCombinations(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {
+    private fun <ValueType> allCombinations(patternCollection: Map<String, Sequence<ValueType>>): Sequence<Map<String, ValueType>> {
         if(patternCollection.isEmpty())
             return sequenceOf(emptyMap())
 

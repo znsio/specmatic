@@ -2,12 +2,11 @@ package io.specmatic.test
 
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
+import io.specmatic.core.filters.ScenarioMetadata
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 
 data class ScenarioAsTest(
@@ -27,6 +26,8 @@ data class ScenarioAsTest(
     companion object {
         private var id: Value? = null
     }
+
+    override fun toScenarioMetadata() = scenario.toScenarioMetadata()
 
     override fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord {
         val resultStatus = result.testResult()

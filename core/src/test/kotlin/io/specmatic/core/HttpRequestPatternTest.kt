@@ -711,4 +711,98 @@ internal class HttpRequestPatternTest {
 
         assertThat(testDescriptions.count { it.matches(Regex("^.*HEADER.*enum.*$")) }).isEqualTo(4)
     }
+
+    @Nested
+    inner class GenerateV2Tests {
+        @Test
+        fun `should generate httpRequests using discriminator values where body is a ListPattern with discriminator`() {
+            val savingsAccountPattern = JSONObjectPattern(
+                pattern = mapOf(
+                    "@type" to ExactValuePattern(StringValue("savings"), discriminator = true),
+                    "accountId" to StringPattern(),
+                    "accountHolderName" to StringPattern(),
+                    "balance" to NumberPattern(),
+                    "minimumBalance" to NumberPattern()
+                )
+            )
+
+            val currentAccountPattern = JSONObjectPattern(
+                pattern = mapOf(
+                    "@type" to ExactValuePattern(StringValue("current"), discriminator = true),
+                    "accountId" to StringPattern(),
+                    "accountHolderName" to StringPattern(),
+                    "balance" to NumberPattern(),
+                    "overdraftLimit" to NumberPattern()
+                )
+            )
+
+            val listPattern = ListPattern(
+                AnyPattern(
+                    listOf(savingsAccountPattern, currentAccountPattern),
+                    discriminatorProperty = "@type",
+                    discriminatorValues = setOf("savings", "current")
+                )
+            )
+            val httpRequestPattern = HttpRequestPattern(
+                body = listPattern,
+                method = "POST",
+                httpPathPattern = HttpPathPattern(emptyList(), "/account")
+            )
+
+            val requests =  httpRequestPattern.generateV2(Resolver())
+
+            assertThat(requests.size).isEqualTo(2)
+            assertThat(requests.map { it.discriminatorValue }).containsExactlyInAnyOrder("savings", "current")
+
+            val savingsAccountRequestBody = (requests.first { it.discriminatorValue == "savings" }.value.body as JSONArrayValue).list.first() as JSONObjectValue
+            val currentAccountRequestBody = (requests.first { it.discriminatorValue == "current" }.value.body as JSONArrayValue).list.first() as JSONObjectValue
+            assertThat(savingsAccountRequestBody.jsonObject["@type"]?.toStringLiteral()).isEqualTo("savings")
+            assertThat(currentAccountRequestBody.jsonObject["@type"]?.toStringLiteral()).isEqualTo("current")
+        }
+
+        @Test
+        fun `should generate httpRequests using discriminator values where body is a non-list pattern with discriminator`() {
+            val savingsAccountPattern = JSONObjectPattern(
+                pattern = mapOf(
+                    "@type" to ExactValuePattern(StringValue("savings"), discriminator = true),
+                    "accountId" to StringPattern(),
+                    "accountHolderName" to StringPattern(),
+                    "balance" to NumberPattern(),
+                    "minimumBalance" to NumberPattern()
+                )
+            )
+
+            val currentAccountPattern = JSONObjectPattern(
+                pattern = mapOf(
+                    "@type" to ExactValuePattern(StringValue("current"), discriminator = true),
+                    "accountId" to StringPattern(),
+                    "accountHolderName" to StringPattern(),
+                    "balance" to NumberPattern(),
+                    "overdraftLimit" to NumberPattern()
+                )
+            )
+
+            val bodyPattern = AnyPattern(
+                listOf(savingsAccountPattern, currentAccountPattern),
+                discriminatorProperty = "@type",
+                discriminatorValues = setOf("savings", "current")
+            )
+
+            val httpRequestPattern = HttpRequestPattern(
+                body = bodyPattern,
+                method = "POST",
+                httpPathPattern = HttpPathPattern(emptyList(), "/account")
+            )
+
+            val requests =  httpRequestPattern.generateV2(Resolver())
+
+            assertThat(requests.size).isEqualTo(2)
+            assertThat(requests.map { it.discriminatorValue }).containsExactlyInAnyOrder("savings", "current")
+
+            val savingsAccountRequestBody = (requests.first { it.discriminatorValue ==  "savings"}.value.body as JSONObjectValue)
+            val currentAccountRequestBody = (requests.first { it.discriminatorValue ==  "current"}.value.body as JSONObjectValue)
+            assertThat(savingsAccountRequestBody.jsonObject["@type"]?.toStringLiteral()).isEqualTo("savings")
+            assertThat(currentAccountRequestBody.jsonObject["@type"]?.toStringLiteral()).isEqualTo("current")
+        }
+    }
 }

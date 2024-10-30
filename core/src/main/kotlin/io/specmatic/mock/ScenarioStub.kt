@@ -1,10 +1,12 @@
 package io.specmatic.mock
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.core.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
 import java.io.File
@@ -16,6 +18,11 @@ fun loadDictionary(fileName: String): Map<String,Value> {
         throw ContractException("Error loading $fileName: ${exceptionCauseMessage(e)}")
     }
 }
+
+// move elsewhere
+data class AdditionalExampleParams(
+    val headers: Map<String, String>
+)
 
 data class ScenarioStub(
     val request: HttpRequest = HttpRequest(),
@@ -36,6 +43,28 @@ data class ScenarioStub(
         return JSONObjectValue(mockInteraction)
     }
 
+    fun getRequestWithAdditionalParamsIfAny(): HttpRequest {
+        try {
+            val additionalExampleParamsFilePath = readEnvVarOrProperty(
+                "ADDITIONAL_EXAMPLE_PARAMS_FILE",
+                "ADDITIONAL_EXAMPLE_PARAMS_FILE"
+            )
+
+            if (additionalExampleParamsFilePath != null && File(additionalExampleParamsFilePath).exists()) {
+                val additionalExampleParams = ObjectMapper().readValue(
+                    File(additionalExampleParamsFilePath).readText(),
+                    Map::class.java
+                ) as Map<String, Any>
+                val additionalHeaders = (additionalExampleParams["headers"] ?: emptyMap<String, String>()) as Map<String, String>
+                val updatedHeaders = request.headers.plus(additionalHeaders)
+                return request.copy(headers = updatedHeaders)
+            }
+            return request
+        } catch (e: Exception) {
+            return request
+        }
+    }
+
     fun findPatterns(input: String): Set<String> {
         val pattern = """\{\{(@\w+)\}\}""".toRegex()
         return pattern.findAll(input).map { it.groupValues[1] }.toSet()
@@ -51,7 +80,7 @@ data class ScenarioStub(
 
     private fun replaceInRequestBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>, requestTemplatePatterns: Map<String, Pattern>, resolver: Resolver): Value {
         return value.copy(
-            value.jsonObject.mapValues {
+            jsonObject = value.jsonObject.mapValues {
                 replaceInRequestBody(it.key, it.value, substitutions, requestTemplatePatterns, resolver)
             }
         )
@@ -59,7 +88,7 @@ data class ScenarioStub(
 
     private fun replaceInRequestBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>, requestTemplatePatterns: Map<String, Pattern>, resolver: Resolver): Value {
         return value.copy(
-            value.list.map {
+            list = value.list.map {
                 replaceInRequestBody(value, substitutions, requestTemplatePatterns, resolver)
             }
         )
@@ -135,7 +164,7 @@ data class ScenarioStub(
 
     private fun replaceInResponseBody(value: JSONObjectValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
         return value.copy(
-            value.jsonObject.mapValues {
+            jsonObject = value.jsonObject.mapValues {
                 replaceInResponseBody(it.value, substitutions, it.key)
             }
         )
@@ -143,7 +172,7 @@ data class ScenarioStub(
 
     private fun replaceInResponseBody(value: JSONArrayValue, substitutions: Map<String, Map<String, Map<String, Value>>>): Value {
         return value.copy(
-            value.list.map { item: Value ->
+            list = value.list.map { item: Value ->
                 replaceInResponseBody(item, substitutions, "")
             }
         )
@@ -248,7 +277,7 @@ fun mockFromJSON(mockSpec: Map<String, Value>): ScenarioStub {
 
     val delayInSeconds: Int? = getIntOrNull(DELAY_IN_SECONDS, mockSpec)
     val delayInMilliseconds: Long? = getLongOrNull(DELAY_IN_MILLISECONDS, mockSpec)
-    val delayInMs: Long? = delayInMilliseconds ?: delayInSeconds?.let { it.toLong().times(1000) }
+    val delayInMs: Long? = delayInMilliseconds ?: delayInSeconds?.toLong()?.times(1000)
 
     val stubToken: String? = getStringOrNull(TRANSIENT_MOCK_ID, mockSpec)
     val requestBodyRegex: String? = getRequestBodyRegexOrNull(mockSpec)

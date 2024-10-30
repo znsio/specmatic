@@ -41,9 +41,9 @@ data class HasValue<T>(override val value: T, val valueDetails: List<ValueDetail
 
     override fun <U> assimilate(acc: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T> {
         if(acc is ReturnFailure)
-            return acc.cast<T>()
+            return acc.cast()
         else if(acc is HasException)
-            return acc.cast<T>()
+            return acc.cast()
 
         acc as HasValue<U>
 
@@ -78,7 +78,7 @@ data class HasValue<T>(override val value: T, val valueDetails: List<ValueDetail
 
     override fun <U, V> combine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
         if(acc is ReturnFailure)
-            return acc.cast<V>()
+            return acc.cast()
 
         acc as HasValue<U>
 
@@ -94,7 +94,7 @@ data class HasValue<T>(override val value: T, val valueDetails: List<ValueDetail
         if(message.isBlank() && breadCrumb.isBlank())
             return this
 
-        return HasValue<T>(
+        return HasValue(
             value,
             valueDetails.map { it.addDetails(message, breadCrumb) })
     }

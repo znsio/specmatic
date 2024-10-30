@@ -1,13 +1,21 @@
 package io.specmatic.test
 
-import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.Result
 import io.specmatic.core.Scenario
+import io.specmatic.core.filters.ScenarioMetadata
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.exceptionCauseMessage
 
-class ScenarioTestGenerationException(val scenario: Scenario, val e: Throwable, val message: String, val breadCrumb: String?) : ContractTest {
+class ScenarioTestGenerationException(
+    val scenario: Scenario,
+    val e: Throwable,
+    val message: String,
+    val breadCrumb: String?
+) : ContractTest {
+
+    override fun toScenarioMetadata() = scenario.toScenarioMetadata()
+
     override fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord? {
         return null
     }

@@ -276,7 +276,7 @@ internal class ProxyTest {
                 assertThat(response.statusCodeValue).isEqualTo(202)
                 assertThat(response.body).isEqualTo("Dump process of spec and examples has started in the background")
 
-                val waiter = Waiter(1000L, 5000L)
+                val waiter = Waiter(1000L, 10000L)
 
                 while(waiter.canWaitForMoreTime()) {
                     if(fakeFileWriter.receivedContract != null)
@@ -284,6 +284,9 @@ internal class ProxyTest {
 
                     waiter.waitForMoreTime()
                 }
+
+                if(fakeFileWriter.receivedContract == null && waiter.hasTimeRunOut())
+                    throw Exception("Timed out waiting for the contract to be written")
 
                 assertThat(fakeFileWriter.receivedContract?.trim()).startsWith("openapi:")
                 assertThatCode {

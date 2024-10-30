@@ -7,16 +7,15 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
 class Substitution(
-    val runningRequest: HttpRequest,
-    val originalRequest: HttpRequest,
+    runningRequest: HttpRequest,
+    private val originalRequest: HttpRequest,
     val httpPathPattern: HttpPathPattern,
     val headersPattern: HttpHeadersPattern,
-    val httpQueryParamPattern: HttpQueryParamPattern,
     val body: Pattern,
     val resolver: Resolver,
     val data: JSONObjectValue,
 ) {
-    val variableValues: Map<String, String>
+    private val variableValues: Map<String, String>
 
     init {
         val variableValuesFromHeaders = variablesFromMap(runningRequest.headers.filter { it.key in originalRequest.headers }, originalRequest.headers)
@@ -25,17 +24,18 @@ class Substitution(
         val runningPathPieces = runningRequest.path!!.split('/').filterNot { it.isBlank() }
         val originalPathPieces = originalRequest.path!!.split('/').filterNot { it.isBlank() }
 
-        val variableValuesFromPath = runningPathPieces.zip(originalPathPieces).map { (runningPiece, originalPiece) ->
-            if (!isPatternToken(originalPiece))
-                null
-            else {
-                val pieces = withoutPatternDelimiters(originalPiece).split(':')
-                val name = pieces.getOrNull(0)
-                    ?: throw ContractException("Could not interpret substituion expression $originalPiece")
+        val variableValuesFromPath = runningPathPieces.zip(originalPathPieces)
+            .mapNotNull { (runningPiece, originalPiece) ->
+                if (!isPatternToken(originalPiece))
+                    null
+                else {
+                    val pieces = withoutPatternDelimiters(originalPiece).split(':')
+                    val name = pieces.getOrNull(0)
+                        ?: throw ContractException("Could not interpret substituion expression $originalPiece")
 
-                name to runningPiece
-            }
-        }.filterNotNull().toMap()
+                    name to runningPiece
+                }
+            }.toMap()
 
         val variableValuesFromRequestBody: Map<String, String> = getVariableValuesFromValue(runningRequest.body, originalRequest.body)
 
@@ -54,7 +54,7 @@ class Substitution(
     }
 
     private fun variablesFromMap(map: Map<String, String>, originalMap: Map<String, String>) = map.entries.map { (key, value) ->
-        val originalValue = originalMap.get(key) ?: return@map null
+        val originalValue = originalMap[key] ?: return@map null
         variableFromString(value, originalValue)
     }.filterNotNull().toMap()
 
@@ -67,7 +67,7 @@ class Substitution(
 
     private fun getVariableValuesFromValue(value: JSONArrayValue, originalValue: JSONArrayValue): Map<String, String> {
         return originalValue.list.foldRightIndexed(emptyMap()) { index: Int, item: Value, acc: Map<String, String> ->
-            val runningItem = value.list.get(index)
+            val runningItem = value.list[index]
             acc + getVariableValuesFromValue(runningItem, item)
         }
     }
@@ -102,7 +102,7 @@ class Substitution(
         }
     }
 
-    fun substituteSimpleVariableLookup(string: String, key: String? = null): String {
+    private fun substituteSimpleVariableLookup(string: String, key: String? = null): String {
         val name = string.trim().removeSurrounding("$(", ")")
         return variableValues[name]
                 ?: throw ContractException("Could not resolve expression $string as no variable by the name $name was found")
@@ -110,7 +110,7 @@ class Substitution(
 
     private fun resolveSubstitutions(value: JSONObjectValue): Value {
         return value.copy(
-            value.jsonObject.mapValues { entry ->
+            jsonObject = value.jsonObject.mapValues { entry ->
                 resolveSubstitutions(entry.value)
             }
         )
@@ -118,7 +118,7 @@ class Substitution(
 
     private fun resolveSubstitutions(value: JSONArrayValue): Value {
         return value.copy(
-            value.list.map {
+            list = value.list.map {
                 resolveSubstitutions(it)
             }
         )
@@ -131,7 +131,7 @@ class Substitution(
             else {
                 val substituteValue = substituteVariableValues(value.trim(), key)
 
-                (patternMap.get(key) ?: patternMap.get("$key?"))?.let { pattern ->
+                (patternMap[key] ?: patternMap["$key?"])?.let { pattern ->
                     try {
                         HasValue(pattern.parse(substituteValue, resolver).toStringLiteral())
                     } catch (e: Throwable) {

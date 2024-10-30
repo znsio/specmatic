@@ -8,6 +8,8 @@ import io.specmatic.core.*
 import io.specmatic.core.Result.Failure
 import io.specmatic.core.log.LogStrategy
 import io.specmatic.core.log.logger
+import io.specmatic.core.overlay.OverlayMerger
+import io.specmatic.core.overlay.OverlayParser
 import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.withoutOptionality
 import io.specmatic.core.utilities.Flags
@@ -114,10 +116,16 @@ class OpenApiSpecification(
             sourceRepositoryBranch: String? = null,
             specificationPath: String? = null,
             securityConfiguration: SecurityConfiguration? = null,
-            specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+            specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+            overlayContent: String = ""
         ): OpenApiSpecification {
             val parseResult: SwaggerParseResult =
-                OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), openApiFilePath)
+                OpenAPIV3Parser().readContents(
+                    yamlContent.applyOverlay(overlayContent),
+                    null,
+                    resolveExternalReferences(),
+                    openApiFilePath
+                )
             val parsedOpenApi: OpenAPI? = parseResult.openAPI
 
             if (parsedOpenApi == null) {
@@ -184,6 +192,10 @@ class OpenApiSpecification(
         }
 
         private fun resolveExternalReferences(): ParseOptions = ParseOptions().also { it.isResolve = true }
+
+        private fun String.applyOverlay(overlayContent: String): String {
+            return OverlayMerger().merge(this, OverlayParser.parse(overlayContent))
+        }
     }
 
     val patterns = mutableMapOf<String, Pattern>()
@@ -388,7 +400,7 @@ class OpenApiSpecification(
 
                     val requestMediaTypes = httpRequestPatternDataGroupedByContentType.keys
 
-                    val requestResponsePairs = httpResponsePatternsGrouped.flatMap { (status, responses) ->
+                    val requestResponsePairs = httpResponsePatternsGrouped.flatMap { (_, responses) ->
                         val responsesGrouped = responses.groupBy {
                             it.responsePattern.headersPattern.contentType
                         }
@@ -410,7 +422,7 @@ class OpenApiSpecification(
 
                     val scenarioInfos = requestResponsePairs.map { (requestPatternData, responsePatternData) ->
                         val (httpRequestPattern, requestExamples: Map<String, List<HttpRequest>>, openApiRequest) = requestPatternData
-                        val (response, responseMediaType: MediaType, httpResponsePattern, responseExamples: Map<String, HttpResponse>) = responsePatternData
+                        val (response, _: MediaType, httpResponsePattern, responseExamples: Map<String, HttpResponse>) = responsePatternData
 
                         val specmaticExampleRows: List<Row> =
                             testRowsFromExamples(responseExamples, requestExamples, operation, openApiRequest, first2xxResponseStatus)
@@ -482,7 +494,7 @@ class OpenApiSpecification(
 
                 val unusedRequestExampleNames = requestExampleNames - usedExamples
 
-                if(Flags.getBooleanValue(IGNORE_INLINE_EXAMPLE_WARNINGS).not()) {
+                if(getBooleanValue(IGNORE_INLINE_EXAMPLE_WARNINGS).not()) {
                     unusedRequestExampleNames.forEach { unusedRequestExampleName ->
                         logger.log(missingResponseExampleErrorMessageForTest(unusedRequestExampleName))
                     }
@@ -520,7 +532,7 @@ class OpenApiSpecification(
         )
         val examplesOfResponseThatReturnsNoValues: Map<String, List<Pair<HttpRequest, HttpResponse>>> =
             requestExamples.filterKeys { it in unusedRequestExampleNames }
-                .mapValues { (key, examples) ->
+                .mapValues { (_, examples) ->
                     examples.map { it to emptyResponse }
                 }
 
@@ -830,7 +842,7 @@ class OpenApiSpecification(
         }
 
         val headerExamples =
-            if(specmaticConfig.ignoreInlineExamples || Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
+            if(specmaticConfig.ignoreInlineExamples || getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
                 emptyMap()
             else
                 response.headers.orEmpty().entries.fold(emptyMap<String, Map<String, String>>()) { acc, (headerName, header) ->
@@ -848,7 +860,7 @@ class OpenApiSpecification(
             )
 
             val exampleBodies: Map<String, String?> =
-                if(specmaticConfig.ignoreInlineExamples || Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
+                if(specmaticConfig.ignoreInlineExamples || getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
                     emptyMap()
                 else
                     mediaType.examples?.mapValues {
@@ -886,13 +898,11 @@ class OpenApiSpecification(
         val securitySchemesForRequestPattern: Map<String, OpenAPISecurityScheme> =
             (parsedOpenApi.security.orEmpty() + operation.security.orEmpty())
                 .flatMap { it.keys }
-                .toSet()
-                .map {
+                .toSet().associateWith {
                     val securityScheme = securitySchemes[it]
                         ?: throw ContractException("Security scheme used in $httpMethod ${httpPathPattern.path} does not exist in the spec")
-                    it to securityScheme
-                }
-            .toMap().ifEmpty {
+                    securityScheme
+                }.ifEmpty {
                     mapOf(NO_SECURITY_SCHEMA_IN_SPECIFICATION to NoSecurityScheme())
                 }
 
@@ -994,7 +1004,7 @@ class OpenApiSpecification(
                     }
 
                     val allExamples =
-                        if(specmaticConfig.ignoreInlineExamples || Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
+                        if(specmaticConfig.ignoreInlineExamples || getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
                             emptyMap()
                         else
                             exampleRequestBuilder.examplesWithRequestBodies(exampleBodies, contentType)
@@ -1030,7 +1040,7 @@ class OpenApiSpecification(
         operation: Operation,
         parameterType: Class<T>
     ): Map<String, Map<String, String>> {
-        if(specmaticConfig.ignoreInlineExamples || Flags.getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
+        if(specmaticConfig.ignoreInlineExamples || getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES))
             return emptyMap()
 
         return operation.parameters.orEmpty()
@@ -1135,9 +1145,7 @@ class OpenApiSpecification(
 
         val values: List<String>
             get() {
-                return discriminatorDetails.entries.firstOrNull()?.let {
-                    it.value.keys.toList()
-                } ?: emptyList()
+                return discriminatorDetails.entries.firstOrNull()?.value?.keys?.toList() ?: emptyList()
             }
 
         val key: String?
@@ -1163,11 +1171,25 @@ class OpenApiSpecification(
             val updatedDiscriminatorDetails: Map<String, Map<String, Pair<String, List<Schema<Any>>>>> =
                 discriminatorDetails.plus(propertyName to valuesAndSchemas)
 
-            return this.copy(updatedDiscriminatorDetails).plus(newDiscriminator)
+            return this.copy(discriminatorDetails = updatedDiscriminatorDetails).plus(newDiscriminator)
         }
 
         fun plus(newDiscriminator: Discriminator): Discriminator {
-            return this.copy(discriminatorDetails + newDiscriminator.discriminatorDetails)
+            return this.copy(discriminatorDetails = mergeMapOfMaps(discriminatorDetails, newDiscriminator.discriminatorDetails))
+        }
+
+        private fun <T> mergeMapOfMaps(
+            discriminatorDetails1: Map<String, Map<String, T>>,
+            discriminatorDetails2: Map<String, Map<String, T>>
+        ): Map<String, Map<String, T>> {
+            val keys = discriminatorDetails1.keys + discriminatorDetails2.keys
+
+            return keys.associateWith { key ->
+                val detail1 = discriminatorDetails1[key] ?: emptyMap()
+                val detail2 = discriminatorDetails2[key] ?: emptyMap()
+
+                (detail1 + detail2)
+            }
         }
 
         fun hasValueForKey(propertyName: String?): Boolean {
@@ -1220,15 +1242,21 @@ class OpenApiSpecification(
             rawDiscriminator.propertyName?.let { propertyName ->
                 val mapping = rawDiscriminator.mapping ?: emptyMap()
 
-                val mappingWithSchemaListAndDiscriminator = mapping.mapValues { (discriminatorValue, refPath) ->
-                    val (schemaName, schema) = resolveReferenceToSchema(refPath)
-                    val componentName = extractComponentName(refPath)
-                    if(componentName !in typeStack) {
-                        schemaName to resolveDeepAllOfs(schema, discriminator, typeStack + componentName)
-                    } else {
-                        schemaName to (emptyList<Schema<Any>>() to Discriminator())
-                    }
-                }
+                val mappingWithSchemaListAndDiscriminator =
+                    mapping.entries.mapNotNull { (discriminatorValue, refPath) ->
+                        val (mappedSchemaName, mappedSchema) = resolveReferenceToSchema(refPath)
+                        val mappedComponentName = extractComponentName(refPath)
+                        if (mappedComponentName !in typeStack) {
+                            val value = mappedSchemaName to resolveDeepAllOfs(
+                                mappedSchema,
+                                discriminator,
+                                typeStack + mappedComponentName
+                            )
+                            discriminatorValue to value
+                        } else {
+                            null
+                        }
+                    }.toMap()
 
                 val discriminatorsFromResolvedMappingSchemas = mappingWithSchemaListAndDiscriminator.values.map { (possiblePropertyValue, discriminator) ->
                     discriminator.second
@@ -1246,22 +1274,26 @@ class OpenApiSpecification(
             }
         }
 
-        val allOfs = schema.allOf.map { constituentSchema ->
+        val allOfs = schema.allOf.mapNotNull { constituentSchema ->
             if (constituentSchema.`$ref` != null) {
                 val (_, referredSchema) = resolveReferenceToSchema(constituentSchema.`$ref`)
 
                 val componentName = extractComponentName(constituentSchema.`$ref`)
 
-                if(componentName !in typeStack) {
-                    resolveDeepAllOfs(referredSchema, discriminator.plus(newDiscriminatorDetails), typeStack + componentName)
+                if (componentName !in typeStack) {
+                    resolveDeepAllOfs(
+                        referredSchema,
+                        discriminator.plus(newDiscriminatorDetails),
+                        typeStack + componentName
+                    )
                 } else
                     null
             } else listOf(constituentSchema) to discriminator
-        }.filterNotNull()
+        }
 
         val discriminatorForThisLevel = newDiscriminatorDetails?.let { Discriminator(mapOf(newDiscriminatorDetails.first to newDiscriminatorDetails.second)) } ?: Discriminator()
 
-        return allOfs.fold(Pair<List<Schema<Any>>, Discriminator>(emptyList(), discriminatorForThisLevel)) { acc, item ->
+        return allOfs.fold(Pair(emptyList(), discriminatorForThisLevel)) { acc, item ->
             val (accSchemas, accDiscriminator) = acc
             val (additionalSchemas, additionalSchemasDiscriminator) = item
 
@@ -1339,7 +1371,7 @@ class OpenApiSpecification(
 
             is ComposedSchema -> {
                 if (schema.allOf != null) {
-                    val (deepListOfAllOfs, allDiscriminators) = resolveDeepAllOfs(schema, OpenApiSpecification.Discriminator(), setOf(patternName))
+                    val (deepListOfAllOfs, allDiscriminators) = resolveDeepAllOfs(schema, Discriminator(), emptySet())
 
                     val explodedDiscriminators = allDiscriminators.explode()
 
@@ -1416,7 +1448,7 @@ class OpenApiSpecification(
                     AnyPattern(
                         candidatePatterns.plus(nullable),
                         discriminatorProperty = schema.discriminator?.propertyName,
-                        discriminatorValues = schema.discriminator?.let { it.mapping.keys.toSet() }.orEmpty(),
+                        discriminatorValues = schema.discriminator?.mapping?.keys?.toSet().orEmpty(),
                         typeAlias = "(${patternName})"
                     )
                 } else if (schema.anyOf != null) {

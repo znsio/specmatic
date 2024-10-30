@@ -1,15 +1,6 @@
 package io.specmatic.core
 
 import integration_tests.testCount
-import io.specmatic.conversions.OpenApiSpecification
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
-import io.specmatic.core.pattern.NumberPattern
-import io.specmatic.core.pattern.parsedJSONObject
-import io.specmatic.core.value.*
-import io.specmatic.osAgnosticPath
-import io.specmatic.test.HttpClient
-import io.specmatic.test.TestExecutor
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -18,10 +9,17 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
-import io.specmatic.core.log.logger
-import io.specmatic.test.ScenarioAsTest
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.pattern.NumberPattern
+import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.value.*
+import io.specmatic.osAgnosticPath
+import io.specmatic.test.HttpClient
+import io.specmatic.test.TestExecutor
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 
 class ContractTests {
@@ -1105,7 +1103,7 @@ Examples:
     fun `test should load an example for a spec with pattern as a path param`() {
         val feature: Feature = OpenApiSpecification.fromFile("src/test/resources/openapi/spec_with_path_param.yaml").toFeature().loadExternalisedExamples()
 
-        var itemSeen: String = ""
+        var itemSeen = ""
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
@@ -1169,11 +1167,11 @@ Examples:
 
         val scenarioNames = mutableListOf<String>()
 
-        feature.generateContractTests(emptyList(), { scenario, row ->
+        feature.generateContractTests(emptyList()) { scenario, _ ->
             scenario.copy(
                 name = "Name added in hook"
             )
-        }).forEach {
+        }.forEach {
             it.runTest(object : TestExecutor {
                 override fun execute(request: HttpRequest): HttpResponse {
                     return HttpResponse.ok("ok")

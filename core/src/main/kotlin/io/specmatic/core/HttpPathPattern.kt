@@ -9,7 +9,6 @@ import java.net.URI
 
 val OMIT = listOf("(OMIT)", "(omit)")
 
-val EMPTY_PATH= HttpPathPattern(emptyList(), "")
 const val PATH_BREAD_CRUMB = "PATH"
 
 data class HttpPathPattern(
@@ -64,7 +63,7 @@ data class HttpPathPattern(
                         else -> result.breadCrumb(urlPathPattern.key).breadCrumb(PATH_BREAD_CRUMB)
                     }
                 } else {
-                    Result.Success()
+                    Success()
                 }
             } catch (e: ContractException) {
                 e.failure().breadCrumb("$PATH_BREAD_CRUMB ($path)").let { failure ->
@@ -77,7 +76,7 @@ data class HttpPathPattern(
             }
         }
 
-        val failures = results.filterIsInstance<Result.Failure>()
+        val failures = results.filterIsInstance<Failure>()
 
         val finalMatchResult = Result.fromResults(failures)
 
@@ -185,7 +184,7 @@ data class HttpPathPattern(
         resolver: Resolver
     ): Sequence<ReturnValue<List<URLPathSegmentPattern>>> {
         return Sequence {
-            patterns.map { it to it.negativeBasedOn(row, resolver) }.toMap()
+            patterns.associateWith { it.negativeBasedOn(row, resolver) }
                 .flatMap { (pathSegmentPattern, negativePatterns) ->
                     negativePatterns.map { negativePatternR ->
                         negativePatternR.ifValue { negativePattern ->
@@ -199,23 +198,6 @@ data class HttpPathPattern(
                     }
                 }.iterator()
         }
-    }
-
-    private fun positively(
-        patterns: List<URLPathSegmentPattern>,
-        row: Row,
-        resolver: Resolver
-    ): Sequence<ReturnValue<URLPathSegmentPattern>> {
-        if(patterns.isEmpty())
-            return emptySequence()
-
-        val patternToPositively = patterns.first()
-
-        val positively: Sequence<ReturnValue<Pattern>> = patternFromExample(null, row, patternToPositively, resolver)
-
-        return positively.flatMap { positive: ReturnValue<Pattern> ->
-            sequenceOf(positive) + positively(patterns.drop(1), row, resolver)
-        }.map { it.ifValue { it as URLPathSegmentPattern } }
     }
 
     fun negativeBasedOn(
@@ -255,7 +237,7 @@ data class HttpPathPattern(
         }
 
         else -> returnValueSequence {
-            val positives: Sequence<Pattern> = urlPathPattern.newBasedOn_Wrapper(row, resolver)
+            val positives: Sequence<Pattern> = urlPathPattern.newBasedOnWrapper(row, resolver)
             val negatives: Sequence<ReturnValue<Pattern>> = urlPathPattern.negativeBasedOn(row, resolver)
 
             positives.map { HasValue(it) } + negatives

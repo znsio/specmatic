@@ -78,13 +78,13 @@ data class Row(
         }
     }
 
-    fun hasNoRequestExamples() = columnNames.isEmpty() && requestBodyJSONExample == null
+    private fun hasNoRequestExamples() = columnNames.isEmpty() && requestBodyJSONExample == null
 
-    fun keyHasExample(key: String, pattern: Pattern, defaultExampleResolver: DefaultExampleResolver): Boolean {
+    private fun keyHasExample(key: String, pattern: Pattern, defaultExampleResolver: DefaultExampleResolver): Boolean {
         return this.containsField(key) ||  defaultExampleResolver.hasExample(pattern)
     }
 
-    fun keyIsMandatory(key: String): Boolean {
+    private fun keyIsMandatory(key: String): Boolean {
         return !isOptional(key)
     }
 

@@ -49,7 +49,7 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
         if(value !is JSONArrayValue)
             return HasFailure(Result.Failure("Cannot resolve data substitutions, expected list but got ${value.displayableType()}"))
 
-        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap<String, Pattern>())
+        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap())
         return value.list.fold(initialValue) { acc, valuePattern ->
             val patterns = pattern.getTemplateTypes("", valuePattern, resolver)
 
@@ -84,11 +84,10 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
 
     override fun generate(resolver: Resolver): Value {
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
-
-        return resolver.resolveExample(example, pattern) ?: dictionaryLookup(resolverWithEmptyType) ?: generateRandomValue(resolverWithEmptyType)
+        return resolver.resolveExample(example, pattern) ?: dictionaryLookup(resolverWithEmptyType)
     }
 
-    private fun dictionaryLookup(resolver: Resolver): Value? {
+    private fun dictionaryLookup(resolver: Resolver): Value {
         return resolver.generateList(pattern)
     }
 

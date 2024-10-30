@@ -26,13 +26,13 @@ subprojects {
 
 }
 
-task codeCoverageReport(type: JacocoReport) {
+tasks.register('codeCoverageReport', JacocoReport) {
     // Gather execution data from all subprojects
     executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
 
     // Add all relevant sourcesets from the subprojects
     subprojects.each {
-        if(!it.name.startsWith("spring-")) {
+        if (!it.name.startsWith("spring-")) {
             sourceSets it.sourceSets.main
         }
     }
@@ -59,7 +59,7 @@ sonarqube {
     }
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 

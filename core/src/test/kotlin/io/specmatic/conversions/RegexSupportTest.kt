@@ -256,8 +256,8 @@ class RegexSupportTest {
                                     pattern: '$regex'
                 """.trimIndent(), "").toFeature()
 
-        val doesNotMatchRegex = "123"
-        val matchesReqex = "012345678901234567890123"
+        private val doesNotMatchRegex = "123"
+        private val matchesReqex = "012345678901234567890123"
 
         @Test
         fun `an API spec with pattern in a request and response match expectations that match the patterns`() {

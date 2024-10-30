@@ -24,8 +24,12 @@ private fun createKeyStore(keyStoreDirPath: String, keyStorePassword: String, ke
 
     val filename = "$APPLICATION_NAME_LOWER_CASE.jks"
     val keyStoreFile = keyStoreDir.resolve(filename)
-    if (keyStoreFile.exists())
-        keyStoreFile.delete()
+    if (keyStoreFile.exists()) {
+        val deleteStatus = keyStoreFile.delete()
+        if (!deleteStatus) {
+            exitWithMessage("Unable to delete existing keystore file at $keyStoreFile")
+        }
+    }
 
     val keyStore = generateCertificate(keyStoreFile, jksPassword = keyStorePassword, keyAlias = keyAlias, keyPassword = keyPassword)
     return KeyData(keyStore = keyStore, keyStorePassword = keyStorePassword, keyAlias = keyAlias, keyPassword = keyPassword)

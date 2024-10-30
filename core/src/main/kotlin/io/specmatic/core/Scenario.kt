@@ -1,6 +1,8 @@
 package io.specmatic.core
 
 import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.discriminator.DiscriminatorBasedItem
+import io.specmatic.core.filters.ScenarioMetadata
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.capitalizeFirstChar
@@ -167,6 +169,25 @@ data class Scenario(
             httpResponsePattern.generateResponse(resolver.copy(factStore = CheckFacts(facts), context = requestContext))
         }
 
+    fun generateHttpResponseV2(
+        actualFacts: Map<String, Value>,
+        requestContext: Context = NoContext,
+        allowOnlyMandatoryKeysInJSONObject: Boolean = false
+    ): List<DiscriminatorBasedItem<HttpResponse>> =
+        scenarioBreadCrumb(this) {
+            val facts = combineFacts(expectedFacts, actualFacts, resolver)
+            val updatedResolver = if(allowOnlyMandatoryKeysInJSONObject) {
+                resolver.copy(
+                    factStore = CheckFacts(facts),
+                    context = requestContext
+                ).withOnlyMandatoryKeysInJSONObject()
+            } else {
+                resolver.copy(factStore = CheckFacts(facts), context = requestContext)
+            }
+
+            httpResponsePattern.generateResponseV2(updatedResolver)
+        }
+
     private fun combineFacts(
         expected: Map<String, Value>,
         actual: Map<String, Value>,
@@ -218,7 +239,26 @@ data class Scenario(
     }
 
     fun generateHttpRequest(flagsBased: FlagsBased = DefaultStrategies): HttpRequest =
-        scenarioBreadCrumb(this) { httpRequestPattern.generate(flagsBased.update(resolver.copy(factStore = CheckFacts(expectedFacts)))) }
+        scenarioBreadCrumb(this) {
+            httpRequestPattern.generate(flagsBased.update(resolver.copy(factStore = CheckFacts(expectedFacts))))
+        }
+
+    fun generateHttpRequestV2(
+        flagsBased: FlagsBased = DefaultStrategies,
+        allowOnlyMandatoryKeysInJSONObject: Boolean = false
+    ): List<DiscriminatorBasedItem<HttpRequest>> =
+        scenarioBreadCrumb(this) {
+            val updatedResolver = if(allowOnlyMandatoryKeysInJSONObject) {
+                flagsBased.update(
+                    resolver.copy(factStore = CheckFacts(expectedFacts))
+                ).withOnlyMandatoryKeysInJSONObject()
+            } else {
+                flagsBased.update(
+                    resolver.copy(factStore = CheckFacts(expectedFacts))
+                )
+            }
+            httpRequestPattern.generateV2(updatedResolver)
+        }
 
     fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
         val resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck).copy(context = RequestContext(httpRequest))
@@ -339,7 +379,7 @@ data class Scenario(
 
         val updatedResolver = flagsBased.update(resolver)
 
-        val errors = rowsToValidate.map { row ->
+        val errors = rowsToValidate.mapNotNull { row ->
             val resolverForExample = resolverForValidation(updatedResolver, row)
 
             val requestError = nullOrExceptionString {
@@ -350,23 +390,23 @@ data class Scenario(
                 validateResponseExample(row, resolverForExample)
             }
 
-            val errors = listOf(requestError, responseError).filterNotNull().map { it.prependIndent("  ") }
+            val errors = listOfNotNull(requestError, responseError).map { it.prependIndent("  ") }
 
-            if(errors.isNotEmpty()) {
-                val title = if(row.fileSource != null) {
+            if (errors.isNotEmpty()) {
+                val title = if (row.fileSource != null) {
                     "Error loading example for ${this.apiDescription.trim()} from ${row.fileSource}"
                 } else {
                     "Error loading example named ${row.name} for ${this.apiDescription.trim()}"
                 }
 
                 listOf(title).plus(errors).joinToString("${System.lineSeparator()}${System.lineSeparator()}").also { message ->
-                    logger.log(message)
+                    logger.logError(Exception(message))
 
-                    logger.newLine()
-                }
+                        logger.newLine()
+                    }
             } else
                 null
-        }.filterNotNull()
+        }
 
         if(errors.isNotEmpty())
             throw ContractException(errors.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))
@@ -486,7 +526,10 @@ data class Scenario(
                 mismatchMessages = mismatchMessages
             )
 
-            val requestMatchResult = attempt(breadCrumb = "REQUEST") { httpRequestPattern.matches(request, resolver) }
+            val requestMatchResult = attempt(breadCrumb = "REQUEST") {
+                if(response.status == 400) httpRequestPattern.matchesPathAndMethod(request, resolver)
+                else httpRequestPattern.matches(request, resolver)
+            }
 
             if (requestMatchResult is Result.Failure)
                 requestMatchResult.updateScenario(this)
@@ -553,10 +596,10 @@ data class Scenario(
         )
     }
 
-    fun useExamples(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Scenario {
-        val matchingTestData: Map<OpenApiSpecification.OperationIdentifier, List<Row>> = matchingRows(externalisedJSONExamples)
+    fun useExamples(rawExternalisedExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Scenario {
+        val matchingRawExternalisedEamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>> = matchingRows(rawExternalisedExamples)
 
-        val newExamples: List<Examples> = matchingTestData.map { (operationId, rows) ->
+        val externalisedExamples: List<Examples> = matchingRawExternalisedEamples.map { (operationId, rows) ->
             if(rows.isEmpty())
                 return@map emptyList()
 
@@ -567,7 +610,7 @@ data class Scenario(
             listOf(Examples(columns, rowsWithPathData))
         }.flatten()
 
-        return this.copy(examples = this.examples + newExamples)
+        return this.copy(examples = inlineExamplesThatAreNotOverridden(externalisedExamples) + externalisedExamples)
     }
 
     private fun matchingRows(externalisedJSONExamples: Map<OpenApiSpecification.OperationIdentifier, List<Row>>): Map<OpenApiSpecification.OperationIdentifier, List<Row>> {
@@ -614,6 +657,27 @@ data class Scenario(
         val responseMatch = httpResponsePattern.matchesMock(template.response, updatedResolver)
 
         return Result.fromResults(listOf(requestMatch, responseMatch))
+    }
+
+    private fun inlineExamplesThatAreNotOverridden(externalisedExamples: List<Examples>): List<Examples> {
+        val externalisedExampleNames = externalisedExamples.flatMap { it.rows.map { row -> row.name } }.toSet()
+
+        return this.examples.mapNotNull {
+            val rowsThatAreNotOverridden  = it.rows.filter { row -> row.name !in externalisedExampleNames }
+            if(rowsThatAreNotOverridden.isEmpty()) return@mapNotNull null
+            it.copy(rows = rowsThatAreNotOverridden)
+        }
+    }
+
+    fun toScenarioMetadata(): ScenarioMetadata {
+        return ScenarioMetadata(
+            method = this.method,
+            path = this.path,
+            statusCode = this.status,
+            header = this.httpRequestPattern.getHeaderKeys(),
+            query = this.httpRequestPattern.getQueryParamKeys(),
+            exampleName = this.exampleName.orEmpty()
+        )
     }
 }
 

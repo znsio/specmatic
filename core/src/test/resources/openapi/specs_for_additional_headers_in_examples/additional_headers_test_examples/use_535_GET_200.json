@@ -1,0 +1,26 @@
+{
+    "http-request": {
+      "path": "/use/2",
+      "method": "GET",
+      "headers": {
+        "X-API-Key": "abcd-1234",
+        "Accept-Language": "hindi-IN",
+        "X-Custom-Header": "Custom---Value"
+      }
+    },
+    "http-response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Rate-Limit-Limit": "100",
+        "X-Rate-Limit-Remaining": "99",
+        "X-Custom-Response-Header": "Custom---Value"
+      },
+      "body": {
+        "id": 2,
+        "name": "John Doe",
+        "department": "Sales",
+        "designation": "Sales Manager"
+      }
+    }
+  }

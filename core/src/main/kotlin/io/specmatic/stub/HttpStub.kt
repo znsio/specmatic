@@ -6,7 +6,7 @@ import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.cors.*
+import io.ktor.server.plugins.cors.CORS
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -21,13 +21,13 @@ import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheck
 import io.specmatic.core.utilities.*
 import io.specmatic.core.value.*
 import io.specmatic.mock.*
-import io.specmatic.stub.report.StubEndpoint
-import io.specmatic.stub.report.StubUsageReport
+import io.specmatic.stub.report.*
 import io.specmatic.test.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
@@ -111,6 +111,7 @@ class HttpStub(
 
     private val requestHandlers: MutableList<RequestHandler> = mutableListOf()
 
+    //used by graphql / plugins
     fun registerHandler(requestHandler: RequestHandler) {
         requestHandlers.add(requestHandler)
     }
@@ -593,7 +594,21 @@ class HttpStub(
             val json = Json {
                 encodeDefaults = false
             }
-            val reportJson = json.encodeToString(stubUsageReport.generate())
+            val generatedReport = stubUsageReport.generate()
+            val reportJson: String = File(JSON_REPORT_PATH).resolve(JSON_REPORT_FILE_NAME).let { reportFile ->
+                if (reportFile.exists()) {
+                    try {
+                        val existingReport = Json.decodeFromString<StubUsageReportJson>(reportFile.readText())
+                        json.encodeToString(generatedReport.merge(existingReport))
+                    } catch (exception: SerializationException) {
+                        logger.log("The existing report file is not a valid Stub Usage Report. ${exception.message}")
+                        json.encodeToString(generatedReport)
+                    }
+                } else {
+                    json.encodeToString(generatedReport)
+                }
+            }
+
             saveJsonFile(reportJson, JSON_REPORT_PATH, JSON_REPORT_FILE_NAME)
         }
     }
@@ -866,9 +881,7 @@ private fun stubThatMatchesRequest(
             )
         }
 
-        val partialMatchResults = httpStubData
-            .map { it.partial?.let { partial -> it to partial } }
-            .filterNotNull()
+        val partialMatchResults = httpStubData.mapNotNull { it.partial?.let { partial -> it to partial } }
             .map { (stubData, partial) ->
                 val (requestPattern, _, resolver) = stubData
 
@@ -1043,16 +1056,22 @@ fun dumpIntoFirstAvailableStringField(jsonObjectValue: JSONObjectValue, stringVa
         )
 
     val newMap = jsonObjectValue.jsonObject.mapValues { (key, value) ->
-        if(value is JSONObjectValue) {
-            dumpIntoFirstAvailableStringField(value, stringValue)
-        } else if(value is JSONArrayValue) {
-            dumpIntoFirstAvailableStringField(value, stringValue)
-        } else {
-            value
+        when (value) {
+            is JSONObjectValue -> {
+                dumpIntoFirstAvailableStringField(value, stringValue)
+            }
+
+            is JSONArrayValue -> {
+                dumpIntoFirstAvailableStringField(value, stringValue)
+            }
+
+            else -> {
+                value
+            }
         }
     }
 
-    return jsonObjectValue.copy(newMap)
+    return jsonObjectValue.copy(jsonObject = newMap)
 }
 
 fun dumpIntoFirstAvailableStringField(jsonArrayValue: JSONArrayValue, stringValue: String): JSONArrayValue {
@@ -1068,12 +1087,18 @@ fun dumpIntoFirstAvailableStringField(jsonArrayValue: JSONArrayValue, stringValu
     }
 
     val newList = jsonArrayValue.list.map { value ->
-        if(value is JSONObjectValue) {
-            dumpIntoFirstAvailableStringField(value, stringValue)
-        } else if(value is JSONArrayValue) {
-            dumpIntoFirstAvailableStringField(value, stringValue)
-        } else {
-            value
+        when (value) {
+            is JSONObjectValue -> {
+                dumpIntoFirstAvailableStringField(value, stringValue)
+            }
+
+            is JSONArrayValue -> {
+                dumpIntoFirstAvailableStringField(value, stringValue)
+            }
+
+            else -> {
+                value
+            }
         }
     }
 

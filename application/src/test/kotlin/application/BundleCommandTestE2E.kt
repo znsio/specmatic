@@ -53,8 +53,8 @@ class BundleTestData(tempDir: File) {
                 }
             """.trimIndent()
         specmaticJSONFile.writeText(specmaticJSONContent)
-        configFilename = Configuration.globalConfigFileName
-        Configuration.globalConfigFileName = specmaticJSONFile.canonicalPath
+        configFilename = Configuration.configFilePath
+        Configuration.configFilePath = specmaticJSONFile.canonicalPath
     }
 }
 
@@ -86,13 +86,13 @@ internal class BundleCommandTestE2E {
         @BeforeAll
         @JvmStatic
         fun setUp() {
-            configFilename = Configuration.globalConfigFileName
+            configFilename = Configuration.configFilePath
         }
 
         @AfterAll
         @JvmStatic
         fun tearDown() {
-            Configuration.globalConfigFileName = configFilename
+            Configuration.configFilePath = configFilename
         }
 
         fun cleanupSpecmaticDirectories(dir: File) {

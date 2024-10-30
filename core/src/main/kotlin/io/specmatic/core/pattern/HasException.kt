@@ -9,7 +9,7 @@ data class HasException<T>(val t: Throwable, val message: String = "", val bread
             message = exceptionCauseMessage(t),
             breadCrumb = breadCrumb ?: ""
         )
-        return HasFailure<T>(failure, message)
+        return HasFailure(failure, message)
     }
 
     override fun <U> withDefault(default: U, fn: (T) -> U): U {
@@ -26,15 +26,15 @@ data class HasException<T>(val t: Throwable, val message: String = "", val bread
     }
 
     override fun <U> assimilate(acc: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T> {
-        return cast<T>()
+        return cast()
     }
 
     override fun <U, V> combine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
-        return cast<V>()
+        return cast()
     }
 
     override fun <V> cast(): ReturnValue<V> {
-        return HasException<V>(t, message, breadCrumb)
+        return HasException(t, message, breadCrumb)
     }
 
     override val value: T
@@ -47,7 +47,7 @@ data class HasException<T>(val t: Throwable, val message: String = "", val bread
     override fun addDetails(message: String, breadCrumb: String): ReturnValue<T> {
         val newE = toException(message, breadCrumb, toException())
 
-        return HasException<T>(newE)
+        return HasException(newE)
     }
 
     private fun toException(): Throwable {

@@ -13,8 +13,11 @@ import io.ktor.server.routing.*
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
-import io.specmatic.core.examples.server.ExamplesView.Companion.groupEndpoints
+import io.specmatic.core.discriminator.DiscriminatorExampleInjector
+import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
+import io.specmatic.core.filters.ScenarioMetadataFilter
+import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
@@ -29,6 +32,7 @@ import io.specmatic.test.TestInteractionsLog.combineLog
 import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.exitProcess
 
 class ExamplesInteractiveServer(
@@ -38,7 +42,10 @@ class ExamplesInteractiveServer(
     private val inputContractFile: File? = null,
     private val filterName: String,
     private val filterNotName: String,
-    private val externalDictionaryFile: File? = null
+    private val filter: List<String>,
+    private val filterNot: List<String>,
+    externalDictionaryFile: File? = null,
+    private val allowOnlyMandatoryKeysInJSONObject: Boolean
 ) : Closeable {
     private var contractFileFromRequest: File? = null
 
@@ -53,7 +60,7 @@ class ExamplesInteractiveServer(
     }
 
     private fun getServerHostPort(request: ExamplePageRequest? = null) : String {
-        return request?.hostPort ?: "localhost:$serverPort"
+        return request?.hostPort ?: "http://localhost:$serverPort"
     }
 
     private val environment = applicationEngineEnvironment {
@@ -104,9 +111,10 @@ class ExamplesInteractiveServer(
                             request.path,
                             request.responseStatusCode,
                             request.contentType,
+                            allowOnlyMandatoryKeysInJSONObject
                         )
 
-                        call.respond(HttpStatusCode.OK, GenerateExampleResponse(generatedExample))
+                        call.respond(HttpStatusCode.OK, GenerateExampleResponse.from(generatedExample))
                     } catch(e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
                     }
@@ -140,12 +148,12 @@ class ExamplesInteractiveServer(
                     try {
                         val contractFile = getContractFile()
 
-                        val examples = request.map {
+                        val examples = request.associate {
                             val exampleFilePath = it.exampleFile
                             exampleFilePath to listOf(ScenarioStub.readFromFile(File(exampleFilePath)))
-                        }.toMap()
+                        }
 
-                        val results = validateMultipleExamples(contractFile, examples = examples)
+                        val results = validateExamples(contractFile, examples = examples)
 
                         val validationResults = results.map { (exampleFilePath, result) ->
                             try {
@@ -256,10 +264,10 @@ class ExamplesInteractiveServer(
     }
 
     private fun getExamplePageHtmlContent(contractFile: File, hostPort: String): String {
-        val feature = ScenarioFilter(filterName, filterNotName).filter(parseContractFileToFeature(contractFile))
+        val feature = ScenarioFilter(filterName, filterNotName, filter, filterNot).filter(parseContractFileToFeature(contractFile))
 
         val endpoints = ExamplesView.getEndpoints(feature, getExamplesDirPath(contractFile))
-        val tableRows = endpoints.groupEndpoints().toTableRows()
+        val tableRows = endpoints.toTableRows()
 
         return HtmlTemplateConfiguration.process(
             templateName = "examples/index.html",
@@ -269,15 +277,22 @@ class ExamplesInteractiveServer(
                 "contractFilePath" to contractFile.absolutePath,
                 "hostPort" to hostPort,
                 "hasExamples" to tableRows.any {it.example != null},
-                "validationDetails" to tableRows.withIndex().associate { (idx, row) ->
-                    idx.inc() to row.exampleMismatchReason
-                },
+                "exampleDetails" to tableRows.transform(),
                 "isTestMode" to (testBaseUrl != null)
             )
         )
     }
 
-    class ScenarioFilter(filterName: String = "", filterNotName: String = "") {
+    private fun List<TableRow>.transform(): Map<String, Map<String, String?>> {
+        return this.groupBy { it.uniqueKey }.mapValues { (_, keyGroup) ->
+            keyGroup.associateBy({ it.example ?: "null" }, { it.exampleMismatchReason })
+        }
+    }
+
+    class ScenarioFilter(filterName: String = "", filterNotName: String = "", filterClauses: List<String> = emptyList(), private val filterNotClauses: List<String> = emptyList()) {
+        private val filter = filterClauses.joinToString(";")
+        private val filterNot = filterNotClauses.joinToString(";")
+
         private val filterNameTokens = if(filterName.isNotBlank()) {
             filterName.trim().split(",").map { it.trim() }
         } else emptyList()
@@ -287,7 +302,7 @@ class ExamplesInteractiveServer(
         } else emptyList()
 
         fun filter(feature: Feature): Feature {
-            val scenarios = feature.scenarios.filter { scenario ->
+            val scenariosFilteredByOlderSyntax = feature.scenarios.filter { scenario ->
                 if(filterNameTokens.isNotEmpty()) {
                     filterNameTokens.any { name -> scenario.testDescription().contains(name) }
                 } else true
@@ -297,13 +312,26 @@ class ExamplesInteractiveServer(
                 } else true
             }
 
-            return feature.copy(scenarios = scenarios)
+            val scenarioInclusionFilter = ScenarioMetadataFilter.from(filter)
+            val scenarioExclusionFilter = ScenarioMetadataFilter.from(filterNot)
+
+            val filteredScenarios = filterUsing(scenariosFilteredByOlderSyntax.asSequence(), scenarioInclusionFilter, scenarioExclusionFilter) {
+                it.toScenarioMetadata()
+            }.toList()
+
+
+            return feature.copy(scenarios = filteredScenarios)
         }
     }
 
     companion object {
+        private val exampleFileNamePostFixCounter = AtomicInteger(0)
         enum class ExampleGenerationStatus {
             CREATED, EXISTED, ERROR
+        }
+
+        fun resetExampleFileNameCounter() {
+            exampleFileNamePostFixCounter.set(0)
         }
 
         class ExampleGenerationResult private constructor (val path: String?, val status: ExampleGenerationStatus) {
@@ -311,14 +339,11 @@ class ExamplesInteractiveServer(
             constructor(): this(null, ExampleGenerationStatus.ERROR)
         }
 
-        fun testExample(test: ContractTest, testBaseUrl: String): Pair<TestResult, String> {
-            val testResultRecord = test.runTest(testBaseUrl, timeoutInMilliseconds = DEFAULT_TIMEOUT_IN_MILLISECONDS).let {
-                test.testResultRecord(it.first, it.second)
-            } ?: return Pair(TestResult.Error, "No Test Result Record Found")
+        fun testExample(test: ContractTest, testBaseUrl: String): Pair<Result, String> {
+            val testResult = test.runTest(testBaseUrl, timeoutInMilliseconds = DEFAULT_TIMEOUT_IN_MILLISECONDS)
+            val testLog = TestInteractionsLog.testHttpLogMessages.lastOrNull { it.scenario == testResult.first.scenario }
 
-            return testResultRecord.scenarioResult?.let { scenarioResult ->
-                Pair(testResultRecord.result, TestInteractionsLog.testHttpLogMessages.last { it.scenario == scenarioResult.scenario }.combineLog())
-            } ?: Pair(TestResult.Error, "No Log Message Found")
+            return testResult.first to (testLog?.combineLog() ?: "No Test Logs Found")
         }
 
         fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean): List<String> {
@@ -347,11 +372,13 @@ class ExamplesInteractiveServer(
                     return emptyList()
                 }
 
-                return feature.scenarios.map { scenario ->
+                return feature.scenarios.flatMap { scenario ->
                     try {
-                        val generatedExampleFilePath = generateExampleFile(contractFile, feature, scenario)
+                        val examples = getExistingExampleFiles(scenario, examplesDir.getExamplesFromDir())
+                            .map { ExamplePathInfo(it.first.absolutePath, false) }
+                            .ifEmpty { listOf(generateExampleFile(contractFile, feature, scenario)) }
 
-                        generatedExampleFilePath.also {
+                        examples.forEach {
                             val loggablePath =
                                 File(it.path).canonicalFile.relativeTo(contractFile.canonicalFile.parentFile).path
 
@@ -364,10 +391,10 @@ class ExamplesInteractiveServer(
                             }
                         }
 
-                        ExampleGenerationResult(generatedExampleFilePath.path, generatedExampleFilePath.created)
+                        examples.map { ExampleGenerationResult(it.path, it.created) }
                     } catch(e: Throwable) {
                         logger.log(e, "Exception generating example for ${scenario.testDescription()}")
-                        ExampleGenerationResult()
+                        emptyList()
                     }
                 }.also { exampleFiles ->
                     val resultCounts = exampleFiles.groupBy { it.status }.mapValues { it.value.size }
@@ -395,17 +422,21 @@ class ExamplesInteractiveServer(
             path: String,
             responseStatusCode: Int,
             contentType: String? = null,
-        ): String? {
+            allowOnlyMandatoryKeysInJSONObject: Boolean
+        ): List<ExamplePathInfo> {
             val feature = parseContractFileToFeature(contractFile)
             val scenario: Scenario? = feature.scenarios.firstOrNull {
                 it.method == method && it.status == responseStatusCode && it.path == path
                         && (contentType == null || it.httpRequestPattern.headersPattern.contentType == contentType)
             }
-            if(scenario == null) return null
+            if(scenario == null) return emptyList()
 
-            return generateExampleFile(contractFile, feature, scenario).also {
-                println("Writing to file: ${File(it.path).canonicalFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
-            }.path
+            val examplesDir = getExamplesDirPath(contractFile)
+            val examples = examplesDir.getExamplesFromDir()
+
+            return getExistingExampleFiles(scenario, examples).map {
+                ExamplePathInfo(it.first.absolutePath, false)
+            }.plus(generateExampleFiles(contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject))
         }
 
         data class ExamplePathInfo(val path: String, val created: Boolean)
@@ -416,23 +447,58 @@ class ExamplesInteractiveServer(
             scenario: Scenario,
         ): ExamplePathInfo {
             val examplesDir = getExamplesDirPath(contractFile)
-            val existingExampleFile = getExistingExampleFile(scenario, examplesDir.getExamplesFromDir())
-            if (existingExampleFile != null) return ExamplePathInfo(existingExampleFile.first.absolutePath, false)
-            else examplesDir.mkdirs()
+            if(!examplesDir.exists()) examplesDir.mkdirs()
 
             val request = scenario.generateHttpRequest()
-
             val response = feature.lookupResponse(scenario).cleanup()
 
             val scenarioStub = ScenarioStub(request, response)
             val stubJSON = scenarioStub.toJSON()
-            val uniqueNameForApiOperation =
-                uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
+            val uniqueNameForApiOperation = uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
 
-            val file = examplesDir.resolve("${uniqueNameForApiOperation}.json")
+            val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
             println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
             file.writeText(stubJSON.toStringLiteral())
             return ExamplePathInfo(file.absolutePath, true)
+        }
+
+
+        private fun generateExampleFiles(
+            contractFile: File,
+            feature: Feature,
+            scenario: Scenario,
+            allowOnlyMandatoryKeysInJSONObject: Boolean
+        ): List<ExamplePathInfo> {
+            val examplesDir = getExamplesDirPath(contractFile)
+            if(!examplesDir.exists()) examplesDir.mkdirs()
+
+            val discriminatorBasedRequestResponses = feature
+                .generateDiscriminatorBasedRequestResponseList(
+                    scenario,
+                    allowOnlyMandatoryKeysInJSONObject = allowOnlyMandatoryKeysInJSONObject
+                ).map {
+                    it.copy(response = it.response.cleanup())
+                }
+
+            return discriminatorBasedRequestResponses.map { (request, response, requestDiscriminator, responseDiscriminator) ->
+                val scenarioStub = ScenarioStub(request, response)
+                val jsonWithDiscriminator = DiscriminatorExampleInjector(
+                    stubJSON = scenarioStub.toJSON(),
+                    requestDiscriminator = requestDiscriminator,
+                    responseDiscriminator = responseDiscriminator
+                ).getExampleWithDiscriminator()
+
+                val uniqueNameForApiOperation = getExampleFileNameBasedOn(
+                    requestDiscriminator,
+                    responseDiscriminator,
+                    scenarioStub
+                )
+
+                val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
+                println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
+                file.writeText(jsonWithDiscriminator.toStringLiteral())
+                ExamplePathInfo(file.absolutePath, true)
+            }
         }
 
         fun validateSingleExample(contractFile: File, exampleFile: File): Result {
@@ -451,28 +517,34 @@ class ExamplesInteractiveServer(
             }
         }
 
-        fun validateMultipleExamples(contractFile: File, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+        fun validateExamples(contractFile: File, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
             val feature = parseContractFileToFeature(contractFile)
-            return validateMultipleExamples(feature, examples, false, scenarioFilter)
+            return validateExamples(feature, examples, false, scenarioFilter)
         }
 
-        fun validateMultipleExamples(feature: Feature, examples: Map<String, List<ScenarioStub>> = emptyMap(), inline: Boolean = false, scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
+        fun validateExamples(
+            feature: Feature,
+            examples: Map<String, List<ScenarioStub>> = emptyMap(),
+            inline: Boolean = false,
+            scenarioFilter: ScenarioFilter = ScenarioFilter(),
+            enableLogging: Boolean = true
+        ): Map<String, Result> {
             val updatedFeature = scenarioFilter.filter(feature)
 
             val results = examples.mapValues { (name, exampleList) ->
-                logger.log("Validating ${name}")
+                if(enableLogging) logger.log("Validating $name")
 
-                exampleList.map { example ->
+                exampleList.mapNotNull { example ->
                     try {
                         validateExample(updatedFeature, example)
                         Result.Success()
-                    } catch(e: NoMatchingScenario) {
-                        if(inline && e.results.withoutFluff().hasResults() == false)
+                    } catch (e: NoMatchingScenario) {
+                        if (inline && !e.results.withoutFluff().hasResults())
                             null
                         else
                             e.results.toResultIfAny()
                     }
-                }.filterNotNull().let {
+                }.let {
                     Result.fromResults(it)
                 }
             }
@@ -519,8 +591,8 @@ class ExamplesInteractiveServer(
             return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
         }
 
-        fun getExistingExampleFile(scenario: Scenario, examples: List<ExampleFromFile>): Pair<File, String>? {
-            return examples.firstNotNullOfOrNull { example ->
+        fun getExistingExampleFiles(scenario: Scenario, examples: List<ExampleFromFile>): List<Pair<File, String>> {
+            return examples.mapNotNull { example ->
                 val response = example.response
 
                 when (val matchResult = scenario.matchesMock(example.request, response)) {
@@ -548,6 +620,21 @@ class ExamplesInteractiveServer(
             return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
         }
 
+        private fun getExampleFileNameBasedOn(
+            requestDiscriminator: DiscriminatorMetadata,
+            responseDiscriminator: DiscriminatorMetadata,
+            scenarioStub: ScenarioStub
+        ): String {
+            val discriminatorValue = requestDiscriminator.discriminatorValue.ifBlank {
+                responseDiscriminator.discriminatorValue
+            }
+            val discriminatorName = if (discriminatorValue.isNotEmpty()) "${discriminatorValue}_" else ""
+            return discriminatorName + uniqueNameForApiOperation(
+                scenarioStub.request,
+                "",
+                scenarioStub.response.status
+            )
+        }
     }
 }
 
@@ -597,9 +684,20 @@ data class GenerateExampleRequest(
     val contentType: String? = null
 )
 
-data class GenerateExampleResponse(
-    val generatedExample: String?
+data class GenerateExample(
+    val exampleFilePath: String,
+    val created: Boolean
 )
+
+data class GenerateExampleResponse (
+    val examples: List<GenerateExample>
+) {
+    companion object {
+        fun from(infos: List<ExamplesInteractiveServer.Companion.ExamplePathInfo>): GenerateExampleResponse {
+            return GenerateExampleResponse(infos.map { GenerateExample(it.path, it.created) })
+        }
+    }
+}
 
 data class ExampleTestRequest(
     val exampleFile: String
@@ -610,15 +708,18 @@ data class ExampleTestResponse(
     val details: String,
     val testLog: String
 ) {
-    constructor(result: TestResult, testLog: String, exampleFile: File): this (
-        result = result,
+    constructor(result: Result, testLog: String, exampleFile: File): this (
+        result = result.testResult(),
         details = resultToDetails(result, exampleFile),
-        testLog = testLog.trim('-', ' ', '\n', '\r')
+        testLog = when(result.isSuccess()) {
+            true -> testLog
+            false -> "${result.reportString()}\n\n$testLog"
+        }
     )
 
     companion object {
-        fun resultToDetails(result: TestResult, exampleFile: File): String {
-            val postFix = when(result) {
+        fun resultToDetails(result: Result, exampleFile: File): String {
+            val postFix = when(result.testResult()) {
                 TestResult.Success -> "has SUCCEEDED"
                 TestResult.Error -> "has ERROR"
                 else -> "has FAILED"
@@ -629,20 +730,22 @@ data class ExampleTestResponse(
     }
 }
 
-fun loadExternalExamples(contractFile: File): Pair<File, Map<String, List<ScenarioStub>>> {
-    val examplesDir =
-        contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
+fun loadExternalExamples(
+    examplesDir: File
+): Pair<File, Map<String, List<ScenarioStub>>> {
     if (!examplesDir.isDirectory) {
         logger.log("$examplesDir does not exist, did not find any files to validate")
         exitProcess(1)
     }
 
     return examplesDir to examplesDir.walk().mapNotNull {
-        if (it.isFile)
-            Pair(it.path, it)
-        else
-            null
+        if (it.isFile.not()) return@mapNotNull null
+        Pair(it.path, it)
     }.toMap().mapValues {
         listOf(ScenarioStub.readFromFile(it.value))
     }
+}
+
+fun defaultExternalExampleDirFrom(contractFile: File): File {
+    return contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
 }

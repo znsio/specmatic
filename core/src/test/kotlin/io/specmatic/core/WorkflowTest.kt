@@ -6,7 +6,7 @@ import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class WorkflowTest {
-    val postScenarioReturningNumber = Scenario(
+    private val postScenarioReturningNumber = Scenario(
         "Add data",
         HttpRequestPattern(
             method = "POST",
@@ -48,7 +48,7 @@ class WorkflowTest {
         emptyMap(),
     )
 
-    val getScenarioAcceptingNumberInPath = Scenario(
+    private val getScenarioAcceptingNumberInPath = Scenario(
         "Get data",
         HttpRequestPattern(
             method = "GET",

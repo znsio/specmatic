@@ -1,13 +1,12 @@
 package io.specmatic.core
 
 import io.specmatic.Utils.readTextResource
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Test
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.osAgnosticPath
 import io.specmatic.runningOnWindows
-import java.io.File
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Test
 
 internal class ContractFilePathTest {
     @Test

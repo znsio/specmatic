@@ -49,7 +49,7 @@ data class JSONObjectPattern(
         val jsonObject = value as? JSONObjectValue ?: return HasFailure("Can't generate object value from partial of type ${value.displayableType()}")
 
         val mapWithKeysInPartial = jsonObject.jsonObject.mapValues { (name, value) ->
-            val valuePattern = pattern.get(name) ?: pattern.get("$name?") ?: return@mapValues HasFailure<Value>(
+            val valuePattern = pattern[name] ?: pattern["$name?"] ?: return@mapValues HasFailure<Value>(
                 Result.Failure(
                     resolver.mismatchMessages.unexpectedKey("header", name)
                 )
@@ -94,7 +94,7 @@ data class JSONObjectPattern(
         }.mapFold()
 
         return mapWithKeysInPartial.combine(mapWithMissingKeysGenerated) { entriesInPartial, missingEntries ->
-            jsonObject.copy(entriesInPartial + missingEntries)
+            jsonObject.copy(jsonObject = entriesInPartial + missingEntries)
         }
     }
 
@@ -113,7 +113,7 @@ data class JSONObjectPattern(
             return HasFailure(Result.Failure("Cannot resolve substitutions, expected object but got ${value.displayableType()}"))
 
         val updatedMap = value.jsonObject.mapValues { (key, value) ->
-            val pattern = attempt("Could not find key in json object", key) { pattern.get(key) ?: pattern.get("$key?") ?: throw MissingDataException("Could not find key $key") }
+            val pattern = attempt("Could not find key in json object", key) { pattern[key] ?: pattern["$key?"] ?: throw MissingDataException("Could not find key $key") }
             pattern.resolveSubstitutions(substitution, value, resolver, key).breadCrumb(key)
         }
 
@@ -124,12 +124,12 @@ data class JSONObjectPattern(
         if(value !is JSONObjectValue)
             return HasFailure(Result.Failure("Cannot resolve data substitutions, expected object but got ${value.displayableType()}"))
 
-        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap<String, Pattern>())
+        val initialValue: ReturnValue<Map<String, Pattern>> = HasValue(emptyMap())
 
         return pattern.mapKeys {
             withoutOptionality(it.key)
         }.entries.fold(initialValue) { acc, (key, valuePattern) ->
-            value.jsonObject.get(key)?.let { valueInObject ->
+            value.jsonObject[key]?.let { valueInObject ->
                 val additionalTemplateTypes = valuePattern.getTemplateTypes(key, valueInObject, resolver)
                 acc.assimilate(additionalTemplateTypes) { data, additional -> data + additional }
             } ?: acc
@@ -275,6 +275,12 @@ data class JSONObjectPattern(
     }
 
     override fun generate(resolver: Resolver): JSONObjectValue {
+        val pattern = if (resolver.allowOnlyMandatoryKeysInJsonObject) {
+            getPatternWithOmittedOptionalFields(this.pattern, resolver)
+        } else {
+            this.pattern
+        }
+
         return JSONObjectValue(
             generate(
                 selectPropertiesWithinMaxAndMin(pattern, minProperties, maxProperties),
@@ -282,6 +288,22 @@ data class JSONObjectPattern(
                 typeAlias
             )
         )
+    }
+
+    private fun getPatternWithOmittedOptionalFields(pattern: Map<String, Pattern>, resolver: Resolver): Map<String, Pattern> {
+        return pattern.filterKeys { it.endsWith("?").not() }.map { entry ->
+            val (key, valuePattern) = entry
+
+            resolvedHop(valuePattern, resolver).let { resolvedValuePattern ->
+                if (resolvedValuePattern !is JSONObjectPattern) {
+                    return@map entry.toPair()
+                }
+
+                key to resolvedValuePattern.copy(
+                    pattern = getPatternWithOmittedOptionalFields(resolvedValuePattern.pattern, resolver)
+                )
+            }
+        }.toMap()
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> =
@@ -301,11 +323,11 @@ data class JSONObjectPattern(
     }
 
     override fun newBasedOn(resolver: Resolver): Sequence<JSONObjectPattern> =
-        allOrNothingCombinationIn<Pattern>(
+        allOrNothingCombinationIn(
             pattern.minus("..."),
             Row(),
             null,
-            null, returnValues<Pattern> { pattern: Map<String, Pattern> ->
+            null, returnValues { pattern: Map<String, Pattern> ->
                 newBasedOn(pattern, withNullPattern(resolver))
             }).map { it.value }.map { toJSONObjectPattern(it) }
 

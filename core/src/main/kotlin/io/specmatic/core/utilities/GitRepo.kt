@@ -2,7 +2,6 @@ package io.specmatic.core.utilities
 
 import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.Configuration
-import io.specmatic.core.DEFAULT_WORKING_DIRECTORY
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.git.checkout
 import io.specmatic.core.git.clone
@@ -95,12 +94,6 @@ data class GitRepo(
         val sourceGit = getSystemGitWithAuth(contractsRepoDir.path)
         sourceGit.fetch()
         return sourceGit.revisionsBehindCount() > 0
-    }
-
-    private fun isSpecmaticFolderIgnored(): Boolean {
-        val currentWorkingDirectory = File(".").absolutePath
-        val sourceGit = getSystemGit(currentWorkingDirectory)
-        return sourceGit.checkIgnore(DEFAULT_WORKING_DIRECTORY).isNotEmpty()
     }
 
     private fun cloneRepoAndCheckoutBranch(reposBaseDir: File, gitRepo: GitRepo): File {

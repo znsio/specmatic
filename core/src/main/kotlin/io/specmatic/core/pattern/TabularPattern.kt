@@ -84,11 +84,11 @@ data class TabularPattern(
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val resolverWithNullType = withNullPattern(resolver)
-        return allOrNothingCombinationIn<Pattern>(
+        return allOrNothingCombinationIn(
             pattern,
             resolver.resolveRow(row),
             null,
-            null, returnValues<Pattern> { pattern: Map<String, Pattern> ->
+            null, returnValues { pattern: Map<String, Pattern> ->
                 newMapBasedOn(pattern, row, resolverWithNullType).map { it.value }
             }).map { it.value }.map {
             toTabularPattern(it.mapKeys { (key, _) ->
@@ -100,11 +100,11 @@ data class TabularPattern(
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> {
         val resolverWithNullType = withNullPattern(resolver)
         val allOrNothingCombinationIn =
-            allOrNothingCombinationIn<Pattern>(
+            allOrNothingCombinationIn(
                 pattern,
                 Row(),
                 null,
-                null, returnValues<Pattern> { pattern: Map<String, Pattern> ->
+                null, returnValues { pattern: Map<String, Pattern> ->
                     newBasedOn(pattern, resolverWithNullType)
                 }).map { it.value }
         return allOrNothingCombinationIn.map { toTabularPattern(it) }
@@ -377,7 +377,7 @@ fun <ValueType> allOrNothingCombinationIn(
 
     val keySets: Sequence<Map<String, ValueType>> = keyLists.map { keySet ->
         patternMap.filterKeys { key -> key in keySet }
-    }.asSequence()
+    }
 
     val keySetValues = keySets.map { newPattern ->
         creator(newPattern)

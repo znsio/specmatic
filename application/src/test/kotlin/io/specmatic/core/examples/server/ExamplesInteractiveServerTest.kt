@@ -47,14 +47,6 @@ class ExamplesInteractiveServerTest {
                 }
                 """.trimIndent())
 
-        private val partialDictionary =
-            parsedJSONObject("""
-                {
-                    "name": "John-Doe",
-                    "address": "123-Main-Street"
-                }
-                """.trimIndent())
-
         fun assertHeaders(headers: Map<String, String>, apiKey: String) {
             assertThat(headers["Authentication"]).isEqualTo(apiKey)
         }
@@ -72,17 +64,6 @@ class ExamplesInteractiveServerTest {
             body as JSONObjectValue
             assertThat(body.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo(name)
             assertThat(body.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo(address)
-        }
-
-        fun assertResponseBody(body: Value, getNameAddress: (index: Int) -> Pair<String, String>) {
-            body as JSONArrayValue
-            body.list.forEachIndexed { index, value ->
-                value as JSONObjectValue
-
-                val (name, address) = getNameAddress(index)
-                assertThat(value.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo(name)
-                assertThat(value.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo(address)
-            }
         }
     }
 

@@ -9,6 +9,8 @@ interface GitCommand {
     fun commit(): SystemGit
     fun push(): SystemGit
     fun pull(): SystemGit
+    fun stash(): Boolean
+    fun stashPop(): SystemGit
     fun resetHard(): SystemGit
     fun resetMixed(): SystemGit
     fun mergeAbort(): SystemGit
@@ -30,8 +32,9 @@ interface GitCommand {
     fun revisionsBehindCount(): Int
     fun getRemoteUrl(name: String = "origin"): String
     fun checkIgnore(path: String): String
-    fun getFilesChangeInCurrentBranch(): List<String>
-    fun getFileInTheDefaultBranch(fileName: String, currentBranch: String): File?
+    fun getFilesChangedInCurrentBranch(baseBranch: String): List<String>
+    fun getFileInBranch(fileName: String, currentBranch: String, baseBranch: String): File?
+    fun currentRemoteBranch(): String
     fun currentBranch(): String {
         return ""
     }
@@ -43,4 +46,5 @@ interface GitCommand {
     fun detachedHEAD(): String {
         return ""
     }
+
 }

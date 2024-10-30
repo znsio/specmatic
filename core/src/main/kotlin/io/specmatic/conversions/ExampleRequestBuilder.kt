@@ -39,9 +39,7 @@ class ExampleRequestBuilder(
             bodies
         }
 
-        val examplesWithoutBodies = (examplesBasedOnParameters.keys - exampleBodies.keys).associate { key ->
-            key to examplesBasedOnParameters.getValue(key)
-        }
+        val examplesWithoutBodies = (examplesBasedOnParameters.keys - exampleBodies.keys).associateWith { key -> examplesBasedOnParameters.getValue(key) }
 
         val allExamples = examplesWithBodies + examplesWithoutBodies
 

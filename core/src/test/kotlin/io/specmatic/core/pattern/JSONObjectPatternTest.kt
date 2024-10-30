@@ -692,7 +692,7 @@ internal class JSONObjectPatternTest {
             dictionary = dictionary
         )
 
-        var value = resolver.generate(addressPattern) as JSONObjectValue
+        val value = resolver.generate(addressPattern) as JSONObjectValue
 
         val addresses = value.findFirstChildByPath("addresses")!! as JSONArrayValue
         assertThat(addresses.list).allSatisfy {
@@ -716,7 +716,7 @@ internal class JSONObjectPatternTest {
             dictionary = dictionary
         )
 
-        var value = resolver.generate(addressPattern) as JSONObjectValue
+        val value = resolver.generate(addressPattern) as JSONObjectValue
 
         val address = value.findFirstChildByPath("address") as StringValue
         assertThat(address).isEqualTo(expectedAddress)

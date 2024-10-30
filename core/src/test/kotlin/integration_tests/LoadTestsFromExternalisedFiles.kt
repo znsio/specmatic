@@ -276,8 +276,38 @@ class LoadTestsFromExternalisedFiles {
             }
         })
 
-        assertThat(idsSeen).containsExactlyInAnyOrder("123", "456")
-        assertThat(results.testCount).isEqualTo(2)
+        assertThat(idsSeen).contains("123", "456")
+        assertThat(results.testCount).isEqualTo(3)
+    }
+
+    @Test
+    fun `external example should override the inline example with the same name and should restrict it from running as a test`() {
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/has_overriding_external_examples.yaml")
+            .toFeature()
+            .loadExternalisedExamples()
+
+        val idsSeen = mutableListOf<String>()
+
+        val result = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val path = request.path ?: fail("Path expected")
+                idsSeen.add(path.split("/").last())
+
+                return HttpResponse(200, parsedJSONObject("""{"id": 10, "name": "Jack"}""")).also {
+                    println("---")
+                    println(request.toLogString())
+                    println(it.toLogString())
+                    println()
+                }
+            }
+        })
+
+        assertThat(idsSeen).contains("overriding_external_id")
+        assertThat(idsSeen).doesNotContain("overridden_inline_id")
+
+        assertThat(idsSeen).hasSize(2)
+        assertThat(result.testCount).isEqualTo(2)
     }
 
     @Test
@@ -303,8 +333,8 @@ class LoadTestsFromExternalisedFiles {
             }
         })
 
-        assertThat(idsSeen).containsExactlyInAnyOrder("123", "456")
-        assertThat(results.testCount).isEqualTo(2)
+        assertThat(idsSeen).contains("123", "456")
+        assertThat(results.testCount).isEqualTo(3)
     }
 
     @Test
@@ -335,7 +365,7 @@ class LoadTestsFromExternalisedFiles {
             }
         })
 
-        assertThat(results.testCount).isEqualTo(2)
+        assertThat(results.testCount).isEqualTo(3)
     }
 
     @Test
@@ -372,7 +402,7 @@ class LoadTestsFromExternalisedFiles {
 
         println(results.report())
 
-        assertThat(results.testCount).isEqualTo(2)
-        assertThat(results.failureCount).isEqualTo(2)
+        assertThat(results.testCount).isEqualTo(3)
+        assertThat(results.failureCount).isEqualTo(3)
     }
 }

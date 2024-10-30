@@ -3,8 +3,6 @@ package io.specmatic.conversions
 import io.specmatic.core.APIKeySecuritySchemeConfiguration
 import io.specmatic.core.BearerSecuritySchemeConfiguration
 import io.specmatic.core.OAuth2SecuritySchemeConfiguration
-import io.mockk.every
-import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

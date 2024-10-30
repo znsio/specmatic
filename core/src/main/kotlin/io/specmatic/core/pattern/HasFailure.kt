@@ -10,7 +10,7 @@ data class HasFailure<T>(val failure: Result.Failure, val message: String = "") 
     }
 
     override fun <U> ifValue(fn: (T) -> U): ReturnValue<U> {
-        return HasFailure<U>(failure)
+        return HasFailure(failure)
     }
 
     override fun update(fn: (T) -> T): ReturnValue<T> {
@@ -18,15 +18,15 @@ data class HasFailure<T>(val failure: Result.Failure, val message: String = "") 
     }
 
     override fun <U> assimilate(acc: ReturnValue<U>, fn: (T, U) -> T): ReturnValue<T> {
-        return cast<T>()
+        return cast()
     }
 
     override fun <U, V> combine(acc: ReturnValue<U>, fn: (T, U) -> V): ReturnValue<V> {
-        return cast<V>()
+        return cast()
     }
 
     override fun <U> cast(): ReturnValue<U> {
-        return HasFailure<U>(failure, message)
+        return HasFailure(failure, message)
     }
 
     override val value: T
@@ -36,12 +36,12 @@ data class HasFailure<T>(val failure: Result.Failure, val message: String = "") 
         return cast()
     }
 
-    fun toFailure(): Result.Failure {
+    private fun toFailure(): Result.Failure {
         return Result.Failure(message, failure)
     }
 
     override fun addDetails(message: String, breadCrumb: String): ReturnValue<T> {
-        return HasFailure<T>(Result.Failure(message, this.toFailure(), breadCrumb))
+        return HasFailure(Result.Failure(message, this.toFailure(), breadCrumb))
     }
 
     override fun <U> realise(hasValue: (T, String?) -> U, orFailure: (HasFailure<T>) -> U, orException: (HasException<T>) -> U): U {

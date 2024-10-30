@@ -6,6 +6,7 @@ import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
 import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.utilities.Flags.Companion.CONFIG_FILE_PATH
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_PARALLELISM
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
@@ -14,13 +15,15 @@ import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.core.utilities.newXMLBuilder
 import io.specmatic.core.utilities.xmlToString
 import io.specmatic.test.SpecmaticJUnitSupport
-import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONFIG_FILE_NAME
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.ENV_NAME
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME_PROPERTY
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME_PROPERTY
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.OVERLAY_FILE_PATH
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
@@ -82,6 +85,48 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--filter-not-name"], description = ["Run only tests which do not have this value in their name"], defaultValue = "\${env:SPECMATIC_FILTER_NOT_NAME}")
     var filterNotName: String = ""
 
+    @Option(
+        names= ["--filter"],
+        description = [
+           """
+Filter tests matching the specified filtering criteria
+
+You can filter tests based on the following keys:
+- `METHOD`: HTTP methods (e.g., GET, POST)
+- `PATH`: Request paths (e.g., /users, /product)
+- `STATUS`: HTTP response status codes (e.g., 200, 400)
+- `HEADERS`: Request headers (e.g., Accept, X-Request-ID)
+- `QUERY-PARAM`: Query parameters (e.g., status, productId)
+- `EXAMPLE-NAME`: Example name (e.g., create-product, active-status)
+
+To specify multiple values for the same filter, separate them with commas. 
+For example, to filter by HTTP methods: 
+--filter="METHOD=GET,POST"
+
+You can supply multiple filters as well. 
+For example:
+--filter="METHOD=GET,POST" --filter="PATH=/users"
+           """
+        ],
+        required = false
+    )
+    var filter: List<String> = emptyList()
+
+    @Option(
+        names= ["--filter-not"],
+        description = [
+           """
+Filter tests not matching the specified criteria
+
+This option supports the same filtering keys and syntax as the --filter option.
+For example:
+--filterNot="STATUS=400" --filterNot="METHOD=PATCH,PUT"
+           """
+        ],
+        required = false
+    )
+    var filterNot: List<String> = emptyList()
+
     @Option(names = ["--env"], description = ["Environment name"])
     var envName: String = ""
 
@@ -109,6 +154,9 @@ class TestCommand : Callable<Unit> {
     @Option(names = ["--examples"], description = ["Directories containing JSON examples"], required = false)
     var exampleDirs: List<String> = mutableListOf()
 
+    @Option(names = ["--overlay-file"], description = ["Overlay file for the specification"], required = false)
+    var overlayFilePath: String? = null
+
     override fun call() = try {
         setParallelism()
 
@@ -117,8 +165,8 @@ class TestCommand : Callable<Unit> {
         }
 
         configFileName?.let {
-            Configuration.globalConfigFileName = it
-            System.setProperty(CONFIG_FILE_NAME, it)
+            Configuration.configFilePath = it
+            System.setProperty(CONFIG_FILE_PATH, it)
         }
 
         if(port == 0) {
@@ -143,6 +191,9 @@ class TestCommand : Callable<Unit> {
         System.setProperty(INLINE_SUGGESTIONS, suggestions)
         System.setProperty(ENV_NAME, envName)
         System.setProperty("protocol", protocol)
+        System.setProperty(FILTER, filter.joinToString(";"))
+        System.setProperty(FILTER_NOT, filterNot.joinToString(";"))
+        System.setProperty(OVERLAY_FILE_PATH, overlayFilePath.orEmpty())
 
         if(exampleDirs.isNotEmpty()) {
             System.setProperty(EXAMPLE_DIRECTORIES, exampleDirs.joinToString(","))
@@ -199,7 +250,7 @@ class TestCommand : Callable<Unit> {
         getStringValue(SPECMATIC_TEST_PARALLELISM)?.let { parallelism ->
             validateParallelism(parallelism)
 
-            System.setProperty("junit.jupiter.execution.parallel.enabled", "true");
+            System.setProperty("junit.jupiter.execution.parallel.enabled", "true")
 
             when (parallelism) {
                 "auto" -> {

@@ -1,0 +1,50 @@
+openapi: 3.0.3
+info:
+  title: Person API
+  description: API for retrieving person details
+  version: 1.0.0
+paths:
+  /person/{id}:
+    get:
+      summary: Get person details by ID
+      description: Retrieves the details of a person based on their unique identifier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique identifier of the person
+          schema:
+            type: string
+          examples:
+            johnDoe:
+              summary: Example ID for John Doe
+              value: 123
+            get_person:
+              summary: Example ID for Unknown
+              value: overridden_inline_id
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                required:
+                  - id
+                  - name
+              examples:
+                johnDoe:
+                  summary: Example response for John Doe
+                  value:
+                    id: 123
+                    name: John Doe
+                get_person:
+                  summary: Example response for Unknown
+                  value:
+                    id: 1000
+                    name: Unknown

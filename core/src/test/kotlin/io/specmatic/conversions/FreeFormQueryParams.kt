@@ -6,7 +6,6 @@ import io.specmatic.core.QueryParameters
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.HttpStubData
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -44,8 +43,8 @@ paths:
 
         println(stub.requestType)
 
-        Assertions.assertThat(stub.requestType.method).isEqualTo("GET")
-        Assertions.assertThat(stub.response.status).isEqualTo(200)
+        assertThat(stub.requestType.method).isEqualTo("GET")
+        assertThat(stub.response.status).isEqualTo(200)
     }
 
     @Test
@@ -81,8 +80,8 @@ paths:
 
         val stub: HttpStubData = feature.matchingStub(request, response)
 
-        Assertions.assertThat(stub.requestType.method).isEqualTo("GET")
-        Assertions.assertThat(stub.response.status).isEqualTo(200)
+        assertThat(stub.requestType.method).isEqualTo("GET")
+        assertThat(stub.response.status).isEqualTo(200)
     }
 
 

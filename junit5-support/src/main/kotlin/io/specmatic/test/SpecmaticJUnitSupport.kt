@@ -55,6 +55,7 @@ open class SpecmaticJUnitSupport {
     companion object {
         const val CONTRACT_PATHS = "contractPaths"
         const val WORKING_DIRECTORY = "workingDirectory"
+        const val CONFIG_FILE_NAME = "manifestFile"
         const val INLINE_SUGGESTIONS = "suggestions"
         const val SUGGESTIONS_PATH = "suggestionsPath"
         const val HOST = "host"
@@ -249,8 +250,6 @@ open class SpecmaticJUnitSupport {
                             suggestionsData,
                             testConfig,
                             specificationPath = it,
-                            filterName = filterName,
-                            filterNotName = filterNotName,
                             specmaticConfig = specmaticConfig,
                             overlayContent = overlayContent
                         )
@@ -282,8 +281,6 @@ open class SpecmaticJUnitSupport {
                             it.branch,
                             it.specificationPath,
                             specmaticConfig?.security,
-                            filterName,
-                            filterNotName,
                             specmaticConfig = specmaticConfig,
                             overlayContent = overlayContent
                         )
@@ -454,8 +451,6 @@ open class SpecmaticJUnitSupport {
         sourceRepositoryBranch: String? = null,
         specificationPath: String? = null,
         securityConfiguration: SecurityConfiguration? = null,
-        filterName: String?,
-        filterNotName: String?,
         specmaticConfig: SpecmaticConfig? = null,
         overlayContent: String = ""
     ): Pair<Sequence<ContractTest>, List<Endpoint>> {

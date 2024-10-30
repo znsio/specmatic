@@ -55,7 +55,6 @@ open class SpecmaticJUnitSupport {
     companion object {
         const val CONTRACT_PATHS = "contractPaths"
         const val WORKING_DIRECTORY = "workingDirectory"
-        const val CONFIG_FILE_NAME = "manifestFile"
         const val INLINE_SUGGESTIONS = "suggestions"
         const val SUGGESTIONS_PATH = "suggestionsPath"
         const val HOST = "host"

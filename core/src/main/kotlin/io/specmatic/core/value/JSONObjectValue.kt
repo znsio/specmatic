@@ -86,6 +86,21 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
 
     fun findFirstChildByName(name: String): Value? =
         jsonObject[name]
+
+    fun objectWithMandatoryKeys(
+        jsonObjectWithOnlyMandatoryKeys: JSONObjectValue
+    ): JSONObjectValue {
+        val updatedJsonObject = jsonObjectWithOnlyMandatoryKeys.jsonObject.mapNotNull { (key, mandatoryValue) ->
+            val value = jsonObject[key] ?: return@mapNotNull null
+
+            val filteredValue = if (value is JSONObjectValue && mandatoryValue is JSONObjectValue) {
+                objectWithMandatoryKeys(mandatoryValue)
+            } else value
+
+            key to filteredValue
+        }.toMap()
+        return this.copy(jsonObject = updatedJsonObject)
+    }
 }
 
 internal fun dictionaryToDeclarations(jsonObject: Map<String, Value>, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Triple<Map<String, DeferredPattern>, Map<String, Pattern>, ExampleDeclarations> {

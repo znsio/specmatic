@@ -724,6 +724,35 @@ class ExamplesInteractiveServer(
         private fun Map<String, String>.toValueMap(): Map<String, Value> {
             return this.mapValues { StringValue(it.value) }
         }
+
+        fun transformExistingExamples(
+            contractFile: File,
+            overlayFile: File?,
+            examplesDir: File
+        ) {
+            val feature = parseContractFileToFeature(
+                contractPath = contractFile.absolutePath,
+                overlayContent = overlayFile?.readText().orEmpty()
+            )
+            val examples = examplesDir.getExamplesFromDir()
+            examples.forEach {
+                if(it.response.body !is JSONObjectValue) return@forEach
+
+                val stub = feature.matchingStub(it.request, it.response)
+                val generatedResponseWithOnlyMandatoryKeys = stub.responsePattern.generateResponseV2(
+                    stub.resolver.withOnlyMandatoryKeysInJSONObject()
+                ).first().value
+                if(generatedResponseWithOnlyMandatoryKeys.body !is JSONObjectValue) {
+                    return@forEach
+                }
+                val existingResponseBody = it.response.body as JSONObjectValue
+                val responseBodyWithOnlyMandatoryKeys = existingResponseBody.objectWithMandatoryKeys(
+                    generatedResponseWithOnlyMandatoryKeys.body
+                )
+                // TODO - create an updated example with the updated response body
+                // TODO - write the updated example to the file
+            }
+        }
     }
 }
 

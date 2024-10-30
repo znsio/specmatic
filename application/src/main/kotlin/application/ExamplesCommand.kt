@@ -26,7 +26,11 @@ private const val FAILURE_EXIT_CODE = 1
     name = "examples",
     mixinStandardHelpOptions = true,
     description = ["Generate externalised JSON example files with API requests and responses"],
-    subcommands = [ExamplesCommand.Validate::class, ExamplesCommand.Interactive::class]
+    subcommands = [
+        ExamplesCommand.Validate::class,
+        ExamplesCommand.Interactive::class,
+        ExamplesCommand.Transform::class
+    ]
 )
 class ExamplesCommand : Callable<Int> {
     @Option(
@@ -532,6 +536,36 @@ For example:
                     }
                 }
             })
+        }
+    }
+
+    @Command(
+        name = "transform",
+        mixinStandardHelpOptions = true,
+        description = ["Transform existing examples"]
+    )
+    class Transform: Callable<Unit> {
+        @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
+        lateinit var contractFile: File
+
+        @Option(names = ["--overlay-file"], description = ["Overlay file path"], required = false)
+        val overlayFile: File? = null
+
+        @Option(names = ["--examples-dir"], description = ["Directory where existing examples reside"], required = true)
+        lateinit var examplesDir: File
+
+        @Option(names = ["--only-mandatory-keys-in-payload"], description = ["Transform existing examples so that they contain only mandatory keys in payload"], required = false)
+        var allowOnlyMandatoryKeysInPayload: Boolean = false
+
+        override fun call() {
+            if(allowOnlyMandatoryKeysInPayload) {
+                ExamplesInteractiveServer.transformExistingExamples(
+                    contractFile,
+                    overlayFile,
+                    examplesDir
+                )
+            }
+            return
         }
     }
 }

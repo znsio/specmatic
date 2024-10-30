@@ -21,16 +21,15 @@ import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
-import io.specmatic.core.utilities.*
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
+import io.specmatic.core.utilities.capitalizeFirstChar
+import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.core.value.*
 import io.specmatic.mock.MOCK_HTTP_REQUEST
 import io.specmatic.mock.MOCK_HTTP_RESPONSE
-import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
-import io.specmatic.stub.HttpStub
-import io.specmatic.stub.HttpStubData
 import io.specmatic.test.ContractTest
 import io.specmatic.test.TestInteractionsLog
 import io.specmatic.test.TestInteractionsLog.combineLog
@@ -525,13 +524,7 @@ class ExamplesInteractiveServer(
 
         fun validateSingleExample(feature: Feature, exampleFile: File): Result {
             val scenarioStub = ScenarioStub.readFromFile(exampleFile)
-
-            return try {
-                validateExample(feature, scenarioStub)
-                Result.Success()
-            } catch(e: NoMatchingScenario) {
-                e.results.toResultIfAny()
-            }
+            return validateExample(feature, scenarioStub).toResultIfAny()
         }
 
         fun validateExamples(contractFile: File, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
@@ -552,14 +545,12 @@ class ExamplesInteractiveServer(
                 if(enableLogging) logger.log("Validating $name")
 
                 exampleList.mapNotNull { example ->
-                    try {
-                        validateExample(updatedFeature, example)
-                        Result.Success()
-                    } catch (e: NoMatchingScenario) {
-                        if (inline && !e.results.withoutFluff().hasResults())
-                            null
-                        else
-                            e.results.toResultIfAny()
+                    val results = validateExample(updatedFeature, example)
+
+                    if (inline && !results.hasResults()) {
+                        return@mapNotNull null
+                    } else {
+                        results.toResultIfAny()
                     }
                 }.let {
                     Result.fromResults(it)
@@ -569,39 +560,12 @@ class ExamplesInteractiveServer(
             return results
         }
 
-        private fun getCleanedUpFailure(
-            failureResults: Results,
-            noMatchingScenario: NoMatchingScenario?
-        ): Results {
-            return failureResults.toResultIfAny().let {
-                if (it.reportString().isBlank())
-                    Results(listOf(Result.Failure(noMatchingScenario?.message ?: "", failureReason = FailureReason.ScenarioMismatch)))
-                else
-                    failureResults
-            }
-        }
 
         private fun validateExample(
             feature: Feature,
             scenarioStub: ScenarioStub
-        ) {
-            val result: Pair<Pair<Result.Success, List<HttpStubData>>?, NoMatchingScenario?> =
-                HttpStub.setExpectation(scenarioStub, feature, InteractiveExamplesMismatchMessages)
-            val validationResult = result.first
-            val noMatchingScenario = result.second
-
-            if (validationResult == null) {
-                val failures = noMatchingScenario?.results?.withoutFluff()?.results ?: emptyList()
-
-                val failureResults = Results(failures).withoutFluff().let {
-                    getCleanedUpFailure(it, noMatchingScenario)
-                }
-                throw NoMatchingScenario(
-                    failureResults,
-                    cachedMessage = failureResults.report(scenarioStub.request),
-                    msg = failureResults.report(scenarioStub.request)
-                )
-            }
+        ): Results {
+            return feature.matchResultFlagBased(scenarioStub, InteractiveExamplesMismatchMessages)
         }
 
         private fun HttpResponse.cleanup(): HttpResponse {

@@ -318,41 +318,33 @@ data class Feature(
         } != null
     }
 
-    fun matchResult(scenarioStub: ScenarioStub, ignoreExtraKeys: Boolean): Result {
-        val results = matchResult(scenarioStub.request, scenarioStub.response, ignoreExtraKeys)
+    fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {
+        val (request, response) = scenarioStub
 
-        return Results(results).withoutFluff().toResultIfAny()
+        val results = scenarios.map {
+            it.matches(request, response, mismatchMessages, flagsBased)
+        }
+
+        return Results(results).withoutFluff()
     }
 
-    private fun matchResult(request: HttpRequest, response: HttpResponse, ignoreExtraKeys: Boolean): List<Result> {
+    fun matchResult(request: HttpRequest, response: HttpResponse): Result {
         if(scenarios.isEmpty())
-            return listOf(Result.Failure("No operations found"))
-
-        val unexpectedKeyCheck =
-            if(ignoreExtraKeys)
-                IgnoreUnexpectedKeys
-            else
-                ValidateUnexpectedKeys
+            return Result.Failure("No operations found")
 
         val matchResults = scenarios.map {
             it.matches(
                 request,
-                serverState,
-                unexpectedKeyCheck = unexpectedKeyCheck
-            ) to it.matches(response, unexpectedKeyCheck = unexpectedKeyCheck)
+                serverState
+            ) to it.matches(response)
         }
 
         if (matchResults.any {
-                it.first is Result.Success && it.second is Result.Success
-            })
-            return listOf(Result.Success())
+            it.first is Result.Success && it.second is Result.Success
+        })
+            return Result.Success()
 
-        return matchResults.flatMap { it.toList() }
-
-    }
-
-    fun matchResult(request: HttpRequest, response: HttpResponse): Result {
-        return Result.fromResults(matchResult(request, response, false))
+        return Result.fromResults(matchResults.flatMap { it.toList() })
     }
 
     fun matchingStub(

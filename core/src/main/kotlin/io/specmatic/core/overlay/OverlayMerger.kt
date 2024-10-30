@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
 import com.jayway.jsonpath.Configuration
+import com.jayway.jsonpath.DocumentContext
 import com.jayway.jsonpath.JsonPath
 import com.jayway.jsonpath.Option
 
@@ -19,17 +20,8 @@ class OverlayMerger {
                 YAMLFactory().disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER)
             )
             val rootNode = yamlMapper.readTree(baseContent) as ObjectNode
-            val originalDocumentContext = JsonPath.using(
-                Configuration.builder().options(Option.ALWAYS_RETURN_LIST).build()
-            ).parse(
-                ObjectMapper().writeValueAsString(rootNode)
-            )
-
-            val documentContext = JsonPath.using(
-                Configuration.builder().options(Option.ALWAYS_RETURN_LIST).build()
-            ).parse(
-                ObjectMapper().writeValueAsString(rootNode)
-            )
+            val originalDocumentContext = documentContextFor(rootNode)
+            val documentContext = documentContextFor(rootNode)
 
 
             overlay.updateMap.forEach { (jsonPath, content) ->
@@ -62,5 +54,13 @@ class OverlayMerger {
             println("Failed while applying overlay over the specification content with error: ${e.message}")
             return baseContent
         }
+    }
+
+    private fun documentContextFor(rootNode: ObjectNode): DocumentContext {
+        return JsonPath.using(
+            Configuration.builder().options(Option.ALWAYS_RETURN_LIST).build()
+        ).parse(
+            ObjectMapper().writeValueAsString(rootNode)
+        )
     }
 }

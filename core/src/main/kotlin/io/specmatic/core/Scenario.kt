@@ -759,10 +759,13 @@ data class Scenario(
             ATTRIBUTE_SELECTION_QUERY_PARAM_KEY,
             ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
         ).orEmpty()
+
+        if(queryParams?.containsKey(attributeSelectionQueryParamKey) != true) return emptySet()
+
         val attributeSelectionFieldsFromRequest = if(attributeSelectionQueryParamKey.isNotEmpty()){
-            queryParams?.getValues(attributeSelectionQueryParamKey)?.flatMap {
+            queryParams.getValues(attributeSelectionQueryParamKey).flatMap {
                 it.split(",").filter { value -> value.isNotBlank() }
-            }?.toSet() ?: emptySet()
+            }.toSet()
         } else emptySet()
         return defaultAttributeSelectionFields.plus(attributeSelectionFieldsFromRequest)
     }

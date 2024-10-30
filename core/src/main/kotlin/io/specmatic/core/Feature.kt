@@ -345,7 +345,7 @@ data class Feature(
         if(deepErrors.isNotEmpty())
             return Results(deepErrors)
 
-        return Results(listOf(Result.Failure("Match not found")))
+        return Results(listOf(Result.Failure("No matching found for this example")))
     }
 
     fun matchResult(request: HttpRequest, response: HttpResponse): Result {

@@ -8,6 +8,8 @@ import io.specmatic.core.*
 import io.specmatic.core.Result.Failure
 import io.specmatic.core.log.LogStrategy
 import io.specmatic.core.log.logger
+import io.specmatic.core.overlay.OverlayMerger
+import io.specmatic.core.overlay.OverlayParser
 import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.withoutOptionality
 import io.specmatic.core.utilities.Flags
@@ -114,10 +116,16 @@ class OpenApiSpecification(
             sourceRepositoryBranch: String? = null,
             specificationPath: String? = null,
             securityConfiguration: SecurityConfiguration? = null,
-            specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+            specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+            overlayContent: String = ""
         ): OpenApiSpecification {
             val parseResult: SwaggerParseResult =
-                OpenAPIV3Parser().readContents(yamlContent, null, resolveExternalReferences(), openApiFilePath)
+                OpenAPIV3Parser().readContents(
+                    yamlContent.applyOverlay(overlayContent),
+                    null,
+                    resolveExternalReferences(),
+                    openApiFilePath
+                )
             val parsedOpenApi: OpenAPI? = parseResult.openAPI
 
             if (parsedOpenApi == null) {
@@ -184,6 +192,10 @@ class OpenApiSpecification(
         }
 
         private fun resolveExternalReferences(): ParseOptions = ParseOptions().also { it.isResolve = true }
+
+        private fun String.applyOverlay(overlayContent: String): String {
+            return OverlayMerger().merge(this, OverlayParser.parse(overlayContent))
+        }
     }
 
     val patterns = mutableMapOf<String, Pattern>()

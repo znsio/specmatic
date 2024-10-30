@@ -52,12 +52,12 @@ dependencies {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter'
         exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
     }
-    implementation('org.springframework.boot:spring-boot-starter:3.3.4') {
+    implementation('org.springframework.boot:spring-boot-starter:3.3.5') {
         exclude group: 'org.springframework', module: 'spring-core'
         exclude group: 'ch.qos.logback', module: 'logback-classic'
         exclude group: 'ch.qos.logback', module: 'logback-core'
     }
-    implementation('org.springframework.boot:spring-boot-autoconfigure:3.3.4')
+    implementation('org.springframework.boot:spring-boot-autoconfigure:3.3.5')
     implementation('org.springframework:spring-core:6.1.14')
     implementation 'info.picocli:picocli:4.7.6'
     implementation "io.ktor:ktor-client-core-jvm:${ktor_version}"
@@ -65,7 +65,7 @@ dependencies {
     implementation "io.ktor:ktor-network-tls-certificates:$ktor_version"
 
     implementation 'org.junit.platform:junit-platform-launcher:1.11.3'
-    implementation 'org.junit.platform:junit-platform-reporting:1.11.2'
+    implementation 'org.junit.platform:junit-platform-reporting:1.11.3'
 
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
@@ -93,7 +93,7 @@ dependencies {
         exclude group: 'ch.qos.logback', module: 'logback-classic'
     }
     testImplementation 'org.assertj:assertj-core:3.26.3'
-    testImplementation 'com.ginsberg:junit5-system-exit:2.0.1'
+    testImplementation 'com.ginsberg:junit5-system-exit:2.0.2'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
     testImplementation 'io.kotest:kotest-assertions-core-jvm:5.9.1'

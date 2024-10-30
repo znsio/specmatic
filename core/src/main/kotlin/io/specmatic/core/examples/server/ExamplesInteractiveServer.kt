@@ -453,14 +453,19 @@ class ExamplesInteractiveServer(
             val examples = examplesDir.getExamplesFromDir()
 
             val existingExamples = getExistingExampleFiles(feature, scenario, examples)
+
+            val extendedExampleExists = existingExamples.any { it.first.isExtendedExample() }
             val newExamples = generateExampleFiles(
                 contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject,
                 existingExamples = if (bulkMode) existingExamples.map { it.first } else emptyList()
             )
 
-            return existingExamples.map { ExamplePathInfo(it.first.file.absolutePath, false) }.ifEmpty {
-                listOfNotNull(generateExtendedExample(contractFile, File(newExamples.random().path), examplesDir))
-            }.plus(newExamples)
+            val extendedExampleOrEmpty = if (extendedExampleExists)
+                emptyList()
+            else listOfNotNull(generateExtendedExample(contractFile, File(newExamples.random().path), examplesDir))
+
+            return existingExamples.map { ExamplePathInfo(it.first.file.absolutePath, false) }
+                .plus(newExamples).plus(extendedExampleOrEmpty)
         }
 
         data class ExamplePathInfo(val path: String, val created: Boolean)
@@ -648,6 +653,13 @@ class ExamplesInteractiveServer(
             )
         }
 
+        private fun ExampleFromFile.isExtendedExample(): Boolean {
+            val requestBodyContainsFields = this.requestBody?.containsExtendedFields()
+            val responseBodyContainsFields = this.responseBody?.containsExtendedFields()
+
+            return requestBodyContainsFields == true || responseBodyContainsFields == true
+        }
+
         private fun generateExtendedExample(contractFile: File, generateExampleFile: File, exampleDir: File): ExamplePathInfo? {
             if (!getBooleanValue(EXTENSIBLE_SCHEMA)) return null
 
@@ -687,6 +699,14 @@ class ExamplesInteractiveServer(
 
             val updatedResponse = this.updateBody(this.body.insertFieldsInValue(extendedFieldsMap))
             return block(updatedResponse)
+        }
+
+        private fun Value.containsExtendedFields(): Boolean {
+            return when(this) {
+                is JSONObjectValue -> extendedFieldsMap.any { it.key in this.jsonObject.keys }
+                is JSONArrayValue -> this.list.firstOrNull()?.containsExtendedFields() ?: false
+                else -> false
+            }
         }
 
         private fun Value.isScalarOrEmpty(): Boolean {

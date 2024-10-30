@@ -267,18 +267,22 @@ data class Scenario(
     }
 
     fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages, flagsBased: FlagsBased): Result {
-        val resolver = flagsBased.update(resolver.copy(mismatchMessages = mismatchMessages))
-
-        val requestMatch = matches(httpRequest, mismatchMessages, resolver.findKeyErrorCheck.unexpectedKeyCheck, resolver)
-        if (requestMatch is Result.Failure && httpResponse.status != httpResponsePattern.status) {
+        if (httpResponsePattern.status == DEFAULT_RESPONSE_CODE) {
             return Result.Failure(
                 breadCrumb = "STATUS",
-                cause = requestMatch,
-                failureReason = FailureReason.RequestMismatchButStatusAlsoWrong
+                failureReason = FailureReason.StatusMismatch
             ).updateScenario(this)
         }
 
+        val resolver = flagsBased.update(resolver.copy(mismatchMessages = mismatchMessages))
+
         val responseMatch = matches(httpResponse, mismatchMessages, resolver.findKeyErrorCheck.unexpectedKeyCheck, resolver)
+
+        if(responseMatch is Result.Failure && responseMatch.hasReason(FailureReason.StatusMismatch))
+            return responseMatch.updateScenario(this)
+
+        val requestMatch = matches(httpRequest, mismatchMessages, resolver.findKeyErrorCheck.unexpectedKeyCheck, resolver)
+
         return Result.fromResults(listOf(requestMatch, responseMatch)).updateScenario(this)
     }
 

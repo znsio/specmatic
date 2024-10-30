@@ -1,0 +1,21 @@
+{
+  "http-request": {
+    "path": "/employees",
+    "method": "GET",
+    "query": {
+      "columns": "name,department"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": 562,
+      "name": "name",
+      "department": "department"
+    },
+    "status-text": "OK",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

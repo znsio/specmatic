@@ -53,6 +53,9 @@ interface ScenarioDetailsForResult {
     fun testDescription(): String
 }
 
+const val ATTRIBUTE_SELECTION_DEFAULT_FIELDS = "ATTRIBUTE_SELECTION_DEFAULT_FIELDS"
+const val ATTRIBUTE_SELECTION_QUERY_PARAM_KEY = "ATTRIBUTE_SELECTION_QUERY_PARAM_KEY"
+
 data class Scenario(
     override val name: String,
     val httpRequestPattern: HttpRequestPattern,
@@ -749,12 +752,12 @@ data class Scenario(
 
     private fun getFieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams: QueryParameters?): Set<String> {
         val defaultAttributeSelectionFields = readEnvVarOrProperty(
-            "ATTRIBUTE_SELECTION_DEFAULT_FIELDS",
-            "ATTRIBUTE_SELECTION_DEFAULT_FIELDS"
+            ATTRIBUTE_SELECTION_DEFAULT_FIELDS,
+            ATTRIBUTE_SELECTION_DEFAULT_FIELDS
         ).orEmpty().split(",").filter { it.isNotBlank() }.toSet()
         val attributeSelectionQueryParamKey =  readEnvVarOrProperty(
-            "ATTRIBUTE_SELECTION_QUERY_PARAM_KEY",
-            "ATTRIBUTE_SELECTION_QUERY_PARAM_KEY"
+            ATTRIBUTE_SELECTION_QUERY_PARAM_KEY,
+            ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
         ).orEmpty()
         val attributeSelectionFieldsFromRequest = if(attributeSelectionQueryParamKey.isNotEmpty()){
             queryParams?.getValues(attributeSelectionQueryParamKey)?.flatMap {

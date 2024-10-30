@@ -4,6 +4,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.core.ATTRIBUTE_SELECTION_DEFAULT_FIELDS
+import io.specmatic.core.ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.SpecmaticConfig
@@ -404,5 +406,38 @@ class LoadTestsFromExternalisedFiles {
 
         assertThat(results.testCount).isEqualTo(3)
         assertThat(results.failureCount).isEqualTo(3)
+    }
+
+    @Test
+    fun `should load an example with some missing mandatory fields as test if attribute selection is turned on`() {
+        System.setProperty(ATTRIBUTE_SELECTION_QUERY_PARAM_KEY, "columns")
+        System.setProperty(ATTRIBUTE_SELECTION_DEFAULT_FIELDS, "id")
+        try {
+            val feature = OpenApiSpecification.fromFile(
+                "src/test/resources/openapi/attribute_selection_tests/api.yaml"
+            ).toFeature().loadExternalisedExamples()
+
+            val results = feature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    assertThat(request.queryParams.containsEntry("columns", "name,department")).isTrue
+
+                    return HttpResponse.ok(parsedJSONObject(
+                        """
+                        {
+                          "id": 562,
+                          "name": "name",
+                          "department": "department"
+                        }
+                    """.trimIndent()
+                    ))
+                }
+            })
+
+            println(results.report())
+            assertThat(results.successCount).isEqualTo(1)
+        } finally {
+            System.clearProperty(ATTRIBUTE_SELECTION_QUERY_PARAM_KEY)
+            System.clearProperty(ATTRIBUTE_SELECTION_DEFAULT_FIELDS)
+        }
     }
 }

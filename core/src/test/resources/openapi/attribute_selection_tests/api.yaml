@@ -1,0 +1,42 @@
+openapi: 3.0.0
+info:
+  title: Employees
+  version: '1.0'
+servers: []
+paths:
+  '/employees':
+    parameters:
+      - schema:
+          type: string
+        name: columns
+        in: query
+        required: true
+    get:
+      summary: Fetch employee details
+      tags: []
+      responses:
+        '200':
+          description: Details for employee id in request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+components:
+  schemas:
+    Employee:
+      title: Employee
+      type: object
+      required:
+        - id
+        - name
+        - department
+        - designation
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        department:
+          type: string
+        designation:
+          type: string

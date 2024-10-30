@@ -337,7 +337,15 @@ data class Feature(
             it.matches(request, response, mismatchMessages, flagsBased)
         }
 
-        return Results(results).withoutFluff()
+        if(results.any { it.isSuccess() })
+            return Results(results).withoutFluff()
+
+        val deepErrors = results.filterNot { it.isFluffy(0) }
+
+        if(deepErrors.isNotEmpty())
+            return Results(deepErrors)
+
+        return Results(listOf(Result.Failure("Match not found")))
     }
 
     fun matchResult(request: HttpRequest, response: HttpResponse): Result {

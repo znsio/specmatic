@@ -16,7 +16,7 @@ class ExamplesView {
     companion object {
         fun getEndpoints(feature: Feature, examplesDir: File): List<Endpoint> {
             val examples = examplesDir.getExamplesFromDir()
-            val scenarioExamplesPairList = getScenarioExamplesPairs(feature.scenarios, examples)
+            val scenarioExamplesPairList = getScenarioExamplesPairs(feature, examples)
 
             return scenarioExamplesPairList.map { (scenario, example) ->
                 Endpoint(
@@ -31,11 +31,11 @@ class ExamplesView {
             }.filterEndpoints()
         }
 
-        private fun getScenarioExamplesPairs(scenarios: List<Scenario>, examples: List<ExampleFromFile>): List<Pair<Scenario, Pair<File, String>?>> {
-            return scenarios.flatMap {
-                getExistingExampleFiles(it, examples).map { exRes ->
-                    it to exRes
-                }.ifEmpty { listOf(it to null) }
+        private fun getScenarioExamplesPairs(feature: Feature, examples: List<ExampleFromFile>): List<Pair<Scenario, Pair<File, String>?>> {
+            return feature.scenarios.flatMap { scenario ->
+                getExistingExampleFiles(feature, scenario, examples).map { exRes ->
+                    scenario to exRes
+                }.ifEmpty { listOf(scenario to null) }
             }
         }
 

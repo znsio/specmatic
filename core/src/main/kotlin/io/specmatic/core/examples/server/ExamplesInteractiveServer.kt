@@ -387,7 +387,7 @@ class ExamplesInteractiveServer(
 
                 return feature.scenarios.flatMap { scenario ->
                     try {
-                        val examples = getExistingExampleFiles(scenario, examplesDir.getExamplesFromDir())
+                        val examples = getExistingExampleFiles(feature, scenario, examplesDir.getExamplesFromDir())
                             .map { ExamplePathInfo(it.first.absolutePath, false) }
                             .ifEmpty { listOf(generateExampleFile(contractFile, feature, scenario)) }
 
@@ -447,7 +447,7 @@ class ExamplesInteractiveServer(
             val examplesDir = getExamplesDirPath(contractFile)
             val examples = examplesDir.getExamplesFromDir()
 
-            val existingExamples = getExistingExampleFiles(scenario, examples)
+            val existingExamples = getExistingExampleFiles(feature, scenario, examples)
             val generatedExamples = generateExampleFiles(contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject)
 
             return existingExamples.map { ExamplePathInfo(it.first.absolutePath, true) }.ifEmpty {
@@ -546,12 +546,10 @@ class ExamplesInteractiveServer(
 
                 exampleList.mapNotNull { example ->
                     val results = validateExample(updatedFeature, example)
+                    if (inline && !results.hasResults()) return@mapNotNull null
+                    if (!results.hasResults()) return@mapNotNull Result.Failure(results.report(example.request))
 
-                    if (inline && !results.hasResults()) {
-                        return@mapNotNull null
-                    } else {
-                        results.toResultIfAny()
-                    }
+                    results.toResultIfAny()
                 }.let {
                     Result.fromResults(it)
                 }
@@ -572,11 +570,9 @@ class ExamplesInteractiveServer(
             return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
         }
 
-        fun getExistingExampleFiles(scenario: Scenario, examples: List<ExampleFromFile>): List<Pair<File, String>> {
+        fun getExistingExampleFiles(feature: Feature, scenario: Scenario, examples: List<ExampleFromFile>): List<Pair<File, String>> {
             return examples.mapNotNull { example ->
-                val response = example.response
-
-                when (val matchResult = scenario.matchesMock(example.request, response)) {
+                when (val matchResult = scenario.matches(example.request, example.response, InteractiveExamplesMismatchMessages, feature.flagsBased)) {
                     is Result.Success -> example.file to ""
                     is Result.Failure -> {
                         val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs("").none { breadCrumb ->

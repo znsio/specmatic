@@ -272,6 +272,7 @@ data class Scenario(
         val requestMatch = matches(httpRequest, mismatchMessages, resolver.findKeyErrorCheck.unexpectedKeyCheck, resolver)
         if (requestMatch is Result.Failure && httpResponse.status != httpResponsePattern.status) {
             return Result.Failure(
+                breadCrumb = "STATUS",
                 cause = requestMatch,
                 failureReason = FailureReason.RequestMismatchButStatusAlsoWrong
             ).updateScenario(this)

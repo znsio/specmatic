@@ -454,9 +454,16 @@ data class Scenario(
 
         val httpResponsePatternBasedOnAttributeSelection =
             newBasedOnAttributeSelectionFields(row.requestExample?.queryParams).httpResponsePattern
+
+        val fieldsToBeMadeMandatory =
+            getFieldsToBeMadeMandatoryBasedOnAttributeSelection(row.requestExample?.queryParams)
+        val updatedResolver = if(fieldsToBeMadeMandatory.isNotEmpty()) {
+            resolverForExample.copy(mismatchMessages = getMismatchObjectForTestExamples(row))
+        } else resolverForExample
+
         if (responseExample != null) {
             val responseMatchResult =
-                httpResponsePatternBasedOnAttributeSelection.matches(responseExample, resolverForExample)
+                httpResponsePatternBasedOnAttributeSelection.matches(responseExample, updatedResolver)
 
             return responseMatchResult
         }
@@ -474,6 +481,24 @@ data class Scenario(
         }
 
         return Result.Success()
+    }
+
+    private fun getMismatchObjectForTestExamples(row: Row): MismatchMessages {
+       return object: MismatchMessages {
+           override fun mismatchMessage(expected: String, actual: String): String {
+               return "Expected $expected as per the specification, but the example ${row.name} had $actual."
+           }
+
+           override fun unexpectedKey(keyLabel: String, keyName: String): String {
+               if(keyLabel == "key") return "Unexpected key named '$keyName' detected in the example"
+               return "The $keyLabel $keyName was found in the example ${row.name} but was not in the specification."
+           }
+
+           override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+               if(keyLabel == "key") return "Missing key named '$keyName' detected in the example"
+               return "The $keyLabel $keyName was found in the example ${row.name} but was not in the specification."
+           }
+       }
     }
 
     fun generateTestScenarios(

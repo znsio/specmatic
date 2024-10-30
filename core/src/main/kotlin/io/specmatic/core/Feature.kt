@@ -181,10 +181,10 @@ data class Feature(
                     else
                         responses.first()
                     DiscriminatorBasedRequestResponse(
-                        request,
-                        response,
-                        requestDiscriminator,
-                        responseDiscriminator
+                        request = request,
+                        response = response,
+                        requestDiscriminator = requestDiscriminator,
+                        responseDiscriminator = responseDiscriminator
                     )
                 }
             } else {
@@ -193,10 +193,10 @@ data class Feature(
                         requests.getDiscriminatorItemWith(responseDiscriminator.discriminatorValue)
                     else requests.first()
                     DiscriminatorBasedRequestResponse(
-                        request,
-                        response,
-                        responseDiscriminator,
-                        requestDiscriminator
+                        request = request,
+                        response = response,
+                        requestDiscriminator = requestDiscriminator,
+                        responseDiscriminator = responseDiscriminator
                     )
                 }
             }

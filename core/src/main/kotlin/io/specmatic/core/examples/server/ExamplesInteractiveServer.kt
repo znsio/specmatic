@@ -28,6 +28,9 @@ import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.core.value.*
 import io.specmatic.mock.MOCK_HTTP_REQUEST
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.Value
 import io.specmatic.mock.MOCK_HTTP_RESPONSE
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.test.ContractTest
@@ -115,7 +118,8 @@ class ExamplesInteractiveServer(
                             request.path,
                             request.responseStatusCode,
                             request.contentType,
-                            allowOnlyMandatoryKeysInJSONObject
+                            request.bulkMode,
+                            allowOnlyMandatoryKeysInJSONObject,
                         )
 
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse.from(generatedExample))
@@ -388,7 +392,7 @@ class ExamplesInteractiveServer(
                 return feature.scenarios.flatMap { scenario ->
                     try {
                         val examples = getExistingExampleFiles(feature, scenario, examplesDir.getExamplesFromDir())
-                            .map { ExamplePathInfo(it.first.absolutePath, false) }
+                            .map { ExamplePathInfo(it.first.file.absolutePath, false) }
                             .ifEmpty { listOf(generateExampleFile(contractFile, feature, scenario)) }
 
                         examples.forEach {
@@ -435,6 +439,7 @@ class ExamplesInteractiveServer(
             path: String,
             responseStatusCode: Int,
             contentType: String? = null,
+            bulkMode: Boolean = false,
             allowOnlyMandatoryKeysInJSONObject: Boolean
         ): List<ExamplePathInfo> {
             val feature = parseContractFileToFeature(contractFile)
@@ -448,11 +453,14 @@ class ExamplesInteractiveServer(
             val examples = examplesDir.getExamplesFromDir()
 
             val existingExamples = getExistingExampleFiles(feature, scenario, examples)
-            val generatedExamples = generateExampleFiles(contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject)
+            val newExamples = generateExampleFiles(
+                contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject,
+                existingExamples = if (bulkMode) existingExamples.map { it.first } else emptyList()
+            )
 
-            return existingExamples.map { ExamplePathInfo(it.first.absolutePath, true) }.ifEmpty {
-                listOfNotNull(generateExtendedExample(contractFile, File(generatedExamples.random().path), examplesDir))
-            }.plus(generatedExamples)
+            return existingExamples.map { ExamplePathInfo(it.first.file.absolutePath, false) }.ifEmpty {
+                listOfNotNull(generateExtendedExample(contractFile, File(newExamples.random().path), examplesDir))
+            }.plus(newExamples)
         }
 
         data class ExamplePathInfo(val path: String, val created: Boolean)
@@ -483,7 +491,8 @@ class ExamplesInteractiveServer(
             contractFile: File,
             feature: Feature,
             scenario: Scenario,
-            allowOnlyMandatoryKeysInJSONObject: Boolean
+            allowOnlyMandatoryKeysInJSONObject: Boolean,
+            existingExamples: List<ExampleFromFile>
         ): List<ExamplePathInfo> {
             val examplesDir = getExamplesDirPath(contractFile)
             if(!examplesDir.exists()) examplesDir.mkdirs()
@@ -492,11 +501,16 @@ class ExamplesInteractiveServer(
                 .generateDiscriminatorBasedRequestResponseList(
                     scenario,
                     allowOnlyMandatoryKeysInJSONObject = allowOnlyMandatoryKeysInJSONObject
-                ).map {
-                    it.copy(response = it.response.cleanup())
-                }
+                ).map { it.copy(response = it.response.cleanup()) }
 
-            return discriminatorBasedRequestResponses.map { (request, response, requestDiscriminator, responseDiscriminator) ->
+            val requestDiscriminator = discriminatorBasedRequestResponses.first().requestDiscriminator
+            val responseDiscriminator = discriminatorBasedRequestResponses.first().responseDiscriminator
+
+            val existingDiscriminators = existingExamples.map {
+                it.requestBody?.getDiscriminatorValue(requestDiscriminator).orEmpty() to it.responseBody?.getDiscriminatorValue(responseDiscriminator).orEmpty()
+            }.toSet()
+
+            return discriminatorBasedRequestResponses.filterNot { it.matches(existingDiscriminators) }.map { (request, response, requestDiscriminator, responseDiscriminator) ->
                 val scenarioStub = ScenarioStub(request, response)
                 val jsonWithDiscriminator = DiscriminatorExampleInjector(
                     stubJSON = scenarioStub.toJSON(),
@@ -515,6 +529,27 @@ class ExamplesInteractiveServer(
                 file.writeText(jsonWithDiscriminator.toStringLiteral())
                 ExamplePathInfo(file.absolutePath, true)
             }
+        }
+
+        private fun Value.getDiscriminatorValue(discriminator: DiscriminatorMetadata): String? {
+            return when (this) {
+                is JSONObjectValue -> {
+                    val targetValue = this.getEventValue() ?: this
+                    targetValue.findFirstChildByPath(discriminator.discriminatorProperty)?.toStringLiteral()
+                }
+                is JSONArrayValue -> this.list.first().getDiscriminatorValue(discriminator)
+                else -> null
+            }
+        }
+
+        private fun JSONObjectValue.getEventValue(): JSONObjectValue? {
+            return (this.findFirstChildByPath("event") as? JSONObjectValue)?.let { eventValue ->
+                eventValue.findFirstChildByPath(eventValue.jsonObject.keys.first()) as? JSONObjectValue
+            }
+        }
+
+        private fun DiscriminatorBasedRequestResponse.matches(discriminatorValues: Set<Pair<String, String>>): Boolean {
+            return discriminatorValues.contains(requestDiscriminator.discriminatorValue to responseDiscriminator.discriminatorValue)
         }
 
         fun validateSingleExample(contractFile: File, exampleFile: File): Result {
@@ -570,10 +605,10 @@ class ExamplesInteractiveServer(
             return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
         }
 
-        fun getExistingExampleFiles(feature: Feature, scenario: Scenario, examples: List<ExampleFromFile>): List<Pair<File, String>> {
+        fun getExistingExampleFiles(feature: Feature, scenario: Scenario, examples: List<ExampleFromFile>): List<Pair<ExampleFromFile, String>> {
             return examples.mapNotNull { example ->
                 when (val matchResult = scenario.matches(example.request, example.response, InteractiveExamplesMismatchMessages, feature.flagsBased)) {
-                    is Result.Success -> example.file to ""
+                    is Result.Success -> example to ""
                     is Result.Failure -> {
                         val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs("").none { breadCrumb ->
                             breadCrumb.contains(PATH_BREAD_CRUMB)
@@ -581,7 +616,7 @@ class ExamplesInteractiveServer(
                                     || breadCrumb.contains("REQUEST.HEADERS.Content-Type")
                                     || breadCrumb.contains("STATUS")
                         }
-                        if (isFailureRelatedToScenario) example.file to matchResult.reportString() else null
+                        if (isFailureRelatedToScenario) example to matchResult.reportString() else null
                     }
                 }
             }
@@ -715,7 +750,8 @@ data class GenerateExampleRequest(
     val method: String,
     val path: String,
     val responseStatusCode: Int,
-    val contentType: String? = null
+    val contentType: String? = null,
+    val bulkMode: Boolean = false
 )
 
 data class GenerateExample(

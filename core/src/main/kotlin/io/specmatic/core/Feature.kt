@@ -36,7 +36,8 @@ fun parseContractFileToFeature(
     sourceRepositoryBranch: String? = null,
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    overlayContent: String = ""
 ): Feature {
     return parseContractFileToFeature(
         File(contractPath),
@@ -46,7 +47,8 @@ fun parseContractFileToFeature(
         sourceRepositoryBranch,
         specificationPath,
         securityConfiguration,
-        specmaticConfig
+        specmaticConfig,
+        overlayContent
     )
 }
 
@@ -63,12 +65,22 @@ fun parseContractFileToFeature(
     sourceRepositoryBranch: String? = null,
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    overlayContent: String = ""
 ): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
-
     return when (file.extension) {
-        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath, securityConfiguration = securityConfiguration, specmaticConfig = specmaticConfig).toFeature()
+        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(
+            hook.readContract(file.path),
+            file.path,
+            sourceProvider = sourceProvider,
+            sourceRepository = sourceRepository,
+            sourceRepositoryBranch = sourceRepositoryBranch,
+            specificationPath = specificationPath,
+            securityConfiguration = securityConfiguration,
+            specmaticConfig = specmaticConfig,
+            overlayContent = overlayContent
+        ).toFeature()
         WSDL -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
         else -> throw unsupportedFileExtensionContractException(file.path, file.extension)
@@ -169,10 +181,10 @@ data class Feature(
                     else
                         responses.first()
                     DiscriminatorBasedRequestResponse(
-                        request,
-                        response,
-                        requestDiscriminator,
-                        responseDiscriminator
+                        request = request,
+                        response = response,
+                        requestDiscriminator = requestDiscriminator,
+                        responseDiscriminator = responseDiscriminator
                     )
                 }
             } else {
@@ -181,10 +193,10 @@ data class Feature(
                         requests.getDiscriminatorItemWith(responseDiscriminator.discriminatorValue)
                     else requests.first()
                     DiscriminatorBasedRequestResponse(
-                        request,
-                        response,
-                        responseDiscriminator,
-                        requestDiscriminator
+                        request = request,
+                        response = response,
+                        requestDiscriminator = requestDiscriminator,
+                        responseDiscriminator = responseDiscriminator
                     )
                 }
             }

@@ -69,6 +69,7 @@ open class SpecmaticJUnitSupport {
         const val FILTER_NOT = "filterNot"
         const val FILTER_NAME_ENVIRONMENT_VARIABLE = "FILTER_NAME"
         const val FILTER_NOT_NAME_ENVIRONMENT_VARIABLE = "FILTER_NOT_NAME"
+        const val OVERLAY_FILE_PATH = "overlayFilePath"
         private const val ENDPOINTS_API = "endpointsAPI"
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
@@ -214,6 +215,8 @@ open class SpecmaticJUnitSupport {
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
         val filterName: String? = System.getProperty(FILTER_NAME_PROPERTY) ?: System.getenv(FILTER_NAME_ENVIRONMENT_VARIABLE)
         val filterNotName: String? = System.getProperty(FILTER_NOT_NAME_PROPERTY) ?: System.getenv(FILTER_NOT_NAME_ENVIRONMENT_VARIABLE)
+        val overlayFilePath: String? = System.getProperty(OVERLAY_FILE_PATH) ?: System.getenv(OVERLAY_FILE_PATH)
+        val overlayContent = if(overlayFilePath.isNullOrBlank()) "" else readFrom(overlayFilePath, "overlay")
 
         specmaticConfig = getSpecmaticConfig()
 
@@ -248,7 +251,8 @@ open class SpecmaticJUnitSupport {
                             specificationPath = it,
                             filterName = filterName,
                             filterNotName = filterNotName,
-                            specmaticConfig = specmaticConfig
+                            specmaticConfig = specmaticConfig,
+                            overlayContent = overlayContent
                         )
                     }
                     val tests: Sequence<ContractTest> = testScenariosAndEndpointsPairList.asSequence().flatMap { it.first }
@@ -280,7 +284,8 @@ open class SpecmaticJUnitSupport {
                             specmaticConfig?.security,
                             filterName,
                             filterNotName,
-                            specmaticConfig = specmaticConfig
+                            specmaticConfig = specmaticConfig,
+                            overlayContent = overlayContent
                         )
                     }
 
@@ -451,7 +456,8 @@ open class SpecmaticJUnitSupport {
         securityConfiguration: SecurityConfiguration? = null,
         filterName: String?,
         filterNotName: String?,
-        specmaticConfig: SpecmaticConfig? = null
+        specmaticConfig: SpecmaticConfig? = null,
+        overlayContent: String = ""
     ): Pair<Sequence<ContractTest>, List<Endpoint>> {
         if(hasOpenApiFileExtension(path) && !isOpenAPI(path))
             return Pair(emptySequence(), emptyList())
@@ -466,7 +472,8 @@ open class SpecmaticJUnitSupport {
                 sourceRepositoryBranch,
                 specificationPath,
                 securityConfiguration,
-                specmaticConfig = specmaticConfig ?: SpecmaticConfig()
+                specmaticConfig = specmaticConfig ?: SpecmaticConfig(),
+                overlayContent = overlayContent
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
         feature.validateExamplesOrException()
@@ -564,6 +571,16 @@ open class SpecmaticJUnitSupport {
                 emptyMap(),
             )
         }
+    }
+
+    private fun readFrom(path: String, fileTag: String = ""): String {
+        if(File(path).exists().not()) {
+            throw ContractException("The $fileTag file $path does not exist. Please provide a valid $fileTag file")
+        }
+        if(File(path).extension != YAML && File(path).extension != JSON && File(path).extension != YML) {
+            throw ContractException("The $fileTag file does not have a valid extension.")
+        }
+        return File(path).readText()
     }
 }
 

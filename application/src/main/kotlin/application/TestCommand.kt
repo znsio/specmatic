@@ -23,6 +23,7 @@ import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME_PROPERTY
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.OVERLAY_FILE_PATH
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
@@ -153,6 +154,9 @@ For example:
     @Option(names = ["--examples"], description = ["Directories containing JSON examples"], required = false)
     var exampleDirs: List<String> = mutableListOf()
 
+    @Option(names = ["--overlay-file"], description = ["Overlay file for the specification"], required = false)
+    var overlayFilePath: String? = null
+
     override fun call() = try {
         setParallelism()
 
@@ -189,6 +193,7 @@ For example:
         System.setProperty("protocol", protocol)
         System.setProperty(FILTER, filter.joinToString(";"))
         System.setProperty(FILTER_NOT, filterNot.joinToString(";"))
+        System.setProperty(OVERLAY_FILE_PATH, overlayFilePath.orEmpty())
 
         if(exampleDirs.isNotEmpty()) {
             System.setProperty(EXAMPLE_DIRECTORIES, exampleDirs.joinToString(","))

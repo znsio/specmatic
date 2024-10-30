@@ -317,6 +317,8 @@ data class AnyPattern(
 
     fun isDiscriminatorPresent() = discriminatorProperty != null && discriminatorValues.isNotEmpty()
 
+    fun hasMultipleDiscriminatorValues() = isDiscriminatorPresent() && discriminatorValues.size > 1
+
     fun generateForEveryDiscriminatorValue(resolver: Resolver): List<DiscriminatorBasedItem<Value>> {
         return discriminatorValues.map { discriminatorValue ->
             DiscriminatorBasedItem(

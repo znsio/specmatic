@@ -39,7 +39,7 @@ class ExamplesView {
 
         private fun Pattern.isDiscriminatorBased(resolver: Resolver): Boolean {
             return when (val resolvedPattern = resolvedHop(this, resolver)) {
-                is AnyPattern -> resolvedPattern.isDiscriminatorPresent()
+                is AnyPattern -> resolvedPattern.isDiscriminatorPresent() && resolvedPattern.hasMultipleDiscriminatorValues()
                 is ListPattern -> resolvedPattern.pattern.isDiscriminatorBased(resolver)
                 else -> false
             }

@@ -8,6 +8,7 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.mapZip
 import io.specmatic.core.utilities.nullOrExceptionString
+import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.RequestContext
@@ -435,9 +436,11 @@ data class Scenario(
     private fun validateResponseExample(row: Row, resolverForExample: Resolver): Result {
         val responseExample: HttpResponse? = row.responseExample
 
+        val httpResponsePatternBasedOnAttributeSelection =
+            newBasedOnAttributeSelectionFields(row.requestExample?.queryParams).httpResponsePattern
         if (responseExample != null) {
             val responseMatchResult =
-                httpResponsePattern.matches(responseExample, resolverForExample)
+                httpResponsePatternBasedOnAttributeSelection.matches(responseExample, resolverForExample)
 
             return responseMatchResult
         }
@@ -476,7 +479,8 @@ data class Scenario(
                     }
                 }
             }.flatMap { row ->
-                newBasedOn(row, flagsBased).map { scenarioR ->
+                val updatedScenario = newBasedOnAttributeSelectionFields(row.requestExample?.queryParams)
+                updatedScenario.newBasedOn(row, flagsBased).map { scenarioR ->
                     scenarioR.ifValue { scenario ->
                         fn(scenario, row)
                     }
@@ -586,6 +590,23 @@ data class Scenario(
     fun newBasedOn(suggestions: List<Scenario>) =
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
 
+    fun newBasedOnAttributeSelectionFields(queryParams: QueryParameters?): Scenario {
+        val fieldsToBeMadeMandatory =
+            getFieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams)
+        val responseBodyPattern = this.httpResponsePattern.body
+
+        val updatedResponseBodyPattern = if(responseBodyPattern is PossibleJsonObjectPatternContainer) {
+            responseBodyPattern.removeKeysNotPresentIn(fieldsToBeMadeMandatory, resolver)
+        } else {
+            responseBodyPattern
+        }
+        return this.copy(
+            httpResponsePattern = httpResponsePattern.copy(
+                body = updatedResponseBodyPattern
+            )
+        )
+    }
+
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
     fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?): Scenario {
         return this.copy(
@@ -678,6 +699,23 @@ data class Scenario(
             query = this.httpRequestPattern.getQueryParamKeys(),
             exampleName = this.exampleName.orEmpty()
         )
+    }
+
+    private fun getFieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams: QueryParameters?): Set<String> {
+        val defaultAttributeSelectionFields = readEnvVarOrProperty(
+            "ATTRIBUTE_SELECTION_DEFAULT_FIELDS",
+            "ATTRIBUTE_SELECTION_DEFAULT_FIELDS"
+        ).orEmpty().split(",").filter { it.isNotBlank() }.toSet()
+        val attributeSelectionQueryParamKey =  readEnvVarOrProperty(
+            "ATTRIBUTE_SELECTION_QUERY_PARAM_KEY",
+            "ATTRIBUTE_SELECTION_QUERY_PARAM_KEY"
+        ).orEmpty()
+        val attributeSelectionFieldsFromRequest = if(attributeSelectionQueryParamKey.isNotEmpty()){
+            queryParams?.getValues(attributeSelectionQueryParamKey)?.flatMap {
+                it.split(",").filter { value -> value.isNotBlank() }
+            }?.toSet() ?: emptySet()
+        } else emptySet()
+        return defaultAttributeSelectionFields.plus(attributeSelectionFieldsFromRequest)
     }
 }
 

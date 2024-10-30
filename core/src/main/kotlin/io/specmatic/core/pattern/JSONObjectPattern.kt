@@ -26,7 +26,7 @@ data class JSONObjectPattern(
     override val typeAlias: String? = null,
     val minProperties: Int? = null,
     val maxProperties: Int? = null
-) : Pattern {
+) : Pattern, PossibleJsonObjectPatternContainer {
     override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
         if(concretePattern !is JSONObjectPattern)
             throw ContractException("Expected json object type but got ${concretePattern.typeName}")
@@ -96,6 +96,15 @@ data class JSONObjectPattern(
         return mapWithKeysInPartial.combine(mapWithMissingKeysGenerated) { entriesInPartial, missingEntries ->
             jsonObject.copy(jsonObject = entriesInPartial + missingEntries)
         }
+    }
+
+    override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {
+        if (keys.isEmpty()) return this
+        return this.copy(pattern = pattern.filterKeys {
+            withoutOptionality(it) in keys
+        }.mapKeys {
+            withoutOptionality(it.key)
+        })
     }
 
     override fun equals(other: Any?): Boolean = when (other) {

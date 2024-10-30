@@ -376,6 +376,8 @@ data class Feature(
         mismatchMessages: MismatchMessages
     ): List<Pair<HttpStubData?, Result>> {
         val results = scenarios.map { scenario ->
+            scenario.newBasedOnAttributeSelectionFields(request.queryParams)
+        }.map { scenario ->
             try {
                 when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
                     is Result.Success -> Pair(
@@ -554,46 +556,8 @@ data class Feature(
         if(scenarios.isEmpty())
             throw ContractException("No scenarios found in feature $name ($path)")
 
-        return if(scenarioStub.partial != null) {
-            val results = scenarios.asSequence().map { scenario ->
-                scenario.matchesPartial(scenarioStub.partial) to scenario
-            }
-
-            val matchingScenario = results.filter { it.first is Result.Success }.map { it.second }.firstOrNull()
-
-            if(matchingScenario != null) {
-                val requestTypeWithAncestors =
-                    matchingScenario.httpRequestPattern.copy(
-                        headersPattern = matchingScenario.httpRequestPattern.headersPattern.copy(
-                            ancestorHeaders = matchingScenario.httpRequestPattern.headersPattern.pattern
-                        )
-                    )
-
-                val responseTypeWithAncestors =
-                    matchingScenario.httpResponsePattern.copy(
-                        headersPattern = matchingScenario.httpResponsePattern.headersPattern.copy(
-                            ancestorHeaders = matchingScenario.httpResponsePattern.headersPattern.pattern
-                        )
-                    )
-
-                HttpStubData(
-                    requestTypeWithAncestors,
-                    HttpResponse(),
-                    matchingScenario.resolver,
-                    responsePattern = responseTypeWithAncestors,
-                    examplePath = scenarioStub.filePath,
-                    scenario = matchingScenario,
-                    data = scenarioStub.data,
-                    partial = scenarioStub.partial.copy(response = scenarioStub.partial.response)
-                )
-            }
-            else {
-                val failures = Results(results.map { it.first }.filterIsInstance<Result.Failure>().toList()).withoutFluff()
-
-                throw NoMatchingScenario(failures, msg = "Could not load partial example ${scenarioStub.filePath}")
-            }
-        } else {
-            matchingStub(
+        if(scenarioStub.partial == null) {
+            return matchingStub(
                 scenarioStub.request,
                 scenarioStub.response,
                 mismatchMessages
@@ -605,6 +569,41 @@ data class Feature(
                 examplePath = scenarioStub.filePath
             )
         }
+
+        val results = scenarios.asSequence().map { scenario ->
+            scenario.matchesPartial(scenarioStub.partial) to scenario
+        }
+
+        val matchingScenario = results.filter { it.first is Result.Success }.map { it.second }.firstOrNull()
+        if(matchingScenario == null) {
+            val failures = Results(results.map { it.first }.filterIsInstance<Result.Failure>().toList()).withoutFluff()
+            throw NoMatchingScenario(failures, msg = "Could not load partial example ${scenarioStub.filePath}")
+        }
+
+        val requestTypeWithAncestors =
+            matchingScenario.httpRequestPattern.copy(
+                headersPattern = matchingScenario.httpRequestPattern.headersPattern.copy(
+                    ancestorHeaders = matchingScenario.httpRequestPattern.headersPattern.pattern
+                )
+            )
+
+        val responseTypeWithAncestors =
+            matchingScenario.httpResponsePattern.copy(
+                headersPattern = matchingScenario.httpResponsePattern.headersPattern.copy(
+                    ancestorHeaders = matchingScenario.httpResponsePattern.headersPattern.pattern
+                )
+            )
+
+        return HttpStubData(
+            requestTypeWithAncestors,
+            HttpResponse(),
+            matchingScenario.resolver,
+            responsePattern = responseTypeWithAncestors,
+            examplePath = scenarioStub.filePath,
+            scenario = matchingScenario,
+            data = scenarioStub.data,
+            partial = scenarioStub.partial.copy(response = scenarioStub.partial.response)
+        )
     }
 
     fun clearServerState() {

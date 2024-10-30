@@ -521,17 +521,17 @@ class ExamplesInteractiveServer(
         private fun Value.getDiscriminatorValue(discriminator: DiscriminatorMetadata): String? {
             return when (this) {
                 is JSONObjectValue -> {
-                    this.getEventValue()?.getDiscriminatorValue(discriminator)
-                        ?: this.findFirstChildByPath(discriminator.discriminatorProperty)?.toStringLiteral()
+                    val targetValue = this.getEventValue() ?: this
+                    targetValue.findFirstChildByPath(discriminator.discriminatorProperty)?.toStringLiteral()
                 }
                 is JSONArrayValue -> this.list.first().getDiscriminatorValue(discriminator)
                 else -> null
             }
         }
 
-        private fun JSONObjectValue.getEventValue(): Value? {
+        private fun JSONObjectValue.getEventValue(): JSONObjectValue? {
             return (this.findFirstChildByPath("event") as? JSONObjectValue)?.let { eventValue ->
-                eventValue.findFirstChildByPath(eventValue.jsonObject.keys.first())
+                eventValue.findFirstChildByPath(eventValue.jsonObject.keys.first()) as? JSONObjectValue
             }
         }
 

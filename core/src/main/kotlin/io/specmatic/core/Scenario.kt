@@ -27,6 +27,22 @@ object ContractAndStubMismatchMessages : MismatchMessages {
     }
 }
 
+object StubAndAttributeSelectionMismatchMessages: MismatchMessages {
+    override fun mismatchMessage(expected: String, actual: String): String {
+        return "Contract expected $expected but stub contained $actual"
+    }
+
+    override fun unexpectedKey(keyLabel: String, keyName: String): String {
+        if(keyLabel == "key") return "Unexpected key named '$keyName' detected in the stub"
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the stub was not in the contract"
+    }
+
+    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+        if(keyLabel == "key") return "Expected key named '$keyName' was missing in the stub"
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the contract was not found in the stub"
+    }
+}
+
 interface ScenarioDetailsForResult {
     val status: Int
     val ignoreFailure: Boolean
@@ -522,12 +538,17 @@ data class Scenario(
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): Result {
         scenarioBreadCrumb(this) {
+            val updatedMismatchMessages =
+                if (getFieldsToBeMadeMandatoryBasedOnAttributeSelection(request.queryParams).isEmpty())
+                    mismatchMessages
+                else StubAndAttributeSelectionMismatchMessages
+
             val resolver = Resolver(
                 IgnoreFacts(),
                 true,
                 patterns,
                 findKeyErrorCheck = DefaultKeyCheck.disableOverrideUnexpectedKeycheck(),
-                mismatchMessages = mismatchMessages
+                mismatchMessages = updatedMismatchMessages
             )
 
             val requestMatchResult = attempt(breadCrumb = "REQUEST") {

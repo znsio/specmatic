@@ -31,13 +31,13 @@ data class JSONObjectPattern(
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
         if (value !is JSONObjectValue) return value
 
-        val filteredPattern = this.pattern.filterKeys { !it.endsWith("?") }
-        val filteredJsonObject = value.jsonObject.mapNotNull { (key, actualValue) ->
-            val patternForKey = filteredPattern[key] ?: return@mapNotNull null
+        val mandatoryObjectPatternMap  = this.pattern.filterKeys { !it.endsWith("?") }
+        val mandatoryObjectMap = value.jsonObject.mapNotNull { (key, actualValue) ->
+            val patternForKey = mandatoryObjectPatternMap[key] ?: return@mapNotNull null
             key to patternForKey.eliminateOptionalKey(actualValue, resolver)
         }.toMap()
 
-        return JSONObjectValue(filteredJsonObject)
+        return JSONObjectValue(mandatoryObjectMap)
     }
 
     override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {

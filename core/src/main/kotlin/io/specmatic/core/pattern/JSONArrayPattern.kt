@@ -13,11 +13,6 @@ import io.specmatic.core.value.Value
 import java.util.*
 
 data class JSONArrayPattern(override val pattern: List<Pattern> = emptyList(), override val typeAlias: String? = null) : Pattern, SequenceType {
-
-    override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
-        return JSONArrayValue(emptyList())
-    }
-
     override val memberList: MemberList
         get() {
             if (pattern.isEmpty())

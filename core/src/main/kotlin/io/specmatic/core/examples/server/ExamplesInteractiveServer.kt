@@ -18,6 +18,7 @@ import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
+import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
@@ -725,33 +726,50 @@ class ExamplesInteractiveServer(
             return this.mapValues { StringValue(it.value) }
         }
 
-        fun transformExistingExamples(
-            contractFile: File,
-            overlayFile: File?,
-            examplesDir: File
-        ) {
-            val feature = parseContractFileToFeature(
-                contractPath = contractFile.absolutePath,
-                overlayContent = overlayFile?.readText().orEmpty()
-            )
+        fun transformExistingExamples(contractFile: File, overlayFile: File?, examplesDir: File) {
+            val feature = parseContractFileToFeature(contractPath = contractFile.absolutePath, overlayContent = overlayFile?.readText().orEmpty())
             val examples = examplesDir.getExamplesFromDir()
-            examples.forEach {
-                if(it.response.body !is JSONObjectValue) return@forEach
 
-                val stub = feature.matchingStub(it.request, it.response)
-                val generatedResponseWithOnlyMandatoryKeys = stub.responsePattern.generateResponseV2(
-                    stub.resolver.withOnlyMandatoryKeysInJSONObject()
-                ).first().value
-                if(generatedResponseWithOnlyMandatoryKeys.body !is JSONObjectValue) {
+            examples.forEach { example ->
+                consoleLog("\nTransforming ${example.file.nameWithoutExtension}")
+
+                if (example.request.body.isScalarOrEmpty() && example.response.body.isScalarOrEmpty()) {
+                    consoleLog("Skipping ${example.file.name}, both request and response bodies are scalars")
                     return@forEach
                 }
-                val existingResponseBody = it.response.body as JSONObjectValue
-                val responseBodyWithOnlyMandatoryKeys = existingResponseBody.objectWithMandatoryKeys(
-                    generatedResponseWithOnlyMandatoryKeys.body
-                )
-                // TODO - create an updated example with the updated response body
-                // TODO - write the updated example to the file
+
+                val scenario = feature.matchResultFlagBased(example.request, example.response, InteractiveExamplesMismatchMessages)
+                    .toResultIfAny().takeIf { it.isSuccess() }?.scenario as? Scenario
+
+                if (scenario == null) {
+                    consoleLog("Skipping ${example.file.name}, no matching scenario found")
+                    return@forEach
+                }
+
+                val requestWithoutOptionality = scenario.httpRequestPattern.withoutOptionality(example.request, scenario.resolver)
+                val responseWithoutOptionality = scenario.httpResponsePattern.withoutOptionality(example.response, scenario.resolver)
+
+                val updatedExample = example.replaceWithDescriptions(requestWithoutOptionality, responseWithoutOptionality)
+                consoleLog("Writing transformed example to ${example.file.canonicalFile.relativeTo(contractFile).path}")
+                example.file.writeText(updatedExample.toStringLiteral())
             }
+        }
+
+        private fun ExampleFromFile.replaceWithDescriptions(request: HttpRequest, response: HttpResponse): JSONObjectValue {
+            return this.json.jsonObject.mapValues { (key, value) ->
+                when (key) {
+                    MOCK_HTTP_REQUEST -> request.toJSON().insertFieldsInValue(value.getDescriptionMap())
+                    MOCK_HTTP_RESPONSE -> response.toJSON().insertFieldsInValue(value.getDescriptionMap())
+                    else -> value
+                }
+            }.let { JSONObjectValue(it.toMap()) }
+        }
+
+        private fun Value.getDescriptionMap(): Map<String, Value> {
+            return (this as? JSONObjectValue)
+                ?.findFirstChildByPath("description")
+                ?.let { mapOf("description" to it.toStringLiteral()).toValueMap() }
+                ?: emptyMap()
         }
     }
 }

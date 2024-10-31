@@ -27,6 +27,19 @@ data class JSONObjectPattern(
     val minProperties: Int? = null,
     val maxProperties: Int? = null
 ) : Pattern {
+
+    override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
+        if (value !is JSONObjectValue) return value
+
+        val filteredPattern = this.pattern.filterKeys { !it.endsWith("?") }
+        val filteredJsonObject = value.jsonObject.mapNotNull { (key, actualValue) ->
+            val patternForKey = filteredPattern[key] ?: return@mapNotNull null
+            key to patternForKey.eliminateOptionalKey(actualValue, resolver)
+        }.toMap()
+
+        return JSONObjectValue(filteredJsonObject)
+    }
+
     override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
         if(concretePattern !is JSONObjectPattern)
             throw ContractException("Expected json object type but got ${concretePattern.typeName}")

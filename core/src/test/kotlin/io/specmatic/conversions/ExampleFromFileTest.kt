@@ -1,6 +1,8 @@
 package io.specmatic.conversions
 
+import io.specmatic.core.HttpHeadersPattern
 import io.specmatic.core.NoBodyValue
+import io.specmatic.core.Resolver
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.pattern.parsedJSONObject
 import org.assertj.core.api.Assertions.assertThat
@@ -135,5 +137,8 @@ class ExampleFromFileTest {
             example.toRow(SpecmaticConfig(additionalExampleParamsFilePath = "src/test/resources/additionalParamsFile.json"))
 
         assertThat(row.requestExample?.headers.orEmpty()).containsEntry("X-Tra", "info")
+
+        val generatedHeaders = HttpHeadersPattern().newBasedOn(row, Resolver()).first().value.generate(Resolver())
+        assertThat(generatedHeaders).containsEntry("X-Tra", "info")
     }
 }

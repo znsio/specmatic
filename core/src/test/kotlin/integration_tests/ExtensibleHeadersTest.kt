@@ -346,6 +346,7 @@ components:
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.headers).containsEntry("Authenticate", "abc123")
                 return HttpResponse.ok(parsedJSONObject("""{"greeting": "Hi!"}""")).also {
                     println(request.toLogString())
                     println(it.toLogString())
@@ -366,6 +367,7 @@ components:
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.headers).containsEntry("Authenticate", "abc123")
                 return HttpResponse.ok(parsedJSONObject("""{"greeting": "Hi!"}""")).also {
                     println(request.toLogString())
                     println(it.toLogString())
@@ -386,6 +388,7 @@ components:
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
+                assertThat(request.headers).containsEntry("Authenticate", "abc123")
                 return HttpResponse.ok(parsedJSONObject("""{"greeting": "Hi!"}""")).also {
                     println(request.toLogString())
                     println(it.toLogString())

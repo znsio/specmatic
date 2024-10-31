@@ -227,7 +227,7 @@ data class HttpHeadersPattern(
                 .filter { exampleHeaderName -> !specPattern.containsKey(exampleHeaderName) && !specPattern.containsKey("${exampleHeaderName}?") }
                 .filter { exampleHeaderName -> exampleHeaderName.lowercase() !in getHeadersToExcludeNotInExamples(row.requestExample) }
                 .filter { exampleHeaderName -> exampleHeaderName !in row.requestExample.metadata.securityHeaderNames }
-                .associateWith { StringPattern() }
+                .associateWith { exampleHeaderName -> ExactValuePattern(StringValue(row.requestExample.headers.getValue(exampleHeaderName))) }
         } else {
             emptyMap()
         }

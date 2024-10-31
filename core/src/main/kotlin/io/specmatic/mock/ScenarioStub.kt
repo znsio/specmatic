@@ -2,11 +2,11 @@ package io.specmatic.mock
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.core.*
+import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.*
 import io.specmatic.stub.stringToMockScenario
 import java.io.File
@@ -43,25 +43,40 @@ data class ScenarioStub(
         return JSONObjectValue(mockInteraction)
     }
 
-    fun getRequestWithAdditionalParamsIfAny(): HttpRequest {
-        try {
-            val additionalExampleParamsFilePath = readEnvVarOrProperty(
-                "ADDITIONAL_EXAMPLE_PARAMS_FILE",
-                "ADDITIONAL_EXAMPLE_PARAMS_FILE"
-            )
+    fun getRequestWithAdditionalParamsIfAny(request: HttpRequest, additionalExampleParamsFilePath: String?): HttpRequest {
+        if(additionalExampleParamsFilePath == null)
+            return this.request
 
-            if (additionalExampleParamsFilePath != null && File(additionalExampleParamsFilePath).exists()) {
-                val additionalExampleParams = ObjectMapper().readValue(
-                    File(additionalExampleParamsFilePath).readText(),
-                    Map::class.java
-                ) as Map<String, Any>
-                val additionalHeaders = (additionalExampleParams["headers"] ?: emptyMap<String, String>()) as Map<String, String>
-                val updatedHeaders = request.headers.plus(additionalHeaders)
-                return request.copy(headers = updatedHeaders)
+        val additionalExampleParamsFile = File(additionalExampleParamsFilePath)
+
+        if (!additionalExampleParamsFile.exists() || !additionalExampleParamsFile.isFile) {
+            return this.request
+        }
+
+        try {
+            val additionalExampleParams = ObjectMapper().readValue(
+                File(additionalExampleParamsFilePath).readText(),
+                Map::class.java
+            ) as? Map<String, Any>
+
+            if(additionalExampleParams == null) {
+                logger.log("WARNING: The content of $additionalExampleParamsFilePath is not a valid JSON object")
+                return this.request
             }
-            return request
+
+            val additionalHeaders = (additionalExampleParams["headers"] ?: emptyMap<String, String>()) as? Map<String, String>
+
+            if(additionalHeaders == null) {
+                logger.log("WARNING: The content of \"headers\" in $additionalExampleParamsFilePath is not a valid JSON object")
+                return this.request
+            }
+
+            val updatedHeaders = this.request.headers.plus(additionalHeaders)
+
+            return this.request.copy(headers = updatedHeaders)
         } catch (e: Exception) {
-            return request
+            logger.log(e, "WARNING: Could not read additional example params file $additionalExampleParamsFilePath")
+            return this.request
         }
     }
 

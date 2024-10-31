@@ -335,5 +335,25 @@ components:
 
         assertThat(results.testCount).isEqualTo(1)
     }
+
+    @Test
+    fun `this should not affect external examples with a header example for a security scheme`() {
+        val feature =
+            OpenApiSpecification
+                .fromFile("src/test/resources/openapi/spec_with_auth_header_and_external_example.yaml")
+                .toFeature()
+                .loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
+                return HttpResponse.OK.also {
+                    println(it.toLogString())
+                }
+            }
+        })
+
+        assertThat(results.testCount).isEqualTo(1)
+    }
 }
 

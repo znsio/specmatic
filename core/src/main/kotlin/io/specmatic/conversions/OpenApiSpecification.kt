@@ -119,9 +119,20 @@ class OpenApiSpecification(
             specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
             overlayContent: String = ""
         ): OpenApiSpecification {
+            val implicitOverlayFile = File(openApiFilePath).let { openApiFile ->
+                if(!openApiFile.isFile)
+                    return@let ""
+
+                val overlayFile = openApiFile.canonicalFile.parentFile.resolve(openApiFile.nameWithoutExtension + "_overlay.yaml")
+                if(overlayFile.isFile)
+                    return@let overlayFile.readText()
+
+                return@let ""
+            }
+
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(
-                    yamlContent.applyOverlay(overlayContent),
+                    yamlContent.applyOverlay(overlayContent).applyOverlay(implicitOverlayFile),
                     null,
                     resolveExternalReferences(),
                     openApiFilePath
@@ -194,6 +205,9 @@ class OpenApiSpecification(
         private fun resolveExternalReferences(): ParseOptions = ParseOptions().also { it.isResolve = true }
 
         private fun String.applyOverlay(overlayContent: String): String {
+            if(overlayContent.isBlank())
+                return this
+
             return OverlayMerger().merge(this, OverlayParser.parse(overlayContent))
         }
     }

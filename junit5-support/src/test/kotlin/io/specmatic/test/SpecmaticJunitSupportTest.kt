@@ -1,7 +1,7 @@
 package io.specmatic.test
 
 import io.specmatic.core.TestConfig
-import io.specmatic.core.utilities.Flags.Companion.CONFIG_FILE_PATH
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.CONTRACT_PATHS
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NAME_PROPERTY
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.FILTER_NOT_NAME_PROPERTY
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
@@ -154,7 +154,7 @@ class SpecmaticJunitSupportTest {
 
     @Test
     fun`should return the two tests other than the test with example name given in filterNotName` () {
-        System.setProperty(CONFIG_FILE_PATH, "./src/test/resources/test_contract.yaml")
+        System.setProperty(CONTRACT_PATHS, "./src/test/resources/spec_with_parameterized_paths.yaml")
         System.setProperty(TEST_BASE_URL, "https://test.com")
         System.setProperty(FILTER_NOT_NAME_PROPERTY, "BLACKLISTED")
         val filteredTests = SpecmaticJUnitSupport().contractTest().map { it }.toList()
@@ -164,7 +164,7 @@ class SpecmaticJunitSupportTest {
 
     @Test
     fun`should return only the test with example name given in filterName` () {
-        System.setProperty(CONFIG_FILE_PATH, "./src/test/resources/test_contract.yaml")
+        System.setProperty(CONTRACT_PATHS, "./src/test/resources/spec_with_parameterized_paths.yaml")
         System.setProperty(TEST_BASE_URL, "https://test.com")
         System.setProperty(FILTER_NAME_PROPERTY, "BLACKLISTED")
         val filteredTests = SpecmaticJUnitSupport().contractTest().map { it }.toList()

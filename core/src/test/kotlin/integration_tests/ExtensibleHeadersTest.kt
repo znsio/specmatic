@@ -346,8 +346,28 @@ components:
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
-                println(request.toLogString())
-                return HttpResponse.OK.also {
+                return HttpResponse.ok(parsedJSONObject("""{"greeting": "Hi!"}""")).also {
+                    println(request.toLogString())
+                    println(it.toLogString())
+                }
+            }
+        })
+
+        assertThat(results.testCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `this should not affect external examples with a header example for a security schemes for specs with multiple security schemes`() {
+        val feature =
+            OpenApiSpecification
+                .fromFile("src/test/resources/openapi/spec_with_two_security_schemes_and_external_example.yaml")
+                .toFeature()
+                .loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.ok(parsedJSONObject("""{"greeting": "Hi!"}""")).also {
+                    println(request.toLogString())
                     println(it.toLogString())
                 }
             }

@@ -28,13 +28,7 @@ data class BearerSecurityScheme(private val configuredToken: String? = null) : O
     }
 
     override fun addTo(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
-        val updatedHeaders = httpRequest.headers.filterKeys {
-            !it.equals(
-                AUTHORIZATION,
-                ignoreCase = true
-            )
-        } + (AUTHORIZATION to getAuthorizationHeaderValue(resolver))
-        return httpRequest.copy(headers = updatedHeaders)
+        return httpRequest.addSecurityHeader(AUTHORIZATION, getAuthorizationHeaderValue(resolver))
     }
 
     override fun addTo(requestPattern: HttpRequestPattern, row: Row): HttpRequestPattern {

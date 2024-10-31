@@ -21,7 +21,7 @@ class ExamplesView {
     companion object {
         fun getEndpoints(feature: Feature, examplesDir: File): List<Endpoint> {
             val examples = examplesDir.getExamplesFromDir()
-            val scenarioExamplesPairList = getScenarioExamplesPairs(feature.scenarios, examples)
+            val scenarioExamplesPairList = getScenarioExamplesPairs(feature, examples)
 
             return scenarioExamplesPairList.map { (scenario, example) ->
                 Endpoint(
@@ -39,17 +39,17 @@ class ExamplesView {
 
         private fun Pattern.isDiscriminatorBased(resolver: Resolver): Boolean {
             return when (val resolvedPattern = resolvedHop(this, resolver)) {
-                is AnyPattern -> resolvedPattern.isDiscriminatorPresent()
+                is AnyPattern -> resolvedPattern.isDiscriminatorPresent() && resolvedPattern.hasMultipleDiscriminatorValues()
                 is ListPattern -> resolvedPattern.pattern.isDiscriminatorBased(resolver)
                 else -> false
             }
         }
 
-        private fun getScenarioExamplesPairs(scenarios: List<Scenario>,examples: List<ExampleFromFile>): List<Pair<Scenario, Pair<File, String>?>> {
-            return scenarios.flatMap {
-                getExistingExampleFiles(it, examples).map { exRes ->
-                    it to (exRes.first.file to exRes.second)
-                }.ifEmpty { listOf(it to null) }
+        private fun getScenarioExamplesPairs(feature: Feature, examples: List<ExampleFromFile>): List<Pair<Scenario, Pair<File, String>?>> {
+            return feature.scenarios.flatMap { scenario ->
+                getExistingExampleFiles(feature, scenario, examples).map { exRes ->
+                    scenario to Pair(exRes.first.file, exRes.second)
+                }.ifEmpty { listOf(scenario to null) }
             }
         }
 

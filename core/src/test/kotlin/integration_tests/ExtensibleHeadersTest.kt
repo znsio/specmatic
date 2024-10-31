@@ -357,10 +357,30 @@ components:
     }
 
     @Test
-    fun `this should not affect external examples with a header example for a security schemes for specs with multiple security schemes`() {
+    fun `this should not affect external examples with a header example for a security schemes for specs with multiple security schemes in the spec but only one used`() {
         val feature =
             OpenApiSpecification
                 .fromFile("src/test/resources/openapi/spec_with_two_security_schemes_and_external_example.yaml")
+                .toFeature()
+                .loadExternalisedExamples()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.ok(parsedJSONObject("""{"greeting": "Hi!"}""")).also {
+                    println(request.toLogString())
+                    println(it.toLogString())
+                }
+            }
+        })
+
+        assertThat(results.testCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `this should not affect external examples with a header example for a security schemes for specs with multiple security schemes used by an API`() {
+        val feature =
+            OpenApiSpecification
+                .fromFile("src/test/resources/openapi/spec_with_two_security_schemes_used_and_external_example.yaml")
                 .toFeature()
                 .loadExternalisedExamples()
 

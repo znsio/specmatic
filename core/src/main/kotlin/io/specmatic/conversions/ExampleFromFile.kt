@@ -38,7 +38,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
 
         }
 
-        val requestExample = mockFromJSON(json.jsonObject).getRequestWithAdditionalParamsIfAny()
+        val requestExample = mockFromJSON(json.jsonObject).getRequestWithAdditionalParamsIfAny(request, specmaticConfig.additionalExampleParamsFilePath)
 
         return Row(
             columnNames,

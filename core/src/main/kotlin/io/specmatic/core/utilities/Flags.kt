@@ -21,6 +21,7 @@ class Flags {
         const val EXAMPLE_DIRECTORIES = "EXAMPLE_DIRECTORIES"
 
         const val EXTENSIBLE_QUERY_PARAMS = "EXTENSIBLE_QUERY_PARAMS"
+        const val ADDITIONAL_EXAMPLE_PARAMS_FILE = "ADDITIONAL_EXAMPLE_PARAMS_FILE"
 
         fun getStringValue(flagName: String): String? = System.getenv(flagName) ?: System.getProperty(flagName)
 

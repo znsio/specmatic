@@ -45,6 +45,8 @@ data class HttpResponse(
         return copy(body = content, headers = headers.minus(CONTENT_TYPE).plus(CONTENT_TYPE to content.httpContentType))
     }
 
+    fun updateBody(body: Value): HttpResponse = copy(body = body)
+
     fun toJSON(): JSONObjectValue =
         JSONObjectValue(mutableMapOf<String, Value>().also { json ->
             json["status"] = NumberValue(status)

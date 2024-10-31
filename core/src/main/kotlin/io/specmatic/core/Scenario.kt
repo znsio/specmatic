@@ -146,7 +146,7 @@ data class Scenario(
         mismatchMessages: MismatchMessages = DefaultMismatchMessages,
         unexpectedKeyCheck: UnexpectedKeyCheck? = null
     ): Result {
-        val resolver = Resolver(serverState, false, patterns).copy(mismatchMessages = mismatchMessages).let {
+        val resolver = resolver.copy(mismatchMessages = mismatchMessages).let {
             if(unexpectedKeyCheck != null) {
                 val keyCheck = it.findKeyErrorCheck
                 it.copy(findKeyErrorCheck = keyCheck.copy(unexpectedKeyCheck = unexpectedKeyCheck))
@@ -286,6 +286,26 @@ data class Scenario(
         return matches(httpResponse, mismatchMessages, unexpectedKeyCheck, resolver)
     }
 
+    fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages, flagsBased: FlagsBased): Result {
+        if (httpResponsePattern.status == DEFAULT_RESPONSE_CODE) {
+            return Result.Failure(
+                breadCrumb = "STATUS",
+                failureReason = FailureReason.StatusMismatch
+            ).updateScenario(this)
+        }
+
+        val resolver = flagsBased.update(resolver.copy(mismatchMessages = mismatchMessages))
+
+        val responseMatch = matches(httpResponse, mismatchMessages, resolver.findKeyErrorCheck.unexpectedKeyCheck, resolver)
+
+        if(responseMatch is Result.Failure && responseMatch.hasReason(FailureReason.StatusMismatch))
+            return responseMatch.updateScenario(this)
+
+        val requestMatch = matches(httpRequest, mismatchMessages, resolver.findKeyErrorCheck.unexpectedKeyCheck, resolver)
+
+        return Result.fromResults(listOf(requestMatch, responseMatch)).updateScenario(this)
+    }
+
     fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
         val resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck)
 
@@ -319,6 +339,14 @@ data class Scenario(
 
         return try {
             httpResponsePattern.matches(httpResponse, resolver).updateScenario(this)
+        } catch (exception: Throwable) {
+            Result.Failure("Exception: ${exception.message}")
+        }
+    }
+
+    fun matches(httpRequest: HttpRequest, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null, resolver: Resolver): Result {
+        return try {
+            httpRequestPattern.matches(httpRequest, resolver).updateScenario(this)
         } catch (exception: Throwable) {
             Result.Failure("Exception: ${exception.message}")
         }

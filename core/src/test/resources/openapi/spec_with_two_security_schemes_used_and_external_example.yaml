@@ -1,0 +1,43 @@
+openapi: 3.0.3
+info:
+  title: Hello API
+  version: 1.0.0
+  description: A simple API that greets the user.
+
+paths:
+  /hello:
+    post:
+      summary: Greet the user
+      security:
+        - ApiKeyAuth: []
+        - BasicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+              required:
+                - name
+      responses:
+        '200':
+          description: Greeting response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  greeting:
+                    type: string
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authenticate
+    BasicAuth:
+      type: http
+      scheme: basic

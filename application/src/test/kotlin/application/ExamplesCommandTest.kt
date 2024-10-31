@@ -87,7 +87,7 @@ paths:
         println(output)
 
         assertThat(returnValue).isNotEqualTo(0)
-        assertThat(output).contains("No matching REST stub or contract found")
+        assertThat(output).contains("No matching found for this example")
     }
 
     @Test

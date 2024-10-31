@@ -3,9 +3,14 @@ package io.specmatic.core.examples.server
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.Feature
+import io.specmatic.core.Resolver
 import io.specmatic.core.Scenario
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesFromDir
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExistingExampleFiles
+import io.specmatic.core.pattern.AnyPattern
+import io.specmatic.core.pattern.ListPattern
+import io.specmatic.core.pattern.Pattern
+import io.specmatic.core.pattern.resolvedHop
 import org.thymeleaf.TemplateEngine
 import org.thymeleaf.context.Context
 import org.thymeleaf.templatemode.TemplateMode
@@ -16,7 +21,7 @@ class ExamplesView {
     companion object {
         fun getEndpoints(feature: Feature, examplesDir: File): List<Endpoint> {
             val examples = examplesDir.getExamplesFromDir()
-            val scenarioExamplesPairList = getScenarioExamplesPairs(feature.scenarios, examples)
+            val scenarioExamplesPairList = getScenarioExamplesPairs(feature, examples)
 
             return scenarioExamplesPairList.map { (scenario, example) ->
                 Endpoint(
@@ -26,16 +31,25 @@ class ExamplesView {
                     responseStatus = scenario.httpResponsePattern.status,
                     contentType = scenario.httpRequestPattern.headersPattern.contentType,
                     exampleFile = example?.first,
-                    exampleMismatchReason = example?.second
+                    exampleMismatchReason = example?.second,
+                    isDiscriminatorBased = scenario.httpRequestPattern.body.isDiscriminatorBased(scenario.resolver) || scenario.httpResponsePattern.body.isDiscriminatorBased(scenario.resolver)
                 )
             }.filterEndpoints()
         }
 
-        private fun getScenarioExamplesPairs(scenarios: List<Scenario>, examples: List<ExampleFromFile>): List<Pair<Scenario, Pair<File, String>?>> {
-            return scenarios.flatMap {
-                getExistingExampleFiles(it, examples).map { exRes ->
-                    it to exRes
-                }.ifEmpty { listOf(it to null) }
+        private fun Pattern.isDiscriminatorBased(resolver: Resolver): Boolean {
+            return when (val resolvedPattern = resolvedHop(this, resolver)) {
+                is AnyPattern -> resolvedPattern.isDiscriminatorPresent() && resolvedPattern.hasMultipleDiscriminatorValues()
+                is ListPattern -> resolvedPattern.pattern.isDiscriminatorBased(resolver)
+                else -> false
+            }
+        }
+
+        private fun getScenarioExamplesPairs(feature: Feature, examples: List<ExampleFromFile>): List<Pair<Scenario, Pair<File, String>?>> {
+            return feature.scenarios.flatMap { scenario ->
+                getExistingExampleFiles(feature, scenario, examples).map { exRes ->
+                    scenario to Pair(exRes.first.file, exRes.second)
+                }.ifEmpty { listOf(scenario to null) }
             }
         }
 
@@ -87,7 +101,8 @@ class ExamplesView {
                                     contentType = it.contentType,
                                     example = it.exampleFile?.absolutePath,
                                     exampleName = it.exampleFile?.nameWithoutExtension,
-                                    exampleMismatchReason = it.exampleMismatchReason?.takeIf { reason ->  reason.isNotBlank() }
+                                    exampleMismatchReason = it.exampleMismatchReason?.takeIf { reason -> reason.isNotBlank() },
+                                    isDiscriminatorBased = it.isDiscriminatorBased
                                 ).also { showPath = false; showMethod = false; showStatus = false }
                             }
                         }
@@ -115,7 +130,9 @@ data class TableRow(
     val exampleMismatchReason: String? = null,
     val isGenerated: Boolean = exampleName != null,
     val isValid: Boolean = isGenerated && exampleMismatchReason == null,
-    val uniqueKey: String = "${path}_${method}_${responseStatus}"
+    val uniqueKey: String = "${path}_${method}_${responseStatus}",
+    val isDiscriminatorBased: Boolean,
+    val isMainRow: Boolean = showPath || showMethod || showStatus
 )
 
 data class StatusGroup(
@@ -140,7 +157,8 @@ data class Endpoint(
     val responseStatus: Int,
     val contentType: String? = null,
     val exampleFile: File? = null,
-    val exampleMismatchReason: String? = null
+    val exampleMismatchReason: String? = null,
+    val isDiscriminatorBased: Boolean
 )
 
 class HtmlTemplateConfiguration {

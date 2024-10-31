@@ -181,10 +181,10 @@ data class Feature(
                     else
                         responses.first()
                     DiscriminatorBasedRequestResponse(
-                        request,
-                        response,
-                        requestDiscriminator,
-                        responseDiscriminator
+                        request = request,
+                        response = response,
+                        requestDiscriminator = requestDiscriminator,
+                        responseDiscriminator = responseDiscriminator
                     )
                 }
             } else {
@@ -193,10 +193,10 @@ data class Feature(
                         requests.getDiscriminatorItemWith(responseDiscriminator.discriminatorValue)
                     else requests.first()
                     DiscriminatorBasedRequestResponse(
-                        request,
-                        response,
-                        responseDiscriminator,
-                        requestDiscriminator
+                        request = request,
+                        response = response,
+                        requestDiscriminator = requestDiscriminator,
+                        responseDiscriminator = responseDiscriminator
                     )
                 }
             }
@@ -328,6 +328,24 @@ data class Feature(
                 serverState
             ) is Result.Success && it.matches(response) is Result.Success
         } != null
+    }
+
+    fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {
+        val (request, response) = scenarioStub
+
+        val results = scenarios.map {
+            it.matches(request, response, mismatchMessages, flagsBased)
+        }
+
+        if(results.any { it.isSuccess() })
+            return Results(results).withoutFluff()
+
+        val deepErrors = results.filterNot { it.isFluffy(0) }
+
+        if(deepErrors.isNotEmpty())
+            return Results(deepErrors)
+
+        return Results(listOf(Result.Failure("No matching found for this example")))
     }
 
     fun matchResult(request: HttpRequest, response: HttpResponse): Result {

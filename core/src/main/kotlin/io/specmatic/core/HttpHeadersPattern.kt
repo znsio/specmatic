@@ -194,10 +194,10 @@ data class HttpHeadersPattern(
 
         val filteredPattern = row.withoutOmittedKeys(pattern, resolver.defaultExampleResolver)
 
-        //val additionalHeadersPattern = extractFromExampleHeadersNotInSpec(filteredPattern, row)
+        val additionalHeadersPattern = extractFromExampleHeadersNotInSpec(filteredPattern, row)
 
         val basedOnExamples = forEachKeyCombinationGivenRowIn(
-            filteredPattern, //+ additionalHeadersPattern,
+            filteredPattern + additionalHeadersPattern,
             row,
             resolver
         ) { pattern ->
@@ -225,8 +225,9 @@ data class HttpHeadersPattern(
         val additionalHeadersPattern = if (row.requestExample != null) {
             row.requestExample.headers.keys
                 .filter { exampleHeaderName -> !specPattern.containsKey(exampleHeaderName) && !specPattern.containsKey("${exampleHeaderName}?") }
-                .filter { exampleHeaderName -> exampleHeaderName.lowercase() !in getHeadersToExcludeNotInExamples() }
-                .associateWith { StringPattern() }
+                .filter { exampleHeaderName -> exampleHeaderName.lowercase() !in getHeadersToExcludeNotInExamples(row.requestExample) }
+                .filter { exampleHeaderName -> exampleHeaderName !in row.requestExample.metadata.securityHeaderNames }
+                .associateWith { exampleHeaderName -> ExactValuePattern(StringValue(row.requestExample.headers.getValue(exampleHeaderName))) }
         } else {
             emptyMap()
         }
@@ -234,9 +235,8 @@ data class HttpHeadersPattern(
         return additionalHeadersPattern
     }
 
-    private fun getHeadersToExcludeNotInExamples() = setOf(
-        "content-type",
-        "authorization"
+    private fun getHeadersToExcludeNotInExamples(exampleRequest: HttpRequest) = setOf(
+        "content-type"
     )
 
 

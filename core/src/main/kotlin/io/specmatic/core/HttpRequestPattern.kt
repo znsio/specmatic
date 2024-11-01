@@ -871,6 +871,11 @@ data class HttpRequestPattern(
         )
     }
 
+    fun withoutOptionality(request: HttpRequest, resolver: Resolver): HttpRequest {
+        return request.copy(
+            body = body.eliminateOptionalKey(request.body, resolver)
+        )
+    }
 }
 
 fun missingParam(missingValue: String): ContractException {

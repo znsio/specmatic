@@ -14,6 +14,59 @@ import org.junit.jupiter.api.Tag
 
 internal class ListPatternTest {
     @Test
+    fun `should filter out optional keys from all the elements`() {
+        val pattern = ListPattern(parsedPattern("""{
+            "topLevelMandatoryKey": "(number)",
+            "topLevelOptionalKey?": "(string)",
+            "subMandatoryObject": {
+                "subMandatoryKey": "(string)",
+                "subOptionalKey?": "(number)"
+            }
+        }
+        """.trimIndent()))
+        val matchingValue = parsedValue("""
+        [
+            {
+                "topLevelMandatoryKey": 10,
+                "topLevelOptionalKey": "value",
+                "subMandatoryObject": {
+                    "subMandatoryKey": "value",
+                    "subOptionalKey": 10
+                }
+            },
+            {
+                "topLevelMandatoryKey": 10,
+                "topLevelOptionalKey": "value",
+                "subMandatoryObject": {
+                    "subMandatoryKey": "value",
+                    "subOptionalKey": 10
+                }
+            }
+        ]   
+        """.trimIndent())
+
+        val valueWithoutOptionals = pattern.eliminateOptionalKey(matchingValue, Resolver())
+        val expectedValue = parsedValue("""
+        [
+            {
+                "topLevelMandatoryKey": 10,
+                "subMandatoryObject": {
+                    "subMandatoryKey": "value"
+                }
+            },
+            {
+                "topLevelMandatoryKey": 10,
+                "subMandatoryObject": {
+                    "subMandatoryKey": "value"
+                }
+            }
+        ]
+        """.trimIndent())
+
+        assertThat(valueWithoutOptionals).isEqualTo(expectedValue)
+    }
+
+    @Test
     fun `should fail to match nulls gracefully`() {
         NullValue shouldNotMatch ListPattern(StringPattern())
     }

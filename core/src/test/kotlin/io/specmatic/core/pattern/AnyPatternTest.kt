@@ -24,6 +24,44 @@ internal class AnyPatternTest {
     }
 
     @Test
+    fun `should match the correct pattern and filter optional keys from value`() {
+        val objectPattern = parsedPattern("""{
+            "topLevelMandatoryKey": "(number)",
+            "topLevelOptionalKey?": "(string)",
+            "subMandatoryObject": {
+                "subMandatoryKey": "(string)",
+                "subOptionalKey?": "(number)"
+            }
+        }
+        """.trimIndent())
+        val listPattern = ListPattern(objectPattern)
+        val pattern = AnyPattern(listOf(objectPattern, listPattern))
+
+        val objectValue = parsedValue("""{
+            "topLevelMandatoryKey": 10,
+            "topLevelOptionalKey": "hello",
+            "subMandatoryObject": {
+                "subMandatoryKey": "hello",
+                "subOptionalKey": 10
+            }
+        }
+        """.trimIndent())
+        val expectedObjectValue = parsedValue("""{
+            "topLevelMandatoryKey": 10,
+            "subMandatoryObject": {
+                "subMandatoryKey": "hello"
+            }
+        }   
+        """.trimIndent())
+
+        val filteredObjectValue = pattern.eliminateOptionalKey(objectValue, Resolver())
+        assertEquals(expectedObjectValue, filteredObjectValue)
+
+        val filteredListValue = pattern.eliminateOptionalKey(JSONArrayValue(listOf(objectValue, objectValue)), Resolver())
+        assertEquals(JSONArrayValue(listOf(expectedObjectValue, expectedObjectValue)), filteredListValue)
+    }
+
+    @Test
     fun `error message when a json object does not match nullable primitive such as string in the contract`() {
         val pattern1 = AnyPattern(listOf(NullPattern, StringPattern()))
         val pattern2 = AnyPattern(listOf(DeferredPattern("(empty)"), StringPattern()))

@@ -31,7 +31,7 @@ data class JSONObjectPattern(
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
         if (value !is JSONObjectValue) return value
 
-        val mandatoryObjectPatternMap  = this.pattern.filterKeys { !it.endsWith("?") }
+        val mandatoryObjectPatternMap  = this.pattern.filterKeys { !isOptional(it) }
         val mandatoryObjectMap = value.jsonObject.mapNotNull { (key, actualValue) ->
             val patternForKey = mandatoryObjectPatternMap[key] ?: return@mapNotNull null
             key to patternForKey.eliminateOptionalKey(actualValue, resolver)

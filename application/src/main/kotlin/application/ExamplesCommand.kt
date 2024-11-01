@@ -554,8 +554,8 @@ For example:
         @Option(names = ["--examples-dir"], description = ["Directory where existing examples reside"], required = true)
         lateinit var examplesDir: File
 
-        @Option(names = ["--only-mandatory-keys-in-payload"], description = ["Transform existing examples so that they contain only mandatory keys in payload"], required = false)
-        var allowOnlyMandatoryKeysInPayload: Boolean = false
+        @Option(names = ["--only-mandatory-keys-in-payload"], description = ["Transform existing examples so that they contain only mandatory keys in payload, default is true"], required = false)
+        var allowOnlyMandatoryKeysInPayload: Boolean = true
 
         override fun call() {
             if(allowOnlyMandatoryKeysInPayload) {

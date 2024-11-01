@@ -333,7 +333,9 @@ data class Feature(
     fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {
         val (request, response) = scenarioStub
 
-        val results = scenarios.map {
+        val results = scenarios.map { scenario ->
+            scenario.newBasedOnAttributeSelectionFields(request.queryParams)
+        }.map {
             it.matches(request, response, mismatchMessages, flagsBased)
         }
 

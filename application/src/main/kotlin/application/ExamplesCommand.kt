@@ -554,8 +554,8 @@ For example:
         @Option(names = ["--examples-dir"], description = ["Directory where existing examples reside"], required = true)
         lateinit var examplesDir: File
 
-        @Option(names = ["--only-mandatory-keys-in-payload"], description = ["Transform existing examples so that they contain only mandatory keys in payload, default is true"], required = false)
-        var allowOnlyMandatoryKeysInPayload: Boolean = true
+        @Option(names = ["--only-mandatory-keys-in-payload"], description = ["Transform existing examples so that they contain only mandatory keys in payload"], required = false)
+        var allowOnlyMandatoryKeysInPayload: Boolean = false
 
         @Option(names = ["--debug"], description = ["Debug Logs"])
         var verbose: Boolean = false
@@ -569,8 +569,9 @@ For example:
                     overlayFile,
                     examplesDir
                 )
+            } else {
+                logger.log("Please choose one of the transformations from the available command-line parameters.")
             }
-            return
         }
     }
 }

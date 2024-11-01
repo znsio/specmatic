@@ -18,7 +18,7 @@ import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
-import io.specmatic.core.log.consoleLog
+import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
@@ -731,10 +731,10 @@ class ExamplesInteractiveServer(
             val examples = examplesDir.getExamplesFromDir()
 
             examples.forEach { example ->
-                consoleLog("\nTransforming ${example.file.nameWithoutExtension}")
+                consoleDebug("\nTransforming ${example.file.nameWithoutExtension}")
 
                 if (example.request.body.isScalarOrEmpty() && example.response.body.isScalarOrEmpty()) {
-                    consoleLog("Skipping ${example.file.name}, both request and response bodies are scalars")
+                    consoleDebug("Skipping ${example.file.name}, both request and response bodies are scalars")
                     return@forEach
                 }
 
@@ -742,16 +742,18 @@ class ExamplesInteractiveServer(
                     .toResultIfAny().takeIf { it.isSuccess() }?.scenario as? Scenario
 
                 if (scenario == null) {
-                    consoleLog("Skipping ${example.file.name}, no matching scenario found")
+                    consoleDebug("Skipping ${example.file.name}, no matching scenario found")
                     return@forEach
                 }
 
-                val requestWithoutOptionality = scenario.httpRequestPattern.withoutOptionality(example.request, scenario.resolver)
-                val responseWithoutOptionality = scenario.httpResponsePattern.withoutOptionality(example.response, scenario.resolver)
+                val flagBasedResolver = feature.flagsBased.update(scenario.resolver)
+                val requestWithoutOptionality = scenario.httpRequestPattern.withoutOptionality(example.request, flagBasedResolver)
+                val responseWithoutOptionality = scenario.httpResponsePattern.withoutOptionality(example.response, flagBasedResolver)
 
                 val updatedExample = example.replaceWithDescriptions(requestWithoutOptionality, responseWithoutOptionality)
-                consoleLog("Writing transformed example to ${example.file.canonicalFile.relativeTo(contractFile).path}")
+                consoleDebug("Writing transformed example to ${example.file.canonicalFile.relativeTo(contractFile).path}")
                 example.file.writeText(updatedExample.toStringLiteral())
+                consoleDebug("Successfully written transformed example")
             }
         }
 

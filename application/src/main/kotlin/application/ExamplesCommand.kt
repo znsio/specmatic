@@ -557,7 +557,12 @@ For example:
         @Option(names = ["--only-mandatory-keys-in-payload"], description = ["Transform existing examples so that they contain only mandatory keys in payload, default is true"], required = false)
         var allowOnlyMandatoryKeysInPayload: Boolean = true
 
+        @Option(names = ["--debug"], description = ["Debug Logs"])
+        var verbose: Boolean = false
+
         override fun call() {
+            configureLogger(verbose)
+
             if(allowOnlyMandatoryKeysInPayload) {
                 ExamplesInteractiveServer.transformExistingExamples(
                     contractFile,

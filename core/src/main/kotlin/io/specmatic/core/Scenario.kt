@@ -81,7 +81,8 @@ data class Scenario(
     val statusInDescription: String = httpResponsePattern.status.toString(),
     val disambiguate: () -> String = { "" },
     val descriptionFromPlugin: String? = null,
-    val dictionary: Map<String, Value> = emptyMap()
+    val dictionary: Map<String, Value> = emptyMap(),
+    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern()
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -779,14 +780,8 @@ data class Scenario(
     }
 
     private fun getFieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams: QueryParameters?): Set<String> {
-        val defaultAttributeSelectionFields = readEnvVarOrProperty(
-            ATTRIBUTE_SELECTION_DEFAULT_FIELDS,
-            ATTRIBUTE_SELECTION_DEFAULT_FIELDS
-        ).orEmpty().split(",").filter { it.isNotBlank() }.toSet()
-        val attributeSelectionQueryParamKey =  readEnvVarOrProperty(
-            ATTRIBUTE_SELECTION_QUERY_PARAM_KEY,
-            ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
-        ).orEmpty()
+        val defaultAttributeSelectionFields = attributeSelectionPattern.defaultFields.toSet()
+        val attributeSelectionQueryParamKey =  attributeSelectionPattern.queryParamKey
 
         if(queryParams?.containsKey(attributeSelectionQueryParamKey) != true) return emptySet()
 

@@ -14,6 +14,14 @@ data class ListPattern(
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
 
+    override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
+        if (value !is JSONArrayValue) return value
+
+        return JSONArrayValue(value.list.map {
+            pattern.eliminateOptionalKey(it, resolver)
+        })
+    }
+
     override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
         if(concretePattern !is JSONArrayPattern)
             return concretePattern

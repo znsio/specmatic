@@ -22,6 +22,50 @@ import java.util.function.Consumer
 
 internal class JSONObjectPatternTest {
     @Test
+    fun `should filter out optional and extended keys from object and sub-objects`() {
+        val pattern = parsedPattern("""{
+            "topLevelMandatoryKey": "(number)",
+            "topLevelOptionalKey?": "(string)",
+            "subMandatoryObject": {
+                "subMandatoryKey": "(string)",
+                "subOptionalKey?": "(number)"
+            },
+            "subOptionalObject?": {
+                "subMandatoryKey": "(string)",
+                "subOptionalKey": "(number)"
+            }
+        }
+        """.trimIndent())
+        val matchingValue = parsedValue("""{
+            "topLevelMandatoryKey": 10,
+            "topLevelOptionalKey": "value",
+            "topLevelExtendedKey": "value",
+            "subMandatoryObject": {
+                "subObjectExtendedKey": "value",
+                "subMandatoryKey": "value",
+                "subOptionalKey": 10
+            },
+            "subOptionalObject": {
+                "subObjectExtendedKey": "value",
+                "subMandatoryKey": "value",
+                "subOptionalKey": 10
+            }
+        }
+        """.trimIndent())
+
+        val valueWithoutOptionals = pattern.eliminateOptionalKey(matchingValue, Resolver())
+        val expectedValue = parsedValue("""{
+            "topLevelMandatoryKey": 10,
+            "subMandatoryObject": {
+                "subMandatoryKey": "value"
+            }
+        }        
+        """.trimIndent())
+
+        assertThat(valueWithoutOptionals).isEqualTo(expectedValue)
+    }
+
+    @Test
     fun `Given an optional key, the generated object should contain the key without the question mark`() {
         when (val result = parsedPattern("""{"id?": "(number)"}""", null).generate(Resolver())) {
             is JSONObjectValue -> assertTrue("id" in result.jsonObject)

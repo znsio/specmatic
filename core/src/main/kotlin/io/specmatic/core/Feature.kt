@@ -331,8 +331,10 @@ data class Feature(
     }
 
     fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {
-        val (request, response) = scenarioStub
+        return matchResultFlagBased(scenarioStub.request, scenarioStub.response, mismatchMessages)
+    }
 
+    fun matchResultFlagBased(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages): Results {
         val results = scenarios.map {
             it.matches(request, response, mismatchMessages, flagsBased)
         }

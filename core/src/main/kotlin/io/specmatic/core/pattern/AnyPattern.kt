@@ -27,6 +27,11 @@ data class AnyPattern(
         return this
     }
 
+    override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
+        val matchingPattern = pattern.find { it.matches(value, resolver) is Result.Success } ?: return value
+        return matchingPattern.eliminateOptionalKey(value, resolver)
+    }
+
     override fun equals(other: Any?): Boolean = other is AnyPattern && other.pattern == this.pattern
 
     override fun hashCode(): Int = pattern.hashCode()

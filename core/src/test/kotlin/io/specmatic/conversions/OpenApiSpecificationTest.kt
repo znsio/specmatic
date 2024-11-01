@@ -9240,6 +9240,118 @@ paths:
 
     }
 
+    @Test
+    fun `should mark the properties as required within the resolved allOf schema using an Any type via overlay`() {
+        val specContent = """
+            openapi: 3.0.3
+            info:
+              title: Product API
+              version: 1.0.0
+            paths:
+              /products/{productId}:
+                get:
+                  summary: Retrieve a product by its ID
+                  description: Retrieve details of a product using its unique identifier.
+                  parameters:
+                    - name: productId
+                      in: path
+                      required: true
+                      schema:
+                        type: string
+                      description: The unique identifier of the product to retrieve
+                  responses:
+                    '200':
+                      description: Product retrieved successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${'$'}ref: '#/components/schemas/Product'
+                    '404':
+                      description: Product not found
+            components:
+              schemas:
+                BaseProduct:
+                  type: object
+                  properties:
+                    '@type':
+                      type: string
+                      description: Type of the product
+                    description:
+                      type: string
+                      description: Detailed description of the product
+                    href:
+                      type: string
+                      format: uri
+                      description: URL to access the product details
+                    id:
+                      type: string
+                      description: Unique identifier for the product
+                    price:
+                      type: number
+                      format: float
+                      description: Price of the product
+                    category:
+                      type: string
+                      description: Category of the product
+                Product:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/BaseProduct'
+                    - type: object
+                      properties:
+                        name:
+                          type: string
+                          description: Name of the product
+                        status:
+                          type: string
+                          description: Availability status of the product
+                          enum: [available, out_of_stock, discontinued]
+        """.trimIndent()
+
+        val overlayContent = """
+            overlay: 1.0.0
+            actions:
+            - target: ${'$'}.components.schemas
+              update:
+                AnyValue: {}
+            - target: ${'$'}.components.schemas.Product.allOf
+              update:
+                type: object
+                required:
+                - '@type'
+                - description
+                - id
+                properties:
+                  '@type':
+                    type: '#/components/schemas/AnyValue'
+                  description:
+                    type: '#/components/schemas/AnyValue'
+                  id:
+                    type: '#/components/schemas/AnyValue'
+        """.trimIndent()
+
+
+        val feature = OpenApiSpecification.fromYAML(
+            specContent,
+            "",
+            overlayContent = overlayContent
+        ).toFeature()
+        val scenario = feature.scenarios.first { it.isA2xxScenario() }
+
+        val resolvedBodyPattern = resolvedHop(
+            scenario.httpResponsePattern.body,
+            scenario.resolver
+        ) as JSONObjectPattern
+
+        assertThat(resolvedBodyPattern.pattern.containsKey("@type"))
+        assertThat(resolvedBodyPattern.pattern.keys).doesNotContain("@type?")
+
+        assertThat(resolvedBodyPattern.pattern.containsKey("description"))
+        assertThat(resolvedBodyPattern.pattern.keys).doesNotContain("description?")
+
+        assertThat(resolvedBodyPattern.pattern.containsKey("id"))
+        assertThat(resolvedBodyPattern.pattern.keys).doesNotContain("id?")
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

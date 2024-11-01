@@ -206,6 +206,12 @@ data class HttpResponsePattern(
             HttpResponse(status, headers, generatedBody)
         }
     }
+
+    fun withoutOptionality(response: HttpResponse, resolver: Resolver): HttpResponse {
+        return response.copy(
+            body = body.eliminateOptionalKey(response.body, resolver)
+        )
+    }
 }
 
 private val valueMismatchMessages = object : MismatchMessages {

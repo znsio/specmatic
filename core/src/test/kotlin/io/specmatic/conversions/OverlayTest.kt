@@ -579,6 +579,157 @@ class OverlayTest {
                 assertKeyIsOptional(resolvedBodyPattern, key)
             }
         }
+
+        @Test
+        fun `should be applied to all matching json paths specified in the target`() {
+            val specContent = """
+        openapi: 3.0.3
+        info:
+          title: Product and Order API
+          version: 1.0.0
+        paths:
+          /products/{productId}:
+            get:
+              summary: Retrieve a product by its ID
+              description: Retrieve details of a product using its unique identifier.
+              parameters:
+                - name: productId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The unique identifier of the product to retrieve
+              responses:
+                '200':
+                  description: Product retrieved successfully
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/Product'
+          /orders/{orderId}:
+            get:
+              summary: Retrieve an order by its ID
+              description: Retrieve details of an order using its unique identifier.
+              parameters:
+                - name: orderId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                  description: The unique identifier of the order to retrieve
+              responses:
+                '200':
+                  description: Order retrieved successfully
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/Order'
+        components:
+          schemas:
+            Base:
+              type: object
+              properties:
+                '@type':
+                  type: string
+                  description: Type of the product
+                description:
+                  type: string
+                  description: Detailed description of the product
+                href:
+                  type: string
+                  format: uri
+                  description: URL to access the product details
+                id:
+                  type: string
+                  description: Unique identifier for the product
+                price:
+                  type: number
+                  format: float
+                  description: Price of the product
+                category:
+                  type: string
+                  description: Category of the product
+            Product:
+              allOf:
+                - ${'$'}ref: '#/components/schemas/Base'
+                - type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the product
+                    status:
+                      type: string
+                      description: Availability status of the product
+                      enum: [available, out_of_stock, discontinued]
+            Order:
+              allOf:
+                - ${'$'}ref: '#/components/schemas/Base'
+                - type: object
+                  properties:
+                    orderId:
+                      type: string
+                      description: Unique identifier for the order
+                    quantity:
+                      type: integer
+                      description: Quantity of the product ordered
+                    status:
+                      type: string
+                      description: Order status
+                      enum: [pending, shipped, delivered, canceled]
+        """.trimIndent()
+            val overlayContent = """
+        overlay: 1.0.0
+        actions:
+        - target: ${'$'}.components.schemas
+          update:
+            AnyValue: {}
+        - target: ${'$'}.components.schemas.['Product','Order'].allOf
+          update:
+            type: object
+            required:
+              - "@type"
+              - description
+              - id
+              - href
+              - price
+            properties:
+              "@type":
+                type: "#/components/schemas/AnyValue"
+              description:
+                type: "#/components/schemas/AnyValue"
+              id:
+                type: "#/components/schemas/AnyValue"
+              href:
+                type: "#/components/schemas/AnyValue"
+              price:
+                type: "#/components/schemas/AnyValue"
+        """.trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(specContent, "", overlayContent = overlayContent).toFeature()
+            val requiredKeys = listOf("@type", "description", "id", "description", "price")
+
+            val productScenario = feature.scenarios.first { it.path == "/products/(productId:string)" }
+            val productResolvedBodyPattern = resolvedHop(productScenario.httpResponsePattern.body, productScenario.resolver) as JSONObjectPattern
+            requiredKeys.forEach { key ->
+                assertKeyIsRequired(productResolvedBodyPattern, key)
+            }
+
+            val productOptionalKeys = listOf("category", "name", "status")
+            productOptionalKeys.forEach { key ->
+                assertKeyIsOptional(productResolvedBodyPattern, key)
+            }
+
+            val orderScenario = feature.scenarios.first { it.path == "/orders/(orderId:string)" }
+            val orderResolvedBodyPattern = resolvedHop(orderScenario.httpResponsePattern.body, orderScenario.resolver) as JSONObjectPattern
+            requiredKeys.forEach { key ->
+                assertKeyIsRequired(orderResolvedBodyPattern, key)
+            }
+
+            val orderOptionalKeys = listOf("category", "orderId", "quantity", "status")
+            orderOptionalKeys.forEach { key ->
+                assertKeyIsOptional(orderResolvedBodyPattern, key)
+            }
+        }
     }
 
     @Nested
@@ -762,6 +913,143 @@ class OverlayTest {
             val requiredKeys = listOf("@type", "description", "href", "id")
             requiredKeys.forEach { key ->
                 assertKeyIsRequired(resolvedBodyPattern, key)
+            }
+        }
+
+        @Test
+        fun `should be applied to all matching json paths specified in the target`() {
+            val specContent = """
+            openapi: 3.0.3
+            info:
+              title: Product and Order API
+              version: 1.0.0
+            paths:
+              /products/{productId}:
+                get:
+                  summary: Retrieve a product by its ID
+                  description: Retrieve details of a product using its unique identifier.
+                  parameters:
+                    - name: productId
+                      in: path
+                      required: true
+                      schema:
+                        type: string
+                      description: The unique identifier of the product to retrieve
+                  responses:
+                    '200':
+                      description: Product retrieved successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${'$'}ref: '#/components/schemas/Product'
+              /orders/{orderId}:
+                get:
+                  summary: Retrieve an order by its ID
+                  description: Retrieve details of an order using its unique identifier.
+                  parameters:
+                    - name: orderId
+                      in: path
+                      required: true
+                      schema:
+                        type: string
+                      description: The unique identifier of the order to retrieve
+                  responses:
+                    '200':
+                      description: Order retrieved successfully
+                      content:
+                        application/json:
+                          schema:
+                            ${'$'}ref: '#/components/schemas/Order'
+            components:
+              schemas:
+                Base:
+                  type: object
+                  properties:
+                    '@type':
+                      type: string
+                      description: Type of the product
+                    description:
+                      type: string
+                      description: Detailed description of the product
+                    href:
+                      type: string
+                      format: uri
+                      description: URL to access the product details
+                    id:
+                      type: string
+                      description: Unique identifier for the product
+                    price:
+                      type: number
+                      format: float
+                      description: Price of the product
+                    category:
+                      type: string
+                      description: Category of the product
+                Product:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Base'
+                    - type: object
+                      properties:
+                        name:
+                          type: string
+                          description: Name of the product
+                        status:
+                          type: string
+                          description: Availability status of the product
+                          enum: [available, out_of_stock, discontinued]
+                      required:
+                        - name
+                        - status
+                Order:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Base'
+                    - type: object
+                      properties:
+                        orderId:
+                          type: string
+                          description: Unique identifier for the order
+                        quantity:
+                          type: integer
+                          description: Quantity of the product ordered
+                        status:
+                          type: string
+                          description: Order status
+                          enum: [pending, shipped, delivered, canceled]
+                      required:
+                        - orderId
+                        - quantity
+                        - status
+                """.trimIndent()
+            val overlayContent = """
+            overlay: 1.0.0
+            actions:
+            - target: ${'$'}.components.schemas.['Product','Order'].allOf[1].required[?(@ == 'status')]
+              remove: true
+            """.trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(specContent, "", overlayContent = overlayContent).toFeature()
+            val optionalKeys = listOf("@type", "description", "id", "description", "price", "category", "status")
+
+            val productScenario = feature.scenarios.first { it.path == "/products/(productId:string)" }
+            val productResolvedBodyPattern = resolvedHop(productScenario.httpResponsePattern.body, productScenario.resolver) as JSONObjectPattern
+            optionalKeys.forEach { key ->
+                assertKeyIsOptional(productResolvedBodyPattern, key)
+            }
+
+            val productRequiredKeys = listOf("name")
+            productRequiredKeys.forEach { key ->
+                assertKeyIsRequired(productResolvedBodyPattern, key)
+            }
+
+            val orderScenario = feature.scenarios.first { it.path == "/orders/(orderId:string)" }
+            val orderResolvedBodyPattern = resolvedHop(orderScenario.httpResponsePattern.body, orderScenario.resolver) as JSONObjectPattern
+            optionalKeys.forEach { key ->
+                assertKeyIsOptional(orderResolvedBodyPattern, key)
+            }
+
+            val orderRequiredKeys = listOf("orderId", "quantity")
+            orderRequiredKeys.forEach { key ->
+                assertKeyIsRequired(orderResolvedBodyPattern, key)
             }
         }
     }

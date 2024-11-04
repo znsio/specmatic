@@ -4,6 +4,39 @@ import org.assertj.core.api.AssertionsForClassTypes.assertThat
 import org.junit.jupiter.api.Test
 
 class OverlayMergerTest {
+    @Test
+    fun `updating parent node after child nodes shouldn't override the changes`() {
+        val yamlContent = """
+            parentNode:
+                node1: "existing node1 content"
+                node2:
+                    subnode: "existing node2 sub node content"
+        """.trimIndent()
+
+        val overlayContent = """
+            overlay: 1.0.0
+            info:
+              title: Targeted Overlay
+              version: 1.0.0
+            actions:
+              - target: ${'$'}.parentNode.node1
+                update: new node1 content
+              - target: ${'$'}.parentNode.node2.subnode
+                update: new node2 sub node content
+              - target: ${'$'}.parentNode
+                update:
+                  node4: "new node 4 content"
+        """.trimIndent()
+
+        val updatedContent = OverlayMerger().merge(
+            baseContent = yamlContent,
+            overlay = OverlayParser.parse(overlayContent)
+        )
+
+        assertThat(updatedContent).contains("""node1: "new node1 content"""")
+        assertThat(updatedContent).contains("""subnode: "new node2 sub node content"""")
+        assertThat(updatedContent).contains("""node4: "new node 4 content"""")
+    }
 
     @Test
     fun `should merge the update map`() {

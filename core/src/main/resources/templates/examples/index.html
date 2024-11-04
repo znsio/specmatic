@@ -1476,7 +1476,7 @@
                 absPath: exampleAbsPath,
                 exampleJson: example,
                 error: getExampleValidationData(tableRow) || error,
-                hasBeenValidated: tableRow.getAttribute("data-valid") === "success",
+                hasBeenValidated: tableRow.getAttribute("data-valid") !== defaultAttrs["data-valid"],
                 test: getExampleTestData(tableRow)
             }]);
         }

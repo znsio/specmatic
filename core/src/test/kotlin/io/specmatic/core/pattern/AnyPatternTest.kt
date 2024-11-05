@@ -339,7 +339,7 @@ internal class AnyPatternTest {
     }
 
     @Nested
-    inner class GenerateForEveryDiscriminatorValueTests {
+    inner class GenerateForEveryDiscriminatorDetailsValueTests {
         @Test
         fun `should generate discriminator based values for every discriminator`() {
             val savingsAccountPattern = JSONObjectPattern(

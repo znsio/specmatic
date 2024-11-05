@@ -9,7 +9,7 @@ import io.specmatic.core.value.JSONObjectValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-class OneOfDiscriminatorTest {
+class OneOfDiscriminatorDetailsTest {
     @Test
     fun `discriminator in oneOf should be honored even when children do not have it`() {
         val feature = OpenApiSpecification.fromYAML(

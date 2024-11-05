@@ -4,23 +4,59 @@ info:
   version: '1.0'
 servers: []
 paths:
-  '/employees':
+  '/employeesObjectResponse':
     parameters:
-      - schema:
-          type: string
-        name: columns
+      - name: columns
         in: query
-        required: true
+        schema:
+          type: string
+        required: false
     get:
       summary: Fetch employee details
       tags: []
       responses:
         '200':
-          description: Details for employee id in request
+          description: Employee Details with object setup
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Employee'
+  '/employeesArrayResponse':
+    parameters:
+      - name: columns
+        in: query
+        schema:
+          type: string
+        required: false
+    get:
+      summary: Fetch employee details
+      tags: []
+      responses:
+        '200':
+          description: Employee Details with array setup
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Employee'
+  '/employeesAllOfResponse':
+    parameters:
+      - name: columns
+        in: query
+        schema:
+          type: string
+        required: false
+    get:
+      summary: Fetch employee details
+      tags: []
+      responses:
+        '200':
+          description: Employee Details with allOf setup
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeAllOf'
 components:
   schemas:
     Employee:
@@ -29,14 +65,28 @@ components:
       required:
         - id
         - name
-        - department
-        - designation
+        - salary
       properties:
         id:
           type: integer
         name:
           type: string
+        salary:
+          type: number
+    Department:
+      type: object
+      properties:
         department:
           type: string
-        designation:
-          type: string
+      required:
+        - department
+    EmployeeAllOf:
+      allOf:
+        - $ref: '#/components/schemas/Employee'
+        - $ref: '#/components/schemas/Department'
+        - type: object
+          properties:
+            designation:
+              type: string
+          required:
+            - designation

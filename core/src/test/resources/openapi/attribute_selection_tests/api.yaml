@@ -73,6 +73,8 @@ components:
           type: string
         salary:
           type: number
+        isActive:
+          type: boolean
     Department:
       type: object
       properties:

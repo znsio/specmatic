@@ -740,7 +740,7 @@ paths:
 
                 val body = (response.body as JSONObjectValue).jsonObject
                 assertThat(body.keys).containsExactlyInAnyOrder("id", "name")
-                assertThat(body.keys).doesNotContain("salary")
+                assertThat(body.keys).doesNotContain("salary", "isActive")
             }
         }
 
@@ -762,6 +762,7 @@ paths:
 
                 val body = (response.body as JSONObjectValue).jsonObject
                 assertThat(body.keys).containsExactlyInAnyOrder("id", "name", "salary")
+                assertThat(body.keys).doesNotContain("isActive")
             }
         }
 
@@ -784,7 +785,7 @@ paths:
 
                 val body = ((response.body as JSONArrayValue).list.first() as JSONObjectValue).jsonObject
                 assertThat(body.keys).containsExactlyInAnyOrder("id", "name")
-                assertThat(body.keys).doesNotContain("salary")
+                assertThat(body.keys).doesNotContain("salary", "isActive")
             }
         }
 
@@ -806,6 +807,7 @@ paths:
 
                 val body = ((response.body as JSONArrayValue).list.first() as JSONObjectValue).jsonObject
                 assertThat(body.keys).containsExactlyInAnyOrder("id", "name", "salary")
+                assertThat(body.keys).doesNotContain("isActive")
             }
         }
 
@@ -828,7 +830,7 @@ paths:
 
                 val body = (response.body as JSONObjectValue).jsonObject
                 assertThat(body.keys).containsExactlyInAnyOrder("id", "name", "department")
-                assertThat(body.keys).doesNotContain("salary", "designation")
+                assertThat(body.keys).doesNotContain("salary", "designation", "isActive")
             }
         }
 
@@ -850,6 +852,7 @@ paths:
 
                 val body = (response.body as JSONObjectValue).jsonObject
                 assertThat(body.keys).containsExactlyInAnyOrder("id", "name", "salary", "designation", "department")
+                assertThat(body.keys).doesNotContain("isActive")
             }
         }
 
@@ -868,10 +871,10 @@ paths:
                 ))
 
                 assertThat(response.status).isEqualTo(200)
-                assertThat(response.headers.get("X-Specmatic-Type")).isEqualTo("random")
+                assertThat(response.headers["X-Specmatic-Type"]).isEqualTo("random")
 
                 val body = (response.body as JSONObjectValue).jsonObject
-                assertThat(body.keys).containsExactlyInAnyOrder("id", "name", "salary")
+                assertThat(body.keys).containsExactlyInAnyOrder("id", "name", "salary", "isActive")
             }
         }
     }

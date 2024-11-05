@@ -74,7 +74,7 @@ class OverlayMergerTest {
     }
 
     @Test
-    fun `should merge the removal map`() {
+    fun `should merge both update and removal maps`() {
         val yamlContent = """
             node1: "existing node1 content"
             node2:
@@ -108,41 +108,7 @@ class OverlayMergerTest {
     }
 
     @Test
-    fun `should merge the overlay maps`() {
-        val yamlContent = """
-            node1: "existing node1 content"
-            node2:
-                subnode: "existing additional content"
-            node3:
-                newField: "existing value"
-        """.trimIndent()
-
-        val overlayContent = """
-            overlay: 1.0.0
-            info:
-              title: Targeted Overlay
-              version: 1.0.0
-            actions:
-              - target: ${'$'}.node1
-                update: new node1 content
-              - target: ${'$'}.node2.subnode
-                remove: true
-              - target: ${'$'}.node3
-                remove: true
-        """.trimIndent()
-
-        val updatedContent = OverlayMerger().merge(
-            baseContent = yamlContent,
-            overlay = OverlayParser.parse(overlayContent)
-        )
-
-        assertThat(updatedContent).contains("""node1: "new node1 content"""")
-        assertThat(updatedContent).doesNotContain("subnode")
-        assertThat(updatedContent).doesNotContain("node3")
-    }
-
-    @Test
-    fun `should merge the overlay content into existing map`() {
+    fun `should merge the overlay content into existing map in oas`() {
         val yamlContent = """
             openapi: 3.0.3
             paths:
@@ -163,7 +129,6 @@ class OverlayMergerTest {
                               - id
                               - name
         """.trimIndent()
-
         val overlayContent = """
             overlay: 1.0.0
             actions:
@@ -178,11 +143,25 @@ class OverlayMergerTest {
             baseContent = yamlContent,
             overlay = OverlayParser.parse(overlayContent)
         )
-        println(updatedContent)
+
+        assertThat(updatedContent).containsIgnoringWhitespaces("""
+            type: "object"
+            properties:
+              id:
+                type: "integer"
+              name:
+                type: "string"
+              age:
+                type: "integer"
+                description: "Age of the person"
+            required:
+              - "id"
+              - "name"
+        """.trimIndent())
     }
 
     @Test
-    fun `should append the overlay content into an existing array`() {
+    fun `should append the overlay content into an existing array in oas`() {
         val yamlContent = """
             openapi: 3.0.3
             paths:
@@ -206,7 +185,6 @@ class OverlayMergerTest {
                               - ACTIVE
                               - INACTIVE
         """.trimIndent()
-
         val overlayContent = """
             overlay: 1.0.0
             actions:
@@ -218,6 +196,12 @@ class OverlayMergerTest {
             baseContent = yamlContent,
             overlay = OverlayParser.parse(overlayContent)
         )
-        println(updatedContent)
+
+        assertThat(updatedContent).containsIgnoringWhitespaces("""
+        enum:
+        - "ACTIVE"
+        - "INACTIVE"
+        - "PENDING"
+        """.trimIndent())
     }
 }

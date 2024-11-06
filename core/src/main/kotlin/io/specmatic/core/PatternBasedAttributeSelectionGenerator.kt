@@ -10,8 +10,8 @@ object PatternBasedAttributeSelectionGenerator {
         val basePatternValue = patternWithFields.generate(resolver)
         val mandatoryKeys = patternWithFields.eliminateOptionalKey(basePatternValue, resolver).getTopLevelKeys()
         val baseMetadata = attributeSelectionPattern.toAttributeSelectionMetadata()
-        return mandatoryKeys.map {
-            baseMetadata.copy(selectedAttributes = baseMetadata.selectedAttributes.plus(it))
+        return mandatoryKeys.filterNot { it in baseMetadata.selectedAttributes }.map {
+            baseMetadata.copy(selectedAttributes = setOf(it))
         }
     }
 

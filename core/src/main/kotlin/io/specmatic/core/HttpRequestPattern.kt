@@ -481,8 +481,10 @@ data class HttpRequestPattern(
             PatternBasedAttributeSelectionGenerator.getAttributeFromPattern(resolver, attributeSelectionPattern, patternWithFields).map {
                 AttributeSelectionBasedItem(
                     attribute = it,
-                    value = generate(resolver).updateWithReplaceQueryParams(
-                        mapOf(it.attributeSelectionField to it.selectedAttributes.joinToString(","))
+                    value = generate(resolver).copy(
+                        queryParams = QueryParameters(mapOf(
+                            it.attributeSelectionField to it.selectedAttributes.joinToString(",")
+                        ))
                     )
                 )
             }

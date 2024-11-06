@@ -305,7 +305,11 @@ data class Scenario(
             ).updateScenario(this)
         }
 
-        val resolver = flagsBased.update(resolver.copy(mismatchMessages = mismatchMessages))
+        val updatedFlagBased = flagsBased.copy(
+            unexpectedKeyCheck = if (isRequestAttributeSelected(httpRequest)) ValidateUnexpectedKeys else flagsBased.unexpectedKeyCheck
+        )
+
+        val resolver = updatedFlagBased.update(resolver.copy(mismatchMessages = mismatchMessages))
 
         val responseMatch = matches(httpResponse, mismatchMessages, resolver.findKeyErrorCheck.unexpectedKeyCheck, resolver)
 
@@ -315,6 +319,10 @@ data class Scenario(
         val requestMatch = matches(httpRequest, mismatchMessages, resolver.findKeyErrorCheck.unexpectedKeyCheck, resolver)
 
         return Result.fromResults(listOf(requestMatch, responseMatch)).updateScenario(this)
+    }
+
+    private fun isRequestAttributeSelected(httpRequest: HttpRequest): Boolean {
+        return httpRequest.queryParams.containsKey(attributeSelectionPattern.queryParamKey)
     }
 
     fun matches(httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {

@@ -15,10 +15,16 @@ data class AnyPattern(
     val key: String? = null,
     override val typeAlias: String? = null,
     override val example: String? = null,
-    private val discriminatorProperty: String? = null,
-    private val discriminatorValues: Set<String> = emptySet(),
-    private val discriminator: Discriminator? = Discriminator.create(discriminatorProperty, discriminatorValues)
+    private val discriminator: Discriminator? = null
 ) : Pattern, HasDefaultExample, PossibleJsonObjectPatternContainer {
+    constructor(
+        pattern: List<Pattern>,
+        key: String? = null,
+        typeAlias: String? = null,
+        example: String? = null,
+        discriminatorProperty: String? = null,
+        discriminatorValues: Set<String> = emptySet()
+    ) : this(pattern, key, typeAlias, example, Discriminator.create(discriminatorProperty, discriminatorValues))
 
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
 
@@ -267,15 +273,15 @@ data class AnyPattern(
         return this
     }
 
-    fun isDiscriminatorPresent() = discriminatorProperty != null && discriminatorValues.isNotEmpty()
+    fun isDiscriminatorPresent() = discriminator?.isNotEmpty() == true
 
-    fun hasMultipleDiscriminatorValues() = isDiscriminatorPresent() && discriminatorValues.size > 1
+    fun hasMultipleDiscriminatorValues() = discriminator?.hasMultipleValues() == true
 
     fun generateForEveryDiscriminatorValue(resolver: Resolver): List<DiscriminatorBasedItem<Value>> {
-        return discriminatorValues.map { discriminatorValue ->
+        return discriminator?.values.orEmpty().map { discriminatorValue ->
             DiscriminatorBasedItem(
                 discriminator = DiscriminatorMetadata(
-                    discriminatorProperty = discriminatorProperty.orEmpty(),
+                    discriminatorProperty = discriminator?.property.orEmpty(),
                     discriminatorValue = discriminatorValue,
                 ),
                 value = generateValue(resolver, discriminatorValue)
@@ -307,10 +313,10 @@ data class AnyPattern(
 
     private fun getDiscriminatorBasedPattern(discriminatorValue: String): JSONObjectPattern? {
         return pattern.filterIsInstance<JSONObjectPattern>().firstOrNull {
-            if(it.pattern.containsKey(discriminatorProperty).not()) {
+            if(it.pattern.containsKey(discriminator?.property.orEmpty()).not()) {
                 return@firstOrNull false
             }
-            val discriminatorPattern = it.pattern[discriminatorProperty]
+            val discriminatorPattern = it.pattern[discriminator?.property.orEmpty()]
             if(discriminatorPattern !is ExactValuePattern) return@firstOrNull false
             discriminatorPattern.discriminator
                     && discriminatorPattern.pattern.toStringLiteral() == discriminatorValue
@@ -349,25 +355,6 @@ data class AnyPattern(
     private fun hasNoAmbiguousPatterns(): Boolean {
         return this.pattern.count { it !is NullPattern } == 1
     }
-
-    private fun discriminatorMatchFailure(pattern: Pattern) = AnyPatternMatch(
-        pattern,
-        Failure(
-            "Discriminator match failure",
-            failureReason = FailureReason.DiscriminatorMismatch
-        )
-    )
-
-    private fun jsonObjectMismatchError(
-        resolver: Resolver,
-        sampleData: Value?
-    ) = resolver.mismatchMessages.valueMismatchFailure("json object", sampleData)
-
-    private fun discriminatorKeyMissingFailure(discriminatorProperty: String, discriminatorCsv: String) = Failure(
-        "Discriminator property $discriminatorProperty is missing from the object (it's value should be $discriminatorCsv)",
-        breadCrumb = discriminatorProperty,
-        failureReason = FailureReason.DiscriminatorMismatch
-    )
 
     private fun addTypeInfoBreadCrumbs(matchResults: List<AnyPatternMatch>): List<Failure> {
         if(this.hasNoAmbiguousPatterns()) {

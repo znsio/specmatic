@@ -7,8 +7,8 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 
 class Discriminator(
-    private val discriminatorProperty: String,
-    private val discriminatorValues: Set<String>
+    val property: String,
+    val values: Set<String>
 ) {
     companion object {
         fun create(discriminatorProperty: String? = null, discriminatorValues: Set<String> = emptySet()): Discriminator? {
@@ -19,27 +19,31 @@ class Discriminator(
         }
     }
 
+    fun isNotEmpty(): Boolean = values.isNotEmpty()
+
+    fun hasMultipleValues(): Boolean = values.size > 1
+
     fun matches(sampleData: Value?, pattern: List<Pattern>, key: String?, resolver: Resolver): Result {
         if (sampleData !is JSONObjectValue)
             return jsonObjectMismatchError(resolver, sampleData)
 
-        val discriminatorCsvClause = if(discriminatorValues.size ==  1)
-            discriminatorValues.first()
+        val discriminatorCsvClause = if(values.size ==  1)
+            values.first()
         else
-            "one of ${discriminatorValues.joinToString(", ")}"
+            "one of ${values.joinToString(", ")}"
 
-        val actualDiscriminatorValue = sampleData.jsonObject[discriminatorProperty] ?: return discriminatorKeyMissingFailure(
-            discriminatorProperty,
+        val actualDiscriminatorValue = sampleData.jsonObject[property] ?: return discriminatorKeyMissingFailure(
+            property,
             discriminatorCsvClause
         )
 
-        if (actualDiscriminatorValue.toStringLiteral() !in discriminatorValues) {
+        if (actualDiscriminatorValue.toStringLiteral() !in values) {
             val message =
                 "Expected the value of discriminator property to be $discriminatorCsvClause but it was ${actualDiscriminatorValue.toStringLiteral()}"
 
             return Result.Failure(
                 message,
-                breadCrumb = discriminatorProperty,
+                breadCrumb = property,
                 failureReason = FailureReason.DiscriminatorMismatch
             )
         }
@@ -53,7 +57,7 @@ class Discriminator(
                 return@fold resultsSoFar.plus(discriminatorMatchFailure(pattern)) to true
             }
 
-            val discriminatorProbe = JSONObjectValue(mapOf(discriminatorProperty to actualDiscriminatorValue))
+            val discriminatorProbe = JSONObjectValue(mapOf(property to actualDiscriminatorValue))
 
             val discriminatorMatched = pattern.matches(discriminatorProbe, resolver).let { probeResult ->
                 probeResult is Result.Success
@@ -71,8 +75,8 @@ class Discriminator(
 
         if(!discriminatorMatchOccurred) {
             return Result.Failure(
-                "Discriminator property $discriminatorProperty is missing from the spec",
-                breadCrumb = discriminatorProperty,
+                "Discriminator property $property is missing from the spec",
+                breadCrumb = property,
                 failureReason = FailureReason.DiscriminatorMismatch
             )
         }

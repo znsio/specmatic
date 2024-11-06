@@ -211,7 +211,9 @@ data class Feature(
         scenario: Scenario
     ): List<AttributeBasedRequestResponse> {
         try {
-            val patternWithFields = findMatchingPostScenario(scenario).httpRequestPattern.body
+            val matchingScenario = findMatchingPostScenario(scenario) ?: return emptyList()
+
+            val patternWithFields = matchingScenario.httpRequestPattern.body
             val requests = scenario.generateAttributeSelectedRequests(flagsBased, patternWithFields)
 
             return requests.map { request ->
@@ -227,13 +229,13 @@ data class Feature(
         }
     }
 
-    private fun findMatchingPostScenario(scenario: Scenario): Scenario {
-        if (scenario.httpRequestPattern.method == "POST") return scenario
-
-        return scenarios.firstOrNull {
-            it.httpRequestPattern.httpPathPattern?.path == scenario.httpRequestPattern.httpPathPattern?.path
-                    && it.httpRequestPattern.method == "POST"
-        } ?: scenario
+    fun findMatchingPostScenario(scenario: Scenario): Scenario? {
+        return when(scenario.httpRequestPattern.method) {
+            "GET" -> scenarios.firstOrNull {
+                it.httpRequestPattern.httpPathPattern?.path == scenario.httpRequestPattern.httpPathPattern?.path && it.httpRequestPattern.method == "POST"
+            }
+            else -> null
+        }
     }
 
     fun stubResponse(

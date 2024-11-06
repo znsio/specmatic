@@ -30,15 +30,17 @@ class ExamplesView {
                     contentType = scenario.httpRequestPattern.headersPattern.contentType,
                     exampleFile = example?.first,
                     exampleMismatchReason = example?.second,
-                    isDiscriminatorBased = scenario.isMultiGen(scenario.resolver)
+                    isDiscriminatorBased = scenario.isMultiGen(feature, scenario.resolver)
                 )
             }.filterEndpoints()
         }
 
-        private fun Scenario.isMultiGen(resolver: Resolver): Boolean {
+        private fun Scenario.isMultiGen(feature: Feature, resolver: Resolver): Boolean {
             val isDiscriminatorBased = this.httpRequestPattern.body.isDiscriminatorBased(resolver) || this.httpResponsePattern.body.isDiscriminatorBased(resolver)
             val containsAttributeSelectionKey = this.httpRequestPattern.httpQueryParamPattern.queryPatterns.map { withoutOptionality(it.key) }.contains(attributeSelectionPattern.queryParamKey)
-            return isDiscriminatorBased || containsAttributeSelectionKey
+            val hasMatchingPostScenario =  feature.findMatchingPostScenario(this) != null
+
+            return isDiscriminatorBased || (containsAttributeSelectionKey && hasMatchingPostScenario)
         }
 
         private fun Pattern.isDiscriminatorBased(resolver: Resolver): Boolean {

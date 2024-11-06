@@ -456,13 +456,17 @@ class ExamplesInteractiveServer(
             val examplesToCheck = if (bulkMode) existingExamples else emptyList()
             val extendedExampleExists = existingExamples.any { it.isExtendedExample() }
 
-            val newExamples = generateExampleFiles(contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject, existingExamples = examplesToCheck)
+            val newExamples = generateExampleFiles(
+                contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject, existingExamples = examplesToCheck
+            )
 
             val extendedExampleOrEmpty = if (extendedExampleExists)
                 emptyList()
             else listOfNotNull(generateExtendedExample(contractFile, File(newExamples.random().path), examplesDir))
 
-            val attributeBasedExamplesOrEmpty = generateAttributeSelectedExamples(contractFile, feature, scenario, examplesDir, existingExamples)
+            val attributeBasedExamplesOrEmpty = generateAttributeSelectedExamples(
+                contractFile, feature, scenario, examplesDir, existingExamples = examplesToCheck
+            )
 
             return existingExamples.map { ExamplePathInfo(it.file.absolutePath, false) }
                 .plus(newExamples).plus(extendedExampleOrEmpty).plus(attributeBasedExamplesOrEmpty)

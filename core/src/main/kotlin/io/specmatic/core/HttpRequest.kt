@@ -69,6 +69,9 @@ data class HttpRequest(
     fun updateQueryParams(otherQueryParams: Map<String, String>): HttpRequest =
         copy(queryParams = queryParams.plus(otherQueryParams))
 
+    fun updateWithReplaceQueryParams(otherQueryParams: Map<String, String>): HttpRequest =
+        copy(queryParams = queryParams.replace(otherQueryParams))
+
     fun withHost(host: String) = this.copy(headers = this.headers.plus("Host" to host))
 
     fun updatePath(path: String): HttpRequest {

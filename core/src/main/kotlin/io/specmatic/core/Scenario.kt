@@ -8,7 +8,6 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.mapZip
 import io.specmatic.core.utilities.nullOrExceptionString
-import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.RequestContext
@@ -269,17 +268,28 @@ data class Scenario(
         allowOnlyMandatoryKeysInJSONObject: Boolean = false
     ): List<DiscriminatorBasedItem<HttpRequest>> =
         scenarioBreadCrumb(this) {
-            val updatedResolver = if(allowOnlyMandatoryKeysInJSONObject) {
-                flagsBased.update(
-                    resolver.copy(factStore = CheckFacts(expectedFacts))
-                ).withOnlyMandatoryKeysInJSONObject()
-            } else {
-                flagsBased.update(
-                    resolver.copy(factStore = CheckFacts(expectedFacts))
-                )
-            }
+            val updatedResolver = getUpdatedResolver(flagsBased, allowOnlyMandatoryKeysInJSONObject)
             httpRequestPattern.generateV2(updatedResolver)
         }
+
+    fun generateAttributeSelectedRequests(flagsBased: FlagsBased, patternWithFields: Pattern): List<AttributeSelectionBasedItem<HttpRequest>> {
+        scenarioBreadCrumb(this) {
+            val updatedResolver = getUpdatedResolver(flagsBased, allowOnlyMandatoryKeysInJSONObject = false)
+            return httpRequestPattern.generateAttributeSelected(updatedResolver, attributeSelectionPattern, patternWithFields)
+        }
+    }
+
+    private fun getUpdatedResolver(flagsBased: FlagsBased, allowOnlyMandatoryKeysInJSONObject: Boolean): Resolver {
+        return if(allowOnlyMandatoryKeysInJSONObject) {
+            flagsBased.update(
+                resolver.copy(factStore = CheckFacts(expectedFacts))
+            ).withOnlyMandatoryKeysInJSONObject()
+        } else {
+            flagsBased.update(
+                resolver.copy(factStore = CheckFacts(expectedFacts))
+            )
+        }
+    }
 
     fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
         val resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck).copy(context = RequestContext(httpRequest))

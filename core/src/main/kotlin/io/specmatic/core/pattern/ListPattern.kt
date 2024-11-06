@@ -6,7 +6,11 @@ import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.ListValue
 import io.specmatic.core.value.Value
 
-data class ListPattern(override val pattern: Pattern, override val typeAlias: String? = null, override val example: List<String?>? = null) : Pattern, SequenceType, HasDefaultExample {
+data class ListPattern(
+    override val pattern: Pattern,
+    override val typeAlias: String? = null,
+    override val example: List<String?>? = null
+) : Pattern, SequenceType, HasDefaultExample, PossibleJsonObjectPatternContainer {
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
 
@@ -186,6 +190,14 @@ data class ListPattern(override val pattern: Pattern, override val typeAlias: St
     }
 
     override val typeName: String = "list of ${pattern.typeName}"
+
+    override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {
+        if(keys.isEmpty()) return this
+        if(pattern is PossibleJsonObjectPatternContainer) {
+            return this.copy(pattern = pattern.removeKeysNotPresentIn(keys, resolver))
+        }
+        return this
+    }
 }
 
 private fun withEmptyType(pattern: Pattern, resolver: Resolver): Resolver {

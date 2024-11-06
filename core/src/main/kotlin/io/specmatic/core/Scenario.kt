@@ -8,6 +8,7 @@ import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.mapZip
 import io.specmatic.core.utilities.nullOrExceptionString
+import io.specmatic.core.utilities.readEnvVarOrProperty
 import io.specmatic.core.value.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.RequestContext
@@ -26,6 +27,22 @@ object ContractAndStubMismatchMessages : MismatchMessages {
     }
 }
 
+object StubAndAttributeSelectionMismatchMessages: MismatchMessages {
+    override fun mismatchMessage(expected: String, actual: String): String {
+        return "Contract expected $expected but stub contained $actual"
+    }
+
+    override fun unexpectedKey(keyLabel: String, keyName: String): String {
+        if(keyLabel == "key") return "Unexpected key named '$keyName' detected in the stub"
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the stub was not in the contract"
+    }
+
+    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+        if(keyLabel == "key") return "Expected key named '$keyName' was missing in the stub"
+        return "${keyLabel.lowercase().capitalizeFirstChar()} named $keyName in the contract was not found in the stub"
+    }
+}
+
 interface ScenarioDetailsForResult {
     val status: Int
     val ignoreFailure: Boolean
@@ -35,6 +52,9 @@ interface ScenarioDetailsForResult {
 
     fun testDescription(): String
 }
+
+const val ATTRIBUTE_SELECTION_DEFAULT_FIELDS = "ATTRIBUTE_SELECTION_DEFAULT_FIELDS"
+const val ATTRIBUTE_SELECTION_QUERY_PARAM_KEY = "ATTRIBUTE_SELECTION_QUERY_PARAM_KEY"
 
 data class Scenario(
     override val name: String,
@@ -61,7 +81,8 @@ data class Scenario(
     val statusInDescription: String = httpResponsePattern.status.toString(),
     val disambiguate: () -> String = { "" },
     val descriptionFromPlugin: String? = null,
-    val dictionary: Map<String, Value> = emptyMap()
+    val dictionary: Map<String, Value> = emptyMap(),
+    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern()
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -463,9 +484,18 @@ data class Scenario(
     private fun validateResponseExample(row: Row, resolverForExample: Resolver): Result {
         val responseExample: HttpResponse? = row.responseExample
 
+        val httpResponsePatternBasedOnAttributeSelection =
+            newBasedOnAttributeSelectionFields(row.requestExample?.queryParams).httpResponsePattern
+
+        val fieldsToBeMadeMandatory =
+            getFieldsToBeMadeMandatoryBasedOnAttributeSelection(row.requestExample?.queryParams)
+        val updatedResolver = if(fieldsToBeMadeMandatory.isNotEmpty()) {
+            resolverForExample.copy(mismatchMessages = getMismatchObjectForTestExamples(row))
+        } else resolverForExample
+
         if (responseExample != null) {
             val responseMatchResult =
-                httpResponsePattern.matches(responseExample, resolverForExample)
+                httpResponsePatternBasedOnAttributeSelection.matches(responseExample, updatedResolver)
 
             return responseMatchResult
         }
@@ -483,6 +513,24 @@ data class Scenario(
         }
 
         return Result.Success()
+    }
+
+    private fun getMismatchObjectForTestExamples(row: Row): MismatchMessages {
+       return object: MismatchMessages {
+           override fun mismatchMessage(expected: String, actual: String): String {
+               return "Expected $expected as per the specification, but the example ${row.name} had $actual."
+           }
+
+           override fun unexpectedKey(keyLabel: String, keyName: String): String {
+               if(keyLabel == "key") return "Unexpected key named '$keyName' detected in the example"
+               return "The $keyLabel $keyName was found in the example ${row.name} but was not in the specification."
+           }
+
+           override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
+               if(keyLabel == "key") return "Missing key named '$keyName' detected in the example"
+               return "The $keyLabel $keyName was found in the example ${row.name} but was not in the specification."
+           }
+       }
     }
 
     fun generateTestScenarios(
@@ -504,7 +552,8 @@ data class Scenario(
                     }
                 }
             }.flatMap { row ->
-                newBasedOn(row, flagsBased).map { scenarioR ->
+                val updatedScenario = newBasedOnAttributeSelectionFields(row.requestExample?.queryParams)
+                updatedScenario.newBasedOn(row, flagsBased).map { scenarioR ->
                     scenarioR.ifValue { scenario ->
                         fn(scenario, row)
                     }
@@ -546,12 +595,17 @@ data class Scenario(
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): Result {
         scenarioBreadCrumb(this) {
+            val updatedMismatchMessages =
+                if (getFieldsToBeMadeMandatoryBasedOnAttributeSelection(request.queryParams).isEmpty())
+                    mismatchMessages
+                else StubAndAttributeSelectionMismatchMessages
+
             val resolver = Resolver(
                 IgnoreFacts(),
                 true,
                 patterns,
                 findKeyErrorCheck = DefaultKeyCheck.disableOverrideUnexpectedKeycheck(),
-                mismatchMessages = mismatchMessages
+                mismatchMessages = updatedMismatchMessages
             )
 
             val requestMatchResult = attempt(breadCrumb = "REQUEST") {
@@ -613,6 +667,23 @@ data class Scenario(
 
     fun newBasedOn(suggestions: List<Scenario>) =
         this.newBasedOn(suggestions.find { it.name == this.name } ?: this)
+
+    fun newBasedOnAttributeSelectionFields(queryParams: QueryParameters?): Scenario {
+        val fieldsToBeMadeMandatory =
+            getFieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams)
+        val responseBodyPattern = this.httpResponsePattern.body
+
+        val updatedResponseBodyPattern = if(responseBodyPattern is PossibleJsonObjectPatternContainer) {
+            responseBodyPattern.removeKeysNotPresentIn(fieldsToBeMadeMandatory, resolver)
+        } else {
+            responseBodyPattern
+        }
+        return this.copy(
+            httpResponsePattern = httpResponsePattern.copy(
+                body = updatedResponseBodyPattern
+            )
+        )
+    }
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
     fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?): Scenario {
@@ -706,6 +777,20 @@ data class Scenario(
             query = this.httpRequestPattern.getQueryParamKeys(),
             exampleName = this.exampleName.orEmpty()
         )
+    }
+
+    private fun getFieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams: QueryParameters?): Set<String> {
+        val defaultAttributeSelectionFields = attributeSelectionPattern.defaultFields.toSet()
+        val attributeSelectionQueryParamKey =  attributeSelectionPattern.queryParamKey
+
+        if(queryParams?.containsKey(attributeSelectionQueryParamKey) != true) return emptySet()
+
+        val attributeSelectionFieldsFromRequest = if(attributeSelectionQueryParamKey.isNotEmpty()){
+            queryParams.getValues(attributeSelectionQueryParamKey).flatMap {
+                it.split(",").filter { value -> value.isNotBlank() }
+            }.toSet()
+        } else emptySet()
+        return defaultAttributeSelectionFields.plus(attributeSelectionFieldsFromRequest)
     }
 }
 

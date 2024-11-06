@@ -8,6 +8,10 @@ class OverlayParser {
     companion object {
 
         fun parse(yamlContent: String): Overlay {
+            if(yamlContent.isBlank()) return Overlay(
+                emptyMap(),
+                emptyMap()
+            )
             return Overlay(
                 updateMap = parseAndReturnUpdateMap(yamlContent),
                 removalMap = parseAndReturnRemovalMap(yamlContent)

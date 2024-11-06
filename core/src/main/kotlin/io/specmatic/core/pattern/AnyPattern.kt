@@ -14,9 +14,18 @@ data class AnyPattern(
     override val example: String? = null,
     private val discriminatorProperty: String? = null,
     private val discriminatorValues: Set<String> = emptySet()
-) : Pattern, HasDefaultExample {
+) : Pattern, HasDefaultExample, PossibleJsonObjectPatternContainer {
 
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
+
+    override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {
+        if(keys.isEmpty()) return this
+        if(this.hasNoAmbiguousPatterns().not()) return this
+
+        val pattern = this.pattern.first { it !is NullPattern }
+        if(pattern is PossibleJsonObjectPatternContainer) return pattern.removeKeysNotPresentIn(keys, resolver)
+        return this
+    }
 
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
         val matchingPattern = pattern.find { it.matches(value, resolver) is Result.Success } ?: return value

@@ -26,7 +26,7 @@ data class JSONObjectPattern(
     override val typeAlias: String? = null,
     val minProperties: Int? = null,
     val maxProperties: Int? = null
-) : Pattern {
+) : Pattern, PossibleJsonObjectPatternContainer {
 
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
         if (value !is JSONObjectValue) return value
@@ -109,6 +109,15 @@ data class JSONObjectPattern(
         return mapWithKeysInPartial.combine(mapWithMissingKeysGenerated) { entriesInPartial, missingEntries ->
             jsonObject.copy(jsonObject = entriesInPartial + missingEntries)
         }
+    }
+
+    override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {
+        if (keys.isEmpty()) return this
+        return this.copy(pattern = pattern.filterKeys {
+            withoutOptionality(it) in keys
+        }.mapKeys {
+            withoutOptionality(it.key)
+        })
     }
 
     override fun equals(other: Any?): Boolean = when (other) {

@@ -224,7 +224,7 @@ class OpenApiSpecification(
         val (scenarioInfos, stubsFromExamples) = toScenarioInfos()
 
         return Feature(
-            scenarioInfos.map { Scenario(it).copy(dictionary = dictionary) }, name = name, path = openApiFilePath, sourceProvider = sourceProvider,
+            scenarioInfos.map { Scenario(it).copy(dictionary = dictionary, attributeSelectionPattern = specmaticConfig.attributeSelectionPattern) }, name = name, path = openApiFilePath, sourceProvider = sourceProvider,
             sourceRepository = sourceRepository,
             sourceRepositoryBranch = sourceRepositoryBranch,
             specification = specificationPath,

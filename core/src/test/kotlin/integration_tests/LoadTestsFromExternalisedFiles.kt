@@ -4,9 +4,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.*
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
@@ -15,8 +13,7 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.*
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.*
 
 class LoadTestsFromExternalisedFiles {
 
@@ -404,5 +401,111 @@ class LoadTestsFromExternalisedFiles {
 
         assertThat(results.testCount).isEqualTo(3)
         assertThat(results.failureCount).isEqualTo(3)
+    }
+
+    @Nested
+    inner class AttributeSelection {
+        @BeforeEach
+        fun setup() {
+            System.setProperty(ATTRIBUTE_SELECTION_QUERY_PARAM_KEY, "columns")
+            System.setProperty(ATTRIBUTE_SELECTION_DEFAULT_FIELDS, "id")
+        }
+
+        @AfterEach
+        fun tearDown() {
+            System.clearProperty(ATTRIBUTE_SELECTION_QUERY_PARAM_KEY)
+            System.clearProperty(ATTRIBUTE_SELECTION_DEFAULT_FIELDS)
+        }
+
+        @Test
+        fun `should load an example with missing mandatory fields and object response`() {
+            val feature = OpenApiSpecification.fromFile(
+                "src/test/resources/openapi/attribute_selection_tests/api.yaml"
+            ).toFeature().loadExternalisedExamples()
+
+            val results = feature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    if (!request.path!!.contains("/employeesObjectResponse")) return HttpResponse.ok("")
+
+                    assertThat(request.queryParams.containsEntry("columns", "name"))
+                        .withFailMessage("Expected query param 'columns' to be present and with value 'name'")
+                        .isTrue()
+
+                    return HttpResponse.ok(parsedJSONObject("""
+                    {
+                      "id": 1,
+                      "name": "name"
+                    }
+                    """.trimIndent()))
+                }
+            })
+
+            val result = results.results.first {it.scenario!!.path == "/employeesObjectResponse"}
+            println(result.reportString())
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `should load an example with missing mandatory fields and array response`() {
+            val feature = OpenApiSpecification.fromFile(
+                "src/test/resources/openapi/attribute_selection_tests/api.yaml"
+            ).toFeature().loadExternalisedExamples()
+
+            val results = feature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    if (!request.path!!.contains("/employeesArrayResponse")) return HttpResponse.ok("")
+
+                    assertThat(request.queryParams.containsEntry("columns", "name"))
+                        .withFailMessage("Expected query param 'columns' to be present and with value 'name'")
+                        .isTrue()
+
+                    return HttpResponse.ok(parsedJSONArray("""
+                    [
+                      {
+                        "id": 1,
+                        "name": "name1"
+                      },
+                      {
+                        "id": 2,
+                        "name": "name2"
+                      }
+                    ]
+                    """.trimIndent()))
+                }
+            })
+
+            val result = results.results.first {it.scenario!!.path == "/employeesArrayResponse"}
+            println(result.reportString())
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `should load an example with missing mandatory fields and allOf response`() {
+            val feature = OpenApiSpecification.fromFile(
+                "src/test/resources/openapi/attribute_selection_tests/api.yaml"
+            ).toFeature().loadExternalisedExamples()
+
+            val results = feature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    if (!request.path!!.contains("/employeesAllOfResponse")) return HttpResponse.ok("")
+
+                    assertThat(request.queryParams.containsEntry("columns", "name,department"))
+                        .withFailMessage("Expected query param 'columns' to be present and with value 'name, department'")
+                        .isTrue()
+
+                    return HttpResponse.ok(parsedJSONObject("""
+                    {
+                        "id": 1,
+                        "name": "name1",
+                        "department": "department1"
+                    }
+                    """.trimIndent()))
+                }
+            })
+
+            val result = results.results.first {it.scenario!!.path == "/employeesAllOfResponse"}
+            println(result.reportString())
+            assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
     }
 }

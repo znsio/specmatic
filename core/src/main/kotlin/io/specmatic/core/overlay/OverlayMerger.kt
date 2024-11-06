@@ -20,12 +20,11 @@ class OverlayMerger {
                 YAMLFactory().disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER)
             )
             val rootNode = yamlMapper.readTree(baseContent) as ObjectNode
-            val originalDocumentContext = documentContextFor(rootNode)
             val documentContext = documentContextFor(rootNode)
 
 
             overlay.updateMap.forEach { (jsonPath, content) ->
-                val targetNodes = originalDocumentContext.read<List<Any>>(jsonPath)
+                val targetNodes = documentContext.read<List<Any>>(jsonPath)
                 val existingNode = if (targetNodes.isNotEmpty()) targetNodes[0] else null
 
                 when (existingNode) {

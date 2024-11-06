@@ -23,6 +23,7 @@ import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.readEnvVarOrProperty
 import java.io.File
 
 const val APPLICATION_NAME = "Specmatic"
@@ -87,6 +88,19 @@ data class WorkflowConfiguration(
     val ids: Map<String, WorkflowIDOperation> = emptyMap()
 )
 
+data class AttributeSelectionPattern(
+    @field:JsonAlias("default_fields")
+    val defaultFields: List<String> = readEnvVarOrProperty(
+        ATTRIBUTE_SELECTION_DEFAULT_FIELDS,
+        ATTRIBUTE_SELECTION_DEFAULT_FIELDS
+    ).orEmpty().split(",").filter { it.isNotBlank() },
+    @field:JsonAlias("query_param_key")
+    val queryParamKey: String = readEnvVarOrProperty(
+        ATTRIBUTE_SELECTION_QUERY_PARAM_KEY,
+        ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
+    ).orEmpty()
+)
+
 data class SpecmaticConfig(
     @field:JsonAlias("contract_repositories")
     val sources: List<Source> = emptyList(),
@@ -102,7 +116,9 @@ data class SpecmaticConfig(
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
     val workflow: WorkflowConfiguration? = null,
     val ignoreInlineExamples: Boolean = getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES),
-    val additionalExampleParamsFilePath: String? = getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE)
+    val additionalExampleParamsFilePath: String? = getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE),
+    @field:JsonAlias("attribute_selection_pattern")
+    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern()
 ) {
     @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {

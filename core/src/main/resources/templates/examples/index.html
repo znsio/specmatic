@@ -1203,7 +1203,7 @@
         let failedCount = 0; createdCount = 0; existedCount = 0;
         const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
         const rowsWithNoExamplesOrDiscriminator = selectedRows.filter(row =>
-            row.getAttribute("data-main") === "true" && (!row.getAttribute("data-generate") || row.getAttribute("data-disc") === "true")
+            row.getAttribute("data-main") === "true" && (row.getAttribute("data-generate") == defaultAttrs["data-generate"] || row.getAttribute("data-disc") === "true")
         );
 
         for (const row of rowsWithNoExamplesOrDiscriminator) {

@@ -516,7 +516,9 @@ class ExamplesInteractiveServer(
             }.toSet()
 
             return discriminatorBasedRequestResponses.filterNot { it.matches(existingDiscriminators) }.map { (request, response, requestDiscriminator, responseDiscriminator) ->
-                val scenarioStub = ScenarioStub(request, response)
+                val requestWithoutAttrSelection = request.removeAttrSelection(scenario.attributeSelectionPattern)
+
+                val scenarioStub = ScenarioStub(requestWithoutAttrSelection, response)
                 val jsonWithDiscriminator = DiscriminatorExampleInjector(
                     stubJSON = scenarioStub.toJSON(),
                     requestDiscriminator = requestDiscriminator,
@@ -534,6 +536,12 @@ class ExamplesInteractiveServer(
                 file.writeText(jsonWithDiscriminator.toStringLiteral())
                 ExamplePathInfo(file.absolutePath, true)
             }
+        }
+
+        private fun HttpRequest.removeAttrSelection(attributeSelectionPattern: AttributeSelectionPattern): HttpRequest {
+            return this.copy(
+                queryParams = this.queryParams.remove(attributeSelectionPattern.queryParamKey)
+            )
         }
 
         private fun generateAttributeSelectedExamples(contractFile: File, feature: Feature, scenario: Scenario, examplesDir: File, existingExamples: List<ExampleFromFile>): List<ExamplePathInfo> {

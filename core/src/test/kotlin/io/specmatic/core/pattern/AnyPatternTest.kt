@@ -332,7 +332,7 @@ internal class AnyPatternTest {
 
     @Test
     fun `error when a discriminator exists and the value is not a json object`() {
-        val pattern = AnyPattern(emptyList(), discriminatorProperty = "type")
+        val pattern = AnyPattern(emptyList(), discriminatorProperty = "type", discriminatorValues = setOf("current", "savings"))
         val result = pattern.matches(StringValue(""), Resolver())
 
         assertThat(result.reportString()).contains("Expected json object")

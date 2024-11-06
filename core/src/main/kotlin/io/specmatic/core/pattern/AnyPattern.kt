@@ -5,7 +5,10 @@ import io.specmatic.core.Result.Failure
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
-import io.specmatic.core.value.*
+import io.specmatic.core.value.EmptyString
+import io.specmatic.core.value.NullValue
+import io.specmatic.core.value.ScalarValue
+import io.specmatic.core.value.Value
 
 data class AnyPattern(
     override val pattern: List<Pattern>,
@@ -13,7 +16,8 @@ data class AnyPattern(
     override val typeAlias: String? = null,
     override val example: String? = null,
     private val discriminatorProperty: String? = null,
-    private val discriminatorValues: Set<String> = emptySet()
+    private val discriminatorValues: Set<String> = emptySet(),
+    private val discriminator: Discriminator? = Discriminator.create(discriminatorProperty, discriminatorValues)
 ) : Pattern, HasDefaultExample, PossibleJsonObjectPatternContainer {
 
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
@@ -99,74 +103,8 @@ data class AnyPattern(
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        if(discriminatorProperty != null) {
-            if (sampleData !is JSONObjectValue)
-                return jsonObjectMismatchError(resolver, sampleData)
-
-            val discriminatorCsvClause = if(discriminatorValues.size ==  1)
-                discriminatorValues.first()
-            else
-                "one of ${discriminatorValues.joinToString(", ")}"
-
-            val actualDiscriminatorValue = sampleData.jsonObject[discriminatorProperty] ?: return discriminatorKeyMissingFailure(
-                discriminatorProperty,
-                discriminatorCsvClause
-            )
-
-            if (actualDiscriminatorValue.toStringLiteral() !in discriminatorValues) {
-                val message =
-                    "Expected the value of discriminator property to be $discriminatorCsvClause but it was ${actualDiscriminatorValue.toStringLiteral()}"
-
-                return Failure(
-                    message,
-                    breadCrumb = discriminatorProperty,
-                    failureReason = FailureReason.DiscriminatorMismatch
-                )
-            }
-
-            val emptyPatternMatchResults = Pair(emptyList<AnyPatternMatch>(), false)
-
-            val (matchResults: List<AnyPatternMatch>, discriminatorMatchOccurred: Boolean) = pattern.fold(emptyPatternMatchResults) { acc, pattern ->
-                val (resultsSoFar, discriminatorMatchHasOccurred) = acc
-
-                if (discriminatorMatchHasOccurred) {
-                    return@fold resultsSoFar.plus(discriminatorMatchFailure(pattern)) to true
-                }
-
-                val discriminatorProbe = JSONObjectValue(mapOf(discriminatorProperty to actualDiscriminatorValue))
-
-                val discriminatorMatched = pattern.matches(discriminatorProbe, resolver).let { probeResult ->
-                    probeResult is Result.Success
-                            || (probeResult is Failure && probeResult.hasReason(FailureReason.FailedButDiscriminatorMatched))
-                }
-
-                if(discriminatorMatched)
-                    resultsSoFar.plus((AnyPatternMatch(pattern, resolver.matchesPattern(key, pattern, sampleData)))) to true
-                else
-                    resultsSoFar.plus(discriminatorMatchFailure(pattern)) to false
-            }
-
-            if(!discriminatorMatchOccurred) {
-                return Failure(
-                    "Discriminator property $discriminatorProperty is missing from the spec",
-                    breadCrumb = discriminatorProperty,
-                    failureReason = FailureReason.DiscriminatorMismatch
-                )
-            }
-
-            val matchResult = matchResults.find { it.result is Result.Success }
-
-            if(matchResult != null)
-                return matchResult.result
-
-            val failures = matchResults.map { it.result }.filterIsInstance<Failure>()
-
-            val deepMatchResults = failures.filter { it.hasReason(FailureReason.FailedButDiscriminatorMatched) }
-
-            return if(deepMatchResults.isNotEmpty())
-                Failure.fromFailures(deepMatchResults).removeReasonsFromCauses().copy(failureReason = FailureReason.FailedButDiscriminatorMatched)
-            else
-                Failure.fromFailures(failures).removeReasonsFromCauses()
+        if(discriminator != null) {
+            return discriminator.matches(sampleData, pattern, key, resolver)
         }
 
         val matchResults: List<AnyPatternMatch> =

@@ -233,7 +233,9 @@ class HttpStub(
                         requestInterceptor.interceptRequest(request) ?: request
                     }
 
-                    val responseFromRequestHandler = requestHandlers.map { it.handleRequest(httpRequest) }.firstOrNull()
+                    val responseFromRequestHandler = requestHandlers.map {
+                        it.handleRequest(httpRequest)
+                    }.filterNotNull().firstOrNull()
 
                     val httpStubResponse: HttpStubResponse = when {
                         isFetchLogRequest(httpRequest) -> handleFetchLogRequest()
@@ -244,7 +246,7 @@ class HttpStub(
                         isSseExpectationCreation(httpRequest) -> handleSseExpectationCreationRequest(httpRequest)
                         isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
                         isFlushTransientStubsRequest(httpRequest) -> handleFlushTransientStubsRequest(httpRequest)
-                        else -> serveStubResponse(httpRequest, specmaticConfig)
+                        else -> serveStubResponse(httpRequest)
                     }
 
                     val httpResponse = responseInterceptors.fold(httpStubResponse.response) { response, responseInterceptor ->
@@ -328,6 +330,23 @@ class HttpStub(
         }
     }
 
+    fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse {
+        val result: StubbedResponseResult = getHttpResponse(
+            httpRequest,
+            features,
+            threadSafeHttpStubs,
+            threadSafeHttpStubQueue,
+            strictMode,
+            passThroughTargetBase,
+            httpClientFactory,
+            specmaticConfig
+        )
+
+        result.log(_logs, httpRequest)
+
+        return result.response
+    }
+
     private fun handleFlushTransientStubsRequest(httpRequest: HttpRequest): HttpStubResponse {
         val token = httpRequest.path?.removePrefix("/_specmatic/$TRANSIENT_MOCK/")
 
@@ -402,23 +421,6 @@ class HttpStub(
 
     private fun handleFetchLogRequest(): HttpStubResponse =
         HttpStubResponse(HttpResponse.ok(StringValue(LogTail.getString())))
-
-    private fun serveStubResponse(httpRequest: HttpRequest, specmaticConfig: SpecmaticConfig): HttpStubResponse {
-        val result: StubbedResponseResult = getHttpResponse(
-            httpRequest,
-            features,
-            threadSafeHttpStubs,
-            threadSafeHttpStubQueue,
-            strictMode,
-            passThroughTargetBase,
-            httpClientFactory,
-            specmaticConfig
-        )
-
-        result.log(_logs, httpRequest)
-
-        return result.response
-    }
 
     private fun handleExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
         return try {

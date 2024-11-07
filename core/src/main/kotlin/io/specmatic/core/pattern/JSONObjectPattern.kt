@@ -360,6 +360,21 @@ data class JSONObjectPattern(
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)
     override fun hashCode(): Int = pattern.hashCode()
+    fun updateWithDiscriminatorValue(discriminatorPropertyName: String, discriminatorValue: String, resolver: Resolver): Pattern {
+        val actualDiscriminatorPropertyName = if(discriminatorPropertyName in pattern) discriminatorPropertyName else if("$discriminatorPropertyName?" in pattern) "$discriminatorPropertyName?" else return this
+
+        val discriminatorPattern = pattern.getValue(actualDiscriminatorPropertyName)
+
+        val candidateDiscriminatorValue = discriminatorPattern.parse(discriminatorValue, resolver)
+        val matchResult = discriminatorPattern.matches(candidateDiscriminatorValue, resolver)
+
+        if(matchResult is Result.Failure)
+            throw ContractException("Expected the value of discriminator value $discriminatorValue does not match discriminator property $discriminatorPropertyName")
+
+        val updatedPattern = pattern.plus(actualDiscriminatorPropertyName to ExactValuePattern(candidateDiscriminatorValue, discriminator = true))
+
+        return this.copy(updatedPattern)
+    }
 
     override val typeName: String = "json object"
 }

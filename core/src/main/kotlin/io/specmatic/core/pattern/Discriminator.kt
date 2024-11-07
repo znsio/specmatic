@@ -8,14 +8,19 @@ import io.specmatic.core.value.Value
 
 class Discriminator(
     val property: String,
-    val values: Set<String>
+    val values: Set<String>,
+    val mapping: Map<String, String>
 ) {
     companion object {
-        fun create(discriminatorProperty: String? = null, discriminatorValues: Set<String> = emptySet()): Discriminator? {
+        fun create(
+            discriminatorProperty: String? = null,
+            discriminatorValues: Set<String> = emptySet(),
+            mapping: Map<String, String>
+        ): Discriminator? {
             if(discriminatorProperty == null || discriminatorValues.isEmpty())
                 return null
 
-            return Discriminator(discriminatorProperty, discriminatorValues)
+            return Discriminator(discriminatorProperty, discriminatorValues, mapping)
         }
     }
 
@@ -23,7 +28,37 @@ class Discriminator(
 
     fun hasMultipleValues(): Boolean = values.size > 1
 
-    fun matches(sampleData: Value?, pattern: List<Pattern>, key: String?, resolver: Resolver): Result {
+    fun matches(sampleData: Value?, patterns: List<Pattern>, key: String?, resolver: Resolver): Result {
+        val updatedPatterns: List<Pattern> = updatePatternsWithDiscriminator(patterns, resolver)
+
+        return _matches(sampleData, updatedPatterns, key, resolver)
+    }
+
+    fun updatePatternsWithDiscriminator(
+        patterns: List<Pattern>,
+        resolver: Resolver
+    ): List<Pattern> {
+        val schemaNameToDiscriminatorValueMapping =
+            mapping.mapValues { it.value.split("/").last() }.map { it.value to it.key }.toMap()
+
+        val updatedPatterns: List<Pattern> = patterns.map { pattern ->
+            val resolved = resolvedHop(pattern, resolver)
+
+            if (resolved !is JSONObjectPattern)
+                return@map resolved
+
+            val typeAlias = resolved.typeAlias ?: return@map resolved
+
+            val schemaName = withoutPatternDelimiters(typeAlias)
+
+            val discriminatorValue = schemaNameToDiscriminatorValueMapping[schemaName] ?: return@map resolved
+
+            resolved.updateWithDiscriminatorValue(property, discriminatorValue, resolver)
+        }
+        return updatedPatterns
+    }
+
+    private fun _matches(sampleData: Value?, pattern: List<Pattern>, key: String?, resolver: Resolver): Result {
         if (sampleData !is JSONObjectValue)
             return jsonObjectMismatchError(resolver, sampleData)
 

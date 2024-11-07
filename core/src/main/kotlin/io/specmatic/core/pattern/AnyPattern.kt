@@ -15,7 +15,7 @@ data class AnyPattern(
     val key: String? = null,
     override val typeAlias: String? = null,
     override val example: String? = null,
-    private val discriminator: Discriminator? = null
+    val discriminator: Discriminator? = null
 ) : Pattern, HasDefaultExample, PossibleJsonObjectPatternContainer {
     constructor(
         pattern: List<Pattern>,
@@ -24,7 +24,11 @@ data class AnyPattern(
         example: String? = null,
         discriminatorProperty: String? = null,
         discriminatorValues: Set<String> = emptySet()
-    ) : this(pattern, key, typeAlias, example, Discriminator.create(discriminatorProperty, discriminatorValues))
+    ) : this(pattern, key, typeAlias, example, Discriminator.create(
+        discriminatorProperty,
+        discriminatorValues,
+        emptyMap()
+    ))
 
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
 
@@ -291,11 +295,13 @@ data class AnyPattern(
 
     private fun generateValue(resolver: Resolver, discriminatorValue: String = ""): Value {
         if (this.isScalarBasedPattern()) {
-            return this.pattern.filterNot { it is NullPattern }.first { it is ScalarType }
+            return this.pattern.filterNot { it is NullPattern }.let { discriminator?.updatePatternsWithDiscriminator(pattern, resolver) ?: pattern }.first { it is ScalarType }
                 .generate(resolver)
         }
 
-        val chosenPattern = getDiscriminatorBasedPattern(discriminatorValue) ?: pattern.random()
+        val updatedPatterns = discriminator?.updatePatternsWithDiscriminator(pattern, resolver) ?: pattern
+
+        val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue) ?: updatedPatterns.random()
         val isNullable = pattern.any { it is NullPattern }
         return resolver.withCyclePrevention(chosenPattern, isNullable) { cyclePreventedResolver ->
             when (key) {
@@ -311,8 +317,11 @@ data class AnyPattern(
                 pattern.filterNot { it is NullPattern }.filter { it is ScalarType }.size == 1
     }
 
-    private fun getDiscriminatorBasedPattern(discriminatorValue: String): JSONObjectPattern? {
-        return pattern.filterIsInstance<JSONObjectPattern>().firstOrNull {
+    private fun getDiscriminatorBasedPattern(
+        updatedPatterns: List<Pattern>,
+        discriminatorValue: String,
+    ): JSONObjectPattern? {
+        return updatedPatterns.filterIsInstance<JSONObjectPattern>().firstOrNull {
             if(it.pattern.containsKey(discriminator?.property.orEmpty()).not()) {
                 return@firstOrNull false
             }

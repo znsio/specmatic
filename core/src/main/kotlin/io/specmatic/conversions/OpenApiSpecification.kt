@@ -11,6 +11,7 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.overlay.OverlayMerger
 import io.specmatic.core.overlay.OverlayParser
 import io.specmatic.core.pattern.*
+import io.specmatic.core.pattern.Discriminator
 import io.specmatic.core.pattern.withoutOptionality
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.IGNORE_INLINE_EXAMPLE_WARNINGS
@@ -1349,7 +1350,14 @@ class OpenApiSpecification(
                     else if (oneOfs.size > 1)
                         AnyPattern(oneOfs, typeAlias = "(${patternName})")
                     else if(allDiscriminators.isNotEmpty())
-                        AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") }, discriminatorProperty = allDiscriminators.key, discriminatorValues = allDiscriminators.values.toSet())
+                        AnyPattern(
+                            schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") },
+                            discriminator = Discriminator.create(
+                                allDiscriminators.key,
+                                allDiscriminators.values.toSet(),
+                                schema.discriminator?.mapping.orEmpty()
+                            )
+                        )
                     else if(schemaProperties.size > 1)
                         AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") })
                     else
@@ -1374,9 +1382,8 @@ class OpenApiSpecification(
 
                     AnyPattern(
                         candidatePatterns.plus(nullable),
-                        discriminatorProperty = schema.discriminator?.propertyName,
-                        discriminatorValues = schema.discriminator?.mapping?.keys?.toSet().orEmpty(),
-                        typeAlias = "(${patternName})"
+                        typeAlias = "(${patternName})",
+                        discriminator = Discriminator.create(schema.discriminator?.propertyName, schema.discriminator?.mapping?.keys?.toSet().orEmpty(), schema.discriminator?.mapping.orEmpty())
                     )
                 } else if (schema.anyOf != null) {
                     throw UnsupportedOperationException("Specmatic does not support anyOf")

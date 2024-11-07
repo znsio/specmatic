@@ -51,6 +51,8 @@ components:
 
     ProductType:
       type: object
+      required:
+        - type
       properties:
         type:
           type: string
@@ -85,7 +87,7 @@ components:
 
         val request = HttpRequest("GET", "/product/123")
         val response =
-            HttpResponse.ok(parsedJSONObject("""{"id": "10", "name": "phone", "type": "gadget", "expirationDate": "2022-12-31"}"""))
+            HttpResponse.ok(parsedJSONObject("""{"id": "10", "name": "phone", "type": "food", "expirationDate": "2022-12-31"}"""))
 
         val scenario = feature.scenarios.first()
 

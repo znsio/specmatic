@@ -305,20 +305,20 @@ data class Scenario(
             ).updateScenario(this)
         }
 
-        val updatedFlagBased = flagsBased.copy(
-            unexpectedKeyCheck = if (isRequestAttributeSelected(httpRequest)) ValidateUnexpectedKeys else flagsBased.unexpectedKeyCheck
-        )
+        val updatedFlagBased = if (isRequestAttributeSelected(httpRequest)) {
+            flagsBased.copy(unexpectedKeyCheck = ValidateUnexpectedKeys)
+        } else flagsBased
 
-        val resolver = updatedFlagBased.update(resolver.copy(mismatchMessages = mismatchMessages))
+        val updatedResolver = updatedFlagBased.update(resolver.copy(mismatchMessages = mismatchMessages))
+        val updatedScenario = newBasedOnAttributeSelectionFields(httpRequest.queryParams)
 
-        val responseMatch = matches(httpResponse, mismatchMessages, resolver.findKeyErrorCheck.unexpectedKeyCheck, resolver)
+        val responseMatch = updatedScenario.matches(httpResponse, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
+        if(responseMatch is Result.Failure && responseMatch.hasReason(FailureReason.StatusMismatch)) {
+            return responseMatch.updateScenario(updatedScenario)
+        }
 
-        if(responseMatch is Result.Failure && responseMatch.hasReason(FailureReason.StatusMismatch))
-            return responseMatch.updateScenario(this)
-
-        val requestMatch = matches(httpRequest, mismatchMessages, resolver.findKeyErrorCheck.unexpectedKeyCheck, resolver)
-
-        return Result.fromResults(listOf(requestMatch, responseMatch)).updateScenario(this)
+        val requestMatch = updatedScenario.matches(httpRequest, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
+        return Result.fromResults(listOf(requestMatch, responseMatch)).updateScenario(updatedScenario)
     }
 
     private fun isRequestAttributeSelected(httpRequest: HttpRequest): Boolean {

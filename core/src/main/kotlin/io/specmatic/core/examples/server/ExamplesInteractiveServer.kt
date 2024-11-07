@@ -648,8 +648,7 @@ class ExamplesInteractiveServer(
 
         fun getExistingExampleFiles(feature: Feature, scenario: Scenario, examples: List<ExampleFromFile>): List<Pair<ExampleFromFile, String>> {
             return examples.mapNotNull { example ->
-                val scenarioBasedOnAttributeSelection = scenario.newBasedOnAttributeSelectionFields(example.request.queryParams)
-                when (val matchResult = scenarioBasedOnAttributeSelection.matches(example.request, example.response, InteractiveExamplesMismatchMessages, feature.flagsBased)) {
+                when (val matchResult = scenario.matches(example.request, example.response, InteractiveExamplesMismatchMessages, feature.flagsBased)) {
                     is Result.Success -> example to ""
                     is Result.Failure -> {
                         val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs("").none { breadCrumb ->

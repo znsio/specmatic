@@ -11,7 +11,6 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.specmatic.conversions.ExampleFromFile
-import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.discriminator.DiscriminatorExampleInjector
 import io.specmatic.core.discriminator.DiscriminatorMetadata
@@ -19,8 +18,10 @@ import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.consoleDebug
+import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.attempt
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
@@ -93,7 +94,7 @@ class ExamplesInteractiveServer(
                     try {
                         respondWithExamplePageHtmlContent(contractFile, getServerHostPort(), call)
                     } catch (e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
+                        call.respond(HttpStatusCode.InternalServerError, exceptionCauseMessage(e))
                     }
                 }
 
@@ -104,7 +105,7 @@ class ExamplesInteractiveServer(
                     try {
                         respondWithExamplePageHtmlContent(contractFile,getServerHostPort(request), call)
                     } catch (e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
+                        call.respond(HttpStatusCode.InternalServerError, exceptionCauseMessage(e))
                     }
                 }
 
@@ -125,7 +126,7 @@ class ExamplesInteractiveServer(
 
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse.from(generatedExample))
                     } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
 
@@ -148,7 +149,7 @@ class ExamplesInteractiveServer(
                         }
                         call.respond(HttpStatusCode.OK, validationResultResponse)
                     } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "An unexpected error occurred: ${e.message}"))
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
 
@@ -189,7 +190,7 @@ class ExamplesInteractiveServer(
 
                         call.respond(HttpStatusCode.OK, validationResults)
                     } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "An unexpected error occurred: ${e.message}"))
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
 
@@ -227,7 +228,7 @@ class ExamplesInteractiveServer(
 
                         call.respond(HttpStatusCode.OK, ExampleTestResponse(result, testLog, exampleFile = File(request.exampleFile)))
                     } catch (e: Throwable) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "An unexpected error occurred: ${e.message}"))
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
             }
@@ -263,13 +264,8 @@ class ExamplesInteractiveServer(
     }
 
     private suspend fun respondWithExamplePageHtmlContent(contractFile: File, hostPort: String, call: ApplicationCall) {
-        try {
-            val html = getExamplePageHtmlContent(contractFile, hostPort)
-            call.respondText(html, contentType = ContentType.Text.Html)
-        } catch (e: Exception) {
-            println(e)
-            call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
-        }
+        val html = getExamplePageHtmlContent(contractFile, hostPort)
+        call.respondText(html, contentType = ContentType.Text.Html)
     }
 
     private fun getExamplePageHtmlContent(contractFile: File, hostPort: String): String {
@@ -636,7 +632,11 @@ class ExamplesInteractiveServer(
         }
 
         fun File.getExamplesFromDir(): List<ExampleFromFile> {
-            return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
+            return this.listFiles()?.mapNotNull {
+                runCatching {
+                    attempt(breadCrumb = "Error reading file ${it.name}") { ExampleFromFile(it) }
+                }.onFailure { err -> consoleLog(exceptionCauseMessage(err)) }.getOrNull()
+            } ?: emptyList()
         }
 
         private fun getExampleFileNameBasedOn(

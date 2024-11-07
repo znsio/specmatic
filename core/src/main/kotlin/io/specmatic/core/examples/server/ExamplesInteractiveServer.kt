@@ -18,8 +18,10 @@ import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.consoleDebug
+import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.attempt
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
@@ -92,7 +94,7 @@ class ExamplesInteractiveServer(
                     try {
                         respondWithExamplePageHtmlContent(contractFile, getServerHostPort(), call)
                     } catch (e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
+                        call.respond(HttpStatusCode.InternalServerError, exceptionCauseMessage(e))
                     }
                 }
 
@@ -103,7 +105,7 @@ class ExamplesInteractiveServer(
                     try {
                         respondWithExamplePageHtmlContent(contractFile,getServerHostPort(request), call)
                     } catch (e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
+                        call.respond(HttpStatusCode.InternalServerError, exceptionCauseMessage(e))
                     }
                 }
 
@@ -124,7 +126,7 @@ class ExamplesInteractiveServer(
 
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse.from(generatedExample))
                     } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
 
@@ -147,7 +149,7 @@ class ExamplesInteractiveServer(
                         }
                         call.respond(HttpStatusCode.OK, validationResultResponse)
                     } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "An unexpected error occurred: ${e.message}"))
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
 
@@ -188,7 +190,7 @@ class ExamplesInteractiveServer(
 
                         call.respond(HttpStatusCode.OK, validationResults)
                     } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "An unexpected error occurred: ${e.message}"))
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
 
@@ -226,7 +228,7 @@ class ExamplesInteractiveServer(
 
                         call.respond(HttpStatusCode.OK, ExampleTestResponse(result, testLog, exampleFile = File(request.exampleFile)))
                     } catch (e: Throwable) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "An unexpected error occurred: ${e.message}"))
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
             }
@@ -262,13 +264,8 @@ class ExamplesInteractiveServer(
     }
 
     private suspend fun respondWithExamplePageHtmlContent(contractFile: File, hostPort: String, call: ApplicationCall) {
-        try {
-            val html = getExamplePageHtmlContent(contractFile, hostPort)
-            call.respondText(html, contentType = ContentType.Text.Html)
-        } catch (e: Exception) {
-            println(e)
-            call.respond(HttpStatusCode.InternalServerError, "An unexpected error occurred: ${e.message}")
-        }
+        val html = getExamplePageHtmlContent(contractFile, hostPort)
+        call.respondText(html, contentType = ContentType.Text.Html)
     }
 
     private fun getExamplePageHtmlContent(contractFile: File, hostPort: String): String {
@@ -482,16 +479,13 @@ class ExamplesInteractiveServer(
             val examplesDir = getExamplesDirPath(contractFile)
             if(!examplesDir.exists()) examplesDir.mkdirs()
 
-            val request = scenario.generateHttpRequest()
-            val response = feature.lookupResponse(scenario).cleanup()
-
-            val scenarioStub = ScenarioStub(request, response)
-            val stubJSON = scenarioStub.toJSON()
-            val uniqueNameForApiOperation = uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
-
-            val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
-            println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
-            file.writeText(stubJSON.toStringLiteral())
+            val file = writeToExampleFile(
+                ScenarioStub(
+                    request = scenario.generateHttpRequest(),
+                    response = feature.lookupResponse(scenario).cleanup()
+                ),
+                contractFile
+            )
             return ExamplePathInfo(file.absolutePath, true)
         }
 
@@ -670,7 +664,11 @@ class ExamplesInteractiveServer(
         }
 
         fun File.getExamplesFromDir(): List<ExampleFromFile> {
-            return this.listFiles()?.map { ExampleFromFile(it) } ?: emptyList()
+            return this.listFiles()?.mapNotNull {
+                runCatching {
+                    attempt(breadCrumb = "Error reading file ${it.name}") { ExampleFromFile(it) }
+                }.onFailure { err -> consoleLog(exceptionCauseMessage(err)) }.getOrNull()
+            } ?: emptyList()
         }
 
         private fun getExampleFileNameBasedOn(
@@ -820,6 +818,34 @@ class ExamplesInteractiveServer(
                 ?.findFirstChildByPath("description")
                 ?.let { mapOf("description" to it.toStringLiteral()).toValueMap() }
                 ?: emptyMap()
+        }
+        fun externaliseInlineExamples(contractFile: File): File {
+            val feature = parseContractFileToFeature(contractFile)
+            val inlineStubs: List<ScenarioStub> = feature.stubsFromExamples.flatMap {
+                it.value.map { (request, response) -> ScenarioStub(request, response) }
+            }
+            try {
+                inlineStubs.forEach { writeToExampleFile(it, contractFile) }
+            } catch(e: Exception) {
+                consoleLog(e)
+            }
+            return getExamplesDirPath(contractFile)
+        }
+
+        private fun writeToExampleFile(
+            scenarioStub: ScenarioStub,
+            contractFile: File
+        ): File {
+            val examplesDir = getExamplesDirPath(contractFile)
+            if(examplesDir.exists().not()) examplesDir.mkdirs()
+            val stubJSON = scenarioStub.toJSON()
+            val uniqueNameForApiOperation =
+                uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
+
+            val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
+            println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
+            file.writeText(stubJSON.toStringLiteral())
+            return file
         }
     }
 }

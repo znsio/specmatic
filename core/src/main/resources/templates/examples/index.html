@@ -498,6 +498,11 @@
                 &#bulk-generate {
                     --_content: "Generate Selected";
 
+                    /* Temporarily Remove Selected Count */
+                    &::before {
+                        content: '';
+                    }
+
                     &::after {
                         content: var(--_content, "Generate Selected");
                     }
@@ -911,6 +916,7 @@
             --_text-color: rgba(var(--smoky-black));
             --_border-color: rgba(var(--smoky-black), 0.1);
 
+            max-width: 75%;
             border: 1px solid var(--_border-color);
             background-color: rgba(var(--white));
             box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.1);
@@ -922,9 +928,15 @@
 
             & > p::before {
                 content: var(--_before-content);
+                word-break: break-word;
                 font-weight: bold;
                 padding-right: 0.5rem;
                 color: var(--_text-color);
+            }
+
+            & > pre {
+                word-break: break-word;
+                white-space: pre-wrap;
             }
         }
 
@@ -1203,7 +1215,7 @@
         let failedCount = 0; createdCount = 0; existedCount = 0;
         const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
         const rowsWithNoExamplesOrDiscriminator = selectedRows.filter(row =>
-            row.getAttribute("data-main") === "true" && (row.getAttribute("data-generate") == defaultAttrs["data-generate"] || row.getAttribute("data-disc") === "true")
+            row.getAttribute("data-main") === "true" && (row.getAttribute("data-generate") === defaultAttrs["data-generate"] || row.getAttribute("data-disc") === "true")
         );
 
         for (const row of rowsWithNoExamplesOrDiscriminator) {
@@ -1228,10 +1240,6 @@
         let errorsCount = 0;
         const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
         const rowsWithExamples = selectedRows.filter(row => row.getAttribute("data-generate") === "success");
-
-        for (const row of rowsWithExamples) {
-            row.setAttribute("data-valid", "processing");
-        }
 
         for (const row of rowsWithExamples) {
             const success = await validateRowExamples(row, true);
@@ -1328,7 +1336,7 @@
 
         if (error) {
             if (!bulkMode) createAlert("Example Generation Failed", error, true);
-            tableRow.setAttribute("data-generate", "failed");
+            tableRow.setAttribute("data-generate", originalState === defaultAttrs["data-generate"] ? "failed": originalState);
             return {success: false, created: 0, existed: 0, count: 0};
         }
 
@@ -1360,6 +1368,12 @@
         const exampleData = getExampleData(tableRow);
         const { exampleAbsPath, error } = await validateExample(exampleData);
 
+        if (error && !exampleAbsPath) {
+            if (!bulkMode) createAlert("Validation Failed", `Error: ${error ?? "Unknown Error"}`, true);
+            tableRow.setAttribute("data-valid", "failed");
+            return false;
+        }
+
         tableRow.setAttribute("data-valid", error ? "failed": "success");
         storeExampleValidationData(tableRow, error);
         storeExampleTestData(tableRow, null);
@@ -1378,10 +1392,8 @@
         tableRow.setAttribute("data-test", "processing");
 
         const isExampleValid = await validateRowExamples(tableRow, bulkMode);
-        tableRow.setAttribute("data-valid", isExampleValid ? "success": "failed");
-
         if (!isExampleValid) {
-            createAlert("Invalid Example", `Example name: ${parseFileName(getExampleData(tableRow))}`, true);
+            createAlert("Invalid Example or Network Failure", `Example name: ${parseFileName(getExampleData(tableRow))}`, true);
             return false;
         }
 
@@ -1389,6 +1401,12 @@
         const {data, error} = await testExample({
             exampleFile: exampleData
         });
+
+        if (error && !data) {
+            if (!bulkMode) createAlert("Testing Failed", `Error: ${error ?? "Unknown Error"}`, true);
+            tableRow.setAttribute("data-test", "failed");
+            return false;
+        }
 
         tableRow.setAttribute("data-test", (error || data?.result !== "Success") ? "failed": "success");
         storeExampleTestData(tableRow, data);
@@ -1662,6 +1680,10 @@
             });
             const data = await resp.json();
 
+            if (!resp.ok) {
+                throw new Error(data.error);
+            }
+
             return { examples: data.examples, error: data.error };
         } catch (error) {
             return { error: error.message, examples: null };
@@ -1678,6 +1700,10 @@
                 }
             });
             const data = await resp.json();
+
+            if (!resp.ok) {
+                throw new Error(data.error);
+            }
 
             return { exampleAbsPath: data.absPath, error: data.error };
         } catch (error) {
@@ -1711,6 +1737,10 @@
                 }
             });
             const data = await resp.json();
+
+            if (!resp.ok) {
+                throw new Error(data.error);
+            }
 
             return {data, error: data.error}
         } catch (error) {
@@ -1748,11 +1778,23 @@
         alerts.replaceChildren(alertBox);
 
         setTimeout(() => {
-            alertBox.classList.add("slide-out");
-            setTimeout(() => {
-                alertBox.remove();
-            }, 250);
+            if (!alerts.matches(":hover")) {
+                removeAlertBox(alertBox);
+            } else {
+                const handleMouseLeave = () => {
+                    removeAlertBox(alertBox);
+                    alerts.removeEventListener("mouseleave", handleMouseLeave);
+                };
+                alerts.addEventListener("mouseleave", handleMouseLeave);
+            }
         }, 3000);
+    }
+
+    function removeAlertBox(alertBox) {
+        alertBox.classList.add("slide-out");
+        setTimeout(() => {
+            alertBox.remove();
+        }, 250);
     }
 
     function cleanUpSelections() {

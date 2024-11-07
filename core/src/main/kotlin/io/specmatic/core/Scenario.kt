@@ -279,6 +279,12 @@ data class Scenario(
         }
     }
 
+    fun generateAttributeSelectedResponses(flagsBased: FlagsBased, requestItem: AttributeSelectionBasedItem<HttpRequest>): AttributeSelectionBasedItem<HttpResponse> {
+        val updatedResolver = getUpdatedResolver(flagsBased, allowOnlyMandatoryKeysInJSONObject = true)
+        val updatedScenario = newBasedOnAttributeSelectionFields(requestItem.value.queryParams)
+        return updatedScenario.httpResponsePattern.generateAttributeSelected(requestItem, updatedResolver)
+    }
+
     private fun getUpdatedResolver(flagsBased: FlagsBased, allowOnlyMandatoryKeysInJSONObject: Boolean): Resolver {
         return if(allowOnlyMandatoryKeysInJSONObject) {
             flagsBased.update(

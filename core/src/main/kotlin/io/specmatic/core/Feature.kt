@@ -217,10 +217,9 @@ data class Feature(
             val requests = scenario.generateAttributeSelectedRequests(flagsBased, patternWithFields)
 
             return requests.map { request ->
-                val updatedScenario = scenario.newBasedOnAttributeSelectionFields(request.value.queryParams)
                 AttributeBasedRequestResponse(
                     request = request.value,
-                    response = updatedScenario.generateHttpResponse(serverState),
+                    response = scenario.generateAttributeSelectedResponses(flagsBased, request).value,
                     attributeSelectionMetadata = request.attribute
                 )
             }
@@ -2329,6 +2328,7 @@ data class AttributeBasedRequestResponse(
 )
 
 data class AttributeSelectionMetadata(
+    val discriminatorMetadata: List<DiscriminatorMetadata>,
     val attributeSelectionField: String,
     val selectedAttributes: Set<String>
 )

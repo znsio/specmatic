@@ -4,6 +4,7 @@ import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorBasedValueGenerator
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.pattern.*
+import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.stub.softCastValueToXML
@@ -211,6 +212,20 @@ data class HttpResponsePattern(
         return response.copy(
             body = body.eliminateOptionalKey(response.body, resolver)
         )
+    }
+
+    fun generateAttributeSelected(requestItem: AttributeSelectionBasedItem<HttpRequest>, resolver: Resolver): AttributeSelectionBasedItem<HttpResponse> {
+        val generatedResponseBody = when {
+            body is ListPattern && body.pattern is AnyPattern -> {
+                JSONArrayValue(
+                    requestItem.attribute.discriminatorMetadata.map { discriminatorMetadata ->
+                        body.pattern.generateValue(resolver, discriminatorMetadata.discriminatorValue)
+                    }
+                )
+            }
+            else -> body.generate(resolver)
+        }
+        return AttributeSelectionBasedItem(requestItem.attribute, generateResponseWith(generatedResponseBody, resolver))
     }
 }
 

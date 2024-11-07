@@ -1242,10 +1242,6 @@
         const rowsWithExamples = selectedRows.filter(row => row.getAttribute("data-generate") === "success");
 
         for (const row of rowsWithExamples) {
-            row.setAttribute("data-valid", "processing");
-        }
-
-        for (const row of rowsWithExamples) {
             const success = await validateRowExamples(row, true);
             if (!success) {
                 errorsCount++;
@@ -1372,6 +1368,12 @@
         const exampleData = getExampleData(tableRow);
         const { exampleAbsPath, error } = await validateExample(exampleData);
 
+        if (error && !exampleAbsPath) {
+            if (!bulkMode) createAlert("Validation Failed", `Error: ${error ?? "Unknown Error"}`, true);
+            tableRow.setAttribute("data-valid", "failed");
+            return false;
+        }
+
         tableRow.setAttribute("data-valid", error ? "failed": "success");
         storeExampleValidationData(tableRow, error);
         storeExampleTestData(tableRow, null);
@@ -1390,10 +1392,8 @@
         tableRow.setAttribute("data-test", "processing");
 
         const isExampleValid = await validateRowExamples(tableRow, bulkMode);
-        tableRow.setAttribute("data-valid", isExampleValid ? "success": "failed");
-
         if (!isExampleValid) {
-            createAlert("Invalid Example", `Example name: ${parseFileName(getExampleData(tableRow))}`, true);
+            createAlert("Invalid Example or Network Failure", `Example name: ${parseFileName(getExampleData(tableRow))}`, true);
             return false;
         }
 
@@ -1401,6 +1401,12 @@
         const {data, error} = await testExample({
             exampleFile: exampleData
         });
+
+        if (error && !data) {
+            if (!bulkMode) createAlert("Testing Failed", `Error: ${error ?? "Unknown Error"}`, true);
+            tableRow.setAttribute("data-test", "failed");
+            return false;
+        }
 
         tableRow.setAttribute("data-test", (error || data?.result !== "Success") ? "failed": "success");
         storeExampleTestData(tableRow, data);
@@ -1674,7 +1680,11 @@
             });
             const data = await resp.json();
 
-            return { examples: data?.examples ?? null, error: data.error };
+            if (!resp.ok) {
+                throw new Error(data.error);
+            }
+
+            return { examples: data.examples, error: data.error };
         } catch (error) {
             return { error: error.message, examples: null };
         }
@@ -1691,7 +1701,11 @@
             });
             const data = await resp.json();
 
-            return { exampleAbsPath: data?.absPath ?? null, error: data.error };
+            if (!resp.ok) {
+                throw new Error(data.error);
+            }
+
+            return { exampleAbsPath: data.absPath, error: data.error };
         } catch (error) {
             return { error: error.message, exampleAbsPath: null };
         }
@@ -1723,6 +1737,10 @@
                 }
             });
             const data = await resp.json();
+
+            if (!resp.ok) {
+                throw new Error(data.error);
+            }
 
             return {data, error: data.error}
         } catch (error) {

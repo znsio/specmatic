@@ -911,6 +911,7 @@
             --_text-color: rgba(var(--smoky-black));
             --_border-color: rgba(var(--smoky-black), 0.1);
 
+            max-width: 75%;
             border: 1px solid var(--_border-color);
             background-color: rgba(var(--white));
             box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.1);
@@ -922,9 +923,15 @@
 
             & > p::before {
                 content: var(--_before-content);
+                word-break: break-word;
                 font-weight: bold;
                 padding-right: 0.5rem;
                 color: var(--_text-color);
+            }
+
+            & > pre {
+                word-break: break-word;
+                white-space: pre-wrap;
             }
         }
 
@@ -1328,7 +1335,7 @@
 
         if (error) {
             if (!bulkMode) createAlert("Example Generation Failed", error, true);
-            tableRow.setAttribute("data-generate", "failed");
+            tableRow.setAttribute("data-generate", originalState === defaultAttrs["data-generate"] ? "failed": originalState);
             return {success: false, created: 0, existed: 0, count: 0};
         }
 
@@ -1662,7 +1669,7 @@
             });
             const data = await resp.json();
 
-            return { examples: data.examples, error: data.error };
+            return { examples: data?.examples ?? null, error: data.error };
         } catch (error) {
             return { error: error.message, examples: null };
         }
@@ -1679,7 +1686,7 @@
             });
             const data = await resp.json();
 
-            return { exampleAbsPath: data.absPath, error: data.error };
+            return { exampleAbsPath: data?.absPath ?? null, error: data.error };
         } catch (error) {
             return { error: error.message, exampleAbsPath: null };
         }
@@ -1748,11 +1755,23 @@
         alerts.replaceChildren(alertBox);
 
         setTimeout(() => {
-            alertBox.classList.add("slide-out");
-            setTimeout(() => {
-                alertBox.remove();
-            }, 250);
+            if (!alerts.matches(":hover")) {
+                removeAlertBox(alertBox);
+            } else {
+                const handleMouseLeave = () => {
+                    removeAlertBox(alertBox);
+                    alerts.removeEventListener("mouseleave", handleMouseLeave);
+                };
+                alerts.addEventListener("mouseleave", handleMouseLeave);
+            }
         }, 3000);
+    }
+
+    function removeAlertBox(alertBox) {
+        alertBox.classList.add("slide-out");
+        setTimeout(() => {
+            alertBox.remove();
+        }, 250);
     }
 
     function cleanUpSelections() {

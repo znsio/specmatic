@@ -18,6 +18,7 @@ import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.consoleDebug
+import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.attempt
@@ -631,8 +632,10 @@ class ExamplesInteractiveServer(
         }
 
         fun File.getExamplesFromDir(): List<ExampleFromFile> {
-            return this.listFiles()?.map {
-                attempt(breadCrumb = "Error reading file ${it.name}") { ExampleFromFile(it) }
+            return this.listFiles()?.mapNotNull {
+                runCatching {
+                    attempt(breadCrumb = "Error reading file ${it.name}") { ExampleFromFile(it) }
+                }.onFailure { err -> consoleLog(exceptionCauseMessage(err)) }.getOrNull()
             } ?: emptyList()
         }
 

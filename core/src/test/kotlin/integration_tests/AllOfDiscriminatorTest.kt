@@ -18,7 +18,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.util.function.Consumer
 
-class AllOfDiscriminatorDetailsTest {
+class AllOfDiscriminatorTest {
     @Test
     fun `when the discriminator property is missing from the spec the issue should be mentioned explicitly`() {
         val feature = OpenApiSpecification.fromYAML("""

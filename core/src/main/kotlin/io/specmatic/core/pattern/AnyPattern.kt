@@ -295,11 +295,11 @@ data class AnyPattern(
 
     private fun generateValue(resolver: Resolver, discriminatorValue: String = ""): Value {
         if (this.isScalarBasedPattern()) {
-            return this.pattern.filterNot { it is NullPattern }.let { discriminator?.updatePatternsWithDiscriminator(pattern, resolver) ?: pattern }.first { it is ScalarType }
+            return this.pattern.filterNot { it is NullPattern }.let { discriminator?.updatePatternsWithDiscriminator(pattern, resolver)?.listFold()?.value ?: pattern }.first { it is ScalarType }
                 .generate(resolver)
         }
 
-        val updatedPatterns = discriminator?.updatePatternsWithDiscriminator(pattern, resolver) ?: pattern
+        val updatedPatterns = discriminator?.updatePatternsWithDiscriminator(pattern, resolver)?.listFold()?.value ?: pattern
 
         val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue) ?: updatedPatterns.random()
         val isNullable = pattern.any { it is NullPattern }

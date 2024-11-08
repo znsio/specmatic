@@ -29,32 +29,37 @@ class Discriminator(
     fun hasMultipleValues(): Boolean = values.size > 1
 
     fun matches(sampleData: Value?, patterns: List<Pattern>, key: String?, resolver: Resolver): Result {
-        val updatedPatterns: List<Pattern> = updatePatternsWithDiscriminator(patterns, resolver)
+        val updatedPatterns: ReturnValue<List<Pattern>> = updatePatternsWithDiscriminator(patterns, resolver).listFold()
 
-        return _matches(sampleData, updatedPatterns, key, resolver)
+        return when(updatedPatterns) {
+            is HasValue<List<Pattern>> -> _matches(sampleData, updatedPatterns.value, key, resolver)
+            is HasFailure -> updatedPatterns.failure
+            is HasException -> updatedPatterns.toHasFailure().failure
+        }
     }
 
     fun updatePatternsWithDiscriminator(
         patterns: List<Pattern>,
         resolver: Resolver
-    ): List<Pattern> {
+    ): List<ReturnValue<Pattern>> {
         val schemaNameToDiscriminatorValueMapping =
             mapping.mapValues { it.value.split("/").last() }.map { it.value to it.key }.toMap()
 
-        val updatedPatterns: List<Pattern> = patterns.map { pattern ->
+        val updatedPatterns: List<ReturnValue<Pattern>> = patterns.map { pattern ->
             val resolved = resolvedHop(pattern, resolver)
 
             if (resolved !is JSONObjectPattern)
-                return@map resolved
+                return@map HasValue(resolved)
 
-            val typeAlias = resolved.typeAlias ?: return@map resolved
+            val typeAlias = resolved.typeAlias ?: return@map HasValue(resolved)
 
             val schemaName = withoutPatternDelimiters(typeAlias)
 
-            val discriminatorValue = schemaNameToDiscriminatorValueMapping[schemaName] ?: return@map resolved
+            val discriminatorValue = schemaNameToDiscriminatorValueMapping[schemaName] ?: return@map HasValue(resolved)
 
             resolved.updateWithDiscriminatorValue(property, discriminatorValue, resolver)
         }
+
         return updatedPatterns
     }
 

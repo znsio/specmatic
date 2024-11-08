@@ -10,6 +10,15 @@ data class QueryParameters(val paramPairs: List<Pair<String, String>> = emptyLis
 
     val keys = paramPairs.map { it.first }.toSet()
 
+    fun remove(key: String): QueryParameters {
+        return QueryParameters(paramPairs.filterNot { it.first == key })
+    }
+
+    fun replace(map: Map<String, String>): QueryParameters {
+        val newListOfPairs = mapToListOfPairs(map)
+        return QueryParameters( paramPairs.filter { it.first !in map }.plus(newListOfPairs))
+    }
+
     fun plus(map: Map<String, String>): QueryParameters {
         val newListOfPairs = mapToListOfPairs(map)
         return QueryParameters( paramPairs + newListOfPairs)

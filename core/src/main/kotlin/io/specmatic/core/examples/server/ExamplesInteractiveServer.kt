@@ -449,20 +449,24 @@ class ExamplesInteractiveServer(
             val examplesDir = getExamplesDirPath(contractFile)
             val examples = examplesDir.getExamplesFromDir()
 
-            val existingExamples = getExistingExampleFiles(feature, scenario, examples)
+            val existingExamples = getExistingExampleFiles(feature, scenario, examples).map { it.first }
+            val examplesToCheck = if (bulkMode) existingExamples else emptyList()
+            val extendedExampleExists = existingExamples.any { it.isExtendedExample() }
 
-            val extendedExampleExists = existingExamples.any { it.first.isExtendedExample() }
             val newExamples = generateExampleFiles(
-                contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject,
-                existingExamples = if (bulkMode) existingExamples.map { it.first } else emptyList()
+                contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject, existingExamples = examplesToCheck
             )
 
             val extendedExampleOrEmpty = if (extendedExampleExists)
                 emptyList()
             else listOfNotNull(generateExtendedExample(contractFile, File(newExamples.random().path), examplesDir))
 
-            return existingExamples.map { ExamplePathInfo(it.first.file.absolutePath, false) }
-                .plus(newExamples).plus(extendedExampleOrEmpty)
+            val attributeBasedExamplesOrEmpty = generateAttributeSelectedExamples(
+                contractFile, feature, scenario, examplesDir, existingExamples = examplesToCheck
+            )
+
+            return existingExamples.map { ExamplePathInfo(it.file.absolutePath, false) }
+                .plus(newExamples).plus(extendedExampleOrEmpty).plus(attributeBasedExamplesOrEmpty)
         }
 
         data class ExamplePathInfo(val path: String, val created: Boolean)
@@ -510,7 +514,9 @@ class ExamplesInteractiveServer(
             }.toSet()
 
             return discriminatorBasedRequestResponses.filterNot { it.matches(existingDiscriminators) }.map { (request, response, requestDiscriminator, responseDiscriminator) ->
-                val scenarioStub = ScenarioStub(request, response)
+                val requestWithoutAttrSelection = request.removeAttrSelection(scenario.attributeSelectionPattern)
+
+                val scenarioStub = ScenarioStub(requestWithoutAttrSelection, response)
                 val jsonWithDiscriminator = DiscriminatorExampleInjector(
                     stubJSON = scenarioStub.toJSON(),
                     requestDiscriminator = requestDiscriminator,
@@ -528,6 +534,36 @@ class ExamplesInteractiveServer(
                 file.writeText(jsonWithDiscriminator.toStringLiteral())
                 ExamplePathInfo(file.absolutePath, true)
             }
+        }
+
+        private fun HttpRequest.removeAttrSelection(attributeSelectionPattern: AttributeSelectionPattern): HttpRequest {
+            return this.copy(
+                queryParams = this.queryParams.remove(attributeSelectionPattern.queryParamKey)
+            )
+        }
+
+        private fun generateAttributeSelectedExamples(contractFile: File, feature: Feature, scenario: Scenario, examplesDir: File, existingExamples: List<ExampleFromFile>): List<ExamplePathInfo> {
+            val attributeBasedRequestResponses = feature.generateAttributeBasedRequestResponseList(scenario)
+                .map { it.copy(response = it.response.cleanup()) }.ifEmpty { return emptyList() }
+
+            val attributeSelectionMetadata = attributeBasedRequestResponses.first().attributeSelectionMetadata
+            val existingAttributeSelections = existingExamples.map {
+                it.request.getAttributeSelectionValue(attributeSelectionMetadata)
+            }
+
+            return attributeBasedRequestResponses.filterNot { it.attributeSelectionMetadata.selectedAttributes in existingAttributeSelections }.map { (request, response, attributeMetadata) ->
+                val scenarioStub = ScenarioStub(request, response)
+                val uniqueNameForApiOperation = getExampleFileNameBasedOn(scenarioStub, attributeMetadata)
+
+                val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
+                println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
+                file.writeText(scenarioStub.toJSON().toStringLiteral())
+                ExamplePathInfo(file.absolutePath, true)
+            }
+        }
+
+        private fun HttpRequest.getAttributeSelectionValue(attributeSelectionMetadata: AttributeSelectionMetadata): Set<String> {
+            return this.queryParams.getValues(attributeSelectionMetadata.attributeSelectionField).toSet()
         }
 
         private fun Value.getDiscriminatorValue(discriminator: DiscriminatorMetadata): String? {
@@ -606,8 +642,7 @@ class ExamplesInteractiveServer(
 
         fun getExistingExampleFiles(feature: Feature, scenario: Scenario, examples: List<ExampleFromFile>): List<Pair<ExampleFromFile, String>> {
             return examples.mapNotNull { example ->
-                val scenarioBasedOnAttributeSelection = scenario.newBasedOnAttributeSelectionFields(example.request.queryParams)
-                when (val matchResult = scenarioBasedOnAttributeSelection.matches(example.request, example.response, InteractiveExamplesMismatchMessages, feature.flagsBased)) {
+                when (val matchResult = scenario.matches(example.request, example.response, InteractiveExamplesMismatchMessages, feature.flagsBased)) {
                     is Result.Success -> example to ""
                     is Result.Failure -> {
                         val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs("").none { breadCrumb ->
@@ -650,6 +685,19 @@ class ExamplesInteractiveServer(
                 "",
                 scenarioStub.response.status
             )
+        }
+
+        private fun getExampleFileNameBasedOn(
+            scenarioStub: ScenarioStub,
+            attributeSelectionMetadata: AttributeSelectionMetadata
+        ): String {
+            val attributeSelectionName = "_${attributeSelectionMetadata.attributeSelectionField}_${attributeSelectionMetadata.selectedAttributes.joinToString("_")}"
+
+            return uniqueNameForApiOperation(
+                scenarioStub.request,
+                "",
+                scenarioStub.response.status
+            ) + attributeSelectionName
         }
 
         private fun ExampleFromFile.isExtendedExample(): Boolean {

@@ -332,14 +332,14 @@ internal class AnyPatternTest {
 
     @Test
     fun `error when a discriminator exists and the value is not a json object`() {
-        val pattern = AnyPattern(emptyList(), discriminatorProperty = "type")
+        val pattern = AnyPattern(emptyList(), discriminatorProperty = "type", discriminatorValues = setOf("current", "savings"))
         val result = pattern.matches(StringValue(""), Resolver())
 
         assertThat(result.reportString()).contains("Expected json object")
     }
 
     @Nested
-    inner class GenerateForEveryDiscriminatorValueTests {
+    inner class GenerateForEveryDiscriminatorDetailsValueTests {
         @Test
         fun `should generate discriminator based values for every discriminator`() {
             val savingsAccountPattern = JSONObjectPattern(

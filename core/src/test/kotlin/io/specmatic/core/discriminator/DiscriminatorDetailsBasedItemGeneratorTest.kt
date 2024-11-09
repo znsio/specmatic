@@ -14,7 +14,7 @@ import io.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-class DiscriminatorBasedItemGeneratorTest {
+class DiscriminatorDetailsBasedItemGeneratorTest {
     
     @Test
     fun `should generate discriminator based values for AnyPattern in ListPattern`() {

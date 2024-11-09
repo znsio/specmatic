@@ -2561,7 +2561,7 @@ paths:
     }
 
     @Nested
-    inner class GenerateDiscriminatorBasedRequestResponsePairsTest {
+    inner class GenerateDiscriminatorDetailsBasedRequestResponsePairsTest {
         private val feature = Feature(name = "feature")
         private val scenario = mockk<Scenario>()
 

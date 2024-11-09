@@ -11,6 +11,7 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.overlay.OverlayMerger
 import io.specmatic.core.overlay.OverlayParser
 import io.specmatic.core.pattern.*
+import io.specmatic.core.pattern.Discriminator
 import io.specmatic.core.pattern.withoutOptionality
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.IGNORE_INLINE_EXAMPLE_WARNINGS
@@ -1152,93 +1153,6 @@ class OpenApiSpecification(
         }.toMap()
     }
 
-    data class Discriminator(private val discriminatorDetails: Map<String, Map<String, Pair<String, List<Schema<Any>>>>> = emptyMap()) {
-        fun isNotEmpty(): Boolean {
-            return discriminatorDetails.isNotEmpty()
-        }
-
-        val values: List<String>
-            get() {
-                return discriminatorDetails.entries.firstOrNull()?.value?.keys?.toList() ?: emptyList()
-            }
-
-        val key: String?
-            get() {
-                return discriminatorDetails.entries.firstOrNull()?.key
-            }
-
-        val schemas: List<Schema<Any>>
-            get() {
-                return discriminatorDetails.entries.flatMap {
-                    it.value.values.flatMap {
-                        it.second
-                    }
-                }
-            }
-
-        fun plus(newDiscriminatorDetails: Triple<String, Map<String, Pair<String, List<Schema<Any>>>>, Discriminator>?): Discriminator {
-            if(newDiscriminatorDetails == null)
-                return this
-
-            val (propertyName, valuesAndSchemas: Map<String, Pair<String, List<Schema<Any>>>>, newDiscriminator) = newDiscriminatorDetails
-
-            val updatedDiscriminatorDetails: Map<String, Map<String, Pair<String, List<Schema<Any>>>>> =
-                discriminatorDetails.plus(propertyName to valuesAndSchemas)
-
-            return this.copy(discriminatorDetails = updatedDiscriminatorDetails).plus(newDiscriminator)
-        }
-
-        fun plus(newDiscriminator: Discriminator): Discriminator {
-            return this.copy(discriminatorDetails = mergeMapOfMaps(discriminatorDetails, newDiscriminator.discriminatorDetails))
-        }
-
-        private fun <T> mergeMapOfMaps(
-            discriminatorDetails1: Map<String, Map<String, T>>,
-            discriminatorDetails2: Map<String, Map<String, T>>
-        ): Map<String, Map<String, T>> {
-            val keys = discriminatorDetails1.keys + discriminatorDetails2.keys
-
-            return keys.associateWith { key ->
-                val detail1 = discriminatorDetails1[key] ?: emptyMap()
-                val detail2 = discriminatorDetails2[key] ?: emptyMap()
-
-                (detail1 + detail2)
-            }
-        }
-
-        fun hasValueForKey(propertyName: String?): Boolean {
-            if(propertyName == null)
-                return false
-
-            return propertyName in discriminatorDetails
-        }
-
-        fun valueFor(propertyName: String): Pattern {
-            if(propertyName !in discriminatorDetails)
-                throw ContractException("$propertyName not found in discriminator details")
-
-            return discriminatorDetails.getValue(propertyName).firstNotNullOf { ExactValuePattern(StringValue(it.key), discriminator = true) }
-        }
-
-        fun explode(): List<Discriminator> {
-            return explode(discriminatorDetails)
-        }
-
-        private fun explode(discriminatorDetails: Map<String, Map<String, Pair<String, List<Schema<Any>>>>>): List<Discriminator> {
-            val propertyName = discriminatorDetails.keys.firstOrNull() ?: return listOf(Discriminator())
-
-            val discriminatorDetailsWithOneKeyLess = discriminatorDetails - propertyName
-
-            val valueOptionsWithSchemasForProperty = discriminatorDetails.getValue(propertyName)
-
-            return valueOptionsWithSchemasForProperty.flatMap { valueOption: Map.Entry<String, Pair<String, List<Schema<Any>>>> ->
-                explode(discriminatorDetailsWithOneKeyLess).map { discriminator ->
-                    discriminator.plus(Triple(propertyName, mapOf(valueOption.toPair()), Discriminator()))
-                }
-            }
-        }
-    }
-
     private fun isJsonInString(
         mediaType: MediaType, formFieldName: String?
     ) = if (mediaType.encoding.isNullOrEmpty()) false
@@ -1247,12 +1161,12 @@ class OpenApiSpecification(
     private fun toSpecmaticPattern(mediaType: MediaType, section: String, jsonInFormData: Boolean = false): Pattern =
         toSpecmaticPattern(mediaType.schema ?: throw ContractException("${section.capitalizeFirstChar()} body definition is missing"), emptyList(), jsonInFormData = jsonInFormData)
 
-    private fun resolveDeepAllOfs(schema: Schema<Any>, discriminator: Discriminator, typeStack: Set<String>): Pair<List<Schema<Any>>, Discriminator> {
+    private fun resolveDeepAllOfs(schema: Schema<Any>, discriminatorDetails: DiscriminatorDetails, typeStack: Set<String>): Pair<List<Schema<Any>>, DiscriminatorDetails> {
         if (schema.allOf == null)
-            return listOf(schema) to discriminator
+            return listOf(schema) to discriminatorDetails
 
         // Pair<String [property name], Map<String [possible value], Pair<String [Schema name derived from the ref], Schema<Any> [reffed schema]>>>
-        val newDiscriminatorDetails: Triple<String, Map<String, Pair<String, List<Schema<Any>>>>, Discriminator>? = schema.discriminator?.let { rawDiscriminator ->
+        val newDiscriminatorDetailsDetails: Triple<String, Map<String, Pair<String, List<Schema<Any>>>>, DiscriminatorDetails>? = schema.discriminator?.let { rawDiscriminator ->
             rawDiscriminator.propertyName?.let { propertyName ->
                 val mapping = rawDiscriminator.mapping ?: emptyMap()
 
@@ -1263,7 +1177,7 @@ class OpenApiSpecification(
                         if (mappedComponentName !in typeStack) {
                             val value = mappedSchemaName to resolveDeepAllOfs(
                                 mappedSchema,
-                                discriminator,
+                                discriminatorDetails,
                                 typeStack + mappedComponentName
                             )
                             discriminatorValue to value
@@ -1276,15 +1190,15 @@ class OpenApiSpecification(
                     discriminator.second
                 }
 
-                val mergedDiscriminatorFromMappingSchemas = discriminatorsFromResolvedMappingSchemas.fold(Discriminator()) { acc, discriminator ->
+                val mergedDiscriminatorDetailsFromMappingSchemas = discriminatorsFromResolvedMappingSchemas.fold(DiscriminatorDetails()) { acc, discriminator ->
                     acc.plus(discriminator)
                 }
 
-                val mappingWithSchema: Map<String, Pair<String, List<Schema<Any>>>> = mappingWithSchemaListAndDiscriminator.mapValues { entry: Map.Entry<String, Pair<String, Pair<List<Schema<Any>>, Discriminator>>> ->
+                val mappingWithSchema: Map<String, Pair<String, List<Schema<Any>>>> = mappingWithSchemaListAndDiscriminator.mapValues { entry: Map.Entry<String, Pair<String, Pair<List<Schema<Any>>, DiscriminatorDetails>>> ->
                     entry.key to (entry.value.second.first)
                 }
 
-                Triple(propertyName, mappingWithSchema, mergedDiscriminatorFromMappingSchemas)
+                Triple(propertyName, mappingWithSchema, mergedDiscriminatorDetailsFromMappingSchemas)
             }
         }
 
@@ -1297,17 +1211,17 @@ class OpenApiSpecification(
                 if (componentName !in typeStack) {
                     resolveDeepAllOfs(
                         referredSchema,
-                        discriminator.plus(newDiscriminatorDetails),
+                        discriminatorDetails.plus(newDiscriminatorDetailsDetails),
                         typeStack + componentName
                     )
                 } else
                     null
-            } else listOf(constituentSchema) to discriminator
+            } else listOf(constituentSchema) to discriminatorDetails
         }
 
-        val discriminatorForThisLevel = newDiscriminatorDetails?.let { Discriminator(mapOf(newDiscriminatorDetails.first to newDiscriminatorDetails.second)) } ?: Discriminator()
+        val discriminatorDetailsForThisLevel = newDiscriminatorDetailsDetails?.let { DiscriminatorDetails(mapOf(newDiscriminatorDetailsDetails.first to newDiscriminatorDetailsDetails.second)) } ?: DiscriminatorDetails()
 
-        return allOfs.fold(Pair(emptyList(), discriminatorForThisLevel)) { acc, item ->
+        return allOfs.fold(Pair(emptyList(), discriminatorDetailsForThisLevel)) { acc, item ->
             val (accSchemas, accDiscriminator) = acc
             val (additionalSchemas, additionalSchemasDiscriminator) = item
 
@@ -1385,7 +1299,7 @@ class OpenApiSpecification(
 
             is ComposedSchema -> {
                 if (schema.allOf != null) {
-                    val (deepListOfAllOfs, allDiscriminators) = resolveDeepAllOfs(schema, Discriminator(), emptySet())
+                    val (deepListOfAllOfs, allDiscriminators) = resolveDeepAllOfs(schema, DiscriminatorDetails(), emptySet())
 
                     val explodedDiscriminators = allDiscriminators.explode()
 
@@ -1436,7 +1350,14 @@ class OpenApiSpecification(
                     else if (oneOfs.size > 1)
                         AnyPattern(oneOfs, typeAlias = "(${patternName})")
                     else if(allDiscriminators.isNotEmpty())
-                        AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") }, discriminatorProperty = allDiscriminators.key, discriminatorValues = allDiscriminators.values.toSet())
+                        AnyPattern(
+                            schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") },
+                            discriminator = Discriminator.create(
+                                allDiscriminators.key,
+                                allDiscriminators.values.toSet(),
+                                schema.discriminator?.mapping.orEmpty()
+                            )
+                        )
                     else if(schemaProperties.size > 1)
                         AnyPattern(schemaProperties.map { toJSONObjectPattern(it, "(${patternName})") })
                     else
@@ -1461,9 +1382,8 @@ class OpenApiSpecification(
 
                     AnyPattern(
                         candidatePatterns.plus(nullable),
-                        discriminatorProperty = schema.discriminator?.propertyName,
-                        discriminatorValues = schema.discriminator?.mapping?.keys?.toSet().orEmpty(),
-                        typeAlias = "(${patternName})"
+                        typeAlias = "(${patternName})",
+                        discriminator = Discriminator.create(schema.discriminator?.propertyName, schema.discriminator?.mapping?.keys?.toSet().orEmpty(), schema.discriminator?.mapping.orEmpty())
                     )
                 } else if (schema.anyOf != null) {
                     throw UnsupportedOperationException("Specmatic does not support anyOf")
@@ -1798,13 +1718,13 @@ class OpenApiSpecification(
     }
 
     private fun toSchemaProperties(
-        schema: Schema<*>, requiredFields: List<String>, patternName: String, typeStack: List<String>, discriminator: Discriminator = Discriminator()
+        schema: Schema<*>, requiredFields: List<String>, patternName: String, typeStack: List<String>, discriminatorDetails: DiscriminatorDetails = DiscriminatorDetails()
     ): Map<String, Pattern> {
         val patternMap = schema.properties.orEmpty().map { (propertyName, propertyType) ->
             if (schema.discriminator?.propertyName == propertyName)
                 propertyName to ExactValuePattern(StringValue(patternName), discriminator = true)
-            else if (discriminator.hasValueForKey(propertyName)) {
-                propertyName to discriminator.valueFor(propertyName)
+            else if (discriminatorDetails.hasValueForKey(propertyName)) {
+                propertyName to discriminatorDetails.valueFor(propertyName)
             } else {
                 val optional = !requiredFields.contains(propertyName)
                 toSpecmaticParamName(optional, propertyName) to attempt(breadCrumb = propertyName) {

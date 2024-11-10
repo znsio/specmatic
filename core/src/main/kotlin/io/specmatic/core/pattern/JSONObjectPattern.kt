@@ -26,7 +26,20 @@ data class JSONObjectPattern(
     override val typeAlias: String? = null,
     val minProperties: Int? = null,
     val maxProperties: Int? = null
-) : Pattern {
+) : Pattern, PossibleJsonObjectPatternContainer {
+
+    override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
+        if (value !is JSONObjectValue) return value
+
+        val mandatoryObjectPatternMap  = this.pattern.filterKeys { !isOptional(it) }
+        val mandatoryObjectMap = value.jsonObject.mapNotNull { (key, actualValue) ->
+            val patternForKey = mandatoryObjectPatternMap[key] ?: return@mapNotNull null
+            key to patternForKey.eliminateOptionalKey(actualValue, resolver)
+        }.toMap()
+
+        return JSONObjectValue(mandatoryObjectMap)
+    }
+
     override fun addTypeAliasesToConcretePattern(concretePattern: Pattern, resolver: Resolver, typeAlias: String?): Pattern {
         if(concretePattern !is JSONObjectPattern)
             throw ContractException("Expected json object type but got ${concretePattern.typeName}")
@@ -96,6 +109,15 @@ data class JSONObjectPattern(
         return mapWithKeysInPartial.combine(mapWithMissingKeysGenerated) { entriesInPartial, missingEntries ->
             jsonObject.copy(jsonObject = entriesInPartial + missingEntries)
         }
+    }
+
+    override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {
+        if (keys.isEmpty()) return this
+        return this.copy(pattern = pattern.filterKeys {
+            withoutOptionality(it) in keys
+        }.mapKeys {
+            withoutOptionality(it.key)
+        })
     }
 
     override fun equals(other: Any?): Boolean = when (other) {
@@ -275,6 +297,12 @@ data class JSONObjectPattern(
     }
 
     override fun generate(resolver: Resolver): JSONObjectValue {
+        val pattern = if (resolver.allowOnlyMandatoryKeysInJsonObject) {
+            getPatternWithOmittedOptionalFields(this.pattern, resolver)
+        } else {
+            this.pattern
+        }
+
         return JSONObjectValue(
             generate(
                 selectPropertiesWithinMaxAndMin(pattern, minProperties, maxProperties),
@@ -282,6 +310,22 @@ data class JSONObjectPattern(
                 typeAlias
             )
         )
+    }
+
+    private fun getPatternWithOmittedOptionalFields(pattern: Map<String, Pattern>, resolver: Resolver): Map<String, Pattern> {
+        return pattern.filterKeys { it.endsWith("?").not() }.map { entry ->
+            val (key, valuePattern) = entry
+
+            resolvedHop(valuePattern, resolver).let { resolvedValuePattern ->
+                if (resolvedValuePattern !is JSONObjectPattern) {
+                    return@map entry.toPair()
+                }
+
+                key to resolvedValuePattern.copy(
+                    pattern = getPatternWithOmittedOptionalFields(resolvedValuePattern.pattern, resolver)
+                )
+            }
+        }.toMap()
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> =
@@ -316,6 +360,31 @@ data class JSONObjectPattern(
 
     override fun parse(value: String, resolver: Resolver): Value = parsedJSONObject(value, resolver.mismatchMessages)
     override fun hashCode(): Int = pattern.hashCode()
+
+    fun updateWithDiscriminatorValue(discriminatorPropertyName: String, discriminatorValue: String, resolver: Resolver): ReturnValue<Pattern> {
+        val actualDiscriminatorPropertyName =
+            if(discriminatorPropertyName in pattern)
+                discriminatorPropertyName
+            else if("$discriminatorPropertyName?" in pattern)
+                    "$discriminatorPropertyName?"
+            else
+                return HasValue(this)
+
+        val discriminatorPattern = pattern.getValue(actualDiscriminatorPropertyName)
+
+        if(discriminatorPattern is ExactValuePattern && discriminatorPattern.discriminator)
+            return HasValue(this)
+
+        val candidateDiscriminatorValue = discriminatorPattern.parse(discriminatorValue, resolver)
+        val matchResult = discriminatorPattern.matches(candidateDiscriminatorValue, resolver)
+
+        if(matchResult is Result.Failure)
+            return HasFailure(matchResult.breadCrumb(discriminatorPropertyName))
+
+        val updatedPattern = pattern.plus(actualDiscriminatorPropertyName to ExactValuePattern(candidateDiscriminatorValue, discriminator = true))
+
+        return HasValue(this.copy(updatedPattern))
+    }
 
     override val typeName: String = "json object"
 }

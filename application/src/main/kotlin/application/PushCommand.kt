@@ -18,7 +18,16 @@ import kotlin.system.exitProcess
 
 private const val pipelineKeyInSpecmaticConfig = "pipeline"
 
-@CommandLine.Command(name = "push", description = ["Check the new contract for backward compatibility with the specified version, then overwrite the old one with it."], mixinStandardHelpOptions = true)
+@CommandLine.Command(
+    name = "push",
+    description = [
+"""
+Check the new contract for backward compatibility with the specified version, then overwrite the old one with it.
+DEPRECATED: This command will be removed in the next major release. Use 'backward-compatibility-check' command instead.
+"""
+    ],
+    mixinStandardHelpOptions = true
+)
 class PushCommand: Callable<Unit> {
     override fun call() {
         val userHome = File(System.getProperty("user.home"))

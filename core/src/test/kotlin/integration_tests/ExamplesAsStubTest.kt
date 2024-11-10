@@ -1,13 +1,20 @@
 package integration_tests
 
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.HttpRequest
+import io.specmatic.core.*
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpStub
 import io.specmatic.stub.captureStandardOutput
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import java.io.File
 import java.util.*
 
 class ExamplesAsStubTest {
@@ -689,5 +696,186 @@ paths:
         }
 
         assertThat(output).withFailMessage(output).contains("EXAMPLE_OF_SUCCESS")
+    }
+
+    @Nested
+    inner class AttributeSelection {
+        @BeforeEach
+        fun setup() {
+            System.setProperty(ATTRIBUTE_SELECTION_QUERY_PARAM_KEY, "columns")
+            System.setProperty(ATTRIBUTE_SELECTION_DEFAULT_FIELDS, "id")
+        }
+
+        @AfterEach
+        fun tearDown() {
+            System.clearProperty(ATTRIBUTE_SELECTION_QUERY_PARAM_KEY)
+            System.clearProperty(ATTRIBUTE_SELECTION_DEFAULT_FIELDS)
+        }
+
+        private fun File.getExternalExamplesFromContract(): List<ScenarioStub> {
+            val attributeExamples = this.parentFile.resolve("${this.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX")
+            val normalExamples = this.parentFile.resolve("${this.nameWithoutExtension}${EXAMPLES_DIR_SUFFIX}_no_attr")
+
+            return attributeExamples.listFiles()?.map { ScenarioStub.readFromFile(it) }?.plus(
+                normalExamples.listFiles()?.map { ScenarioStub.readFromFile(it) } ?: emptyList()
+            ) ?: emptyList()
+        }
+
+        @Test
+        fun `should match example when attribute selection is used and response is an object`() {
+            val specFilepath = File("src/test/resources/openapi/attribute_selection_tests/api.yaml")
+
+            val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
+            val stubScenarios = specFilepath.getExternalExamplesFromContract()
+
+            HttpStub(feature, stubScenarios).use {
+                val response = it.client.execute(HttpRequest(
+                    "GET",
+                    "/employeesObjectResponse",
+                    queryParametersMap = mapOf("columns" to "name")
+                ))
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.headers.keys).doesNotContain("X-Specmatic-Type")
+
+                val body = (response.body as JSONObjectValue).jsonObject
+                assertThat(body.keys).containsExactlyInAnyOrder("id", "name")
+                assertThat(body.keys).doesNotContain("salary", "isActive")
+            }
+        }
+
+        @Test
+        fun `should match example when attribute selection is not used response is an object`() {
+            val specFilepath = File("src/test/resources/openapi/attribute_selection_tests/api.yaml")
+
+            val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
+            val stubScenarios = specFilepath.getExternalExamplesFromContract()
+
+            HttpStub(feature, stubScenarios).use {
+                val response = it.client.execute(HttpRequest(
+                    "GET",
+                    "/employeesObjectResponse"
+                ))
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.headers.keys).doesNotContain("X-Specmatic-Type")
+
+                val body = (response.body as JSONObjectValue).jsonObject
+                assertThat(body.keys).containsExactlyInAnyOrder("id", "name", "salary")
+                assertThat(body.keys).doesNotContain("isActive")
+            }
+        }
+
+        @Test
+        fun `should match example when attribute selection is used and response is an array`() {
+            val specFilepath = File("src/test/resources/openapi/attribute_selection_tests/api.yaml")
+
+            val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
+            val stubScenarios = specFilepath.getExternalExamplesFromContract()
+
+            HttpStub(feature, stubScenarios).use {
+                val response = it.client.execute(HttpRequest(
+                    "GET",
+                    "/employeesArrayResponse",
+                    queryParametersMap = mapOf("columns" to "name")
+                ))
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.headers.keys).doesNotContain("X-Specmatic-Type")
+
+                val body = ((response.body as JSONArrayValue).list.first() as JSONObjectValue).jsonObject
+                assertThat(body.keys).containsExactlyInAnyOrder("id", "name")
+                assertThat(body.keys).doesNotContain("salary", "isActive")
+            }
+        }
+
+        @Test
+        fun `should match example when attribute selection is not used and response is an array`() {
+            val specFilepath = File("src/test/resources/openapi/attribute_selection_tests/api.yaml")
+
+            val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
+            val stubScenarios = specFilepath.getExternalExamplesFromContract()
+
+            HttpStub(feature, stubScenarios).use {
+                val response = it.client.execute(HttpRequest(
+                    "GET",
+                    "/employeesArrayResponse"
+                ))
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.headers.keys).doesNotContain("X-Specmatic-Type")
+
+                val body = ((response.body as JSONArrayValue).list.first() as JSONObjectValue).jsonObject
+                assertThat(body.keys).containsExactlyInAnyOrder("id", "name", "salary")
+                assertThat(body.keys).doesNotContain("isActive")
+            }
+        }
+
+        @Test
+        fun `should match example when attribute selection is used response is an allOf`() {
+            val specFilepath = File("src/test/resources/openapi/attribute_selection_tests/api.yaml")
+
+            val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
+            val stubScenarios = specFilepath.getExternalExamplesFromContract()
+
+            HttpStub(feature, stubScenarios).use {
+                val response = it.client.execute(HttpRequest(
+                    "GET",
+                    "/employeesAllOfResponse",
+                    queryParametersMap = mapOf("columns" to "name,department")
+                ))
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.headers.keys).doesNotContain("X-Specmatic-Type")
+
+                val body = (response.body as JSONObjectValue).jsonObject
+                assertThat(body.keys).containsExactlyInAnyOrder("id", "name", "department")
+                assertThat(body.keys).doesNotContain("salary", "designation", "isActive")
+            }
+        }
+
+        @Test
+        fun `should match example when attribute selection is not used response is an allOf`() {
+            val specFilepath = File("src/test/resources/openapi/attribute_selection_tests/api.yaml")
+
+            val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
+            val stubScenarios = specFilepath.getExternalExamplesFromContract()
+
+            HttpStub(feature, stubScenarios).use {
+                val response = it.client.execute(HttpRequest(
+                    "GET",
+                    "/employeesAllOfResponse"
+                ))
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.headers.keys).doesNotContain("X-Specmatic-Type")
+
+                val body = (response.body as JSONObjectValue).jsonObject
+                assertThat(body.keys).containsExactlyInAnyOrder("id", "name", "salary", "designation", "department")
+                assertThat(body.keys).doesNotContain("isActive")
+            }
+        }
+
+        @Test
+        fun `should fallback to random generation when non-existent attribute is selected`() {
+            val specFilepath = File("src/test/resources/openapi/attribute_selection_tests/api.yaml")
+
+            val feature = OpenApiSpecification.fromFile(specFilepath.absolutePath).toFeature()
+            val stubScenarios = specFilepath.getExternalExamplesFromContract()
+
+            HttpStub(feature, stubScenarios).use {
+                val response = it.client.execute(HttpRequest(
+                    "GET",
+                    "/employeesObjectResponse",
+                    queryParametersMap = mapOf("columns" to "name,unknownKey")
+                ))
+
+                assertThat(response.status).isEqualTo(200)
+                assertThat(response.headers["X-Specmatic-Type"]).isEqualTo("random")
+
+                val body = (response.body as JSONObjectValue).jsonObject
+                assertThat(body.keys).containsExactlyInAnyOrder("id", "name", "salary", "isActive")
+            }
+        }
     }
 }

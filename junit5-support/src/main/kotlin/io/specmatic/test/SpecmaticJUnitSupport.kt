@@ -3,11 +3,14 @@ package io.specmatic.test
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
+import io.specmatic.core.filters.ScenarioMetadataFilter
+import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.ignoreLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.*
-import io.specmatic.core.utilities.Flags.Companion.CONFIG_FILE_PATH
+import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
+import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
@@ -62,13 +65,21 @@ open class SpecmaticJUnitSupport {
         const val VARIABLES_FILE_NAME = "variablesFileName"
         const val FILTER_NAME_PROPERTY = "filterName"
         const val FILTER_NOT_NAME_PROPERTY = "filterNotName"
+        const val FILTER = "filter"
+        const val FILTER_NOT = "filterNot"
         const val FILTER_NAME_ENVIRONMENT_VARIABLE = "FILTER_NAME"
         const val FILTER_NOT_NAME_ENVIRONMENT_VARIABLE = "FILTER_NOT_NAME"
+        const val OVERLAY_FILE_PATH = "overlayFilePath"
         private const val ENDPOINTS_API = "endpointsAPI"
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfig: SpecmaticConfig? = null
         val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
+        private val scenarioMetadataFilter = ScenarioMetadataFilter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty())
+        private val scenarioMetadataExclusionFilter = ScenarioMetadataFilter.from(
+            readEnvVarOrProperty(FILTER_NOT, FILTER_NOT).orEmpty()
+        )
+
 
         private val threads: Vector<String> = Vector<String>()
 
@@ -160,7 +171,7 @@ open class SpecmaticJUnitSupport {
             }
         }
 
-        val configFile get() = Flags.getStringValue(CONFIG_FILE_PATH) ?: getConfigFilePath()
+        val configFile get() = getConfigFilePath()
 
         private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
     }
@@ -204,10 +215,16 @@ open class SpecmaticJUnitSupport {
         val givenWorkingDirectory = System.getProperty(WORKING_DIRECTORY)
         val filterName: String? = System.getProperty(FILTER_NAME_PROPERTY) ?: System.getenv(FILTER_NAME_ENVIRONMENT_VARIABLE)
         val filterNotName: String? = System.getProperty(FILTER_NOT_NAME_PROPERTY) ?: System.getenv(FILTER_NOT_NAME_ENVIRONMENT_VARIABLE)
+        val overlayFilePath: String? = System.getProperty(OVERLAY_FILE_PATH) ?: System.getenv(OVERLAY_FILE_PATH)
+        val overlayContent = if(overlayFilePath.isNullOrBlank()) "" else readFrom(overlayFilePath, "overlay")
 
         specmaticConfig = getSpecmaticConfig()
 
-        val timeoutInMilliseconds = specmaticConfig?.test?.timeoutInMilliseconds ?: try { Flags.getLongValue(Flags.SPECMATIC_TEST_TIMEOUT) } catch(e: NumberFormatException) { throw ContractException("${Flags.SPECMATIC_TEST_TIMEOUT} should be a value of type long") } ?:  DEFAULT_TIMEOUT_IN_MILLISECONDS
+        val timeoutInMilliseconds = specmaticConfig?.test?.timeoutInMilliseconds ?: try {
+            getLongValue(SPECMATIC_TEST_TIMEOUT)
+        } catch (e: NumberFormatException) {
+            throw ContractException("$SPECMATIC_TEST_TIMEOUT should be a value of type long")
+        } ?: DEFAULT_TIMEOUT_IN_MILLISECONDS
 
         val suggestionsData = System.getProperty(INLINE_SUGGESTIONS) ?: ""
         val suggestionsPath = System.getProperty(SUGGESTIONS_PATH) ?: ""
@@ -234,7 +251,8 @@ open class SpecmaticJUnitSupport {
                             specificationPath = it,
                             filterName = filterName,
                             filterNotName = filterNotName,
-                            specmaticConfig = specmaticConfig
+                            specmaticConfig = specmaticConfig,
+                            overlayContent = overlayContent
                         )
                     }
                     val tests: Sequence<ContractTest> = testScenariosAndEndpointsPairList.asSequence().flatMap { it.first }
@@ -266,7 +284,8 @@ open class SpecmaticJUnitSupport {
                             specmaticConfig?.security,
                             filterName,
                             filterNotName,
-                            specmaticConfig = specmaticConfig
+                            specmaticConfig = specmaticConfig,
+                            overlayContent = overlayContent
                         )
                     }
 
@@ -278,7 +297,16 @@ open class SpecmaticJUnitSupport {
                 }
             }
             openApiCoverageReportInput.addEndpoints(allEndpoints)
-            selectTestsToRun(testScenarios, filterName, filterNotName) { it.testDescription() }
+
+            val filteredTestsBasedOnName = selectTestsToRun(
+                testScenarios,
+                filterName,
+                filterNotName
+            ) { it.testDescription() }
+
+            filterUsing(filteredTestsBasedOnName, scenarioMetadataFilter, scenarioMetadataExclusionFilter) {
+                it.toScenarioMetadata()
+            }
         } catch(e: ContractException) {
             return loadExceptionAsTestError(e)
         } catch(e: Throwable) {
@@ -428,7 +456,8 @@ open class SpecmaticJUnitSupport {
         securityConfiguration: SecurityConfiguration? = null,
         filterName: String?,
         filterNotName: String?,
-        specmaticConfig: SpecmaticConfig? = null
+        specmaticConfig: SpecmaticConfig? = null,
+        overlayContent: String = ""
     ): Pair<Sequence<ContractTest>, List<Endpoint>> {
         if(hasOpenApiFileExtension(path) && !isOpenAPI(path))
             return Pair(emptySequence(), emptyList())
@@ -443,7 +472,8 @@ open class SpecmaticJUnitSupport {
                 sourceRepositoryBranch,
                 specificationPath,
                 securityConfiguration,
-                specmaticConfig = specmaticConfig ?: SpecmaticConfig()
+                specmaticConfig = specmaticConfig ?: SpecmaticConfig(),
+                overlayContent = overlayContent
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
         feature.validateExamplesOrException()
@@ -467,8 +497,18 @@ open class SpecmaticJUnitSupport {
             )
         }
 
+        val filteredScenariosBasedOnName = selectTestsToRun(
+            feature.scenarios.asSequence(),
+            filterName,
+            filterNotName
+        ) { it.testDescription() }
+        val filteredScenarios = filterUsing(
+            filteredScenariosBasedOnName,
+            scenarioMetadataFilter,
+            scenarioMetadataExclusionFilter
+        ) { it.toScenarioMetadata() }
         val tests: Sequence<ContractTest> = feature
-            .copy(scenarios = selectTestsToRun(feature.scenarios.asSequence(), filterName, filterNotName) { it.testDescription() }.toList())
+            .copy(scenarios = filteredScenarios.toList())
             .also {
                 if (it.scenarios.isEmpty())
                     logger.log("All scenarios were filtered out.")
@@ -532,6 +572,16 @@ open class SpecmaticJUnitSupport {
             )
         }
     }
+
+    private fun readFrom(path: String, fileTag: String = ""): String {
+        if(File(path).exists().not()) {
+            throw ContractException("The $fileTag file $path does not exist. Please provide a valid $fileTag file")
+        }
+        if(File(path).extension != YAML && File(path).extension != JSON && File(path).extension != YML) {
+            throw ContractException("The $fileTag file does not have a valid extension.")
+        }
+        return File(path).readText()
+    }
 }
 
 private fun columnsFromExamples(exampleData: JSONArrayValue): List<String> {
@@ -576,3 +626,4 @@ fun <T> selectTestsToRun(
 
     return filteredByNotName
 }
+

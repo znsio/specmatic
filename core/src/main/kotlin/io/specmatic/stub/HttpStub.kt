@@ -21,13 +21,13 @@ import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheck
 import io.specmatic.core.utilities.*
 import io.specmatic.core.value.*
 import io.specmatic.mock.*
-import io.specmatic.stub.report.StubEndpoint
-import io.specmatic.stub.report.StubUsageReport
+import io.specmatic.stub.report.*
 import io.specmatic.test.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
@@ -233,7 +233,9 @@ class HttpStub(
                         requestInterceptor.interceptRequest(request) ?: request
                     }
 
-                    val responseFromRequestHandler = requestHandlers.map { it.handleRequest(httpRequest) }.firstOrNull()
+                    val responseFromRequestHandler = requestHandlers.map {
+                        it.handleRequest(httpRequest)
+                    }.filterNotNull().firstOrNull()
 
                     val httpStubResponse: HttpStubResponse = when {
                         isFetchLogRequest(httpRequest) -> handleFetchLogRequest()
@@ -244,7 +246,7 @@ class HttpStub(
                         isSseExpectationCreation(httpRequest) -> handleSseExpectationCreationRequest(httpRequest)
                         isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
                         isFlushTransientStubsRequest(httpRequest) -> handleFlushTransientStubsRequest(httpRequest)
-                        else -> serveStubResponse(httpRequest, specmaticConfig)
+                        else -> serveStubResponse(httpRequest)
                     }
 
                     val httpResponse = responseInterceptors.fold(httpStubResponse.response) { response, responseInterceptor ->
@@ -328,6 +330,23 @@ class HttpStub(
         }
     }
 
+    fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse {
+        val result: StubbedResponseResult = getHttpResponse(
+            httpRequest,
+            features,
+            threadSafeHttpStubs,
+            threadSafeHttpStubQueue,
+            strictMode,
+            passThroughTargetBase,
+            httpClientFactory,
+            specmaticConfig
+        )
+
+        result.log(_logs, httpRequest)
+
+        return result.response
+    }
+
     private fun handleFlushTransientStubsRequest(httpRequest: HttpRequest): HttpStubResponse {
         val token = httpRequest.path?.removePrefix("/_specmatic/$TRANSIENT_MOCK/")
 
@@ -402,23 +421,6 @@ class HttpStub(
 
     private fun handleFetchLogRequest(): HttpStubResponse =
         HttpStubResponse(HttpResponse.ok(StringValue(LogTail.getString())))
-
-    private fun serveStubResponse(httpRequest: HttpRequest, specmaticConfig: SpecmaticConfig): HttpStubResponse {
-        val result: StubbedResponseResult = getHttpResponse(
-            httpRequest,
-            features,
-            threadSafeHttpStubs,
-            threadSafeHttpStubQueue,
-            strictMode,
-            passThroughTargetBase,
-            httpClientFactory,
-            specmaticConfig
-        )
-
-        result.log(_logs, httpRequest)
-
-        return result.response
-    }
 
     private fun handleExpectationCreationRequest(httpRequest: HttpRequest): HttpStubResponse {
         return try {
@@ -594,7 +596,21 @@ class HttpStub(
             val json = Json {
                 encodeDefaults = false
             }
-            val reportJson = json.encodeToString(stubUsageReport.generate())
+            val generatedReport = stubUsageReport.generate()
+            val reportJson: String = File(JSON_REPORT_PATH).resolve(JSON_REPORT_FILE_NAME).let { reportFile ->
+                if (reportFile.exists()) {
+                    try {
+                        val existingReport = Json.decodeFromString<StubUsageReportJson>(reportFile.readText())
+                        json.encodeToString(generatedReport.merge(existingReport))
+                    } catch (exception: SerializationException) {
+                        logger.log("The existing report file is not a valid Stub Usage Report. ${exception.message}")
+                        json.encodeToString(generatedReport)
+                    }
+                } else {
+                    json.encodeToString(generatedReport)
+                }
+            }
+
             saveJsonFile(reportJson, JSON_REPORT_PATH, JSON_REPORT_FILE_NAME)
         }
     }

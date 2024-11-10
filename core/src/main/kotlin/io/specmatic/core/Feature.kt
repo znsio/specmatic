@@ -15,6 +15,8 @@ import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
+import io.specmatic.core.discriminator.DiscriminatorBasedItem
+import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.*
 import io.swagger.v3.oas.models.*
 import io.swagger.v3.oas.models.headers.Header
@@ -34,7 +36,8 @@ fun parseContractFileToFeature(
     sourceRepositoryBranch: String? = null,
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    overlayContent: String = ""
 ): Feature {
     return parseContractFileToFeature(
         File(contractPath),
@@ -44,7 +47,8 @@ fun parseContractFileToFeature(
         sourceRepositoryBranch,
         specificationPath,
         securityConfiguration,
-        specmaticConfig
+        specmaticConfig,
+        overlayContent
     )
 }
 
@@ -61,12 +65,22 @@ fun parseContractFileToFeature(
     sourceRepositoryBranch: String? = null,
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    overlayContent: String = ""
 ): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
-
     return when (file.extension) {
-        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(hook.readContract(file.path), file.path, sourceProvider =sourceProvider, sourceRepository = sourceRepository, sourceRepositoryBranch = sourceRepositoryBranch, specificationPath = specificationPath, securityConfiguration = securityConfiguration, specmaticConfig = specmaticConfig).toFeature()
+        in OPENAPI_FILE_EXTENSIONS -> OpenApiSpecification.fromYAML(
+            hook.readContract(file.path),
+            file.path,
+            sourceProvider = sourceProvider,
+            sourceRepository = sourceRepository,
+            sourceRepositoryBranch = sourceRepositoryBranch,
+            specificationPath = specificationPath,
+            securityConfiguration = securityConfiguration,
+            specmaticConfig = specmaticConfig,
+            overlayContent = overlayContent
+        ).toFeature()
         WSDL -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
         else -> throw unsupportedFileExtensionContractException(file.path, file.extension)
@@ -106,7 +120,7 @@ data class Feature(
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
     val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig)
-) {
+): IFeature {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         val updatedSpecmaticConfig = specmaticConfig.copy(
             test = specmaticConfig.test?.copy(
@@ -144,6 +158,83 @@ data class Feature(
             return scenario.generateHttpResponse(serverState)
         } finally {
             serverState = emptyMap()
+        }
+    }
+
+    fun generateDiscriminatorBasedRequestResponseList(
+        scenario: Scenario,
+        allowOnlyMandatoryKeysInJSONObject: Boolean = false
+    ): List<DiscriminatorBasedRequestResponse> {
+        try {
+            val requests = scenario.generateHttpRequestV2(
+                allowOnlyMandatoryKeysInJSONObject = allowOnlyMandatoryKeysInJSONObject
+            )
+            val responses = scenario.generateHttpResponseV2(
+                serverState,
+                allowOnlyMandatoryKeysInJSONObject = allowOnlyMandatoryKeysInJSONObject
+            )
+
+            val discriminatorBasedRequestResponseList = if (requests.size > responses.size) {
+                requests.map { (requestDiscriminator, request) ->
+                    val (responseDiscriminator, response) = if (responses.containsDiscriminatorValueAs(requestDiscriminator.discriminatorValue))
+                        responses.getDiscriminatorItemWith(requestDiscriminator.discriminatorValue)
+                    else
+                        responses.first()
+                    DiscriminatorBasedRequestResponse(
+                        request = request,
+                        response = response,
+                        requestDiscriminator = requestDiscriminator,
+                        responseDiscriminator = responseDiscriminator
+                    )
+                }
+            } else {
+                responses.map { (responseDiscriminator, response) ->
+                    val (requestDiscriminator, request) = if (requests.containsDiscriminatorValueAs(responseDiscriminator.discriminatorValue))
+                        requests.getDiscriminatorItemWith(responseDiscriminator.discriminatorValue)
+                    else requests.first()
+                    DiscriminatorBasedRequestResponse(
+                        request = request,
+                        response = response,
+                        requestDiscriminator = requestDiscriminator,
+                        responseDiscriminator = responseDiscriminator
+                    )
+                }
+            }
+
+            return discriminatorBasedRequestResponseList
+        } finally {
+            serverState = emptyMap()
+        }
+    }
+
+    fun generateAttributeBasedRequestResponseList(
+        scenario: Scenario
+    ): List<AttributeBasedRequestResponse> {
+        try {
+            val matchingScenario = findMatchingPostScenario(scenario) ?: return emptyList()
+
+            val patternWithFields = matchingScenario.httpRequestPattern.body
+            val requests = scenario.generateAttributeSelectedRequests(flagsBased, patternWithFields)
+
+            return requests.map { request ->
+                val updatedScenario = scenario.newBasedOnAttributeSelectionFields(request.value.queryParams)
+                AttributeBasedRequestResponse(
+                    request = request.value,
+                    response = updatedScenario.generateHttpResponse(serverState),
+                    attributeSelectionMetadata = request.attribute
+                )
+            }
+        } finally {
+            serverState = emptyMap()
+        }
+    }
+
+    fun findMatchingPostScenario(scenario: Scenario): Scenario? {
+        return when(scenario.httpRequestPattern.method) {
+            "GET" -> scenarios.firstOrNull {
+                it.httpRequestPattern.httpPathPattern?.path == scenario.httpRequestPattern.httpPathPattern?.path && it.httpRequestPattern.method == "POST"
+            }
+            else -> null
         }
     }
 
@@ -270,6 +361,26 @@ data class Feature(
         } != null
     }
 
+    fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {
+        return matchResultFlagBased(scenarioStub.request, scenarioStub.response, mismatchMessages)
+    }
+
+    fun matchResultFlagBased(request: HttpRequest, response: HttpResponse, mismatchMessages: MismatchMessages): Results {
+        val results = scenarios.map {
+            it.matches(request, response, mismatchMessages, flagsBased)
+        }
+
+        if(results.any { it.isSuccess() })
+            return Results(results).withoutFluff()
+
+        val deepErrors = results.filterNot { it.isFluffy(0) }
+
+        if(deepErrors.isNotEmpty())
+            return Results(deepErrors)
+
+        return Results(listOf(Result.Failure("No matching found for this example")))
+    }
+
     fun matchResult(request: HttpRequest, response: HttpResponse): Result {
         if(scenarios.isEmpty())
             return Result.Failure("No operations found")
@@ -316,6 +427,8 @@ data class Feature(
         mismatchMessages: MismatchMessages
     ): List<Pair<HttpStubData?, Result>> {
         val results = scenarios.map { scenario ->
+            scenario.newBasedOnAttributeSelectionFields(request.queryParams)
+        }.map { scenario ->
             try {
                 when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
                     is Result.Success -> Pair(
@@ -522,46 +635,8 @@ data class Feature(
         if(scenarios.isEmpty())
             throw ContractException("No scenarios found in feature $name ($path)")
 
-        return if(scenarioStub.partial != null) {
-            val results = scenarios.asSequence().map { scenario ->
-                scenario.matchesPartial(scenarioStub.partial) to scenario
-            }
-
-            val matchingScenario = results.filter { it.first is Result.Success }.map { it.second }.firstOrNull()
-
-            if(matchingScenario != null) {
-                val requestTypeWithAncestors =
-                    matchingScenario.httpRequestPattern.copy(
-                        headersPattern = matchingScenario.httpRequestPattern.headersPattern.copy(
-                            ancestorHeaders = matchingScenario.httpRequestPattern.headersPattern.pattern
-                        )
-                    )
-
-                val responseTypeWithAncestors =
-                    matchingScenario.httpResponsePattern.copy(
-                        headersPattern = matchingScenario.httpResponsePattern.headersPattern.copy(
-                            ancestorHeaders = matchingScenario.httpResponsePattern.headersPattern.pattern
-                        )
-                    )
-
-                HttpStubData(
-                    requestTypeWithAncestors,
-                    HttpResponse(),
-                    matchingScenario.resolver,
-                    responsePattern = responseTypeWithAncestors,
-                    examplePath = scenarioStub.filePath,
-                    scenario = matchingScenario,
-                    data = scenarioStub.data,
-                    partial = scenarioStub.partial.copy(response = scenarioStub.partial.response)
-                )
-            }
-            else {
-                val failures = Results(results.map { it.first }.filterIsInstance<Result.Failure>().toList()).withoutFluff()
-
-                throw NoMatchingScenario(failures, msg = "Could not load partial example ${scenarioStub.filePath}")
-            }
-        } else {
-            matchingStub(
+        if(scenarioStub.partial == null) {
+            return matchingStub(
                 scenarioStub.request,
                 scenarioStub.response,
                 mismatchMessages
@@ -573,6 +648,41 @@ data class Feature(
                 examplePath = scenarioStub.filePath
             )
         }
+
+        val results = scenarios.asSequence().map { scenario ->
+            scenario.matchesPartial(scenarioStub.partial) to scenario
+        }
+
+        val matchingScenario = results.filter { it.first is Result.Success }.map { it.second }.firstOrNull()
+        if(matchingScenario == null) {
+            val failures = Results(results.map { it.first }.filterIsInstance<Result.Failure>().toList()).withoutFluff()
+            throw NoMatchingScenario(failures, msg = "Could not load partial example ${scenarioStub.filePath}")
+        }
+
+        val requestTypeWithAncestors =
+            matchingScenario.httpRequestPattern.copy(
+                headersPattern = matchingScenario.httpRequestPattern.headersPattern.copy(
+                    ancestorHeaders = matchingScenario.httpRequestPattern.headersPattern.pattern
+                )
+            )
+
+        val responseTypeWithAncestors =
+            matchingScenario.httpResponsePattern.copy(
+                headersPattern = matchingScenario.httpResponsePattern.headersPattern.copy(
+                    ancestorHeaders = matchingScenario.httpResponsePattern.headersPattern.pattern
+                )
+            )
+
+        return HttpStubData(
+            requestTypeWithAncestors,
+            HttpResponse(),
+            matchingScenario.resolver,
+            responsePattern = responseTypeWithAncestors,
+            examplePath = scenarioStub.filePath,
+            scenario = matchingScenario,
+            data = scenarioStub.data,
+            partial = scenarioStub.partial.copy(response = scenarioStub.partial.response)
+        )
     }
 
     fun clearServerState() {
@@ -1640,6 +1750,19 @@ data class Feature(
             throw ContractException(errors.joinToString("${System.lineSeparator()}${System.lineSeparator()}"))
     }
 
+    private fun<T> List<DiscriminatorBasedItem<T>>.containsDiscriminatorValueAs(
+        discriminatorValue: String
+    ): Boolean {
+        return this.any { it.discriminatorValue == discriminatorValue }
+    }
+
+    private fun <T> List<DiscriminatorBasedItem<T>>.getDiscriminatorItemWith(
+        discriminatorValue: String
+    ): DiscriminatorBasedItem<T> {
+        return this.first { it.discriminatorValue == discriminatorValue }
+    }
+
+
     companion object {
 
         private fun getTestsDirectory(contractFile: File): File? {
@@ -2219,3 +2342,26 @@ fun similarURLPath(baseScenario: Scenario, newScenario: Scenario): Boolean {
 fun isInteger(
     base: URLPathSegmentPattern
 ) = base.pattern is ExactValuePattern && base.pattern.pattern.toStringLiteral().toIntOrNull() != null
+
+data class DiscriminatorBasedRequestResponse(
+    val request: HttpRequest,
+    val response: HttpResponse,
+    val requestDiscriminator: DiscriminatorMetadata,
+    val responseDiscriminator: DiscriminatorMetadata
+)
+
+data class AttributeBasedRequestResponse(
+    val request: HttpRequest,
+    val response: HttpResponse,
+    val attributeSelectionMetadata: AttributeSelectionMetadata
+)
+
+data class AttributeSelectionMetadata(
+    val attributeSelectionField: String,
+    val selectedAttributes: Set<String>
+)
+
+data class AttributeSelectionBasedItem<T>(
+    val attribute: AttributeSelectionMetadata,
+    val value: T
+)

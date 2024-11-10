@@ -1,9 +1,6 @@
 package io.specmatic.conversions
 
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpRequestPattern
-import io.specmatic.core.Resolver
-import io.specmatic.core.Result
+import io.specmatic.core.*
 import io.specmatic.core.pattern.Row
 import io.specmatic.core.pattern.StringPattern
 
@@ -17,7 +14,8 @@ data class APIKeyInHeaderSecurityScheme(val name: String, private val apiKey:Str
     }
 
     override fun addTo(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
-        return httpRequest.copy(headers = httpRequest.headers.plus(name to (apiKey ?: resolver.generate("HEADERS", name, StringPattern()).toStringLiteral())))
+        val headerValue = apiKey ?: resolver.generate("HEADERS", name, StringPattern()).toStringLiteral()
+        return httpRequest.addSecurityHeader(name, headerValue)
     }
 
     override fun addTo(requestPattern: HttpRequestPattern, row: Row): HttpRequestPattern {

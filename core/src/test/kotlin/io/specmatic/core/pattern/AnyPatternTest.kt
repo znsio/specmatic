@@ -24,6 +24,44 @@ internal class AnyPatternTest {
     }
 
     @Test
+    fun `should match the correct pattern and filter optional keys from value`() {
+        val objectPattern = parsedPattern("""{
+            "topLevelMandatoryKey": "(number)",
+            "topLevelOptionalKey?": "(string)",
+            "subMandatoryObject": {
+                "subMandatoryKey": "(string)",
+                "subOptionalKey?": "(number)"
+            }
+        }
+        """.trimIndent())
+        val listPattern = ListPattern(objectPattern)
+        val pattern = AnyPattern(listOf(objectPattern, listPattern))
+
+        val objectValue = parsedValue("""{
+            "topLevelMandatoryKey": 10,
+            "topLevelOptionalKey": "hello",
+            "subMandatoryObject": {
+                "subMandatoryKey": "hello",
+                "subOptionalKey": 10
+            }
+        }
+        """.trimIndent())
+        val expectedObjectValue = parsedValue("""{
+            "topLevelMandatoryKey": 10,
+            "subMandatoryObject": {
+                "subMandatoryKey": "hello"
+            }
+        }   
+        """.trimIndent())
+
+        val filteredObjectValue = pattern.eliminateOptionalKey(objectValue, Resolver())
+        assertEquals(expectedObjectValue, filteredObjectValue)
+
+        val filteredListValue = pattern.eliminateOptionalKey(JSONArrayValue(listOf(objectValue, objectValue)), Resolver())
+        assertEquals(JSONArrayValue(listOf(expectedObjectValue, expectedObjectValue)), filteredListValue)
+    }
+
+    @Test
     fun `error message when a json object does not match nullable primitive such as string in the contract`() {
         val pattern1 = AnyPattern(listOf(NullPattern, StringPattern()))
         val pattern2 = AnyPattern(listOf(DeferredPattern("(empty)"), StringPattern()))
@@ -294,9 +332,114 @@ internal class AnyPatternTest {
 
     @Test
     fun `error when a discriminator exists and the value is not a json object`() {
-        val pattern = AnyPattern(emptyList(), discriminatorProperty = "type")
+        val pattern = AnyPattern(emptyList(), discriminatorProperty = "type", discriminatorValues = setOf("current", "savings"))
         val result = pattern.matches(StringValue(""), Resolver())
 
         assertThat(result.reportString()).contains("Expected json object")
+    }
+
+    @Nested
+    inner class GenerateForEveryDiscriminatorDetailsValueTests {
+        @Test
+        fun `should generate discriminator based values for every discriminator`() {
+            val savingsAccountPattern = JSONObjectPattern(
+                pattern = mapOf(
+                    "@type" to ExactValuePattern(StringValue("savings"), discriminator = true),
+                    "accountId" to StringPattern(),
+                    "accountHolderName" to StringPattern(),
+                    "balance" to NumberPattern(),
+                    "minimumBalance" to NumberPattern()
+                )
+            )
+
+            val currentAccountPattern = JSONObjectPattern(
+                pattern = mapOf(
+                    "@type" to ExactValuePattern(StringValue("current"), discriminator = true),
+                    "accountId" to StringPattern(),
+                    "accountHolderName" to StringPattern(),
+                    "balance" to NumberPattern(),
+                    "overdraftLimit" to NumberPattern()
+                )
+            )
+
+            val pattern = AnyPattern(
+                pattern = listOf(
+                    savingsAccountPattern, currentAccountPattern
+                ),
+                discriminatorProperty = "@type",
+                discriminatorValues =  setOf("current", "savings")
+            )
+
+            val discriminatorToValues = pattern.generateForEveryDiscriminatorValue(Resolver())
+
+            val commonKeys = setOf("@type", "accountId", "accountHolderName", "balance")
+            val currentAccount = discriminatorToValues.first { it.discriminatorValue == "current" }.value as JSONObjectValue
+            val savingsAccount = discriminatorToValues.first { it.discriminatorValue == "savings" }.value as JSONObjectValue
+
+            assertThat(currentAccount.jsonObject["@type"]?.toStringLiteral()).isEqualTo("current")
+            assertThat(currentAccount.jsonObject.keys).isEqualTo(commonKeys.plus("overdraftLimit"))
+            assertThat(savingsAccount.jsonObject["@type"]?.toStringLiteral()).isEqualTo("savings")
+            assertThat(savingsAccount.jsonObject.keys).isEqualTo(commonKeys.plus("minimumBalance"))
+        }
+
+        @Test
+        fun `should generate scalar value for scalar-based pattern`() {
+            val pattern = AnyPattern(
+                pattern = listOf(StringPattern()),
+                discriminatorProperty = "@type",
+                discriminatorValues = setOf("current", "savings")
+            )
+
+            val values = pattern.generateForEveryDiscriminatorValue(Resolver())
+            assertThat(values).isNotEmpty
+            assertThat(values.map { it.discriminatorValue }).containsExactlyInAnyOrder("current", "savings")
+            assertThat(values.map { it.value }.first()).isInstanceOf(Value::class.java)
+            assertThat(values.map { it.value }.last()).isInstanceOf(Value::class.java)
+        }
+
+        @Test
+        fun `should randomly select a pattern when discriminator does not match any`() {
+            val fallbackPattern = JSONObjectPattern(
+                pattern = mapOf(
+                    "fallbackField" to StringPattern()
+                )
+            )
+
+            val pattern = AnyPattern(
+                pattern = listOf(fallbackPattern),
+                discriminatorProperty = "@type",
+                discriminatorValues = setOf("nonexistent")
+            )
+
+            val values = (pattern.generateForEveryDiscriminatorValue(Resolver()).single().value) as JSONObjectValue
+
+            assertThat(values.jsonObject.size).isEqualTo(1)
+            assertThat(values.jsonObject.keys.single()).isEqualTo("fallbackField")
+        }
+
+        // TODO - discuss with Joel
+        @Test
+        fun `should return empty map when no discriminator values provided`() {
+            val pattern = AnyPattern(
+                pattern = listOf(),
+                discriminatorProperty = "@type",
+                discriminatorValues = emptySet()
+            )
+
+            val values = pattern.generateForEveryDiscriminatorValue(Resolver())
+            assertThat(values).isEmpty()
+        }
+
+        @Test
+        fun `should handle null patterns gracefully`() {
+            val pattern = AnyPattern(
+                pattern = listOf(NullPattern),
+                discriminatorProperty = "@type",
+                discriminatorValues = setOf("current", "savings")
+            )
+
+            val values = pattern.generateForEveryDiscriminatorValue(Resolver())
+            assertThat(values).isNotEmpty
+        }
     }
 }

@@ -88,6 +88,10 @@ interface Pattern {
         return concretePattern
     }
 
+    fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
+        return value
+    }
+
     val typeAlias: String?
     val typeName: String
     val pattern: Any

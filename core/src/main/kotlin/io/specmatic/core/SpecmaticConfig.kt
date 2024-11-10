@@ -23,16 +23,19 @@ import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.readEnvVarOrProperty
 import java.io.File
 
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
+const val CONFIG_FILE_NAME_WITHOUT_EXT = "specmatic"
 const val DEFAULT_TIMEOUT_IN_MILLISECONDS: Long = 6000L
 const val CONTRACT_EXTENSION = "spec"
 const val YAML = "yaml"
 const val WSDL = "wsdl"
 const val YML = "yml"
 const val JSON = "json"
+val CONFIG_EXTENSIONS = listOf(YAML, YML, JSON)
 val OPENAPI_FILE_EXTENSIONS = listOf(YAML, YML, JSON)
 val CONTRACT_EXTENSIONS = listOf(CONTRACT_EXTENSION, WSDL) + OPENAPI_FILE_EXTENSIONS
 const val DATA_DIR_SUFFIX = "_data"
@@ -89,6 +92,19 @@ data class WorkflowConfiguration(
     }
 }
 
+data class AttributeSelectionPattern(
+    @field:JsonAlias("default_fields")
+    val defaultFields: List<String> = readEnvVarOrProperty(
+        ATTRIBUTE_SELECTION_DEFAULT_FIELDS,
+        ATTRIBUTE_SELECTION_DEFAULT_FIELDS
+    ).orEmpty().split(",").filter { it.isNotBlank() },
+    @field:JsonAlias("query_param_key")
+    val queryParamKey: String = readEnvVarOrProperty(
+        ATTRIBUTE_SELECTION_QUERY_PARAM_KEY,
+        ATTRIBUTE_SELECTION_QUERY_PARAM_KEY
+    ).orEmpty()
+)
+
 data class SpecmaticConfig(
     @field:JsonAlias("contract_repositories")
     val sources: List<Source> = emptyList(),
@@ -103,7 +119,10 @@ data class SpecmaticConfig(
     val stub: StubConfiguration = StubConfiguration(),
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
     val workflow: WorkflowConfiguration? = null,
-    val ignoreInlineExamples: Boolean = getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES)
+    val ignoreInlineExamples: Boolean = getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES),
+    val additionalExampleParamsFilePath: String? = getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE),
+    @field:JsonAlias("attribute_selection_pattern")
+    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern()
 ) {
     @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {

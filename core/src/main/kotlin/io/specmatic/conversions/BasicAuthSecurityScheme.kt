@@ -39,11 +39,7 @@ data class BasicAuthSecurityScheme(private val token: String? = null) : OpenAPIS
     }
 
     override fun addTo(httpRequest: HttpRequest, resolver: Resolver): HttpRequest {
-        return httpRequest.copy(
-            headers = httpRequest.headers.plus(
-                AUTHORIZATION to getAuthorizationHeaderValue(resolver)
-            )
-        )
+        return httpRequest.addSecurityHeader(AUTHORIZATION, getAuthorizationHeaderValue(resolver))
     }
 
     override fun addTo(requestPattern: HttpRequestPattern, row: Row): HttpRequestPattern {

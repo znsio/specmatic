@@ -1,6 +1,9 @@
 package io.specmatic.conversions
 
+import io.specmatic.core.HttpHeadersPattern
 import io.specmatic.core.NoBodyValue
+import io.specmatic.core.Resolver
+import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.pattern.parsedJSONObject
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -107,4 +110,35 @@ class ExampleFromFileTest {
         assertThat(request.queryParams.asMap()).containsExactlyEntriesOf(mapOf("filter" to "active"))
     }
 
+    @Test
+    fun `should load extra header params from additional params file`() {
+        val example = """
+        {
+            "http-request": {
+                "method": "POST",
+                "path": "/api/resource?filter=active",
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "body": {
+                    "key": "value"
+                }
+            },
+            "http-response": {
+                "status": 200,
+                "body": "ok"
+            }
+        }
+    """.trimIndent().let {
+            ExampleFromFile(parsedJSONObject(it), File("./data.json"))
+        }
+
+        val row =
+            example.toRow(SpecmaticConfig(additionalExampleParamsFilePath = "src/test/resources/additionalParamsFile.json"))
+
+        assertThat(row.requestExample?.headers.orEmpty()).containsEntry("X-Tra", "info")
+
+        val generatedHeaders = HttpHeadersPattern().newBasedOn(row, Resolver()).first().value.generate(Resolver())
+        assertThat(generatedHeaders).containsEntry("X-Tra", "info")
+    }
 }

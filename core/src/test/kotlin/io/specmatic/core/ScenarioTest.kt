@@ -1,8 +1,11 @@
 package io.specmatic.core
 
 import io.specmatic.conversions.OpenApiSpecification
+import io.mockk.every
+import io.mockk.mockk
 import io.specmatic.core.pattern.*
 import org.assertj.core.api.Assertions.*
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.util.function.Consumer
 
@@ -285,5 +288,135 @@ class ScenarioTest {
         )
 
         assertThat(scenario.apiDescription).isEqualTo("POST /products -> 201")
+    }
+
+    @Test
+    fun `should return scenarioMetadata from scenario`() {
+        val httpRequestPattern = mockk<HttpRequestPattern> {
+            every {
+                getHeaderKeys()
+            } returns setOf("Authorization", "X-Request-ID")
+
+            every {
+                getQueryParamKeys()
+            } returns setOf("productId", "orderId")
+
+            every { method } returns "POST"
+            every { httpPathPattern } returns HttpPathPattern(emptyList(), "/createProduct")
+        }
+
+        val scenarioMetadata = Scenario(
+            "",
+            httpRequestPattern,
+            HttpResponsePattern(status = 200),
+            exampleName = "example"
+        ).toScenarioMetadata()
+
+        assertThat(scenarioMetadata.method).isEqualTo("POST")
+        assertThat(scenarioMetadata.path).isEqualTo("/createProduct")
+        assertThat(scenarioMetadata.query).isEqualTo(setOf("productId", "orderId"))
+        assertThat(scenarioMetadata.header).isEqualTo(setOf("Authorization", "X-Request-ID"))
+        assertThat(scenarioMetadata.statusCode).isEqualTo(200)
+        assertThat(scenarioMetadata.exampleName).isEqualTo("example")
+    }
+
+    @Nested
+    inner class AttributeSelectionTest {
+        @Test
+        fun `should validate unexpected keys when the request is attribute based`() {
+            val httpRequestPattern = HttpRequestPattern(
+                httpPathPattern = buildHttpPathPattern("/test"),
+                method = "GET",
+                httpQueryParamPattern = HttpQueryParamPattern(
+                    queryPatterns = mapOf("fields?" to ListPattern(StringPattern()))
+                )
+            )
+
+            val httpResponsePattern = HttpResponsePattern(
+                status = 200,
+                body = JSONObjectPattern(
+                    pattern = mapOf("id" to NumberPattern(), "name" to StringPattern())
+                )
+            )
+
+            val scenario = Scenario(
+                "",
+                httpRequestPattern,
+                httpResponsePattern,
+                attributeSelectionPattern = AttributeSelectionPattern(queryParamKey = "fields", defaultFields = emptyList())
+            )
+
+            val httpRequest = HttpRequest(
+                path = "/test",
+                method = "GET",
+                queryParams = QueryParameters(mapOf("fields" to "id"))
+            )
+
+            val httpResponse = HttpResponse(
+                status = 200,
+                body = """{"id": 10, "extraKey": "extraValue"}"""
+            )
+
+            val flagBasedWithExtensibleSchema = DefaultStrategies.copy(unexpectedKeyCheck = IgnoreUnexpectedKeys)
+            val result = scenario.matches(httpRequest, httpResponse, DefaultMismatchMessages, flagBasedWithExtensibleSchema)
+
+            println(result.reportString())
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+            assertThat(result.reportString()).containsIgnoringWhitespaces("""
+            >> RESPONSE.BODY.extraKey 
+            Key named "extraKey" was unexpected
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should fallback to flag based when the request is not attribute based`() {
+            val httpRequestPattern = HttpRequestPattern(
+                httpPathPattern = buildHttpPathPattern("/test"),
+                method = "GET",
+                httpQueryParamPattern = HttpQueryParamPattern(
+                    queryPatterns = mapOf("fields?" to ListPattern(StringPattern()))
+                )
+            )
+
+            val httpResponsePattern = HttpResponsePattern(
+                status = 200,
+                body = JSONObjectPattern(
+                    pattern = mapOf("id" to NumberPattern(), "name" to StringPattern())
+                )
+            )
+
+            val scenario = Scenario(
+                "",
+                httpRequestPattern,
+                httpResponsePattern,
+                attributeSelectionPattern = AttributeSelectionPattern(queryParamKey = "fields", defaultFields = emptyList())
+            )
+
+            val httpRequest = HttpRequest(
+                path = "/test",
+                method = "GET"
+            )
+
+            val httpResponse = HttpResponse(
+                status = 200,
+                body = """{"id": 10, "name": "name", "extraKey": "extraValue"}"""
+            )
+
+            val flagBasedWithExtensibleSchema = DefaultStrategies.copy(unexpectedKeyCheck = IgnoreUnexpectedKeys)
+            val extensibleResult = scenario.matches(httpRequest, httpResponse, DefaultMismatchMessages, flagBasedWithExtensibleSchema)
+
+            println(extensibleResult.reportString())
+            assertThat(extensibleResult).isInstanceOf(Result.Success::class.java)
+
+            val flagBasedWithoutExtensibleSchema = DefaultStrategies
+            val nonExtensibleResult = scenario.matches(httpRequest, httpResponse, DefaultMismatchMessages, flagBasedWithoutExtensibleSchema)
+
+            println(nonExtensibleResult.reportString())
+            assertThat(nonExtensibleResult).isInstanceOf(Result.Failure::class.java)
+            assertThat(nonExtensibleResult.reportString()).containsIgnoringWhitespaces("""
+            >> RESPONSE.BODY.extraKey 
+            Key named "extraKey" was unexpected
+            """.trimIndent())
+        }
     }
 }

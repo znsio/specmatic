@@ -1941,6 +1941,50 @@ components:
     }
 
     @Test
+    fun `should return the first non-null response returned by a request handler in a list of request handlers`() {
+        createStubFromContracts(
+            contractPaths = listOf("src/test/resources/openapi/hello.yaml"),
+            dataDirPaths = emptyList(),
+            timeoutMillis = 0
+        ).use { stub ->
+
+            stub.registerHandler(object: RequestHandler {
+                override val name: String
+                    get() = "POST request handler"
+
+                override fun handleRequest(httpRequest: HttpRequest): HttpStubResponse? {
+                    if(httpRequest.method != "POST") return null
+                    return HttpStubResponse(
+                        response = HttpResponse(body = "POST response", status = 200)
+                    )
+                }
+            })
+            stub.registerHandler(object: RequestHandler {
+                override val name: String
+                    get() = "GET request handler"
+
+                override fun handleRequest(httpRequest: HttpRequest): HttpStubResponse? {
+                    if(httpRequest.method != "GET") return null
+                    return HttpStubResponse(
+                        response = HttpResponse(body = "GET response", status = 200)
+                    )
+                }
+
+            })
+
+            val request = HttpRequest(
+                "GET",
+                "/hello/10",
+                headers = mapOf("Authorization" to "Bearer token")
+            )
+
+            val response = stub.client.execute(request).body.toStringLiteral()
+
+            assertThat(response).isEqualTo("GET response")
+        }
+    }
+
+    @Test
     fun `should use the 400 response code based externalised example and respond accordingly`() {
         createStubFromContracts(
             contractPaths = listOf("src/test/resources/openapi/has_400_example_for_stub.yaml"),

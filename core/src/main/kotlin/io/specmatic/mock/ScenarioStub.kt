@@ -1,6 +1,8 @@
 package io.specmatic.mock
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.core.*
+import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.parsedJSONObject
@@ -16,6 +18,11 @@ fun loadDictionary(fileName: String): Map<String,Value> {
         throw ContractException("Error loading $fileName: ${exceptionCauseMessage(e)}")
     }
 }
+
+// move elsewhere
+data class AdditionalExampleParams(
+    val headers: Map<String, String>
+)
 
 data class ScenarioStub(
     val request: HttpRequest = HttpRequest(),
@@ -34,6 +41,43 @@ data class ScenarioStub(
         mockInteraction[MOCK_HTTP_RESPONSE] = response.toJSON()
 
         return JSONObjectValue(mockInteraction)
+    }
+
+    fun getRequestWithAdditionalParamsIfAny(request: HttpRequest, additionalExampleParamsFilePath: String?): HttpRequest {
+        if(additionalExampleParamsFilePath == null)
+            return this.request
+
+        val additionalExampleParamsFile = File(additionalExampleParamsFilePath)
+
+        if (!additionalExampleParamsFile.exists() || !additionalExampleParamsFile.isFile) {
+            return this.request
+        }
+
+        try {
+            val additionalExampleParams = ObjectMapper().readValue(
+                File(additionalExampleParamsFilePath).readText(),
+                Map::class.java
+            ) as? Map<String, Any>
+
+            if(additionalExampleParams == null) {
+                logger.log("WARNING: The content of $additionalExampleParamsFilePath is not a valid JSON object")
+                return this.request
+            }
+
+            val additionalHeaders = (additionalExampleParams["headers"] ?: emptyMap<String, String>()) as? Map<String, String>
+
+            if(additionalHeaders == null) {
+                logger.log("WARNING: The content of \"headers\" in $additionalExampleParamsFilePath is not a valid JSON object")
+                return this.request
+            }
+
+            val updatedHeaders = this.request.headers.plus(additionalHeaders)
+
+            return this.request.copy(headers = updatedHeaders)
+        } catch (e: Exception) {
+            logger.log(e, "WARNING: Could not read additional example params file $additionalExampleParamsFilePath")
+            return this.request
+        }
     }
 
     fun findPatterns(input: String): Set<String> {

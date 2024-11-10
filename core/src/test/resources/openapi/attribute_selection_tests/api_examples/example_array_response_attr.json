@@ -1,0 +1,26 @@
+{
+  "http-request": {
+    "path": "/employeesArrayResponse",
+    "method": "GET",
+    "query": {
+      "columns": "name"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": [
+      {
+        "id": 1,
+        "name": "name1"
+      },
+      {
+        "id": 2,
+        "name": "name2"
+      }
+    ],
+    "status-text": "OK",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

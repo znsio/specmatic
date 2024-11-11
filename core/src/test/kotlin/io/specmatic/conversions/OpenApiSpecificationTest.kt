@@ -9393,7 +9393,7 @@ paths:
               properties:
                 id:
                   type: string
-                href:
+                description:
                   type: string
                 type:
                   type: string
@@ -9407,7 +9407,7 @@ paths:
                 - ${'$'}ref: '#/components/schemas/Product'
               required:
                 - id
-                - href
+                - description
         """.trimIndent()
         val feature = OpenApiSpecification.fromYAML(specContent, "",).toFeature()
 
@@ -9424,13 +9424,13 @@ paths:
             if (requestBodyPattern != null) {
                 assertThat(requestBodyPattern.pattern).containsKey("type").doesNotContainKey("type?")
                 assertThat(requestBodyPattern.pattern).containsKey("id").doesNotContainKey("id?")
-                assertThat(requestBodyPattern.pattern).containsKey("href").doesNotContainKey("href?")
+                assertThat(requestBodyPattern.pattern).containsKey("description").doesNotContainKey("description?")
                 assertThat(requestBodyPattern.pattern).containsKey("createdAt?").doesNotContainKey("createdAt")
             }
 
             assertThat(responseBodyPattern.pattern).containsKey("type").doesNotContainKey("type?")
             assertThat(responseBodyPattern.pattern).containsKey("id").doesNotContainKey("id?")
-            assertThat(responseBodyPattern.pattern).containsKey("href").doesNotContainKey("href?")
+            assertThat(responseBodyPattern.pattern).containsKey("description").doesNotContainKey("description?")
             assertThat(responseBodyPattern.pattern).containsKey("createdAt?").doesNotContainKey("createdAt")
         }
     }
@@ -9476,7 +9476,7 @@ paths:
               properties:
                 id:
                   type: string
-                href:
+                description:
                   type: string
                 type:
                   type: string
@@ -9492,7 +9492,7 @@ paths:
                 - ${'$'}ref: '#/components/schemas/Product'
               required:
                 - id
-                - href
+                - description
                 - name
             Buyer:
               type: object
@@ -9514,7 +9514,7 @@ paths:
 
             assertThat(resolvedBodyPattern.pattern).containsKey("type").doesNotContainKey("type?")
             assertThat(resolvedBodyPattern.pattern).containsKey("id").doesNotContainKey("id?")
-            assertThat(resolvedBodyPattern.pattern).containsKey("href").doesNotContainKey("href?")
+            assertThat(resolvedBodyPattern.pattern).containsKey("description").doesNotContainKey("description?")
 
             assertThat(resolvedBodyPattern.pattern).containsKey("createdAt?").doesNotContainKey("createdAt")
             assertThat(resolvedBodyPattern.pattern).containsKey("buyer?").doesNotContainKey("buyer")

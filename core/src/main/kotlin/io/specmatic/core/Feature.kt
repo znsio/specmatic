@@ -207,37 +207,6 @@ data class Feature(
         }
     }
 
-    fun generateAttributeBasedRequestResponseList(
-        scenario: Scenario
-    ): List<AttributeBasedRequestResponse> {
-        try {
-            val matchingScenario = findMatchingPostScenario(scenario) ?: return emptyList()
-
-            val patternWithFields = matchingScenario.httpRequestPattern.body
-            val requests = scenario.generateAttributeSelectedRequests(flagsBased, patternWithFields)
-
-            return requests.map { request ->
-                val updatedScenario = scenario.newBasedOnAttributeSelectionFields(request.value.queryParams)
-                AttributeBasedRequestResponse(
-                    request = request.value,
-                    response = updatedScenario.generateHttpResponse(serverState),
-                    attributeSelectionMetadata = request.attribute
-                )
-            }
-        } finally {
-            serverState = emptyMap()
-        }
-    }
-
-    fun findMatchingPostScenario(scenario: Scenario): Scenario? {
-        return when(scenario.httpRequestPattern.method) {
-            "GET" -> scenarios.firstOrNull {
-                it.httpRequestPattern.httpPathPattern?.path == scenario.httpRequestPattern.httpPathPattern?.path && it.httpRequestPattern.method == "POST"
-            }
-            else -> null
-        }
-    }
-
     fun stubResponse(
         httpRequest: HttpRequest,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
@@ -2320,20 +2289,4 @@ data class DiscriminatorBasedRequestResponse(
     val response: HttpResponse,
     val requestDiscriminator: DiscriminatorMetadata,
     val responseDiscriminator: DiscriminatorMetadata
-)
-
-data class AttributeBasedRequestResponse(
-    val request: HttpRequest,
-    val response: HttpResponse,
-    val attributeSelectionMetadata: AttributeSelectionMetadata
-)
-
-data class AttributeSelectionMetadata(
-    val attributeSelectionField: String,
-    val selectedAttributes: Set<String>
-)
-
-data class AttributeSelectionBasedItem<T>(
-    val attribute: AttributeSelectionMetadata,
-    val value: T
 )

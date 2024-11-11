@@ -476,21 +476,6 @@ data class HttpRequestPattern(
         }
     }
 
-    fun generateAttributeSelected(resolver: Resolver, attributeSelectionPattern: AttributeSelectionPattern, patternWithFields: Pattern): List<AttributeSelectionBasedItem<HttpRequest>> {
-        return attempt(breadCrumb = "REQUEST") {
-            PatternBasedAttributeSelectionGenerator.getAttributeFromPattern(resolver, attributeSelectionPattern, patternWithFields).map {
-                AttributeSelectionBasedItem(
-                    attribute = it,
-                    value = generate(resolver).copy(
-                        queryParams = QueryParameters(mapOf(
-                            it.attributeSelectionField to it.selectedAttributes.joinToString(",")
-                        ))
-                    )
-                )
-            }
-        }
-    }
-
     private fun HttpRequest.generateAndUpdatePath(resolver: Resolver): HttpRequest {
         if (httpPathPattern == null) {
             throw missingParam("URL path")

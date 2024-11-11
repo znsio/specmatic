@@ -7,9 +7,6 @@ import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger
 import io.specmatic.test.TestInteractionsLog.displayName
 import io.specmatic.test.TestInteractionsLog.duration
-import io.specmatic.test.TestResultRecord
-import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
-import io.specmatic.test.reports.coverage.console.OpenApiCoverageConsoleRow
 import io.specmatic.test.OpenApiTestResultRecord
 import io.specmatic.test.groupTestResults
 import io.specmatic.test.report.interfaces.ReportInput
@@ -28,7 +25,6 @@ class OpenApiHtmlRenderer : ReportRenderer {
             TableColumn(name = "Method", colSpan = 1),
             TableColumn(name = "Status", colSpan = 1),
         )
-        val actuatorEnabled = SpecmaticJUnitSupport.openApiCoverageReportInput.endpointsAPISet
     }
 
     override fun render(reportInput: ReportInput, specmaticConfig: SpecmaticConfig): String {
@@ -41,8 +37,6 @@ class OpenApiHtmlRenderer : ReportRenderer {
         val (host, port) = reportInput.getHostAndPort()
 
         val reportData = HtmlReportData(
-            totalCoveragePercentage = report.totalCoveragePercentage, tableRows = makeTableRows(report, htmlReportConfiguration),
-            scenarioData = makeScenarioData(report), totalTestDuration = report.getTotalDuration()
             totalCoveragePercentage = reportInput.totalCoveragePercentage(), tableRows = makeTableRows(reportInput, htmlReportConfiguration),
             scenarioData = makeScenarioData(reportInput), totalTestDuration = reportInput.getTotalDuration()
         )
@@ -97,16 +91,12 @@ class OpenApiHtmlRenderer : ReportRenderer {
         }
     }
 
-    private fun getTotalDuration(report: OpenAPICoverageConsoleReport): Long {
-        return report.httpLogMessages.sumOf { it.duration() }
-    }
-
     private fun makeScenarioData(report: OpenApiReportInput): ScenarioDataGroup {
         val groupedTestResultRecords = report.testResultRecords.groupTestResults()
         val scenarioData = ScenarioDataGroup()
 
         for ((path, methodGroup) in groupedTestResultRecords) {
-            scenarioData.subGroup[path] = ScenarioDataGroup(report.testResultRecords)
+            scenarioData.subGroup[path] = ScenarioDataGroup()
             for ((method, statusGroup) in methodGroup) {
                 scenarioData.subGroup[path]!!.subGroup[method] = ScenarioDataGroup()
                 for ((status, testResultRecords) in statusGroup) {

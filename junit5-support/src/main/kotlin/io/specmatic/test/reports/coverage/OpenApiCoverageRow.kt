@@ -46,9 +46,6 @@ data class OpenApiCoverageRow (
                 "path" -> formattedPathName
                 "method" -> formattedMethodName
                 "response" -> formattedStatus
-                "#exercised" -> count
-                "result" -> remarks.toString()
-                "response" -> formattedResponseStatus
                 "#exercised" -> exercisedCount
                 "result" -> remark.toString()
                 else -> throw Exception("Unknown column name: ${column.name}")

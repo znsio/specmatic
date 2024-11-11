@@ -2,7 +2,6 @@ package io.specmatic.test
 
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
-import io.specmatic.core.filters.ScenarioMetadata
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.logger
@@ -29,10 +28,10 @@ data class ScenarioAsTest(
 
     override fun toScenarioMetadata() = scenario.toScenarioMetadata()
 
-    override fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord {
+    override fun testResultRecord(result: Result, response: HttpResponse?): OpenApiTestResultRecord {
         val resultStatus = result.testResult()
 
-        return TestResultRecord(
+        return OpenApiTestResultRecord(
             convertPathParameterStyle(scenario.path),
             scenario.method,
             scenario.status,

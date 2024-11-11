@@ -231,9 +231,7 @@ data class ReportFormatter(
     val logo: String = "assets/specmatic-logo.svg",
     val logoAltText: String = "Specmatic",
     val heading: String = "Contract Test Results",
-    val outputDirectory: String = "./build/reports/specmatic/html",
-    val logo: String = "assets/specmatic-logo.svg",
-    val logoAltText: String = "Specmatic",
+    val outputDirectory: String = "./build/reports/specmatic/html"
 )
 
 enum class ReportFormatterType {

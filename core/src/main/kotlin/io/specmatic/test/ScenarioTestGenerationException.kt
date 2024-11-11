@@ -3,7 +3,6 @@ package io.specmatic.test
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.Result
 import io.specmatic.core.Scenario
-import io.specmatic.core.filters.ScenarioMetadata
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.exceptionCauseMessage
 
@@ -16,7 +15,7 @@ class ScenarioTestGenerationException(
 
     override fun toScenarioMetadata() = scenario.toScenarioMetadata()
 
-    override fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord? {
+    override fun testResultRecord(result: Result, response: HttpResponse?): OpenApiTestResultRecord? {
         return null
     }
 

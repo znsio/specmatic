@@ -28,7 +28,7 @@ class Flags {
 
         fun getBooleanValue(flagName: String, default: Boolean = false) = getStringValue(flagName)?.toBoolean() ?: default
 
-        fun getLongValue(flagName: String): Long? = ( getStringValue(flagName))?.toLong()
+        fun getLongValue(flagName: String, default: Long? = null): Long? = ( getStringValue(flagName))?.toLong() ?: default
 
         fun <T> using(vararg properties: Pair<String, String>, fn: () -> T): T {
             try {

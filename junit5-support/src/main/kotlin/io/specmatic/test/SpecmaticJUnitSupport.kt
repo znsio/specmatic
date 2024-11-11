@@ -79,7 +79,6 @@ open class SpecmaticJUnitSupport {
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfig: SpecmaticConfig? = null
-        val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
         private val scenarioMetadataFilter = ScenarioMetadataFilter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty())
         private val scenarioMetadataExclusionFilter = ScenarioMetadataFilter.from(
             readEnvVarOrProperty(FILTER_NOT, FILTER_NOT).orEmpty()
@@ -108,34 +107,6 @@ open class SpecmaticJUnitSupport {
                 if(it.size > 1) {
                     logger.newLine()
                     logger.log("Executed tests in ${it.size} threads")
-                }
-            }
-        }
-
-        @JvmStatic
-        fun getReportConfiguration(specmaticConfig: SpecmaticConfig?): ReportConfiguration {
-            return when (val reportConfiguration = specmaticConfig?.report) {
-                null -> {
-                    logger.log("Could not load report configuration, coverage will be calculated but no coverage threshold will be enforced")
-                    ReportConfiguration(
-                        formatters = listOf(
-                            ReportFormatter(ReportFormatterType.TEXT, ReportFormatterLayout.TABLE),
-                            ReportFormatter(ReportFormatterType.HTML)
-                        ), types = ReportTypes()
-                    )
-                }
-
-                else -> {
-                    val htmlReportFormatter = reportConfiguration.formatters?.firstOrNull {
-                        it.type == ReportFormatterType.HTML
-                    } ?: ReportFormatter(ReportFormatterType.HTML)
-                    val textReportFormatter = reportConfiguration.formatters?.firstOrNull {
-                        it.type == ReportFormatterType.TEXT
-                    } ?: ReportFormatter(ReportFormatterType.TEXT)
-                    ReportConfiguration(
-                        formatters = listOf(htmlReportFormatter, textReportFormatter),
-                        types = reportConfiguration.types
-                    )
                 }
             }
         }
@@ -185,8 +156,6 @@ open class SpecmaticJUnitSupport {
         } ?: emptyList()
 
         fun getTotalTestCount(): Int = testResultRecords.size
-
-        private fun getConfigFileWithAbsolutePath() = File(configFile).canonicalPath
 
         fun setDefaultLogger(logger: LogStrategy) {
             defaultLogger = logger

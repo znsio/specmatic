@@ -2,13 +2,7 @@ package io.specmatic.test.reports.coverage.html
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
-import io.specmatic.core.ReportFormatter
-import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.SuccessCriteria
 import io.specmatic.core.TestResult
-import io.specmatic.core.log.logger
-import io.specmatic.test.reports.coverage.console.Remarks
-import io.specmatic.core.*
 import io.specmatic.core.log.logger
 import io.specmatic.test.reports.coverage.html.HtmlTemplateConfiguration.Companion.configureTemplateEngine
 import org.thymeleaf.context.Context
@@ -102,14 +96,9 @@ class HtmlReport(private val htmlReportInput: HtmlReportInput) {
         return tableRows
     }
 
-    private fun updateScenarioData(scenarioData: ScenarioDataGroup): ScenarioDataGroup {
-        scenarioData.subGroup.forEach { (_, group) ->
-            if (group.subGroup.isNotEmpty()) {
-                updateScenarioData(group)
-            } else {
-                group.data.forEach {
-                    val htmlResult = categorizeResult(it)
-                    val scenarioDetail = "${it.name} ${htmlResultToDetailPostFix(htmlResult)}"
+    private fun updateScenarioData(scenarioData: ScenarioData): ScenarioData {
+        val htmlResult = categorizeResult(scenarioData)
+        val scenarioDetail = "${scenarioData.name} ${htmlResultToDetailPostFix(htmlResult)}"
 
         scenarioData.htmlResult = htmlResult
         scenarioData.details = if (scenarioData.details.isBlank()) scenarioDetail else "$scenarioDetail\n${scenarioData.details}"

@@ -1302,12 +1302,13 @@ class OpenApiSpecification(
                     val (deepListOfAllOfs, allDiscriminators) = resolveDeepAllOfs(schema, DiscriminatorDetails(), emptySet())
 
                     val explodedDiscriminators = allDiscriminators.explode()
+                    val topLevelRequired = schema.required.orEmpty()
 
                     val schemaProperties = explodedDiscriminators.map { discriminator ->
                         val schemasFromDiscriminator = discriminator.schemas
 
                         val schemaProperties = (deepListOfAllOfs + schemasFromDiscriminator).map { schemaToProcess ->
-                            val requiredFields = schemaToProcess.required.orEmpty()
+                            val requiredFields = topLevelRequired.plus(schemaToProcess.required.orEmpty())
                             toSchemaProperties(schemaToProcess, requiredFields, patternName, typeStack, discriminator)
                         }.fold(emptyMap<String, Pattern>()) { propertiesAcc, propertiesEntry ->
                             combine(propertiesEntry, propertiesAcc)

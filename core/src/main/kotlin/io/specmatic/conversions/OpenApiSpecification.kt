@@ -1161,12 +1161,12 @@ class OpenApiSpecification(
     private fun toSpecmaticPattern(mediaType: MediaType, section: String, jsonInFormData: Boolean = false): Pattern =
         toSpecmaticPattern(mediaType.schema ?: throw ContractException("${section.capitalizeFirstChar()} body definition is missing"), emptyList(), jsonInFormData = jsonInFormData)
 
-    private fun resolveDeepAllOfs(schema: Schema<Any>, discriminatorDetails: DiscriminatorDetails, typeStack: Set<String>): Pair<List<Schema<Any>>, DiscriminatorDetails> {
+    private fun resolveDeepAllOfs(schema: Schema<Any>, discriminatorDetails: DiscriminatorDetails, typeStack: Set<String>, topLevel: Boolean): Pair<List<Schema<Any>>, DiscriminatorDetails> {
         if (schema.allOf == null)
             return listOf(schema) to discriminatorDetails
 
         // Pair<String [property name], Map<String [possible value], Pair<String [Schema name derived from the ref], Schema<Any> [reffed schema]>>>
-        val newDiscriminatorDetailsDetails: Triple<String, Map<String, Pair<String, List<Schema<Any>>>>, DiscriminatorDetails>? = schema.discriminator?.let { rawDiscriminator ->
+        val newDiscriminatorDetailsDetails: Triple<String, Map<String, Pair<String, List<Schema<Any>>>>, DiscriminatorDetails>? = if (!topLevel) null else schema.discriminator?.let { rawDiscriminator ->
             rawDiscriminator.propertyName?.let { propertyName ->
                 val mapping = rawDiscriminator.mapping ?: emptyMap()
 
@@ -1178,7 +1178,8 @@ class OpenApiSpecification(
                             val value = mappedSchemaName to resolveDeepAllOfs(
                                 mappedSchema,
                                 discriminatorDetails,
-                                typeStack + mappedComponentName
+                                typeStack + mappedComponentName,
+                                topLevel = false
                             )
                             discriminatorValue to value
                         } else {
@@ -1212,7 +1213,8 @@ class OpenApiSpecification(
                     resolveDeepAllOfs(
                         referredSchema,
                         discriminatorDetails.plus(newDiscriminatorDetailsDetails),
-                        typeStack + componentName
+                        typeStack + componentName,
+                        topLevel = false
                     )
                 } else
                     null
@@ -1299,7 +1301,7 @@ class OpenApiSpecification(
 
             is ComposedSchema -> {
                 if (schema.allOf != null) {
-                    val (deepListOfAllOfs, allDiscriminators) = resolveDeepAllOfs(schema, DiscriminatorDetails(), emptySet())
+                    val (deepListOfAllOfs, allDiscriminators) = resolveDeepAllOfs(schema, DiscriminatorDetails(), emptySet(), topLevel = true)
 
                     val explodedDiscriminators = allDiscriminators.explode()
 

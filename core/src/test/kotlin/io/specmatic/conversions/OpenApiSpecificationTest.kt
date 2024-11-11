@@ -9357,38 +9357,38 @@ paths:
         val specContent = """
         openapi: 3.0.3
         info:
-          title: Ticketing API
-          description: API for managing tickets
+          title: Products API
+          description: API for managing products
           version: 1.0.0
         paths:
-          /tickets:
+          /products:
             get:
               responses:
                 '200':
-                  description: A list of tickets
+                  description: A list of products
                   content:
                     application/json:
                       schema:
                         type: array
                         items:
-                          ${'$'}ref: '#/components/schemas/TicketRes'
+                          ${'$'}ref: '#/components/schemas/ProductRes'
             post:
               requestBody:
                 required: true
                 content:
                   application/json:
                     schema:
-                      ${'$'}ref: '#/components/schemas/TicketRes'
+                      ${'$'}ref: '#/components/schemas/ProductRes'
               responses:
                 '201':
-                  description: Successfully created a ticket
+                  description: Successfully created a products
                   content:
                     application/json:
                       schema:
-                        ${'$'}ref: '#/components/schemas/TicketRes'
+                        ${'$'}ref: '#/components/schemas/ProductRes'
         components:
           schemas:
-            Ticket:
+            Product:
               type: object
               properties:
                 id:
@@ -9402,9 +9402,9 @@ paths:
                   format: date-time
               required:
                 - type
-            TicketRes:
+            ProductRes:
               allOf:
-                - ${'$'}ref: '#/components/schemas/Ticket'
+                - ${'$'}ref: '#/components/schemas/Product'
               required:
                 - id
                 - href
@@ -9440,38 +9440,38 @@ paths:
         val specContent = """
         openapi: 3.0.3
         info:
-          title: Ticketing API
-          description: API for managing tickets
+          title: Products API
+          description: API for managing products
           version: 1.0.0
         paths:
-          /tickets:
+          /products:
             get:
               responses:
                 '200':
-                  description: A list of tickets
+                  description: A list of products
                   content:
                     application/json:
                       schema:
                         type: array
                         items:
-                          ${'$'}ref: '#/components/schemas/TicketRes'
+                          ${'$'}ref: '#/components/schemas/ProductRes'
             post:
               requestBody:
                 required: true
                 content:
                   application/json:
                     schema:
-                      ${'$'}ref: '#/components/schemas/TicketRes'
+                      ${'$'}ref: '#/components/schemas/ProductRes'
               responses:
                 '201':
-                  description: Successfully created a ticket
+                  description: Successfully created a products
                   content:
                     application/json:
                       schema:
-                        ${'$'}ref: '#/components/schemas/TicketRes'
+                        ${'$'}ref: '#/components/schemas/ProductRes'
         components:
           schemas:
-            Ticket:
+            Product:
               type: object
               properties:
                 id:
@@ -9483,18 +9483,18 @@ paths:
                 createdAt:
                   type: string
                   format: date-time
-                assignedTo:
-                  ${'$'}ref: '#/components/schemas/AssignedTo'
+                buyer:
+                  ${'$'}ref: '#/components/schemas/Buyer'
               required:
                 - type
-            TicketRes:
+            ProductRes:
               allOf:
-                - ${'$'}ref: '#/components/schemas/Ticket'
+                - ${'$'}ref: '#/components/schemas/Product'
               required:
                 - id
                 - href
                 - name
-            AssignedTo:
+            Buyer:
               type: object
               properties:
                 name:
@@ -9517,9 +9517,9 @@ paths:
             assertThat(resolvedBodyPattern.pattern).containsKey("href").doesNotContainKey("href?")
 
             assertThat(resolvedBodyPattern.pattern).containsKey("createdAt?").doesNotContainKey("createdAt")
-            assertThat(resolvedBodyPattern.pattern).containsKey("assignedTo?").doesNotContainKey("assignedTo")
+            assertThat(resolvedBodyPattern.pattern).containsKey("buyer?").doesNotContainKey("buyer")
 
-            val assignedToPattern = resolvedHop(resolvedBodyPattern.pattern["assignedTo?"]!!, scenario.resolver) as JSONObjectPattern
+            val assignedToPattern = resolvedHop(resolvedBodyPattern.pattern["buyer?"]!!, scenario.resolver) as JSONObjectPattern
             assertThat(assignedToPattern.pattern).containsKey("name?").doesNotContainKey("name")
             assertThat(assignedToPattern.pattern).containsKey("email?").doesNotContainKey("email")
         }

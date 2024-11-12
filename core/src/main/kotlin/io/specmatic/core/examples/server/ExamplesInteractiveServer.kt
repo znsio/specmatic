@@ -113,17 +113,21 @@ class ExamplesInteractiveServer(
 
                     try {
                         val request = call.receive<GenerateExampleRequest>()
-                        val generatedExample = generate(
-                            contractFile,
-                            request.method,
-                            request.path,
-                            request.responseStatusCode,
-                            request.contentType,
-                            request.bulkMode,
-                            allowOnlyMandatoryKeysInJSONObject,
-                        )
+                        val generatedExamples = if (request.isSchemaBased) {
+                            generateForSchemaBased(contractFile, request.path)
+                        } else {
+                            generate(
+                                contractFile,
+                                request.method,
+                                request.path,
+                                request.responseStatusCode,
+                                request.contentType,
+                                request.bulkMode,
+                                allowOnlyMandatoryKeysInJSONObject,
+                            )
+                        }
 
-                        call.respond(HttpStatusCode.OK, GenerateExampleResponse.from(generatedExample))
+                        call.respond(HttpStatusCode.OK, GenerateExampleResponse.from(generatedExamples))
                     } catch(e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
@@ -272,7 +276,7 @@ class ExamplesInteractiveServer(
 
         val examplesDir = getExamplesDirPath(contractFile)
         val endpoints = ExamplesView.getEndpoints(feature, examplesDir)
-        val schemaExamplesPairs = examplesDir.getSchemaBasedExamples(feature)
+        val schemaExamplesPairs = examplesDir.getSchemaExamplesWithValidation(feature)
         val tableRows = endpoints.toTableRows().withSchemaExamples(schemaExamplesPairs)
 
         return HtmlTemplateConfiguration.process(
@@ -449,6 +453,23 @@ class ExamplesInteractiveServer(
             )
 
             return existingExamples.map { ExamplePathInfo(it.file.absolutePath, false) }.plus(newExamples)
+        }
+
+        fun generateForSchemaBased(contractFile: File, patternName: String): List<ExamplePathInfo> {
+            val examplesDir = getExamplesDirPath(contractFile)
+            if(examplesDir.exists().not()) examplesDir.mkdirs()
+
+            val feature = parseContractFileToFeature(contractFile)
+            val generatedValue = feature.generateSchema(patternName)
+            val schemaExample = SchemaExample.toSchemaExample(patternName, generatedValue)
+
+            val exampleFile = examplesDir.getSchemaExamples().firstOrNull {
+                it.getSchemaBasedOn == patternName
+            }?.file ?: examplesDir.resolve("${patternName}_schema.json")
+
+            println("Writing to file: ${exampleFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
+            exampleFile.writeText(schemaExample.toStringLiteral())
+            return listOf(ExamplePathInfo(path = exampleFile.absolutePath, created = true))
         }
 
         data class ExamplePathInfo(val path: String, val created: Boolean)
@@ -634,15 +655,19 @@ class ExamplesInteractiveServer(
             } ?: emptyList()
         }
 
-        fun  File.getSchemaBasedExamples(feature: Feature): List<Pair<String, Pair<SchemaExample, String>?>> {
+        fun File.getSchemaExamplesWithValidation(feature: Feature): List<Pair<String, Pair<SchemaExample, String>?>> {
+            return getSchemaExamples().map {
+                it.getSchemaBasedOn to if(it.value !is NullValue) {
+                    it to feature.matchResultSchema(it.getSchemaBasedOn, it.value).reportString()
+                } else null
+            }
+        }
+
+        private fun File.getSchemaExamples(): List<SchemaExample> {
             return this.listFiles()?.mapNotNull { exampleFile ->
                 runCatching {
                     attempt(breadCrumb = "Error reading file ${exampleFile.name}") {
-                        SchemaExample(exampleFile).let {
-                            it.getSchemaBasedOn to if(it.value !is NullValue) {
-                                it to feature.matchResultSchema(it.getSchemaBasedOn, it.value).reportString()
-                            } else null
-                        }
+                        SchemaExample(exampleFile)
                     }
                 }.onFailure { err -> consoleDebug(exceptionCauseMessage(err)) }.getOrNull()
             } ?: emptyList()
@@ -803,7 +828,8 @@ data class GenerateExampleRequest(
     val path: String,
     val responseStatusCode: Int,
     val contentType: String? = null,
-    val bulkMode: Boolean = false
+    val bulkMode: Boolean = false,
+    val isSchemaBased: Boolean = false
 )
 
 data class GenerateExample(

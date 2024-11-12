@@ -150,7 +150,7 @@ data class TableRow(
     val uniqueKey: String = "${path}_${method}_${responseStatus}",
     val isDiscriminatorBased: Boolean,
     val isMainRow: Boolean = showPath || showMethod || showStatus,
-    val isSchemaExample: Boolean = method.isBlank() && responseStatus.isBlank()
+    val isSchemaBased: Boolean = method.isBlank() && responseStatus.isBlank()
 )
 
 data class StatusGroup(

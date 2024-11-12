@@ -336,6 +336,12 @@ data class Feature(
         return pattern.matches(value, resolver)
     }
 
+    fun generateSchema(patternName: String): Value {
+        val resolver = scenarios.last().resolver
+        val pattern = DeferredPattern("($patternName)")
+        return pattern.generate(resolver)
+    }
+
     fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {
         return matchResultFlagBased(scenarioStub.request, scenarioStub.response, mismatchMessages)
     }

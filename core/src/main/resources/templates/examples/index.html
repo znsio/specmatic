@@ -1030,7 +1030,7 @@
         <tbody th:attr="data-test-mode=${isTestMode}">
             <tr
                 th:each="row, iter : ${tableRows}"
-                th:attr="data-raw-path=${row.rawPath}, data-key=${row.uniqueKey},
+                th:attr="data-raw-path=${row.rawPath}, data-key=${row.uniqueKey}, data-schema-based=${row.isSchemaBased},
                         data-example=${row.example}, data-main=${row.isMainRow}, data-disc=${row.isDiscriminatorBased},
                         data-generate=${row.isGenerated ? 'success' : 'not-generated'}, data-test='not-tested',
                         data-valid=${row.isGenerated ? (row.isValid ? 'success' : 'failed') : 'not-validated'}">
@@ -1038,7 +1038,7 @@
                     <input type="checkbox" name="path-row" class="path-row">
                 </td>
                 <td></td>
-                <td th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=${row.isSchemaExample ? 5: 3}">
+                <td th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=${row.isSchemaBased ? 5: 3}">
                     <span>[[${row.path}]]</span>
                 </td>
                 <td th:class="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodSpan}">
@@ -1300,8 +1300,9 @@
     function extractRowValues(tableRow) {
         const [method, responseAndContentType] = [...tableRow.children].slice(3, 5).map((child) => child.textContent.trim());
         const [responseStatusCode, contentType] = responseAndContentType.split("\n").map((str) => str.trim());
+        const isSchemaBased = tableRow.getAttribute("data-schema-based") === "true"
 
-        return { path: tableRow.getAttribute("data-raw-path"), method, responseStatusCode, contentType };
+        return { path: tableRow.getAttribute("data-raw-path"), method, responseStatusCode, contentType, isSchemaBased };
     }
 
     function getRowsCount() {

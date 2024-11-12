@@ -9352,6 +9352,180 @@ paths:
         assertThat(resolvedBodyPattern.pattern.keys).doesNotContain("id?")
     }
 
+    @Test
+    fun `should apply top-level required fields to properties in resolved allOf schema`() {
+        val specContent = """
+        openapi: 3.0.3
+        info:
+          title: Products API
+          description: API for managing products
+          version: 1.0.0
+        paths:
+          /products:
+            get:
+              responses:
+                '200':
+                  description: A list of products
+                  content:
+                    application/json:
+                      schema:
+                        type: array
+                        items:
+                          ${'$'}ref: '#/components/schemas/ProductRes'
+            post:
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      ${'$'}ref: '#/components/schemas/ProductRes'
+              responses:
+                '201':
+                  description: Successfully created a products
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/ProductRes'
+        components:
+          schemas:
+            Product:
+              type: object
+              properties:
+                id:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+                createdAt:
+                  type: string
+                  format: date-time
+              required:
+                - type
+            ProductRes:
+              type: object
+              allOf:
+                - ${'$'}ref: '#/components/schemas/Product'
+              required:
+                - id
+                - description
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(specContent, "",).toFeature()
+
+        assertThat(feature.scenarios).allSatisfy { scenario ->
+            val responsePattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
+
+            val requestBodyPattern = resolvedHop(scenario.httpRequestPattern.body, scenario.resolver) as? JSONObjectPattern
+            val responseBodyPattern = when (responsePattern) {
+                is JSONObjectPattern -> responsePattern
+                is ListPattern -> resolvedHop(responsePattern.pattern, scenario.resolver) as JSONObjectPattern
+                else -> throw IllegalArgumentException("Unexpected response pattern")
+            }
+
+            if (requestBodyPattern != null) {
+                assertThat(requestBodyPattern.pattern).containsKey("type").doesNotContainKey("type?")
+                assertThat(requestBodyPattern.pattern).containsKey("id").doesNotContainKey("id?")
+                assertThat(requestBodyPattern.pattern).containsKey("description").doesNotContainKey("description?")
+                assertThat(requestBodyPattern.pattern).containsKey("createdAt?").doesNotContainKey("createdAt")
+            }
+
+            assertThat(responseBodyPattern.pattern).containsKey("type").doesNotContainKey("type?")
+            assertThat(responseBodyPattern.pattern).containsKey("id").doesNotContainKey("id?")
+            assertThat(responseBodyPattern.pattern).containsKey("description").doesNotContainKey("description?")
+            assertThat(responseBodyPattern.pattern).containsKey("createdAt?").doesNotContainKey("createdAt")
+        }
+    }
+
+    @Test
+    fun `should not propagate top-level required fields into nested schemas in allOf`() {
+        val specContent = """
+        openapi: 3.0.3
+        info:
+          title: Products API
+          description: API for managing products
+          version: 1.0.0
+        paths:
+          /products:
+            get:
+              responses:
+                '200':
+                  description: A list of products
+                  content:
+                    application/json:
+                      schema:
+                        type: array
+                        items:
+                          ${'$'}ref: '#/components/schemas/ProductRes'
+            post:
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      ${'$'}ref: '#/components/schemas/ProductRes'
+              responses:
+                '201':
+                  description: Successfully created a products
+                  content:
+                    application/json:
+                      schema:
+                        ${'$'}ref: '#/components/schemas/ProductRes'
+        components:
+          schemas:
+            Product:
+              type: object
+              properties:
+                id:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+                createdAt:
+                  type: string
+                  format: date-time
+                buyer:
+                  ${'$'}ref: '#/components/schemas/Buyer'
+              required:
+                - type
+            ProductRes:
+              allOf:
+                - ${'$'}ref: '#/components/schemas/Product'
+              required:
+                - id
+                - description
+                - name
+            Buyer:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(specContent, "").toFeature()
+
+        assertThat(feature.scenarios).allSatisfy { scenario ->
+            val responsePattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
+            val resolvedBodyPattern = when (responsePattern) {
+                is JSONObjectPattern -> responsePattern
+                is ListPattern -> resolvedHop(responsePattern.pattern, scenario.resolver) as JSONObjectPattern
+                else -> throw IllegalArgumentException("Unexpected response pattern")
+            }
+
+            assertThat(resolvedBodyPattern.pattern).containsKey("type").doesNotContainKey("type?")
+            assertThat(resolvedBodyPattern.pattern).containsKey("id").doesNotContainKey("id?")
+            assertThat(resolvedBodyPattern.pattern).containsKey("description").doesNotContainKey("description?")
+
+            assertThat(resolvedBodyPattern.pattern).containsKey("createdAt?").doesNotContainKey("createdAt")
+            assertThat(resolvedBodyPattern.pattern).containsKey("buyer?").doesNotContainKey("buyer")
+
+            val assignedToPattern = resolvedHop(resolvedBodyPattern.pattern["buyer?"]!!, scenario.resolver) as JSONObjectPattern
+            assertThat(assignedToPattern.pattern).containsKey("name?").doesNotContainKey("name")
+            assertThat(assignedToPattern.pattern).containsKey("email?").doesNotContainKey("email")
+        }
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

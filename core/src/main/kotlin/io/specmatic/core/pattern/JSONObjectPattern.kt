@@ -261,7 +261,7 @@ data class JSONObjectPattern(
                 it.missingKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
             }
 
-        val updatedResolver = resolver.addPatternAsSeen(this)
+        val updatedResolver = resolverWithNullType.addPatternAsSeen(this)
 
         data class ResultWithDiscriminatorStatus(val result: Result, val isDiscriminator: Boolean)
 

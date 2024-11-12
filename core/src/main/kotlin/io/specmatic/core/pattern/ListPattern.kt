@@ -81,7 +81,7 @@ data class ListPattern(
             return Result.Failure(message = "List cannot be empty")
         }
 
-        val updatedResolver = resolver.addPatternAsSeen(this)
+        val updatedResolver = resolverWithEmptyType.addPatternAsSeen(this)
         val failures: List<Result.Failure> = sampleData.list.map {
             updatedResolver.matchesPattern(null, pattern, it)
         }.mapIndexed { index, result ->

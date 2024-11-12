@@ -9353,6 +9353,40 @@ paths:
     }
 
     @Test
+    fun `should not resolve deep discriminators in an allOf schema`() {
+        val specFile = "src/test/resources/openapi/vehicle_deep_allof.yaml"
+        val feature = OpenApiSpecification.fromFile(specFile).toFeature()
+
+        assertThat(feature.scenarios).allSatisfy { scenario ->
+            val responseBodyPattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver).let {
+                when (it) {
+                    is ListPattern -> resolvedHop(it.pattern, scenario.resolver)
+                    else -> it
+                }
+            }
+            val requestBodyPattern = scenario.httpRequestPattern.body.takeIf { it !is NoBodyPattern }?.let {
+                resolvedHop(scenario.httpRequestPattern.body, scenario.resolver)
+            }
+
+            assertThat(responseBodyPattern).isNotInstanceOf(AnyPattern::class.java)
+            if (requestBodyPattern != null) {
+                when (scenario.method) {
+                    "POST" -> {
+                        assertThat(requestBodyPattern).isInstanceOf(AnyPattern::class.java)
+                        (requestBodyPattern as AnyPattern).let {
+                            assertThat(it.pattern).hasSize(2)
+                            assertThat(it.discriminator!!.property).isEqualTo("type")
+                            assertThat(it.discriminator!!.values).containsExactlyInAnyOrder("car", "truck")
+                        }
+                    }
+                    "PATCH" -> assertThat(requestBodyPattern).isNotInstanceOf(AnyPattern::class.java)
+                    else -> Exception("Unexpected method: ${scenario.method}")
+                }
+            }
+        }
+    }
+
+    @Test
     fun `should apply top-level required fields to properties in resolved allOf schema`() {
         val specContent = """
         openapi: 3.0.3

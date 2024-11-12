@@ -7,11 +7,18 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.io.File
 
 class ExamplesInteractiveServerTest {
+    @BeforeEach
+    fun resetCounter() {
+        ExamplesInteractiveServer.resetExampleFileNameCounter()
+    }
+
     @Nested
     inner class ExternaliseInlineExamplesTests {
 
@@ -63,6 +70,58 @@ class ExamplesInteractiveServerTest {
             } finally {
                 examplesDir?.deleteRecursively()
             }
+        }
+    }
+
+    @Nested
+    inner class DiscriminatorExamplesGenerationTests {
+        private val specFile = File("src/test/resources/openapi/vehicle_deep_allof.yaml")
+        private val examplesDir = specFile.parentFile.resolve("vehicle_deep_allof_examples")
+
+        @AfterEach
+        fun cleanUp() {
+            if (examplesDir.exists()) {
+                examplesDir.listFiles()?.forEach { it.delete() }
+                examplesDir.delete()
+            }
+        }
+
+        @Test
+        fun `should generate multiple examples for top level discriminator`() {
+            val generatedExamples = ExamplesInteractiveServer.generate(
+                contractFile = specFile,
+                method = "POST", path = "/vehicles", responseStatusCode = 201,
+                bulkMode = false, allowOnlyMandatoryKeysInJSONObject = false
+            )
+
+            assertThat(generatedExamples).hasSize(2)
+            assertThat(generatedExamples).allSatisfy {
+                assertThat(it.created).isTrue()
+                assertThat(it.path).satisfiesAnyOf(
+                    { path -> assertThat(path).contains("car") }, { path -> assertThat(path).contains("truck") }
+                )
+            }
+        }
+
+        @Test
+        fun `should not generate multiple examples for deep nested discriminator`() {
+            val generatedGetExamples = ExamplesInteractiveServer.generate(
+                contractFile = specFile,
+                method = "GET", path = "/vehicles", responseStatusCode = 200,
+                bulkMode = false, allowOnlyMandatoryKeysInJSONObject = false
+            )
+
+            assertThat(generatedGetExamples).hasSize(1)
+            assertThat(generatedGetExamples.first().path).contains("GET")
+
+            val generatedPatchExamples = ExamplesInteractiveServer.generate(
+                contractFile = specFile,
+                method = "PATCH", path = "/vehicles", responseStatusCode = 200,
+                bulkMode = false, allowOnlyMandatoryKeysInJSONObject = false
+            )
+
+            assertThat(generatedPatchExamples).hasSize(1)
+            assertThat(generatedPatchExamples.first().path).contains("PATCH")
         }
     }
 }

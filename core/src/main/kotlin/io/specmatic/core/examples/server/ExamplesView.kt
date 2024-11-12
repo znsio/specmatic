@@ -80,6 +80,20 @@ class ExamplesView {
             }
         }
 
+        fun List<TableRow>.withSchemaExamples(schemaExample: List<Pair<String, Pair<SchemaExample, String>?>>): List<TableRow> {
+            return schemaExample.map { (patternName, example) ->
+                TableRow(
+                    rawPath = patternName, path = patternName,
+                    method = "", responseStatus = "", contentType = "",
+                    pathSpan = 1, methodSpan = 1, statusSpan = 1,
+                    showPath = true, showMethod = false, showStatus = false,
+                    example = example?.first?.file?.absolutePath, exampleName = example?.first?.file?.nameWithoutExtension,
+                    exampleMismatchReason = example?.second?.takeIf { it.isNotBlank() },
+                    isDiscriminatorBased = false
+                )
+            }.plus(this)
+        }
+
         fun List<Endpoint>.toTableRows(): List<TableRow> {
             val groupedEndpoint = this.sortEndpoints().groupEndpoints()
             return groupedEndpoint.flatMap { (_, pathGroup) ->
@@ -135,7 +149,8 @@ data class TableRow(
     val isValid: Boolean = isGenerated && exampleMismatchReason == null,
     val uniqueKey: String = "${path}_${method}_${responseStatus}",
     val isDiscriminatorBased: Boolean,
-    val isMainRow: Boolean = showPath || showMethod || showStatus
+    val isMainRow: Boolean = showPath || showMethod || showStatus,
+    val isSchemaExample: Boolean = method.isBlank() && responseStatus.isBlank()
 )
 
 data class StatusGroup(

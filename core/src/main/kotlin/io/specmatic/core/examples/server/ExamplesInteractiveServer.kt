@@ -15,6 +15,7 @@ import io.specmatic.core.*
 import io.specmatic.core.discriminator.DiscriminatorExampleInjector
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
+import io.specmatic.core.examples.server.ExamplesView.Companion.withSchemaExamples
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.consoleDebug
@@ -269,8 +270,10 @@ class ExamplesInteractiveServer(
     private fun getExamplePageHtmlContent(contractFile: File, hostPort: String): String {
         val feature = ScenarioFilter(filterName, filterNotName, filter, filterNot).filter(parseContractFileToFeature(contractFile))
 
-        val endpoints = ExamplesView.getEndpoints(feature, getExamplesDirPath(contractFile))
-        val tableRows = endpoints.toTableRows()
+        val examplesDir = getExamplesDirPath(contractFile)
+        val endpoints = ExamplesView.getEndpoints(feature, examplesDir)
+        val schemaExamplesPairs = examplesDir.getSchemaBasedExamples(feature)
+        val tableRows = endpoints.toTableRows().withSchemaExamples(schemaExamplesPairs)
 
         return HtmlTemplateConfiguration.process(
             templateName = "examples/index.html",
@@ -548,8 +551,13 @@ class ExamplesInteractiveServer(
         }
 
         fun validateSingleExample(feature: Feature, exampleFile: File): Result {
-            val scenarioStub = ScenarioStub.readFromFile(exampleFile)
-            return validateExample(feature, scenarioStub).toResultIfAny()
+            return kotlin.runCatching {
+                val scenarioStub = ScenarioStub.readFromFile(exampleFile)
+                validateExample(feature, scenarioStub).toResultIfAny()
+            }.getOrElse {
+                val schemaExample = SchemaExample(exampleFile)
+                feature.matchResultSchema(schemaExample.getSchemaBasedOn, schemaExample.value)
+            }
         }
 
         fun validateExamples(contractFile: File, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
@@ -623,6 +631,20 @@ class ExamplesInteractiveServer(
                 runCatching {
                     attempt(breadCrumb = "Error reading file ${it.name}") { ExampleFromFile(it) }
                 }.onFailure { err -> consoleLog(exceptionCauseMessage(err)) }.getOrNull()
+            } ?: emptyList()
+        }
+
+        fun  File.getSchemaBasedExamples(feature: Feature): List<Pair<String, Pair<SchemaExample, String>?>> {
+            return this.listFiles()?.mapNotNull { exampleFile ->
+                runCatching {
+                    attempt(breadCrumb = "Error reading file ${exampleFile.name}") {
+                        SchemaExample(exampleFile).let {
+                            it.getSchemaBasedOn to if(it.value !is NullValue) {
+                                it to feature.matchResultSchema(it.getSchemaBasedOn, it.value).reportString()
+                            } else null
+                        }
+                    }
+                }.onFailure { err -> consoleDebug(exceptionCauseMessage(err)) }.getOrNull()
             } ?: emptyList()
         }
 

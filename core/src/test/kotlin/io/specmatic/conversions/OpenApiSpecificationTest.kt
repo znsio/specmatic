@@ -9403,6 +9403,7 @@ paths:
               required:
                 - type
             ProductRes:
+              type: object
               allOf:
                 - ${'$'}ref: '#/components/schemas/Product'
               required:

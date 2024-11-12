@@ -1,0 +1,82 @@
+openapi: 3.0.3
+info:
+  title: Vehicle Inventory API
+  description: An API to manage a catalog of vehicles available for sale
+  version: 1.0.0
+paths:
+  /vehicles:
+    get:
+      responses:
+        '200':
+          description: A list of vehicles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VehicleResponse'
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vehicle'
+      responses:
+        '201':
+          description: Vehicle created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResponse'
+    patch:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleResponse'
+      responses:
+        '200':
+          description: Vehicle updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResponse'
+components:
+  schemas:
+    VehicleResponse:
+      allOf:
+        - $ref: '#/components/schemas/Vehicle'
+      required:
+        - id
+    BaseVehicle:
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+      required:
+        - type
+    Vehicle:
+      allOf:
+        - $ref: '#/components/schemas/BaseVehicle'
+      discriminator:
+        propertyName: type
+        mapping:
+          car: '#/components/schemas/Car'
+          truck: '#/components/schemas/Truck'
+    Car:
+      allOf:
+        - $ref: '#/components/schemas/BaseVehicle'
+        - type: object
+          properties:
+            seatingCapacity:
+              type: integer
+    Truck:
+      allOf:
+        - $ref: '#/components/schemas/BaseVehicle'
+        - type: object
+          properties:
+            trailer:
+              type: boolean

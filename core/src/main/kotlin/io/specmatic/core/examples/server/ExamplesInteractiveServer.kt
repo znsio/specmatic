@@ -465,7 +465,7 @@ class ExamplesInteractiveServer(
 
             val exampleFile = examplesDir.getSchemaExamples().firstOrNull {
                 it.getSchemaBasedOn == patternName
-            }?.file ?: examplesDir.resolve("${patternName}_schema.json")
+            }?.file ?: examplesDir.resolve("${patternName}.example.json")
 
             println("Writing to file: ${exampleFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
             exampleFile.writeText(schemaExample.toStringLiteral())

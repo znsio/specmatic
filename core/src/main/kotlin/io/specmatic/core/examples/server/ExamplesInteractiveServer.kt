@@ -460,7 +460,7 @@ class ExamplesInteractiveServer(
             if(examplesDir.exists().not()) examplesDir.mkdirs()
 
             val feature = parseContractFileToFeature(contractFile)
-            val generatedValue = feature.generateSchema(patternName)
+            val generatedValue = feature.generateSchemaFlagBased(patternName)
             val schemaExample = SchemaExample.toSchemaExample(patternName, generatedValue)
 
             val exampleFile = examplesDir.getSchemaExamples().firstOrNull {
@@ -577,7 +577,7 @@ class ExamplesInteractiveServer(
                 validateExample(feature, scenarioStub).toResultIfAny()
             }.getOrElse {
                 val schemaExample = SchemaExample(exampleFile)
-                feature.matchResultSchema(schemaExample.getSchemaBasedOn, schemaExample.value)
+                feature.matchResultSchemaFlagBased(schemaExample.getSchemaBasedOn, schemaExample.value)
             }
         }
 
@@ -629,7 +629,7 @@ class ExamplesInteractiveServer(
                 }.getOrElse {
                     val schemaExample = SchemaExample(example)
                     if (schemaExample.value !is NullValue) {
-                        updatedFeature.matchResultSchema(schemaExample.getSchemaBasedOn, schemaExample.value)
+                        updatedFeature.matchResultSchemaFlagBased(schemaExample.getSchemaBasedOn, schemaExample.value)
                     } else {
                         if (enableLogging) logger.log("Skipping empty schema example ${example.name}"); null
                     }
@@ -686,7 +686,7 @@ class ExamplesInteractiveServer(
         fun File.getSchemaExamplesWithValidation(feature: Feature): List<Pair<String, Pair<SchemaExample, String>?>> {
             return getSchemaExamples().map {
                 it.getSchemaBasedOn to if(it.value !is NullValue) {
-                    it to feature.matchResultSchema(it.getSchemaBasedOn, it.value).reportString()
+                    it to feature.matchResultSchemaFlagBased(it.getSchemaBasedOn, it.value).reportString()
                 } else null
             }
         }

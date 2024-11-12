@@ -77,9 +77,13 @@ data class ListPattern(
             }
 
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
+        if (resolverWithEmptyType.allPatternsAreMandatory && !resolverWithEmptyType.hasSeenPattern(this) && sampleData.list.isEmpty()) {
+            return Result.Failure(message = "List cannot be empty")
+        }
 
+        val updatedResolver = resolver.addPatternAsSeen(this)
         val failures: List<Result.Failure> = sampleData.list.map {
-            resolverWithEmptyType.matchesPattern(null, pattern, it)
+            updatedResolver.matchesPattern(null, pattern, it)
         }.mapIndexed { index, result ->
             ResultWithIndex(index, result)
         }.filter {

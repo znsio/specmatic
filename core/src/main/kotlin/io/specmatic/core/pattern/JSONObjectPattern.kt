@@ -252,16 +252,22 @@ data class JSONObjectPattern(
             else
                 emptyList()
 
+        val adjustedPattern = if (resolverWithNullType.allPatternsAreMandatory && !resolverWithNullType.hasSeenPattern(this)) {
+            pattern.mapKeys { withoutOptionality(it.key) }
+        } else pattern
+
         val keyErrors: List<Result.Failure> =
-            resolverWithNullType.findKeyErrorList(pattern, sampleData.jsonObject).map {
+            resolverWithNullType.findKeyErrorList(adjustedPattern, sampleData.jsonObject).map {
                 it.missingKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
             }
+
+        val updatedResolver = resolver.addPatternAsSeen(this)
 
         data class ResultWithDiscriminatorStatus(val result: Result, val isDiscriminator: Boolean)
 
         val resultsWithDiscriminator: List<ResultWithDiscriminatorStatus> =
             mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
-                val result = resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
+                val result = updatedResolver.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
 
                 val isDiscrimintor = patternValue.isDiscriminator()
 

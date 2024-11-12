@@ -42,7 +42,9 @@ data class Resolver(
     val generation: GenerationStrategies = NonGenerativeTests,
     val dictionary: Map<String, Value> = emptyMap(),
     val dictionaryLookupPath: String = "",
-    val jsonObjectResolver: JSONObjectResolver = JSONObjectResolver()
+    val jsonObjectResolver: JSONObjectResolver = JSONObjectResolver(),
+    val allPatternsAreMandatory: Boolean = false,
+    val patternsSeenSoFar: Set<String> = setOf()
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
@@ -63,6 +65,10 @@ data class Resolver(
 
     fun withOnlyMandatoryKeysInJSONObject(): Resolver {
         return this.copy(jsonObjectResolver = this.jsonObjectResolver.copy(allowOnlyMandatoryKeys = true))
+    }
+
+    fun withAllPatternsAsMandatory(): Resolver {
+        return this.copy(allPatternsAreMandatory = true)
     }
 
     fun disableOverrideUnexpectedKeycheck(): Resolver {
@@ -306,6 +312,16 @@ ${matchResult.reportString()}
 
     fun getDictionaryToken(key: String): Value {
         return dictionary.getValue(key)
+    }
+
+    fun hasSeenPattern(pattern: Pattern): Boolean {
+        return patternsSeenSoFar.contains(pattern.typeAlias)
+    }
+
+    fun addPatternAsSeen(pattern: Pattern): Resolver {
+        return this.copy(
+            patternsSeenSoFar = pattern.typeAlias?.let { patternsSeenSoFar.plus(it) } ?: patternsSeenSoFar
+        )
     }
 }
 

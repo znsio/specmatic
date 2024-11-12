@@ -330,16 +330,16 @@ data class Feature(
         } != null
     }
 
-    fun matchResultSchema(patternName: String, value: Value): Result {
-        val resolver = scenarios.last().resolver
+    fun matchResultSchemaFlagBased(patternName: String, value: Value): Result {
+        val updatedResolver = flagsBased.update(scenarios.last().resolver)
         val pattern = DeferredPattern("($patternName)")
-        return pattern.matches(value, resolver)
+        return pattern.matches(value, updatedResolver)
     }
 
-    fun generateSchema(patternName: String): Value {
-        val resolver = scenarios.last().resolver
+    fun generateSchemaFlagBased(patternName: String): Value {
+        val updatedResolver = flagsBased.update(scenarios.last().resolver)
         val pattern = DeferredPattern("($patternName)")
-        return pattern.generate(resolver)
+        return pattern.generate(updatedResolver)
     }
 
     fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {

@@ -303,7 +303,7 @@ data class Scenario(
         } else flagsBased
 
         val updatedResolver = updatedFlagBased.update(resolver.copy(mismatchMessages = mismatchMessages))
-        val updatedScenario = newBasedOnAttributeSelectionFields(httpRequest.queryParams)
+        val updatedScenario = this.newBasedOnAllMandatory().newBasedOnAttributeSelectionFields(httpRequest.queryParams)
 
         val responseMatch = updatedScenario.matches(httpResponse, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
         if(responseMatch is Result.Failure && responseMatch.hasReason(FailureReason.StatusMismatch)) {
@@ -312,6 +312,23 @@ data class Scenario(
 
         val requestMatch = updatedScenario.matches(httpRequest, mismatchMessages, updatedResolver.findKeyErrorCheck.unexpectedKeyCheck, updatedResolver)
         return Result.fromResults(listOf(requestMatch, responseMatch)).updateScenario(updatedScenario)
+    }
+
+    private fun newBasedOnAllMandatory(): Scenario {
+        return this.copy(
+            httpRequestPattern = httpRequestPattern.copy(body = httpRequestPattern.body.withoutOptionality()),
+            httpResponsePattern = httpResponsePattern.copy(body = httpResponsePattern.body.withoutOptionality())
+        )
+    }
+
+    fun Pattern.withoutOptionality(): Pattern {
+        return when (this) {
+            is DeferredPattern -> resolvedHop(this, resolver).withoutOptionality()
+            is AnyPattern -> this.copy(pattern = this.pattern.map { it.withoutOptionality() })
+            is ListPattern -> this.copy(pattern = this.pattern.withoutOptionality())
+            is JSONObjectPattern -> this.copy(pattern = this.pattern.mapKeys { (key, _) -> withoutOptionality(key)})
+            else -> this
+        }
     }
 
     private fun isRequestAttributeSelected(httpRequest: HttpRequest): Boolean {

@@ -120,7 +120,7 @@ data class SpecmaticConfig(
     @field:JsonAlias("attribute_selection_pattern")
     val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
     @field:JsonAlias("all_patterns_mandatory")
-    val allPatternsMandatory: Boolean = getBooleanValue(Flags.SPECMATIC_ALL_PATTERNS_MANDATORY)
+    val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY)
 ) {
     @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {

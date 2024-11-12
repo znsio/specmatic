@@ -449,7 +449,17 @@ class OpenApiSpecification(
 
                         ScenarioInfo(
                             scenarioName = scenarioName,
-                            patterns = patterns.toMap(),
+                            patterns = patterns.toMap().mapValues { (_, value) ->
+
+                                if(value is JSONObjectPattern)
+                                    value.copy(
+                                        pattern = value.pattern.mapKeys { (key, _) ->
+                                            key.removeSuffix("?")
+                                        }
+                                    )
+                                else
+                                    value
+                            },
                             httpRequestPattern = httpRequestPattern,
                             httpResponsePattern = httpResponsePattern,
                             ignoreFailure = ignoreFailure,
@@ -972,7 +982,7 @@ class OpenApiSpecification(
                             val partNameWithPresence = if (partSchemas.required?.contains(partName) == true)
                                 partName
                             else
-                                "$partName?"
+                                "$partName"
 
                             if (partSchema is BinarySchema) {
                                 MultiPartFilePattern(
@@ -1488,7 +1498,7 @@ class OpenApiSpecification(
                         acc.plus(propertyEntry.key to newPropertyValue)
 
                     propertyEntry.key ->
-                        acc.minus("$keyWithoutOptionality?").plus(propertyEntry.key to newPropertyValue)
+                        acc.minus("$keyWithoutOptionality").plus(propertyEntry.key to newPropertyValue)
 
                     else ->
                         acc.plus(propertyEntry.key to newPropertyValue)
@@ -1506,12 +1516,13 @@ class OpenApiSpecification(
     }
 
     private fun String.withOptionalSuffix(): String {
-        if(this.endsWith("?")) return this
-        return "$this?"
+        return this
+//        if(this.endsWith("?")) return this
+//        return "$this?"
     }
 
     private fun String.withoutOptionalSuffix(): String {
-        if(this.endsWith("?")) return this.removeSuffix("?")
+        if(this.endsWith("")) return this.removeSuffix("?")
         return this
     }
 
@@ -1758,7 +1769,7 @@ class OpenApiSpecification(
     }
 
     private fun toSpecmaticParamName(optional: Boolean, name: String) = when (optional) {
-        true -> "${name}?"
+        true -> "${name}"
         false -> name
     }
 
@@ -1811,7 +1822,7 @@ class OpenApiSpecification(
             val queryParamKey = if(it.required == true)
                 it.name
             else
-                "${it.name}?"
+                "${it.name}"
 
             queryParamKey to specmaticPattern
         }.filterValues { it != null }.mapValues { it.value!! }

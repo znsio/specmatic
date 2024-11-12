@@ -9526,6 +9526,81 @@ paths:
         }
     }
 
+    @Test
+    fun test() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Cyclical Reference API
+  version: 1.0.0
+paths:
+  /example:
+    get:
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/A'
+components:
+  schemas:
+    A:
+      type: object
+      required:
+        - b
+      properties:
+        b:
+          ${"$"}ref: '#/components/schemas/B'
+    B:
+      type: object
+      required:
+        - c
+      properties:
+        c:
+          ${"$"}ref: '#/components/schemas/C'
+    C:
+      type: object
+      required:
+        - a
+      properties:
+        a:
+          ${"$"}ref: '#/components/schemas/A'
+        """.trimIndent()
+
+        val exampleContent = """
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/example",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "a": {
+        "b": {
+          "c": {
+            "a": {
+            }
+          }
+        }
+      }
+    }
+  }
+}
+        """
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        val example = ScenarioStub.parse(exampleContent)
+
+        val result = feature.matchResultFlagBased(example, DefaultMismatchMessages)
+
+        println(result.report())
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

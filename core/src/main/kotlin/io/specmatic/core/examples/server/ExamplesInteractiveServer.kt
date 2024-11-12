@@ -612,6 +612,34 @@ class ExamplesInteractiveServer(
             return results
         }
 
+        fun validateExamples(
+            feature: Feature,
+            examples: List<File> = emptyList(),
+            scenarioFilter: ScenarioFilter = ScenarioFilter(),
+            enableLogging: Boolean = true
+        ): Map<String, Result> {
+            val updatedFeature = scenarioFilter.filter(feature)
+
+            val results = examples.mapNotNull { example ->
+                if (enableLogging) logger.log("Validating ${example.name}")
+
+                val result = kotlin.runCatching {
+                    val scenarioStub = ScenarioStub.readFromFile(example)
+                    validateExample(updatedFeature, scenarioStub).toResultIfAny()
+                }.getOrElse {
+                    val schemaExample = SchemaExample(example)
+                    if (schemaExample.value !is NullValue) {
+                        updatedFeature.matchResultSchema(schemaExample.getSchemaBasedOn, schemaExample.value)
+                    } else {
+                        if (enableLogging) logger.log("Skipping empty schema example ${example.name}"); null
+                    }
+                } ?: return@mapNotNull null
+
+                example.name to result
+            }.toMap()
+
+            return results
+        }
 
         private fun validateExample(
             feature: Feature,
@@ -880,18 +908,15 @@ data class ExampleTestResponse(
 
 fun loadExternalExamples(
     examplesDir: File
-): Pair<File, Map<String, List<ScenarioStub>>> {
+): Pair<File, List<File>> {
     if (!examplesDir.isDirectory) {
         logger.log("$examplesDir does not exist, did not find any files to validate")
         exitProcess(1)
     }
 
     return examplesDir to examplesDir.walk().mapNotNull {
-        if (it.isFile.not()) return@mapNotNull null
-        Pair(it.path, it)
-    }.toMap().mapValues {
-        listOf(ScenarioStub.readFromFile(it.value))
-    }
+        it.takeIf { it.isFile && it.extension == "json" }
+    }.toList()
 }
 
 fun defaultExternalExampleDirFrom(contractFile: File): File {

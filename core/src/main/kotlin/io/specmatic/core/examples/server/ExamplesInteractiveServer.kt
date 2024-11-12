@@ -23,8 +23,6 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.attempt
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
-import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
-import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.uniqueNameForApiOperation
@@ -331,15 +329,6 @@ class ExamplesInteractiveServer(
 
     companion object {
         private val exampleFileNamePostFixCounter = AtomicInteger(0)
-
-        private val extendedExampleDescription = mapOf("description" to "Example with extra fields for extended schema").toValueMap()
-        private val extendedFieldsMap = mapOf("SAMPLE_EXTRA_FIELD_FOR_EXTENDED_SCHEMA" to "SAMPLE_VALUE").toValueMap()
-
-        private val extendedKeys = extendedFieldsMap.keys.joinToString(", ")
-        private val extendedPayloadDescription = mapOf(
-            "description" to "This is an example of a payload that includes additional fields for an extended schema, as indicated by the following keys: $extendedKeys.",
-        ).toValueMap()
-
         enum class ExampleGenerationStatus {
             CREATED, EXISTED, ERROR
         }
@@ -451,22 +440,12 @@ class ExamplesInteractiveServer(
 
             val existingExamples = getExistingExampleFiles(feature, scenario, examples).map { it.first }
             val examplesToCheck = if (bulkMode) existingExamples else emptyList()
-            val extendedExampleExists = existingExamples.any { it.isExtendedExample() }
 
             val newExamples = generateExampleFiles(
                 contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject, existingExamples = examplesToCheck
             )
 
-            val extendedExampleOrEmpty = if (extendedExampleExists)
-                emptyList()
-            else listOfNotNull(generateExtendedExample(contractFile, File(newExamples.random().path), examplesDir))
-
-            val attributeBasedExamplesOrEmpty = generateAttributeSelectedExamples(
-                contractFile, feature, scenario, examplesDir, existingExamples = examplesToCheck
-            )
-
-            return existingExamples.map { ExamplePathInfo(it.file.absolutePath, false) }
-                .plus(newExamples).plus(extendedExampleOrEmpty).plus(attributeBasedExamplesOrEmpty)
+            return existingExamples.map { ExamplePathInfo(it.file.absolutePath, false) }.plus(newExamples)
         }
 
         data class ExamplePathInfo(val path: String, val created: Boolean)
@@ -540,30 +519,6 @@ class ExamplesInteractiveServer(
             return this.copy(
                 queryParams = this.queryParams.remove(attributeSelectionPattern.queryParamKey)
             )
-        }
-
-        private fun generateAttributeSelectedExamples(contractFile: File, feature: Feature, scenario: Scenario, examplesDir: File, existingExamples: List<ExampleFromFile>): List<ExamplePathInfo> {
-            val attributeBasedRequestResponses = feature.generateAttributeBasedRequestResponseList(scenario)
-                .map { it.copy(response = it.response.cleanup()) }.ifEmpty { return emptyList() }
-
-            val attributeSelectionMetadata = attributeBasedRequestResponses.first().attributeSelectionMetadata
-            val existingAttributeSelections = existingExamples.map {
-                it.request.getAttributeSelectionValue(attributeSelectionMetadata)
-            }
-
-            return attributeBasedRequestResponses.filterNot { it.attributeSelectionMetadata.selectedAttributes in existingAttributeSelections }.map { (request, response, attributeMetadata) ->
-                val scenarioStub = ScenarioStub(request, response)
-                val uniqueNameForApiOperation = getExampleFileNameBasedOn(scenarioStub, attributeMetadata)
-
-                val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
-                println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
-                file.writeText(scenarioStub.toJSON().toStringLiteral())
-                ExamplePathInfo(file.absolutePath, true)
-            }
-        }
-
-        private fun HttpRequest.getAttributeSelectionValue(attributeSelectionMetadata: AttributeSelectionMetadata): Set<String> {
-            return this.queryParams.getValues(attributeSelectionMetadata.attributeSelectionField).toSet()
         }
 
         private fun Value.getDiscriminatorValue(discriminator: DiscriminatorMetadata): String? {
@@ -687,83 +642,14 @@ class ExamplesInteractiveServer(
             )
         }
 
-        private fun getExampleFileNameBasedOn(
-            scenarioStub: ScenarioStub,
-            attributeSelectionMetadata: AttributeSelectionMetadata
-        ): String {
-            val attributeSelectionName = "_${attributeSelectionMetadata.attributeSelectionField}_${attributeSelectionMetadata.selectedAttributes.joinToString("_")}"
-
-            return uniqueNameForApiOperation(
-                scenarioStub.request,
-                "",
-                scenarioStub.response.status
-            ) + attributeSelectionName
-        }
-
-        private fun ExampleFromFile.isExtendedExample(): Boolean {
-            val requestBodyContainsFields = this.requestBody?.containsExtendedFields()
-            val responseBodyContainsFields = this.responseBody?.containsExtendedFields()
-
-            return requestBodyContainsFields == true || responseBodyContainsFields == true
-        }
-
-        private fun generateExtendedExample(contractFile: File, generateExampleFile: File, exampleDir: File): ExamplePathInfo? {
-            if (!getBooleanValue(EXTENSIBLE_SCHEMA)) return null
-
-            val scenarioStub = ScenarioStub.readFromFile(generateExampleFile)
-            if (scenarioStub.request.body.isScalarOrEmpty() && scenarioStub.response.body.isScalarOrEmpty()) return null
-
-            val requestJSON = scenarioStub.request.insertIfBodyNotScalar(extendedFieldsMap) { request ->
-                request.toJSON().insertFieldsInValue(extendedPayloadDescription) as JSONObjectValue
-            } ?: scenarioStub.request.toJSON()
-
-            val responseJSON = scenarioStub.response.insertIfBodyNotScalar(extendedFieldsMap) { response ->
-                response.toJSON().insertFieldsInValue(extendedPayloadDescription) as JSONObjectValue
-            } ?: scenarioStub.response.toJSON()
-
-            val extendedExampleJson = JSONObjectValue(extendedExampleDescription.plus(
-                mapOf(
-                    MOCK_HTTP_REQUEST to requestJSON,
-                    MOCK_HTTP_RESPONSE to responseJSON,
-                )
-            ))
-
-            val file = exampleDir.resolve(generateExampleFile.nameWithoutExtension + "_extended.json")
-            println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
-            file.writeText(extendedExampleJson.toStringLiteral())
-            return ExamplePathInfo(file.absolutePath, true)
-        }
-
-        private fun HttpRequest.insertIfBodyNotScalar(extendedFieldsMap: Map<String, Value>, block: (request: HttpRequest) -> JSONObjectValue) : JSONObjectValue? {
-            if (this.body.isScalarOrEmpty()) return null
-
-            val updatedRequest = this.updateBody(this.body.insertFieldsInValue(extendedFieldsMap))
-            return block(updatedRequest)
-        }
-
-        private fun HttpResponse.insertIfBodyNotScalar(extendedFieldsMap: Map<String, Value>, block: (response: HttpResponse) -> JSONObjectValue ): JSONObjectValue? {
-            if (this.body.isScalarOrEmpty()) return null
-
-            val updatedResponse = this.updateBody(this.body.insertFieldsInValue(extendedFieldsMap))
-            return block(updatedResponse)
-        }
-
-        private fun Value.containsExtendedFields(): Boolean {
-            return when(this) {
-                is JSONObjectValue -> extendedFieldsMap.any { it.key in this.jsonObject.keys }
-                is JSONArrayValue -> this.list.firstOrNull()?.containsExtendedFields() ?: false
-                else -> false
-            }
-        }
-
         private fun Value.isScalarOrEmpty(): Boolean {
             return this is ScalarValue || this is NoBodyValue
         }
 
-        private fun Value.insertFieldsInValue(extendedFieldsMap: Map<String, Value>): Value {
+        private fun Value.insertFieldsInValue(fieldsToBeInserted: Map<String, Value>): Value {
             return when (this) {
-                is JSONObjectValue -> JSONObjectValue(extendedFieldsMap.plus(this.jsonObject))
-                is JSONArrayValue -> JSONArrayValue(this.list.map {value ->  value.insertFieldsInValue(extendedFieldsMap) })
+                is JSONObjectValue -> JSONObjectValue(fieldsToBeInserted.plus(this.jsonObject))
+                is JSONArrayValue -> JSONArrayValue(this.list.map {value ->  value.insertFieldsInValue(fieldsToBeInserted) })
                 else -> this
             }
         }
@@ -819,6 +705,7 @@ class ExamplesInteractiveServer(
                 ?.let { mapOf("description" to it.toStringLiteral()).toValueMap() }
                 ?: emptyMap()
         }
+
         fun externaliseInlineExamples(contractFile: File): File {
             val feature = parseContractFileToFeature(contractFile)
             val inlineStubs: List<ScenarioStub> = feature.stubsFromExamples.flatMap {

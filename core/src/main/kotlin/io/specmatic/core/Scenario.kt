@@ -272,13 +272,6 @@ data class Scenario(
             httpRequestPattern.generateV2(updatedResolver)
         }
 
-    fun generateAttributeSelectedRequests(flagsBased: FlagsBased, patternWithFields: Pattern): List<AttributeSelectionBasedItem<HttpRequest>> {
-        scenarioBreadCrumb(this) {
-            val updatedResolver = getUpdatedResolver(flagsBased, allowOnlyMandatoryKeysInJSONObject = false)
-            return httpRequestPattern.generateAttributeSelected(updatedResolver, attributeSelectionPattern, patternWithFields)
-        }
-    }
-
     private fun getUpdatedResolver(flagsBased: FlagsBased, allowOnlyMandatoryKeysInJSONObject: Boolean): Resolver {
         return if(allowOnlyMandatoryKeysInJSONObject) {
             flagsBased.update(

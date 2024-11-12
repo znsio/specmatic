@@ -8,7 +8,6 @@ import io.specmatic.core.Scenario
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesFromDir
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExistingExampleFiles
 import io.specmatic.core.pattern.*
-import io.specmatic.core.pattern.withoutOptionality
 import org.thymeleaf.TemplateEngine
 import org.thymeleaf.context.Context
 import org.thymeleaf.templatemode.TemplateMode
@@ -30,17 +29,15 @@ class ExamplesView {
                     contentType = scenario.httpRequestPattern.headersPattern.contentType,
                     exampleFile = example?.first,
                     exampleMismatchReason = example?.second,
-                    isDiscriminatorBased = scenario.isMultiGen(feature, scenario.resolver)
+                    isDiscriminatorBased = scenario.isMultiGen(scenario.resolver)
                 )
             }.filterEndpoints()
         }
 
-        private fun Scenario.isMultiGen(feature: Feature, resolver: Resolver): Boolean {
-            val isDiscriminatorBased = this.httpRequestPattern.body.isDiscriminatorBased(resolver) || this.httpResponsePattern.body.isDiscriminatorBased(resolver)
-            val containsAttributeSelectionKey = this.httpRequestPattern.httpQueryParamPattern.queryPatterns.map { withoutOptionality(it.key) }.contains(attributeSelectionPattern.queryParamKey)
-            val hasMatchingPostScenario =  feature.findMatchingPostScenario(this) != null
-
-            return isDiscriminatorBased || (containsAttributeSelectionKey && hasMatchingPostScenario)
+        private fun Scenario.isMultiGen(resolver: Resolver): Boolean {
+            val discriminatorInRequest = this.httpRequestPattern.body.isDiscriminatorBased(resolver)
+            val discriminatorInResponse = this.httpResponsePattern.body.isDiscriminatorBased(resolver)
+            return discriminatorInRequest || discriminatorInResponse
         }
 
         private fun Pattern.isDiscriminatorBased(resolver: Resolver): Boolean {

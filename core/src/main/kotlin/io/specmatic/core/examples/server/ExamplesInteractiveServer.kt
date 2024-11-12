@@ -10,6 +10,8 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.util.*
+import io.ktor.util.pipeline.*
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.*
 import io.specmatic.core.discriminator.DiscriminatorExampleInjector
@@ -17,9 +19,7 @@ import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
-import io.specmatic.core.log.consoleDebug
-import io.specmatic.core.log.consoleLog
-import io.specmatic.core.log.logger
+import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.attempt
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
@@ -71,6 +71,7 @@ class ExamplesInteractiveServer(
     }
 
     private val environment = applicationEngineEnvironment {
+        logger = Verbose(CompositePrinter())
         module {
             install(CORS) {
                 allowMethod(HttpMethod.Options)
@@ -92,6 +93,8 @@ class ExamplesInteractiveServer(
                     try {
                         respondWithExamplePageHtmlContent(contractFile, getServerHostPort(), call)
                     } catch (e: Exception) {
+                        logException(e)
+
                         call.respond(HttpStatusCode.InternalServerError, exceptionCauseMessage(e))
                     }
                 }
@@ -103,6 +106,8 @@ class ExamplesInteractiveServer(
                     try {
                         respondWithExamplePageHtmlContent(contractFile,getServerHostPort(request), call)
                     } catch (e: Exception) {
+                        logException(e)
+
                         call.respond(HttpStatusCode.InternalServerError, exceptionCauseMessage(e))
                     }
                 }
@@ -124,6 +129,8 @@ class ExamplesInteractiveServer(
 
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse.from(generatedExample))
                     } catch(e: Exception) {
+                        logException(e)
+
                         call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
@@ -147,6 +154,8 @@ class ExamplesInteractiveServer(
                         }
                         call.respond(HttpStatusCode.OK, validationResultResponse)
                     } catch(e: Exception) {
+                        logException(e)
+
                         call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
@@ -188,6 +197,8 @@ class ExamplesInteractiveServer(
 
                         call.respond(HttpStatusCode.OK, validationResults)
                     } catch(e: Exception) {
+                        logException(e)
+
                         call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
@@ -226,6 +237,8 @@ class ExamplesInteractiveServer(
 
                         call.respond(HttpStatusCode.OK, ExampleTestResponse(result, testLog, exampleFile = File(request.exampleFile)))
                     } catch (e: Throwable) {
+                        logException(e)
+
                         call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
@@ -235,6 +248,13 @@ class ExamplesInteractiveServer(
             this.host = serverHost
             this.port = serverPort
         }
+    }
+
+    private fun PipelineContext<Unit, ApplicationCall>.logException(e: Throwable) {
+        logger.log(
+            e,
+            "An exception was thrown while handling ${this.context.request.httpMethod} ${this.context.request.path()}"
+        )
     }
 
     private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {

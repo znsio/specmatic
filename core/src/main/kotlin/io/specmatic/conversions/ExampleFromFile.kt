@@ -1,6 +1,8 @@
 package io.specmatic.conversions
 
 import io.specmatic.core.*
+import io.specmatic.core.examples.server.SchemaExample
+import io.specmatic.core.examples.server.SchemaExample.Companion.SCHEMA_BASED
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.URIUtils.parseQuery
@@ -51,7 +53,12 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         )
     }
 
-    constructor(file: File) : this(parsedJSONObject(file.readText()), file)
+    constructor(file: File) : this(
+        json = if (SchemaExample.matchesFilePattern(file)) {
+            throw ContractException(breadCrumb = SCHEMA_BASED, errorMessage = "Skipping file ${file.canonicalPath}, because it contains schema-based example")
+        } else attempt("Error reading example file ${file.canonicalPath}") {parsedJSONObject(file.readText()) },
+        file = file
+    )
 
     val expectationFilePath: String = file.canonicalPath
 

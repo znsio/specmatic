@@ -1023,4 +1023,84 @@ internal class JSONObjectPatternTest {
                 .contains("abc123")
         })
     }
+
+    @Test
+    fun `should result in failure when optional keys are missing and resolver is set to allPatternsAsMandatory`() {
+        val pattern = parsedPattern("""{
+            "topLevelMandatoryKey": "(number)",
+            "topLevelOptionalKey?": "(string)",
+            "subMandatoryObject": {
+                "subMandatoryKey": "(string)",
+                "subOptionalKey?": "(number)"
+            },
+            "subOptionalObject?": {
+                "subMandatoryKey": "(string)",
+                "subOptionalKey": "(number)"
+            }
+        }
+        """.trimIndent())
+        val matchingValue = parsedValue("""{
+            "topLevelMandatoryKey": 10,
+            "subMandatoryObject": {
+                "subMandatoryKey": "value"
+            },
+            "subOptionalObject": {
+                "subMandatoryKey": "value"
+            }
+        }
+        """.trimIndent())
+        val result = pattern.matches(matchingValue, Resolver().withAllPatternsAsMandatory())
+        println(result.reportString())
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        >> topLevelOptionalKey
+        Expected key named "topLevelOptionalKey" was missing
+        >> subMandatoryObject.subOptionalKey
+        Expected key named "subOptionalKey" was missing
+        >> subOptionalObject.subOptionalKey
+        Expected key named "subOptionalKey" was missing
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should not result in failure for missing keys when pattern is cycling with resolver set to allPatternsAsMandatory`() {
+        val basePattern = parsedPattern("""{
+            "mandatoryKey": "(number)",
+            "optionalKey?": "(string)"
+        }""".trimIndent()) as JSONObjectPattern
+
+        val thirdPattern = JSONObjectPattern(
+            basePattern.pattern + mapOf("firstObject?" to DeferredPattern("(firstPattern)")),
+            typeAlias = "(thirdPattern)"
+        )
+        val secondPattern = JSONObjectPattern(
+            basePattern.pattern + mapOf("thirdObject?" to thirdPattern),
+            typeAlias = "(secondPattern)"
+        )
+        val firstPattern = JSONObjectPattern(
+            basePattern.pattern + mapOf("secondObject?" to secondPattern),
+            typeAlias = "(firstPattern)"
+        )
+        val newPatterns = mapOf("(firstPattern)" to firstPattern, "(secondPattern)" to secondPattern, "(thirdPattern)" to thirdPattern)
+
+        val matchingValue = parsedValue("""{
+            "mandatoryKey": 10,
+            "optionalKey": "abc",
+            "secondObject": {
+                "mandatoryKey": 10,
+                "optionalKey": "abc",
+                "thirdObject": {
+                    "mandatoryKey": 10,
+                    "optionalKey": "abc",
+                    "firstObject": {
+                        "mandatoryKey": 10
+                    }
+                }
+            }
+        }""".trimIndent())
+        val matchingResult = firstPattern.matches(matchingValue, Resolver(newPatterns = newPatterns).withAllPatternsAsMandatory())
+        println(matchingResult.reportString())
+        assertThat(matchingResult).isInstanceOf(Result.Success::class.java)
+    }
 }

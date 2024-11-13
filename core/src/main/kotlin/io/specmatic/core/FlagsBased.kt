@@ -12,7 +12,8 @@ data class FlagsBased(
     val generation: GenerationStrategies,
     val unexpectedKeyCheck: UnexpectedKeyCheck?,
     val positivePrefix: String,
-    val negativePrefix: String
+    val negativePrefix: String,
+    val allPatternsAreMandatory: Boolean
 ) {
     fun update(resolver: Resolver): Resolver {
         val findKeyErrorCheck = if(unexpectedKeyCheck != null) {
@@ -23,7 +24,8 @@ data class FlagsBased(
         return resolver.copy(
             defaultExampleResolver = defaultExampleResolver,
             generation = generation,
-            findKeyErrorCheck = findKeyErrorCheck
+            findKeyErrorCheck = findKeyErrorCheck,
+            allPatternsAreMandatory = allPatternsAreMandatory
         )
     }
 
@@ -47,7 +49,8 @@ fun strategiesFromFlags(specmaticConfig: SpecmaticConfig): FlagsBased {
         },
         unexpectedKeyCheck = if (specmaticConfig.isExtensibleSchemaEnabled()) IgnoreUnexpectedKeys else null,
         positivePrefix = positivePrefix,
-        negativePrefix = negativePrefix
+        negativePrefix = negativePrefix,
+        allPatternsAreMandatory = specmaticConfig.allPatternsMandatory
     )
 }
 
@@ -56,5 +59,6 @@ val DefaultStrategies = FlagsBased (
     NonGenerativeTests,
     null,
     "",
-    ""
+    "",
+    false
 )

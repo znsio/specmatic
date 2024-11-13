@@ -38,6 +38,15 @@ interface Value {
     }
 }
 
+fun Value.mergeWith(other: Value): Value {
+    require(other is JSONObjectValue) { "Can only merge JSONObjectValues, got ${other.javaClass.name}" }
+    return when (this) {
+        is JSONObjectValue -> JSONObjectValue(jsonObject.plus(other.jsonObject))
+        is JSONArrayValue -> JSONArrayValue(list.map { it.mergeWith(other) })
+        else -> this
+    }
+}
+
 fun String.hasDataTemplate(): Boolean {
     return this.startsWith("$(") && this.endsWith(")")
 }

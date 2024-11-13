@@ -350,7 +350,7 @@ For example:
 
         private fun validateExternalExamples(
             feature: Feature,
-            externalExamples: Map<String, List<ScenarioStub>>,
+            externalExamples: List<File>,
             enableLogging: Boolean = true
         ): Map<String, Result> {
             return ExamplesInteractiveServer.validateExamples(

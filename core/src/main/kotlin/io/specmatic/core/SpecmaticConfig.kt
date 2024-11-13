@@ -118,7 +118,9 @@ data class SpecmaticConfig(
     val ignoreInlineExamples: Boolean = getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES),
     val additionalExampleParamsFilePath: String? = getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE),
     @field:JsonAlias("attribute_selection_pattern")
-    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern()
+    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
+    @field:JsonAlias("all_patterns_mandatory")
+    val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY)
 ) {
     @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {

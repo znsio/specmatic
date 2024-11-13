@@ -16,13 +16,14 @@ import io.specmatic.core.discriminator.DiscriminatorExampleInjector
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.examples.server.ExamplesView.Companion.withSchemaExamples
+import io.specmatic.core.examples.server.SchemaExample.Companion.NOT_SCHEMA_BASED
+import io.specmatic.core.examples.server.SchemaExample.Companion.SCHEMA_BASED
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.attempt
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.exceptionCauseMessage
@@ -678,8 +679,11 @@ class ExamplesInteractiveServer(
         fun File.getExamplesFromDir(): List<ExampleFromFile> {
             return this.listFiles()?.mapNotNull {
                 runCatching {
-                    attempt(breadCrumb = "Error reading file ${it.name}") { ExampleFromFile(it) }
-                }.onFailure { err -> consoleLog(exceptionCauseMessage(err)) }.getOrNull()
+                    ExampleFromFile(it)
+                }.onFailure { err ->
+                    val isExampleSchemaBased = err is ContractException && err.breadCrumb == SCHEMA_BASED
+                    if (!isExampleSchemaBased) consoleDebug(exceptionCauseMessage(err))
+                }.getOrNull()
             } ?: emptyList()
         }
 
@@ -694,10 +698,11 @@ class ExamplesInteractiveServer(
         private fun File.getSchemaExamples(): List<SchemaExample> {
             return this.listFiles()?.mapNotNull { exampleFile ->
                 runCatching {
-                    attempt(breadCrumb = "Error reading file ${exampleFile.name}") {
-                        SchemaExample(exampleFile)
-                    }
-                }.onFailure { err -> consoleDebug(exceptionCauseMessage(err)) }.getOrNull()
+                    SchemaExample(exampleFile)
+                }.onFailure { err ->
+                    val isExampleSchemaBased = err is ContractException && err.breadCrumb != NOT_SCHEMA_BASED
+                    if (isExampleSchemaBased) consoleDebug(exceptionCauseMessage(err))
+                }.getOrNull()
             } ?: emptyList()
         }
 

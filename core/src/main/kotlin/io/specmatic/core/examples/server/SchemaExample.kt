@@ -13,6 +13,9 @@ data class SchemaExample(val json: JSONObjectValue, val file: File) {
         const val SCHEMA_IDENTIFIER = "schema"
         const val VALUE_IDENTIFIER = "value"
 
+        const val SCHEMA_BASED = "SCHEMA_BASED"
+        const val NOT_SCHEMA_BASED = "NOT_SCHEMA_BASED"
+
         fun toSchemaExample(patternName: String, value: Value): JSONObjectValue {
             return JSONObjectValue(
                 mapOf(
@@ -22,14 +25,21 @@ data class SchemaExample(val json: JSONObjectValue, val file: File) {
             )
         }
     }
-    constructor(file: File) : this(parsedJSONObject(file.readText()), file)
 
-    val getSchemaBasedOn = attempt("Error reading schema in example") {
-        json.findFirstChildByPath(SCHEMA_IDENTIFIER)?.toStringLiteral()
-            ?: throw ContractException("Schema Identifier '${SCHEMA_IDENTIFIER}' not found")
+    constructor(file: File) : this(json = attempt("Error reading example file ${file.canonicalPath}") { parsedJSONObject(file.readText()) }, file = file)
+
+    init {
+        if (json.findFirstChildByPath(VALUE_IDENTIFIER) == null) {
+            throw ContractException(breadCrumb = NOT_SCHEMA_BASED, errorMessage = "Skipping file ${file.canonicalPath}, because it contains non schema-based example")
+        }
     }
 
-    val value = attempt("Error reading value in example") {
-        json.findFirstChildByPath(VALUE_IDENTIFIER) ?: throw ContractException("Example value identifier '${VALUE_IDENTIFIER}' not found")
+    val getSchemaBasedOn = attempt(breadCrumb = "Error reading schema in example ${file.canonicalPath}") {
+        json.findFirstChildByPath(SCHEMA_IDENTIFIER)?.toStringLiteral()
+            ?:throw ContractException("Schema Identifier key '${SCHEMA_IDENTIFIER}' not found")
+    }
+
+    val value = attempt(breadCrumb = "Error reading value in example ${file.canonicalPath}") {
+        json.findFirstChildByPath(VALUE_IDENTIFIER) ?: throw ContractException("Example value identifier key '${VALUE_IDENTIFIER}' not found")
     }
 }

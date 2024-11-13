@@ -53,13 +53,12 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         )
     }
 
-    constructor(file: File) : this(json = attempt("Error reading example file ${file.canonicalPath}") { parsedJSONObject(file.readText()) }, file = file)
-
-    init {
-        if (json.findFirstChildByPath(SchemaExample.VALUE_IDENTIFIER) != null) {
+    constructor(file: File) : this(
+        json = if (SchemaExample.matchesFilePattern(file)) {
             throw ContractException(breadCrumb = SCHEMA_BASED, errorMessage = "Skipping file ${file.canonicalPath}, because it contains schema-based example")
-        }
-    }
+        } else attempt("Error reading example file ${file.canonicalPath}") {parsedJSONObject(file.readText()) },
+        file = file
+    )
 
     val expectationFilePath: String = file.canonicalPath
 

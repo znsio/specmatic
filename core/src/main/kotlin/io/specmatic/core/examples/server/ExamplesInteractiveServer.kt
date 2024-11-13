@@ -18,6 +18,7 @@ import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.examples.server.ExamplesView.Companion.withSchemaExamples
 import io.specmatic.core.examples.server.SchemaExample.Companion.NOT_SCHEMA_BASED
 import io.specmatic.core.examples.server.SchemaExample.Companion.SCHEMA_BASED
+import io.specmatic.core.examples.server.SchemaExample.Companion.toSchemaExampleFileName
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.consoleDebug
@@ -462,14 +463,13 @@ class ExamplesInteractiveServer(
 
             val feature = parseContractFileToFeature(contractFile)
             val generatedValue = feature.generateSchemaFlagBased(patternName)
-            val schemaExample = SchemaExample.toSchemaExample(patternName, generatedValue)
 
             val exampleFile = examplesDir.getSchemaExamples().firstOrNull {
                 it.getSchemaBasedOn == patternName
-            }?.file ?: examplesDir.resolve("${patternName}.example.json")
+            }?.file ?: examplesDir.resolve(toSchemaExampleFileName(patternName))
 
             println("Writing to file: ${exampleFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
-            exampleFile.writeText(schemaExample.toStringLiteral())
+            exampleFile.writeText(generatedValue.toStringLiteral())
             return listOf(ExamplePathInfo(path = exampleFile.absolutePath, created = true))
         }
 

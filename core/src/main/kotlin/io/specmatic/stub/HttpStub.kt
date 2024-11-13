@@ -14,7 +14,6 @@ import io.ktor.util.*
 import io.specmatic.core.*
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
@@ -180,6 +179,8 @@ class HttpStub(
 
     val endPoint = endPointFromHostAndPort(host, port, keyData)
 
+    private val stubCache = StubCache()
+
     override val client = HttpClient(this.endPoint)
 
     private val sseBuffer: SSEBuffer = SSEBuffer()
@@ -339,7 +340,8 @@ class HttpStub(
             strictMode,
             passThroughTargetBase,
             httpClientFactory,
-            specmaticConfig
+            specmaticConfig,
+            stubCache
         )
 
         result.log(_logs, httpRequest)
@@ -770,9 +772,14 @@ fun getHttpResponse(
     strictMode: Boolean,
     passThroughTargetBase: String = "",
     httpClientFactory: HttpClientFactory? = null,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    stubCache: StubCache = StubCache()
 ): StubbedResponseResult {
     try {
+        if(specmaticConfig.stub.stateful == true) {
+            return cachedHttpResponse(features, httpRequest, specmaticConfig, stubCache)
+        }
+
         val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
         if(matchingStubResponse != null) {
             val (httpStubResponse, httpStubData) = matchingStubResponse
@@ -795,6 +802,7 @@ fun getHttpResponse(
             )
         }
         if(strictMode) return NotStubbed(HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults)))
+
         return fakeHttpResponse(features, httpRequest, specmaticConfig)
     } finally {
         features.forEach { feature -> feature.clearServerState() }
@@ -883,19 +891,20 @@ object ContractAndRequestsMismatch : MismatchMessages {
     }
 }
 
-private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest, specmaticConfig: SpecmaticConfig = SpecmaticConfig()): StubbedResponseResult {
-    data class ResponseDetails(val feature: Feature, val successResponse: ResponseBuilder?, val results: Results)
+data class ResponseDetails(val feature: Feature, val successResponse: ResponseBuilder?, val results: Results)
+
+private fun fakeHttpResponse(
+    features: List<Feature>,
+    httpRequest: HttpRequest,
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+): StubbedResponseResult {
 
     if (features.isEmpty())
        return NotStubbed(HttpStubResponse(HttpResponse(400, "No valid API specifications loaded")))
 
-    val responses: List<ResponseDetails> = features.asSequence().map { feature ->
-        feature.stubResponse(httpRequest, ContractAndRequestsMismatch).let {
-            ResponseDetails(feature, it.first, it.second)
-        }
-    }.toList()
+    val responses: List<ResponseDetails> = responseDetailsFrom(features, httpRequest)
 
-    return when (val fakeResponse = responses.find { it.successResponse != null }) {
+    return when (val fakeResponse = responses.successResponse()) {
         null -> {
             val failureResults = responses.filter { it.successResponse == null }.map { it.results }
 
@@ -930,13 +939,127 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest, 
 
         else -> FoundStubbedResponse(
             HttpStubResponse(
-                fakeResponse.successResponse?.build(RequestContext(httpRequest))?.withRandomResultHeader()!!,
+                generateHttpResponseFrom(fakeResponse, httpRequest),
                 contractPath = fakeResponse.feature.path,
                 feature = fakeResponse.feature,
-                scenario = fakeResponse.successResponse.scenario
+                scenario = fakeResponse.successResponse?.scenario
             )
         )
     }
+}
+
+private fun responseDetailsFrom(features: List<Feature>, httpRequest: HttpRequest): List<ResponseDetails> {
+    return features.asSequence().map { feature ->
+        feature.stubResponse(httpRequest, ContractAndRequestsMismatch).let {
+            ResponseDetails(feature, it.first, it.second)
+        }
+    }.toList()
+}
+
+private fun List<ResponseDetails>.successResponse(): ResponseDetails? {
+    return this.find { it.successResponse != null }
+}
+
+private fun generateHttpResponseFrom(fakeResponse: ResponseDetails, httpRequest: HttpRequest): HttpResponse {
+    return fakeResponse.successResponse?.build(RequestContext(httpRequest))?.withRandomResultHeader()!!
+}
+
+private fun cachedHttpResponse(
+    features: List<Feature>,
+    httpRequest: HttpRequest,
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    stubCache: StubCache
+): StubbedResponseResult {
+    if (features.isEmpty())
+        return NotStubbed(HttpStubResponse(HttpResponse(400, "No valid API specifications loaded")))
+
+    val responses: List<ResponseDetails> = responseDetailsFrom(features, httpRequest)
+    val fakeResponse = responses.successResponse()
+        ?: return fakeHttpResponse(features, httpRequest, specmaticConfig)
+
+    val generatedResponse = generateHttpResponseFrom(fakeResponse, httpRequest)
+    val responseBody = cachedResponse(fakeResponse, httpRequest, stubCache)
+
+    val updatedResponse = if(responseBody != null) generatedResponse.copy(body = responseBody)
+    else generatedResponse
+
+    return FoundStubbedResponse(
+        HttpStubResponse(
+            updatedResponse,
+            contractPath = fakeResponse.feature.path,
+            feature = fakeResponse.feature,
+            scenario = fakeResponse.successResponse?.scenario
+        )
+    )
+}
+
+private fun cachedResponse(fakeResponse: ResponseDetails, httpRequest: HttpRequest, stubCache: StubCache): Value? {
+    val scenario = fakeResponse.successResponse?.scenario
+    val method = scenario?.method
+
+    val generatedResponse = generateHttpResponseFrom(fakeResponse, httpRequest)
+    val unsupportedResponseBodyForCaching =
+        (generatedResponse.body is JSONObjectValue ||
+                (method == "GET" && generatedResponse.body is JSONArrayValue)).not()
+
+    if(unsupportedResponseBodyForCaching) return null
+
+    val pathSegments = httpRequest.path?.split("/")?.filter { it.isNotBlank() }.orEmpty()
+    val resourcePath = "/${pathSegments.first()}"
+    val resourceId = pathSegments.last()
+
+    if(method == "POST") {
+        if(generatedResponse.body !is JSONObjectValue || httpRequest.body !is JSONObjectValue)
+            return null
+
+        val responseBody = generatedResponse.body
+        val responseBodyWithValuesFromRequest = responseBody.copy(
+            jsonObject = patchValuesFromRequestIntoResponse(httpRequest.body, responseBody)
+        )
+        stubCache.addResponse(scenario.path, responseBodyWithValuesFromRequest)
+        return responseBodyWithValuesFromRequest
+    }
+
+    if(method == "GET" && pathSegments.size == 1) return stubCache.findAllResponsesFor(resourcePath)
+
+    if(method == "GET" && pathSegments.size > 1) {
+        val resourceIdKey = resourceIdKeyFrom(scenario.httpRequestPattern)
+        return stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)?.responseBody
+    }
+
+    if(method == "PATCH" && pathSegments.size > 1) {
+        if(httpRequest.body !is JSONObjectValue) return null
+
+        val resourceIdKey = resourceIdKeyFrom(scenario.httpRequestPattern)
+
+        val cachedResponse = stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)
+
+        val responseBody = cachedResponse?.responseBody ?: return null
+
+        val updatedResponseBody = responseBody.copy(
+            jsonObject = patchValuesFromRequestIntoResponse(httpRequest.body, responseBody)
+        )
+        stubCache.updateResponse(resourcePath, updatedResponseBody, resourceIdKey, resourceId)
+
+        return updatedResponseBody
+    }
+
+    return null
+}
+
+private fun patchValuesFromRequestIntoResponse(requestBody: JSONObjectValue, responseBody: JSONObjectValue): Map<String, Value> {
+    return responseBody.jsonObject.mapValues { (key, value) ->
+        val patchValueFromRequest = requestBody.jsonObject.entries.firstOrNull {
+            it.key == key
+        }?.value ?: return@mapValues value
+
+        if(patchValueFromRequest::class.java == value::class.java) return@mapValues patchValueFromRequest
+        value
+    }
+}
+
+private fun resourceIdKeyFrom(httpRequestPattern: HttpRequestPattern): String {
+    return httpRequestPattern.httpPathPattern?.pathSegmentPatterns?.last()?.key.orEmpty()
 }
 
 fun dumpIntoFirstAvailableStringField(httpResponse: HttpResponse, stringValue: String): HttpResponse {

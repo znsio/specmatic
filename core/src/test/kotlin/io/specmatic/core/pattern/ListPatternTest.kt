@@ -179,4 +179,65 @@ Feature: Recursive test
         val value = ListPattern(NumberPattern(), example = listOf("1", "2", "3")).generate(Resolver(defaultExampleResolver = UseDefaultExample))
         assertThat(value).isEqualTo(JSONArrayValue(listOf(NumberValue(1), NumberValue(2), NumberValue(3))))
     }
+
+    @Test
+    fun `should result in failure when list is empty and resolver is set to allPatternsAsMandatory`() {
+        val pattern = ListPattern(parsedPattern("""{
+            "topLevelMandatoryKey": "(number)",
+            "topLevelOptionalKey?": "(string)",
+            "subMandatoryObject": {
+                "subMandatoryKey": "(string)",
+                "subOptionalKey?": "(number)"
+            }
+        }
+        """.trimIndent()))
+
+        val matchingValue = parsedValue("[]".trimIndent())
+        val result = pattern.matches(matchingValue, Resolver().withAllPatternsAsMandatory())
+        println(result.reportString())
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).containsIgnoringWhitespaces("List cannot be empty")
+    }
+
+    @Test
+    fun `should not result in failure when list is empty but pattern is cycling and resolver is set to allPatternsAsMandatory`() {
+        val basePattern = ListPattern(parsedPattern("""{
+            "topLevelMandatoryKey": "(number)",
+            "topLevelOptionalKey?": "(string)",
+            "subMandatoryObject": {
+                "subMandatoryKey": "(string)",
+                "subOptionalKey?": "(number)"
+            }
+        }
+        """.trimIndent(), typeAlias = "(baseJsonPattern)"), typeAlias = "(baseListPattern)")
+        val listPattern = ListPattern(basePattern, typeAlias = "(baseListPattern)")
+
+        val matchingValue = parsedValue("""[
+            [
+                {
+                    "topLevelMandatoryKey": 10,
+                    "topLevelOptionalKey": "abc",
+                    "subMandatoryObject": {
+                        "subMandatoryKey": "abc",
+                        "subOptionalKey": 10
+                    }
+                },
+                {
+                    "topLevelMandatoryKey": 10,
+                    "topLevelOptionalKey": "abc",
+                    "subMandatoryObject": {
+                        "subMandatoryKey": "abc",
+                        "subOptionalKey": 10
+                    }
+                }
+            ],
+            []
+        ]
+        """.trimIndent())
+        val result = listPattern.matches(matchingValue, Resolver().withAllPatternsAsMandatory())
+        println(result.reportString())
+
+        assertThat(result).isInstanceOf(Result.Success::class.java)
+    }
 }

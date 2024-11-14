@@ -495,13 +495,14 @@
                     color: white;
                 }
 
+                /* Temporarily Remove Selected Count */
+                &#bulk-generate[data-selected][data-panel="table"]::before {
+                    content: var(--_after_content);
+                    color: white;
+                }
+
                 &#bulk-generate {
                     --_content: "Generate Selected";
-
-                    /* Temporarily Remove Selected Count */
-                    &::before {
-                        content: '';
-                    }
 
                     &::after {
                         content: var(--_content, "Generate Selected");

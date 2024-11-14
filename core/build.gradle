@@ -18,13 +18,13 @@ repositories {
     mavenCentral()
 }
 
-def ktor_version = "2.3.12"
+def ktor_version = "3.0.0"
 def jgit_version = "7.0.0.202409031743-r"
 def junit_version = "5.11.3"
 
 dependencies {
     // TODO Fix to eliminate vulnerabilities, remove when the enclosing library supports it
-    implementation 'io.netty:netty-codec-http:4.1.114.Final' // used by ktor-server-netty-jvm 2.3.9 in core
+    implementation 'io.netty:netty-codec-http:4.1.115.Final' // used by ktor-server-netty-jvm 2.3.9 in core
     implementation 'joda-time:joda-time:2.13.0' // used by swagger-parser 2.1.22
 
     implementation 'io.cucumber:gherkin:22.0.0'
@@ -41,7 +41,7 @@ dependencies {
 
 
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.3"
-    implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.24"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:2.0.0"
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
 

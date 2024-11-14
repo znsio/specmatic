@@ -993,6 +993,8 @@ private fun cachedHttpResponse(
 private fun cachedResponse(fakeResponse: ResponseDetails, httpRequest: HttpRequest, stubCache: StubCache): HttpResponse? {
     val scenario = fakeResponse.successResponse?.scenario
     val method = scenario?.method
+    val attributeSelectionKeys: Set<String> =
+        scenario?.getFieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams).orEmpty()
 
     val generatedResponse = generateHttpResponseFrom(fakeResponse, httpRequest)
     val pathSegments = httpRequest.path?.split("/")?.filter { it.isNotBlank() }.orEmpty()
@@ -1010,21 +1012,31 @@ private fun cachedResponse(fakeResponse: ResponseDetails, httpRequest: HttpReque
     val resourceId = pathSegments.last()
     val resourceIdKey = resourceIdKeyFrom(scenario?.httpRequestPattern)
 
-    if(method == "POST") return generateAndCachePostResponse(generatedResponse, httpRequest, stubCache, resourcePath)
+    if(method == "POST") {
+        val responseBody =
+            generateAndCachePostResponse(generatedResponse, httpRequest, stubCache, resourcePath) ?: return null
+        return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
+    }
 
     if(method == "PATCH" && pathSegments.size > 1) {
-        return generateAndCachePatchResponse(generatedResponse, httpRequest, stubCache, resourcePath, resourceIdKey, resourceId)
+        val responseBody =
+            generateAndCachePatchResponse(httpRequest, stubCache, resourcePath, resourceIdKey, resourceId)
+                ?: return null
+
+        return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
     }
 
     if(method == "GET" && pathSegments.size == 1) {
-        val responseBody = stubCache.findAllResponsesFor(resourcePath)
-        return generatedResponse.withUpdated(responseBody)
+        val responseBody = stubCache.findAllResponsesFor(resourcePath, attributeSelectionKeys)
+        return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
     }
 
     if(method == "GET" && pathSegments.size > 1) {
-        val responseBody = stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)?.responseBody
+        val responseBody =
+            stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)?.responseBody
             ?: return HttpResponse(404, "Resource with resourceId '$resourceId' not found")
-        return generatedResponse.withUpdated(responseBody)
+
+        return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
     }
 
     if(method == "DELETE" && pathSegments.size > 1) {
@@ -1040,7 +1052,7 @@ private fun generateAndCachePostResponse(
     httpRequest: HttpRequest,
     stubCache: StubCache,
     resourcePath: String
-): HttpResponse? {
+): JSONObjectValue? {
     if(generatedResponse.body !is JSONObjectValue || httpRequest.body !is JSONObjectValue)
         return null
 
@@ -1049,17 +1061,16 @@ private fun generateAndCachePostResponse(
         jsonObject = patchValuesFromRequestIntoResponse(httpRequest.body, responseBody)
     )
     stubCache.addResponse(resourcePath, responseBodyWithValuesFromRequest)
-    return generatedResponse.withUpdated(responseBodyWithValuesFromRequest)
+    return responseBodyWithValuesFromRequest
 }
 
 private fun generateAndCachePatchResponse(
-    generatedResponse: HttpResponse,
     httpRequest: HttpRequest,
     stubCache: StubCache,
     resourcePath: String,
     resourceIdKey: String,
     resourceId: String
-): HttpResponse? {
+): JSONObjectValue? {
     if(httpRequest.body !is JSONObjectValue) return null
 
     val cachedResponse = stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)
@@ -1071,7 +1082,7 @@ private fun generateAndCachePatchResponse(
     )
     stubCache.updateResponse(resourcePath, updatedResponseBody, resourceIdKey, resourceId)
 
-    return generatedResponse.withUpdated(updatedResponseBody)
+    return updatedResponseBody
 }
 
 private fun patchValuesFromRequestIntoResponse(requestBody: JSONObjectValue, responseBody: JSONObjectValue): Map<String, Value> {
@@ -1089,8 +1100,9 @@ private fun resourceIdKeyFrom(httpRequestPattern: HttpRequestPattern?): String {
     return httpRequestPattern?.getPathSegmentPatterns()?.last()?.key.orEmpty()
 }
 
-private fun HttpResponse.withUpdated(body: Value): HttpResponse {
-    return this.copy(body = body)
+private fun HttpResponse.withUpdated(body: Value, attributeSelectionKeys: Set<String>): HttpResponse {
+    if(body !is JSONObjectValue) return this.copy(body = body)
+    return this.copy(body = body.removeKeysNotPresentIn(attributeSelectionKeys))
 }
 
 fun dumpIntoFirstAvailableStringField(httpResponse: HttpResponse, stringValue: String): HttpResponse {

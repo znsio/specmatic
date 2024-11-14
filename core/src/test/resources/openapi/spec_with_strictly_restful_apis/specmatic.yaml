@@ -5,3 +5,8 @@ sources:
 
 stub:
   stateful: true
+
+attributeSelectionPattern:
+  defaultFields:
+    - id
+  queryParamKey: columns

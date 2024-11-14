@@ -9,6 +9,12 @@ paths:
     get:
       summary: Get all products
       description: Retrieve a list of all products.
+      parameters:
+        - in: query
+          name: columns
+          schema:
+            type: string
+          description: Specify which fields to retrieve in the response
       responses:
         '200':
           description: A list of products
@@ -21,6 +27,12 @@ paths:
     post:
       summary: Create a new product
       description: Add a new product to the catalog.
+      parameters:
+        - in: query
+          name: columns
+          schema:
+            type: string
+          description: Specify which fields to retrieve in the response
       requestBody:
         required: true
         content:
@@ -46,6 +58,11 @@ paths:
           schema:
             type: string
           description: The ID of the product to retrieve
+        - in: query
+          name: columns
+          schema:
+            type: string
+          description: Specify which fields to retrieve in the response
       responses:
         '200':
           description: A single product
@@ -66,6 +83,11 @@ paths:
           schema:
             type: string
           description: The ID of the product to update
+        - in: query
+          name: columns
+          schema:
+            type: string
+          description: Specify which fields to retrieve in the response
       requestBody:
         required: true
         content:
@@ -92,6 +114,11 @@ paths:
           schema:
             type: string
           description: The ID of the product to delete
+        - in: query
+          name: columns
+          schema:
+            type: string
+          description: Specify which fields to retrieve in the response
       responses:
         '204':
           description: Product deleted successfully
@@ -104,8 +131,7 @@ components:
       type: object
       properties:
         id:
-          type: string
-          example: "123"
+          type: integer
         name:
           type: string
           example: "Product A"
@@ -156,4 +182,3 @@ components:
         inStock:
           type: boolean
           example: false
-

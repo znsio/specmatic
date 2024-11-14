@@ -790,7 +790,7 @@ data class Scenario(
         )
     }
 
-    private fun getFieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams: QueryParameters?): Set<String> {
+    fun getFieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams: QueryParameters?): Set<String> {
         val defaultAttributeSelectionFields = attributeSelectionPattern.defaultFields.toSet()
         val attributeSelectionQueryParamKey =  attributeSelectionPattern.queryParamKey
 

@@ -36,9 +36,9 @@ class StubCache {
         }
     }
 
-    fun findAllResponsesFor(path: String): JSONArrayValue {
+    fun findAllResponsesFor(path: String, attributeSelectionKeys: Set<String>): JSONArrayValue {
         val responseBodies = cachedResponses.filter { it.path == path }.map {
-            it.responseBody
+            it.responseBody.removeKeysNotPresentIn(attributeSelectionKeys)
         }
         return JSONArrayValue(responseBodies)
     }

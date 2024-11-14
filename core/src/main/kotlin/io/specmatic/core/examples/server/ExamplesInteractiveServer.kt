@@ -14,6 +14,7 @@ import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.*
 import io.specmatic.core.discriminator.DiscriminatorExampleInjector
 import io.specmatic.core.discriminator.DiscriminatorMetadata
+import io.specmatic.core.examples.server.ExamplesView.Companion.isScenarioMultiGen
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.examples.server.ExamplesView.Companion.withSchemaExamples
 import io.specmatic.core.examples.server.SchemaExample.Companion.toSchemaExampleFileName
@@ -292,17 +293,16 @@ class ExamplesInteractiveServer(
 
     companion object {
         private val exampleFileNamePostFixCounter = AtomicInteger(0)
-        enum class ExampleGenerationStatus {
-            CREATED, EXISTED, ERROR
-        }
-
         fun resetExampleFileNameCounter() {
             exampleFileNamePostFixCounter.set(0)
         }
 
-        class ExampleGenerationResult private constructor (val path: String?, val status: ExampleGenerationStatus) {
-            constructor(path: String, created: Boolean) : this(path, if(created) ExampleGenerationStatus.CREATED else ExampleGenerationStatus.EXISTED)
-            constructor(): this(null, ExampleGenerationStatus.ERROR)
+        enum class ExampleGenerationStatus { CREATED, EXISTED }
+        data class ExamplePathInfo(val path: String, val created: Boolean, val status: ExampleGenerationStatus) {
+            constructor(path: String, created: Boolean): this(path, created, if (created) ExampleGenerationStatus.CREATED else ExampleGenerationStatus.EXISTED)
+            fun relativeTo(file: File): String {
+                return File(path).canonicalFile.relativeTo(file.canonicalFile.parentFile).path
+            }
         }
 
         fun testExample(test: ContractTest, testBaseUrl: String): Pair<Result, String> {
@@ -312,8 +312,8 @@ class ExamplesInteractiveServer(
             return testResult.first to (testLog?.combineLog() ?: "No Test Logs Found")
         }
 
-        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean): List<String> {
-            try {
+        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean, allowOnlyMandatoryKeysInJSONObject: Boolean): List<String> {
+            return try {
                 val feature: Feature = parseContractFileToFeature(contractFile).let { feature ->
                     val filteredScenarios = if (!extensive) {
                         feature.scenarios.filter {
@@ -327,59 +327,68 @@ class ExamplesInteractiveServer(
                         it.copy(examples = emptyList())
                     })).copy(stubsFromExamples = emptyMap())
                 }
-
-                val examplesDir =
-                    getExamplesDirPath(contractFile)
-
-                examplesDir.mkdirs()
-
                 if (feature.scenarios.isEmpty()) {
                     logger.log("All examples were filtered out by the filter expression")
                     return emptyList()
                 }
 
-                return feature.scenarios.flatMap { scenario ->
-                    try {
-                        val examples = getExistingExampleFiles(feature, scenario, examplesDir.getExamplesFromDir())
-                            .map { ExamplePathInfo(it.first.file.absolutePath, false) }
-                            .ifEmpty { listOf(generateExampleFile(contractFile, feature, scenario)) }
+                val examplesDir = getExamplesDirPath(contractFile).also { if (it.exists()) it.mkdirs() }
+                val allExistingExamples = examplesDir.getExamplesFromDir()
 
-                        examples.forEach {
-                            val loggablePath =
-                                File(it.path).canonicalFile.relativeTo(contractFile.canonicalFile.parentFile).path
+                val allExamples = feature.scenarios.flatMap { scenario ->
+                    generateAndLogScenarioExamples(contractFile, feature, scenario, allExistingExamples, allowOnlyMandatoryKeysInJSONObject)
+                }
 
-                            val trimmedScenarioDescription = scenario.testDescription().trim()
-
-                            if (!it.created) {
-                                println("Example exists for $trimmedScenarioDescription: $loggablePath")
-                            } else {
-                                println("Created example for $trimmedScenarioDescription: $loggablePath")
-                            }
-                        }
-
-                        examples.map { ExampleGenerationResult(it.path, it.created) }
-                    } catch(e: Throwable) {
-                        logger.log(e, "Exception generating example for ${scenario.testDescription()}")
-                        emptyList()
-                    }
-                }.also { exampleFiles ->
-                    val resultCounts = exampleFiles.groupBy { it.status }.mapValues { it.value.size }
-                    val createdFileCount = resultCounts[ExampleGenerationStatus.CREATED] ?: 0
-                    val errorCount = resultCounts[ExampleGenerationStatus.ERROR] ?: 0
-                    val existingFileCount = resultCounts[ExampleGenerationStatus.EXISTED] ?: 0
-
-                    logger.log(System.lineSeparator() + "NOTE: All examples may be found in ${getExamplesDirPath(contractFile).canonicalFile}" + System.lineSeparator())
-
-                    val errorsClause = if(errorCount > 0) ", $errorCount examples could not be generated due to errors" else ""
-
-                    logger.log("=============== Example Generation Summary ===============")
-                    logger.log("$createdFileCount example(s) created, $existingFileCount examples already existed$errorsClause")
-                    logger.log("==========================================================")
-                }.mapNotNull { it.path }
+                generationSummary(contractFile, allExamples).map { it.path }
             } catch (e: StackOverflowError) {
                 logger.log("Got a stack overflow error. You probably have a recursive data structure definition in the contract.")
                 throw e
             }
+        }
+
+        private fun generateAndLogScenarioExamples(contractFile: File, feature: Feature, scenario: Scenario, allExistingExamples: List<ExampleFromFile>, allowOnlyMandatoryKeysInJSONObject: Boolean): List<ExamplePathInfo> {
+            return try {
+                val trimmedDescription = scenario.testDescription().trim()
+                val existingExamples = getExistingExampleFiles(feature, scenario, allExistingExamples).map { it.first }
+                val scenarioIsMultiGen = isScenarioMultiGen(scenario, scenario.resolver)
+
+                val generatedExamples = if (scenarioIsMultiGen || existingExamples.isEmpty()) {
+                    generateExampleFiles(contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject, existingExamples)
+                } else emptyList()
+
+                val allExamples = existingExamples.map {
+                    ExamplePathInfo(it.file.canonicalPath, created = false)
+                }.plus(generatedExamples)
+
+                allExamples.also { logExamples(contractFile, trimmedDescription, it) }
+            } catch (e: Throwable) {
+                logger.log(e, "Exception generating example for ${scenario.testDescription()}")
+                emptyList()
+            }
+        }
+
+        private fun logExamples(contractFile: File, description: String, examples: List<ExamplePathInfo>) {
+            examples.forEach { example ->
+                val loggablePath = example.relativeTo(contractFile)
+                if (!example.created) {
+                    consoleLog("Example already existed for $description: $loggablePath")
+                } else {
+                    consoleLog("Created example for $description: $loggablePath")
+                }
+            }
+        }
+
+        private fun generationSummary(contractFile: File, exampleFiles: List<ExamplePathInfo>): List<ExamplePathInfo> {
+            val resultCounts = exampleFiles.groupBy { it.status }.mapValues { it.value.size }
+            val createdFileCount = resultCounts[ExampleGenerationStatus.CREATED] ?: 0
+            val existingFileCount = resultCounts[ExampleGenerationStatus.EXISTED] ?: 0
+
+            logger.log(System.lineSeparator() + "NOTE: All examples may be found in ${getExamplesDirPath(contractFile).canonicalFile}" + System.lineSeparator())
+            logger.log("=============== Example Generation Summary ===============")
+            logger.log("$createdFileCount example(s) created, $existingFileCount examples already existed")
+            logger.log("==========================================================")
+
+            return exampleFiles
         }
 
         fun generate(
@@ -401,14 +410,11 @@ class ExamplesInteractiveServer(
             val examplesDir = getExamplesDirPath(contractFile)
             val examples = examplesDir.getExamplesFromDir()
 
-            val existingExamples = getExistingExampleFiles(feature, scenario, examples).map { it.first }
-            val examplesToCheck = if (bulkMode) existingExamples else emptyList()
-
-            val newExamples = generateExampleFiles(
-                contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject, existingExamples = examplesToCheck
+            return generateAndLogScenarioExamples(
+                contractFile, feature, scenario,
+                allExistingExamples = if(bulkMode) examples else emptyList(),
+                allowOnlyMandatoryKeysInJSONObject
             )
-
-            return existingExamples.map { ExamplePathInfo(it.file.absolutePath, false) }.plus(newExamples)
         }
 
         fun generateForSchemaBased(contractFile: File, patternName: String): List<ExamplePathInfo> {
@@ -425,22 +431,6 @@ class ExamplesInteractiveServer(
             println("Writing to file: ${exampleFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
             exampleFile.writeText(generatedValue.toStringLiteral())
             return listOf(ExamplePathInfo(path = exampleFile.absolutePath, created = true))
-        }
-
-        data class ExamplePathInfo(val path: String, val created: Boolean)
-
-        private fun generateExampleFile(contractFile: File, feature: Feature, scenario: Scenario): ExamplePathInfo {
-            val examplesDir = getExamplesDirPath(contractFile)
-            if(!examplesDir.exists()) examplesDir.mkdirs()
-
-            val file = writeToExampleFile(
-                ScenarioStub(
-                    request = scenario.generateHttpRequest(),
-                    response = feature.lookupResponse(scenario).cleanup()
-                ),
-                contractFile
-            )
-            return ExamplePathInfo(file.absolutePath, true)
         }
 
         private fun generateExampleFiles(

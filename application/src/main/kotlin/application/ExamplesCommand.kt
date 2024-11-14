@@ -107,6 +107,13 @@ For example:
     )
     var filterNot: List<String> = emptyList()
 
+    @Option(
+        names = ["--allow-only-mandatory-keys-in-payload"],
+        description = ["Generate examples with only mandatory keys in the json request and response payloads"],
+        required = false
+    )
+    var allowOnlyMandatoryKeysInJSONObject: Boolean = false
+
     override fun call(): Int {
         if (contractFile == null) {
             println("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
@@ -127,7 +134,7 @@ For example:
             ExamplesInteractiveServer.generate(
                 contractFile!!,
                 ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter, filterNot),
-                extensive,
+                extensive, allowOnlyMandatoryKeysInJSONObject
             )
         } catch (e: Throwable) {
             logger.log(e)

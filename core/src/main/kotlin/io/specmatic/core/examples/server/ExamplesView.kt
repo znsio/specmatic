@@ -29,14 +29,14 @@ class ExamplesView {
                     contentType = scenario.httpRequestPattern.headersPattern.contentType,
                     exampleFile = example?.first,
                     exampleMismatchReason = example?.second,
-                    isDiscriminatorBased = scenario.isMultiGen(scenario.resolver)
+                    isDiscriminatorBased = isScenarioMultiGen(scenario, scenario.resolver)
                 )
             }.filterEndpoints()
         }
 
-        private fun Scenario.isMultiGen(resolver: Resolver): Boolean {
-            val discriminatorInRequest = this.httpRequestPattern.body.isDiscriminatorBased(resolver)
-            val discriminatorInResponse = this.httpResponsePattern.body.isDiscriminatorBased(resolver)
+        fun isScenarioMultiGen(scenario: Scenario, resolver: Resolver): Boolean {
+            val discriminatorInRequest = scenario.httpRequestPattern.body.isDiscriminatorBased(resolver)
+            val discriminatorInResponse = scenario.httpResponsePattern.body.isDiscriminatorBased(resolver)
             return discriminatorInRequest || discriminatorInResponse
         }
 

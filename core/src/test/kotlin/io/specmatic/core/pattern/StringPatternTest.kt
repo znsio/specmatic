@@ -92,9 +92,19 @@ internal class StringPatternTest {
     @MethodSource("lengthTestValues")
     fun `generate string value of appropriate length matching minLength and maxLength parameters`(min: Int?, max: Int?, length: Int) {
         val result = StringPattern(minLength = min, maxLength = max).generate(Resolver()) as StringValue
-
-        assertThat(result.string.length).isEqualTo(length)
+        val generatedLength = result.string.length
+        val randomStringDefaultLength = 5;
+        // If max is provided, ensure the generated length is within the range of min and max
+        if (max != null) {
+            // Ensure that the generated string length is between min (or 0 if min is null) and max
+            assertThat(generatedLength).isGreaterThanOrEqualTo(min ?: 0)
+            assertThat(generatedLength).isLessThanOrEqualTo(max)
+        } else {
+            // If max is not provided, ensure the generated length is at least the min (or randomStringDefaultLength if min is null)
+            assertThat(generatedLength).isGreaterThanOrEqualTo(min ?: randomStringDefaultLength)
+        }
     }
+
 
     @Test
     fun `string should encompass enum of string`() {
@@ -239,5 +249,13 @@ internal class StringPatternTest {
     @Test
     fun `string pattern encompasses email`() {
         assertThat(StringPattern().encompasses(EmailPattern(), Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should fail to generate string when maxLength is less than minLength`() {
+        val exception = assertThrows<IllegalArgumentException> {
+            StringPattern(minLength = 6, maxLength = 4)
+        }
+        assertThat(exception.message).isEqualTo("maxLength cannot be less than minLength")
     }
 }

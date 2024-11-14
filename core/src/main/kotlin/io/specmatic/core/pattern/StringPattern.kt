@@ -67,20 +67,28 @@ data class StringPattern (
         return JSONArrayValue(valueList)
     }
 
+    //Tells us the minimum length to be used for random string
     private val randomStringLength: Int =
         when {
             minLength != null && 5 < minLength -> minLength
             maxLength != null && 5 > maxLength -> maxLength
             else -> 5
         }
-    
+
     override fun generate(resolver: Resolver): Value {
         val defaultExample: Value? = resolver.resolveExample(example, this)
-
         if (regex != null) {
-            if(defaultExample == null)
-                return StringValue(Generex(regex.removePrefix("^").removeSuffix("$")).random(randomStringLength))
+            if(defaultExample == null) {
+                if (maxLength != null)
+                    return StringValue(
+                        Generex(regex.removePrefix("^").removeSuffix("$")).random(
+                            randomStringLength,
+                            maxLength
+                        )
+                    )
 
+                return StringValue(Generex(regex.removePrefix("^").removeSuffix("$")).random(randomStringLength))
+            }
             val defaultExampleMatchResult = matches(defaultExample, resolver)
 
             if(defaultExampleMatchResult.isSuccess())

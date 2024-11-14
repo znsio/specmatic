@@ -977,9 +977,9 @@ private fun cachedHttpResponse(
     val fakeResponse = responses.successResponse()
         ?: return fakeHttpResponse(features, httpRequest, specmaticConfig)
 
-    val generatedResponse = generateHttpResponseFrom(fakeResponse, httpRequest)
     val responseBody = cachedResponse(fakeResponse, httpRequest, stubCache)
 
+    val generatedResponse = generateHttpResponseFrom(fakeResponse, httpRequest)
     val updatedResponse = if(responseBody != null) generatedResponse.copy(body = responseBody)
     else generatedResponse
 

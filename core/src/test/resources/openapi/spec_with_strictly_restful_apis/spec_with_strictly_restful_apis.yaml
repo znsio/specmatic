@@ -1,0 +1,143 @@
+openapi: 3.0.3
+info:
+  title: Product API
+  version: 1.0.0
+  description: API to manage products
+
+paths:
+  /products:
+    get:
+      summary: Get all products
+      description: Retrieve a list of all products.
+      responses:
+        '200':
+          description: A list of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+    post:
+      summary: Create a new product
+      description: Add a new product to the catalog.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+  /products/{id}:
+    get:
+      summary: Get product by ID
+      description: Retrieve a specific product by its ID.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The ID of the product to retrieve
+      responses:
+        '200':
+          description: A single product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+
+    patch:
+      summary: Update a product partially
+      description: Partially update product details.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The ID of the product to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdate'
+      responses:
+        '200':
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "123"
+        name:
+          type: string
+          example: "Product A"
+        description:
+          type: string
+          example: "A detailed description of Product A."
+        price:
+          type: number
+          format: float
+          example: 19.99
+        inStock:
+          type: boolean
+          example: true
+
+    ProductInput:
+      type: object
+      required:
+        - name
+        - price
+      properties:
+        name:
+          type: string
+          example: "Product A"
+        description:
+          type: string
+          example: "A detailed description of Product A."
+        price:
+          type: number
+          format: float
+          example: 19.99
+        inStock:
+          type: boolean
+          example: true
+
+    ProductUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Updated Product Name"
+        description:
+          type: string
+          example: "Updated description of the product."
+        price:
+          type: number
+          format: float
+          example: 29.99
+        inStock:
+          type: boolean
+          example: false
+

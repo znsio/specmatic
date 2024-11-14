@@ -1,0 +1,7 @@
+sources:
+  - provider: filesystem
+    stub:
+      - api.yaml
+
+stub:
+  stateful: true

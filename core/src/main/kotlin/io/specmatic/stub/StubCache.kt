@@ -43,7 +43,7 @@ class StubCache {
         return JSONArrayValue(responseBodies)
     }
 
-    private fun deleteResponse(path: String, idKey: String, idValue: String) {
+    fun deleteResponse(path: String, idKey: String, idValue: String) {
         val existingResponse = findResponseFor(path, idKey, idValue) ?: return
         cachedResponses.remove(existingResponse)
     }

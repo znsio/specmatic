@@ -82,6 +82,22 @@ paths:
         '404':
           description: Product not found
 
+    delete:
+      summary: Delete a product
+      description: Delete a product by its ID.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The ID of the product to delete
+      responses:
+        '204':
+          description: Product deleted successfully
+        '404':
+          description: Product not found
+
 components:
   schemas:
     Product:

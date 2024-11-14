@@ -977,11 +977,8 @@ private fun cachedHttpResponse(
     val fakeResponse = responses.successResponse()
         ?: return fakeHttpResponse(features, httpRequest, specmaticConfig)
 
-    val responseBody = cachedResponse(fakeResponse, httpRequest, stubCache)
-
     val generatedResponse = generateHttpResponseFrom(fakeResponse, httpRequest)
-    val updatedResponse = if(responseBody != null) generatedResponse.copy(body = responseBody)
-    else generatedResponse
+    val updatedResponse = cachedResponse(fakeResponse, httpRequest, stubCache) ?: generatedResponse
 
     return FoundStubbedResponse(
         HttpStubResponse(
@@ -993,58 +990,88 @@ private fun cachedHttpResponse(
     )
 }
 
-private fun cachedResponse(fakeResponse: ResponseDetails, httpRequest: HttpRequest, stubCache: StubCache): Value? {
+private fun cachedResponse(fakeResponse: ResponseDetails, httpRequest: HttpRequest, stubCache: StubCache): HttpResponse? {
     val scenario = fakeResponse.successResponse?.scenario
     val method = scenario?.method
 
     val generatedResponse = generateHttpResponseFrom(fakeResponse, httpRequest)
+    val pathSegments = httpRequest.path?.split("/")?.filter { it.isNotBlank() }.orEmpty()
+
     val unsupportedResponseBodyForCaching =
         (generatedResponse.body is JSONObjectValue ||
-                (method == "GET" && generatedResponse.body is JSONArrayValue)).not()
+                (method == "DELETE" && pathSegments.size > 1) ||
+                (method == "GET" &&
+                        generatedResponse.body is JSONArrayValue &&
+                        generatedResponse.body.list.firstOrNull() is JSONObjectValue)).not()
 
     if(unsupportedResponseBodyForCaching) return null
 
-    val pathSegments = httpRequest.path?.split("/")?.filter { it.isNotBlank() }.orEmpty()
     val resourcePath = "/${pathSegments.first()}"
     val resourceId = pathSegments.last()
+    val resourceIdKey = resourceIdKeyFrom(scenario?.httpRequestPattern)
 
-    if(method == "POST") {
-        if(generatedResponse.body !is JSONObjectValue || httpRequest.body !is JSONObjectValue)
-            return null
-
-        val responseBody = generatedResponse.body
-        val responseBodyWithValuesFromRequest = responseBody.copy(
-            jsonObject = patchValuesFromRequestIntoResponse(httpRequest.body, responseBody)
-        )
-        stubCache.addResponse(scenario.path, responseBodyWithValuesFromRequest)
-        return responseBodyWithValuesFromRequest
-    }
-
-    if(method == "GET" && pathSegments.size == 1) return stubCache.findAllResponsesFor(resourcePath)
-
-    if(method == "GET" && pathSegments.size > 1) {
-        val resourceIdKey = resourceIdKeyFrom(scenario.httpRequestPattern)
-        return stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)?.responseBody
-    }
+    if(method == "POST") return generateAndCachePostResponse(generatedResponse, httpRequest, stubCache, resourcePath)
 
     if(method == "PATCH" && pathSegments.size > 1) {
-        if(httpRequest.body !is JSONObjectValue) return null
+        return generateAndCachePatchResponse(generatedResponse, httpRequest, stubCache, resourcePath, resourceIdKey, resourceId)
+    }
 
-        val resourceIdKey = resourceIdKeyFrom(scenario.httpRequestPattern)
+    if(method == "GET" && pathSegments.size == 1) {
+        val responseBody = stubCache.findAllResponsesFor(resourcePath)
+        return generatedResponse.withUpdated(responseBody)
+    }
 
-        val cachedResponse = stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)
+    if(method == "GET" && pathSegments.size > 1) {
+        val responseBody = stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)?.responseBody
+            ?: return HttpResponse(404, "Resource with resourceId '$resourceId' not found")
+        return generatedResponse.withUpdated(responseBody)
+    }
 
-        val responseBody = cachedResponse?.responseBody ?: return null
-
-        val updatedResponseBody = responseBody.copy(
-            jsonObject = patchValuesFromRequestIntoResponse(httpRequest.body, responseBody)
-        )
-        stubCache.updateResponse(resourcePath, updatedResponseBody, resourceIdKey, resourceId)
-
-        return updatedResponseBody
+    if(method == "DELETE" && pathSegments.size > 1) {
+        stubCache.deleteResponse(resourcePath, resourceIdKey, resourceId)
+        return generatedResponse
     }
 
     return null
+}
+
+private fun generateAndCachePostResponse(
+    generatedResponse: HttpResponse,
+    httpRequest: HttpRequest,
+    stubCache: StubCache,
+    resourcePath: String
+): HttpResponse? {
+    if(generatedResponse.body !is JSONObjectValue || httpRequest.body !is JSONObjectValue)
+        return null
+
+    val responseBody = generatedResponse.body
+    val responseBodyWithValuesFromRequest = responseBody.copy(
+        jsonObject = patchValuesFromRequestIntoResponse(httpRequest.body, responseBody)
+    )
+    stubCache.addResponse(resourcePath, responseBodyWithValuesFromRequest)
+    return generatedResponse.withUpdated(responseBodyWithValuesFromRequest)
+}
+
+private fun generateAndCachePatchResponse(
+    generatedResponse: HttpResponse,
+    httpRequest: HttpRequest,
+    stubCache: StubCache,
+    resourcePath: String,
+    resourceIdKey: String,
+    resourceId: String
+): HttpResponse? {
+    if(httpRequest.body !is JSONObjectValue) return null
+
+    val cachedResponse = stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)
+
+    val responseBody = cachedResponse?.responseBody ?: return null
+
+    val updatedResponseBody = responseBody.copy(
+        jsonObject = patchValuesFromRequestIntoResponse(httpRequest.body, responseBody)
+    )
+    stubCache.updateResponse(resourcePath, updatedResponseBody, resourceIdKey, resourceId)
+
+    return generatedResponse.withUpdated(updatedResponseBody)
 }
 
 private fun patchValuesFromRequestIntoResponse(requestBody: JSONObjectValue, responseBody: JSONObjectValue): Map<String, Value> {
@@ -1058,8 +1085,12 @@ private fun patchValuesFromRequestIntoResponse(requestBody: JSONObjectValue, res
     }
 }
 
-private fun resourceIdKeyFrom(httpRequestPattern: HttpRequestPattern): String {
-    return httpRequestPattern.httpPathPattern?.pathSegmentPatterns?.last()?.key.orEmpty()
+private fun resourceIdKeyFrom(httpRequestPattern: HttpRequestPattern?): String {
+    return httpRequestPattern?.getPathSegmentPatterns()?.last()?.key.orEmpty()
+}
+
+private fun HttpResponse.withUpdated(body: Value): HttpResponse {
+    return this.copy(body = body)
 }
 
 fun dumpIntoFirstAvailableStringField(httpResponse: HttpResponse, stringValue: String): HttpResponse {

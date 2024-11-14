@@ -1109,6 +1109,28 @@ class StatefulHttpStubTest {
         assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
     }
 
+    @Test
+    @Order(5)
+    fun `should delete a product`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "DELETE",
+                path = "/products/$resourceId"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(204)
+
+        val getResponse = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products/$resourceId"
+            )
+        )
+
+        assertThat(getResponse.status).isEqualTo(404)
+    }
+
     private fun JSONObjectValue.getStringValue(key: String): String? {
         return this.jsonObject[key]?.toStringLiteral()
     }

@@ -33,6 +33,9 @@ data class HttpRequestPattern(
     val multiPartFormDataPattern: List<MultiPartFormDataPattern> = emptyList(),
     val securitySchemes: List<OpenAPISecurityScheme> = listOf(NoSecurityScheme())
 ) {
+
+    fun getPathSegmentPatterns() = httpPathPattern?.pathSegmentPatterns
+
     fun getHeaderKeys() = headersPattern.headerNames
 
     fun getQueryParamKeys() = httpQueryParamPattern.queryKeyNames

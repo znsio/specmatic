@@ -17,6 +17,13 @@ internal fun withoutOptionality(key: String): String {
     }
 }
 
+internal fun withOptionality(key: String): String {
+    return when {
+        key.endsWith(DEFAULT_OPTIONAL_SUFFIX) -> key
+        else -> "$key$DEFAULT_OPTIONAL_SUFFIX"
+    }
+}
+
 internal fun isOptional(key: String): Boolean =
     key.endsWith(DEFAULT_OPTIONAL_SUFFIX) || key.endsWith(XML_ATTR_OPTIONAL_SUFFIX)
 

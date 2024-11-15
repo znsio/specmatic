@@ -3,9 +3,6 @@ sources:
     stub:
       - api.yaml
 
-stub:
-  stateful: true
-
 attributeSelectionPattern:
   defaultFields:
     - id

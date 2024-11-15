@@ -77,7 +77,7 @@ data class StubConfiguration(
     val generative: Boolean? = false,
     val delayInMilliseconds: Long? = getLongValue(SPECMATIC_STUB_DELAY),
     val dictionary: String? = getStringValue(SPECMATIC_STUB_DICTIONARY),
-    val stateful: Boolean? = false
+    val includeMandatoryAndRequestedKeysInResponse: Boolean? = true
 )
 
 data class WorkflowIDOperation(

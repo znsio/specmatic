@@ -1,4 +1,4 @@
-package io.specmatic.stub
+package io.specmatic.stub.stateful
 
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue

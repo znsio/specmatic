@@ -6,24 +6,72 @@ import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.cors.CORS
+import io.ktor.server.plugins.cors.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
-import io.specmatic.core.*
-import io.specmatic.core.log.*
+import io.specmatic.core.APPLICATION_NAME
+import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.ContractAndStubMismatchMessages
+import io.specmatic.core.Feature
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
+import io.specmatic.core.KeyData
+import io.specmatic.core.MismatchMessages
+import io.specmatic.core.MissingDataException
+import io.specmatic.core.MultiPartContent
+import io.specmatic.core.MultiPartContentValue
+import io.specmatic.core.MultiPartFileValue
+import io.specmatic.core.MultiPartFormDataValue
+import io.specmatic.core.NoBodyValue
+import io.specmatic.core.QueryParameters
+import io.specmatic.core.ResponseBuilder
+import io.specmatic.core.Result
+import io.specmatic.core.Results
+import io.specmatic.core.SPECMATIC_RESULT_HEADER
+import io.specmatic.core.Scenario
+import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.WorkingDirectory
+import io.specmatic.core.listOfExcludedHeaders
+import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.log.HttpLogMessage
+import io.specmatic.core.log.LogMessage
+import io.specmatic.core.log.LogTail
+import io.specmatic.core.log.dontPrintToConsole
+import io.specmatic.core.log.logger
+import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
-import io.specmatic.core.utilities.*
-import io.specmatic.core.value.*
-import io.specmatic.mock.*
-import io.specmatic.stub.report.*
+import io.specmatic.core.urlDecodePathSegments
+import io.specmatic.core.utilities.capitalizeFirstChar
+import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.jsonStringToValueMap
+import io.specmatic.core.utilities.saveJsonFile
+import io.specmatic.core.utilities.toMap
+import io.specmatic.core.value.EmptyString
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
+import io.specmatic.core.value.toXMLNode
+import io.specmatic.mock.NoMatchingScenario
+import io.specmatic.mock.ScenarioStub
+import io.specmatic.mock.TRANSIENT_MOCK
+import io.specmatic.mock.mockFromJSON
+import io.specmatic.mock.validateMock
+import io.specmatic.stub.report.StubEndpoint
+import io.specmatic.stub.report.StubUsageReport
+import io.specmatic.stub.report.StubUsageReportJson
 import io.specmatic.test.HttpClient
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.*
+import kotlinx.coroutines.channels.BroadcastChannel
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.broadcast
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
@@ -178,8 +226,6 @@ class HttpStub(
         }
 
     val endPoint = endPointFromHostAndPort(host, port, keyData)
-
-    private val stubCache = StubCache()
 
     override val client = HttpClient(this.endPoint)
 
@@ -341,7 +387,6 @@ class HttpStub(
             passThroughTargetBase,
             httpClientFactory,
             specmaticConfig,
-            stubCache
         )
 
         result.log(_logs, httpRequest)
@@ -773,13 +818,8 @@ fun getHttpResponse(
     passThroughTargetBase: String = "",
     httpClientFactory: HttpClientFactory? = null,
     specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    stubCache: StubCache = StubCache()
 ): StubbedResponseResult {
     try {
-        if(specmaticConfig.stub.stateful == true) {
-            return cachedHttpResponse(features, httpRequest, specmaticConfig, stubCache)
-        }
-
         val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
         if(matchingStubResponse != null) {
             val (httpStubResponse, httpStubData) = matchingStubResponse
@@ -893,7 +933,7 @@ object ContractAndRequestsMismatch : MismatchMessages {
 
 data class ResponseDetails(val feature: Feature, val successResponse: ResponseBuilder?, val results: Results)
 
-private fun fakeHttpResponse(
+fun fakeHttpResponse(
     features: List<Feature>,
     httpRequest: HttpRequest,
     specmaticConfig: SpecmaticConfig = SpecmaticConfig()
@@ -948,7 +988,7 @@ private fun fakeHttpResponse(
     }
 }
 
-private fun responseDetailsFrom(features: List<Feature>, httpRequest: HttpRequest): List<ResponseDetails> {
+fun responseDetailsFrom(features: List<Feature>, httpRequest: HttpRequest): List<ResponseDetails> {
     return features.asSequence().map { feature ->
         feature.stubResponse(httpRequest, ContractAndRequestsMismatch).let {
             ResponseDetails(feature, it.first, it.second)
@@ -956,153 +996,12 @@ private fun responseDetailsFrom(features: List<Feature>, httpRequest: HttpReques
     }.toList()
 }
 
-private fun List<ResponseDetails>.successResponse(): ResponseDetails? {
+fun List<ResponseDetails>.successResponse(): ResponseDetails? {
     return this.find { it.successResponse != null }
 }
 
-private fun generateHttpResponseFrom(fakeResponse: ResponseDetails, httpRequest: HttpRequest): HttpResponse {
+fun generateHttpResponseFrom(fakeResponse: ResponseDetails, httpRequest: HttpRequest): HttpResponse {
     return fakeResponse.successResponse?.build(RequestContext(httpRequest))?.withRandomResultHeader()!!
-}
-
-private fun cachedHttpResponse(
-    features: List<Feature>,
-    httpRequest: HttpRequest,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    stubCache: StubCache
-): StubbedResponseResult {
-    if (features.isEmpty())
-        return NotStubbed(HttpStubResponse(HttpResponse(400, "No valid API specifications loaded")))
-
-    val responses: List<ResponseDetails> = responseDetailsFrom(features, httpRequest)
-    val fakeResponse = responses.successResponse()
-        ?: return fakeHttpResponse(features, httpRequest, specmaticConfig)
-
-    val generatedResponse = generateHttpResponseFrom(fakeResponse, httpRequest)
-    val updatedResponse = cachedResponse(fakeResponse, httpRequest, stubCache) ?: generatedResponse
-
-    return FoundStubbedResponse(
-        HttpStubResponse(
-            updatedResponse,
-            contractPath = fakeResponse.feature.path,
-            feature = fakeResponse.feature,
-            scenario = fakeResponse.successResponse?.scenario
-        )
-    )
-}
-
-private fun cachedResponse(fakeResponse: ResponseDetails, httpRequest: HttpRequest, stubCache: StubCache): HttpResponse? {
-    val scenario = fakeResponse.successResponse?.scenario
-    val method = scenario?.method
-    val attributeSelectionKeys: Set<String> =
-        scenario?.getFieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams).orEmpty()
-
-    val generatedResponse = generateHttpResponseFrom(fakeResponse, httpRequest)
-    val pathSegments = httpRequest.path?.split("/")?.filter { it.isNotBlank() }.orEmpty()
-
-    val unsupportedResponseBodyForCaching =
-        (generatedResponse.body is JSONObjectValue ||
-                (method == "DELETE" && pathSegments.size > 1) ||
-                (method == "GET" &&
-                        generatedResponse.body is JSONArrayValue &&
-                        generatedResponse.body.list.firstOrNull() is JSONObjectValue)).not()
-
-    if(unsupportedResponseBodyForCaching) return null
-
-    val resourcePath = "/${pathSegments.first()}"
-    val resourceId = pathSegments.last()
-    val resourceIdKey = resourceIdKeyFrom(scenario?.httpRequestPattern)
-
-    if(method == "POST") {
-        val responseBody =
-            generateAndCachePostResponse(generatedResponse, httpRequest, stubCache, resourcePath) ?: return null
-        return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
-    }
-
-    if(method == "PATCH" && pathSegments.size > 1) {
-        val responseBody =
-            generateAndCachePatchResponse(httpRequest, stubCache, resourcePath, resourceIdKey, resourceId)
-                ?: return null
-
-        return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
-    }
-
-    if(method == "GET" && pathSegments.size == 1) {
-        val responseBody = stubCache.findAllResponsesFor(resourcePath, attributeSelectionKeys)
-        return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
-    }
-
-    if(method == "GET" && pathSegments.size > 1) {
-        val responseBody =
-            stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)?.responseBody
-            ?: return HttpResponse(404, "Resource with resourceId '$resourceId' not found")
-
-        return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
-    }
-
-    if(method == "DELETE" && pathSegments.size > 1) {
-        stubCache.deleteResponse(resourcePath, resourceIdKey, resourceId)
-        return generatedResponse
-    }
-
-    return null
-}
-
-private fun generateAndCachePostResponse(
-    generatedResponse: HttpResponse,
-    httpRequest: HttpRequest,
-    stubCache: StubCache,
-    resourcePath: String
-): JSONObjectValue? {
-    if(generatedResponse.body !is JSONObjectValue || httpRequest.body !is JSONObjectValue)
-        return null
-
-    val responseBody = generatedResponse.body
-    val responseBodyWithValuesFromRequest = responseBody.copy(
-        jsonObject = patchValuesFromRequestIntoResponse(httpRequest.body, responseBody)
-    )
-    stubCache.addResponse(resourcePath, responseBodyWithValuesFromRequest)
-    return responseBodyWithValuesFromRequest
-}
-
-private fun generateAndCachePatchResponse(
-    httpRequest: HttpRequest,
-    stubCache: StubCache,
-    resourcePath: String,
-    resourceIdKey: String,
-    resourceId: String
-): JSONObjectValue? {
-    if(httpRequest.body !is JSONObjectValue) return null
-
-    val cachedResponse = stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)
-
-    val responseBody = cachedResponse?.responseBody ?: return null
-
-    val updatedResponseBody = responseBody.copy(
-        jsonObject = patchValuesFromRequestIntoResponse(httpRequest.body, responseBody)
-    )
-    stubCache.updateResponse(resourcePath, updatedResponseBody, resourceIdKey, resourceId)
-
-    return updatedResponseBody
-}
-
-private fun patchValuesFromRequestIntoResponse(requestBody: JSONObjectValue, responseBody: JSONObjectValue): Map<String, Value> {
-    return responseBody.jsonObject.mapValues { (key, value) ->
-        val patchValueFromRequest = requestBody.jsonObject.entries.firstOrNull {
-            it.key == key
-        }?.value ?: return@mapValues value
-
-        if(patchValueFromRequest::class.java == value::class.java) return@mapValues patchValueFromRequest
-        value
-    }
-}
-
-private fun resourceIdKeyFrom(httpRequestPattern: HttpRequestPattern?): String {
-    return httpRequestPattern?.getPathSegmentPatterns()?.last()?.key.orEmpty()
-}
-
-private fun HttpResponse.withUpdated(body: Value, attributeSelectionKeys: Set<String>): HttpResponse {
-    if(body !is JSONObjectValue) return this.copy(body = body)
-    return this.copy(body = body.removeKeysNotPresentIn(attributeSelectionKeys))
 }
 
 fun dumpIntoFirstAvailableStringField(httpResponse: HttpResponse, stringValue: String): HttpResponse {

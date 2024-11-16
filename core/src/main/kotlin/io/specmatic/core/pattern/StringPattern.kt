@@ -71,7 +71,8 @@ data class StringPattern (
     private val patternMinLength: Int =
         when {
             minLength != null && minLength > 0 -> minLength
-            else -> 1
+            maxLength != null && maxLength < 5 -> 1
+            else -> 5
         }
 
     override fun generate(resolver: Resolver): Value {

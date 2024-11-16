@@ -93,15 +93,21 @@ internal class StringPatternTest {
     fun `generate string value of appropriate length matching minLength and maxLength parameters`(min: Int?, max: Int?, length: Int) {
         val result = StringPattern(minLength = min, maxLength = max).generate(Resolver()) as StringValue
         val generatedLength = result.string.length
-        val minPatternLength = min ?: 1;
+        val patternMinLength: Int =
+            when {
+                min != null && min > 0 -> min
+                max != null && max < 5 -> 1
+                else -> 5
+            }
+
         // If max is provided, ensure the generated length is within the range of min and max
         if (max != null) {
             // Ensure that the generated string length is between min (or 0 if min is null) and max
-            assertThat(generatedLength).isGreaterThanOrEqualTo(minPatternLength)
+            assertThat(generatedLength).isGreaterThanOrEqualTo(patternMinLength)
             assertThat(generatedLength).isLessThanOrEqualTo(max)
         } else {
             // If max is not provided, ensure the generated length is at least the min (or randomStringDefaultLength if min is null)
-            assertThat(generatedLength).isGreaterThanOrEqualTo(minPatternLength)
+            assertThat(generatedLength).isGreaterThanOrEqualTo(patternMinLength)
         }
     }
 

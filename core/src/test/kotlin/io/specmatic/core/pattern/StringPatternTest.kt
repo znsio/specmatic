@@ -37,7 +37,7 @@ internal class StringPatternTest {
 
     @Test
     fun `should generate 5 character long random string when min and max length are not specified`() {
-        assertThat(StringPattern().generate(Resolver()).toStringLiteral().length).isEqualTo(1)
+        assertThat(StringPattern().generate(Resolver()).toStringLiteral().length).isEqualTo(5)
     }
 
     @Test

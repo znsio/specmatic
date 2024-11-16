@@ -68,11 +68,10 @@ data class StringPattern (
     }
 
     //Tells us the minimum length to be used for random string
-    private val randomStringLength: Int =
+    private val patternMinLength: Int =
         when {
-            minLength != null && 5 < minLength -> minLength
-            maxLength != null && 5 > maxLength -> maxLength
-            else -> 5
+            minLength != null && minLength > 0 -> minLength
+            else -> 1
         }
 
     override fun generate(resolver: Resolver): Value {
@@ -82,12 +81,12 @@ data class StringPattern (
                 if (maxLength != null)
                     return StringValue(
                         Generex(regex.removePrefix("^").removeSuffix("$")).random(
-                            randomStringLength,
+                            patternMinLength,
                             maxLength
                         )
                     )
 
-                return StringValue(Generex(regex.removePrefix("^").removeSuffix("$")).random(randomStringLength))
+                return StringValue(Generex(regex.removePrefix("^").removeSuffix("$")).random(patternMinLength))
             }
             val defaultExampleMatchResult = matches(defaultExample, resolver)
 
@@ -104,7 +103,7 @@ data class StringPattern (
             return defaultExample
         }
 
-        return StringValue(randomString(randomStringLength))
+        return StringValue(randomString(patternMinLength))
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {

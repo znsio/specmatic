@@ -37,7 +37,7 @@ internal class StringPatternTest {
 
     @Test
     fun `should generate 5 character long random string when min and max length are not specified`() {
-        assertThat(StringPattern().generate(Resolver()).toStringLiteral().length).isEqualTo(5)
+        assertThat(StringPattern().generate(Resolver()).toStringLiteral().length).isEqualTo(1)
     }
 
     @Test
@@ -93,15 +93,15 @@ internal class StringPatternTest {
     fun `generate string value of appropriate length matching minLength and maxLength parameters`(min: Int?, max: Int?, length: Int) {
         val result = StringPattern(minLength = min, maxLength = max).generate(Resolver()) as StringValue
         val generatedLength = result.string.length
-        val randomStringDefaultLength = 5;
+        val minPatternLength = min ?: 1;
         // If max is provided, ensure the generated length is within the range of min and max
         if (max != null) {
             // Ensure that the generated string length is between min (or 0 if min is null) and max
-            assertThat(generatedLength).isGreaterThanOrEqualTo(min ?: 0)
+            assertThat(generatedLength).isGreaterThanOrEqualTo(minPatternLength)
             assertThat(generatedLength).isLessThanOrEqualTo(max)
         } else {
             // If max is not provided, ensure the generated length is at least the min (or randomStringDefaultLength if min is null)
-            assertThat(generatedLength).isGreaterThanOrEqualTo(min ?: randomStringDefaultLength)
+            assertThat(generatedLength).isGreaterThanOrEqualTo(minPatternLength)
         }
     }
 

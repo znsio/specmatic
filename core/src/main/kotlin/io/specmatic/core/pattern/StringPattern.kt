@@ -11,7 +11,8 @@ import io.specmatic.core.value.Value
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-data class StringPattern (
+data class
+StringPattern (
     override val typeAlias: String? = null,
     val minLength: Int? = null,
     val maxLength: Int? = null,
@@ -77,34 +78,26 @@ data class StringPattern (
 
     override fun generate(resolver: Resolver): Value {
         val defaultExample: Value? = resolver.resolveExample(example, this)
-        if (regex != null) {
-            if(defaultExample == null) {
-                if (maxLength != null)
-                    return StringValue(
-                        Generex(regex.removePrefix("^").removeSuffix("$")).random(
-                            patternMinLength,
-                            maxLength
-                        )
-                    )
 
-                return StringValue(Generex(regex.removePrefix("^").removeSuffix("$")).random(patternMinLength))
-            }
-            val defaultExampleMatchResult = matches(defaultExample, resolver)
-
-            if(defaultExampleMatchResult.isSuccess())
-                return defaultExample
-
-            throw ContractException("Schema example ${defaultExample.toStringLiteral()} does not match pattern $regex")
+        return if (regex != null) {
+            handleRegex(defaultExample,resolver)
+        } else {
+            defaultExample?.takeIf { it is StringValue }
+                ?: StringValue(randomString(patternMinLength))
         }
-
-        if(defaultExample != null) {
-            if(defaultExample !is StringValue)
-                throw ContractException("Schema example ${defaultExample.toStringLiteral()} is not a string")
-
+    }
+    private fun handleRegex(defaultExample: Value?,resolver: Resolver): Value {
+        if (defaultExample == null) {
+            val cleanedRegex = regex!!.removePrefix("^").removeSuffix("$")
+            val randomValue = maxLength?.let {
+                Generex(cleanedRegex).random(patternMinLength, it)
+            } ?: Generex(cleanedRegex).random(patternMinLength)
+            return StringValue(randomValue)
+        }
+        if (matches(defaultExample, resolver).isSuccess()) {
             return defaultExample
         }
-
-        return StringValue(randomString(patternMinLength))
+        throw ContractException("Schema example ${defaultExample.toStringLiteral()} does not match pattern $regex")
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {

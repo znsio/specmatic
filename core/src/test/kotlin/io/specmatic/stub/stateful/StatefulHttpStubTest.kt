@@ -7,8 +7,6 @@ import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.value.*
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.loadContractStubsFromImplicitPaths
-import io.specmatic.stub.stateful.StatefulHttpStubTest.Companion
-import io.specmatic.stub.stateful.StatefulHttpStubTest.Companion.resourceId
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -16,6 +14,8 @@ import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class StatefulHttpStubTest {
@@ -399,6 +399,87 @@ class StatefulHttpStubSeedDataFromExamplesTest {
     }
 
 
+}
+
+class StatefulHttpStubConcurrencyTest {
+    companion object {
+        private lateinit var httpStub: ContractStub
+        private const val SPEC_DIR_PATH = "src/test/resources/openapi/spec_with_strictly_restful_apis"
+        private var resourceId = ""
+
+        @JvmStatic
+        @BeforeAll
+        fun setup() {
+            httpStub = StatefulHttpStub(
+                specmaticConfigPath = "$SPEC_DIR_PATH/specmatic.yaml",
+                features = listOf(
+                    OpenApiSpecification.fromFile(
+                        "$SPEC_DIR_PATH/spec_with_strictly_restful_apis.yaml"
+                    ).toFeature()
+                )
+            )
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun tearDown() {
+            httpStub.close()
+        }
+    }
+
+    @Test
+    fun `should handle concurrent additions and updates without corruption`() {
+        val numberOfThreads = 10
+        val executor = Executors.newFixedThreadPool(numberOfThreads)
+        val latch = CountDownLatch(numberOfThreads)
+
+        repeat(numberOfThreads) { threadIndex ->
+            executor.submit {
+                try {
+                    val path = "/products"
+
+                    httpStub.client.execute(
+                        HttpRequest(
+                            method = "POST",
+                            path = path,
+                            body = parsedJSONObject(
+                                """
+                                {
+                                  "name": "Product $threadIndex",
+                                  "price": ${threadIndex * 10}
+                                }
+                                """.trimIndent()
+                            )
+                        )
+                    )
+                } finally {
+                    latch.countDown()
+                }
+            }
+        }
+
+        latch.await()
+        executor.shutdown()
+
+        // Verify all products were added
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val products = (response.body as JSONArrayValue).list
+        assertThat(products.size).isEqualTo(numberOfThreads)
+        products.sortedBy { (it as JSONObjectValue).getStringValue("name") }.forEachIndexed { index, product ->
+            val productObject = product as JSONObjectValue
+            assertThat(productObject.getStringValue("name")).isEqualTo("Product $index")
+            assertThat(productObject.getStringValue("price")).isEqualTo("${index * 10}")
+        }
+    }
 }
 
 private fun JSONObjectValue.getStringValue(key: String): String? {

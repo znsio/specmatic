@@ -1,8 +1,12 @@
 package io.specmatic.core.pattern
 
 import com.mifmif.common.regex.Generex
+import dk.brics.automaton.Automaton
+import dk.brics.automaton.RegExp
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
+import io.specmatic.core.log.StringLog
+import io.specmatic.core.log.consoleLog
 import io.specmatic.core.mismatchResult
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.JSONArrayValue
@@ -10,6 +14,7 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import java.nio.charset.StandardCharsets
 import java.util.*
+
 
 data class
 StringPattern (
@@ -22,6 +27,17 @@ StringPattern (
     init {
         if (minLength != null && maxLength != null && minLength > maxLength) {
             throw IllegalArgumentException("maxLength cannot be less than minLength")
+        }
+
+        if(regex != null) {
+            val automaton: Automaton = RegExp(regex).toAutomaton()
+             val min = automaton.getShortestExample(true).length
+        when {
+            minLength != null && min < minLength ->
+                throw IllegalArgumentException("Invalid Regex - min cannot be less than regex least size")
+            maxLength != null && min > maxLength ->
+                throw IllegalArgumentException("Invalid Regex - min cannot be more than regex max size")
+        }
         }
     }
 

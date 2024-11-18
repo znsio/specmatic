@@ -9560,6 +9560,64 @@ paths:
         }
     }
 
+    @Test
+    fun `should include unreferenced or indirectly referenced schema patterns`() {
+        val specContent = """
+        openapi: 3.0.3
+        info:
+          title: Products API
+          version: 1.0.0
+        paths:
+          /products:
+            get:
+              responses:
+                '200':
+                  description: Successful response
+                  content:
+                    application/json:
+                      schema:
+                        type: array
+                        items:
+                          ${'$'}ref: '#/components/schemas/ExtendedDetails'
+        components:
+          schemas:
+            User:
+              type: object
+              properties:
+                name:
+                  type: string
+            ExtendedDetails:
+              allOf:
+                - ${'$'}ref: '#/components/schemas/BaseDetails'
+                - ${'$'}ref: '#/components/schemas/User'
+            BaseDetails:
+              type: object
+              properties:
+                id:
+                  type: string
+                email:
+                  type: string
+              required:
+                - id
+            Address:
+              type: object
+              properties:
+                street:
+                  type: string
+                city:
+                  type: string
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(specContent, "").toFeature()
+        val directlyNonReferencedPatterns = listOf("(BaseDetails)", "(User)", "(Address)")
+
+        assertThat(feature.scenarios).allSatisfy { scenario ->
+            directlyNonReferencedPatterns.forEach {
+                assertThat(scenario.patterns).containsKey(it)
+                assertThat(scenario.resolver.newPatterns).containsKey(it)
+            }
+        }
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

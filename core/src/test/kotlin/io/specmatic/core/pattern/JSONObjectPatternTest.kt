@@ -1153,4 +1153,83 @@ internal class JSONObjectPatternTest {
 
         assertThat(matchResult).isInstanceOf(Result.Success::class.java)
     }
+
+    @Test
+    fun `should not result in failure for missing keys with array ref when pattern is cycling with an allOf schema`() {
+        val spec = """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          description: Sample API
+          version: 0.1.9
+        paths:
+          /hello:
+            get:
+              responses:
+                '200':
+                  description: Says hello
+                  content:
+                    application/json:
+                      schema:
+                        ${"$"}ref: '#/components/schemas/MainMessage'
+        components:
+          schemas:
+            MainMessage:
+              allOf:
+                - ${"$"}ref: '#/components/schemas/MessageType'
+                - ${"$"}ref: '#/components/schemas/Message'
+              discriminator:
+                propertyName: type
+                mapping:
+                  Message: '#/components/schemas/Message'
+            Message:
+              allOf:
+                - ${"$"}ref: '#/components/schemas/MessageType'
+                - type: object
+                  properties:
+                    msgRefOrValue:
+                      type: array
+                      items:
+                        ${"$"}ref: '#/components/schemas/MessageRefOrValue'
+              discriminator:
+                propertyName: type
+                mapping:
+                  Message: '#/components/schemas/Message'
+            MessageType:
+              type: object
+              properties:
+                type:
+                  type: string
+            MessageRefOrValue:
+              oneOf:
+                - ${"$"}ref: '#/components/schemas/MessageRef'
+                - ${"$"}ref: '#/components/schemas/Message'
+              discriminator:
+                propertyName: type
+                mapping:
+                  Message: '#/components/schemas/Message'
+                  MessageRef: '#/components/schemas/MessageRef'
+            MessageRef:
+              type: object
+              properties:
+                id:
+                  type: string
+                type:
+                  type: string
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val scenario = feature.scenarios.first()
+        val resolver = scenario.resolver.copy(allPatternsAreMandatory = true)
+
+        val responsePattern = scenario.httpResponsePattern.body
+        val value = responsePattern.generate(resolver)
+        println(value.toStringLiteral())
+
+        val matchResult = responsePattern.matches(value, resolver)
+        println(matchResult.reportString())
+
+        assertThat(matchResult).isInstanceOf(Result.Success::class.java)
+    }
 }

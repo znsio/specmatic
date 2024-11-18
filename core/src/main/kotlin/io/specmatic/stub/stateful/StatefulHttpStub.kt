@@ -25,6 +25,7 @@ import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
+import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.CouldNotParseRequest
 import io.specmatic.stub.FoundStubbedResponse
@@ -49,7 +50,8 @@ class StatefulHttpStub(
     port: Int = 9000,
     private val features: List<Feature>,
     private val specmaticConfigPath: String? = null,
-    private val timeoutMillis: Long = 2000
+    private val scenarioStubs: List<ScenarioStub> = emptyList(),
+    private val timeoutMillis: Long = 2000,
 ): ContractStub {
 
     private val environment = applicationEngineEnvironment {
@@ -140,7 +142,7 @@ class StatefulHttpStub(
     }
 
     private val specmaticConfig = loadSpecmaticConfig()
-    private val stubCache = StubCache()
+    private val stubCache = stubCacheWithExampleData()
 
     private fun cachedHttpResponse(
         httpRequest: HttpRequest,
@@ -181,7 +183,7 @@ class StatefulHttpStub(
         val pathSegments = httpRequest.pathSegments()
         if(isUnsupportedResponseBodyForCaching(generatedResponse, method, pathSegments)) return null
 
-        val (resourcePath, resourceId) = resourcePathAndIdFrom(pathSegments)
+        val (resourcePath, resourceId) = resourcePathAndIdFrom(httpRequest)
         val resourceIdKey = resourceIdKeyFrom(scenario?.httpRequestPattern)
         val attributeSelectionKeys: Set<String> =
             scenario?.getFieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams).orEmpty()
@@ -233,7 +235,8 @@ class StatefulHttpStub(
         return null
     }
 
-    private fun resourcePathAndIdFrom(pathSegments: List<String>): Pair<String, String> {
+    private fun resourcePathAndIdFrom(httpRequest: HttpRequest): Pair<String, String> {
+        val pathSegments = httpRequest.pathSegments()
         val resourcePath = "/${pathSegments.first()}"
         val resourceId = pathSegments.last()
         return Pair(resourcePath, resourceId)
@@ -375,5 +378,36 @@ class StatefulHttpStub(
             loadSpecmaticConfig(specmaticConfigPath)
         else
             SpecmaticConfig()
+    }
+
+    private fun stubCacheWithExampleData(): StubCache {
+        val stubCache = StubCache()
+
+        scenarioStubs.forEach {
+            val httpRequest = it.request
+            if (httpRequest.method !in setOf("GET", "POST")) return@forEach
+            if (isUnsupportedResponseBodyForCaching(
+                    generatedResponse = it.response,
+                    method = httpRequest.method,
+                    pathSegments = httpRequest.pathSegments()
+                )
+            ) return@forEach
+
+            val (resourcePath, _) = resourcePathAndIdFrom(httpRequest)
+            val responseBody = it.response.body
+            if (httpRequest.method == "GET" && httpRequest.pathSegments().size == 1) {
+                val responseBodies = (it.response.body as JSONArrayValue).list.filterIsInstance<JSONObjectValue>()
+                responseBodies.forEach { body ->
+                    stubCache.addResponse(resourcePath, body)
+                }
+            } else {
+                if (responseBody !is JSONObjectValue) return@forEach
+                if(httpRequest.method == "POST" && httpRequest.body !is JSONObjectValue) return@forEach
+
+                stubCache.addResponse(resourcePath, responseBody)
+            }
+        }
+
+        return stubCache
     }
 }

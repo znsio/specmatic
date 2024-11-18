@@ -26,15 +26,19 @@ import java.util.concurrent.CountDownLatch
 )
 class VirtualServiceCommand  : Callable<Int> {
 
-    @Option(names = ["--host"], description = ["Host for the http stub"], defaultValue = DEFAULT_HTTP_STUB_HOST)
+    @Option(names = ["--host"], description = ["Host for the virtual service"], defaultValue = DEFAULT_HTTP_STUB_HOST)
     lateinit var host: String
 
-    @Option(names = ["--port"], description = ["Port for the http stub"], defaultValue = DEFAULT_HTTP_STUB_PORT)
+    @Option(names = ["--port"], description = ["Port for the virtual service"], defaultValue = DEFAULT_HTTP_STUB_PORT)
     var port: Int = 0
+
+    @Option(names = ["--examples"], description = ["Directories containing JSON examples"], required = false)
+    var exampleDirs: List<String> = mutableListOf()
 
     private val stubLoaderEngine = StubLoaderEngine()
     private var server: StatefulHttpStub? = null
     private val latch = CountDownLatch(1)
+    private val newLine = System.lineSeparator()
 
     override fun call(): Int {
         setup()
@@ -82,7 +86,7 @@ class VirtualServiceCommand  : Callable<Int> {
     private fun startServer() {
         val stubData: List<Pair<Feature, List<ScenarioStub>>> = stubLoaderEngine.loadStubs(
             stubContractPathData(),
-            emptyList(), // TODO - to be replaced with exampleDirs
+            exampleDirs,
             Configuration.configFilePath,
             false
         )
@@ -91,10 +95,16 @@ class VirtualServiceCommand  : Callable<Int> {
             host,
             port,
             stubData.map { it.first },
-            Configuration.configFilePath
+            Configuration.configFilePath,
+            stubData.flatMap { it.second }.also { it.logExamplesCachedAsSeedData() }
         )
         logger.log("Virtual service started on http://$host:$port")
         latch.await()
+    }
+
+    private fun List<ScenarioStub>.logExamplesCachedAsSeedData() {
+        logger.log("${newLine}Injecting the data read from the following stub files into the stub server's state..".prependIndent("  "))
+        this.forEach { logger.log(it.filePath.orEmpty().prependIndent("  ")) }
     }
 }
 

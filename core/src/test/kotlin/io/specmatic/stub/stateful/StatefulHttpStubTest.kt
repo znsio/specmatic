@@ -3,9 +3,12 @@ package io.specmatic.stub.stateful
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.value.*
 import io.specmatic.stub.ContractStub
-import io.specmatic.stub.HttpStub
+import io.specmatic.stub.loadContractStubsFromImplicitPaths
+import io.specmatic.stub.stateful.StatefulHttpStubTest.Companion
+import io.specmatic.stub.stateful.StatefulHttpStubTest.Companion.resourceId
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -163,9 +166,6 @@ class StatefulHttpStubTest {
         assertThat(getResponse.status).isEqualTo(404)
     }
 
-    private fun JSONObjectValue.getStringValue(key: String): String? {
-        return this.jsonObject[key]?.toStringLiteral()
-    }
 }
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
@@ -320,4 +320,87 @@ class StatefulHttpStubWithAttributeSelectionTest {
     private fun JSONObjectValue.getStringValue(key: String): String? {
         return this.jsonObject[key]?.toStringLiteral()
     }
+}
+
+class StatefulHttpStubSeedDataFromExamplesTest {
+    companion object {
+        private lateinit var httpStub: ContractStub
+        private const val SPEC_DIR_PATH = "src/test/resources/openapi/spec_with_strictly_restful_apis"
+
+        @JvmStatic
+        @BeforeAll
+        fun setup() {
+            val specPath = "$SPEC_DIR_PATH/spec_with_strictly_restful_apis.yaml"
+
+            val scenarioStubs = loadContractStubsFromImplicitPaths(
+                contractPathDataList = listOf(ContractPathData("", specPath)),
+                specmaticConfig = loadSpecmaticConfig("$SPEC_DIR_PATH/specmatic.yaml")
+            ).flatMap { it.second }
+
+            httpStub = StatefulHttpStub(
+                specmaticConfigPath = "$SPEC_DIR_PATH/specmatic.yaml",
+                features = listOf(
+                    OpenApiSpecification.fromFile(specPath).toFeature()
+                ),
+                scenarioStubs = scenarioStubs
+            )
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun tearDown() {
+            httpStub.close()
+        }
+    }
+
+    @Test
+    fun `should get the list of products from seed data loaded from examples`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = (response.body as JSONArrayValue)
+        assertThat(responseBody.list.size).isEqualTo(4)
+
+        val responseObjectFromResponseBody = (response.body as JSONArrayValue)
+            .list.filterIsInstance<JSONObjectValue>().first { it.getStringValue("id") == "300" }
+
+        assertThat(responseObjectFromResponseBody.getStringValue("id")).isEqualTo("300")
+        assertThat(responseObjectFromResponseBody.getStringValue("name")).isEqualTo("iPhone 16")
+        assertThat(responseObjectFromResponseBody.getStringValue("description")).isEqualTo("New iPhone 16")
+        assertThat(responseObjectFromResponseBody.getStringValue("price")).isEqualTo("942")
+        assertThat(responseObjectFromResponseBody.getStringValue("inStock")).isEqualTo("true")
+    }
+
+
+    @Test
+    fun `should get the product from seed data loaded from examples`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products/300"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        val responseBody = response.body as JSONObjectValue
+
+        assertThat(responseBody.getStringValue("id")).isEqualTo("300")
+        assertThat(responseBody.getStringValue("name")).isEqualTo("iPhone 16")
+        assertThat(responseBody.getStringValue("description")).isEqualTo("New iPhone 16")
+        assertThat(responseBody.getStringValue("price")).isEqualTo("942")
+        assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
+    }
+
+
+}
+
+private fun JSONObjectValue.getStringValue(key: String): String? {
+    return this.jsonObject[key]?.toStringLiteral()
 }

@@ -145,6 +145,8 @@ components:
         inStock:
           type: boolean
           example: true
+      required:
+        - id
 
     ProductInput:
       type: object

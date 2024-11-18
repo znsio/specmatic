@@ -11,6 +11,7 @@ import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpRequestPattern
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.Resolver
+import io.specmatic.core.Scenario
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
@@ -18,14 +19,18 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.JSONObjectPattern
 import io.specmatic.core.pattern.Pattern
+import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.pattern.resolvedHop
+import io.specmatic.core.pattern.withoutOptionality
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.stub.ContractAndRequestsMismatch
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.CouldNotParseRequest
 import io.specmatic.stub.FoundStubbedResponse
@@ -40,8 +45,6 @@ import io.specmatic.stub.generateHttpResponseFrom
 import io.specmatic.stub.internalServerError
 import io.specmatic.stub.ktorHttpRequestToHttpRequest
 import io.specmatic.stub.respondToKtorHttpResponse
-import io.specmatic.stub.responseDetailsFrom
-import io.specmatic.stub.successResponse
 import io.specmatic.test.HttpClient
 import java.io.File
 
@@ -150,16 +153,16 @@ class StatefulHttpStub(
         if (features.isEmpty())
             return NotStubbed(HttpStubResponse(HttpResponse(400, "No valid API specifications loaded")))
 
-        val responses: List<ResponseDetails> = responseDetailsFrom(features, httpRequest)
-        val fakeResponse = responses.successResponse()
+        val responses: Map<Int, ResponseDetails> = responseDetailsFrom(features, httpRequest)
+        val fakeResponse = responses.responseWithStatusCodeStartingWith("2")
             ?: return fakeHttpResponse(features, httpRequest, specmaticConfig)
 
-        val generatedResponse = generateHttpResponseFrom(fakeResponse, httpRequest)
         val updatedResponse = cachedResponse(
             fakeResponse,
             httpRequest,
-            specmaticConfig.stub.includeMandatoryAndRequestedKeysInResponse
-        ) ?: generatedResponse
+            specmaticConfig.stub.includeMandatoryAndRequestedKeysInResponse,
+            responses.responseWithStatusCodeStartingWith("404")?.successResponse?.responseBodyPattern
+        ) ?: generateHttpResponseFrom(fakeResponse, httpRequest)
 
         return FoundStubbedResponse(
             HttpStubResponse(
@@ -171,22 +174,39 @@ class StatefulHttpStub(
         )
     }
 
+    private fun Map<Int, ResponseDetails>.responseWithStatusCodeStartingWith(value: String): ResponseDetails? {
+        return this.entries.firstOrNull {
+            it.key.toString().startsWith(value) && it.value.successResponse != null
+        }?.value
+    }
+
     private fun cachedResponse(
         fakeResponse: ResponseDetails,
         httpRequest: HttpRequest,
-        includeMandatoryAndRequestedKeysInResponse: Boolean?
+        includeMandatoryAndRequestedKeysInResponse: Boolean?,
+        notFoundResponseBodyPattern: Pattern?
     ): HttpResponse? {
         val scenario = fakeResponse.successResponse?.scenario
 
         val generatedResponse = generateHttpResponseFrom(fakeResponse, httpRequest)
         val method = scenario?.method
         val pathSegments = httpRequest.pathSegments()
+
         if(isUnsupportedResponseBodyForCaching(generatedResponse, method, pathSegments)) return null
 
         val (resourcePath, resourceId) = resourcePathAndIdFrom(httpRequest)
         val resourceIdKey = resourceIdKeyFrom(scenario?.httpRequestPattern)
         val attributeSelectionKeys: Set<String> =
             scenario?.getFieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams).orEmpty()
+
+        val notFoundResponse = generate4xxResponseWithMessage(
+            notFoundResponseBodyPattern,
+            scenario,
+            message = "Resource with resourceId '$resourceId' not found",
+            statusCode = 404
+        )
+        val cachedResponseWithId = stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)?.responseBody
+        if(pathSegments.size > 1 && cachedResponseWithId == null) return notFoundResponse
 
         if (method == "POST") {
             val responseBody =
@@ -220,11 +240,8 @@ class StatefulHttpStub(
         }
 
         if(method == "GET" && pathSegments.size > 1) {
-            val responseBody =
-                stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)?.responseBody
-                    ?: return HttpResponse(404, "Resource with resourceId '$resourceId' not found")
-
-            return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
+            if(cachedResponseWithId == null) return notFoundResponse
+            return generatedResponse.withUpdated(cachedResponseWithId, attributeSelectionKeys)
         }
 
         if(method == "DELETE" && pathSegments.size > 1) {
@@ -233,6 +250,34 @@ class StatefulHttpStub(
         }
 
         return null
+    }
+
+
+    private fun generate4xxResponseWithMessage(
+        notFoundResponseBodyPattern: Pattern?,
+        scenario: Scenario?,
+        message: String,
+        statusCode: Int
+    ): HttpResponse {
+        if(statusCode.toString().startsWith("4").not()) {
+            throw IllegalArgumentException("The statusCode should be of 4xx type")
+        }
+
+        if (notFoundResponseBodyPattern == null || notFoundResponseBodyPattern !is JSONObjectPattern) {
+            return HttpResponse(statusCode, message)
+        }
+        val messageKey =
+            notFoundResponseBodyPattern.pattern.entries.firstOrNull { it.value is StringPattern }?.key
+        if (messageKey == null || scenario?.resolver == null) {
+            return HttpResponse(statusCode, message)
+        }
+
+        val jsonObjectWithNotFoundMessage = notFoundResponseBodyPattern.generate(
+            scenario.resolver
+        ).jsonObject.plus(
+            mapOf(withoutOptionality(messageKey) to StringValue(message))
+        )
+        return HttpResponse(statusCode, JSONObjectValue(jsonObject = jsonObjectWithNotFoundMessage))
     }
 
     private fun resourcePathAndIdFrom(httpRequest: HttpRequest): Pair<String, String> {
@@ -303,7 +348,7 @@ class StatefulHttpStub(
         includeMandatoryAndRequestedKeysInResponse: Boolean?
     ): JSONObjectValue {
         val responseBodyPattern = fakeResponse.successResponse?.responseBodyPattern ?: return this
-        val resolver = fakeResponse.successResponse.resolver
+        val resolver = fakeResponse.successResponse.resolver ?: return this
 
         val resolvedResponseBodyPattern = responseBodyPatternFrom(fakeResponse)
         if(resolvedResponseBodyPattern !is JSONObjectPattern) return this
@@ -357,7 +402,7 @@ class StatefulHttpStub(
 
     private fun responseBodyPatternFrom(fakeResponse: ResponseDetails): Pattern? {
         val responseBodyPattern = fakeResponse.successResponse?.responseBodyPattern ?: return null
-        val resolver = fakeResponse.successResponse.resolver
+        val resolver = fakeResponse.successResponse.resolver ?: return null
 
         return resolver.withCyclePrevention(responseBodyPattern) {
             resolvedHop(responseBodyPattern, it)
@@ -409,5 +454,16 @@ class StatefulHttpStub(
         }
 
         return stubCache
+    }
+
+    private fun responseDetailsFrom(features: List<Feature>, httpRequest: HttpRequest): Map<Int, ResponseDetails> {
+        return features.asSequence().map { feature ->
+            feature.stubResponseMap(
+                httpRequest,
+                ContractAndRequestsMismatch
+            ).map { (statusCode, responseResultPair) ->
+                statusCode to ResponseDetails(feature, responseResultPair.first, responseResultPair.second)
+            }.toMap()
+        }.flatMap { map -> map.entries.map { it.toPair() } }.toMap()
     }
 }

@@ -34,11 +34,11 @@ data class AnyPattern(
 
     override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {
         if(keys.isEmpty()) return this
-        if(this.hasNoAmbiguousPatterns().not()) return this
 
-        val pattern = this.pattern.first { it !is NullPattern }
-        if(pattern is PossibleJsonObjectPatternContainer) return pattern.removeKeysNotPresentIn(keys, resolver)
-        return this
+        return this.copy(pattern = this.pattern.map {
+            if (it !is PossibleJsonObjectPatternContainer) return@map it
+            it.removeKeysNotPresentIn(keys, resolver)
+        })
     }
 
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {

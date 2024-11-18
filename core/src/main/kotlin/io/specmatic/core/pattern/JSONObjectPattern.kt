@@ -236,6 +236,13 @@ data class JSONObjectPattern(
         return JSONArrayValue(valueList)
     }
 
+    private fun shouldMakePatternMandatory(pattern: Pattern, resolver: Resolver): Boolean {
+        if (!resolver.allPatternsAreMandatory) return false
+
+        val patternToCheck = if (pattern.typeAlias == null) this else pattern
+        return !resolver.hasSeenPattern(patternToCheck)
+    }
+
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         val resolverWithNullType = withNullPattern(resolver)
         if (sampleData !is JSONObjectValue)
@@ -252,9 +259,11 @@ data class JSONObjectPattern(
             else
                 emptyList()
 
-        val adjustedPattern = if (resolverWithNullType.allPatternsAreMandatory && !resolverWithNullType.hasSeenPattern(this)) {
-            pattern.mapKeys { withoutOptionality(it.key) }
-        } else pattern
+        val adjustedPattern = pattern.mapKeys {
+            if (shouldMakePatternMandatory(it.value, resolver)) {
+                withoutOptionality(it.key)
+            } else it.key
+        }
 
         val keyErrors: List<Result.Failure> =
             resolverWithNullType.findKeyErrorList(adjustedPattern, sampleData.jsonObject).map {
@@ -267,7 +276,8 @@ data class JSONObjectPattern(
 
         val resultsWithDiscriminator: List<ResultWithDiscriminatorStatus> =
             mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
-                val result = updatedResolver.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
+                val innerResolver = updatedResolver.addPatternAsSeen(patternValue)
+                val result = innerResolver.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
 
                 val isDiscrimintor = patternValue.isDiscriminator()
 

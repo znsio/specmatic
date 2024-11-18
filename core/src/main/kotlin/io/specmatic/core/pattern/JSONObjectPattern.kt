@@ -239,7 +239,11 @@ data class JSONObjectPattern(
     private fun shouldMakePatternMandatory(pattern: Pattern, resolver: Resolver): Boolean {
         if (!resolver.allPatternsAreMandatory) return false
 
-        val patternToCheck = if (pattern.typeAlias == null) this else pattern
+        val patternToCheck = when(pattern) {
+            is ListPattern -> pattern.typeAlias?.let { pattern } ?: pattern.pattern
+            else -> pattern.typeAlias?.let { pattern } ?: this
+        }
+
         return !resolver.hasSeenPattern(patternToCheck)
     }
 

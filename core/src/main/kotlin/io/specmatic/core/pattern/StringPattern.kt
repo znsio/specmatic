@@ -77,28 +77,28 @@ StringPattern (
         }
 
     override fun generate(resolver: Resolver): Value {
-        val defaultExample: Value? = resolver.resolveExample(example, this)
+        val defaultExample = resolver.resolveExample(example, this)
 
-        return if (regex != null) {
-            handleRegex(defaultExample,resolver)
-        } else {
-            defaultExample?.takeIf { it is StringValue }
-                ?: StringValue(randomString(patternMinLength))
+        // Validate the default example
+        defaultExample?.let {
+            if (matches(it, resolver).isSuccess()) {
+                return it
+            }
+            throw ContractException("Schema example ${it.toStringLiteral()} does not match pattern $regex")
         }
+
+        // Generate a value based on regex or length constraints
+        return regex?.let { generateFromRegex() } ?: StringValue(randomString(patternMinLength))
     }
-    private fun handleRegex(defaultExample: Value?,resolver: Resolver): Value {
-        if (defaultExample == null) {
-            val cleanedRegex = regex!!.removePrefix("^").removeSuffix("$")
-            val randomValue = maxLength?.let {
-                Generex(cleanedRegex).random(patternMinLength, it)
-            } ?: Generex(cleanedRegex).random(patternMinLength)
-            return StringValue(randomValue)
-        }
-        if (matches(defaultExample, resolver).isSuccess()) {
-            return defaultExample
-        }
-        throw ContractException("Schema example ${defaultExample.toStringLiteral()} does not match pattern $regex")
+
+    private fun generateFromRegex(): Value {
+        val cleanedRegex = regex!!.removePrefix("^").removeSuffix("$")
+        val generatedValue = maxLength?.let {
+            Generex(cleanedRegex).random(patternMinLength, it)
+        } ?: Generex(cleanedRegex).random(patternMinLength)
+        return StringValue(generatedValue)
     }
+
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val minLengthExample: ReturnValue<Pattern>? = minLength?.let {

@@ -50,7 +50,7 @@ class HttpStub(
     val workingDirectory: WorkingDirectory? = null,
     val specmaticConfigPath: String? = null,
     private val timeoutMillis: Long = 0,
-    baseUrl: String = "",
+    val baseUrl: String = "",
 ) : ContractStub {
     constructor(
         feature: Feature,
@@ -220,11 +220,13 @@ class HttpStub(
 
                 anyHost()
             }
+            val urlPrefixIntraceptor = UrlPrefixIntraceptor()
+            registerRequestInterceptor(urlPrefixIntraceptor)
                 intercept(ApplicationCallPipeline.Call) {
                 val httpLogMessage = HttpLogMessage()
 
                 try {
-                    val rawHttpRequest = ktorHttpRequestToHttpRequest(call,baseUrl)
+                    val rawHttpRequest = ktorHttpRequestToHttpRequest(call)
                     httpLogMessage.addRequest(rawHttpRequest)
 
                     if(rawHttpRequest.isHealthCheckRequest()) return@intercept
@@ -619,7 +621,7 @@ class HttpStub(
 
 class CouldNotParseRequest(innerException: Throwable) : Exception(exceptionCauseMessage(innerException))
 
-internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall,baseUrl: String): HttpRequest {
+internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
     try {
         val (body, formFields, multiPartFormData) = bodyFromCall(call)
 
@@ -627,7 +629,7 @@ internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall,baseUrl:
 
         return HttpRequest(
             method = call.request.httpMethod.value,
-            path = urlDecodePathSegments(call.request.path(),baseUrl),
+            path = call.request.path(),
             headers = requestHeaders,
             body = body,
             queryParams = QueryParameters(paramPairs = toParams(call.request.queryParameters)),
@@ -1201,7 +1203,7 @@ fun endPointFromHostAndPort(host: String, baseUrl:String, port: Int?, keyData: K
         80, null -> ""
         else -> ":$port"
     }
-    baseUrl?.let {   return "$protocol://$host$computedPortString$baseUrl" }
+    baseUrl?.let{ return "$protocol://$host$computedPortString/${it.trim('/')}" }
 
     return "$protocol://$host$computedPortString"
 

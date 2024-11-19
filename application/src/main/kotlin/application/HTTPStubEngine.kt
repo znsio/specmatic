@@ -51,7 +51,7 @@ class HTTPStubEngine {
             val protocol = if (keyStoreData != null) "https" else "http"
             consoleLog(
                 StringLog(
-                    "Stub server is running on ${protocol}://${host}:$port${baseUrl.orEmpty()}. Ctrl + C to stop."
+                    "Stub server is running on ${protocol}://${host}:$port${baseUrl?.let { "/${it.trim('/')}" }.orEmpty()}. Ctrl + C to stop."
                 )
             )
         }

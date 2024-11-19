@@ -7,6 +7,7 @@ import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.utilities.Flags.Companion.BASE_URL
 import io.specmatic.core.utilities.contractStubPaths
 import io.specmatic.core.utilities.examplesDirFor
 import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
@@ -106,7 +107,6 @@ internal fun createStub(
     val contractInfo = loadContractStubsFromFiles(contractPathData, dataDirPaths, specmaticConfig, strict)
     val features = contractInfo.map { it.first }
     val httpExpectations = contractInfoToHttpExpectations(contractInfo)
-
     return HttpStub(
         features,
         httpExpectations,

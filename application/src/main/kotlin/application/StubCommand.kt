@@ -5,6 +5,7 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.utilities.Flags.Companion.BASE_URL
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
 import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
@@ -115,6 +116,8 @@ class StubCommand : Callable<Unit> {
         if (delayInMilliseconds > 0) {
             System.setProperty(SPECMATIC_STUB_DELAY, delayInMilliseconds.toString())
         }
+        if(baseURL.isNotEmpty())
+        System.setProperty(BASE_URL,baseURL)
 
         val logPrinters = configureLogPrinters()
 

@@ -630,26 +630,6 @@ fun escapeSpaceInPath(path: String): String {
     }
 }
 
-fun urlDecodePathSegments(url: String, baseURL: String): String {
-    val normalizedBaseURL = baseURL?.let { "/${it.trim('/')}" }
-    val relativePath = getRelativePath(url, normalizedBaseURL)
-
-    return if (relativePath.contains("://")) {
-        URLParts(relativePath).withDecodedPathSegments()
-    } else {
-        decodePath(relativePath)
-    }
-    }
-
-private fun getRelativePath(url: String, normalizedBaseURL: String?): String {
-    return when {
-        normalizedBaseURL == null || normalizedBaseURL == "/" -> url
-        url.contains(normalizedBaseURL) -> {
-            url.removePrefix(normalizedBaseURL).takeIf { it.startsWith("/") } ?: ""
-        }
-        else -> ""
-    }
-}
 
 fun decodePath(path: String): String {
     return path.split("/").joinToString("/") { segment ->

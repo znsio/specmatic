@@ -52,7 +52,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
         module {
             intercept(ApplicationCallPipeline.Call) {
                 try {
-                    val httpRequest = ktorHttpRequestToHttpRequest(call,baseURL)
+                    val httpRequest = ktorHttpRequestToHttpRequest(call)
 
                     if(httpRequest.isHealthCheckRequest()) return@intercept
                     if(httpRequest.isDumpRequest()) return@intercept

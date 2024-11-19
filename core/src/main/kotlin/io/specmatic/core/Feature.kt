@@ -498,6 +498,7 @@ data class Feature(
         concreteTestScenario.specification,
         concreteTestScenario.serviceType,
         comment,
+        validators = listOf(ExamplePostValidator),
         workflow = workflow,
         originalScenario = originalScenario
     )

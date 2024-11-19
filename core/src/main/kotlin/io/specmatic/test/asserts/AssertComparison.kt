@@ -1,11 +1,7 @@
 package io.specmatic.test.asserts
 
 import io.specmatic.core.Result
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.ScalarValue
 import io.specmatic.core.value.Value
-import kotlin.math.exp
 
 val ASSERT_PATTERN = Regex("^\\$(\\w+)\\((.*)\\)$")
 
@@ -13,31 +9,30 @@ class AssertComparison(val prefix: String, val key: String, val lookupKey: Strin
 
     override fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
         val prefixValue = currentFactStore[prefix] ?: return Result.Failure(breadCrumb = prefix, message = "Could not resolve $prefix in current fact store")
-        val actualValue = currentFactStore["$prefix.$key"] ?: return Result.Failure(breadCrumb = lookupKey, message = "Could not resolve $lookupKey in actual current fact store")
-        val expectedValue = actualFactStore[lookupKey] ?: return Result.Failure(breadCrumb = lookupKey, message = "Could not resolve $lookupKey in expected actual fact store")
+        val expectedValue = actualFactStore[lookupKey] ?: return Result.Failure(breadCrumb = lookupKey, message = "Could not resolve $lookupKey in actual fact store")
 
-        return assert(prefixValue, actualValue, expectedValue)
+        val dynamicList = createDynamicList(prefixValue)
+        val results = dynamicList.map { newAssert ->
+            val finalKey = "${newAssert.prefix}.${newAssert.key}"
+            val actualValue = currentFactStore[finalKey] ?: return@map Result.Failure(breadCrumb = finalKey, message = "Could not resolve $finalKey in current fact store")
+            assert(actualValue, expectedValue)
+        }
+
+        return results.toResult()
     }
 
-    private fun assert(value: Value, actualValue: Value, expectedValue: Value): Result {
-        return when(value) {
-            is JSONObjectValue -> assert(value, actualValue, expectedValue)
-            is JSONArrayValue -> assert(value, actualValue, expectedValue)
-            else -> Result.Failure(breadCrumb = key, message = "Expected value to be a scalar, array or object")
+    private fun createDynamicList(prefixValue: Value): List<AssertComparison> {
+        return prefixValue.suffixIfMoreThanOne {_, suffix ->
+            AssertComparison(prefix = "$prefix$suffix", key = key, lookupKey = lookupKey, isEqualityCheck = isEqualityCheck)
         }
     }
 
-    private fun assert(value: JSONObjectValue, actualValue: Value, expectedValue: Value): Result {
-        val matches = actualValue.toStringLiteral() == expectedValue.toStringLiteral()
+    private fun assert(actualValue: Value, expectedValue: Value): Result {
+        val match = actualValue.toStringLiteral() == expectedValue.toStringLiteral()
         return when (isEqualityCheck) {
-            true -> if (matches) Result.Success() else Result.Failure(breadCrumb = key, message = "Expected $actualValue to equal $expectedValue")
-            false -> if (!matches) Result.Success() else Result.Failure(breadCrumb = key, message = "Expected $actualValue to not equal $expectedValue")
+            true -> if (match) Result.Success() else Result.Failure(breadCrumb = key, message = "Expected $actualValue to equal $expectedValue")
+            false -> if (!match) Result.Success() else Result.Failure(breadCrumb = key, message = "Expected $actualValue to not equal $expectedValue")
         }
-    }
-
-    private fun assert(value: JSONArrayValue, actualValue: Value, expectedValue: Value): Result {
-        val results = value.list.map { assert(value, actualValue, expectedValue) }
-        return Result.fromResults(results)
     }
 
     companion object {

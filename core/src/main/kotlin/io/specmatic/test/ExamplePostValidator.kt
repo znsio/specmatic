@@ -21,7 +21,7 @@ object ExamplePostValidator: ResponseValidator {
         return Result.fromFailures(finalResults)
     }
 
-    fun Row.toAsserts(): List<Assert> {
+    private fun Row.toAsserts(): List<Assert> {
         val responseExampleBody = this.responseExampleForValidation?.responseExample?.body ?: return emptyList()
 
         return responseExampleBody.traverse(
@@ -48,7 +48,7 @@ object ExamplePostValidator: ResponseValidator {
 
     private fun HttpResponse.toFactStore(): Map<String, Value> {
         val headers = this.headers.map {
-            "REQUEST.HEADERS.${it.key}" to StringValue(it.value)
+            "RESPONSE.HEADERS.${it.key}" to StringValue(it.value)
         }.toMap()
 
         return this.body.traverse(

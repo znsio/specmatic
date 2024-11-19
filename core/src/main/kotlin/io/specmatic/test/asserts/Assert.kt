@@ -6,6 +6,13 @@ import io.specmatic.core.value.Value
 
 interface Assert {
     fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result
+
+    fun List<Result>.toResult(): Result {
+        val failures = filterIsInstance<Result.Failure>()
+        return if (failures.isNotEmpty()) {
+            Result.fromFailures(failures)
+        } else Result.Success()
+    }
 }
 
 fun parsedAssert(prefix: String, key: String, value: Value): Assert? {

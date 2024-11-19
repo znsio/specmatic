@@ -14,13 +14,6 @@ class AssertConditional(val conditionalAsserts: List<Assert>, val thenAsserts: L
         }
     }
 
-    private fun List<Result>.toResult(): Result {
-        val failures = filterIsInstance<Result.Failure>()
-        return if (failures.isNotEmpty()) {
-            Result.fromFailures(failures)
-        } else Result.Success()
-    }
-
     companion object {
         private fun toAsserts(prefix: String, jsonObjectValue: JSONObjectValue?): List<Assert> {
             return jsonObjectValue?.jsonObject?.entries?.mapNotNull { (key, value) ->

@@ -208,6 +208,12 @@ data class Scenario(
             httpResponsePattern.generateResponseV2(updatedResolver)
         }
 
+    fun resolvedResponseBodyPattern(): Pattern {
+        return resolver.withCyclePrevention(httpResponsePattern.body) {
+            resolvedHop(httpResponsePattern.body, it)
+        }
+    }
+
     private fun combineFacts(
         expected: Map<String, Value>,
         actual: Map<String, Value>,

@@ -155,7 +155,7 @@ class StatefulHttpStub(
 
         val responses: Map<Int, ResponseDetails> = responseDetailsFrom(features, httpRequest)
         val fakeResponse = responses.responseWithStatusCodeStartingWith("2")
-            ?: return fakeHttpResponse(features, httpRequest, specmaticConfig)
+            ?: return badRequestOrFakeResponse(responses, httpRequest)
 
         val updatedResponse = cachedResponse(
             fakeResponse,
@@ -172,6 +172,42 @@ class StatefulHttpStub(
                 scenario = fakeResponse.successResponse?.scenario
             )
         )
+    }
+
+    private fun badRequestOrFakeResponse(
+        responses: Map<Int, ResponseDetails>,
+        httpRequest: HttpRequest
+    ): StubbedResponseResult {
+        val badRequestScenario = features.scenarioWith(
+            httpRequest.method,
+            httpRequest.path?.split("/")?.getOrNull(1),
+            400
+        )
+        val badRequestResponseDetails = responses.responseWithStatusCodeStartingWith("400")
+            ?: return fakeHttpResponse(features, httpRequest, specmaticConfig)
+
+        val response = generate4xxResponseWithMessage(
+            badRequestScenario?.resolvedResponseBodyPattern(),
+            badRequestScenario,
+            badRequestResponseDetails.results.distinctReport(),
+            400
+        )
+        return FoundStubbedResponse(
+            HttpStubResponse(
+                response,
+                contractPath = badRequestResponseDetails.feature.path,
+                feature = badRequestResponseDetails.feature,
+                scenario = badRequestResponseDetails.successResponse?.scenario
+            )
+        )
+    }
+
+    private fun List<Feature>.scenarioWith(method: String?, path: String?, statusCode: Int): Scenario? {
+        return this.flatMap { it.scenarios }.firstOrNull { scenario ->
+            scenario.method == method
+                    && scenario.path.split("/").getOrNull(1) == path
+                    && scenario.status == statusCode
+        }
     }
 
     private fun Map<Int, ResponseDetails>.responseWithStatusCodeStartingWith(value: String): ResponseDetails? {
@@ -254,7 +290,7 @@ class StatefulHttpStub(
 
 
     private fun generate4xxResponseWithMessage(
-        notFoundResponseBodyPattern: Pattern?,
+        responseBodyPattern: Pattern?,
         scenario: Scenario?,
         message: String,
         statusCode: Int
@@ -263,16 +299,16 @@ class StatefulHttpStub(
             throw IllegalArgumentException("The statusCode should be of 4xx type")
         }
 
-        if (notFoundResponseBodyPattern == null || notFoundResponseBodyPattern !is JSONObjectPattern) {
+        if (responseBodyPattern == null || responseBodyPattern !is JSONObjectPattern) {
             return HttpResponse(statusCode, message)
         }
         val messageKey =
-            notFoundResponseBodyPattern.pattern.entries.firstOrNull { it.value is StringPattern }?.key
+            responseBodyPattern.pattern.entries.firstOrNull { it.value is StringPattern }?.key
         if (messageKey == null || scenario?.resolver == null) {
             return HttpResponse(statusCode, message)
         }
 
-        val jsonObjectWithNotFoundMessage = notFoundResponseBodyPattern.generate(
+        val jsonObjectWithNotFoundMessage = responseBodyPattern.generate(
             scenario.resolver
         ).jsonObject.plus(
             mapOf(withoutOptionality(messageKey) to StringValue(message))

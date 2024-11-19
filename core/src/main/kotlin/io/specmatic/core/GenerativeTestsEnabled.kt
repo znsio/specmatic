@@ -13,7 +13,7 @@ data class GenerativeTestsEnabled(private val positiveOnly: Boolean) : Generatio
         key: String
     ): Sequence<ReturnValue<Pattern>> {
         // TODO generate value outside
-        return resolver.withCyclePrevention(pattern, isOptional(key)) { cyclePreventedResolver ->
+        return resolver.withCyclePrevention(pattern, key, isOptional(key)) { cyclePreventedResolver ->
             pattern.newBasedOn(Row(), cyclePreventedResolver)
         } ?: emptySequence()
     }

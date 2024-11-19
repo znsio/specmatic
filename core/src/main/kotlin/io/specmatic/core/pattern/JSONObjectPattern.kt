@@ -327,7 +327,7 @@ data class JSONObjectPattern(
             generate(
                 selectPropertiesWithinMaxAndMin(pattern, minProperties, maxProperties),
                 withNullPattern(resolver),
-                typeAlias
+                this
             )
         )
     }
@@ -409,12 +409,12 @@ data class JSONObjectPattern(
     override val typeName: String = "json object"
 }
 
-fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver, typeAlias: String?): Map<String, Value> {
+fun generate(jsonPatternMap: Map<String, Pattern>, resolver: Resolver, jsonPattern: JSONObjectPattern): Map<String, Value> {
     val resolverWithNullType = withNullPattern(resolver)
 
-    val optionalProps = jsonPattern.keys.filter { isOptional(it) }.map { withoutOptionality(it) }
+    val optionalProps = jsonPatternMap.keys.filter { isOptional(it) }.map { withoutOptionality(it) }
 
-    return jsonPattern
+    return jsonPatternMap
         .mapKeys { entry -> withoutOptionality(entry.key) }
         .mapValues { (key, pattern) ->
             attempt(breadCrumb = key) {
@@ -423,9 +423,25 @@ fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver, typeAlias: S
 
                 val canPropertyBeSkipped = propertyIsOptionalInSchema
 
-                Optional.ofNullable(resolverWithNullType.withCyclePrevention(pattern, canPropertyBeSkipped) {
-                    it.generate(typeAlias, key, pattern)
+                val value = Optional.ofNullable(resolverWithNullType.withCyclePrevention(jsonPattern, key, canPropertyBeSkipped) {
+                    it.generate(jsonPattern.typeAlias, key, pattern)
                 })
+
+                if(value.isPresent || resolverWithNullType.hasSeenLookupPath(jsonPattern, key))
+                    return@attempt value
+
+                val resolverWithCycleMarker = resolverWithNullType.cyclePast(jsonPattern, key)
+
+                val valueWithCycle = Optional.ofNullable(resolverWithCycleMarker.withCyclePrevention(jsonPattern, key, canPropertyBeSkipped) {
+                    it.generate(jsonPattern.typeAlias, key, pattern)
+                })
+
+                valueWithCycle
+
+                // if failed and not yet seen
+                // try again until this is seen or exception
+                // if exception, check flag
+                //    if flag is true throw exception else omit property
             }
         }
         .filterValues { it.isPresent }

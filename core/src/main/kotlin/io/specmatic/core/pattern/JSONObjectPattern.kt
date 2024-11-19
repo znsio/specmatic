@@ -120,6 +120,10 @@ data class JSONObjectPattern(
         })
     }
 
+    override fun jsonObjectPattern(resolver: Resolver): JSONObjectPattern? {
+        return this
+    }
+
     override fun equals(other: Any?): Boolean = when (other) {
         is JSONObjectPattern -> this.pattern == other.pattern
         else -> false

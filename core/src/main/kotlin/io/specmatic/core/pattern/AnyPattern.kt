@@ -41,6 +41,15 @@ data class AnyPattern(
         return this
     }
 
+    override fun jsonObjectPattern(resolver: Resolver): JSONObjectPattern? {
+        if (this.hasNoAmbiguousPatterns().not()) return null
+
+        val pattern = this.pattern.first { it !is NullPattern }
+        if (pattern is JSONObjectPattern) return pattern
+        if (pattern is PossibleJsonObjectPatternContainer) return pattern.jsonObjectPattern(resolver)
+        return null
+    }
+
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
         val matchingPattern = pattern.find { it.matches(value, resolver) is Result.Success } ?: return value
         return matchingPattern.eliminateOptionalKey(value, resolver)

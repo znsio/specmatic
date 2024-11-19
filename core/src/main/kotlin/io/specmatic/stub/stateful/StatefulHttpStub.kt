@@ -19,6 +19,7 @@ import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.JSONObjectPattern
 import io.specmatic.core.pattern.Pattern
+import io.specmatic.core.pattern.PossibleJsonObjectPatternContainer
 import io.specmatic.core.pattern.StringPattern
 import io.specmatic.core.pattern.resolvedHop
 import io.specmatic.core.pattern.withoutOptionality
@@ -245,15 +246,18 @@ class StatefulHttpStub(
         if(pathSegments.size > 1 && cachedResponseWithId == null) return notFoundResponse
 
         if (method == "POST") {
-            val responseBody =
-                generatePostResponse(generatedResponse, httpRequest)?.includeMandatoryAndRequestedKeys(
+            val responseBody = generatePostResponse(generatedResponse, httpRequest) ?: return null
+
+            val finalResponseBody = if (attributeSelectionKeys.isEmpty()) {
+                responseBody.includeMandatoryAndRequestedKeys(
                     fakeResponse,
                     httpRequest,
                     includeMandatoryAndRequestedKeysInResponse
-                ) ?: return null
+                )
+            } else responseBody
 
-            stubCache.addResponse(resourcePath, responseBody)
-            return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
+            stubCache.addResponse(resourcePath, finalResponseBody)
+            return generatedResponse.withUpdated(finalResponseBody, attributeSelectionKeys)
         }
 
         if(method == "PATCH" && pathSegments.size > 1) {
@@ -361,11 +365,9 @@ class StatefulHttpStub(
         if (httpRequest.body !is JSONObjectValue) return null
 
         val responseBodyPattern = responseBodyPatternFrom(fakeResponse) ?: return null
-        if(responseBodyPattern !is JSONObjectPattern) return null
         val resolver = fakeResponse.successResponse?.resolver ?: return null
 
         val cachedResponse = stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)
-
         val responseBody = cachedResponse?.responseBody ?: return null
 
         return responseBody.copy(
@@ -386,8 +388,7 @@ class StatefulHttpStub(
         val responseBodyPattern = fakeResponse.successResponse?.responseBodyPattern ?: return this
         val resolver = fakeResponse.successResponse.resolver ?: return this
 
-        val resolvedResponseBodyPattern = responseBodyPatternFrom(fakeResponse)
-        if(resolvedResponseBodyPattern !is JSONObjectPattern) return this
+        val resolvedResponseBodyPattern = responseBodyPatternFrom(fakeResponse) ?: return this
 
         if (includeMandatoryAndRequestedKeysInResponse == true && httpRequest.body is JSONObjectValue) {
             return this.copy(
@@ -436,13 +437,17 @@ class StatefulHttpStub(
         ).plus(entriesFromRequestMissingInTheResponse)
     }
 
-    private fun responseBodyPatternFrom(fakeResponse: ResponseDetails): Pattern? {
+    private fun responseBodyPatternFrom(fakeResponse: ResponseDetails): JSONObjectPattern? {
         val responseBodyPattern = fakeResponse.successResponse?.responseBodyPattern ?: return null
         val resolver = fakeResponse.successResponse.resolver ?: return null
-
-        return resolver.withCyclePrevention(responseBodyPattern) {
+        val resolvedPattern = resolver.withCyclePrevention(responseBodyPattern) {
             resolvedHop(responseBodyPattern, it)
         }
+        if(resolvedPattern !is PossibleJsonObjectPatternContainer) {
+            return null
+        }
+
+        return resolvedPattern.jsonObjectPattern(resolver)
     }
 
     private fun resourceIdKeyFrom(httpRequestPattern: HttpRequestPattern?): String {

@@ -231,10 +231,11 @@ data class Feature(
 
     fun stubResponseMap(
         httpRequest: HttpRequest,
-        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages,
+        unexpectedKeyCheck: UnexpectedKeyCheck
     ): Map<Int, Pair<ResponseBuilder?, Results>> {
         try {
-            val resultList = matchingScenarioToResultList(httpRequest, serverState, mismatchMessages)
+            val resultList = matchingScenarioToResultList(httpRequest, serverState, mismatchMessages, unexpectedKeyCheck)
             val matchingScenarios = matchingScenarios(resultList)
 
             if(matchingScenarios.toList().isEmpty()) {
@@ -261,12 +262,13 @@ data class Feature(
     private fun matchingScenarioToResultList(
         httpRequest: HttpRequest,
         serverState: Map<String, Value>,
-        mismatchMessages: MismatchMessages
+        mismatchMessages: MismatchMessages,
+        unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys
     ): Sequence<Pair<Scenario, Result>> {
         val scenarioSequence = scenarios.asSequence()
 
         return scenarioSequence.zip(scenarioSequence.map {
-            it.matchesStub(httpRequest, serverState, mismatchMessages)
+            it.matchesStub(httpRequest, serverState, mismatchMessages, unexpectedKeyCheck)
         })
     }
 

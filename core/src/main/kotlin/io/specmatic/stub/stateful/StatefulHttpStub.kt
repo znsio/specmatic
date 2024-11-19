@@ -17,6 +17,7 @@ import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.core.pattern.JSONObjectPattern
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.PossibleJsonObjectPatternContainer
@@ -501,7 +502,8 @@ class StatefulHttpStub(
         return features.asSequence().map { feature ->
             feature.stubResponseMap(
                 httpRequest,
-                ContractAndRequestsMismatch
+                ContractAndRequestsMismatch,
+                IgnoreUnexpectedKeys
             ).map { (statusCode, responseResultPair) ->
                 statusCode to ResponseDetails(feature, responseResultPair.first, responseResultPair.second)
             }.toMap()

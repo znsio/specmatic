@@ -160,10 +160,13 @@ data class Scenario(
     fun matchesStub(
         httpRequest: HttpRequest,
         serverState: Map<String, Value>,
-        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages,
+        unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys
     ): Result {
         val headersResolver = Resolver(serverState, false, patterns).copy(mismatchMessages = mismatchMessages)
-        val nonHeadersResolver = headersResolver.disableOverrideUnexpectedKeycheck()
+        val nonHeadersResolver = headersResolver
+            .withUnexpectedKeyCheck(unexpectedKeyCheck)
+            .disableOverrideUnexpectedKeycheck()
 
         return matches(httpRequest, serverState, nonHeadersResolver, headersResolver)
     }

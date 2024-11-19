@@ -168,6 +168,39 @@ class StatefulHttpStubTest {
 
     @Test
     @Order(6)
+    fun `should post a product even though the request contains unknown keys`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "POST",
+                path = "/products",
+                body = parsedJSONObject(
+                    """
+                    {
+                      "name": "Product A",
+                      "description": "A detailed description of Product A.",
+                      "price": 19.99,
+                      "inStock": true,
+                      "random": "random",
+                      "other": 10
+                    }
+                    """.trimIndent()
+                )
+            )
+        )
+
+        assertThat(response.status).isEqualTo(201)
+        val responseBody = response.body as JSONObjectValue
+
+        resourceId = responseBody.getStringValue("id").orEmpty()
+
+        assertThat(responseBody.getStringValue("name")).isEqualTo("Product A")
+        assertThat(responseBody.getStringValue("description")).isEqualTo("A detailed description of Product A.")
+        assertThat(responseBody.getStringValue("price")).isEqualTo("19.99")
+        assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
+    }
+
+    @Test
+    @Order(7)
     fun `should get a 400 response in a structured manner for an invalid post request`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -193,7 +226,7 @@ class StatefulHttpStubTest {
         assertThat(error).contains("Contract expected boolean but request contained \"true\"")
     }
 
-    @Order(7)
+    @Order(8)
     @Test
     fun `should get a 400 response as a string for an invalid get request where 400 sceham is not defined for the same in the spec`() {
         val response = httpStub.client.execute(
@@ -210,7 +243,7 @@ class StatefulHttpStubTest {
     }
 
     @Test
-    @Order(8)
+    @Order(9)
     fun `should get a 404 response in a structured manner for a get request where the entry with requested id is not present in the cache`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -226,7 +259,7 @@ class StatefulHttpStubTest {
     }
 
     @Test
-    @Order(9)
+    @Order(10)
     fun `should get a 404 response as a string for a delete request with missing id where 404 schema is not defined for the same in the spec`() {
         val response = httpStub.client.execute(
             HttpRequest(

@@ -166,6 +166,80 @@ class StatefulHttpStubTest {
         assertThat(getResponse.status).isEqualTo(404)
     }
 
+    @Test
+    @Order(6)
+    fun `should get a 400 response in a structured manner for an invalid post request`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "POST",
+                path = "/products",
+                body = parsedJSONObject(
+                    """
+                    {
+                      "name": "Product A",
+                      "description": "A detailed description of Product A.",
+                      "price": 19.99,
+                      "inStock": "true"
+                    }
+                    """.trimIndent()
+                )
+            )
+        )
+
+        assertThat(response.status).isEqualTo(400)
+        val responseBody = response.body as JSONObjectValue
+        val error = responseBody.getStringValue("error")
+        assertThat(error).contains(">> REQUEST.BODY.inStock")
+        assertThat(error).contains("Contract expected boolean but request contained \"true\"")
+    }
+
+    @Order(7)
+    @Test
+    fun `should get a 400 response as a string for an invalid get request where 400 sceham is not defined for the same in the spec`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products/invalid-id"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(400)
+        val responseBody = (response.body as StringValue).toStringLiteral()
+        assertThat(responseBody).contains(">> REQUEST.PATH.id")
+        assertThat(responseBody).contains("Contract expected number but request contained \"invalid-id\"")
+    }
+
+    @Test
+    @Order(8)
+    fun `should get a 404 response in a structured manner for a get request where the entry with requested id is not present in the cache`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products/0"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(404)
+        val responseBody = response.body as JSONObjectValue
+        val error = responseBody.getStringValue("error")
+        assertThat(error).isEqualTo("Resource with resourceId '0' not found")
+    }
+
+    @Test
+    @Order(9)
+    fun `should get a 404 response as a string for a delete request with missing id where 404 schema is not defined for the same in the spec`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "DELETE",
+                path = "/products/0"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(404)
+        val responseBody = response.body as StringValue
+        assertThat(responseBody.toStringLiteral()).isEqualTo("Resource with resourceId '0' not found")
+    }
+
 }
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)

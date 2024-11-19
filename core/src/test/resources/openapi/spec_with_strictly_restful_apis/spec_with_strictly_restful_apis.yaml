@@ -46,6 +46,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Product'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestError'
 
   /products/{id}:
     get:
@@ -56,7 +62,7 @@ paths:
           name: id
           required: true
           schema:
-            type: string
+            type: integer
           description: The ID of the product to retrieve
         - in: query
           name: columns
@@ -72,6 +78,10 @@ paths:
                 $ref: '#/components/schemas/Product'
         '404':
           description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
 
     patch:
       summary: Update a product partially
@@ -184,3 +194,19 @@ components:
         inStock:
           type: boolean
           example: false
+
+    NotFoundError:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+    BadRequestError:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string

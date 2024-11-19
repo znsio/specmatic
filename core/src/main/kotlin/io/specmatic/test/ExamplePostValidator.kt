@@ -1,111 +1,94 @@
 package io.specmatic.test
 
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.Result
-import io.specmatic.core.Scenario
+import io.specmatic.core.*
 import io.specmatic.core.pattern.Row
 import io.specmatic.core.value.*
-
-enum class AssertType(val value: String) {
-    ASSERT_EQUAL("eq"),
-    ASSERT_NOT_EQUAL("neq");
-
-    companion object {
-        fun fromValue(value: String): AssertType {
-            return entries.firstOrNull { it.value == value } ?: throw IllegalArgumentException("Unknown assert type: $value")
-        }
-    }
-}
-
-val ASSERT_PATTERN = Regex("^\\$(\\w+)\\((.*)\\)$")
-
-data class Assert(val type: AssertType, val lookupKey: String)
+import io.specmatic.test.asserts.Assert
+import io.specmatic.test.asserts.isKeyAssert
+import io.specmatic.test.asserts.parsedAssert
 
 object ExamplePostValidator: ResponseValidator {
-    private var factStore = mapOf<String, Value>()
 
     override fun validate(scenario: Scenario, httpRequest: HttpRequest, httpResponse: HttpResponse): Result? {
-        val bodyAsserts = scenario.exampleRow?.toAsserts() ?: return null
+        val asserts  = scenario.exampleRow?.toAsserts()?.takeIf { it.isNotEmpty() } ?: return null
 
-        factStore = httpRequest.toFactStore() + ExampleProcessor.getFactStore()
-        val responseStore = httpResponse.toFactStore()
-        val results = bodyAsserts.map { (key, assert) ->
-            val factValue = factStore[assert.lookupKey] ?: return@map Result.Failure(breadCrumb = key, message = "Could not resolve ${assert.lookupKey} in fact store")
-            val actualValue = responseStore[key] ?: return@map Result.Failure(breadCrumb = key, message = "Could not resolve $key in response store")
-            when (assert.type) {
-                AssertType.ASSERT_EQUAL -> {
-                    if (factValue.toStringLiteral() != actualValue.toStringLiteral()) {
-                        Result.Failure(breadCrumb = key, message = "Expected $key to be equal to '$factValue`, but got '$actualValue'")
-                    } else Result.Success()
-                }
-                AssertType.ASSERT_NOT_EQUAL -> {
-                    if (factValue.toStringLiteral() == actualValue.toStringLiteral()) {
-                        Result.Failure(breadCrumb = key, message = "Expected $key to not be equal to '$factValue', but got '$actualValue'")
-                    } else Result.Success()
-                }
-            }
-        }
+        val actualFactStore = httpRequest.toFactStore() + ExampleProcessor.getFactStore()
+        val currentFactStore = httpResponse.toFactStore()
 
-        return Result.fromResults(results)
+        val results = asserts.map { it.assert(currentFactStore, actualFactStore) }
+
+        val finalResults = results.filterIsInstance<Result.Failure>().ifEmpty { return Result.Success() }
+        return Result.fromFailures(finalResults)
+    }
+
+    fun Row.toAsserts(): List<Assert> {
+        val responseExampleBody = this.responseExampleForValidation?.responseExample?.body ?: return emptyList()
+
+        return responseExampleBody.traverse(
+            onScalar = { value, key -> mapOf(key to parsedAssert("RESPONSE.BODY", key, value)) },
+            onAssert = { value, key -> mapOf(key to parsedAssert("RESPONSE.BODY", key, value)) }
+        ).values.filterNotNull()
     }
 
     private fun HttpRequest.toFactStore(): Map<String, Value> {
+        val queryParams = this.queryParams.asMap().map {
+            "REQUEST.QUERY-PARAMS.${it.key}" to StringValue(it.value)
+        }.toMap()
+
+        val headers = this.headers.map {
+            "REQUEST.HEADERS.${it.key}" to StringValue(it.value)
+        }.toMap()
+
         return this.body.traverse(
             prefix = "REQUEST.BODY",
             onScalar = { value, key -> mapOf(key to value) },
             onComposite = { value, key -> mapOf(key to value) }
-        )
+        ) + queryParams + headers
     }
 
     private fun HttpResponse.toFactStore(): Map<String, Value> {
+        val headers = this.headers.map {
+            "REQUEST.HEADERS.${it.key}" to StringValue(it.value)
+        }.toMap()
+
         return this.body.traverse(
+            prefix = "RESPONSE.BODY",
             onScalar = { value, key -> mapOf(key to value) },
             onComposite = { value, key -> mapOf(key to value) }
-        )
-    }
-
-    private fun Row.toAsserts(): Map<String, Assert>? {
-        return this.responseExampleForValidation?.responseExample?.body?.toAsserts()
-    }
-
-    private fun Value.toAsserts(): Map<String, Assert> {
-        return this.traverse(
-            onScalar = { value, key ->
-                val matchResult = ASSERT_PATTERN.find(value.toStringLiteral()) ?: return@traverse emptyMap()
-                mapOf(key to Assert(AssertType.fromValue(matchResult.groupValues[1]), matchResult.groupValues[2]))
-            }
-        )
+        ) + headers
     }
 }
 
 internal fun <T> Value.traverse(
-    prefix: String = "",
-    onScalar: (Value, String) -> Map<String, T>,
-    onComposite: (Value, String) -> Map<String, T> = { _, _ -> emptyMap() }
+    prefix: String = "", onScalar: (Value, String) -> Map<String, T>,
+    onComposite: ((Value, String) -> Map<String, T>)? = null, onAssert: ((Value, String) ->  Map<String, T>)? = null
 ): Map<String, T> {
     return when (this) {
-        is JSONObjectValue -> this.traverse(prefix, onScalar, onComposite)
-        is JSONArrayValue ->  this.traverse(prefix, onScalar, onComposite)
+        is JSONObjectValue -> this.traverse(prefix, onScalar, onComposite, onAssert)
+        is JSONArrayValue ->  this.traverse(prefix, onScalar, onComposite, onAssert)
         is ScalarValue -> onScalar(this, prefix)
         else -> emptyMap()
-    }
+    }.filterValues { it != null }
 }
 
 private fun <T> JSONObjectValue.traverse(
-    prefix: String = "", onScalar: (Value, String) -> Map<String, T>, onComposite: (Value, String) -> Map<String, T>
+    prefix: String = "", onScalar: (Value, String) -> Map<String, T>,
+    onComposite: ((Value, String) -> Map<String, T>)? = null, onAssert: ((Value, String) ->  Map<String, T>)? = null
 ): Map<String, T> {
     return this.jsonObject.entries.flatMap { (key, value) ->
         val fullKey = if (prefix.isNotEmpty()) "$prefix.$key" else key
-        value.traverse(fullKey, onScalar, onComposite).entries
-    }.associate { it.toPair() } + onComposite(this, prefix)
+        key.isKeyAssert {
+            onAssert?.invoke(value, fullKey)?.entries.orEmpty()
+        } ?: value.traverse(fullKey, onScalar, onComposite, onAssert).entries
+    }.associate { it.toPair() } + onComposite?.invoke(this, prefix).orEmpty()
 }
 
 private fun <T> JSONArrayValue.traverse(
-    prefix: String = "", onScalar: (Value, String) -> Map<String, T>, onComposite: (Value, String) -> Map<String, T>
+    prefix: String = "", onScalar: (Value, String) -> Map<String, T>,
+    onComposite: ((Value, String) -> Map<String, T>)? = null, onAssert: ((Value, String) ->  Map<String, T>)? = null
 ): Map<String, T> {
     return this.list.mapIndexed { index, value ->
-        val fullKey = "$prefix[$index]"
-        value.traverse(fullKey, onScalar, onComposite)
-    }.flatMap { it.entries }.associate { it.toPair() } + onComposite(this, prefix)
+        val fullKey = if (onAssert != null) { prefix } else "$prefix[$index]"
+        value.traverse(fullKey, onScalar, onComposite, onAssert)
+    }.flatMap { it.entries }.associate { it.toPair() } + onComposite?.invoke(this, prefix).orEmpty()
 }

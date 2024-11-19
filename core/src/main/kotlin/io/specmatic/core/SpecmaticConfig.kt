@@ -19,7 +19,6 @@ import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_GENERATIVE_TESTS
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
-import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_PAYLOAD_CONFIG
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_TEST_TIMEOUT
 import io.specmatic.core.utilities.Flags.Companion.VALIDATE_RESPONSE_VALUE
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
@@ -126,7 +125,7 @@ data class SpecmaticConfig(
     @field:JsonAlias("all_patterns_mandatory")
     val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY),
     @field:JsonAlias("payload_config")
-    val payloadConfig: String? = getStringValue(SPECMATIC_PAYLOAD_CONFIG)
+    val payloadConfig: String? = getStringValue(Flags.SPECMATIC_PAYLOAD_CONFIG)
 ) {
     @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {
@@ -145,10 +144,10 @@ data class SpecmaticConfig(
         return (test?.validateResponseValues == true)
     }
 
-    val parsedPayloadConfig: JSONObjectValue? = payloadConfig?.let { File(it).let { file ->
-            if (!file.exists()) throw ContractException("Payload config file does not exist: ${file.canonicalPath}")
-
-            attempt(breadCrumb = "Error reading payload config file ${file.canonicalPath}") {
+    val parsedPayloadConfig = payloadConfig?.let {
+        attempt(breadCrumb = "Error reading payload config file $payloadConfig") {
+            File(it).let { file ->
+                if (!file.exists()) throw Exception("Payload config file does not exist: ${file.canonicalPath}")
                 parsedJSONObject(file.readText())
             }
         }

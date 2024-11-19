@@ -46,7 +46,7 @@ object ExampleProcessor {
     fun resolve(httpRequest: HttpRequest, ifNotExists: (lookupKey: String) -> Value = ::defaultIfNotExits): HttpRequest {
         return httpRequest.copy(
             method = httpRequest.method,
-            path = httpRequest.parsePath().joinToString("/") { resolve(it, ifNotExists) },
+            path = httpRequest.parsePath().joinToString("/", prefix = "/") { resolve(it, ifNotExists) },
             headers = resolve(httpRequest.headers, ifNotExists),
             body = resolve(httpRequest.body, ifNotExists),
             queryParams = QueryParameters(resolve(httpRequest.queryParams.asMap(), ifNotExists))
@@ -95,25 +95,18 @@ object ExampleProcessor {
     }
 
     /* STORE HELPERS */
-    fun store(exampleRow: Row, httpRequest: HttpRequest): HttpRequest {
-        TODO("Not yet implemented")
-    }
-
     fun store(exampleRow: Row, httpResponse: HttpResponse) {
         val bodyToCheck = exampleRow.responseExample?.body ?: exampleRow.responseExampleForValidation?.responseExample?.body
 
         bodyToCheck?.ifContainsStoreToken { entityKey ->
-            runningEntity = httpResponse.body.toFactStore(prefix = "ENTITY").let {
-                val entityKeyValue = it["ENTITY.$entityKey"] ?: throw ContractException("Could not resolve $entityKey, key does not exist in response body")
-                it + mapOf("ENTITY_ID" to entityKeyValue)
-            }
+            runningEntity = httpResponse.body.toFactStore(prefix = "ENTITY")
         }
     }
 
     private fun Value.ifContainsStoreToken(block: (entityKey: String) -> Unit) {
         if (this !is JSONObjectValue) return
 
-        val entityId = this.jsonObject.entries.firstOrNull { it.value.toStringLiteral().matches("\\(ENTITY_ID:.*\\)".toRegex()) }
+        val entityId = this.jsonObject.entries.firstOrNull { it.value.toStringLiteral().matches("\\(ENTITY\\)".toRegex()) }
         entityId?.let { block(it.key) }
     }
 

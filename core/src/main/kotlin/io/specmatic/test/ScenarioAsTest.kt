@@ -96,11 +96,11 @@ data class ScenarioAsTest(
             val response = testExecutor.execute(request)
 
             workflow.extractDataFrom(response, originalScenario)
-            testScenario.exampleRow?.let { ExampleProcessor.store(it, response) }
 
             val validatorResult = validators.asSequence().map { it.validate(scenario, request, response) }.filterNotNull().firstOrNull()
-            val result = validatorResult ?: testResult(request, response, testScenario, flagsBased)
+            testScenario.exampleRow?.let { ExampleProcessor.store(it, response) }
 
+            val result = validatorResult ?: testResult(request, response, testScenario, flagsBased)
             Pair(result.withBindings(testScenario.bindings, response), response)
         } catch (exception: Throwable) {
             Pair(

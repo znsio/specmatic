@@ -126,7 +126,7 @@ data class HttpResponsePattern(
             else -> response.body
         }
 
-        val result = body.matches(parsedValue, resolver)
+        val result = resolver.matchesPattern(null, body, parsedValue)
         if(result is Result.Failure)
             return MatchSuccess(Triple(response, resolver, failures.plus(result.breadCrumb("BODY"))))
 

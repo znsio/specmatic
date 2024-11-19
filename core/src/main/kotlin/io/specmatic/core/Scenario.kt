@@ -498,16 +498,13 @@ data class Scenario(
         val httpResponsePatternBasedOnAttributeSelection =
             newBasedOnAttributeSelectionFields(row.requestExample?.queryParams).httpResponsePattern
 
-        val fieldsToBeMadeMandatory =
-            getFieldsToBeMadeMandatoryBasedOnAttributeSelection(row.requestExample?.queryParams)
+        val fieldsToBeMadeMandatory = getFieldsToBeMadeMandatoryBasedOnAttributeSelection(row.requestExample?.queryParams)
         val updatedResolver = if(fieldsToBeMadeMandatory.isNotEmpty()) {
             resolverForExample.copy(mismatchMessages = getMismatchObjectForTestExamples(row))
         } else resolverForExample
 
         if (responseExample != null) {
-            val responseMatchResult =
-                httpResponsePatternBasedOnAttributeSelection.matches(responseExample, updatedResolver)
-
+            val responseMatchResult = httpResponsePatternBasedOnAttributeSelection.matches(responseExample, updatedResolver)
             return responseMatchResult
         }
 
@@ -520,11 +517,7 @@ data class Scenario(
             return Result.Success()
         }
 
-        val updatedResolver = if(row.isPartial) {
-            resolverForExample.copy(findKeyErrorCheck = PARTIAL_KEYCHECK, mockMode = true)
-        } else resolverForExample
-
-        val result = httpRequestPattern.matches(requestExample, updatedResolver, updatedResolver)
+        val result = httpRequestPattern.matches(requestExample, resolverForExample, resolverForExample)
         return result.takeUnless {
             it is Result.Failure && !status.toString().startsWith("4")
         } ?: Result.Success()

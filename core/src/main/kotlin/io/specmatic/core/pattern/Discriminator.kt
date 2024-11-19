@@ -78,7 +78,7 @@ class Discriminator(
             discriminatorCsvClause
         )
 
-        if (ExampleProcessor.isSubstitutionToken(actualDiscriminatorValue)) return Result.Success()
+        if (isPatternToken(actualDiscriminatorValue) || ExampleProcessor.isSubstitutionToken(actualDiscriminatorValue)) return Result.Success()
 
         if (actualDiscriminatorValue.toStringLiteral() !in values) {
             val message =

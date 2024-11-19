@@ -419,7 +419,11 @@ fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver, typeAlias: S
         .mapValues { (key, pattern) ->
             attempt(breadCrumb = key) {
                 // Handle cycle (represented by null value) by marking this property as removable
-                Optional.ofNullable(resolverWithNullType.withCyclePrevention(pattern, optionalProps.contains(key)) {
+                val propertyIsOptionalInSchema = optionalProps.contains(key)
+
+                val canPropertyBeSkipped = propertyIsOptionalInSchema
+
+                Optional.ofNullable(resolverWithNullType.withCyclePrevention(pattern, canPropertyBeSkipped) {
                     it.generate(typeAlias, key, pattern)
                 })
             }

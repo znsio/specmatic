@@ -318,6 +318,10 @@ ${matchResult.reportString()}
         return patternsSeenSoFar.contains(pattern.typeAlias)
     }
 
+    fun isInCyclePreventionStack(pattern: Pattern): Boolean {
+        return pattern  in cyclePreventionStack
+    }
+
     fun addPatternAsSeen(pattern: Pattern): Resolver {
         return this.copy(
             patternsSeenSoFar = pattern.typeAlias?.let { patternsSeenSoFar.plus(it) } ?: patternsSeenSoFar

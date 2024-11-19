@@ -11,8 +11,7 @@ import io.specmatic.core.value.Value
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-data class
-StringPattern (
+data class StringPattern (
     override val typeAlias: String? = null,
     val minLength: Int? = null,
     val maxLength: Int? = null,
@@ -68,7 +67,6 @@ StringPattern (
         return JSONArrayValue(valueList)
     }
 
-    //Tells us the minimum length to be used for random string
     private val patternMinLength: Int =
         when {
             minLength != null && minLength > 0 -> minLength
@@ -79,7 +77,6 @@ StringPattern (
     override fun generate(resolver: Resolver): Value {
         val defaultExample = resolver.resolveExample(example, this)
 
-        // Validate the default example
         defaultExample?.let {
             if (matches(it, resolver).isSuccess()) {
                 return it
@@ -87,18 +84,11 @@ StringPattern (
             throw ContractException("Schema example ${it.toStringLiteral()} does not match pattern $regex")
         }
 
-        // Generate a value based on regex or length constraints
-        return regex?.let { generateFromRegex() } ?: StringValue(randomString(patternMinLength))
+        return regex?.let {
+            val regexWithoutCaretAndDollar = regex.removePrefix("^").removeSuffix("$")
+            StringValue(generateFromRegex(regexWithoutCaretAndDollar, patternMinLength, maxLength))
+        } ?: StringValue(randomString(patternMinLength))
     }
-
-    private fun generateFromRegex(): Value {
-        val cleanedRegex = regex!!.removePrefix("^").removeSuffix("$")
-        val generatedValue = maxLength?.let {
-            Generex(cleanedRegex).random(patternMinLength, it)
-        } ?: Generex(cleanedRegex).random(patternMinLength)
-        return StringValue(generatedValue)
-    }
-
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val minLengthExample: ReturnValue<Pattern>? = minLength?.let {
@@ -158,6 +148,11 @@ StringPattern (
 
     override val pattern: Any = "(string)"
     override fun toString(): String = pattern.toString()
+
+    private fun generateFromRegex(regexWithoutCaretAndDollar: String, minLength: Int, maxLength: Int?): String =
+        maxLength?.let {
+            Generex(regexWithoutCaretAndDollar).random(minLength, it)
+        } ?: Generex(regexWithoutCaretAndDollar).random(minLength)
 }
 
 fun randomString(length: Int = 5): String {

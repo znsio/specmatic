@@ -2,18 +2,24 @@ package io.specmatic.core.pattern
 
 import io.specmatic.GENERATION
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.MatchFailureDetails
-import io.specmatic.core.Resolver
-import io.specmatic.core.Result
+import io.specmatic.core.*
+import io.specmatic.core.utilities.Flags.Companion.ALL_PATTERNS_MANDATORY
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
+import io.specmatic.core.utilities.Flags.Companion.IGNORE_INLINE_EXAMPLES
+import io.specmatic.core.utilities.Flags.Companion.IGNORE_INLINE_EXAMPLE_WARNINGS
 import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
+import io.specmatic.mock.ScenarioStub
 import io.specmatic.shouldNotMatch
 import io.specmatic.stub.captureStandardOutput
 import io.specmatic.trimmedLinesString
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -1025,9 +1031,31 @@ internal class JSONObjectPatternTest {
         })
     }
 
-    @Test
-    fun `should result in failure when optional keys are missing and resolver is set to allPatternsAsMandatory`() {
-        val pattern = parsedPattern("""{
+    @Nested
+    inner class CyclicalGeneration {
+        @BeforeEach
+        fun setup() {
+            System.setProperty(ALL_PATTERNS_MANDATORY, "true")
+            System.setProperty(IGNORE_INLINE_EXAMPLES, "true")
+            System.setProperty(IGNORE_INLINE_EXAMPLE_WARNINGS, "true")
+            System.setProperty(ATTRIBUTE_SELECTION_QUERY_PARAM_KEY, "fields")
+            System.setProperty(EXTENSIBLE_QUERY_PARAMS, "fields")
+            System.setProperty(EXTENSIBLE_SCHEMA, "fields")
+        }
+
+        @AfterEach
+        fun teardown() {
+            System.clearProperty(ALL_PATTERNS_MANDATORY)
+            System.clearProperty(IGNORE_INLINE_EXAMPLES)
+            System.clearProperty(IGNORE_INLINE_EXAMPLE_WARNINGS)
+            System.clearProperty(ATTRIBUTE_SELECTION_QUERY_PARAM_KEY)
+            System.clearProperty(EXTENSIBLE_QUERY_PARAMS)
+            System.clearProperty(EXTENSIBLE_SCHEMA)
+        }
+
+        @Test
+        fun `should result in failure when optional keys are missing and resolver is set to allPatternsAsMandatory`() {
+            val pattern = parsedPattern("""{
             "topLevelMandatoryKey": "(number)",
             "topLevelOptionalKey?": "(string)",
             "subMandatoryObject": {
@@ -1040,7 +1068,7 @@ internal class JSONObjectPatternTest {
             }
         }
         """.trimIndent())
-        val matchingValue = parsedValue("""{
+            val matchingValue = parsedValue("""{
             "topLevelMandatoryKey": 10,
             "subMandatoryObject": {
                 "subMandatoryKey": "value"
@@ -1050,11 +1078,11 @@ internal class JSONObjectPatternTest {
             }
         }
         """.trimIndent())
-        val result = pattern.matches(matchingValue, Resolver().withAllPatternsAsMandatory())
-        println(result.reportString())
+            val result = pattern.matches(matchingValue, Resolver().withAllPatternsAsMandatory())
+            println(result.reportString())
 
-        assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+            assertThat(result).isInstanceOf(Result.Failure::class.java)
+            assertThat(result.reportString()).containsIgnoringWhitespaces("""
         >> topLevelOptionalKey
         Expected key named "topLevelOptionalKey" was missing
         >> subMandatoryObject.subOptionalKey
@@ -1062,30 +1090,30 @@ internal class JSONObjectPatternTest {
         >> subOptionalObject.subOptionalKey
         Expected key named "subOptionalKey" was missing
         """.trimIndent())
-    }
+        }
 
-    @Test
-    fun `should not result in failure for missing keys when pattern is cycling with resolver set to allPatternsAsMandatory`() {
-        val basePattern = parsedPattern("""{
+        @Test
+        fun `should not result in failure for missing keys when pattern is cycling with resolver set to allPatternsAsMandatory`() {
+            val basePattern = parsedPattern("""{
             "mandatoryKey": "(number)",
             "optionalKey?": "(string)"
         }""".trimIndent()) as JSONObjectPattern
 
-        val thirdPattern = JSONObjectPattern(
-            basePattern.pattern + mapOf("firstObject?" to DeferredPattern("(firstPattern)")),
-            typeAlias = "(thirdPattern)"
-        )
-        val secondPattern = JSONObjectPattern(
-            basePattern.pattern + mapOf("thirdObject?" to thirdPattern),
-            typeAlias = "(secondPattern)"
-        )
-        val firstPattern = JSONObjectPattern(
-            basePattern.pattern + mapOf("secondObject?" to secondPattern),
-            typeAlias = "(firstPattern)"
-        )
-        val newPatterns = mapOf("(firstPattern)" to firstPattern, "(secondPattern)" to secondPattern, "(thirdPattern)" to thirdPattern)
+            val thirdPattern = JSONObjectPattern(
+                basePattern.pattern + mapOf("firstObject?" to DeferredPattern("(firstPattern)")),
+                typeAlias = "(thirdPattern)"
+            )
+            val secondPattern = JSONObjectPattern(
+                basePattern.pattern + mapOf("thirdObject?" to thirdPattern),
+                typeAlias = "(secondPattern)"
+            )
+            val firstPattern = JSONObjectPattern(
+                basePattern.pattern + mapOf("secondObject?" to secondPattern),
+                typeAlias = "(firstPattern)"
+            )
+            val newPatterns = mapOf("(firstPattern)" to firstPattern, "(secondPattern)" to secondPattern, "(thirdPattern)" to thirdPattern)
 
-        val matchingValue = parsedValue("""{
+            val matchingValue = parsedValue("""{
             "mandatoryKey": 10,
             "optionalKey": "abc",
             "secondObject": {
@@ -1100,14 +1128,14 @@ internal class JSONObjectPatternTest {
                 }
             }
         }""".trimIndent())
-        val matchingResult = firstPattern.matches(matchingValue, Resolver(newPatterns = newPatterns).withAllPatternsAsMandatory())
-        println(matchingResult.reportString())
-        assertThat(matchingResult).isInstanceOf(Result.Success::class.java)
-    }
+            val matchingResult = firstPattern.matches(matchingValue, Resolver(newPatterns = newPatterns).withAllPatternsAsMandatory())
+            println(matchingResult.reportString())
+            assertThat(matchingResult).isInstanceOf(Result.Success::class.java)
+        }
 
-    @Test
-    fun `should not result in failure for missing keys when pattern is cycling with an allOf schema`() {
-        val spec = """
+        @Test
+        fun `should not result in failure for missing keys when pattern is cycling with an allOf schema`() {
+            val spec = """
         openapi: 3.0.0
         info:
           title: Sample API
@@ -1139,24 +1167,24 @@ internal class JSONObjectPatternTest {
               oneOf:
                 - ${"$"}ref: '#/components/schemas/Message'
         """.trimIndent()
-        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-        val scenario = feature.scenarios.first()
-        val resolver = scenario.resolver.copy(allPatternsAreMandatory = true)
+            val scenario = feature.scenarios.first()
+            val resolver = scenario.resolver.copy(allPatternsAreMandatory = true)
 
-        val responsePattern = scenario.httpResponsePattern.body
-        val value = responsePattern.generate(resolver)
-        println(value.toStringLiteral())
+            val responsePattern = scenario.httpResponsePattern.body
+            val value = responsePattern.generate(resolver)
+            println(value.toStringLiteral())
 
-        val matchResult = responsePattern.matches(value, resolver)
-        println(matchResult.reportString())
+            val matchResult = responsePattern.matches(value, resolver)
+            println(matchResult.reportString())
 
-        assertThat(matchResult).isInstanceOf(Result.Success::class.java)
-    }
+            assertThat(matchResult).isInstanceOf(Result.Success::class.java)
+        }
 
-    @Test
-    fun `should not result in failure for missing keys with array ref when pattern is cycling with an allOf schema`() {
-        val spec = """
+        @Test
+        fun `should not result in failure for missing keys with array ref when pattern is cycling with an allOf schema`() {
+            val spec = """
         openapi: 3.0.0
         info:
           title: Sample API
@@ -1218,18 +1246,77 @@ internal class JSONObjectPatternTest {
                   type: string
         """.trimIndent()
 
-        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
-        val scenario = feature.scenarios.first()
-        val resolver = scenario.resolver.copy(allPatternsAreMandatory = true)
+            val scenario = feature.scenarios.first()
+            val resolver = scenario.resolver.copy(allPatternsAreMandatory = true)
 
-        val responsePattern = scenario.httpResponsePattern.body
-        val value = responsePattern.generate(resolver)
-        println(value.toStringLiteral())
+            val responsePattern = scenario.httpResponsePattern.body
+            val value = responsePattern.generate(resolver)
+            println(value.toStringLiteral())
 
-        val matchResult = responsePattern.matches(value, resolver)
-        println(matchResult.reportString())
+            val matchResult = responsePattern.matches(value, resolver)
+            println(matchResult.reportString())
 
-        assertThat(matchResult).isInstanceOf(Result.Success::class.java)
+            assertThat(matchResult).isInstanceOf(Result.Success::class.java)
+        }
+
+        @Test
+        fun `recursion with cross property conflict handled correctly when generating values`() {
+            val spec = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Sample API
+  version: 0.1.9
+paths:
+  /hello:
+    get:
+      responses:
+        '200':
+          description: Has data
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Data'
+components:
+  schemas:
+    Data:
+      type: object
+      properties:
+        directSelfRef:
+          ${"$"}ref: '#/components/schemas/DataRef'
+        indirectSelfRef:
+          ${"$"}ref: '#/components/schemas/DataRefToRef'
+    DataRefToRef:
+      type: object
+      required:
+        - messageRefToRef
+      properties:
+        messageRefToRef:
+          ${"$"}ref: '#/components/schemas/DataRef'
+    DataRef:
+      type: object
+      required:
+        - messageRef
+      properties:
+        messageRef:
+          ${"$"}ref: '#/components/schemas/Data'
+    """.trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+            val scenario = feature.scenarios.first()
+            val resolver = scenario.resolver.copy(allPatternsAreMandatory = true)
+
+            val responsePattern = scenario.httpResponsePattern.body
+            val value = responsePattern.generate(resolver)
+            println(value.toStringLiteral())
+
+            val matchResult = responsePattern.matches(value, resolver)
+            println(matchResult.reportString())
+
+            assertThat(matchResult).isInstanceOf(Result.Success::class.java)
+        }
     }
 }

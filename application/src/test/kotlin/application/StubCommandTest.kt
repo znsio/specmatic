@@ -106,7 +106,7 @@ internal class StubCommandTest {
             val port = 9000
             val certInfo = CertInfo()
             val strictMode = false
-
+            val baseUrl = ""
             every {
                 httpStubEngine.runHTTPStub(
                     stubInfo,
@@ -117,7 +117,8 @@ internal class StubCommandTest {
                     any(),
                     httpClientFactory = any(),
                     workingDirectory = any(),
-                    gracefulRestartTimeoutInMs = any()
+                    gracefulRestartTimeoutInMs = any(),
+                    baseUrl = baseUrl
                 )
             }.returns(null)
 
@@ -138,7 +139,8 @@ internal class StubCommandTest {
                     any(),
                     httpClientFactory = any(),
                     workingDirectory = any(),
-                    gracefulRestartTimeoutInMs = any()
+                    gracefulRestartTimeoutInMs = any(),
+                    baseUrl = baseUrl
                 )
             }
         } finally {
@@ -216,7 +218,7 @@ internal class StubCommandTest {
             val certInfo = CertInfo()
             val strictMode = false
             val passThroughTargetBase = "http://passthroughTargetBase"
-
+            val baseUrl = ""
             every {
                 httpStubEngine.runHTTPStub(
                     stubInfo,
@@ -227,7 +229,8 @@ internal class StubCommandTest {
                     passThroughTargetBase,
                     httpClientFactory = any(),
                     workingDirectory = any(),
-                    gracefulRestartTimeoutInMs = any()
+                    gracefulRestartTimeoutInMs = any(),
+                    baseUrl = baseUrl
                 )
             }.returns(null)
 
@@ -251,7 +254,8 @@ internal class StubCommandTest {
                     any(),
                     httpClientFactory = any(),
                     workingDirectory = any(),
-                    gracefulRestartTimeoutInMs = any()
+                    gracefulRestartTimeoutInMs = any(),
+                    baseUrl = baseUrl
                 )
             }
         } finally {

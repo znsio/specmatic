@@ -50,6 +50,7 @@ class HttpStub(
     val workingDirectory: WorkingDirectory? = null,
     val specmaticConfigPath: String? = null,
     private val timeoutMillis: Long = 0,
+    baseUrl: String = "",
 ) : ContractStub {
     constructor(
         feature: Feature,
@@ -178,7 +179,7 @@ class HttpStub(
             return threadSafeHttpStubQueue.size
         }
 
-    val endPoint = endPointFromHostAndPort(host, port, keyData)
+    val endPoint = endPointFromHostAndPort(host, baseUrl, port, keyData)
 
     override val client = HttpClient(this.endPoint)
 
@@ -219,12 +220,11 @@ class HttpStub(
 
                 anyHost()
             }
-
-            intercept(ApplicationCallPipeline.Call) {
+                intercept(ApplicationCallPipeline.Call) {
                 val httpLogMessage = HttpLogMessage()
 
                 try {
-                    val rawHttpRequest = ktorHttpRequestToHttpRequest(call)
+                    val rawHttpRequest = ktorHttpRequestToHttpRequest(call,baseUrl)
                     httpLogMessage.addRequest(rawHttpRequest)
 
                     if(rawHttpRequest.isHealthCheckRequest()) return@intercept
@@ -328,6 +328,7 @@ class HttpStub(
                 this.port = port
             }
         }
+
     }
 
     fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse {
@@ -618,7 +619,7 @@ class HttpStub(
 
 class CouldNotParseRequest(innerException: Throwable) : Exception(exceptionCauseMessage(innerException))
 
-internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRequest {
+internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall,baseUrl: String): HttpRequest {
     try {
         val (body, formFields, multiPartFormData) = bodyFromCall(call)
 
@@ -626,7 +627,7 @@ internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRe
 
         return HttpRequest(
             method = call.request.httpMethod.value,
-            path = urlDecodePathSegments(call.request.path()),
+            path = urlDecodePathSegments(call.request.path(),baseUrl),
             headers = requestHeaders,
             body = body,
             queryParams = QueryParameters(paramPairs = toParams(call.request.queryParameters)),
@@ -1190,7 +1191,7 @@ internal fun httpResponseLog(response: HttpResponse): String =
 internal fun httpRequestLog(httpRequest: HttpRequest): String =
     ">> Request Start At ${Date()}\n${httpRequest.toLogString("-> ")}"
 
-fun endPointFromHostAndPort(host: String, port: Int?, keyData: KeyData?): String {
+fun endPointFromHostAndPort(host: String, baseUrl:String, port: Int?, keyData: KeyData?): String {
     val protocol = when (keyData) {
         null -> "http"
         else -> "https"
@@ -1200,8 +1201,10 @@ fun endPointFromHostAndPort(host: String, port: Int?, keyData: KeyData?): String
         80, null -> ""
         else -> ":$port"
     }
+    baseUrl?.let {   return "$protocol://$host$computedPortString$baseUrl" }
 
     return "$protocol://$host$computedPortString"
+
 }
 
 internal fun isPath(path: String?, lastPart: String): Boolean {

@@ -47,6 +47,9 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--port"], description = ["Port for the http stub"], defaultValue = DEFAULT_HTTP_STUB_PORT)
     var port: Int = 0
 
+    @Option(names = ["--baseURL"], description = ["The base URL, use this instead of host and port"], defaultValue = "")
+    lateinit var baseURL: String
+
     @Option(names = ["--strict"], description = ["Start HTTP stub in strict mode"], required = false)
     var strictMode: Boolean = false
 
@@ -192,7 +195,7 @@ class StubCommand : Callable<Unit> {
             true -> if (portIsInUse(host, port)) findRandomFreePort() else port
             false -> port
         }
-        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, specmaticConfigPath, httpClientFactory, workingDirectory, gracefulRestartTimeoutInMs)
+        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, specmaticConfigPath, httpClientFactory, workingDirectory, gracefulRestartTimeoutInMs,baseURL)
 
         LogTail.storeSnapshot()
     }

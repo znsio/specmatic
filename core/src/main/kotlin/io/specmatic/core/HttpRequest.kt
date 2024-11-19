@@ -11,7 +11,6 @@ import io.ktor.http.*
 import io.ktor.http.content.*
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_PRETTY_PRINT
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
-import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.apache.http.client.utils.URLEncodedUtils
 import org.apache.http.message.BasicNameValuePair
 import java.io.File
@@ -631,11 +630,25 @@ fun escapeSpaceInPath(path: String): String {
     }
 }
 
-fun urlDecodePathSegments(url: String): String {
-    if("://" !in url)
-        return decodePath(url)
+fun urlDecodePathSegments(url: String, baseURL: String): String {
+    val normalizedBaseURL = baseURL?.let { "/${it.trim('/')}" }
+    val relativePath = getRelativePath(url, normalizedBaseURL)
 
-    return URLParts(url).withDecodedPathSegments()
+    return if (relativePath.contains("://")) {
+        URLParts(relativePath).withDecodedPathSegments()
+    } else {
+        decodePath(relativePath)
+    }
+    }
+
+private fun getRelativePath(url: String, normalizedBaseURL: String?): String {
+    return when {
+        normalizedBaseURL == null || normalizedBaseURL == "/" -> url
+        url.contains(normalizedBaseURL) -> {
+            url.removePrefix(normalizedBaseURL).takeIf { it.startsWith("/") } ?: ""
+        }
+        else -> ""
+    }
 }
 
 fun decodePath(path: String): String {

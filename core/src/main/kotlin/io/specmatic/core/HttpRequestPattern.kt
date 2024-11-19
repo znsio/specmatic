@@ -610,7 +610,7 @@ data class HttpRequestPattern(
                         val value = it.parse(example, resolver)
 
                         val requestBodyAsIs = if (!isInvalidRequestResponse(status)) {
-                            val result = body.matches(value, resolver)
+                            val result = resolver.matchesPattern(null, body, value)
 
                             if (result is Failure)
                                 throw ContractException(result.toFailureReport())

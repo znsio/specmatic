@@ -81,7 +81,8 @@ data class Scenario(
     val disambiguate: () -> String = { "" },
     val descriptionFromPlugin: String? = null,
     val dictionary: Map<String, Value> = emptyMap(),
-    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern()
+    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
+    val exampleRow: Row? = null
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -411,6 +412,7 @@ data class Scenario(
                             expectedFacts = newExpectedServerState,
                             ignoreFailure = ignoreFailure,
                             exampleName = row.name,
+                            exampleRow = row,
                             generativePrefix = generativePrefix,
                         )
                     }
@@ -432,9 +434,7 @@ data class Scenario(
         }
     }
 
-    fun validExamplesOrException(
-        flagsBased: FlagsBased,
-    ) {
+    fun validExamplesOrException(flagsBased: FlagsBased) {
         val rowsToValidate = examples.flatMap { it.rows }
 
         val updatedResolver = flagsBased.update(resolver)
@@ -515,15 +515,19 @@ data class Scenario(
     }
 
     private fun validateRequestExample(row: Row, resolverForExample: Resolver): Result {
-        if(row.requestExample != null) {
-            val result = httpRequestPattern.matches(row.requestExample, resolverForExample, resolverForExample)
-            if(result is Result.Failure && !status.toString().startsWith("4"))
-                return result
-        } else {
+        val requestExample = row.requestExample ?: run {
             httpRequestPattern.newBasedOn(row, resolverForExample, status).first().value
+            return Result.Success()
         }
 
-        return Result.Success()
+        val updatedResolver = if(row.isPartial) {
+            resolverForExample.copy(findKeyErrorCheck = PARTIAL_KEYCHECK, mockMode = true)
+        } else resolverForExample
+
+        val result = httpRequestPattern.matches(requestExample, updatedResolver, updatedResolver)
+        return result.takeUnless {
+            it is Result.Failure && !status.toString().startsWith("4")
+        } ?: Result.Success()
     }
 
     private fun getMismatchObjectForTestExamples(row: Row): MismatchMessages {

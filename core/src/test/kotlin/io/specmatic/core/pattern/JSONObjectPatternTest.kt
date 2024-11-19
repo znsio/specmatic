@@ -1318,5 +1318,67 @@ components:
 
             assertThat(matchResult).isInstanceOf(Result.Success::class.java)
         }
+
+        @Test
+        fun `recursion with cross property conflict across arrays handled correctly when generating values`() {
+            val spec = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Sample API
+  version: 0.1.9
+paths:
+  /hello:
+    get:
+      responses:
+        '200':
+          description: Has data
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Data'
+components:
+  schemas:
+    Data:
+      type: object
+      properties:
+        directSelfRef:
+          type: array
+          items:
+            ${"$"}ref: '#/components/schemas/DataRef'
+        indirectSelfRef:
+          type: array
+          items:
+            ${"$"}ref: '#/components/schemas/DataRefToRef'
+    DataRefToRef:
+      type: object
+      required:
+        - messageRefToRef
+      properties:
+        messageRefToRef:
+          ${"$"}ref: '#/components/schemas/DataRef'
+    DataRef:
+      type: object
+      required:
+        - messageRef
+      properties:
+        messageRef:
+          ${"$"}ref: '#/components/schemas/Data'
+    """.trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+            val scenario = feature.scenarios.first()
+            val resolver = scenario.resolver.copy(allPatternsAreMandatory = true)
+
+            val responsePattern = scenario.httpResponsePattern.body
+            val value = responsePattern.generate(resolver)
+            println(value.toStringLiteral())
+
+            val matchResult = responsePattern.matches(value, resolver)
+            println(matchResult.reportString())
+
+            assertThat(matchResult).isInstanceOf(Result.Success::class.java)
+        }
     }
 }

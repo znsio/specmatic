@@ -437,11 +437,6 @@ fun generate(jsonPatternMap: Map<String, Pattern>, resolver: Resolver, jsonPatte
                 })
 
                 valueWithCycle
-
-                // if failed and not yet seen
-                // try again until this is seen or exception
-                // if exception, check flag
-                //    if flag is true throw exception else omit property
             }
         }
         .filterValues { it.isPresent }

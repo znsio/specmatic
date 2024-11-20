@@ -22,12 +22,16 @@ object ExamplePostValidator: ResponseValidator {
     }
 
     private fun Row.toAsserts(): List<Assert> {
-        val responseExampleBody = this.responseExampleForValidation?.responseExample?.body ?: return emptyList()
+        val responseExampleBody = this.responseExampleForValidation?.responseExample ?: return emptyList()
 
-        return responseExampleBody.traverse(
+        val headerAsserts = responseExampleBody.headers.map {
+            parsedAssert("RESPONSE.HEADERS", it.key, StringValue(it.value))
+        }.filterNotNull()
+
+        return responseExampleBody.body.traverse(
             onScalar = { value, key -> mapOf(key to parsedAssert("RESPONSE.BODY", key, value)) },
             onAssert = { value, key -> mapOf(key to parsedAssert("RESPONSE.BODY", key, value)) }
-        ).values.filterNotNull()
+        ).values.filterNotNull() + headerAsserts
     }
 
     private fun HttpRequest.toFactStore(): Map<String, Value> {

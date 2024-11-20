@@ -41,7 +41,7 @@ fun <T> Value.suffixIfMoreThanOne(block: (suffix: String, suffixValue: Value) ->
 }
 
 fun <T> String.isKeyAssert(block: (String) -> T): T? {
-    return if (this.startsWith("\$if") || this.startsWith("\$array")) {
+    return if (this.startsWith("\$if")) {
         block(this)
     } else null
 }

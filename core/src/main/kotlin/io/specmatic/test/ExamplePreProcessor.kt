@@ -40,14 +40,20 @@ object ExampleProcessor {
 
     private fun getValue(key: String, type: SubstitutionType): Value? {
         val returnValue = factStore[key] ?: runningEntity[key]
-        return when (type) {
-            SubstitutionType.DELAYED_RANDOM -> returnValue?.let {
-                if (it !is JSONArrayValue) throw ContractException("Delayed random value must be an array")
-                val entityValue = getValue("ENTITY.${key.split(".").last()}", SubstitutionType.SIMPLE) ?: throw ContractException("Could not resolve ENTITY.$key")
-                it.list.filter { item -> item.toStringLiteral() != entityValue.toStringLiteral() }.random()
-            }
-            else ->  returnValue
+        if (type != SubstitutionType.DELAYED_RANDOM) return returnValue
+
+        val arrayValue = returnValue as? JSONArrayValue
+            ?: throw ContractException("$key is not an array in fact store")
+
+        val entityKey = "ENTITY.${key.substringAfterLast('.')}"
+        val entityValue = factStore[entityKey] ?: runningEntity[entityKey]
+            ?: throw ContractException("Could not resolve $entityKey in fact store")
+
+        val filteredList = arrayValue.list.filterNot { it.toStringLiteral() == entityValue.toStringLiteral() }.ifEmpty {
+            throw ContractException("Couldn't pick a random value from $key that was not equal to $entityValue")
         }
+
+        return filteredList.random()
     }
 
     /* RESOLVER HELPERS */
@@ -169,4 +175,3 @@ object ExampleProcessor {
         }
     }
 }
-

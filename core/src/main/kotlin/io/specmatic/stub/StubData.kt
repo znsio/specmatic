@@ -33,6 +33,18 @@ data class HttpStubData(
         else -> this.copy(response = response.copy(body = softCastValueToXML(response.body)))
     }
 
+    fun matches(
+        httpRequest: HttpRequest,
+        mismatchMessages: MismatchMessages = StubAndRequestMismatchMessages
+    ): Result {
+        return requestType.matches(
+            httpRequest,
+            resolver.disableOverrideUnexpectedKeycheck()
+                .copy(mismatchMessages = mismatchMessages),
+            requestBodyReqex = requestBodyRegex
+        )
+    }
+
     private fun invokeExternalCommand(httpRequest: HttpRequest): HttpStubData {
         val result = executeExternalCommand(
             response.externalisedResponseCommand,

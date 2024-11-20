@@ -20,6 +20,15 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
 
     override fun deepPattern(): Pattern = toJSONObjectPattern(jsonObject.mapValues { it.value.deepPattern() })
 
+    fun removeKeysNotPresentIn(keys: Set<String>): JSONObjectValue {
+        if (keys.isEmpty()) return this
+        return this.copy(jsonObject = jsonObject.filterKeys {
+            withoutOptionality(it) in keys
+        }.mapKeys {
+            withoutOptionality(it.key)
+        })
+    }
+
     override fun toString() = valueMapToPrettyJsonString(jsonObject)
 
     override fun typeDeclarationWithKey(key: String, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Pair<TypeDeclaration, ExampleDeclarations> {
@@ -86,6 +95,9 @@ data class JSONObjectValue(val jsonObject: Map<String, Value> = emptyMap()) : Va
 
     fun findFirstChildByName(name: String): Value? =
         jsonObject[name]
+
+    fun keys() = jsonObject.keys
+
 }
 
 internal fun dictionaryToDeclarations(jsonObject: Map<String, Value>, types: Map<String, Pattern>, exampleDeclarations: ExampleDeclarations): Triple<Map<String, DeferredPattern>, Map<String, Pattern>, ExampleDeclarations> {

@@ -6,25 +6,72 @@ import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.cors.CORS
+import io.ktor.server.plugins.cors.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
-import io.specmatic.core.*
-import io.specmatic.core.log.*
+import io.specmatic.core.APPLICATION_NAME
+import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.ContractAndStubMismatchMessages
+import io.specmatic.core.Feature
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
+import io.specmatic.core.KeyData
+import io.specmatic.core.MismatchMessages
+import io.specmatic.core.MissingDataException
+import io.specmatic.core.MultiPartContent
+import io.specmatic.core.MultiPartContentValue
+import io.specmatic.core.MultiPartFileValue
+import io.specmatic.core.MultiPartFormDataValue
+import io.specmatic.core.NoBodyValue
+import io.specmatic.core.QueryParameters
+import io.specmatic.core.ResponseBuilder
+import io.specmatic.core.Result
+import io.specmatic.core.Results
+import io.specmatic.core.SPECMATIC_RESULT_HEADER
+import io.specmatic.core.Scenario
+import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.WorkingDirectory
+import io.specmatic.core.listOfExcludedHeaders
+import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.log.HttpLogMessage
+import io.specmatic.core.log.LogMessage
+import io.specmatic.core.log.LogTail
+import io.specmatic.core.log.dontPrintToConsole
+import io.specmatic.core.log.logger
+import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.IgnoreUnexpectedKeys
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
-import io.specmatic.core.utilities.*
-import io.specmatic.core.value.*
-import io.specmatic.mock.*
-import io.specmatic.stub.report.*
+import io.specmatic.core.urlDecodePathSegments
+import io.specmatic.core.utilities.capitalizeFirstChar
+import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.jsonStringToValueMap
+import io.specmatic.core.utilities.saveJsonFile
+import io.specmatic.core.utilities.toMap
+import io.specmatic.core.value.EmptyString
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
+import io.specmatic.core.value.toXMLNode
+import io.specmatic.mock.NoMatchingScenario
+import io.specmatic.mock.ScenarioStub
+import io.specmatic.mock.TRANSIENT_MOCK
+import io.specmatic.mock.mockFromJSON
+import io.specmatic.mock.validateMock
+import io.specmatic.stub.report.StubEndpoint
+import io.specmatic.stub.report.StubUsageReport
+import io.specmatic.stub.report.StubUsageReportJson
 import io.specmatic.test.HttpClient
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.*
+import kotlinx.coroutines.channels.BroadcastChannel
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.broadcast
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
@@ -339,7 +386,7 @@ class HttpStub(
             strictMode,
             passThroughTargetBase,
             httpClientFactory,
-            specmaticConfig
+            specmaticConfig,
         )
 
         result.log(_logs, httpRequest)
@@ -770,30 +817,35 @@ fun getHttpResponse(
     strictMode: Boolean,
     passThroughTargetBase: String = "",
     httpClientFactory: HttpClientFactory? = null,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
 ): StubbedResponseResult {
-    return try {
+    try {
         val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
-
         if(matchingStubResponse != null) {
             val (httpStubResponse, httpStubData) = matchingStubResponse
-            FoundStubbedResponse(httpStubResponse.resolveSubstitutions(
-                httpRequest,
-                if(httpStubData.partial != null) httpStubData.partial.request else httpStubData.originalRequest ?: httpRequest,
-                httpStubData.data,
-            ))
+            return FoundStubbedResponse(
+                httpStubResponse.resolveSubstitutions(
+                    httpRequest,
+                    if (httpStubData.partial != null) httpStubData.partial.request else httpStubData.originalRequest
+                        ?: httpRequest,
+                    httpStubData.data,
+                )
+            )
         }
-        else if (httpClientFactory != null && passThroughTargetBase.isNotBlank())
-            NotStubbed(passThroughResponse(httpRequest, passThroughTargetBase, httpClientFactory))
-        else if (strictMode) {
-            NotStubbed(HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults)))
-        } else {
-            fakeHttpResponse(features, httpRequest, specmaticConfig)
+        if (httpClientFactory != null && passThroughTargetBase.isNotBlank()) {
+            return NotStubbed(
+                passThroughResponse(
+                    httpRequest,
+                    passThroughTargetBase,
+                    httpClientFactory
+                )
+            )
         }
+        if(strictMode) return NotStubbed(HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults)))
+
+        return fakeHttpResponse(features, httpRequest, specmaticConfig)
     } finally {
-        features.forEach { feature ->
-            feature.clearServerState()
-        }
+        features.forEach { feature -> feature.clearServerState() }
     }
 }
 
@@ -850,105 +902,8 @@ private fun stubThatMatchesRequest(
     nonTransientStubs: ThreadSafeListOfStubs,
     httpRequest: HttpRequest
 ): Pair<HttpStubData?, List<Pair<Result, HttpStubData>>> {
-    val queueMatchResults: List<Pair<Result, HttpStubData>> = transientStubs.matchResults { stubs ->
-        stubs.map {
-            val (requestPattern, _, resolver) = it
-            Pair(
-                requestPattern.matches(
-                    httpRequest,
-                    resolver.disableOverrideUnexpectedKeycheck()
-                        .copy(mismatchMessages = StubAndRequestMismatchMessages),
-                    requestBodyReqex = it.requestBodyRegex
-                ), it
-            )
-        }
-    }
-
-    val queueMock = queueMatchResults.findLast { (result, _) -> result is Result.Success }
-    if (queueMock != null) {
-        transientStubs.remove(queueMock.second)
-        return Pair(queueMock.second, queueMatchResults)
-    }
-
-    val listMatchResults: List<Pair<Result, HttpStubData>> = nonTransientStubs.matchResults { httpStubData ->
-        val nonPartialMatchResults = httpStubData.filter { it.partial == null }.map {
-            val (requestPattern, _, resolver) = it
-            Pair(
-                requestPattern.matches(
-                    httpRequest,
-                    resolver.disableOverrideUnexpectedKeycheck()
-                        .copy(mismatchMessages = StubAndRequestMismatchMessages),
-                    requestBodyReqex = it.requestBodyRegex
-                ), it
-            )
-        }
-
-        val partialMatchResults = httpStubData.mapNotNull { it.partial?.let { partial -> it to partial } }
-            .map { (stubData, partial) ->
-                val (requestPattern, _, resolver) = stubData
-
-                val partialRequest = requestPattern.generate(partial.request, resolver)
-
-                val partialResolver = resolver.copy(
-                    findKeyErrorCheck = KeyCheck(unexpectedKeyCheck = IgnoreUnexpectedKeys)
-                )
-
-                val partialResult = partialRequest.matches(httpRequest, partialResolver, partialResolver)
-
-                if(!partialResult.isSuccess())
-                    partialResult to stubData
-                else
-                    Pair(
-                        requestPattern.matches(
-                            httpRequest,
-                            resolver.disableOverrideUnexpectedKeycheck()
-                                .copy(mismatchMessages = StubAndRequestMismatchMessages),
-                            requestBodyReqex = stubData.requestBodyRegex
-                        ), stubData
-                    )
-            }
-
-        partialMatchResults + nonPartialMatchResults
-    }
-
-    val mock = listMatchResults.map {
-        val (result, stubData) = it
-
-        if(result is Result.Success) {
-            val response = if(stubData.partial != null)
-                stubData.responsePattern.generateResponse(stubData.partial.response, stubData.resolver)
-            else
-                stubData.response
-
-            val stubResponse = HttpStubResponse(
-                response,
-                stubData.delayInMilliseconds,
-                stubData.contractPath,
-                feature = stubData.feature,
-                scenario = stubData.scenario
-            )
-
-            try {
-                val originalRequest =
-                    if(stubData.partial != null)
-                        stubData.partial.request
-                    else
-                        stubData.originalRequest
-
-                    stubResponse.resolveSubstitutions(httpRequest, originalRequest ?: httpRequest, it.second.data)
-
-                result to stubData.copy(response = response)
-            } catch(e: ContractException) {
-                if(isMissingData(e))
-                    Pair(e.failure(), stubData)
-                else
-                    throw e
-            }
-        } else
-            it
-    }.find { (result, _) -> result is Result.Success }
-
-    return Pair(mock?.second, listMatchResults)
+    return transientStubs.matchingTransientStub(httpRequest)
+        ?: nonTransientStubs.matchingNonTransientStub(httpRequest)
 }
 
 fun isMissingData(e: Throwable?): Boolean {
@@ -976,19 +931,20 @@ object ContractAndRequestsMismatch : MismatchMessages {
     }
 }
 
-private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest, specmaticConfig: SpecmaticConfig = SpecmaticConfig()): StubbedResponseResult {
-    data class ResponseDetails(val feature: Feature, val successResponse: ResponseBuilder?, val results: Results)
+data class ResponseDetails(val feature: Feature, val successResponse: ResponseBuilder?, val results: Results)
+
+fun fakeHttpResponse(
+    features: List<Feature>,
+    httpRequest: HttpRequest,
+    specmaticConfig: SpecmaticConfig = SpecmaticConfig()
+): StubbedResponseResult {
 
     if (features.isEmpty())
        return NotStubbed(HttpStubResponse(HttpResponse(400, "No valid API specifications loaded")))
 
-    val responses: List<ResponseDetails> = features.asSequence().map { feature ->
-        feature.stubResponse(httpRequest, ContractAndRequestsMismatch).let {
-            ResponseDetails(feature, it.first, it.second)
-        }
-    }.toList()
+    val responses: List<ResponseDetails> = responseDetailsFrom(features, httpRequest)
 
-    return when (val fakeResponse = responses.find { it.successResponse != null }) {
+    return when (val fakeResponse = responses.successResponse()) {
         null -> {
             val failureResults = responses.filter { it.successResponse == null }.map { it.results }
 
@@ -1023,13 +979,29 @@ private fun fakeHttpResponse(features: List<Feature>, httpRequest: HttpRequest, 
 
         else -> FoundStubbedResponse(
             HttpStubResponse(
-                fakeResponse.successResponse?.build(RequestContext(httpRequest))?.withRandomResultHeader()!!,
+                generateHttpResponseFrom(fakeResponse, httpRequest),
                 contractPath = fakeResponse.feature.path,
                 feature = fakeResponse.feature,
-                scenario = fakeResponse.successResponse.scenario
+                scenario = fakeResponse.successResponse?.scenario
             )
         )
     }
+}
+
+fun responseDetailsFrom(features: List<Feature>, httpRequest: HttpRequest): List<ResponseDetails> {
+    return features.asSequence().map { feature ->
+        feature.stubResponse(httpRequest, ContractAndRequestsMismatch).let {
+            ResponseDetails(feature, it.first, it.second)
+        }
+    }.toList()
+}
+
+fun List<ResponseDetails>.successResponse(): ResponseDetails? {
+    return this.find { it.successResponse != null }
+}
+
+fun generateHttpResponseFrom(fakeResponse: ResponseDetails, httpRequest: HttpRequest): HttpResponse {
+    return fakeResponse.successResponse?.build(RequestContext(httpRequest))?.withRandomResultHeader()!!
 }
 
 fun dumpIntoFirstAvailableStringField(httpResponse: HttpResponse, stringValue: String): HttpResponse {

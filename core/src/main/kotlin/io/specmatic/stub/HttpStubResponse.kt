@@ -11,6 +11,8 @@ data class HttpStubResponse(
     val feature: Feature? = null,
     val scenario: Scenario? = null
 ) {
+    val responseBody = response.body
+
     fun resolveSubstitutions(
         request: HttpRequest,
         originalRequest: HttpRequest,

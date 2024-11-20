@@ -202,6 +202,10 @@ data class ListPattern(
         }
         return this
     }
+
+    override fun jsonObjectPattern(resolver: Resolver): JSONObjectPattern? {
+        return null
+    }
 }
 
 private fun withEmptyType(pattern: Pattern, resolver: Resolver): Resolver {

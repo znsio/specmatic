@@ -236,7 +236,7 @@ data class JSONObjectPattern(
         return JSONArrayValue(valueList)
     }
 
-    private fun shouldMakePatternMandatory(pattern: Pattern, resolver: Resolver): Boolean {
+    private fun shouldMakePropertyMandatory(pattern: Pattern, resolver: Resolver): Boolean {
         if (!resolver.allPatternsAreMandatory) return false
 
         val patternToCheck = when(pattern) {
@@ -264,7 +264,7 @@ data class JSONObjectPattern(
                 emptyList()
 
         val adjustedPattern = pattern.mapKeys {
-            if (shouldMakePatternMandatory(it.value, resolver)) {
+            if (shouldMakePropertyMandatory(it.value, resolver)) {
                 withoutOptionality(it.key)
             } else it.key
         }
@@ -419,24 +419,32 @@ fun generate(jsonPatternMap: Map<String, Pattern>, resolver: Resolver, jsonPatte
         .mapValues { (key, pattern) ->
             attempt(breadCrumb = key) {
                 // Handle cycle (represented by null value) by marking this property as removable
-                val propertyIsOptionalInSchema = optionalProps.contains(key)
+                val canBeOmitted = optionalProps.contains(key)
 
-                val canPropertyBeSkipped = propertyIsOptionalInSchema
+                val value = Optional.ofNullable(
+                    resolverWithNullType.withCyclePrevention(
+                        jsonPattern,
+                        key,
+                        canBeOmitted
+                    ) {
+                        it.generate(jsonPattern.typeAlias, key, pattern)
+                    })
 
-                val value = Optional.ofNullable(resolverWithNullType.withCyclePrevention(jsonPattern, key, canPropertyBeSkipped) {
-                    it.generate(jsonPattern.typeAlias, key, pattern)
-                })
-
-                if(value.isPresent || resolverWithNullType.hasSeenLookupPath(jsonPattern, key))
+                if (value.isPresent || resolverWithNullType.hasSeenLookupPath(jsonPattern, key))
                     return@attempt value
 
                 val resolverWithCycleMarker = resolverWithNullType.cyclePast(jsonPattern, key)
 
-                val valueWithCycle = Optional.ofNullable(resolverWithCycleMarker.withCyclePrevention(jsonPattern, key, canPropertyBeSkipped) {
-                    it.generate(jsonPattern.typeAlias, key, pattern)
-                })
+                val valueWithOneCycle = Optional.ofNullable(
+                    resolverWithCycleMarker.withCyclePrevention(
+                        jsonPattern,
+                        key,
+                        canBeOmitted
+                    ) {
+                        it.generate(jsonPattern.typeAlias, key, pattern)
+                    })
 
-                valueWithCycle
+                valueWithOneCycle
             }
         }
         .filterValues { it.isPresent }

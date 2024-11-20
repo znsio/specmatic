@@ -2,7 +2,6 @@ package io.specmatic.core
 
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
-import io.specmatic.core.utilities.Flags
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.True
@@ -389,11 +388,7 @@ ${matchResult.reportString()}
     fun hasSeenLookupPath(pattern: Pattern, key: String): Boolean {
         val lookupPath = lookupPath(pattern.typeAlias, key)
 
-        return lookupPath in lookupPathsSeenSoFar
-    }
-
-    fun isInCyclePreventionStack(pattern: Pattern): Boolean {
-        return pattern  in cyclePreventionStack
+        return lookupPathSeen(lookupPath)
     }
 
     fun addPatternAsSeen(pattern: Pattern): Resolver {

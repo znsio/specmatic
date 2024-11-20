@@ -11,7 +11,6 @@ import io.specmatic.core.utilities.Flags.Companion.IGNORE_INLINE_EXAMPLE_WARNING
 import io.specmatic.core.utilities.Flags.Companion.MAX_TEST_REQUEST_COMBINATIONS
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
-import io.specmatic.mock.ScenarioStub
 import io.specmatic.shouldNotMatch
 import io.specmatic.stub.captureStandardOutput
 import io.specmatic.trimmedLinesString
@@ -1380,5 +1379,345 @@ components:
 
             assertThat(matchResult).isInstanceOf(Result.Success::class.java)
         }
+
+        @Test
+        fun `simple unavoidable recursion when all properties should appear`() {
+            val spec = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Sample API
+  version: 0.1.9
+paths:
+  /hello:
+    get:
+      responses:
+        '200':
+          description: Has data
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Data'
+components:
+  schemas:
+    Data:
+      type: object
+      required:
+      - directSelfRef
+      properties:
+        directSelfRef:
+          ${"$"}ref: '#/components/schemas/Data'
+    """.trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+            val scenario = feature.scenarios.first()
+            val resolver = scenario.resolver.copy(allPatternsAreMandatory = true)
+
+            val responsePattern = scenario.httpResponsePattern.body
+            assertThatThrownBy {
+                responsePattern.generate(resolver)
+            }.satisfies(Consumer {
+                assertThat(exceptionCauseMessage(it)).contains("Invalid pattern cycle: Data.directSelfRef")
+            })
+
+        }
+
+        @Test
+        fun `simple avoidable recursion when all properties should appear`() {
+            val spec = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Sample API
+  version: 0.1.9
+paths:
+  /hello:
+    get:
+      responses:
+        '200':
+          description: Has data
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Data'
+components:
+  schemas:
+    Data:
+      type: object
+      properties:
+        directSelfRef:
+          ${"$"}ref: '#/components/schemas/Data'
+    """.trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+            val scenario = feature.scenarios.first()
+            val resolver = scenario.resolver.copy(allPatternsAreMandatory = true)
+
+            val responsePattern = scenario.httpResponsePattern.body
+            val value = responsePattern.generate(resolver)
+
+            assertThat(value).isEqualTo(JSONObjectValue(mapOf("directSelfRef" to JSONObjectValue())))
+        }
+
+        @Test
+        fun `simple unavoidable recursion across arrays`() {
+            val spec = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Sample API
+  version: 0.1.9
+paths:
+  /hello:
+    get:
+      responses:
+        '200':
+          description: Has data
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Data'
+components:
+  schemas:
+    Data:
+      type: object
+      required:
+      - directSelfRef
+      properties:
+        directSelfRef:
+          type: array
+          items:
+            ${"$"}ref: '#/components/schemas/Data'
+    """.trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+            val scenario = feature.scenarios.first()
+            val resolver = scenario.resolver.copy(allPatternsAreMandatory = true)
+
+            val responsePattern = scenario.httpResponsePattern.body
+            assertThatThrownBy {
+                responsePattern.generate(resolver)
+            }.satisfies(Consumer {
+                assertThat(exceptionCauseMessage(it)).contains("Invalid pattern cycle: Data.directSelfRef")
+            })
+
+        }
+
+        @Test
+        fun `simple avoidable recursion across arrays`() {
+            val spec = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Sample API
+  version: 0.1.9
+paths:
+  /hello:
+    get:
+      responses:
+        '200':
+          description: Has data
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Data'
+components:
+  schemas:
+    Data:
+      type: object
+      properties:
+        directSelfRef:
+          type: array
+          items:
+            ${"$"}ref: '#/components/schemas/Data'
+    """.trimIndent()
+
+            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+            val scenario = feature.scenarios.first()
+            val resolver = scenario.resolver.copy(allPatternsAreMandatory = true)
+
+            val responsePattern = scenario.httpResponsePattern.body
+            val value = responsePattern.generate(resolver) as JSONObjectValue
+
+            assertThat(value.findFirstChildByPath("directSelfRef")).isNotNull()
+
+            val listPropertyValue = value.findFirstChildByPath("directSelfRef") as JSONArrayValue
+
+            assertThat(listPropertyValue.list).allSatisfy {
+                assertThat(it).isEqualTo(JSONObjectValue())
+            }
+
+        }
+
+    }
+
+    @Test
+    fun `simple unavoidable recursion`() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Sample API
+  version: 0.1.9
+paths:
+  /hello:
+    get:
+      responses:
+        '200':
+          description: Has data
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Data'
+components:
+  schemas:
+    Data:
+      type: object
+      required:
+      - directSelfRef
+      properties:
+        directSelfRef:
+          ${"$"}ref: '#/components/schemas/Data'
+    """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val scenario = feature.scenarios.first()
+        val resolver = scenario.resolver
+
+        val responsePattern = scenario.httpResponsePattern.body
+        assertThatThrownBy {
+            responsePattern.generate(resolver)
+        }.satisfies(Consumer {
+            assertThat(exceptionCauseMessage(it)).contains("Invalid pattern cycle: Data")
+        })
+
+    }
+
+    @Test
+    fun `simple avoidable recursion`() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Sample API
+  version: 0.1.9
+paths:
+  /hello:
+    get:
+      responses:
+        '200':
+          description: Has data
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Data'
+components:
+  schemas:
+    Data:
+      type: object
+      properties:
+        directSelfRef:
+          ${"$"}ref: '#/components/schemas/Data'
+    """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val scenario = feature.scenarios.first()
+        val resolver = scenario.resolver
+
+        val responsePattern = scenario.httpResponsePattern.body
+        val value = responsePattern.generate(resolver)
+
+        assertThat(value).isEqualTo(JSONObjectValue())
+    }
+
+    @Test
+    fun `simple unavoidable recursion across arrays`() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Sample API
+  version: 0.1.9
+paths:
+  /hello:
+    get:
+      responses:
+        '200':
+          description: Has data
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Data'
+components:
+  schemas:
+    Data:
+      type: object
+      required:
+      - directSelfRef
+      properties:
+        directSelfRef:
+          type: array
+          items:
+            ${"$"}ref: '#/components/schemas/Data'
+    """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val scenario = feature.scenarios.first()
+        val resolver = scenario.resolver
+
+        val responsePattern = scenario.httpResponsePattern.body
+        assertThatThrownBy {
+            responsePattern.generate(resolver)
+        }.satisfies(Consumer {
+            assertThat(exceptionCauseMessage(it)).contains("Invalid pattern cycle: Data")
+        })
+
+    }
+
+    @Test
+    fun `simple avoidable recursion across arrays`() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Sample API
+  version: 0.1.9
+paths:
+  /hello:
+    get:
+      responses:
+        '200':
+          description: Has data
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Data'
+components:
+  schemas:
+    Data:
+      type: object
+      properties:
+        directSelfRef:
+          type: array
+          items:
+            ${"$"}ref: '#/components/schemas/Data'
+    """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val scenario = feature.scenarios.first()
+        val resolver = scenario.resolver
+
+        val responsePattern = scenario.httpResponsePattern.body
+        val value = responsePattern.generate(resolver) as JSONObjectValue
+
+        assertThat(value).isEqualTo(JSONObjectValue())
     }
 }

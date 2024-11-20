@@ -3,9 +3,12 @@ package io.specmatic.stub.stateful
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
+import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.*
 import io.ktor.server.plugins.doublereceive.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import io.specmatic.core.Feature
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpRequestPattern
@@ -71,14 +74,20 @@ class StatefulHttpStub(
                 allowMethod(HttpMethod.Delete)
                 allowMethod(HttpMethod.Patch)
 
-                allowHeaders {
-                    true
-                }
+                allowHeaders { true }
 
                 allowCredentials = true
                 allowNonSimpleContentTypes = true
 
                 anyHost()
+            }
+
+            routing {
+                staticResources("/", "swagger-ui")
+
+                get("/openapi.yaml") {
+                    call.respondFile(File(features.first().path))
+                }
             }
 
             intercept(ApplicationCallPipeline.Call) {
@@ -133,6 +142,9 @@ class StatefulHttpStub(
     })
 
     init {
+        if(features.isEmpty()) {
+            throw IllegalArgumentException("The stateful stub requires at least one API specification to function.")
+        }
         server.start()
     }
 

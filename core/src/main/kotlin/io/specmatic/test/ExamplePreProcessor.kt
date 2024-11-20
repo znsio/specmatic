@@ -1,5 +1,6 @@
 package io.specmatic.test
 
+import io.ktor.util.*
 import io.specmatic.core.*
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.pattern.ContractException
@@ -15,6 +16,8 @@ const val delayedRandomSubstitutionKey = "\$rand"
 val SUBSTITUTE_PATTERN = Regex("^\\$(\\w+)?\\((.*)\\)$")
 
 enum class SubstitutionType { SIMPLE, DELAYED_RANDOM }
+
+enum class StoreType { REPLACE, MERGE }
 
 object ExampleProcessor {
     private var runningEntity: Map<String, Value> = mapOf()
@@ -139,19 +142,30 @@ object ExampleProcessor {
     }
 
     /* STORE HELPERS */
-    fun store(exampleRow: Row, httpResponse: HttpResponse) {
-        val bodyToCheck = exampleRow.responseExample?.body ?: exampleRow.responseExampleForValidation?.responseExample?.body
-
-        bodyToCheck?.ifContainsStoreToken { _ ->
+    fun store(exampleRow: Row, httpRequest: HttpRequest, httpResponse: HttpResponse) {
+        if (httpRequest.method == "POST") {
             runningEntity = httpResponse.body.toFactStore(prefix = "ENTITY")
+            return
+        }
+
+        val bodyToCheck = exampleRow.responseExample?.body ?: exampleRow.responseExampleForValidation?.responseExample?.body
+        bodyToCheck?.ifContainsStoreToken { type ->
+            runningEntity = when (type) {
+                StoreType.REPLACE -> httpResponse.body.toFactStore(prefix = "ENTITY")
+                StoreType.MERGE -> runningEntity.plus(httpResponse.body.toFactStore(prefix = "ENTITY"))
+            }
         }
     }
 
-    private fun Value.ifContainsStoreToken(block: (entityKey: String) -> Unit) {
+    private fun Value.ifContainsStoreToken(block: (storeType: StoreType) -> Unit) {
         if (this !is JSONObjectValue) return
 
-        val entityId = this.jsonObject.entries.firstOrNull { it.value.toStringLiteral().matches("\\(ENTITY\\)".toRegex()) }
-        entityId?.let { block(it.key) }
+        this.findFirstChildByPath("\$store")?.let {
+            when (it.toStringLiteral().toLowerCasePreservingASCIIRules()){
+                "merge" -> block(StoreType.MERGE)
+                else -> block(StoreType.REPLACE)
+            }
+        }
     }
 
     /* PARSER HELPERS */

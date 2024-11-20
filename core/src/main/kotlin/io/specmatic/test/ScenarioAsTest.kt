@@ -113,7 +113,7 @@ data class ScenarioAsTest(
             val postValidateResult = validators.asSequence().map { it.postValidate(testScenario, request, response) }.filterNotNull().firstOrNull()
             val result = postValidateResult ?: testResult
 
-            testScenario.exampleRow?.let { ExampleProcessor.store(it, response) }
+            testScenario.exampleRow?.let { ExampleProcessor.store(it, request, response) }
             Pair(result.withBindings(testScenario.bindings, response), response)
         } catch (exception: Throwable) {
             Pair(

@@ -247,7 +247,7 @@ class StatefulHttpStub(
         if(pathSegments.size > 1 && cachedResponseWithId == null) return notFoundResponse
 
         if (method == "POST") {
-            val responseBody = generatePostResponse(generatedResponse, httpRequest) ?: return null
+            val responseBody = generatePostResponse(generatedResponse, httpRequest, scenario.resolver) ?: return null
 
             val finalResponseBody = if (attributeSelectionKeys.isEmpty()) {
                 responseBody.includeMandatoryAndRequestedKeys(
@@ -350,13 +350,17 @@ class StatefulHttpStub(
 
     private fun generatePostResponse(
         generatedResponse: HttpResponse,
-        httpRequest: HttpRequest
+        httpRequest: HttpRequest,
+        resolver: Resolver
     ): JSONObjectValue? {
-        if (generatedResponse.body !is JSONObjectValue || httpRequest.body !is JSONObjectValue)
+        val responseBody = generatedResponse.body
+        if (responseBody !is JSONObjectValue || httpRequest.body !is JSONObjectValue)
             return null
 
-        return generatedResponse.body.copy(
-            jsonObject = patchValuesFromRequestIntoResponse(httpRequest.body, generatedResponse.body)
+        val patchedResponseBodyMap = patchValuesFromRequestIntoResponse(httpRequest.body, responseBody)
+
+        return responseBody.copy(
+            jsonObject = responseBodyMapWithUniqueId(httpRequest, patchedResponseBodyMap, resolver)
         )
     }
 
@@ -440,6 +444,29 @@ class StatefulHttpStub(
             requestBody,
             responseBody
         ).plus(entriesFromRequestMissingInTheResponse)
+    }
+
+    private fun responseBodyMapWithUniqueId(
+        httpRequest: HttpRequest,
+        responseBodyMap: Map<String, Value>,
+        resolver: Resolver,
+    ): Map<String, Value> {
+        val idKey = "id"
+        val maxAttempts = 100_000
+
+        val initialIdValue = responseBodyMap[idKey] ?: return responseBodyMap
+
+        val (resourcePath, _) = resourcePathAndIdFrom(httpRequest)
+        var currentIdValue = initialIdValue
+
+        repeat(maxAttempts) {
+            if (stubCache.findResponseFor(resourcePath, idKey, currentIdValue.toStringLiteral()) == null) {
+                return responseBodyMap + mapOf(idKey to currentIdValue)
+            }
+            currentIdValue = currentIdValue.deepPattern().generate(resolver)
+        }
+
+        return responseBodyMap
     }
 
     private fun responseBodyPatternFrom(fakeResponse: ResponseDetails): JSONObjectPattern? {

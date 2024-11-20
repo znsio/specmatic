@@ -6,7 +6,7 @@ import io.specmatic.core.value.Value
 
 enum class ArrayAssertType { ARRAY_HAS }
 
-class AssertArray(val prefix: String, val key: String, val lookupKey: String, private val arrayAssertType: ArrayAssertType): Assert {
+class AssertArray(override val prefix: String, override val key: String, private val lookupKey: String, private val arrayAssertType: ArrayAssertType): Assert {
     override fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
         val prefixValue = currentFactStore[prefix] ?: return Result.Failure(breadCrumb = prefix, message = "Could not resolve $prefix in current fact store")
         if (prefixValue !is JSONArrayValue) {
@@ -25,6 +25,8 @@ class AssertArray(val prefix: String, val key: String, val lookupKey: String, pr
             is Result.Failure -> Result.Failure("None of the values in $prefix matched $lookupKey of value ${actualFactStore[lookupKey]}", breadCrumb = lookupKey)
         }
     }
+
+    override fun dynamicAsserts(prefixValue: Value): List<AssertArray> { return listOf(this) }
 
     companion object {
         fun parse(prefix: String, key: String, value: Value): AssertArray? {

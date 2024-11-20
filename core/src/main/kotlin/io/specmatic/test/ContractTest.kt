@@ -7,7 +7,13 @@ import io.specmatic.core.Scenario
 import io.specmatic.core.filters.ScenarioMetadata
 
 interface ResponseValidator {
-    fun validate(scenario: Scenario, httpRequest: HttpRequest, httpResponse: HttpResponse): Result?
+    fun validate(scenario: Scenario, httpResponse: HttpResponse): Result? {
+        return null
+    }
+
+    fun postValidate(scenario: Scenario, httpRequest: HttpRequest, httpResponse: HttpResponse): Result? {
+        return null
+    }
 }
 
 interface ContractTest {

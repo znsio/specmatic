@@ -7,12 +7,17 @@ import io.specmatic.core.value.Value
 interface Assert {
     fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result
 
+    fun dynamicAsserts(prefixValue: Value): List<Assert>
+
     fun List<Result>.toResult(): Result {
         val failures = filterIsInstance<Result.Failure>()
         return if (failures.isNotEmpty()) {
             Result.fromFailures(failures)
         } else Result.Success()
     }
+
+    val prefix: String
+    val key: String
 }
 
 fun parsedAssert(prefix: String, key: String, value: Value): Assert? {
@@ -24,10 +29,10 @@ fun parsedAssert(prefix: String, key: String, value: Value): Assert? {
     }
 }
 
-fun <T> Value.suffixIfMoreThanOne(block: (index: Int, suffix: String) -> T): List<T> {
+fun <T> Value.suffixIfMoreThanOne(block: (suffix: String, suffixValue: Value) -> T): List<T> {
     return when (this) {
-        is JSONArrayValue -> (0 until this.list.size).mapNotNull { index -> block(index, "[$index]") }
-        else -> listOfNotNull(block(0,""))
+        is JSONArrayValue -> this.list.mapIndexed { index, value -> block("[$index]", value) }
+        else -> listOfNotNull(block("", this))
     }
 }
 

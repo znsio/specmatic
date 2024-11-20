@@ -5,13 +5,13 @@ import io.specmatic.core.value.Value
 
 val ASSERT_PATTERN = Regex("^\\$(\\w+)\\((.*)\\)$")
 
-class AssertComparison(val prefix: String, val key: String, val lookupKey: String, private val isEqualityCheck: Boolean): Assert {
+class AssertComparison(override val prefix: String, override val key: String, val lookupKey: String, private val isEqualityCheck: Boolean): Assert {
 
     override fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
         val prefixValue = currentFactStore[prefix] ?: return Result.Failure(breadCrumb = prefix, message = "Could not resolve $prefix in current fact store")
         val expectedValue = actualFactStore[lookupKey] ?: return Result.Failure(breadCrumb = lookupKey, message = "Could not resolve $lookupKey in actual fact store")
 
-        val dynamicList = createDynamicList(prefixValue)
+        val dynamicList = dynamicAsserts(prefixValue)
         val results = dynamicList.map { newAssert ->
             val finalKey = "${newAssert.prefix}.${newAssert.key}"
             val actualValue = currentFactStore[finalKey] ?: return@map Result.Failure(breadCrumb = finalKey, message = "Could not resolve $finalKey in current fact store")
@@ -21,8 +21,8 @@ class AssertComparison(val prefix: String, val key: String, val lookupKey: Strin
         return results.toResult()
     }
 
-    private fun createDynamicList(prefixValue: Value): List<AssertComparison> {
-        return prefixValue.suffixIfMoreThanOne {_, suffix ->
+    override fun dynamicAsserts(prefixValue: Value): List<Assert> {
+        return prefixValue.suffixIfMoreThanOne {suffix, _ ->
             AssertComparison(prefix = "$prefix$suffix", key = key, lookupKey = lookupKey, isEqualityCheck = isEqualityCheck)
         }
     }

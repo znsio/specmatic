@@ -2,10 +2,11 @@ package io.specmatic.test
 
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
-import io.specmatic.core.filters.ScenarioMetadata
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.logger
+import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.attempt
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.Value
 
@@ -88,19 +89,31 @@ data class ScenarioAsTest(
             workflow.updateRequest(it, originalScenario)
         }.let { ExampleProcessor.resolve(it) }
 
+        attempt(breadCrumb = "SUBSTITUTION-FAILURES") {
+            val result = testScenario.matches(request, emptyMap())
+            if (result is Result.Failure) throw ContractException(result.reportString())
+        }
+
         return try {
             testExecutor.setServerState(testScenario.serverState)
-
             testExecutor.preExecuteScenario(testScenario, request)
-
             val response = testExecutor.execute(request)
-
             workflow.extractDataFrom(response, originalScenario)
 
-            val validatorResult = validators.asSequence().map { it.validate(scenario, request, response) }.filterNotNull().firstOrNull()
-            testScenario.exampleRow?.let { ExampleProcessor.store(it, response) }
+            val validatorResult = validators.asSequence().map { it.validate(scenario, response) }.filterNotNull().firstOrNull()
+            if (validatorResult is Result.Failure) {
+                Pair(validatorResult.withBindings(testScenario.bindings, response), response)
+            }
 
-            val result = validatorResult ?: testResult(request, response, testScenario, flagsBased)
+            val testResult = testResult(request, response, testScenario, flagsBased)
+            if (testResult is Result.Failure) {
+                return Pair(testResult.withBindings(testScenario.bindings, response), response)
+            }
+
+            val postValidateResult = validators.asSequence().map { it.postValidate(testScenario, request, response) }.filterNotNull().firstOrNull()
+            val result = postValidateResult ?: testResult
+
+            testScenario.exampleRow?.let { ExampleProcessor.store(it, response) }
             Pair(result.withBindings(testScenario.bindings, response), response)
         } catch (exception: Throwable) {
             Pair(

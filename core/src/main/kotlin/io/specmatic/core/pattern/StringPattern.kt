@@ -67,28 +67,20 @@ data class StringPattern (
         return JSONArrayValue(valueList)
     }
 
-    //Tells us the minimum length to be used for random string
-    private val patternMinLength: Int =
+    private val randomStringLength: Int =
         when {
-            minLength != null && minLength > 0 -> minLength
-            maxLength != null && maxLength < 5 -> 1
+            minLength != null && 5 < minLength -> minLength
+            maxLength != null && 5 > maxLength -> maxLength
             else -> 5
         }
 
     override fun generate(resolver: Resolver): Value {
         val defaultExample: Value? = resolver.resolveExample(example, this)
-        if (regex != null) {
-            if(defaultExample == null) {
-                if (maxLength != null)
-                    return StringValue(
-                        Generex(regex.removePrefix("^").removeSuffix("$")).random(
-                            patternMinLength,
-                            maxLength
-                        )
-                    )
 
-                return StringValue(Generex(regex.removePrefix("^").removeSuffix("$")).random(patternMinLength))
-            }
+        if (regex != null) {
+            if(defaultExample == null)
+                return StringValue(Generex(regex.removePrefix("^").removeSuffix("$")).random(randomStringLength))
+
             val defaultExampleMatchResult = matches(defaultExample, resolver)
 
             if(defaultExampleMatchResult.isSuccess())
@@ -104,7 +96,7 @@ data class StringPattern (
             return defaultExample
         }
 
-        return StringValue(randomString(patternMinLength))
+        return StringValue(randomString(randomStringLength))
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {

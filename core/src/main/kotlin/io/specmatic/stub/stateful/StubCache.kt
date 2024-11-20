@@ -65,9 +65,10 @@ class StubCache {
     private fun Map<String, Value>.satisfiesFilter(filter: Map<String, String>): Boolean {
         if(filter.isEmpty()) return true
 
-        return filter.all { (key, filterValue) ->
-            if(this.containsKey(key).not()) return@all true
-            val actualValue = this[key] ?: return@all false
+        return filter.all { (filterKey, filterValue) ->
+            if(this.containsKey(filterKey).not()) return@all true
+
+            val actualValue = this.getValue(filterKey)
             actualValue.toStringLiteral() == filterValue
         }
     }

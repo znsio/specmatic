@@ -11,8 +11,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.attempt
-import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
@@ -26,7 +24,6 @@ import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.readEnvVarOrProperty
-import io.specmatic.core.value.JSONObjectValue
 import java.io.File
 
 const val APPLICATION_NAME = "Specmatic"
@@ -124,8 +121,6 @@ data class SpecmaticConfig(
     val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
     @field:JsonAlias("all_patterns_mandatory")
     val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY),
-    @field:JsonAlias("payload_config")
-    val payloadConfig: String? = getStringValue(Flags.SPECMATIC_PAYLOAD_CONFIG)
 ) {
     @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {
@@ -142,15 +137,6 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun isResponseValueValidationEnabled(): Boolean {
         return (test?.validateResponseValues == true)
-    }
-
-    val parsedPayloadConfig = payloadConfig?.let {
-        attempt(breadCrumb = "Error reading payload config file $payloadConfig") {
-            File(it).let { file ->
-                if (!file.exists()) throw Exception("Payload config file does not exist: ${file.canonicalPath}")
-                parsedJSONObject(file.readText())
-            }
-        }
     }
 }
 

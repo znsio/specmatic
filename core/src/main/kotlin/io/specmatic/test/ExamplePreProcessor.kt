@@ -1,13 +1,17 @@
 package io.specmatic.test
 
 import io.specmatic.core.*
+import io.specmatic.core.log.consoleLog
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Row
+import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
+import java.io.File
 
 const val delayedRandomSubstitutionKey = "\$rand"
 val SUBSTITUTE_PATTERN = Regex("^\\$(\\w+)?\\((.*)\\)$")
@@ -15,12 +19,24 @@ val SUBSTITUTE_PATTERN = Regex("^\\$(\\w+)?\\((.*)\\)$")
 enum class SubstitutionType { SIMPLE, DELAYED_RANDOM }
 
 object ExampleProcessor {
-    private val factStore: MutableMap<String, Value> = mutableMapOf()
     private var runningEntity: Map<String, Value> = mapOf()
+    private val factStore: Map<String, Value> = loadConfig().toFactStore("CONFIG")
 
-    init {
-        val payloadConfig = SpecmaticConfig().parsedPayloadConfig?.toFactStore("CONFIG") ?: emptyMap()
-        factStore.putAll(payloadConfig)
+    private fun loadConfig(): JSONObjectValue {
+        val configFilePath = runCatching {
+            loadSpecmaticConfig().additionalExampleParamsFilePath
+        }.getOrNull() ?: return JSONObjectValue(emptyMap())
+
+        val configFile = File(configFilePath)
+        if (!configFile.exists()) {
+            consoleLog("Could not find the CONFIG at path ${configFile.canonicalPath}")
+            return JSONObjectValue(emptyMap())
+        }
+
+        return runCatching { parsedJSONObject(configFile.readText()) }.getOrElse { e ->
+            consoleLog("Error loading CONFIG $configFilePath: ${exceptionCauseMessage(e)}")
+            JSONObjectValue(emptyMap())
+        }
     }
 
     private fun defaultIfNotExits(lookupKey: String, type: SubstitutionType = SubstitutionType.SIMPLE): Value {

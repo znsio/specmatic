@@ -426,7 +426,11 @@ class StatefulHttpStub(
     }
 
     private fun patchValuesFromRequestIntoResponse(requestBody: JSONObjectValue, responseBody: JSONObjectValue): Map<String, Value> {
+        val nonPatchableKeys = specmaticConfig.virtualService.nonPatchableKeys
+
         return responseBody.jsonObject.mapValues { (key, value) ->
+            if(key in nonPatchableKeys) return@mapValues value
+
             val patchValueFromRequest = requestBody.jsonObject.entries.firstOrNull {
                 it.key == key
             }?.value ?: return@mapValues value

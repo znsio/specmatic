@@ -143,7 +143,7 @@ class StatefulHttpStubTest {
 
     @Test
     @Order(4)
-    fun `should update an existing product with patch`() {
+    fun `should update an existing product with patch except for the non-patchable 'description' key`() {
         val response = httpStub.client.execute(
             HttpRequest(
                 method = "PATCH",
@@ -152,7 +152,8 @@ class StatefulHttpStubTest {
                     """
                     {
                       "name": "Product B",
-                      "price": 100
+                      "price": 100,
+                      "description": "random description"
                     }
                     """.trimIndent()
                 )

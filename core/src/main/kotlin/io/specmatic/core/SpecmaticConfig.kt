@@ -80,6 +80,10 @@ data class StubConfiguration(
     val includeMandatoryAndRequestedKeysInResponse: Boolean? = true
 )
 
+data class VirtualServiceConfiguration(
+    val nonPatchableKeys: Set<String> = emptySet()
+)
+
 data class WorkflowIDOperation(
     val extract: String? = null,
     val use: String? = null
@@ -114,6 +118,8 @@ data class SpecmaticConfig(
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
+    @field:JsonAlias("virtual_service")
+    val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
     val workflow: WorkflowConfiguration? = null,
     val ignoreInlineExamples: Boolean = getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES),

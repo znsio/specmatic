@@ -3,6 +3,10 @@ sources:
     stub:
       - api.yaml
 
+virtual_service:
+  nonPatchableKeys:
+    - description
+
 attributeSelectionPattern:
   defaultFields:
     - id

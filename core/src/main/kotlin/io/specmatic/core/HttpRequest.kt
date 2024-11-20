@@ -115,7 +115,10 @@ data class HttpRequest(
         val cleanBase = baseURL?.removeSuffix("/")
         val cleanPath = path?.removePrefix("/")
         val fullUrl = URLParts(concatNonNulls(cleanBase, cleanPath, "/")).withEncodedPathSegments()
-        val queryPart = URLEncodedUtils.format(queryParams.paramPairs.map { BasicNameValuePair(it.first, it.second) }, Charsets.UTF_8)
+        val queryPart = URLEncodedUtils.format(
+            queryParams.paramPairs.map { BasicNameValuePair(it.first, it.second) },
+            Charsets.UTF_8
+        )
         return concatNonNulls(fullUrl, queryPart, "?")
     }
 
@@ -152,7 +155,8 @@ data class HttpRequest(
 
         val pathString = path ?: "NO_PATH"
         val queryParamString =
-            queryParams.paramPairs.joinToString("&") { "${it.first}=${it.second}" }.let { if (it.isNotEmpty()) "?$it" else it }
+            queryParams.paramPairs.joinToString("&") { "${it.first}=${it.second}" }
+                .let { if (it.isNotEmpty()) "?$it" else it }
         val urlString = "$pathString$queryParamString"
 
         val firstLine = "$methodString $urlString"
@@ -197,7 +201,7 @@ data class HttpRequest(
     private fun mapToQueryParameterPattern(queryParams: QueryParameters): Map<String, Pattern> {
         val queryParamGroups = queryParams.paramPairs.groupBy { it.first }
             .mapValues { (_, keyValuePairs) ->
-                keyValuePairs.map { (_,value) ->
+                keyValuePairs.map { (_, value) ->
                     if (isPatternToken(value))
                         parsedPattern(value)
                     else
@@ -205,10 +209,9 @@ data class HttpRequest(
                 }
             }
         return queryParamGroups.map { (parameterKey, parameterPatterns) ->
-            if(parameterPatterns.size > 1) {
+            if (parameterPatterns.size > 1) {
                 parameterKey to QueryParameterArrayPattern(parameterPatterns, parameterKey)
-            }
-            else {
+            } else {
                 parameterKey to QueryParameterScalarPattern(parameterPatterns.single())
             }
         }.toMap()
@@ -231,7 +234,7 @@ data class HttpRequest(
                 httpRequestBuilder.header("Host", it.authority)
         }
 
-        if(body !is NoBodyValue) {
+        if (body !is NoBodyValue) {
             httpRequestBuilder.setBody(
                 when {
                     formFields.isNotEmpty() -> {

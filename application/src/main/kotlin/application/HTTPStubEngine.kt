@@ -24,7 +24,7 @@ class HTTPStubEngine {
         httpClientFactory: HttpClientFactory,
         workingDirectory: WorkingDirectory,
         gracefulRestartTimeoutInMs: Long,
-        baseUrl : String,
+        pathPrefix: String? = null,
     ): HttpStub? {
         val features = stubs.map { it.first }
 
@@ -45,13 +45,15 @@ class HTTPStubEngine {
             workingDirectory = workingDirectory,
             specmaticConfigPath = specmaticConfigPath,
             timeoutMillis = gracefulRestartTimeoutInMs,
-            baseUrl = baseUrl
+            pathPrefix = pathPrefix
         ).also {
             consoleLog(NewLineLogMessage)
             val protocol = if (keyStoreData != null) "https" else "http"
             consoleLog(
                 StringLog(
-                    "Stub server is running on ${protocol}://${host}:$port${baseUrl?.let { "/${it.trim('/')}" }.orEmpty()}. Ctrl + C to stop."
+                    "Stub server is running on ${protocol}://${host}:$port${
+                        pathPrefix?.let { "/${it.trim('/')}" }.orEmpty()
+                    }. Ctrl + C to stop."
                 )
             )
         }

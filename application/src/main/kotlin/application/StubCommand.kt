@@ -5,7 +5,7 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
-import io.specmatic.core.utilities.Flags.Companion.BASE_URL
+import io.specmatic.core.utilities.Flags.Companion.PATH_PREFIX
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
 import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
@@ -48,22 +48,31 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--port"], description = ["Port for the http stub"], defaultValue = DEFAULT_HTTP_STUB_PORT)
     var port: Int = 0
 
-    @Option(names = ["--baseURL"], description = ["The base URL, use this instead of host and port"], defaultValue = "")
-    lateinit var baseURL: String
+    @Option(names = ["--pathPrefix"], description = ["Path prefix to actual url"], defaultValue = "")
+    lateinit var pathPrefix: String
 
     @Option(names = ["--strict"], description = ["Start HTTP stub in strict mode"], required = false)
     var strictMode: Boolean = false
 
-    @Option(names = ["--passThroughTargetBase"], description = ["All requests that did not match a url in any contract will be forwarded to this service"])
+    @Option(
+        names = ["--passThroughTargetBase"],
+        description = ["All requests that did not match a url in any contract will be forwarded to this service"]
+    )
     var passThroughTargetBase: String = ""
 
     @Option(names = ["--httpsKeyStore"], description = ["Run the proxy on https using a key in this store"])
     var keyStoreFile = ""
 
-    @Option(names = ["--httpsKeyStoreDir"], description = ["Run the proxy on https, create a store named $APPLICATION_NAME_LOWER_CASE.jks in this directory"])
+    @Option(
+        names = ["--httpsKeyStoreDir"],
+        description = ["Run the proxy on https, create a store named $APPLICATION_NAME_LOWER_CASE.jks in this directory"]
+    )
     var keyStoreDir = ""
 
-    @Option(names = ["--httpsKeyStorePassword"], description = ["Run the proxy on https, password for pre-existing key store"])
+    @Option(
+        names = ["--httpsKeyStorePassword"],
+        description = ["Run the proxy on https, password for pre-existing key store"]
+    )
     var keyStorePassword = "forgotten"
 
     @Option(names = ["--httpsKeyAlias"], description = ["Run the proxy on https using a key by this name"])
@@ -75,7 +84,10 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--debug"], description = ["Debug logs"])
     var verbose = false
 
-    @Option(names = ["--config"], description = ["Configuration file name ($APPLICATION_NAME_LOWER_CASE.json by default)"])
+    @Option(
+        names = ["--config"],
+        description = ["Configuration file name ($APPLICATION_NAME_LOWER_CASE.json by default)"]
+    )
     var configFileName: String? = null
 
     @Option(names = ["--textLog"], description = ["Directory in which to write a text log"])
@@ -96,7 +108,10 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--delay-in-ms"], description = ["Stub response delay in milliseconds"])
     var delayInMilliseconds: Long = 0
 
-    @Option(names = ["--graceful-restart-timeout-in-ms"], description = ["Time to wait for the server to stop before starting it again"])
+    @Option(
+        names = ["--graceful-restart-timeout-in-ms"],
+        description = ["Time to wait for the server to stop before starting it again"]
+    )
     var gracefulRestartTimeoutInMs: Long = 1000
 
     @Autowired
@@ -108,7 +123,7 @@ class StubCommand : Callable<Unit> {
     @Autowired
     val httpClientFactory = HttpClientFactory()
 
-    private var contractSources:List<ContractPathData> = emptyList()
+    private var contractSources: List<ContractPathData> = emptyList()
 
     var specmaticConfigPath: String? = null
 
@@ -116,12 +131,12 @@ class StubCommand : Callable<Unit> {
         if (delayInMilliseconds > 0) {
             System.setProperty(SPECMATIC_STUB_DELAY, delayInMilliseconds.toString())
         }
-        if(baseURL.isNotEmpty())
-        System.setProperty(BASE_URL,baseURL)
+        if (pathPrefix.isNotEmpty())
+            System.setProperty(PATH_PREFIX, pathPrefix)
 
         val logPrinters = configureLogPrinters()
 
-        logger = if(verbose)
+        logger = if (verbose)
             Verbose(CompositePrinter(logPrinters))
         else
             NonVerbose(CompositePrinter(logPrinters))
@@ -139,6 +154,7 @@ class StubCommand : Callable<Unit> {
                     specmaticConfigPath = File(Configuration.configFilePath).canonicalPath
                     specmaticConfig.contractStubPathData()
                 }
+
                 else -> contractPaths.map {
                     ContractPathData("", it)
                 }
@@ -148,7 +164,7 @@ class StubCommand : Callable<Unit> {
             validateContractFileExtensions(contractPaths, fileOperations)
             startServer()
 
-            if(httpStub != null) {
+            if (httpStub != null) {
                 addShutdownHook()
                 val watcher = watchMaker.make(contractPaths.plus(exampleDirs))
                 watcher.watchForChanges {
@@ -189,7 +205,7 @@ class StubCommand : Callable<Unit> {
 
     private fun startServer() {
         val workingDirectory = WorkingDirectory()
-        if(strictMode) throwExceptionIfDirectoriesAreInvalid(exampleDirs, "example directories")
+        if (strictMode) throwExceptionIfDirectoriesAreInvalid(exampleDirs, "example directories")
         val stubData = stubLoaderEngine.loadStubs(contractSources, exampleDirs, specmaticConfigPath, strictMode)
 
         val certInfo = CertInfo(keyStoreFile, keyStoreDir, keyStorePassword, keyStoreAlias, keyPassword)
@@ -198,12 +214,24 @@ class StubCommand : Callable<Unit> {
             true -> if (portIsInUse(host, port)) findRandomFreePort() else port
             false -> port
         }
-        httpStub = httpStubEngine.runHTTPStub(stubData, host, port, certInfo, strictMode, passThroughTargetBase, specmaticConfigPath, httpClientFactory, workingDirectory, gracefulRestartTimeoutInMs,baseURL)
+        httpStub = httpStubEngine.runHTTPStub(
+            stubData,
+            host,
+            port,
+            certInfo,
+            strictMode,
+            passThroughTargetBase,
+            specmaticConfigPath,
+            httpClientFactory,
+            workingDirectory,
+            gracefulRestartTimeoutInMs,
+            pathPrefix
+        )
 
         LogTail.storeSnapshot()
     }
 
-    private fun isDefaultPort(port:Int): Boolean {
+    private fun isDefaultPort(port: Int): Boolean {
         return DEFAULT_HTTP_STUB_PORT == port.toString()
     }
 
@@ -213,10 +241,12 @@ class StubCommand : Callable<Unit> {
             stopServer()
             consoleLog(StringLog("Stopped."))
         } catch (e: Throwable) {
-            consoleLog(e,"Error stopping server")
+            consoleLog(e, "Error stopping server")
         }
 
-        try { startServer() } catch (e: Throwable) {
+        try {
+            startServer()
+        } catch (e: Throwable) {
             consoleLog(e, "Error starting server")
         }
     }

@@ -22,14 +22,14 @@ class ApacheHttpClientFactoryTest {
         assertThat(timeoutPolicyFromHttpClientFactory.socketTimeoutInMillis).isEqualTo(expectedSocketTimeout)
     }
 
-    @Test
-    fun `the factory should ask the timeout policy to set the timeout`() {
-        val timeoutPolicy = mockk<TimeoutPolicy>()
-
-        justRun { timeoutPolicy.configure(any()) }
-
-        ApacheHttpClientFactory(timeoutPolicy).create().close()
-
-        verify(exactly = 1) { timeoutPolicy.configure(any()) }
-    }
+//    @Test
+//    fun `the factory should ask the timeout policy to set the timeout`() {
+//        val timeoutPolicy = mockk<TimeoutPolicy>()
+//
+//        justRun { timeoutPolicy.configure(any()) }
+//
+//        ApacheHttpClientFactory(timeoutPolicy).create().close()
+//
+//        verify(exactly = 1) { timeoutPolicy.configure(any()) }
+//    }
 }

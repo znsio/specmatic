@@ -70,179 +70,167 @@ class ExamplesInteractiveServer(
         return request?.hostPort ?: "http://localhost:$serverPort"
     }
 
-    private val environment = applicationEngineEnvironment {
-        module {
-            install(CORS) {
-                allowMethod(HttpMethod.Options)
-                allowMethod(HttpMethod.Post)
-                allowMethod(HttpMethod.Get)
-                allowHeader(HttpHeaders.AccessControlAllowOrigin)
-                allowHeader(HttpHeaders.ContentType)
-                anyHost()
+    private val server: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> = embeddedServer(Netty, port = 8080) {
+        install(CORS) {
+            allowMethod(HttpMethod.Options)
+            allowMethod(HttpMethod.Post)
+            allowMethod(HttpMethod.Get)
+            allowHeader(HttpHeaders.AccessControlAllowOrigin)
+            allowHeader(HttpHeaders.ContentType)
+            anyHost()
+        }
+
+        install(ContentNegotiation) {
+            jackson {}
+        }
+
+        configureHealthCheckModule()
+
+        routing {
+            get("/_specmatic/examples") {
+                val contractFile = getContractFileOrBadRequest(call) ?: return@get
+                try {
+                    respondWithExamplePageHtmlContent(contractFile, getServerHostPort(), call)
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, exceptionCauseMessage(e))
+                }
             }
 
-            install(ContentNegotiation) {
-                jackson {}
+            post("/_specmatic/examples") {
+                val request = call.receive<ExamplePageRequest>()
+                contractFileFromRequest = File(request.contractFile)
+                val contractFile = getContractFileOrBadRequest(call) ?: return@post
+                try {
+                    respondWithExamplePageHtmlContent(contractFile,getServerHostPort(request), call)
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, exceptionCauseMessage(e))
+                }
             }
 
-            configureHealthCheckModule()
-            routing {
-                get("/_specmatic/examples") {
-                    val contractFile = getContractFileOrBadRequest(call) ?: return@get
-                    try {
-                        respondWithExamplePageHtmlContent(contractFile, getServerHostPort(), call)
-                    } catch (e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, exceptionCauseMessage(e))
-                    }
-                }
+            post("/_specmatic/examples/generate") {
+                val contractFile = getContractFile()
 
-                post("/_specmatic/examples") {
-                    val request = call.receive<ExamplePageRequest>()
-                    contractFileFromRequest = File(request.contractFile)
-                    val contractFile = getContractFileOrBadRequest(call) ?: return@post
-                    try {
-                        respondWithExamplePageHtmlContent(contractFile,getServerHostPort(request), call)
-                    } catch (e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, exceptionCauseMessage(e))
-                    }
-                }
+                try {
+                    val request = call.receive<GenerateExampleRequest>()
+                    val generatedExample = generate(
+                        contractFile,
+                        request.method,
+                        request.path,
+                        request.responseStatusCode,
+                        request.contentType,
+                        request.bulkMode,
+                        allowOnlyMandatoryKeysInJSONObject,
+                    )
 
-                post("/_specmatic/examples/generate") {
+                    call.respond(HttpStatusCode.OK, GenerateExampleResponse.from(generatedExample))
+                } catch(e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
+                }
+            }
+
+            post("/_specmatic/examples/validate") {
+                val request = call.receive<ValidateExampleRequest>()
+                try {
+                    val contractFile = getContractFile()
+                    val validationResultResponse = try {
+                        val result = validateSingleExample(contractFile, File(request.exampleFile))
+                        if(result.isSuccess())
+                            ValidateExampleResponse(request.exampleFile)
+                        else
+                            ValidateExampleResponse(request.exampleFile, result.reportString())
+                    } catch (e: FileNotFoundException) {
+                        ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
+                    } catch (e: ContractException) {
+                        ValidateExampleResponse(request.exampleFile, exceptionCauseMessage(e))
+                    } catch (e: Exception) {
+                        ValidateExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
+                    }
+                    call.respond(HttpStatusCode.OK, validationResultResponse)
+                } catch(e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
+                }
+            }
+
+            post("/_specmatic/v2/examples/validate") {
+                val request = call.receive<List<ValidateExampleRequest>>()
+                try {
                     val contractFile = getContractFile()
 
-                    try {
-                        val request = call.receive<GenerateExampleRequest>()
-                        val generatedExample = generate(
-                            contractFile,
-                            request.method,
-                            request.path,
-                            request.responseStatusCode,
-                            request.contentType,
-                            request.bulkMode,
-                            allowOnlyMandatoryKeysInJSONObject,
-                        )
-
-                        call.respond(HttpStatusCode.OK, GenerateExampleResponse.from(generatedExample))
-                    } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
+                    val examples = request.associate {
+                        val exampleFilePath = it.exampleFile
+                        exampleFilePath to listOf(ScenarioStub.readFromFile(File(exampleFilePath)))
                     }
-                }
 
-                post("/_specmatic/examples/validate") {
-                    val request = call.receive<ValidateExampleRequest>()
-                    try {
-                        val contractFile = getContractFile()
-                        val validationResultResponse = try {
-                            val result = validateSingleExample(contractFile, File(request.exampleFile))
-                            if(result.isSuccess())
-                                ValidateExampleResponse(request.exampleFile)
-                            else
-                                ValidateExampleResponse(request.exampleFile, result.reportString())
-                        } catch (e: FileNotFoundException) {
-                            ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
+                    val results = validateExamples(contractFile, examples = examples)
+
+                    val validationResults = results.map { (exampleFilePath, result) ->
+                        try {
+                            result.throwOnFailure()
+                            ValidateExampleResponseV2(
+                                ValidateExampleVerdict.SUCCESS,
+                                "The provided example is valid",
+                                exampleFilePath
+                            )
                         } catch (e: ContractException) {
-                            ValidateExampleResponse(request.exampleFile, exceptionCauseMessage(e))
+                            ValidateExampleResponseV2(
+                                ValidateExampleVerdict.FAILURE,
+                                exceptionCauseMessage(e),
+                                exampleFilePath
+                            )
                         } catch (e: Exception) {
-                            ValidateExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
+                            ValidateExampleResponseV2(
+                                ValidateExampleVerdict.FAILURE,
+                                e.message ?: "An unexpected error occurred",
+                                exampleFilePath
+                            )
                         }
-                        call.respond(HttpStatusCode.OK, validationResultResponse)
-                    } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
+
+                    call.respond(HttpStatusCode.OK, validationResults)
+                } catch(e: Exception) {
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
+                }
+            }
+
+            get("/_specmatic/examples/content") {
+                val fileName = call.request.queryParameters["fileName"]
+                if(fileName == null) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request. Missing required query param named 'fileName'"))
+                    return@get
+                }
+                val file = File(fileName)
+                if(file.exists().not() || file.extension != "json") {
+                    val message = if(file.extension == "json") "The provided example file ${file.name} does not exist"
+                    else "The provided example file ${file.name} is not a valid example file"
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to message))
+                    return@get
+                }
+                call.respond(
+                    HttpStatusCode.OK,
+                    mapOf("content" to File(fileName).readText())
+                )
+            }
+
+            post ("/_specmatic/examples/test") {
+                if (testBaseUrl.isNullOrEmpty()) {
+                    return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request, No Test Base URL provided via command-line"))
                 }
 
-                post("/_specmatic/v2/examples/validate") {
-                    val request = call.receive<List<ValidateExampleRequest>>()
-                    try {
-                        val contractFile = getContractFile()
+                val request = call.receive<ExampleTestRequest>()
+                try {
+                    val feature = parseContractFileToFeature(getContractFile())
 
-                        val examples = request.associate {
-                            val exampleFilePath = it.exampleFile
-                            exampleFilePath to listOf(ScenarioStub.readFromFile(File(exampleFilePath)))
-                        }
+                    val contractTest = feature.createContractTestFromExampleFile(request.exampleFile).value
 
-                        val results = validateExamples(contractFile, examples = examples)
+                    val (result, testLog) = testExample(contractTest, testBaseUrl)
 
-                        val validationResults = results.map { (exampleFilePath, result) ->
-                            try {
-                                result.throwOnFailure()
-                                ValidateExampleResponseV2(
-                                    ValidateExampleVerdict.SUCCESS,
-                                    "The provided example is valid",
-                                    exampleFilePath
-                                )
-                            } catch (e: ContractException) {
-                                ValidateExampleResponseV2(
-                                    ValidateExampleVerdict.FAILURE,
-                                    exceptionCauseMessage(e),
-                                    exampleFilePath
-                                )
-                            } catch (e: Exception) {
-                                ValidateExampleResponseV2(
-                                    ValidateExampleVerdict.FAILURE,
-                                    e.message ?: "An unexpected error occurred",
-                                    exampleFilePath
-                                )
-                            }
-                        }
-
-                        call.respond(HttpStatusCode.OK, validationResults)
-                    } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
-                    }
-                }
-
-                get("/_specmatic/examples/content") {
-                    val fileName = call.request.queryParameters["fileName"]
-                    if(fileName == null) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request. Missing required query param named 'fileName'"))
-                        return@get
-                    }
-                    val file = File(fileName)
-                    if(file.exists().not() || file.extension != "json") {
-                        val message = if(file.extension == "json") "The provided example file ${file.name} does not exist"
-                        else "The provided example file ${file.name} is not a valid example file"
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to message))
-                        return@get
-                    }
-                    call.respond(
-                        HttpStatusCode.OK,
-                        mapOf("content" to File(fileName).readText())
-                    )
-                }
-
-                post ("/_specmatic/examples/test") {
-                    if (testBaseUrl.isNullOrEmpty()) {
-                        return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request, No Test Base URL provided via command-line"))
-                    }
-
-                    val request = call.receive<ExampleTestRequest>()
-                    try {
-                        val feature = parseContractFileToFeature(getContractFile())
-
-                        val contractTest = feature.createContractTestFromExampleFile(request.exampleFile).value
-
-                        val (result, testLog) = testExample(contractTest, testBaseUrl)
-
-                        call.respond(HttpStatusCode.OK, ExampleTestResponse(result, testLog, exampleFile = File(request.exampleFile)))
-                    } catch (e: Throwable) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
-                    }
+                    call.respond(HttpStatusCode.OK, ExampleTestResponse(result, testLog, exampleFile = File(request.exampleFile)))
+                } catch (e: Throwable) {
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                 }
             }
         }
-        connector {
-            this.host = serverHost
-            this.port = serverPort
-        }
-    }
-
-    private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {
-        this.requestQueueLimit = 1000
-        this.callGroupSize = 5
-        this.connectionGroupSize = 20
-        this.workerGroupSize = 20
-    })
+    }.start(wait = true)
 
     init {
         server.start()

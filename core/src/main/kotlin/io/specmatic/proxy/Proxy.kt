@@ -35,6 +35,16 @@ import kotlinx.coroutines.withContext
 import java.io.Closeable
 import java.net.URI
 import java.net.URL
+import io.ktor.server.plugins.statuspages.*
+import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.call
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.server.response.respond
+import io.ktor.server.application.ApplicationCall
+import io.ktor.server.application.*
+
 
 class Proxy(host: String, port: Int, baseURL: String, private val outputDirectory: FileWriter, keyData: KeyData? = null, timeoutInMilliseconds: Long = DEFAULT_TIMEOUT_IN_MILLISECONDS): Closeable {
     constructor(host: String, port: Int, baseURL: String, proxySpecmaticDataDir: String, keyData: KeyData? = null, timeoutInMilliseconds: Long) : this(host, port, baseURL, RealFileWriter(proxySpecmaticDataDir), keyData, timeoutInMilliseconds)
@@ -48,88 +58,6 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
         }
     }
 
-    private val environment = applicationEngineEnvironment {
-        module {
-            intercept(ApplicationCallPipeline.Call) {
-                try {
-                    val httpRequest = ktorHttpRequestToHttpRequest(call)
-
-                    if(httpRequest.isHealthCheckRequest()) return@intercept
-                    if(httpRequest.isDumpRequest()) return@intercept
-
-                    when (httpRequest.method?.uppercase()) {
-                        "CONNECT" -> {
-                            val errorResponse = HttpResponse(400, "CONNECT is not supported")
-                            println(
-                                listOf(httpRequestLog(httpRequest), httpResponseLog(errorResponse)).joinToString(
-                                    System.lineSeparator()
-                                )
-                            )
-                            respondToKtorHttpResponse(call, errorResponse)
-                        }
-
-                        else -> try {
-                            val client = HttpClient(proxyURL(httpRequest, baseURL), timeoutInMilliseconds = timeoutInMilliseconds)
-
-                            val requestToSend = targetHost?.let {
-                                httpRequest.withHost(targetHost)
-                            } ?: httpRequest
-
-                            val httpResponse = client.execute(requestToSend)
-
-                            val name =
-                                "${httpRequest.method} ${httpRequest.path}${toQueryString(httpRequest.queryParams.asMap())}"
-                            stubs.add(
-                                NamedStub(
-                                    name,
-                                    uniqueNameForApiOperation(httpRequest, baseURL, httpResponse.status),
-                                    ScenarioStub(
-                                        httpRequest.withoutDynamicHeaders(),
-                                        httpResponse.withoutDynamicHeaders()
-                                    )
-                                )
-                            )
-
-                            respondToKtorHttpResponse(call, withoutContentEncodingGzip(httpResponse))
-                        } catch (e: Throwable) {
-                            logger.log(e)
-                            val errorResponse =
-                                HttpResponse(500, exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString())
-                            respondToKtorHttpResponse(call, errorResponse)
-                            logger.debug(
-                                listOf(
-                                    httpRequestLog(httpRequest),
-                                    httpResponseLog(errorResponse)
-                                ).joinToString(System.lineSeparator())
-                            )
-                        }
-                    }
-                } catch (e: Throwable) {
-                    logger.log(e)
-                    val errorResponse =
-                        HttpResponse(500, exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString())
-                    respondToKtorHttpResponse(call, errorResponse)
-                }
-            }
-
-            configureHealthCheckModule()
-
-            routing {
-                post(DUMP_ENDPOINT) { handleDumpRequest(call) }
-            }
-        }
-
-        when (keyData) {
-            null -> connector {
-                this.host = host
-                this.port = port
-            }
-            else -> sslConnector(keyStore = keyData.keyStore, keyAlias = keyData.keyAlias, privateKeyPassword = { keyData.keyPassword.toCharArray() }, keyStorePassword = { keyData.keyPassword.toCharArray() }) {
-                this.host = host
-                this.port = port
-            }
-        }
-    }
 
     private fun toQueryString(queryParams: Map<String, String>): String {
         return queryParams.entries.joinToString("&") { entry ->
@@ -150,12 +78,52 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
         }
     }
 
-    private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {
-        this.requestQueueLimit = 1000
-        this.callGroupSize = 5
-        this.connectionGroupSize = 20
-        this.workerGroupSize = 20
-    })
+    val server = embeddedServer(
+        Netty,
+        port = 8080,
+        host = "0.0.0.0",
+        module = {
+            intercept(ApplicationCallPipeline.Plugins) {
+                val httpRequest = ktorHttpRequestToHttpRequest(call)
+
+                if (httpRequest.isHealthCheckRequest()) return@intercept
+                if (httpRequest.isDumpRequest()) return@intercept
+
+                when (httpRequest.method?.uppercase()) {
+                    "CONNECT" -> {
+                        val errorResponse = HttpResponse(400, "CONNECT is not supported")
+                        println(
+                            listOf(httpRequestLog(httpRequest), httpResponseLog(errorResponse)).joinToString(
+                                System.lineSeparator()
+                            )
+                        )
+                        respondToKtorHttpResponse(call, errorResponse)
+                    }
+                    else -> {
+                        try {
+                            val client = HttpClient(proxyURL(httpRequest, baseURL), timeoutInMilliseconds = timeoutInMilliseconds)
+                            val requestToSend = targetHost?.let {
+                                httpRequest.withHost(targetHost)
+                            } ?: httpRequest
+                            val httpResponse = client.execute(requestToSend)
+                            respondToKtorHttpResponse(call, withoutContentEncodingGzip(httpResponse))
+                        } catch (e: Throwable) {
+                            logger.log(e)
+                            val errorResponse = HttpResponse(500, exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString())
+                            respondToKtorHttpResponse(call, errorResponse)
+                        }
+                    }
+                }
+            }
+
+            routing {
+                post(DUMP_ENDPOINT) { handleDumpRequest(call) }
+            }
+
+        }
+
+    )
+
 
     private fun proxyURL(httpRequest: HttpRequest, baseURL: String): String {
         return when {

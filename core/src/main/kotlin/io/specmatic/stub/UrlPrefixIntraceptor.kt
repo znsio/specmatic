@@ -12,7 +12,7 @@ class UrlPrefixIntraceptor : RequestInterceptor {
         val decodedPath = urlDecodePathSegments(httpRequest.path!!, baseUrl)
         return httpRequest.copy(path = decodedPath)
     }
-    private fun urlDecodePathSegments(url: String, baseURL: String): String {
+    private fun urlDecodePathSegments(url: String, baseURL: String?): String {
         val normalizedBaseURL = baseURL?.let { "/${it.trim('/')}" }
         val relativePath = getRelativePath(url, normalizedBaseURL)
 

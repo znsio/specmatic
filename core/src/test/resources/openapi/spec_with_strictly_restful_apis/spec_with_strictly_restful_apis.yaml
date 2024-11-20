@@ -15,6 +15,15 @@ paths:
           schema:
             type: string
           description: Specify which fields to retrieve in the response
+        - in: query
+          name: name
+          schema:
+            type: string
+        - in: query
+          name: price
+          schema:
+            type: number
+            format: float
       responses:
         '200':
           description: A list of products

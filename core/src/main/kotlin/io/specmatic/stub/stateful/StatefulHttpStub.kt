@@ -276,7 +276,11 @@ class StatefulHttpStub(
         }
 
         if(method == "GET" && pathSegments.size == 1) {
-            val responseBody = stubCache.findAllResponsesFor(resourcePath, attributeSelectionKeys)
+            val responseBody = stubCache.findAllResponsesFor(
+                resourcePath,
+                attributeSelectionKeys,
+                httpRequest.queryParams.asMap()
+            )
             return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
         }
 

@@ -2,6 +2,7 @@ package io.specmatic.stub.stateful
 
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.Value
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -39,9 +40,17 @@ class StubCache {
         }
     }
 
-    fun findAllResponsesFor(path: String, attributeSelectionKeys: Set<String>): JSONArrayValue = lock.withLock {
-        val responseBodies = cachedResponses.filter { it.path == path }.map {
-            it.responseBody.removeKeysNotPresentIn(attributeSelectionKeys)
+    fun findAllResponsesFor(
+        path: String,
+        attributeSelectionKeys: Set<String>,
+        filter: Map<String, String> = emptyMap()
+    ): JSONArrayValue = lock.withLock {
+        val responseBodies = cachedResponses.filter {
+            it.path == path
+        }.map{ it.responseBody }.filter {
+            it.jsonObject.satisfiesFilter(filter)
+        }.map {
+            it.removeKeysNotPresentIn(attributeSelectionKeys)
         }
         return JSONArrayValue(responseBodies)
     }
@@ -50,6 +59,16 @@ class StubCache {
         val existingResponse = findResponseFor(path, idKey, idValue) ?: return
         lock.withLock {
             cachedResponses.remove(existingResponse)
+        }
+    }
+
+    private fun Map<String, Value>.satisfiesFilter(filter: Map<String, String>): Boolean {
+        if(filter.isEmpty()) return true
+
+        return filter.all { (key, filterValue) ->
+            if(this.containsKey(key).not()) return@all true
+            val actualValue = this[key] ?: return@all false
+            actualValue.toStringLiteral() == filterValue
         }
     }
 }

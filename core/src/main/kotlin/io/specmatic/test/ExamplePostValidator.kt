@@ -4,7 +4,6 @@ import io.specmatic.core.*
 import io.specmatic.core.pattern.Row
 import io.specmatic.core.value.*
 import io.specmatic.test.asserts.Assert
-import io.specmatic.test.asserts.isKeyAssert
 import io.specmatic.test.asserts.parsedAssert
 
 object ExamplePostValidator: ResponseValidator {
@@ -61,38 +60,4 @@ object ExamplePostValidator: ResponseValidator {
             onComposite = { value, key -> mapOf(key to value) }
         ) + headers
     }
-}
-
-internal fun <T> Value.traverse(
-    prefix: String = "", onScalar: (Value, String) -> Map<String, T>,
-    onComposite: ((Value, String) -> Map<String, T>)? = null, onAssert: ((Value, String) ->  Map<String, T>)? = null
-): Map<String, T> {
-    return when (this) {
-        is JSONObjectValue -> this.traverse(prefix, onScalar, onComposite, onAssert)
-        is JSONArrayValue ->  this.traverse(prefix, onScalar, onComposite, onAssert)
-        is ScalarValue -> onScalar(this, prefix)
-        else -> emptyMap()
-    }.filterValues { it != null }
-}
-
-private fun <T> JSONObjectValue.traverse(
-    prefix: String = "", onScalar: (Value, String) -> Map<String, T>,
-    onComposite: ((Value, String) -> Map<String, T>)? = null, onAssert: ((Value, String) ->  Map<String, T>)? = null
-): Map<String, T> {
-    return this.jsonObject.entries.flatMap { (key, value) ->
-        val fullKey = if (prefix.isNotEmpty()) "$prefix.$key" else key
-        key.isKeyAssert {
-            onAssert?.invoke(value, fullKey)?.entries.orEmpty()
-        } ?: value.traverse(fullKey, onScalar, onComposite, onAssert).entries
-    }.associate { it.toPair() } + onComposite?.invoke(this, prefix).orEmpty()
-}
-
-private fun <T> JSONArrayValue.traverse(
-    prefix: String = "", onScalar: (Value, String) -> Map<String, T>,
-    onComposite: ((Value, String) -> Map<String, T>)? = null, onAssert: ((Value, String) ->  Map<String, T>)? = null
-): Map<String, T> {
-    return this.list.mapIndexed { index, value ->
-        val fullKey = if (onAssert != null) { prefix } else "$prefix[$index]"
-        value.traverse(fullKey, onScalar, onComposite, onAssert)
-    }.flatMap { it.entries }.associate { it.toPair() } + onComposite?.invoke(this, prefix).orEmpty()
 }

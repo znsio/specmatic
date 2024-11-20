@@ -500,9 +500,8 @@ data class HttpRequestPattern(
     private fun HttpRequest.generateAndUpdateBody(resolver: Resolver, body: Pattern): HttpRequest {
         return attempt(breadCrumb = "BODY") {
             resolver.withCyclePrevention(body) {cyclePreventedResolver ->
-                body.generate(cyclePreventedResolver).let { value ->
-                    this.updateBody(value)
-                }
+                val generatedValue = body.generate(cyclePreventedResolver)
+                this.updateBody(generatedValue)
             }
         }
     }

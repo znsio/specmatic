@@ -1,6 +1,7 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.IgnoreUnexpectedKeys
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.SCHEMA_EXAMPLE_DEFAULT
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 
@@ -60,5 +61,5 @@ val DefaultStrategies = FlagsBased (
     null,
     "",
     "",
-    false
+    Flags.getBooleanValue(Flags.ALL_PATTERNS_MANDATORY, false)
 )

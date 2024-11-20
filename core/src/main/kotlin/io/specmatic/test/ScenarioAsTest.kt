@@ -130,8 +130,7 @@ data class ScenarioAsTest(
     ): Result {
 
         val result = when {
-            response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral())
-                .updateScenario(testScenario)
+            response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral()).updateScenario(testScenario)
             else -> testScenario.matches(request, response, ContractAndResponseMismatch, flagsBased?.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
         }
 

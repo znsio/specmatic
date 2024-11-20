@@ -15,7 +15,7 @@ class AssertComparison(override val prefix: String, override val key: String, va
         val results = dynamicList.map { newAssert ->
             val finalKey = "${newAssert.prefix}.${newAssert.key}"
             val actualValue = currentFactStore[finalKey] ?: return@map Result.Failure(breadCrumb = finalKey, message = "Could not resolve $finalKey in current fact store")
-            assert(actualValue, expectedValue)
+            assert(finalKey, actualValue, expectedValue)
         }
 
         return results.toResult()
@@ -27,11 +27,15 @@ class AssertComparison(override val prefix: String, override val key: String, va
         }
     }
 
-    private fun assert(actualValue: Value, expectedValue: Value): Result {
+    private fun assert(finalKey: String, actualValue: Value, expectedValue: Value): Result {
         val match = actualValue.toStringLiteral() == expectedValue.toStringLiteral()
-        return when (isEqualityCheck) {
-            true -> if (match) Result.Success() else Result.Failure(breadCrumb = key, message = "Expected $actualValue to equal $expectedValue")
-            false -> if (!match) Result.Success() else Result.Failure(breadCrumb = key, message = "Expected $actualValue to not equal $expectedValue")
+        val success = match == isEqualityCheck
+        return if (success) { Result.Success() } else {
+            val message = if (isEqualityCheck) "equal" else "not equal"
+            Result.Failure(
+                breadCrumb = finalKey,
+                message = "Expected ${actualValue.displayableValue()} to $message ${expectedValue.displayableValue()}"
+            )
         }
     }
 

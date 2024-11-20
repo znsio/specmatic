@@ -19,12 +19,13 @@ class AssertArray(override val prefix: String, override val key: String, private
     }
 
     private fun assertArrayHas(prefixValue: JSONArrayValue, currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
+        val expectedValue = actualFactStore[lookupKey] ?: return Result.Failure(breadCrumb = lookupKey, message = "Could not resolve $lookupKey in actual fact store")
         val asserts = AssertComparison(prefix = prefix, key = key, lookupKey = lookupKey, isEqualityCheck = true).dynamicAsserts(prefixValue)
         val result = asserts.map { it.assert(currentFactStore, actualFactStore) }.toResultIfAny()
 
         return when (result) {
             is Result.Success -> Result.Success()
-            is Result.Failure -> Result.Failure("None of the values in $prefix matched $lookupKey of value ${actualFactStore[lookupKey]}", breadCrumb = lookupKey)
+            is Result.Failure -> Result.Failure("None of the values in $prefix[*].$key matched $lookupKey of value ${expectedValue.displayableValue()}", breadCrumb = prefix)
         }
     }
 

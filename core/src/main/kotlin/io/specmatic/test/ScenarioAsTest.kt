@@ -90,7 +90,7 @@ data class ScenarioAsTest(
         }.let { ExampleProcessor.resolve(it) }
 
         attempt(breadCrumb = "SUBSTITUTION-FAILURES") {
-            val result = testScenario.matches(request, emptyMap())
+            val result = originalScenario.matches(request, emptyMap())
             if (result is Result.Failure) throw ContractException(result.reportString())
         }
 

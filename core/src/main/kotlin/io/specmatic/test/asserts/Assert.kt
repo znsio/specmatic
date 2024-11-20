@@ -16,6 +16,10 @@ interface Assert {
         } else Result.Success()
     }
 
+    fun List<Result>.toResultIfAny(): Result {
+        return this.firstOrNull { it is Result.Success } ?: this.toResult()
+    }
+
     val prefix: String
     val key: String
 }

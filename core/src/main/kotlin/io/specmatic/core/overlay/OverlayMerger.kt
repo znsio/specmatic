@@ -23,22 +23,24 @@ class OverlayMerger {
             val documentContext = documentContextFor(rootNode)
 
 
-            overlay.updateMap.forEach { (jsonPath, content) ->
+            overlay.updateMap.forEach { (jsonPath, contentList) ->
                 val targetNodes = documentContext.read<List<Any>>(jsonPath)
                 val existingNode = if (targetNodes.isNotEmpty()) targetNodes[0] else null
 
-                when (existingNode) {
-                    is Map<*, *> -> {
-                        val mergedContent = (existingNode as Map<String, Any?>).toMutableMap()
-                        (content as Map<String, Any?>).forEach { (key, value) ->
-                            mergedContent[key] = value
+                contentList.forEach { content ->
+                    when (existingNode) {
+                        is Map<*, *> -> {
+                            val mergedContent = (existingNode as Map<String, Any?>).toMutableMap()
+                            (content as Map<String, Any?>).forEach { (key, value) ->
+                                mergedContent[key] = value
+                            }
+                            documentContext.set(jsonPath, mergedContent)
                         }
-                        documentContext.set(jsonPath, mergedContent)
+
+                        is List<*> -> documentContext.add(jsonPath, content)
+
+                        else -> documentContext.set(jsonPath, content)
                     }
-
-                    is List<*> -> documentContext.add(jsonPath, content)
-
-                    else -> documentContext.set(jsonPath, content)
                 }
             }
 

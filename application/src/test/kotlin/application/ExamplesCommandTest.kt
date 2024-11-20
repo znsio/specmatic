@@ -87,7 +87,7 @@ paths:
         println(output)
 
         assertThat(returnValue).isNotEqualTo(0)
-        assertThat(output).contains("No matching found for this example")
+        assertThat(output).contains("No matching specification found for this example")
     }
 
     @Test

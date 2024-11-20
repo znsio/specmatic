@@ -403,7 +403,7 @@ data class Feature(
         if(deepErrors.isNotEmpty())
             return Results(deepErrors)
 
-        return Results(listOf(Result.Failure("No matching found for this example")))
+        return Results(listOf(Result.Failure("No matching specification found for this example")))
     }
 
     fun matchResult(request: HttpRequest, response: HttpResponse): Result {
@@ -574,7 +574,9 @@ data class Feature(
     }
 
     private fun positiveTestScenarios(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =
-        scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
+        scenarios.asSequence().filter {
+            it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario
+        }.map {
             it.newBasedOn(suggestions)
         }.flatMap { originalScenario ->
             val resolverStrategies = if(originalScenario.isA2xxScenario())

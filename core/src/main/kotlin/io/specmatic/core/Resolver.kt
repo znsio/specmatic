@@ -44,7 +44,7 @@ data class Resolver(
     val dictionary: Map<String, Value> = emptyMap(),
     val dictionaryLookupPath: String = "",
     val jsonObjectResolver: JSONObjectResolver = JSONObjectResolver(),
-    val allPatternsAreMandatory: Boolean = Flags.getBooleanValue(Flags.ALL_PATTERNS_MANDATORY, false),
+    val allPatternsAreMandatory: Boolean = false,
     val patternsSeenSoFar: Set<String> = setOf(),
     val lookupPathsSeenSoFar: Set<String> = setOf(),
     val cycleMarker: String = "",

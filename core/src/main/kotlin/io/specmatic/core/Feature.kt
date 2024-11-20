@@ -37,7 +37,8 @@ fun parseContractFileToFeature(
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
     specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    overlayContent: String = ""
+    overlayContent: String = "",
+
 ): Feature {
     return parseContractFileToFeature(
         File(contractPath),
@@ -119,7 +120,8 @@ data class Feature(
     val serviceType:String? = null,
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig)
+    val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig),
+    val serverDetails :  List<Pair<String, String>> = emptyList()
 ): IFeature {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         val updatedSpecmaticConfig = specmaticConfig.copy(

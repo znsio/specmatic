@@ -221,7 +221,9 @@ class OpenApiSpecification(
 
     fun toFeature(): Feature {
         val name = File(openApiFilePath).name
-
+        val serverDetails = servers().map { server ->
+            server.url to server.description
+        }
         val (scenarioInfos, stubsFromExamples) = toScenarioInfos()
 
         return Feature(
@@ -231,7 +233,8 @@ class OpenApiSpecification(
             specification = specificationPath,
             serviceType = SERVICE_TYPE_HTTP,
             stubsFromExamples = stubsFromExamples,
-            specmaticConfig = specmaticConfig
+            specmaticConfig = specmaticConfig,
+            serverDetails = serverDetails
         )
     }
 
@@ -790,7 +793,7 @@ class OpenApiSpecification(
         }
 
     private fun openApiPaths() = parsedOpenApi.paths.orEmpty()
-
+    private fun servers() = parsedOpenApi.servers.orEmpty()
     private fun isNumber(value: String): Boolean {
         return value.toIntOrNull() != null
     }

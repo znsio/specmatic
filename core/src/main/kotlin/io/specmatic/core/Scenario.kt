@@ -160,10 +160,16 @@ data class Scenario(
     fun matchesStub(
         httpRequest: HttpRequest,
         serverState: Map<String, Value>,
-        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages,
+        unexpectedKeyCheck: UnexpectedKeyCheck? = null
     ): Result {
         val headersResolver = Resolver(serverState, false, patterns).copy(mismatchMessages = mismatchMessages)
-        val nonHeadersResolver = headersResolver.disableOverrideUnexpectedKeycheck()
+
+        val nonHeadersResolver = if(unexpectedKeyCheck != null) {
+            headersResolver.withUnexpectedKeyCheck(unexpectedKeyCheck)
+        } else {
+            headersResolver
+        }.disableOverrideUnexpectedKeycheck()
 
         return matches(httpRequest, serverState, nonHeadersResolver, headersResolver)
     }
@@ -207,6 +213,12 @@ data class Scenario(
 
             httpResponsePattern.generateResponseV2(updatedResolver)
         }
+
+    fun resolvedResponseBodyPattern(): Pattern {
+        return resolver.withCyclePrevention(httpResponsePattern.body) {
+            resolvedHop(httpResponsePattern.body, it)
+        }
+    }
 
     private fun combineFacts(
         expected: Map<String, Value>,
@@ -790,7 +802,7 @@ data class Scenario(
         )
     }
 
-    private fun getFieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams: QueryParameters?): Set<String> {
+    fun getFieldsToBeMadeMandatoryBasedOnAttributeSelection(queryParams: QueryParameters?): Set<String> {
         val defaultAttributeSelectionFields = attributeSelectionPattern.defaultFields.toSet()
         val attributeSelectionQueryParamKey =  attributeSelectionPattern.queryParamKey
 

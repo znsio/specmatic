@@ -1,0 +1,13 @@
+sources:
+  - provider: filesystem
+    stub:
+      - api.yaml
+
+virtual_service:
+  nonPatchableKeys:
+    - description
+
+attributeSelectionPattern:
+  defaultFields:
+    - id
+  queryParamKey: columns

@@ -212,12 +212,7 @@ data class Feature(
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): Pair<ResponseBuilder?, Results> {
         try {
-            val scenarioSequence = scenarios.asSequence()
-
-            val localCopyOfServerState = serverState
-            val resultList = scenarioSequence.zip(scenarioSequence.map {
-                it.matchesStub(httpRequest, localCopyOfServerState, mismatchMessages)
-            })
+            val resultList = matchingScenarioToResultList(httpRequest, serverState, mismatchMessages)
 
             return matchingScenario(resultList)?.let {
                 Pair(ResponseBuilder(it, serverState), Results())
@@ -232,6 +227,49 @@ data class Feature(
         } finally {
             serverState = emptyMap()
         }
+    }
+
+    fun stubResponseMap(
+        httpRequest: HttpRequest,
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages,
+        unexpectedKeyCheck: UnexpectedKeyCheck
+    ): Map<Int, Pair<ResponseBuilder?, Results>> {
+        try {
+            val resultList = matchingScenarioToResultList(httpRequest, serverState, mismatchMessages, unexpectedKeyCheck)
+            val matchingScenarios = matchingScenarios(resultList)
+
+            if(matchingScenarios.toList().isEmpty()) {
+                val results = Results(
+                    resultList.map { it.second }.toList()
+                ).withoutFluff()
+                return mapOf(
+                    400 to Pair(
+                        ResponseBuilder(null, serverState),
+                        results
+                    )
+                )
+            }
+
+            return matchingScenarios.map { (status, scenario) ->
+                status to Pair(ResponseBuilder(scenario, serverState), Results())
+            }.toMap()
+
+        } finally {
+            serverState = emptyMap()
+        }
+    }
+
+    private fun matchingScenarioToResultList(
+        httpRequest: HttpRequest,
+        serverState: Map<String, Value>,
+        mismatchMessages: MismatchMessages,
+        unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys
+    ): Sequence<Pair<Scenario, Result>> {
+        val scenarioSequence = scenarios.asSequence()
+
+        return scenarioSequence.zip(scenarioSequence.map {
+            it.matchesStub(httpRequest, serverState, mismatchMessages, unexpectedKeyCheck)
+        })
     }
 
     fun compatibilityLookup(httpRequest: HttpRequest, mismatchMessages: MismatchMessages = NewAndOldContractRequestMismatches): List<Pair<Scenario, Result>> {
@@ -273,6 +311,12 @@ data class Feature(
         return resultList.find {
             it.second is Result.Success
         }?.first
+    }
+
+    private fun matchingScenarios(resultList: Sequence<Pair<Scenario, Result>>): Sequence<Pair<Int, Scenario>> {
+        return resultList.filter { it.second is Result.Success }.map {
+            Pair(it.first.status, it.first)
+        }
     }
 
     private fun lookupScenario(
@@ -359,7 +403,7 @@ data class Feature(
         if(deepErrors.isNotEmpty())
             return Results(deepErrors)
 
-        return Results(listOf(Result.Failure("No matching found for this example")))
+        return Results(listOf(Result.Failure("No matching specification found for this example")))
     }
 
     fun matchResult(request: HttpRequest, response: HttpResponse): Result {
@@ -530,7 +574,9 @@ data class Feature(
     }
 
     private fun positiveTestScenarios(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =
-        scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
+        scenarios.asSequence().filter {
+            it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario
+        }.map {
             it.newBasedOn(suggestions)
         }.flatMap { originalScenario ->
             val resolverStrategies = if(originalScenario.isA2xxScenario())

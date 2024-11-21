@@ -20,9 +20,9 @@ class OverlayParserTest {
 
         val (updateMap, _) = OverlayParser.parse(overlayContent)
 
-        assertThat(updateMap["${'$'}.node1"]).isEqualTo("new content for node1")
-        assertThat(updateMap["${'$'}.node2.subnode"]).isEqualTo("new additional content for subnode")
-        assertThat(updateMap["${'$'}.node3"]).isEqualTo(
+        assertThat(updateMap["${'$'}.node1"]?.first()).isEqualTo("new content for node1")
+        assertThat(updateMap["${'$'}.node2.subnode"]?.first()).isEqualTo("new additional content for subnode")
+        assertThat(updateMap["${'$'}.node3"]?.first()).isEqualTo(
             mapOf(
                 "newField" to "updated value"
             )

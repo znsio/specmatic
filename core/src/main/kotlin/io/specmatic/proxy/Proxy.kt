@@ -134,9 +134,8 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
             routing {
                 post(DUMP_ENDPOINT) { handleDumpRequest(call) }
             }
+            if (keyData != null) {
             (environment.config as NettyApplicationEngine.Configuration).apply {
-                // Enable SSL for Netty
-                if (keyData != null) {
                     sslConnector(
                         keyStore = keyData.keyStore,
                         keyAlias = keyData.keyAlias,

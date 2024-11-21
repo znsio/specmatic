@@ -225,37 +225,39 @@ paths:
 
         HttpStub(contract).use { stub ->
             stub.setExpectation("""
-                {
-                    "http-request": {
-                        "method": "POST",
-                        "path": "/data",
-                        "body": {
-                            "item": "123"
-                        }
-                    },
-                    "http-response": {
-                        "status": 200,
-                        "body": "transient"
-                    },
-                    "http-stub-id": "123"
-                }
-            """.trimIndent())
+            {
+                "http-request": {
+                    "method": "POST",
+                    "path": "/data",
+                    "body": {
+                        "item": "123"
+                    }
+                },
+                "http-response": {
+                    "status": 200,
+                    "body": "transient"
+                },
+                "http-stub-id": "123",
+                "transient": true
+            }
+        """.trimIndent())
 
             stub.setExpectation("""
-                {
-                    "http-request": {
-                        "method": "POST",
-                        "path": "/data",
-                        "body": {
-                            "item": "123"
-                        }
-                    },
-                    "http-response": {
-                        "status": 200,
-                        "body": "non-transient"
+            {
+                "http-request": {
+                    "method": "POST",
+                    "path": "/data",
+                    "body": {
+                        "item": "123"
                     }
-                }
-            """.trimIndent())
+                },
+                "http-response": {
+                    "status": 200,
+                    "body": "non-transient"
+                },
+                "transient": false
+            }
+        """.trimIndent())
 
             val request = HttpRequest("POST", "/data", body = parsedJSON("""{"item": "123"}"""))
             val firstResponse = stub.client.execute(request)
@@ -268,6 +270,8 @@ paths:
             assertThat(thirdResponse.body.toStringLiteral()).isEqualTo("non-transient")
         }
     }
+
+
 
     @Test
     fun `SSE test`() {

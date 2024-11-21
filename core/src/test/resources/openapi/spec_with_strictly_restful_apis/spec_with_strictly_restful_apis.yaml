@@ -139,6 +139,8 @@ paths:
             type: string
           description: Specify which fields to retrieve in the response
       responses:
+        '202':
+          description: Product accepted successfully
         '204':
           description: Product deleted successfully
         '404':

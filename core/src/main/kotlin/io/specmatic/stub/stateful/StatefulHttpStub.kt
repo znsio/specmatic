@@ -225,8 +225,19 @@ class StatefulHttpStub(
     }
 
     private fun Map<Int, ResponseDetails>.responseWithStatusCodeStartingWith(value: String): ResponseDetails? {
+        val responseDetailMatchingPredicate: (Int, ResponseDetails) -> Boolean = { statusCode, responseDetails ->
+            statusCode.toString().startsWith(value) && responseDetails.successResponse != null
+        }
+
+        val non202Response = this.entries.filter {
+            it.key != 202
+        }.firstOrNull {
+            responseDetailMatchingPredicate(it.key, it.value)
+        }?.value
+        if(non202Response != null) return non202Response
+
         return this.entries.firstOrNull {
-            it.key.toString().startsWith(value) && it.value.successResponse != null
+            responseDetailMatchingPredicate(it.key, it.value)
         }?.value
     }
 

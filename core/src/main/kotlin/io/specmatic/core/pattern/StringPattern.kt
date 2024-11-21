@@ -17,7 +17,7 @@ import java.util.*
 
 
 data class
-StringPattern (
+StringPattern(
     override val typeAlias: String? = null,
     val minLength: Int? = null,
     val maxLength: Int? = null,
@@ -29,15 +29,16 @@ StringPattern (
             throw IllegalArgumentException("maxLength cannot be less than minLength")
         }
 
-        if(regex != null) {
+        if (regex != null) {
             val automaton: Automaton = RegExp(regex).toAutomaton()
-             val min = automaton.getShortestExample(true).length
-        when {
-            minLength != null && min < minLength ->
-                throw IllegalArgumentException("Invalid Regex - min cannot be less than regex least size")
-            maxLength != null && min > maxLength ->
-                throw IllegalArgumentException("Invalid Regex - min cannot be more than regex max size")
-        }
+            val min = automaton.getShortestExample(true).length
+            when {
+                minLength != null && min < minLength ->
+                    throw IllegalArgumentException("Invalid Regex - min cannot be less than regex least size")
+
+                maxLength != null && min > maxLength ->
+                    throw IllegalArgumentException("Invalid Regex - min cannot be more than regex max size")
+            }
         }
     }
 
@@ -57,7 +58,7 @@ StringPattern (
                     sampleData, resolver.mismatchMessages
                 )
 
-                if(regex != null && !Regex(regex).matches(sampleData.toStringLiteral())) {
+                if (regex != null && !Regex(regex).matches(sampleData.toStringLiteral())) {
                     return mismatchResult(
                         """string that matches regex /$regex/""",
                         sampleData,
@@ -67,6 +68,7 @@ StringPattern (
 
                 return Result.Success()
             }
+
             else -> mismatchResult("string", sampleData, resolver.mismatchMessages)
         }
     }
@@ -96,13 +98,14 @@ StringPattern (
         val defaultExample: Value? = resolver.resolveExample(example, this)
 
         return if (regex != null) {
-            handleRegex(defaultExample,resolver)
+            handleRegex(defaultExample, resolver)
         } else {
             defaultExample?.takeIf { it is StringValue }
                 ?: StringValue(randomString(patternMinLength))
         }
     }
-    private fun handleRegex(defaultExample: Value?,resolver: Resolver): Value {
+
+    private fun handleRegex(defaultExample: Value?, resolver: Resolver): Value {
         if (defaultExample == null) {
             val cleanedRegex = regex!!.removePrefix("^").removeSuffix("$")
             val randomValue = maxLength?.let {
@@ -132,7 +135,11 @@ StringPattern (
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
-    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(
+        row: Row,
+        resolver: Resolver,
+        config: NegativePatternConfiguration
+    ): Sequence<ReturnValue<Pattern>> {
         val current = this
 
         return sequence {

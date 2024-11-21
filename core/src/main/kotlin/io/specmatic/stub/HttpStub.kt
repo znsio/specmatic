@@ -1248,9 +1248,8 @@ fun endPointFromHostAndPort(
         else -> ":$port"
     }
 
-    serverUrlFromOpenSpecs?.let { return "$protocol://$host$computedPortString/${java.net.URL(it).path}"}
     pathPrefix?.let { return "$protocol://$host$computedPortString/${it.trim('/')}"}
-
+    serverUrlFromOpenSpecs?.let { return "$protocol://$host$computedPortString${java.net.URL(it).path}"}
     return "$protocol://$host$computedPortString"
 }
 

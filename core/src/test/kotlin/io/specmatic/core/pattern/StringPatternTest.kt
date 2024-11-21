@@ -72,45 +72,48 @@ internal class StringPatternTest {
 
     companion object {
         @JvmStatic
-        fun lengthTestValues(): Stream<Arguments> {
+        fun minLengthMaxLengthAndExpectedLength(): Stream<Arguments> {
             return Stream.of(
                 Arguments.of(null, 10, 5),
-                Arguments.of(null, 4, 4),
-                Arguments.of(1, 10, 5),
-                Arguments.of(1, 4, 4),
-                Arguments.of(1, 5, 5),
+                Arguments.of(null, 4, 1),
+                Arguments.of(1, 10, 1),
                 Arguments.of(5, 10, 5),
-                Arguments.of(6, 10, 6),
                 Arguments.of(6, null, 6),
-                Arguments.of(3, null, 5),
                 Arguments.of(null, null, 5)
+            )
+        }
+
+        @JvmStatic
+        fun regexMinLengthAndMaxLengthAndExpectedLength(): Stream<Arguments> {
+            return Stream.of(
+                Arguments.of("^[a-z]*\$", null, null, 5),
+                Arguments.of("^[a-z0-9]{6,}\$", 3, 10, 6),
+                Arguments.of(null, 1, 10, 1),
             )
         }
     }
 
     @ParameterizedTest
-    @MethodSource("lengthTestValues")
-    fun `generate string value of appropriate length matching minLength and maxLength parameters`(min: Int?, max: Int?, length: Int) {
+    @MethodSource("minLengthMaxLengthAndExpectedLength")
+    fun `generate string value as per minLength and maxLength`(min: Int?, max: Int?, expectedLengthOfGeneratedValue: Int) {
         val result = StringPattern(minLength = min, maxLength = max).generate(Resolver()) as StringValue
         val generatedLength = result.string.length
-        val patternMinLength: Int =
-            when {
-                min != null && min > 0 -> min
-                max != null && max < 5 -> 1
-                else -> 5
-            }
 
-        // If max is provided, ensure the generated length is within the range of min and max
-        if (max != null) {
-            // Ensure that the generated string length is between min (or 0 if min is null) and max
-            assertThat(generatedLength).isGreaterThanOrEqualTo(patternMinLength)
-            assertThat(generatedLength).isLessThanOrEqualTo(max)
-        } else {
-            // If max is not provided, ensure the generated length is at least the min (or randomStringDefaultLength if min is null)
-            assertThat(generatedLength).isGreaterThanOrEqualTo(patternMinLength)
-        }
+        assertThat(generatedLength).isGreaterThanOrEqualTo(expectedLengthOfGeneratedValue)
+        max?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
     }
 
+    @ParameterizedTest
+    @MethodSource("regexMinLengthAndMaxLengthAndExpectedLength")
+    fun `generate string value as per regex in conjunction with minLength and maxLength`(regex: String?, min: Int?, max: Int?, expectedLength: Int) {
+        val result = StringPattern(minLength = min, maxLength = max, regex = regex).generate(Resolver()) as StringValue
+        val generatedString = result.string
+        val generatedLength = generatedString.length
+
+        assertThat(generatedLength).isGreaterThanOrEqualTo(expectedLength)
+        max?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
+        regex?.let { assertThat(generatedString).matches(regex) }
+    }
 
     @Test
     fun `string should encompass enum of string`() {

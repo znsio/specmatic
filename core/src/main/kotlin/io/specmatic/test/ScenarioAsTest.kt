@@ -87,17 +87,19 @@ data class ScenarioAsTest(
     ): Pair<Result, HttpResponse?> {
         val request = testScenario.generateHttpRequest(flagsBased).let {
             workflow.updateRequest(it, originalScenario)
-        }.let { ExampleProcessor.resolve(it) }
-
-        attempt(breadCrumb = "SUBSTITUTION-FAILURES") {
-            val result = originalScenario.matches(request, emptyMap())
-            if (result is Result.Failure) throw ContractException(result.reportString())
         }
 
         return try {
+            val updatedRequest = ExampleProcessor.resolve(request)
+
+            val substitutionResult = originalScenario.matches(updatedRequest, emptyMap())
+            if (substitutionResult is Result.Failure) {
+                return Pair(substitutionResult.breadCrumb("SUBSTITUTION-FAILURES"), null)
+            }
+
             testExecutor.setServerState(testScenario.serverState)
-            testExecutor.preExecuteScenario(testScenario, request)
-            val response = testExecutor.execute(request)
+            testExecutor.preExecuteScenario(testScenario, updatedRequest)
+            val response = testExecutor.execute(updatedRequest)
             workflow.extractDataFrom(response, originalScenario)
 
             val validatorResult = validators.asSequence().map { it.validate(scenario, response) }.filterNotNull().firstOrNull()
@@ -105,15 +107,15 @@ data class ScenarioAsTest(
                 Pair(validatorResult.withBindings(testScenario.bindings, response), response)
             }
 
-            val testResult = testResult(request, response, testScenario, flagsBased)
+            val testResult = testResult(updatedRequest, response, testScenario, flagsBased)
             if (testResult is Result.Failure) {
                 return Pair(testResult.withBindings(testScenario.bindings, response), response)
             }
 
-            val postValidateResult = validators.asSequence().map { it.postValidate(testScenario, request, response) }.filterNotNull().firstOrNull()
+            val postValidateResult = validators.asSequence().map { it.postValidate(testScenario, updatedRequest, response) }.filterNotNull().firstOrNull()
             val result = postValidateResult ?: testResult
 
-            testScenario.exampleRow?.let { ExampleProcessor.store(it, request, response) }
+            testScenario.exampleRow?.let { ExampleProcessor.store(it, updatedRequest, response) }
             Pair(result.withBindings(testScenario.bindings, response), response)
         } catch (exception: Throwable) {
             Pair(

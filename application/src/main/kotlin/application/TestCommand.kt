@@ -158,8 +158,9 @@ For example:
     @Option(names = ["--overlay-file"], description = ["Overlay file for the specification"], required = false)
     var overlayFilePath: String? = null
 
-    @Option(names = ["--description"], description = ["The port to bind to"])
+    @Option(names = ["--description"], description = ["The server description to pickup the server url"])
     var description: String ?= null
+
     override fun call() = try {
         setParallelism()
 

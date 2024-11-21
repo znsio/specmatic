@@ -25,6 +25,7 @@ class HTTPStubEngine {
         workingDirectory: WorkingDirectory,
         gracefulRestartTimeoutInMs: Long,
         pathPrefix: String? = null,
+        serverDescription: String? = null
     ): HttpStub? {
         val features = stubs.map { it.first }
 
@@ -45,7 +46,8 @@ class HTTPStubEngine {
             workingDirectory = workingDirectory,
             specmaticConfigPath = specmaticConfigPath,
             timeoutMillis = gracefulRestartTimeoutInMs,
-            pathPrefix = pathPrefix
+            pathPrefix = pathPrefix,
+            serverDescription = serverDescription
         ).also {
             consoleLog(NewLineLogMessage)
             val protocol = if (keyStoreData != null) "https" else "http"

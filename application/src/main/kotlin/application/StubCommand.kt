@@ -6,6 +6,7 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.Flags.Companion.PATH_PREFIX
+import io.specmatic.core.utilities.Flags.Companion.SERVER_DESCRIPTION
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.exitIfAnyDoNotExist
 import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
@@ -48,8 +49,8 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--port"], description = ["Port for the http stub"], defaultValue = DEFAULT_HTTP_STUB_PORT)
     var port: Int = 0
 
-    @Option(names = ["--pathPrefix"], description = ["Path prefix to actual url"], defaultValue = "")
-    lateinit var pathPrefix: String
+    @Option(names = ["--pathPrefix"], description = ["Path prefix to actual url"])
+    var pathPrefix: String? = null
 
     @Option(names = ["--strict"], description = ["Start HTTP stub in strict mode"], required = false)
     var strictMode: Boolean = false
@@ -108,10 +109,14 @@ class StubCommand : Callable<Unit> {
     @Option(names = ["--delay-in-ms"], description = ["Stub response delay in milliseconds"])
     var delayInMilliseconds: Long = 0
 
+    @Option(names = ["--description"], description = ["The server description to pickup the server url"])
+    var serverDescription: String? = null
+
     @Option(
         names = ["--graceful-restart-timeout-in-ms"],
         description = ["Time to wait for the server to stop before starting it again"]
     )
+
     var gracefulRestartTimeoutInMs: Long = 1000
 
     @Autowired
@@ -131,8 +136,9 @@ class StubCommand : Callable<Unit> {
         if (delayInMilliseconds > 0) {
             System.setProperty(SPECMATIC_STUB_DELAY, delayInMilliseconds.toString())
         }
-        if (pathPrefix.isNotEmpty())
-            System.setProperty(PATH_PREFIX, pathPrefix)
+
+        pathPrefix?.let { System.setProperty(PATH_PREFIX, it) }
+        serverDescription?.let { System.setProperty(SERVER_DESCRIPTION, it) }
 
         val logPrinters = configureLogPrinters()
 
@@ -225,7 +231,8 @@ class StubCommand : Callable<Unit> {
             httpClientFactory,
             workingDirectory,
             gracefulRestartTimeoutInMs,
-            pathPrefix
+            pathPrefix,
+            serverDescription
         )
 
         LogTail.storeSnapshot()

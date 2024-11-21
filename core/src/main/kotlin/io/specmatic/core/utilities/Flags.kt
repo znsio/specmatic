@@ -11,7 +11,7 @@ class Flags {
         const val SPECMATIC_TEST_PARALLELISM = "SPECMATIC_TEST_PARALLELISM"
         const val SPECMATIC_STUB_DELAY = "SPECMATIC_STUB_DELAY"
         const val SPECMATIC_TEST_TIMEOUT = "SPECMATIC_TEST_TIMEOUT"
-        const val PATH_PREFIX = "PATH_PREFIX"
+
         const val CONFIG_FILE_PATH = "CONFIG_FILE_PATH"
 
         const val IGNORE_INLINE_EXAMPLES = "IGNORE_INLINE_EXAMPLES"
@@ -23,11 +23,14 @@ class Flags {
         const val EXTENSIBLE_QUERY_PARAMS = "EXTENSIBLE_QUERY_PARAMS"
         const val ADDITIONAL_EXAMPLE_PARAMS_FILE = "ADDITIONAL_EXAMPLE_PARAMS_FILE"
 
+        const val PATH_PREFIX = "PATH_PREFIX"
+        const val SERVER_DESCRIPTION = "SERVER_DESCRIPTION"
         fun getStringValue(flagName: String): String? = System.getenv(flagName) ?: System.getProperty(flagName)
 
-        fun getBooleanValue(flagName: String, default: Boolean = false) = getStringValue(flagName)?.toBoolean() ?: default
+        fun getBooleanValue(flagName: String, default: Boolean = false) =
+            getStringValue(flagName)?.toBoolean() ?: default
 
-        fun getLongValue(flagName: String): Long? = ( getStringValue(flagName))?.toLong()
+        fun getLongValue(flagName: String): Long? = (getStringValue(flagName))?.toLong()
 
         fun <T> using(vararg properties: Pair<String, String>, fn: () -> T): T {
             try {

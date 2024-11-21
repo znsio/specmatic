@@ -1,6 +1,7 @@
 package io.specmatic.test
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
 import io.specmatic.core.filters.ScenarioMetadataFilter
@@ -100,6 +101,10 @@ open class SpecmaticJUnitSupport {
                     logger.log("Executed tests in ${it.size} threads")
                 }
             }
+        }
+
+        private fun getOpenApiSpecificationFromFilePath(configFilePath: String): OpenApiSpecification {
+            return OpenApiSpecification.fromFile(configFilePath)
         }
 
         private fun getReportConfiguration(): ReportConfiguration {
@@ -234,7 +239,7 @@ open class SpecmaticJUnitSupport {
         val suggestionsPath = System.getProperty(SUGGESTIONS_PATH) ?: ""
 
         val workingDirectory = WorkingDirectory(givenWorkingDirectory ?: DEFAULT_WORKING_DIRECTORY)
-
+        val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
         val envConfig = getEnvConfig(System.getProperty(ENV_NAME))
         val testConfig = try {
             loadTestConfig(envConfig).withVariablesFromFilePath(System.getProperty(VARIABLES_FILE_NAME))
@@ -270,8 +275,6 @@ open class SpecmaticJUnitSupport {
                     if (File(configFile).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
 
                     createIfDoesNotExist(workingDirectory.path)
-
-                    val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
 
                     exitIfAnyDoNotExist("The following specifications do not exist", contractFilePaths.map { it.path })
 
@@ -319,12 +322,21 @@ open class SpecmaticJUnitSupport {
         }
 
         val testBaseURL = try {
-            constructTestBaseURL()
+            val specificationURL =
+                getOpenApiSpecificationFromFilePath(contractFilePaths.first().path).getURLByDescription(description)
+            val testBaseURL = System.getProperty(TEST_BASE_URL)
+
+            when {
+                testBaseURL != null -> constructTestBaseURL(testBaseURL)
+                specificationURL != null -> specificationURL
+                else -> constructURLFromHostAndPort()
+            }
         } catch (e: Throwable) {
             logger.logError(e)
             logger.newLine()
-            throw (e)
+            throw e
         }
+
 
         return try {
             dynamicTestStream(testScenarios, testBaseURL, timeoutInMilliseconds)
@@ -333,6 +345,7 @@ open class SpecmaticJUnitSupport {
             loadExceptionAsTestError(e)
         }
     }
+
 
     private fun dynamicTestStream(
         testScenarios: Sequence<ContractTest>,
@@ -386,15 +399,14 @@ open class SpecmaticJUnitSupport {
         }.asStream()
     }
 
-    fun constructTestBaseURL(): String {
-        val testBaseURL = System.getProperty(TEST_BASE_URL)
-        if (testBaseURL != null) {
-            when (val validationResult = validateURI(testBaseURL)) {
-                Success -> return testBaseURL
-                else -> throw TestAbortedException("${validationResult.message} in $TEST_BASE_URL environment variable")
-            }
+    fun constructTestBaseURL(testBaseURL: String): String {
+        return when (val validationResult = validateURI(testBaseURL)) {
+            Success -> testBaseURL
+            else -> throw TestAbortedException("${validationResult.message} in $TEST_BASE_URL environment variable")
         }
+    }
 
+    private fun constructURLFromHostAndPort(): String {
         val hostProperty = System.getProperty(HOST)
             ?: throw TestAbortedException("Please specify $TEST_BASE_URL OR $HOST and $PORT as environment variables")
         val host = if (hostProperty.startsWith("http")) {
@@ -489,7 +501,7 @@ open class SpecmaticJUnitSupport {
             suggestionsData.isNotEmpty() -> suggestionsFromCommandLine(suggestionsData)
             else -> emptyList()
         }
-        val servers = feature.serverDetails
+
         val allEndpoints: List<Endpoint> = feature.scenarios.map { scenario ->
             Endpoint(
                 convertPathParameterStyle(scenario.path),

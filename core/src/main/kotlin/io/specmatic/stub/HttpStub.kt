@@ -11,6 +11,7 @@ import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
+import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
@@ -51,6 +52,7 @@ class HttpStub(
     val specmaticConfigPath: String? = null,
     private val timeoutMillis: Long = 0,
     val pathPrefix: String? = null,
+    val serverDescription: String? = null,
 ) : ContractStub {
     constructor(
         feature: Feature,
@@ -182,7 +184,12 @@ class HttpStub(
             return threadSafeHttpStubQueue.size
         }
 
-    val endPoint = endPointFromHostAndPort(host, pathPrefix, port, keyData)
+    private val serverUrlFromOpenSpecs = serverDescription?.let {
+        val contractFilePaths = contractTestPathsFrom(getConfigFilePath(), workingDirectory!!.path)
+        getOpenApiSpecificationFromFilePath(contractFilePaths.first().path).getURLByDescription(it)
+    }
+
+    val endPoint = endPointFromHostAndPort(serverUrlFromOpenSpecs, host, pathPrefix, port, keyData)
 
     override val client = HttpClient(this.endPoint)
 
@@ -224,7 +231,7 @@ class HttpStub(
                 anyHost()
             }
 
-            val urlPrefixInterceptor = UrlPrefixInterceptor()
+            val urlPrefixInterceptor = UrlPrefixInterceptor(serverUrlFromOpenSpecs)
             val urlDecodeInterceptor = UrlDecodeInterceptor()
             registerRequestInterceptor(urlPrefixInterceptor)
             registerRequestInterceptor(urlDecodeInterceptor)
@@ -1220,7 +1227,17 @@ internal fun httpResponseLog(response: HttpResponse): String =
 internal fun httpRequestLog(httpRequest: HttpRequest): String =
     ">> Request Start At ${Date()}\n${httpRequest.toLogString("-> ")}"
 
-fun endPointFromHostAndPort(host: String, pathPrefix: String?, port: Int?, keyData: KeyData?): String {
+private fun getOpenApiSpecificationFromFilePath(configFilePath: String): OpenApiSpecification {
+    return OpenApiSpecification.fromFile(configFilePath)
+}
+
+fun endPointFromHostAndPort(
+    serverUrlFromOpenSpecs: String?,
+    host: String,
+    pathPrefix: String?,
+    port: Int?,
+    keyData: KeyData?
+): String {
     val protocol = when (keyData) {
         null -> "http"
         else -> "https"
@@ -1230,10 +1247,10 @@ fun endPointFromHostAndPort(host: String, pathPrefix: String?, port: Int?, keyDa
         80, null -> ""
         else -> ":$port"
     }
+
     pathPrefix?.let { return "$protocol://$host$computedPortString/${it.trim('/')}" }
 
     return "$protocol://$host$computedPortString"
-
 }
 
 internal fun isPath(path: String?, lastPart: String): Boolean {

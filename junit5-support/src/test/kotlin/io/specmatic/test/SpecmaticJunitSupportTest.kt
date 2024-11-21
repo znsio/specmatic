@@ -44,7 +44,7 @@ class SpecmaticJunitSupportTest {
         System.setProperty(TEST_BASE_URL, validURL)
         lateinit var url: String
         assertThatCode {
-            url = SpecmaticJUnitSupport().constructTestBaseURL()
+            url = SpecmaticJUnitSupport().constructTestBaseURL(validURL)
         }.doesNotThrowAnyException()
         assertThat(url).isEqualTo(validURL)
     }
@@ -57,7 +57,7 @@ class SpecmaticJunitSupportTest {
         System.setProperty(PORT, port)
         lateinit var url: String
         assertThatCode {
-            url = SpecmaticJUnitSupport().constructTestBaseURL()
+            url = SpecmaticJUnitSupport().constructURLFromHostAndPort()
         }.doesNotThrowAnyException()
         assertThat(url).isEqualTo("http://$domain:$port")
     }
@@ -71,7 +71,7 @@ class SpecmaticJunitSupportTest {
         System.setProperty(PORT, port)
         lateinit var url: String
         assertThatCode {
-            url = SpecmaticJUnitSupport().constructTestBaseURL()
+            url = SpecmaticJUnitSupport().constructURLFromHostAndPort()
         }.doesNotThrowAnyException()
         assertThat(url).isEqualTo("http://$domainName:$port")
     }
@@ -86,7 +86,7 @@ class SpecmaticJunitSupportTest {
         System.setProperty(PROTOCOL, protocol)
         lateinit var url: String
         assertThatCode {
-            url = SpecmaticJUnitSupport().constructTestBaseURL()
+            url = SpecmaticJUnitSupport().constructURLFromHostAndPort()
         }.doesNotThrowAnyException()
         assertThat(url).isEqualTo("$protocol://$domain:$port")
     }
@@ -96,7 +96,7 @@ class SpecmaticJunitSupportTest {
     fun `testBaseURL system property should be valid URI`(invalidURL: String) {
         System.setProperty(TEST_BASE_URL, invalidURL)
         val ex = assertThrows<TestAbortedException> {
-            SpecmaticJUnitSupport().constructTestBaseURL()
+            SpecmaticJUnitSupport().constructTestBaseURL(invalidURL)
         }
         assertThat(ex.message).isEqualTo("Please specify a valid URL in $TEST_BASE_URL environment variable")
     }
@@ -107,7 +107,7 @@ class SpecmaticJunitSupportTest {
         System.setProperty(HOST, "invalid domain")
         System.setProperty(PORT, "8080")
         val ex = assertThrows<TestAbortedException> {
-            SpecmaticJUnitSupport().constructTestBaseURL()
+            SpecmaticJUnitSupport().constructURLFromHostAndPort()
         }
         assertThat(ex.message).isEqualTo("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
     }
@@ -118,7 +118,7 @@ class SpecmaticJunitSupportTest {
         System.setProperty(HOST, "test.com")
         System.setProperty(PORT, "8080")
         val ex = assertThrows<TestAbortedException> {
-            SpecmaticJUnitSupport().constructTestBaseURL()
+            SpecmaticJUnitSupport().constructURLFromHostAndPort()
         }
         assertThat(ex.message).isEqualTo("Please specify a valid $PROTOCOL, $HOST and $PORT environment variables")
     }
@@ -129,7 +129,7 @@ class SpecmaticJunitSupportTest {
         System.setProperty(HOST, "test.com")
         System.setProperty(PORT, "invalid_port")
         val ex = assertThrows<TestAbortedException> {
-            SpecmaticJUnitSupport().constructTestBaseURL()
+            SpecmaticJUnitSupport().constructURLFromHostAndPort()
         }
         assertThat(ex.message).isEqualTo("Please specify a number value for $PORT environment variable")
     }
@@ -137,7 +137,7 @@ class SpecmaticJunitSupportTest {
     @Test
     fun `testBaseURL or host and port system property are mandatory`() {
         val ex = assertThrows<TestAbortedException> {
-            SpecmaticJUnitSupport().constructTestBaseURL()
+            SpecmaticJUnitSupport().constructURLFromHostAndPort()
         }
         assertThat(ex.message).isEqualTo("Please specify $TEST_BASE_URL OR host and port as environment variables")
     }

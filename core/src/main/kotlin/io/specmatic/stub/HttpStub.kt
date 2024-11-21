@@ -184,7 +184,7 @@ class HttpStub(
             return threadSafeHttpStubQueue.size
         }
 
-    private val serverUrlFromOpenSpecs = serverDescription?.let {
+    val serverUrlFromOpenSpecs = serverDescription?.let {
         val contractFilePaths = contractTestPathsFrom(getConfigFilePath(), workingDirectory!!.path)
         getOpenApiSpecificationFromFilePath(contractFilePaths.first().path).getURLByDescription(it)
     }
@@ -1248,7 +1248,8 @@ fun endPointFromHostAndPort(
         else -> ":$port"
     }
 
-    pathPrefix?.let { return "$protocol://$host$computedPortString/${it.trim('/')}" }
+    serverUrlFromOpenSpecs?.let { return "$protocol://$host$computedPortString/${java.net.URL(it).path}"}
+    pathPrefix?.let { return "$protocol://$host$computedPortString/${it.trim('/')}"}
 
     return "$protocol://$host$computedPortString"
 }

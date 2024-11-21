@@ -406,7 +406,7 @@ open class SpecmaticJUnitSupport {
         }
     }
 
-    private fun constructURLFromHostAndPort(): String {
+     fun constructURLFromHostAndPort(): String {
         val hostProperty = System.getProperty(HOST)
             ?: throw TestAbortedException("Please specify $TEST_BASE_URL OR $HOST and $PORT as environment variables")
         val host = if (hostProperty.startsWith("http")) {

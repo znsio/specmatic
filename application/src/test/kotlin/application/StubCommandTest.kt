@@ -117,8 +117,7 @@ internal class StubCommandTest {
                     any(),
                     httpClientFactory = any(),
                     workingDirectory = any(),
-                    gracefulRestartTimeoutInMs = any(),
-                    baseUrl = baseUrl
+                    gracefulRestartTimeoutInMs = any()
                 )
             }.returns(null)
 
@@ -139,8 +138,7 @@ internal class StubCommandTest {
                     any(),
                     httpClientFactory = any(),
                     workingDirectory = any(),
-                    gracefulRestartTimeoutInMs = any(),
-                    baseUrl = baseUrl
+                    gracefulRestartTimeoutInMs = any()
                 )
             }
         } finally {
@@ -229,8 +227,7 @@ internal class StubCommandTest {
                     passThroughTargetBase,
                     httpClientFactory = any(),
                     workingDirectory = any(),
-                    gracefulRestartTimeoutInMs = any(),
-                    baseUrl = baseUrl
+                    gracefulRestartTimeoutInMs = any()
                 )
             }.returns(null)
 
@@ -254,8 +251,7 @@ internal class StubCommandTest {
                     any(),
                     httpClientFactory = any(),
                     workingDirectory = any(),
-                    gracefulRestartTimeoutInMs = any(),
-                    baseUrl = baseUrl
+                    gracefulRestartTimeoutInMs = any()
                 )
             }
         } finally {

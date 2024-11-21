@@ -51,11 +51,10 @@ class HTTPStubEngine {
         ).also {
             consoleLog(NewLineLogMessage)
             val protocol = if (keyStoreData != null) "https" else "http"
+            val finalPathPrefix = pathPrefix?.let { "/${it.trim('/')}" } ?: it.serverUrlFromOpenSpecs?.let { java.net.URL(it).path }
             consoleLog(
                 StringLog(
-                    "Stub server is running on ${protocol}://${host}:$port${
-                        pathPrefix?.let { "/${it.trim('/')}" }.orEmpty()
-                    }. Ctrl + C to stop."
+                    "Stub server is running on ${protocol}://${host}:$port${finalPathPrefix.orEmpty()}. Ctrl + C to stop."
                 )
             )
         }

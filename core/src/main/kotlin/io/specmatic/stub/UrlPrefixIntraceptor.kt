@@ -16,7 +16,7 @@ class  UrlPrefixInterceptor(private val serverUrlFromOpenSpecs: String?) : Reque
         val serverUrlPrefix = serverUrlFromOpenSpecs?.let {
             java.net.URL(it).path
         }
-        val pathPrefix = rawPrefix?.let { "/${it.trim('/')}" } ?: serverUrlPrefix?.let { "/${it.trim('/')}" }
+        val pathPrefix = rawPrefix?.let { "/${it.trim('/')}" } ?: serverUrlPrefix
         val relativePath = getRelativePath(url, pathPrefix)
         return relativePath;
     }

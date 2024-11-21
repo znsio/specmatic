@@ -373,27 +373,27 @@ Feature: GET API
 
     @Test
     fun `generates a valid endpoint when a port is not given`() {
-        assertThat(endPointFromHostAndPort("localhost", "",null, null)).isEqualTo("http://localhost")
+        assertThat(endPointFromHostAndPort(null,"localhost", "",null, null)).isEqualTo("http://localhost")
     }
 
     @Test
     fun `generates a valid endpoint when a non 80 port is given`() {
-        assertThat(endPointFromHostAndPort("localhost", "",9000, null)).isEqualTo("http://localhost:9000")
+        assertThat(endPointFromHostAndPort(null,"localhost", "",9000, null)).isEqualTo("http://localhost:9000")
     }
 
     @Test
     fun `generates a valid endpoint when port 80 is given`() {
-        assertThat(endPointFromHostAndPort("localhost", "",80, null)).isEqualTo("http://localhost")
+        assertThat(endPointFromHostAndPort(null,"localhost", "",80, null)).isEqualTo("http://localhost")
     }
     @Test
     fun `generates a valid endpoint when baseurl is given`() {
-        assertThat(endPointFromHostAndPort("localhost", "/api/host",80, null)).isEqualTo("http://localhost/api/host")
+        assertThat(endPointFromHostAndPort(null,"localhost", "/api/host",80, null)).isEqualTo("http://localhost/api/host")
     }
 
 
     @Test
     fun `generates an https endpoint when key store data is provided`() {
-        assertThat(endPointFromHostAndPort("localhost","",80, KeyData(KeyStore.getInstance(KeyStore.getDefaultType()), ""))).isEqualTo("https://localhost")
+        assertThat(endPointFromHostAndPort(null,"localhost","",80, KeyData(KeyStore.getInstance(KeyStore.getDefaultType()), ""))).isEqualTo("https://localhost")
     }
 
     @Test

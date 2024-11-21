@@ -89,7 +89,9 @@ object ExampleProcessor {
     fun resolve(httpRequest: HttpRequest, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value = ::defaultIfNotExits): HttpRequest {
         return httpRequest.copy(
             method = httpRequest.method,
-            path = httpRequest.parsePath().joinToString("/", prefix = "/") { resolve(it, ifNotExists) },
+            path = httpRequest.parsePath().joinToString("/", prefix = "/", postfix = "/".takeIf { httpRequest.path?.endsWith('/') == true }.orEmpty()) {
+                resolve(it, ifNotExists)
+            },
             headers = resolve(httpRequest.headers, ifNotExists),
             body = resolve(httpRequest.body, ifNotExists),
             queryParams = QueryParameters(resolve(httpRequest.queryParams.asMap(), ifNotExists))

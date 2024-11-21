@@ -199,7 +199,7 @@ internal class StringPatternTest {
     @Test
     @Tag(GENERATION)
     fun `negative value for regex should be generated when regex is provided`() {
-        val minLength = 10
+        val minLength = 2
         val maxLength = 20
 
         val result = StringPattern(
@@ -218,7 +218,7 @@ internal class StringPatternTest {
     @Test
     @Tag(GENERATION)
     fun `should exclude data type based negatives when withDataTypeNegatives config is false`() {
-        val minLength = 10
+        val minLength = 2
         val maxLength = 20
 
         val result = StringPattern(

@@ -5,8 +5,6 @@ import dk.brics.automaton.Automaton
 import dk.brics.automaton.RegExp
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
-import io.specmatic.core.log.StringLog
-import io.specmatic.core.log.consoleLog
 import io.specmatic.core.mismatchResult
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.JSONArrayValue
@@ -15,9 +13,8 @@ import io.specmatic.core.value.Value
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-
 data class
-StringPattern(
+StringPattern (
     override val typeAlias: String? = null,
     val minLength: Int? = null,
     val maxLength: Int? = null,
@@ -27,17 +24,17 @@ StringPattern(
     init {
         if (minLength != null && maxLength != null && minLength > maxLength) {
             throw IllegalArgumentException("maxLength cannot be less than minLength")
-        }
 
-        if (regex != null) {
-            val automaton: Automaton = RegExp(regex).toAutomaton()
-            val min = automaton.getShortestExample(true).length
-            when {
-                minLength != null && min < minLength ->
-                    throw IllegalArgumentException("Invalid Regex - min cannot be less than regex least size")
+            if (regex != null) {
+                val automaton: Automaton = RegExp(regex).toAutomaton()
+                val min = automaton.getShortestExample(true).length
+                when {
+                    minLength != null && min < minLength ->
+                        throw IllegalArgumentException("Invalid Regex - min cannot be less than regex least size")
 
-                maxLength != null && min > maxLength ->
-                    throw IllegalArgumentException("Invalid Regex - min cannot be more than regex max size")
+                    maxLength != null && min > maxLength ->
+                        throw IllegalArgumentException("Invalid Regex - min cannot be more than regex max size")
+                }
             }
         }
     }
@@ -58,7 +55,7 @@ StringPattern(
                     sampleData, resolver.mismatchMessages
                 )
 
-                if (regex != null && !Regex(regex).matches(sampleData.toStringLiteral())) {
+                if(regex != null && !Regex(regex).matches(sampleData.toStringLiteral())) {
                     return mismatchResult(
                         """string that matches regex /$regex/""",
                         sampleData,
@@ -68,7 +65,6 @@ StringPattern(
 
                 return Result.Success()
             }
-
             else -> mismatchResult("string", sampleData, resolver.mismatchMessages)
         }
     }
@@ -95,29 +91,28 @@ StringPattern(
         }
 
     override fun generate(resolver: Resolver): Value {
-        val defaultExample: Value? = resolver.resolveExample(example, this)
+        val defaultExample = resolver.resolveExample(example, this)
 
-        return if (regex != null) {
-            handleRegex(defaultExample, resolver)
-        } else {
-            defaultExample?.takeIf { it is StringValue }
-                ?: StringValue(randomString(patternMinLength))
+        // Validate the default example
+        defaultExample?.let {
+            if (matches(it, resolver).isSuccess()) {
+                return it
+            }
+            throw ContractException("Schema example ${it.toStringLiteral()} does not match pattern $regex")
         }
+
+        // Generate a value based on regex or length constraints
+        return regex?.let { generateFromRegex() } ?: StringValue(randomString(patternMinLength))
     }
 
-    private fun handleRegex(defaultExample: Value?, resolver: Resolver): Value {
-        if (defaultExample == null) {
-            val cleanedRegex = regex!!.removePrefix("^").removeSuffix("$")
-            val randomValue = maxLength?.let {
-                Generex(cleanedRegex).random(patternMinLength, it)
-            } ?: Generex(cleanedRegex).random(patternMinLength)
-            return StringValue(randomValue)
-        }
-        if (matches(defaultExample, resolver).isSuccess()) {
-            return defaultExample
-        }
-        throw ContractException("Schema example ${defaultExample.toStringLiteral()} does not match pattern $regex")
+    private fun generateFromRegex(): Value {
+        val cleanedRegex = regex!!.removePrefix("^").removeSuffix("$")
+        val generatedValue = maxLength?.let {
+            Generex(cleanedRegex).random(patternMinLength, it)
+        } ?: Generex(cleanedRegex).random(patternMinLength)
+        return StringValue(generatedValue)
     }
+
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val minLengthExample: ReturnValue<Pattern>? = minLength?.let {
@@ -135,11 +130,7 @@ StringPattern(
 
     override fun newBasedOn(resolver: Resolver): Sequence<Pattern> = sequenceOf(this)
 
-    override fun negativeBasedOn(
-        row: Row,
-        resolver: Resolver,
-        config: NegativePatternConfiguration
-    ): Sequence<ReturnValue<Pattern>> {
+    override fun negativeBasedOn(row: Row, resolver: Resolver, config: NegativePatternConfiguration): Sequence<ReturnValue<Pattern>> {
         val current = this
 
         return sequence {

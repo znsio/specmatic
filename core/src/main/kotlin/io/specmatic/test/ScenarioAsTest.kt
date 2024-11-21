@@ -90,10 +90,10 @@ data class ScenarioAsTest(
         try {
             val updatedRequest = ExampleProcessor.resolve(request)
 
-            val substitutionResult = originalScenario.httpRequestPattern.matches(updatedRequest, originalScenario.resolver)
-//            if (substitutionResult is Result.Failure) {
-//                return Pair(substitutionResult.withBindings(testScenario.bindings, HttpResponse()), HttpResponse())
-//            }
+            val substitutionResult = originalScenario.httpRequestPattern.matches(updatedRequest, flagsBased.update(originalScenario.resolver))
+            if (substitutionResult is Result.Failure && !testScenario.isA4xxScenario() && !testScenario.isNegative) {
+                return Pair(substitutionResult.updateScenario(testScenario), null)
+            }
 
             testExecutor.setServerState(testScenario.serverState)
             testExecutor.preExecuteScenario(testScenario, updatedRequest)

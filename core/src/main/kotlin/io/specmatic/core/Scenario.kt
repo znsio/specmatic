@@ -709,6 +709,9 @@ data class Scenario(
     }
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
+
+    fun isA4xxScenario(): Boolean = this.httpResponsePattern.status in 400..499
+
     fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?): Scenario {
         return this.copy(
             isNegative = true,

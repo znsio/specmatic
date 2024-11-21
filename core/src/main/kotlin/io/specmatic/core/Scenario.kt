@@ -161,12 +161,15 @@ data class Scenario(
         httpRequest: HttpRequest,
         serverState: Map<String, Value>,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages,
-        unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys
+        unexpectedKeyCheck: UnexpectedKeyCheck? = null
     ): Result {
         val headersResolver = Resolver(serverState, false, patterns).copy(mismatchMessages = mismatchMessages)
-        val nonHeadersResolver = headersResolver
-            .withUnexpectedKeyCheck(unexpectedKeyCheck)
-            .disableOverrideUnexpectedKeycheck()
+
+        val nonHeadersResolver = if(unexpectedKeyCheck != null) {
+            headersResolver.withUnexpectedKeyCheck(unexpectedKeyCheck)
+        } else {
+            headersResolver
+        }.disableOverrideUnexpectedKeycheck()
 
         return matches(httpRequest, serverState, nonHeadersResolver, headersResolver)
     }

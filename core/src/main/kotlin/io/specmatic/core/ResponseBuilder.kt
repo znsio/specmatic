@@ -12,7 +12,7 @@ class ResponseBuilder(val scenario: Scenario?, val serverState: Map<String, Valu
     }
     val resolver = scenario?.resolver
 
-    fun build(requestContext: RequestContext): HttpResponse {
-        return scenario!!.generateHttpResponse(serverState, requestContext)
+    fun build(requestContext: RequestContext): HttpResponse? {
+        return scenario?.generateHttpResponse(serverState, requestContext)
     }
 }

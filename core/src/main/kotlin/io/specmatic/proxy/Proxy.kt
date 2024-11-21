@@ -67,7 +67,26 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
         }
     }
 
-    private val server = embeddedServer(Netty, port = port, host = host,
+    private val server = embeddedServer(Netty, applicationEnvironment(), configure = {
+        if (keyData != null) {
+                sslConnector(
+                    keyStore = keyData.keyStore,
+                    keyAlias = keyData.keyAlias,
+                    keyStorePassword = { keyData.keyStorePassword.toCharArray() },
+                    privateKeyPassword = { keyData.keyPassword.toCharArray() }
+                ){
+                    this.host = host
+                    this.port = port
+                }
+        }
+        else
+        {
+            connector {
+                this.host = host
+                this.port = port
+            }
+        }
+    },
         module = {
             intercept(ApplicationCallPipeline.Plugins) {
                 try {
@@ -134,20 +153,8 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
             routing {
                 post(DUMP_ENDPOINT) { handleDumpRequest(call) }
             }
-            if (keyData != null) {
-            (environment.config as NettyApplicationEngine.Configuration).apply {
-                    sslConnector(
-                        keyStore = keyData.keyStore,
-                        keyAlias = keyData.keyAlias,
-                        keyStorePassword = { keyData.keyStorePassword.toCharArray() },
-                        privateKeyPassword = { keyData.keyPassword.toCharArray() }
-                    ){
-                        this.host = host
-                        this.port = port
-                    }
-                }
-            }
-    })
+
+    },)
 
 
 

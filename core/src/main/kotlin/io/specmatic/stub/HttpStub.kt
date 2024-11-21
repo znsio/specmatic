@@ -278,7 +278,26 @@ class HttpStub(
         return request
     }
 
-    private val server = embeddedServer(Netty,port = port, host = host,
+    private val server = embeddedServer(Netty, applicationEnvironment(), configure = {
+        if (keyData != null) {
+            sslConnector(
+                keyStore = keyData.keyStore,
+                keyAlias = keyData.keyAlias,
+                keyStorePassword = { keyData.keyStorePassword.toCharArray() },
+                privateKeyPassword = { keyData.keyPassword.toCharArray() }
+            ){
+                this.host = host
+                this.port = port
+            }
+        }
+        else
+        {
+            connector {
+                this.host = host
+                this.port = port
+            }
+        }
+    },
         module = {
             install(DoubleReceive)
             install(io.ktor.server.plugins.cors.routing.CORS) {

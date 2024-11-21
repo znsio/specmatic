@@ -29,8 +29,8 @@ class ApacheHttpClientFactory(private val timeoutInMilliseconds: Long): HttpClie
         }
 
         install(HttpTimeout) {
-            requestTimeoutMillis = this.requestTimeoutMillis
-            socketTimeoutMillis  = this.socketTimeoutMillis
+            requestTimeoutMillis = timeoutInMilliseconds
+            socketTimeoutMillis  = timeoutInMilliseconds + BREATHING_ROOM_FOR_REQUEST_TIMEOUT_TO_KICK_IN_FIRST
         }
     }
 }

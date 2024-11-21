@@ -14,6 +14,7 @@ import io.specmatic.core.utilities.throwExceptionIfDirectoriesAreInvalid
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
+import org.yaml.snakeyaml.TypeDescription
 import org.yaml.snakeyaml.Yaml
 import java.io.File
 
@@ -45,17 +46,18 @@ fun allContractsFromDirectory(dirContainingContracts: String): List<String> =
     File(dirContainingContracts).listFiles()?.filter { it.extension == CONTRACT_EXTENSION }?.map { it.absolutePath }
         ?: emptyList()
 
-fun createStub(host: String = "localhost", port: Int = 9000, pathPrefix: String? = null): ContractStub {
-    return createStub(host, port, false, pathPrefix)
+fun createStub(host: String = "localhost", port: Int = 9000, pathPrefix: String? = null,serverDescription: String?): ContractStub {
+    return createStub(host, port, false, pathPrefix,serverDescription)
 }
 
 fun createStub(
     host: String = "localhost",
     port: Int = 9000,
     strict: Boolean = false,
-    pathPrefix: String? = null
+    pathPrefix: String? = null,
+    serverDescription: String? = null
 ): ContractStub {
-    return createStub(host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT, strict, pathPrefix)
+    return createStub(host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT, strict, pathPrefix = pathPrefix,serverDescription = serverDescription)
 }
 
 // Used by stub client code
@@ -63,9 +65,10 @@ fun createStub(
     dataDirPaths: List<String>,
     host: String = "localhost",
     port: Int = 9000,
-    pathPrefix: String? = null
+    pathPrefix: String? = null,
+    serverDescription: String? = null
 ): ContractStub {
-    return createStub(dataDirPaths, host, port, false, pathPrefix)
+    return createStub(dataDirPaths, host, port, false, pathPrefix,serverDescription)
 }
 
 fun createStub(
@@ -73,9 +76,10 @@ fun createStub(
     host: String = "localhost",
     port: Int = 9000,
     strict: Boolean = false,
-    pathPrefix: String? = null
+    pathPrefix: String? = null,
+    serverDescription: String? = null
 ): ContractStub {
-    return createStub(dataDirPaths, host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT, strict = strict, pathPrefix)
+    return createStub(dataDirPaths, host, port, timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT, strict = strict, pathPrefix = pathPrefix, serverDescription = serverDescription)
 }
 
 fun createStubFromContracts(
@@ -83,7 +87,8 @@ fun createStubFromContracts(
     dataDirPaths: List<String>,
     host: String = "localhost",
     port: Int = 9000,
-    pathPrefix: String? = null
+    pathPrefix: String? = null,
+    serverDescription: String? = null
 ): ContractStub {
     return createStubFromContracts(
         contractPaths,
@@ -91,7 +96,8 @@ fun createStubFromContracts(
         host,
         port,
         timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT,
-        pathPrefix
+        pathPrefix,
+        serverDescription = serverDescription
     )
 }
 
@@ -100,13 +106,15 @@ fun createStubFromContracts(
     contractPaths: List<String>,
     host: String = "localhost",
     port: Int = 9000,
-    pathPrefix: String? = null
+    pathPrefix: String? = null,
+    serverDescription: String? = null
 ): ContractStub {
     return createStubFromContracts(
         contractPaths,
         host,
         port,
-        timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT, pathPrefix
+        timeoutMillis = HTTP_STUB_SHUTDOWN_TIMEOUT, pathPrefix,
+        serverDescription = serverDescription
     )
 }
 
@@ -116,7 +124,8 @@ internal fun createStub(
     port: Int = 9000,
     timeoutMillis: Long,
     strict: Boolean = false,
-    pathPrefix: String? = null
+    pathPrefix: String? = null,
+    serverDescription: String? = null
 ): ContractStub {
     val configFileName = getConfigFilePath()
     if (File(configFileName).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
@@ -137,7 +146,8 @@ internal fun createStub(
         specmaticConfigPath = File(configFileName).canonicalPath,
         timeoutMillis = timeoutMillis,
         strictMode = strict,
-        pathPrefix = pathPrefix
+        pathPrefix = pathPrefix,
+        serverDescription = serverDescription
     )
 }
 
@@ -148,7 +158,8 @@ internal fun createStub(
     strict: Boolean = false,
     givenConfigFileName: String? = null,
     dataDirPaths: List<String> = emptyList(),
-    pathPrefix: String? = null
+    pathPrefix: String? = null,
+    serverDescription: String? = null
 ): ContractStub {
     val workingDirectory = WorkingDirectory()
     val configFileName = givenConfigFileName ?: getConfigFilePath()
@@ -173,7 +184,8 @@ internal fun createStub(
         specmaticConfigPath = File(configFileName).canonicalPath,
         timeoutMillis = timeoutMillis,
         strictMode = strict,
-        pathPrefix = pathPrefix
+        pathPrefix = pathPrefix,
+        serverDescription = serverDescription
     )
 }
 
@@ -184,7 +196,8 @@ internal fun createStubFromContracts(
     port: Int = 9000,
     timeoutMillis: Long,
     specmaticConfigPath: String? = null,
-    pathPrefix: String? = null
+    pathPrefix: String? = null,
+    serverDescription: String? = null
 ): HttpStub {
 
     return createStubFromContracts(
@@ -194,7 +207,8 @@ internal fun createStubFromContracts(
         port,
         timeoutMillis,
         loadSpecmaticConfigOrDefault(specmaticConfigPath),
-        pathPrefix
+        pathPrefix = pathPrefix,
+        serverDescription = serverDescription
     )
 }
 
@@ -205,7 +219,8 @@ internal fun createStubFromContracts(
     port: Int = 9000,
     timeoutMillis: Long,
     specmaticConfig: SpecmaticConfig,
-    pathPrefix: String? = null
+    pathPrefix: String? = null,
+    serverDescription: String? = null
 ): HttpStub {
     val contractInfo =
         loadContractStubsFromFiles(contractPaths.map { ContractPathData("", it) }, dataDirPaths, specmaticConfig)
@@ -220,7 +235,8 @@ internal fun createStubFromContracts(
         ::consoleLog,
         specmaticConfigPath = File(getConfigFilePath()).canonicalPath,
         timeoutMillis = timeoutMillis,
-        pathPrefix = pathPrefix
+        pathPrefix = pathPrefix,
+        serverDescription = serverDescription
     )
 }
 
@@ -229,7 +245,8 @@ internal fun createStubFromContracts(
     host: String = "localhost",
     port: Int = 9000,
     timeoutMillis: Long,
-    pathPrefix: String? = null
+    pathPrefix: String? = null,
+    serverDescription: String? = null
 ): ContractStub {
     val defaultImplicitDirs: List<String> = implicitContractDataDirs(contractPaths)
 
@@ -238,7 +255,7 @@ internal fun createStubFromContracts(
     } else
         defaultImplicitDirs
 
-    return createStubFromContracts(contractPaths, completeList, host, port, timeoutMillis, pathPrefix)
+    return createStubFromContracts(contractPaths, completeList, host, port, timeoutMillis, pathPrefix,serverDescription)
 }
 
 fun loadContractStubsFromImplicitPaths(

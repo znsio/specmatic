@@ -26,6 +26,7 @@ import io.specmatic.test.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
@@ -184,7 +185,7 @@ class HttpStub(
 
     private val sseBuffer: SSEBuffer = SSEBuffer()
 
-    private val broadcastChannels: Vector<BroadcastChannel<SseEvent>> = Vector(50, 10)
+    private val broadcastChannels: Vector<MutableSharedFlow<SseEvent>> = Vector(50, 10)
 
     private val requestInterceptors: MutableList<RequestInterceptor> = mutableListOf()
 

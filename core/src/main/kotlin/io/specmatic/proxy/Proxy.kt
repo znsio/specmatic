@@ -48,9 +48,28 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
         }
     }
 
-    private val environment = applicationEngineEnvironment {
-        module {
-            intercept(ApplicationCallPipeline.Call) {
+    private fun toQueryString(queryParams: Map<String, String>): String {
+        return queryParams.entries.joinToString("&") { entry ->
+            "${entry.key}=${entry.value}"
+        }.let { when {
+            it.isEmpty() -> it
+            else -> "?$it"
+        }}
+    }
+
+    private fun withoutContentEncodingGzip(httpResponse: HttpResponse): HttpResponse {
+        val contentEncodingKey = httpResponse.headers.keys.find { it.lowercase() == "content-encoding" } ?: "Content-Encoding"
+        return when {
+            httpResponse.headers[contentEncodingKey]?.lowercase()?.contains("gzip") == true ->
+                httpResponse.copy(headers = httpResponse.headers.minus(contentEncodingKey))
+            else ->
+                httpResponse
+        }
+    }
+
+    private val server = embeddedServer(Netty, port = port, host = host,
+        module = {
+            intercept(ApplicationCallPipeline.Plugins) {
                 try {
                     val httpRequest = ktorHttpRequestToHttpRequest(call)
 
@@ -111,51 +130,27 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                     respondToKtorHttpResponse(call, errorResponse)
                 }
             }
-
             configureHealthCheckModule()
-
             routing {
                 post(DUMP_ENDPOINT) { handleDumpRequest(call) }
             }
-        }
-
-        when (keyData) {
-            null -> connector {
-                this.host = host
-                this.port = port
+            (environment.config as NettyApplicationEngine.Configuration).apply {
+                // Enable SSL for Netty
+                if (keyData != null) {
+                    sslConnector(
+                        keyStore = keyData.keyStore,
+                        keyAlias = keyData.keyAlias,
+                        keyStorePassword = { keyData.keyStorePassword.toCharArray() },
+                        privateKeyPassword = { keyData.keyPassword.toCharArray() }
+                    ){
+                        this.host = host
+                        this.port = port
+                    }
+                }
             }
-            else -> sslConnector(keyStore = keyData.keyStore, keyAlias = keyData.keyAlias, privateKeyPassword = { keyData.keyPassword.toCharArray() }, keyStorePassword = { keyData.keyPassword.toCharArray() }) {
-                this.host = host
-                this.port = port
-            }
-        }
-    }
-
-    private fun toQueryString(queryParams: Map<String, String>): String {
-        return queryParams.entries.joinToString("&") { entry ->
-            "${entry.key}=${entry.value}"
-        }.let { when {
-            it.isEmpty() -> it
-            else -> "?$it"
-        }}
-    }
-
-    private fun withoutContentEncodingGzip(httpResponse: HttpResponse): HttpResponse {
-        val contentEncodingKey = httpResponse.headers.keys.find { it.lowercase() == "content-encoding" } ?: "Content-Encoding"
-        return when {
-            httpResponse.headers[contentEncodingKey]?.lowercase()?.contains("gzip") == true ->
-                httpResponse.copy(headers = httpResponse.headers.minus(contentEncodingKey))
-            else ->
-                httpResponse
-        }
-    }
-
-    private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {
-        this.requestQueueLimit = 1000
-        this.callGroupSize = 5
-        this.connectionGroupSize = 20
-        this.workerGroupSize = 20
     })
+
+
 
     private fun proxyURL(httpRequest: HttpRequest, baseURL: String): String {
         return when {

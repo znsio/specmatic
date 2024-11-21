@@ -11,12 +11,12 @@ data class ConsumeResult<ListType, MatchedType>(val result: Result = Result.Succ
 
     inline fun <reified OtherListType> cast(typeName: String): ConsumeResult<OtherListType, MatchedType> {
         val newList = remainder.map {
-            if(it is OtherListType)
+            if (it is OtherListType) {
                 it
-            else
+            } else {
                 throw ContractException("Could not cast list to $typeName type")
+            }
         }
-
-        return ConsumeResult(result, newList, provisionalError)
+        return ConsumeResult(result, newList as List<OtherListType>, provisionalError)
     }
 }

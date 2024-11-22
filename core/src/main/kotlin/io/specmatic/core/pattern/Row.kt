@@ -18,7 +18,8 @@ data class Row(
     val requestBodyJSONExample: JSONExample? = null,
     val responseExampleForValidation: ResponseExample? = null,
     val requestExample: HttpRequest? = null,
-    val responseExample: HttpResponse? = null
+    val responseExample: HttpResponse? = null,
+    val isPartial: Boolean = false
 ) {
     constructor(examples: Map<String, String>) :this(examples.keys.toList(), examples.values.toList())
 

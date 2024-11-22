@@ -5,7 +5,11 @@ import io.specmatic.core.ReportFormatterType
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger
+import io.specmatic.core.utilities.Flags
 import io.specmatic.test.SpecmaticJUnitSupport
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import io.specmatic.test.TestInteractionsLog.displayName
 import io.specmatic.test.TestInteractionsLog.duration
 import io.specmatic.test.TestResultRecord
@@ -106,13 +110,13 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
                             it.scenario == test.scenarioResult?.scenario
                         }
                         val scenarioName = getTestName(test, matchingLogMessage)
-                        val (requestString, requestTime) = getRequestString(matchingLogMessage)
-                        val (responseString, responseTime) = getResponseString(matchingLogMessage)
+                        val (requestString, requestTime) = getRequestString(test, matchingLogMessage)
+                        val (responseString, responseTime) = getResponseString(test, matchingLogMessage)
 
                         scenarioDataList.add(
                             ScenarioData(
                                 name = scenarioName,
-                                baseUrl = getBaseUrl(matchingLogMessage),
+                                baseUrl = getBaseUrl(test, matchingLogMessage),
                                 duration = matchingLogMessage?.duration() ?: 0,
                                 testResult = test.result,
                                 valid = test.isValid,
@@ -134,21 +138,24 @@ class CoverageReportHtmlRenderer : ReportRenderer<OpenAPICoverageConsoleReport> 
     }
 
     private fun getTestName(testResult: TestResultRecord, httpLogMessage: HttpLogMessage?): String {
-        return httpLogMessage?.displayName() ?: "Scenario: ${testResult.path} -> ${testResult.responseStatus}"
+        return httpLogMessage?.displayName() ?: testResult.scenarioResult?.scenario?.testDescription() ?: "Scenario: ${testResult.path} -> ${testResult.responseStatus}"
     }
 
-    private fun getBaseUrl(httpLogMessage: HttpLogMessage?): String {
-        return httpLogMessage?.targetServer ?: "Unknown baseURL"
+    private fun getBaseUrl(testResult: TestResultRecord, httpLogMessage: HttpLogMessage?): String {
+        val host = Flags.getStringValue(HOST).orEmpty()
+        val port = Flags.getStringValue(PORT).orEmpty()
+        val baseUrlFromFlags = Flags.getStringValue(TEST_BASE_URL) ?: if (host.isNotBlank() && port.isNotBlank()) "$host:$port" else null
+        return httpLogMessage?.targetServer ?: baseUrlFromFlags ?: "Unknown baseURL"
     }
 
-    private fun getRequestString(httpLogMessage: HttpLogMessage?): Pair<String, Long> {
+    private fun getRequestString(testResult: TestResultRecord, httpLogMessage: HttpLogMessage?): Pair<String, Long> {
         return Pair(
             httpLogMessage?.request?.toLogString() ?: "No Request",
             httpLogMessage?.requestTime?.toEpochMillis() ?: 0
         )
     }
 
-    private fun getResponseString(httpLogMessage: HttpLogMessage?): Pair<String, Long> {
+    private fun getResponseString(testResult: TestResultRecord, httpLogMessage: HttpLogMessage?): Pair<String, Long> {
         return Pair(
             httpLogMessage?.response?.toLogString() ?: "No Response",
             httpLogMessage?.responseTime?.toEpochMillis() ?: 0

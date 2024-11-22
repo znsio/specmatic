@@ -81,7 +81,8 @@ data class Scenario(
     val disambiguate: () -> String = { "" },
     val descriptionFromPlugin: String? = null,
     val dictionary: Map<String, Value> = emptyMap(),
-    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern()
+    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
+    val exampleRow: Row? = null
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -423,6 +424,7 @@ data class Scenario(
                             expectedFacts = newExpectedServerState,
                             ignoreFailure = ignoreFailure,
                             exampleName = row.name,
+                            exampleRow = row,
                             generativePrefix = generativePrefix,
                         )
                     }
@@ -444,9 +446,7 @@ data class Scenario(
         }
     }
 
-    fun validExamplesOrException(
-        flagsBased: FlagsBased,
-    ) {
+    fun validExamplesOrException(flagsBased: FlagsBased) {
         val rowsToValidate = examples.flatMap { it.rows }
 
         val updatedResolver = flagsBased.update(resolver)
@@ -709,6 +709,9 @@ data class Scenario(
     }
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
+
+    fun isA4xxScenario(): Boolean = this.httpResponsePattern.status in 400..499
+
     fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?): Scenario {
         return this.copy(
             isNegative = true,

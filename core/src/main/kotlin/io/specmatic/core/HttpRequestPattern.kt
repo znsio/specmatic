@@ -12,6 +12,7 @@ import io.specmatic.core.discriminator.DiscriminatorBasedValueGenerator
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
+import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 
 private const val MULTIPART_FORMDATA_BREADCRUMB = "MULTIPART-FORMDATA"
@@ -201,11 +202,13 @@ data class HttpRequestPattern(
         val (httpRequest, resolver, failures) = parameters
 
         val result = try {
+            // TODO: Review Body String Logic
             val bodyValue =
                 if (isPatternToken(httpRequest.bodyString))
                     StringValue(httpRequest.bodyString)
-                else
-                    body.parse(httpRequest.bodyString, resolver)
+                else if (httpRequest.body is JSONObjectValue || httpRequest.body is JSONArrayValue) {
+                    httpRequest.body
+                } else body.parse(httpRequest.bodyString, resolver)
 
             resolver.matchesPattern(null, body, bodyValue).breadCrumb("BODY")
         } catch (e: ContractException) {
@@ -612,7 +615,7 @@ data class HttpRequestPattern(
                         val value = it.parse(example, resolver)
 
                         val requestBodyAsIs = if (!isInvalidRequestResponse(status)) {
-                            val result = body.matches(value, resolver)
+                            val result = resolver.matchesPattern(null, body, value)
 
                             if (result is Failure)
                                 throw ContractException(result.toFailureReport())

@@ -69,30 +69,7 @@ internal class StringPatternTest {
         assertThat(result.isSuccess()).isFalse
         assertThat(result.reportString()).isEqualTo("""Expected string with maxLength 3, actual was "test"""")
     }
-
-    companion object {
-        @JvmStatic
-        fun minLengthMaxLengthAndExpectedLength(): Stream<Arguments> {
-            return Stream.of(
-                Arguments.of(null, 10, 5),
-                Arguments.of(null, 4, 1),
-                Arguments.of(1, 10, 1),
-                Arguments.of(5, 10, 5),
-                Arguments.of(6, null, 6),
-                Arguments.of(null, null, 5)
-            )
-        }
-
-        @JvmStatic
-        fun regexMinLengthAndMaxLengthAndExpectedLength(): Stream<Arguments> {
-            return Stream.of(
-                Arguments.of("^[a-z]*\$", null, null, 5),
-                Arguments.of("^[a-z0-9]{6,}\$", 3, 10, 6),
-                Arguments.of(null, 1, 10, 1),
-            )
-        }
-    }
-
+    
     @ParameterizedTest
     @CsvSource(
         "null, 10, 5",

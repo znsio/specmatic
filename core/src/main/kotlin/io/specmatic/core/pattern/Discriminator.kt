@@ -5,6 +5,7 @@ import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
+import io.specmatic.test.ExampleProcessor
 
 class Discriminator(
     val property: String,
@@ -76,6 +77,8 @@ class Discriminator(
             property,
             discriminatorCsvClause
         )
+
+        if (isPatternToken(actualDiscriminatorValue) || ExampleProcessor.isSubstitutionToken(actualDiscriminatorValue)) return Result.Success()
 
         if (actualDiscriminatorValue.toStringLiteral() !in values) {
             val message =

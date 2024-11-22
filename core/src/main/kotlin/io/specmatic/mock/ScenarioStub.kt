@@ -43,14 +43,20 @@ data class ScenarioStub(
         return JSONObjectValue(mockInteraction)
     }
 
-    fun getRequestWithAdditionalParamsIfAny(request: HttpRequest, additionalExampleParamsFilePath: String?): HttpRequest {
+    private fun getHttpRequest(): HttpRequest {
+        return this.partial?.request ?: this.request
+    }
+
+    fun getRequestWithAdditionalParamsIfAny(additionalExampleParamsFilePath: String?): HttpRequest {
+        val request = getHttpRequest()
+
         if(additionalExampleParamsFilePath == null)
-            return this.request
+            return request
 
         val additionalExampleParamsFile = File(additionalExampleParamsFilePath)
 
         if (!additionalExampleParamsFile.exists() || !additionalExampleParamsFile.isFile) {
-            return this.request
+            return request
         }
 
         try {
@@ -61,22 +67,22 @@ data class ScenarioStub(
 
             if(additionalExampleParams == null) {
                 logger.log("WARNING: The content of $additionalExampleParamsFilePath is not a valid JSON object")
-                return this.request
+                return request
             }
 
             val additionalHeaders = (additionalExampleParams["headers"] ?: emptyMap<String, String>()) as? Map<String, String>
 
             if(additionalHeaders == null) {
                 logger.log("WARNING: The content of \"headers\" in $additionalExampleParamsFilePath is not a valid JSON object")
-                return this.request
+                return request
             }
 
-            val updatedHeaders = this.request.headers.plus(additionalHeaders)
+            val updatedHeaders = request.headers.plus(additionalHeaders)
 
-            return this.request.copy(headers = updatedHeaders)
+            return request.copy(headers = updatedHeaders)
         } catch (e: Exception) {
             logger.log(e, "WARNING: Could not read additional example params file $additionalExampleParamsFilePath")
-            return this.request
+            return request
         }
     }
 

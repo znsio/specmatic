@@ -10,6 +10,7 @@ import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
+import io.ktor.utils.io.jvm.javaio.*
 import io.specmatic.core.*
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.ContractException
@@ -410,20 +411,6 @@ class HttpStub(
                 log(httpLogMessage)
             }
             configureHealthCheckModule()
-            if (keyData != null) {
-            (environment.config as NettyApplicationEngine.Configuration).apply {
-
-                    sslConnector(
-                        keyStore = keyData.keyStore,
-                        keyAlias = keyData.keyAlias,
-                        keyStorePassword = { keyData.keyStorePassword.toCharArray() },
-                        privateKeyPassword = { keyData.keyPassword.toCharArray() }
-                    ) {
-                        this.host = host
-                        this.port = port
-                    }
-                }
-            }
             }
     )
 
@@ -673,9 +660,9 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
             multiPartData.forEachPart { part ->
                 when (part) {
                     is PartData.FileItem -> {
-                        val content = part.streamProvider().use { inputStream ->
-                            MultiPartContent(inputStream.readBytes())
-                        }
+                        val inputStream = part.provider().toInputStream()
+                        val content = MultiPartContent(inputStream.readBytes())
+                        inputStream.close()
                         parts.add(MultiPartFileValue(
                             part.name ?: "",
                             part.originalFileName ?: "",
@@ -687,6 +674,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
                     }
 
                     is PartData.FormItem -> {
+                        println("Form field: ${part.name} = ${part.value}")
                         parts.add(MultiPartContentValue(
                             part.name ?: "",
                             StringValue(part.value),

@@ -58,6 +58,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
     }
 
     private fun isPartial(): Boolean {
+        // TODO: Review
         return json.findByPath("partial") != null
     }
 

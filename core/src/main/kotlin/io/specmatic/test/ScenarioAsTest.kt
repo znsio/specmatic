@@ -98,6 +98,8 @@ data class ScenarioAsTest(
             testExecutor.setServerState(testScenario.serverState)
             testExecutor.preExecuteScenario(testScenario, updatedRequest)
             val response = testExecutor.execute(updatedRequest)
+
+            //TODO: Review - Do we need workflow anymore
             workflow.extractDataFrom(response, originalScenario)
 
             val validatorResult = validators.asSequence().map { it.validate(scenario, response) }.filterNotNull().firstOrNull()

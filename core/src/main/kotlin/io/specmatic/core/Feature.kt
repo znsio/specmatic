@@ -1641,19 +1641,20 @@ data class Feature(
         if (!testsDirectory.exists())
             return emptyMap()
 
-        val files = testsDirectory.listFiles()
+        val files = testsDirectory.walk().filterNot { it.isDirectory }.filter {
+            it.extension == "json"
+        }.toList()
 
-        if (files.isNullOrEmpty())
-            return emptyMap()
+        if (files.isEmpty()) return emptyMap()
 
-        val examlesInSubdirectories: Map<OpenApiSpecification.OperationIdentifier, List<Row>> =
+        val examplesInSubdirectories: Map<OpenApiSpecification.OperationIdentifier, List<Row>> =
             files.filter {
                 it.isDirectory
             }.fold(emptyMap()) { acc, item ->
                 acc + loadExternalisedJSONExamples(item)
             }
 
-        return examlesInSubdirectories + files.filterNot { it.isDirectory }.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
+        return examplesInSubdirectories + files.filterNot { it.isDirectory }.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
             try {
                 with(exampleFromFile) {
                     OpenApiSpecification.OperationIdentifier(

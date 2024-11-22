@@ -245,7 +245,7 @@ class OpenApiSpecification(
 
     private fun parseUnreferencedSchemas(): Map<String, Pattern> {
         return openApiSchemas().filterNot { withPatternDelimiters(it.key) in patterns }.map {
-            withPatternDelimiters(it.key) to toSpecmaticPattern(it.value, emptyList())
+            withPatternDelimiters(it.key) to toSpecmaticPattern(it.value, emptyList(), it.key)
         }.toMap()
     }
 

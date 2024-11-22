@@ -16,6 +16,7 @@ import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
+import io.specmatic.core.discriminator.DiscriminatorBasedValueGenerator
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.*
 import io.swagger.v3.oas.models.*
@@ -380,10 +381,10 @@ data class Feature(
         return pattern.matches(value, updatedResolver)
     }
 
-    fun generateSchemaFlagBased(patternName: String): Value {
+    fun generateSchemaValuesFlagBased(patternName: String): Pair<String, List<DiscriminatorBasedItem<Value>>> {
         val updatedResolver = flagsBased.update(scenarios.last().resolver)
         val pattern = DeferredPattern("($patternName)")
-        return pattern.generate(updatedResolver)
+        return patternName to DiscriminatorBasedValueGenerator.generateDiscriminatorBasedValues(updatedResolver, pattern)
     }
 
     fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {

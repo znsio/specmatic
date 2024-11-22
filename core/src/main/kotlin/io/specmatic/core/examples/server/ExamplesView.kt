@@ -80,17 +80,28 @@ class ExamplesView {
             }
         }
 
+        private fun List<Pair<String, Pair<SchemaExample, String>?>>.groupByPattern(): Map<String, List<Pair<String, Pair<SchemaExample, String>?>>> {
+            return this.groupBy { (patternName, examplePair) ->
+                examplePair?.let { (example, _) ->
+                    example.getDiscriminatorBasedOn ?: patternName
+                } ?: patternName
+            }.filterKeys { it.isNotBlank() }
+        }
+
         fun List<TableRow>.withSchemaExamples(schemaExample: List<Pair<String, Pair<SchemaExample, String>?>>): List<TableRow> {
-            return schemaExample.map { (patternName, example) ->
-                TableRow(
-                    rawPath = patternName, path = patternName,
-                    method = "", responseStatus = "", contentType = "",
-                    pathSpan = 1, methodSpan = 1, statusSpan = 1,
-                    showPath = true, showMethod = false, showStatus = false,
-                    example = example?.first?.file?.absolutePath, exampleName = example?.first?.file?.nameWithoutExtension,
-                    exampleMismatchReason = example?.second?.takeIf { it.isNotBlank() },
-                    isDiscriminatorBased = false
-                )
+            return schemaExample.groupByPattern().flatMap { (mainPattern, examples) ->
+                var showPath = true
+                examples.map { (patternName, example) ->
+                    TableRow(
+                        rawPath = mainPattern, path = mainPattern,
+                        method = "", responseStatus = "", contentType = "",
+                        pathSpan = examples.size, methodSpan = 1, statusSpan = 1,
+                        showPath = showPath, showMethod = false, showStatus = false,
+                        example = example?.first?.file?.absolutePath, exampleName = example?.first?.file?.nameWithoutExtension,
+                        exampleMismatchReason = example?.second?.takeIf { it.isNotBlank() },
+                        isDiscriminatorBased = false
+                    ).also { showPath = false }
+                }
             }.plus(this)
         }
 

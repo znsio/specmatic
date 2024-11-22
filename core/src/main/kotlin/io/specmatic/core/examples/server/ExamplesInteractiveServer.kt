@@ -462,15 +462,23 @@ class ExamplesInteractiveServer(
             if(examplesDir.exists().not()) examplesDir.mkdirs()
 
             val feature = parseContractFileToFeature(contractFile)
-            val generatedValue = feature.generateSchemaFlagBased(patternName)
+            val (parentPattern, generatedValues) = feature.generateSchemaValuesFlagBased(patternName)
 
-            val exampleFile = examplesDir.getSchemaExamples().firstOrNull {
-                it.getSchemaBasedOn == patternName
-            }?.file ?: examplesDir.resolve(toSchemaExampleFileName(patternName))
+            return generatedValues.map { (discriminatorMetadata, value) ->
+                val exampleFile = examplesDir.getSchemaExamples().firstOrNull {
+                    discriminatorMetadata.discriminatorValue == it.getSchemaBasedOn
+                }?.file ?: examplesDir.resolve(toSchemaExampleFileName(parentPattern, discriminatorMetadata.discriminatorValue))
 
-            println("Writing to file: ${exampleFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
-            exampleFile.writeText(generatedValue.toStringLiteral())
-            return listOf(ExamplePathInfo(path = exampleFile.absolutePath, created = true))
+                if (exampleFile.exists() && SchemaExample(exampleFile).value !is NullValue) {
+                    logger.log("Example already exists for discriminator value ${discriminatorMetadata.discriminatorValue}")
+                    logger.log("Skipping to avoid overwriting existing example.")
+                    return@map ExamplePathInfo(exampleFile.absolutePath, false)
+                }
+
+                println("Writing to file: ${exampleFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
+                exampleFile.writeText(value.toStringLiteral())
+                ExamplePathInfo(path = exampleFile.absolutePath, created = true)
+            }
         }
 
         data class ExamplePathInfo(val path: String, val created: Boolean)

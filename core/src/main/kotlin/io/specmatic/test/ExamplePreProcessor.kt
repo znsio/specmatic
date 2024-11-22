@@ -3,10 +3,7 @@ package io.specmatic.test
 import io.ktor.util.*
 import io.specmatic.core.*
 import io.specmatic.core.log.consoleLog
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.Row
-import io.specmatic.core.pattern.parsedJSONObject
-import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
 import io.specmatic.test.asserts.isKeyAssert
@@ -89,10 +86,12 @@ object ExampleProcessor {
     fun resolve(httpRequest: HttpRequest, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value = ::defaultIfNotExits): HttpRequest {
         return httpRequest.copy(
             method = httpRequest.method,
-            path = httpRequest.parsePath().joinToString("/", prefix = "/") { resolve(it, ifNotExists) },
+            path = httpRequest.parsePath().joinToString("/", prefix = "/", postfix = "/".takeIf { httpRequest.path?.endsWith('/') == true }.orEmpty()) {
+                resolve(it, ifNotExists)
+            },
             headers = resolve(httpRequest.headers, ifNotExists),
             body = resolve(httpRequest.body, ifNotExists),
-            queryParams = QueryParameters(resolve(httpRequest.queryParams.asMap(), ifNotExists))
+            queryParams = QueryParameters(resolve(httpRequest.queryParams.paramPairs, ifNotExists))
         )
     }
 
@@ -102,6 +101,14 @@ object ExampleProcessor {
             headers = resolve(httpResponse.headers, ifNotExists),
             body = resolve(httpResponse.body, ifNotExists)
         )
+    }
+
+    fun resolve(entries: List<Pair<String, String>>, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value): List<Pair<String, String>> {
+        val keysToAvoid = entries.groupBy { it.first }.filter { it.value.size > 1 }.keys
+        return entries.map { (key, value) ->
+            val updatedValue = if (key in keysToAvoid) value else resolve(value, ifNotExists)
+            key to updatedValue
+        }
     }
 
     fun resolve(value: Map<String, String>, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value): Map<String, String> {

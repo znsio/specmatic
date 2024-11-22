@@ -5,8 +5,6 @@ import io.specmatic.core.*
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.attempt
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.Value
 
@@ -89,12 +87,12 @@ data class ScenarioAsTest(
             workflow.updateRequest(it, originalScenario)
         }
 
-        return try {
+        try {
             val updatedRequest = ExampleProcessor.resolve(request)
 
-            val substitutionResult = originalScenario.matches(updatedRequest, emptyMap())
-            if (substitutionResult is Result.Failure) {
-                return Pair(substitutionResult.breadCrumb("SUBSTITUTION-FAILURES"), null)
+            val substitutionResult = originalScenario.httpRequestPattern.matches(updatedRequest, flagsBased.update(originalScenario.resolver))
+            if (substitutionResult is Result.Failure && !testScenario.isA4xxScenario() && !testScenario.isNegative) {
+                return Pair(substitutionResult.updateScenario(testScenario), null)
             }
 
             testExecutor.setServerState(testScenario.serverState)
@@ -104,7 +102,7 @@ data class ScenarioAsTest(
 
             val validatorResult = validators.asSequence().map { it.validate(scenario, response) }.filterNotNull().firstOrNull()
             if (validatorResult is Result.Failure) {
-                Pair(validatorResult.withBindings(testScenario.bindings, response), response)
+                return Pair(validatorResult.withBindings(testScenario.bindings, response), response)
             }
 
             val testResult = testResult(updatedRequest, response, testScenario, flagsBased)
@@ -116,9 +114,9 @@ data class ScenarioAsTest(
             val result = postValidateResult ?: testResult
 
             testScenario.exampleRow?.let { ExampleProcessor.store(it, updatedRequest, response) }
-            Pair(result.withBindings(testScenario.bindings, response), response)
+            return Pair(result.withBindings(testScenario.bindings, response), response)
         } catch (exception: Throwable) {
-            Pair(
+            return Pair(
                 Result.Failure(exceptionCauseMessage(exception))
                 .also { failure -> failure.updateScenario(testScenario) }, null)
         }

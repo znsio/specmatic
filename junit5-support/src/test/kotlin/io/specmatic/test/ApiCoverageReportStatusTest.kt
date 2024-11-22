@@ -91,8 +91,8 @@ class ApiCoverageReportStatusTest {
         ).generate()
         assertThat(apiCoverageReport.coverageRows).isEqualTo(
             listOf(
-                OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
-                OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
+                OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.Missed),
+                OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered, showPath = false, showMethod = false)
             )
         )
     }
@@ -118,8 +118,8 @@ class ApiCoverageReportStatusTest {
         ).generate()
         assertThat(apiCoverageReport.coverageRows).isEqualTo(
             listOf(
-                OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered),
-                OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.Missed, showPath = false, showMethod = false)
+                OpenApiCoverageConsoleRow("GET", "/route1", 400, 0, 50, Remarks.Missed),
+                OpenApiCoverageConsoleRow("GET", "/route1", 200, 1, 50, Remarks.Covered, showPath = false, showMethod = false)
             )
         )
     }

@@ -162,12 +162,15 @@ data class Scenario(
         httpRequest: HttpRequest,
         serverState: Map<String, Value>,
         mismatchMessages: MismatchMessages = DefaultMismatchMessages,
-        unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys
+        unexpectedKeyCheck: UnexpectedKeyCheck? = null
     ): Result {
         val headersResolver = Resolver(serverState, false, patterns).copy(mismatchMessages = mismatchMessages)
-        val nonHeadersResolver = headersResolver
-            .withUnexpectedKeyCheck(unexpectedKeyCheck)
-            .disableOverrideUnexpectedKeycheck()
+
+        val nonHeadersResolver = if(unexpectedKeyCheck != null) {
+            headersResolver.withUnexpectedKeyCheck(unexpectedKeyCheck)
+        } else {
+            headersResolver
+        }.disableOverrideUnexpectedKeycheck()
 
         return matches(httpRequest, serverState, nonHeadersResolver, headersResolver)
     }
@@ -507,13 +510,16 @@ data class Scenario(
         val httpResponsePatternBasedOnAttributeSelection =
             newBasedOnAttributeSelectionFields(row.requestExample?.queryParams).httpResponsePattern
 
-        val fieldsToBeMadeMandatory = getFieldsToBeMadeMandatoryBasedOnAttributeSelection(row.requestExample?.queryParams)
+        val fieldsToBeMadeMandatory =
+            getFieldsToBeMadeMandatoryBasedOnAttributeSelection(row.requestExample?.queryParams)
         val updatedResolver = if(fieldsToBeMadeMandatory.isNotEmpty()) {
             resolverForExample.copy(mismatchMessages = getMismatchObjectForTestExamples(row))
         } else resolverForExample
 
         if (responseExample != null) {
-            val responseMatchResult = httpResponsePatternBasedOnAttributeSelection.matches(responseExample, updatedResolver)
+            val responseMatchResult =
+                httpResponsePatternBasedOnAttributeSelection.matches(responseExample, updatedResolver)
+
             return responseMatchResult
         }
 
@@ -521,15 +527,15 @@ data class Scenario(
     }
 
     private fun validateRequestExample(row: Row, resolverForExample: Resolver): Result {
-        val requestExample = row.requestExample ?: run {
+        if(row.requestExample != null) {
+            val result = httpRequestPattern.matches(row.requestExample, resolverForExample, resolverForExample)
+            if(result is Result.Failure && !status.toString().startsWith("4"))
+                return result
+        } else {
             httpRequestPattern.newBasedOn(row, resolverForExample, status).first().value
-            return Result.Success()
         }
 
-        val result = httpRequestPattern.matches(requestExample, resolverForExample, resolverForExample)
-        return result.takeUnless {
-            it is Result.Failure && !status.toString().startsWith("4")
-        } ?: Result.Success()
+        return Result.Success()
     }
 
     private fun getMismatchObjectForTestExamples(row: Row): MismatchMessages {
@@ -703,6 +709,9 @@ data class Scenario(
     }
 
     fun isA2xxScenario(): Boolean = this.httpResponsePattern.status in 200..299
+
+    fun isA4xxScenario(): Boolean = this.httpResponsePattern.status in 400..499
+
     fun negativeBasedOn(badRequestOrDefault: BadRequestOrDefault?): Scenario {
         return this.copy(
             isNegative = true,

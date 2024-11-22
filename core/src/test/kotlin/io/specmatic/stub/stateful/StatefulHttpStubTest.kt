@@ -237,8 +237,6 @@ class StatefulHttpStubTest {
         assertThat(response.status).isEqualTo(201)
         val responseBody = response.body as JSONObjectValue
 
-        resourceId = responseBody.getStringValue("id").orEmpty()
-
         assertThat(responseBody.getStringValue("name")).isEqualTo("Product A")
         assertThat(responseBody.getStringValue("description")).isEqualTo("A detailed description of Product A.")
         assertThat(responseBody.getStringValue("price")).isEqualTo("19.99")

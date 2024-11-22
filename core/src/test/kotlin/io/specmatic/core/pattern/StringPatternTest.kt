@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.CsvSource
 import java.util.stream.Stream
 import io.specmatic.core.Result as Result
 
@@ -94,26 +94,48 @@ internal class StringPatternTest {
     }
 
     @ParameterizedTest
-    @MethodSource("minLengthMaxLengthAndExpectedLength")
-    fun `generate string value as per minLength and maxLength`(min: Int?, max: Int?, expectedLengthOfGeneratedValue: Int) {
-        val result = StringPattern(minLength = min, maxLength = max).generate(Resolver()) as StringValue
+    @CsvSource(
+        "null, 10, 5",
+        "null, 4, 1",
+        "1, 10, 1",
+        "5, 10, 5",
+        "6, null, 6",
+        "null, null, 5"
+    )
+    fun `generate string value as per minLength and maxLength`(min: String?, max: String?, expectedLength: Int) {
+        val minLength = if (min == "null") null else min?.toInt()
+        val maxLength = if (max == "null") null else max?.toInt()
+
+        val result = StringPattern(minLength = minLength, maxLength = maxLength).generate(Resolver()) as StringValue
         val generatedLength = result.string.length
 
-        assertThat(generatedLength).isGreaterThanOrEqualTo(expectedLengthOfGeneratedValue)
-        max?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
+        assertThat(generatedLength).isGreaterThanOrEqualTo(expectedLength)
+        maxLength?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
     }
 
+
     @ParameterizedTest
-    @MethodSource("regexMinLengthAndMaxLengthAndExpectedLength")
-    fun `generate string value as per regex in conjunction with minLength and maxLength`(regex: String?, min: Int?, max: Int?, expectedLength: Int) {
-        val result = StringPattern(minLength = min, maxLength = max, regex = regex).generate(Resolver()) as StringValue
+    @CsvSource(
+        "'^[a-z]*$', null, null, 5",
+        "'^[a-z0-9]{6,}$', 3, 10, 6",
+        "null, 1, 10, 1"
+    )
+    fun `generate string value as per regex in conjunction with minLength and maxLength`(
+        regex: String?, min: String?, max: String?, expectedLength: Int
+    ) {
+        val minLength = min?.toIntOrNull()
+        val maxLength = max?.toIntOrNull()
+        val patternRegex = if (regex == "null") null else regex
+
+        val result = StringPattern(minLength = minLength, maxLength = maxLength, regex = patternRegex).generate(Resolver()) as StringValue
         val generatedString = result.string
         val generatedLength = generatedString.length
 
         assertThat(generatedLength).isGreaterThanOrEqualTo(expectedLength)
-        max?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
-        regex?.let { assertThat(generatedString).matches(regex) }
+        maxLength?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
+        patternRegex?.let { assertThat(generatedString).matches(patternRegex) }
     }
+
 
     @Test
     fun `string should encompass enum of string`() {

@@ -78,10 +78,9 @@ data class StringPattern (
         val defaultExample = resolver.resolveExample(example, this)
 
         defaultExample?.let {
-            if (matches(it, resolver).isSuccess()) {
-                return it
-            }
-            throw ContractException("Schema example ${it.toStringLiteral()} does not match pattern $regex")
+            val result = matches(it, resolver)
+            result.throwOnFailure()
+            return it
         }
 
         return regex?.let {

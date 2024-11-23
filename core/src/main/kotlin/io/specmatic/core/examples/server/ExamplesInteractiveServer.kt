@@ -75,7 +75,15 @@ class ExamplesInteractiveServer(
 
 
     private val server: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> =
-        embeddedServer(Netty, port = this.serverPort, host = this.serverHost, module =
+        embeddedServer(Netty, configure = {
+            this.callGroupSize = 5
+            this.connectionGroupSize = 20
+            this.workerGroupSize = 20
+            connector {
+                this.host = host
+                this.port = port
+            }
+        }, module =
         {
             install(CORS) {
                 allowMethod(HttpMethod.Options)
@@ -151,7 +159,10 @@ class ExamplesInteractiveServer(
                         } catch (e: ContractException) {
                             ValidateExampleResponse(request.exampleFile, exceptionCauseMessage(e))
                         } catch (e: Exception) {
-                            ValidateExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
+                            ValidateExampleResponse(
+                                request.exampleFile,
+                                e.message ?: "An unexpected error occurred"
+                            )
                         }
                         call.respond(HttpStatusCode.OK, validationResultResponse)
                     } catch (e: Exception) {

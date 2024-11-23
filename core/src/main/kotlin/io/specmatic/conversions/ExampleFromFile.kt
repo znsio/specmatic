@@ -39,7 +39,8 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
             values,
             name = testName,
             fileSource = this.file.canonicalPath,
-            responseExampleForValidation = responseExample,
+            exactResponseExample = responseExample.takeUnless { this.isPartial() },
+            responseExampleForAssertion = response,
             requestExample = scenarioStub.getRequestWithAdditionalParamsIfAny(specmaticConfig.additionalExampleParamsFilePath),
             responseExample = response.takeUnless { this.isPartial() },
             isPartial = scenarioStub.partial != null

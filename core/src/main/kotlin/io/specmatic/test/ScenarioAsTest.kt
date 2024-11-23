@@ -124,16 +124,10 @@ data class ScenarioAsTest(
         }
     }
 
-    private fun testResult(
-        request: HttpRequest,
-        response: HttpResponse,
-        testScenario: Scenario,
-        flagsBased: FlagsBased? = null
-    ): Result {
-
+    private fun testResult(request: HttpRequest, response: HttpResponse, testScenario: Scenario, flagsBased: FlagsBased): Result {
         val result = when {
             response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral()).updateScenario(testScenario)
-            else -> testScenario.matches(request, response, ContractAndResponseMismatch, flagsBased?.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
+            else -> testScenario.matchesResponse(request, response, ContractAndResponseMismatch, flagsBased.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
         }
 
         if (result is Result.Success && result.isPartialSuccess()) {
@@ -143,7 +137,6 @@ data class ScenarioAsTest(
 
         return result
     }
-
 }
 
 private fun LogMessage.withComment(comment: String?): LogMessage {

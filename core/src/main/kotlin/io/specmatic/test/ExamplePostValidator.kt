@@ -21,7 +21,7 @@ object ExamplePostValidator: ResponseValidator {
     }
 
     private fun Row.toAsserts(): List<Assert> {
-        val responseExampleBody = this.responseExampleForValidation?.responseExample ?: return emptyList()
+        val responseExampleBody = this.responseExampleForAssertion ?: return emptyList()
 
         val headerAsserts = responseExampleBody.headers.map {
             parsedAssert("RESPONSE.HEADERS", it.key, StringValue(it.value))

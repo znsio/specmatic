@@ -297,10 +297,14 @@ data class Scenario(
         }
     }
 
-    fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
-        val resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck).copy(context = RequestContext(httpRequest))
+    fun matchesResponse(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
+        val updatedUnexpectedKeyCheck = if (isRequestAttributeSelected(httpRequest)) {
+            ValidateUnexpectedKeys
+        } else unexpectedKeyCheck
 
-        return matches(httpResponse, mismatchMessages, unexpectedKeyCheck, resolver)
+        val resolver = updatedResolver(mismatchMessages, updatedUnexpectedKeyCheck).copy(context = RequestContext(httpRequest))
+
+        return matches(httpResponse, mismatchMessages, updatedUnexpectedKeyCheck, resolver)
     }
 
     fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages, flagsBased: FlagsBased): Result {

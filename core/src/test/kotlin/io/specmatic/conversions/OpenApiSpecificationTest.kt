@@ -350,7 +350,7 @@ Pet:
         val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
 
         val examples = scenarioInfos.first().examples.flatMap {
-            it.rows.map { row -> row.responseExampleForValidation }
+            it.rows.map { row -> row.exactResponseExample }
         }
         examples.forEach {
             assertThat(it).isInstanceOf(ResponseValueExample::class.java)
@@ -364,7 +364,7 @@ Pet:
         val (scenarioInfos, _) = openApiSpecification.toScenarioInfos()
 
         val examples = scenarioInfos.first().examples.flatMap {
-            it.rows.map { row -> row.responseExampleForValidation }
+            it.rows.map { row -> row.exactResponseExample }
         }
         examples.forEach {
             assertThat(it).isNull()

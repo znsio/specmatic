@@ -76,7 +76,7 @@ data class HttpResponsePattern(
 
     fun withResponseExampleValue(row: Row, resolver: Resolver): HttpResponsePattern =
         attempt(breadCrumb = "RESPONSE") {
-            val responseExample: ResponseExample = row.responseExampleForValidation ?: return@attempt this
+            val responseExample: ResponseExample = row.responseExampleForValidation.takeIf { !row.isPartial } ?: return@attempt this
 
             val responseExampleMatchResult = matches(responseExample.responseExample, resolver)
 
@@ -126,7 +126,7 @@ data class HttpResponsePattern(
             else -> response.body
         }
 
-        val result = body.matches(parsedValue, resolver)
+        val result = resolver.matchesPattern(null, body, parsedValue)
         if(result is Result.Failure)
             return MatchSuccess(Triple(response, resolver, failures.plus(result.breadCrumb("BODY"))))
 

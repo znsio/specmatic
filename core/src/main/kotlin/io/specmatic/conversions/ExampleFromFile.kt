@@ -10,6 +10,7 @@ import io.specmatic.core.value.EmptyString
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.mockFromJSON
+import io.specmatic.test.ExampleProcessor
 import java.io.File
 import java.net.URI
 
@@ -17,30 +18,21 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
     fun toRow(specmaticConfig: SpecmaticConfig = SpecmaticConfig()): Row {
         logger.log("Loading test file ${this.expectationFilePath}")
 
-        val examples: Map<String, String> =
-            headers
-                .plus(queryParams)
-                .plus(requestBody?.let { mapOf("(REQUEST-BODY)" to it.toStringLiteral()) } ?: emptyMap())
+        val examples: Map<String, String> = headers
+            .plus(queryParams)
+            .plus(requestBody?.let { mapOf("(REQUEST-BODY)" to it.toStringLiteral()) } ?: emptyMap())
 
-        val (
-            columnNames,
-            values
-        ) = examples.entries.let { entry ->
+        val (columnNames, values) = examples.entries.let { entry ->
             entry.map { it.key } to entry.map { it.value }
         }
 
         val responseExample: ResponseExample? = response.let { httpResponse ->
             when {
-                specmaticConfig.isResponseValueValidationEnabled() ->
-                    ResponseValueExample(httpResponse)
-
-                else ->
-                    null
+                specmaticConfig.isResponseValueValidationEnabled() -> ResponseValueExample(httpResponse)
+                else -> null
             }
-
         }
-
-        val requestExample = mockFromJSON(json.jsonObject).getRequestWithAdditionalParamsIfAny(request, specmaticConfig.additionalExampleParamsFilePath)
+        val scenarioStub = mockFromJSON(json.jsonObject)
 
         return Row(
             columnNames,
@@ -48,9 +40,10 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
             name = testName,
             fileSource = this.file.canonicalPath,
             responseExampleForValidation = responseExample,
-            requestExample = requestExample,
-            responseExample = response
-        )
+            requestExample = scenarioStub.getRequestWithAdditionalParamsIfAny(specmaticConfig.additionalExampleParamsFilePath),
+            responseExample = response.takeUnless { this.isPartial() },
+            isPartial = scenarioStub.partial != null
+        ).let { ExampleProcessor.resolveLookupIfPresent(it) }
     }
 
     constructor(file: File) : this(
@@ -59,6 +52,15 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         } else attempt("Error reading example file ${file.canonicalPath}") {parsedJSONObject(file.readText()) },
         file = file
     )
+
+    private fun JSONObjectValue.findByPath(path: String): Value? {
+        return  findFirstChildByPath("partial.$path") ?: findFirstChildByPath(path)
+    }
+
+    private fun isPartial(): Boolean {
+        // TODO: Review
+        return json.findByPath("partial") != null
+    }
 
     val expectationFilePath: String = file.canonicalPath
 
@@ -88,12 +90,12 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
             )
         }
 
-    val responseBody: Value? = attempt("Error reading response body in file ${file.parentFile.canonicalPath}") {
-        json.findFirstChildByPath("http-response.body")
+    val responseBody: Value? = attempt("Error reading response body in file ${file.canonicalPath}") {
+        json.findByPath("http-response.body")
     }
 
-    val responseHeaders: JSONObjectValue? = attempt("Error reading response headers in file ${file.parentFile.canonicalPath}") {
-        val headers = json.findFirstChildByPath("http-response.headers") ?: return@attempt null
+    val responseHeaders: JSONObjectValue? = attempt("Error reading response headers in file ${file.canonicalPath}") {
+        val headers = json.findByPath("http-response.headers") ?: return@attempt null
 
         if(headers !is JSONObjectValue)
             throw ContractException("http-response.headers should be a JSON object, but instead it was ${headers.toStringLiteral()}")
@@ -101,18 +103,18 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         headers
     }
 
-    val responseStatus: Int = attempt("Error reading status in file ${file.parentFile.canonicalPath}") {
-        json.findFirstChildByPath("http-response.status")?.toStringLiteral()?.toInt()
+    val responseStatus: Int = attempt("Error reading status in file ${file.canonicalPath}") {
+        json.findByPath("http-response.status")?.toStringLiteral()?.toInt()
     } ?: throw ContractException("Response status code was not found.")
 
-    val requestMethod: String = attempt("Error reading method in file ${file.parentFile.canonicalPath}") {
-        json.findFirstChildByPath("http-request.method")?.toStringLiteral()
+    val requestMethod: String = attempt("Error reading method in file ${file.canonicalPath}") {
+        json.findByPath("http-request.method")?.toStringLiteral()
     } ?: throw ContractException("Request method was not found.")
 
     private val rawPath: String? =
-        json.findFirstChildByPath("http-request.path")?.toStringLiteral()
+        json.findByPath("http-request.path")?.toStringLiteral()
 
-    val requestPath: String = attempt("Error reading path in file ${file.parentFile.canonicalPath}") {
+    val requestPath: String = attempt("Error reading path in file ${file.canonicalPath}") {
         rawPath?.let { pathOnly(it) }
     } ?: throw ContractException("Request path was not found.")
 
@@ -120,21 +122,21 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         return URI(requestPath).path ?: ""
     }
 
-    private val testName: String = attempt("Error reading expectation name in file ${file.parentFile.canonicalPath}") {
-        json.findFirstChildByPath("name")?.toStringLiteral() ?: file.nameWithoutExtension
+    private val testName: String = attempt("Error reading expectation name in file ${file.canonicalPath}") {
+        json.findByPath("name")?.toStringLiteral() ?: file.nameWithoutExtension
     }
 
     val queryParams: Map<String, String>
         get() {
-            val path = attempt("Error reading path in file ${file.parentFile.canonicalPath}") {
+            val path = attempt("Error reading path in file ${file.canonicalPath}") {
                 rawPath ?: throw ContractException("Request path was not found.")
             }
 
             val uri = URI.create(path)
             val queryParamsFromURL = parseQuery(uri.query)
 
-            val queryParamsFromJSONBlock = attempt("Error reading query params in file ${file.parentFile.canonicalPath}") {
-                (json.findFirstChildByPath("http-request.query") as JSONObjectValue?)?.jsonObject?.mapValues { (_, value) ->
+            val queryParamsFromJSONBlock = attempt("Error reading query params in file ${file.canonicalPath}") {
+                (json.findByPath("http-request.query") as JSONObjectValue?)?.jsonObject?.mapValues { (_, value) ->
                     value.toStringLiteral()
                 } ?: emptyMap()
             }
@@ -142,13 +144,13 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
             return queryParamsFromURL + queryParamsFromJSONBlock
         }
 
-    val headers: Map<String, String> = attempt("Error reading headers in file ${file.parentFile.canonicalPath}") {
-        (json.findFirstChildByPath("http-request.headers") as JSONObjectValue?)?.jsonObject?.mapValues { (_, value) ->
+    val headers: Map<String, String> = attempt("Error reading headers in file ${file.canonicalPath}") {
+        (json.findByPath("http-request.headers") as JSONObjectValue?)?.jsonObject?.mapValues { (_, value) ->
             value.toStringLiteral()
         } ?: emptyMap()
     }
 
-    val requestBody: Value? = attempt("Error reading request body in file ${file.parentFile.canonicalPath}") {
-        json.findFirstChildByPath("http-request.body")
+    val requestBody: Value? = attempt("Error reading request body in file ${file.canonicalPath}") {
+        json.findByPath("http-request.body")
     }
 }

@@ -88,6 +88,9 @@ class Proxy(
     private val server = embeddedServer(
         Netty, applicationEnvironment(),
         configure = {
+            this.callGroupSize = 5
+            this.connectionGroupSize = 20
+            this.workerGroupSize = 20
             if (keyData != null) {
                 sslConnector(
                     keyStore = keyData.keyStore,

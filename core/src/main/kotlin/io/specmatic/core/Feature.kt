@@ -514,7 +514,7 @@ data class Feature(
         val scenarioStub = ScenarioStub.readFromFile(File(filePath))
 
         val originalScenario = scenarios.firstOrNull { scenario ->
-            scenario.matches(scenarioStub.request, scenarioStub.response) is Result.Success
+            scenario.matches(scenarioStub.request, scenarioStub.response, DefaultMismatchMessages, flagsBased) is Result.Success
         } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
 
         val concreteTestScenario = Scenario(

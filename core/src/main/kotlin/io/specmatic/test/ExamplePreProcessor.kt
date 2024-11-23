@@ -155,7 +155,7 @@ object ExampleProcessor {
             return
         }
 
-        val bodyToCheck = exampleRow.responseExample?.body ?: exampleRow.responseExampleForValidation?.responseExample?.body
+        val bodyToCheck = exampleRow.responseExampleForAssertion?.body
         bodyToCheck?.ifContainsStoreToken { type ->
             runningEntity = when (type) {
                 StoreType.REPLACE -> httpResponse.body.toFactStore(prefix = "ENTITY")

@@ -1,5 +1,4 @@
 package io.specmatic.test
-
 import io.specmatic.core.*
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
@@ -29,7 +28,6 @@ import java.net.URL
 import java.util.*
 import java.util.zip.GZIPInputStream
 
-// API for non-Kotlin invokers
 fun createHttpClient(baseURL: String, timeoutInMilliseconds: Long) = HttpClient(baseURL, timeoutInMilliseconds)
 
 class HttpClient(

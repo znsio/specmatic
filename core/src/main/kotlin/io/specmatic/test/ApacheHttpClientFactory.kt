@@ -9,8 +9,8 @@ import org.apache.http.ssl.SSLContextBuilder
 
 const val BREATHING_ROOM_FOR_REQUEST_TIMEOUT_TO_KICK_IN_FIRST = 1
 
-class ApacheHttpClientFactory(override val timeoutPolicy: TimeoutPolicy): HttpClientFactory {
-    constructor(timeoutInMilliseconds: Long): this(TimeoutPolicy(timeoutInMilliseconds))
+class ApacheHttpClientFactory(private val timeoutInMilliseconds: Long) : HttpClientFactory {
+
 
     override fun create(): HttpClient = HttpClient(Apache) {
         expectSuccess = false
@@ -29,7 +29,8 @@ class ApacheHttpClientFactory(override val timeoutPolicy: TimeoutPolicy): HttpCl
         }
 
         install(HttpTimeout) {
-            timeoutPolicy.configure(this)
+            requestTimeoutMillis = timeoutInMilliseconds
+            socketTimeoutMillis = timeoutInMilliseconds + BREATHING_ROOM_FOR_REQUEST_TIMEOUT_TO_KICK_IN_FIRST
         }
     }
 }

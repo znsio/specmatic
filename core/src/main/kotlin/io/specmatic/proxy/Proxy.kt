@@ -36,8 +36,22 @@ import java.io.Closeable
 import java.net.URI
 import java.net.URL
 
-class Proxy(host: String, port: Int, baseURL: String, private val outputDirectory: FileWriter, keyData: KeyData? = null, timeoutInMilliseconds: Long = DEFAULT_TIMEOUT_IN_MILLISECONDS): Closeable {
-    constructor(host: String, port: Int, baseURL: String, proxySpecmaticDataDir: String, keyData: KeyData? = null, timeoutInMilliseconds: Long) : this(host, port, baseURL, RealFileWriter(proxySpecmaticDataDir), keyData, timeoutInMilliseconds)
+class Proxy(
+    host: String,
+    port: Int,
+    baseURL: String,
+    private val outputDirectory: FileWriter,
+    keyData: KeyData? = null,
+    timeoutInMilliseconds: Long = DEFAULT_TIMEOUT_IN_MILLISECONDS
+) : Closeable {
+    constructor(
+        host: String,
+        port: Int,
+        baseURL: String,
+        proxySpecmaticDataDir: String,
+        keyData: KeyData? = null,
+        timeoutInMilliseconds: Long
+    ) : this(host, port, baseURL, RealFileWriter(proxySpecmaticDataDir), keyData, timeoutInMilliseconds)
 
     private val stubs = mutableListOf<NamedStub>()
 
@@ -48,14 +62,59 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
         }
     }
 
-    private val environment = applicationEngineEnvironment {
-        module {
-            intercept(ApplicationCallPipeline.Call) {
+    private fun toQueryString(queryParams: Map<String, String>): String {
+        return queryParams.entries.joinToString("&") { entry ->
+            "${entry.key}=${entry.value}"
+        }.let {
+            when {
+                it.isEmpty() -> it
+                else -> "?$it"
+            }
+        }
+    }
+
+    private fun withoutContentEncodingGzip(httpResponse: HttpResponse): HttpResponse {
+        val contentEncodingKey =
+            httpResponse.headers.keys.find { it.lowercase() == "content-encoding" } ?: "Content-Encoding"
+        return when {
+            httpResponse.headers[contentEncodingKey]?.lowercase()?.contains("gzip") == true ->
+                httpResponse.copy(headers = httpResponse.headers.minus(contentEncodingKey))
+
+            else ->
+                httpResponse
+        }
+    }
+
+    private val server = embeddedServer(
+        Netty, applicationEnvironment(),
+        configure = {
+            this.callGroupSize = 5
+            this.connectionGroupSize = 20
+            this.workerGroupSize = 20
+            if (keyData != null) {
+                sslConnector(
+                    keyStore = keyData.keyStore,
+                    keyAlias = keyData.keyAlias,
+                    keyStorePassword = { keyData.keyStorePassword.toCharArray() },
+                    privateKeyPassword = { keyData.keyPassword.toCharArray() }
+                ) {
+                    this.host = host
+                    this.port = port
+                }
+            } else {
+                connector {
+                    this.host = host
+                    this.port = port
+                }
+            }
+        },
+        module = {
+            intercept(ApplicationCallPipeline.Plugins) {
                 try {
                     val httpRequest = ktorHttpRequestToHttpRequest(call)
 
-                    if(httpRequest.isHealthCheckRequest()) return@intercept
-                    if(httpRequest.isDumpRequest()) return@intercept
+                    if (httpRequest.isHealthCheckRequest()) return@intercept
+                    if (httpRequest.isDumpRequest()) return@intercept
 
                     when (httpRequest.method?.uppercase()) {
                         "CONNECT" -> {
@@ -69,7 +128,10 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                         }
 
                         else -> try {
-                            val client = HttpClient(proxyURL(httpRequest, baseURL), timeoutInMilliseconds = timeoutInMilliseconds)
+                            val client = HttpClient(
+                                proxyURL(httpRequest, baseURL),
+                                timeoutInMilliseconds = timeoutInMilliseconds
+                            )
 
                             val requestToSend = targetHost?.let {
                                 httpRequest.withHost(targetHost)
@@ -111,51 +173,14 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
                     respondToKtorHttpResponse(call, errorResponse)
                 }
             }
-
             configureHealthCheckModule()
-
             routing {
                 post(DUMP_ENDPOINT) { handleDumpRequest(call) }
             }
-        }
 
-        when (keyData) {
-            null -> connector {
-                this.host = host
-                this.port = port
-            }
-            else -> sslConnector(keyStore = keyData.keyStore, keyAlias = keyData.keyAlias, privateKeyPassword = { keyData.keyPassword.toCharArray() }, keyStorePassword = { keyData.keyPassword.toCharArray() }) {
-                this.host = host
-                this.port = port
-            }
-        }
-    }
+        },
+    )
 
-    private fun toQueryString(queryParams: Map<String, String>): String {
-        return queryParams.entries.joinToString("&") { entry ->
-            "${entry.key}=${entry.value}"
-        }.let { when {
-            it.isEmpty() -> it
-            else -> "?$it"
-        }}
-    }
-
-    private fun withoutContentEncodingGzip(httpResponse: HttpResponse): HttpResponse {
-        val contentEncodingKey = httpResponse.headers.keys.find { it.lowercase() == "content-encoding" } ?: "Content-Encoding"
-        return when {
-            httpResponse.headers[contentEncodingKey]?.lowercase()?.contains("gzip") == true ->
-                httpResponse.copy(headers = httpResponse.headers.minus(contentEncodingKey))
-            else ->
-                httpResponse
-        }
-    }
-
-    private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {
-        this.requestQueueLimit = 1000
-        this.callGroupSize = 5
-        this.connectionGroupSize = 20
-        this.workerGroupSize = 20
-    })
 
     private fun proxyURL(httpRequest: HttpRequest, baseURL: String): String {
         return when {
@@ -166,7 +191,10 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
 
     private fun isFullURL(path: String?): Boolean {
         return path != null && try {
-            URL(URLParts(path).withEncodedPathSegments()); true } catch(e: Throwable) { false }
+            URL(URLParts(path).withEncodedPathSegments()); true
+        } catch (e: Throwable) {
+            false
+        }
     }
 
     init {
@@ -185,7 +213,7 @@ class Proxy(host: String, port: Int, baseURL: String, private val outputDirector
         val base = "proxy_generated"
         val featureFileName = "$base.yaml"
 
-        if(stubs.isEmpty()) {
+        if (stubs.isEmpty()) {
             println("No stubs were recorded. No contract will be written.")
             return
         }

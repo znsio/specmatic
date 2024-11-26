@@ -24,16 +24,32 @@ data class StringPattern(
         if (minLength != null && maxLength != null && minLength > maxLength) {
             throw IllegalArgumentException("maxLength cannot be less than minLength")
         }
-        if (regex != null) {
-            val automaton: Automaton = RegExp(regex).toAutomaton()
-            val min = automaton.getShortestExample(true).length
-            when {
-                minLength != null && min < minLength ->
-                    throw IllegalArgumentException("Invalid Regex - min cannot be less than regex least size")
+        regex?.let {
+            regexMinLengthValidation(it)
+            regexMaxLengthValidation(it)
+        }
 
-                maxLength != null && min > maxLength ->
-                    throw IllegalArgumentException("Invalid Regex - min cannot be more than regex max size")
+    }
+
+    private fun regexMinLengthValidation(it: String) {
+        val automaton = RegExp(it).toAutomaton()
+
+        minLength?.let { minLen ->
+            val min = automaton.getShortestExample(true).length
+            if (min < minLen) {
+                throw IllegalArgumentException("Invalid Regex - min cannot be less than regex least size")
+            } else if (maxLength != null && min > maxLength) {
+                throw IllegalArgumentException("Invalid Regex - min cannot be more than regex max size")
             }
+        }
+    }
+
+    private fun regexMaxLengthValidation(it: String) {
+        maxLength?.let { maxLen ->
+            val regexWithoutCaretAndDollar = it.removePrefix("^").removeSuffix("$")
+            runCatching {
+                StringValue(generateFromRegex(regexWithoutCaretAndDollar, 5, maxLen + 1))
+            }.getOrNull() ?: throw IllegalArgumentException("Invalid Regex - max cannot be more than regex max size")
         }
     }
 
@@ -81,10 +97,10 @@ data class StringPattern(
         return JSONArrayValue(valueList)
     }
 
-    private val patternMinLength: Int =
+    private val randomStringLength: Int =
         when {
-            minLength != null && minLength > 0 -> minLength
-            maxLength != null && maxLength < 5 -> 1
+            minLength != null && 5 < minLength -> minLength
+            maxLength != null && 5 > maxLength -> maxLength
             else -> 5
         }
 
@@ -100,8 +116,10 @@ data class StringPattern(
 
         return regex?.let {
             val regexWithoutCaretAndDollar = regex.removePrefix("^").removeSuffix("$")
-            StringValue(generateFromRegex(regexWithoutCaretAndDollar, patternMinLength, maxLength))
-        } ?: StringValue(randomString(patternMinLength))
+            regexMinLengthValidation(it)
+            regexMaxLengthValidation(it)
+            StringValue(generateFromRegex(regexWithoutCaretAndDollar, randomStringLength, maxLength))
+        } ?: StringValue(randomString(randomStringLength))
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {

@@ -160,8 +160,7 @@ class ExamplesView {
                         example = exampleFile?.canonicalPath,
                         exampleName = exampleFile?.nameWithoutExtension,
                         exampleMismatchReason = mismatchReason.takeIf { !it.isNullOrBlank() },
-                        isDiscriminatorBased = examples.size > 1,
-                        isSchemaBased = true,
+                        isDiscriminatorBased = false, isSchemaBased = true,
                         pathColSpan = if (isDiscriminator) 3 else 5,
                         methodColSpan = if (isDiscriminator) 2 else 1
                     )

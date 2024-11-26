@@ -10,12 +10,12 @@ import java.io.File
 
 data class SchemaExample(val json: Value, val file: File) {
     companion object {
-        val SCHEMA_IDENTIFIER_REGEX = Regex("^resource\\.(\\w+)(?:\\.(\\w+))?\\.example\\.json\$")
+        val SCHEMA_IDENTIFIER_REGEX = Regex("^resource(?:\\.(\\w+))?\\.(\\w+)\\.example\\.json\$")
         const val SCHEMA_BASED = "SCHEMA_BASED"
         const val NOT_SCHEMA_BASED = "NOT_SCHEMA_BASED"
 
-        fun toSchemaExampleFileName(parentPattern: String? = null, patternName: String): String {
-            if (parentPattern.isNullOrEmpty() || parentPattern == patternName) return "resource.$patternName.example.json"
+        fun toSchemaExampleFileName(parentPattern: String, patternName: String): String {
+            if (patternName.isBlank()) return "resource.$parentPattern.example.json"
             return "resource.$parentPattern.$patternName.example.json"
         }
 
@@ -32,13 +32,9 @@ data class SchemaExample(val json: Value, val file: File) {
         }
     }
 
-    val isDiscriminatorBased = attempt(breadCrumb = "Error parsing schema from example name ${file.name}") {
-        SCHEMA_IDENTIFIER_REGEX.find(file.name)?.groupValues?.getOrNull(1) != null
-    }
+    val discriminatorBasedOn = SCHEMA_IDENTIFIER_REGEX.find(file.name)?.groupValues?.getOrNull(1).takeUnless { it.isNullOrBlank() }
 
-    val getDiscriminatorBasedOn = SCHEMA_IDENTIFIER_REGEX.find(file.name)?.groupValues?.getOrNull(1)
-
-    val getSchemaBasedOn = attempt(breadCrumb = "Error parsing schema from example name ${file.name}") {
+    val schemaBasedOn = attempt(breadCrumb = "Error parsing schema from example name ${file.name}") {
         SCHEMA_IDENTIFIER_REGEX.find(file.name)?.groupValues?.let { match -> match[2].ifEmpty { match[1] } }
             ?: throw ContractException("File name didn't match pattern ${SCHEMA_IDENTIFIER_REGEX.pattern}")
     }

@@ -303,7 +303,7 @@ data class AnyPattern(
         }
     }
 
-    private fun generateValue(resolver: Resolver, discriminatorValue: String = ""): Value {
+    fun generateValue(resolver: Resolver, discriminatorValue: String = ""): Value {
         if (this.isScalarBasedPattern()) {
             return this.pattern.filterNot { it is NullPattern }.let { discriminator?.updatePatternsWithDiscriminator(pattern, resolver)?.listFold()?.value ?: pattern }.first { it is ScalarType }
                 .generate(resolver)

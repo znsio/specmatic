@@ -116,7 +116,7 @@ class ExamplesInteractiveServer(
                     try {
                         val request = call.receive<GenerateExampleRequest>()
                         val generatedExamples = if (request.isSchemaBased) {
-                            generateForSchemaBased(contractFile, request.path)
+                            generateForSchemaBased(contractFile, request.path, request.method)
                         } else {
                             generate(
                                 contractFile,
@@ -279,7 +279,7 @@ class ExamplesInteractiveServer(
         val examplesDir = getExamplesDirPath(contractFile)
         val endpoints = ExamplesView.getEndpoints(feature, examplesDir)
         val schemaExamplesPairs = examplesDir.getSchemaExamplesWithValidation(feature)
-        val tableRows = endpoints.toTableRows().withSchemaExamples(schemaExamplesPairs)
+        val tableRows = endpoints.toTableRows().withSchemaExamples(feature, schemaExamplesPairs)
 
         return HtmlTemplateConfiguration.process(
             templateName = "examples/index.html",
@@ -457,28 +457,21 @@ class ExamplesInteractiveServer(
             return existingExamples.map { ExamplePathInfo(it.file.absolutePath, false) }.plus(newExamples)
         }
 
-        fun generateForSchemaBased(contractFile: File, patternName: String): List<ExamplePathInfo> {
+        fun generateForSchemaBased(contractFile: File, mainPattern: String, subPattern: String): List<ExamplePathInfo> {
             val examplesDir = getExamplesDirPath(contractFile)
             if(examplesDir.exists().not()) examplesDir.mkdirs()
 
             val feature = parseContractFileToFeature(contractFile)
-            val (parentPattern, generatedValues) = feature.generateSchemaValuesFlagBased(patternName)
+            val value = feature.generateSchemaFlagBased(mainPattern, subPattern)
+            val schemaFileName = toSchemaExampleFileName(mainPattern, subPattern)
 
-            val originalSchemaFile = examplesDir.getSchemaExamples().firstOrNull {
-                it.getSchemaBasedOn == parentPattern
-            }?.file
+            val exampleFile = examplesDir.getSchemaExamples().firstOrNull {
+                it.file.nameWithoutExtension == schemaFileName
+            }?.file ?: examplesDir.resolve(schemaFileName)
 
-            if (generatedValues.size > 1) { originalSchemaFile?.delete() }
-
-            return generatedValues.map { (discriminatorMetadata, value) ->
-                val exampleFile = examplesDir.getSchemaExamples().firstOrNull {
-                    discriminatorMetadata.discriminatorValue == it.getSchemaBasedOn
-                }?.file ?: examplesDir.resolve(toSchemaExampleFileName(parentPattern, discriminatorMetadata.discriminatorValue))
-
-                println("Writing to file: ${exampleFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
-                exampleFile.writeText(value.toStringLiteral())
-                ExamplePathInfo(path = exampleFile.absolutePath, created = true)
-            }
+            println("Writing to file: ${exampleFile.relativeTo(contractFile.canonicalFile.parentFile).path}")
+            exampleFile.writeText(value.toStringLiteral())
+            return listOf(ExamplePathInfo(path = exampleFile.absolutePath, created = true))
         }
 
         data class ExamplePathInfo(val path: String, val created: Boolean)
@@ -586,7 +579,7 @@ class ExamplesInteractiveServer(
                 validateExample(feature, scenarioStub).toResultIfAny()
             }.getOrElse {
                 val schemaExample = SchemaExample(exampleFile)
-                feature.matchResultSchemaFlagBased(schemaExample.getSchemaBasedOn, schemaExample.value)
+                feature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value)
             }
         }
 
@@ -638,7 +631,7 @@ class ExamplesInteractiveServer(
                 }.getOrElse {
                     val schemaExample = SchemaExample(example)
                     if (schemaExample.value !is NullValue) {
-                        updatedFeature.matchResultSchemaFlagBased(schemaExample.getSchemaBasedOn, schemaExample.value)
+                        updatedFeature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value)
                     } else {
                         if (enableLogging) logger.log("Skipping empty schema example ${example.name}"); null
                     }
@@ -695,10 +688,10 @@ class ExamplesInteractiveServer(
             } ?: emptyList()
         }
 
-        fun File.getSchemaExamplesWithValidation(feature: Feature): List<Pair<String, Pair<SchemaExample, String>?>> {
+        fun File.getSchemaExamplesWithValidation(feature: Feature): List<Pair<SchemaExample, String?>> {
             return getSchemaExamples().map {
-                it.getSchemaBasedOn to if(it.value !is NullValue) {
-                    it to feature.matchResultSchemaFlagBased(it.getSchemaBasedOn, it.value).reportString()
+                it to if(it.value !is NullValue) {
+                    feature.matchResultSchemaFlagBased(it.discriminatorBasedOn, it.schemaBasedOn, it.value).reportString()
                 } else null
             }
         }

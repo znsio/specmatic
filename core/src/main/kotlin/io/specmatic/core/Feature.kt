@@ -16,7 +16,6 @@ import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
-import io.specmatic.core.discriminator.DiscriminatorBasedValueGenerator
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.*
 import io.swagger.v3.oas.models.*
@@ -375,16 +374,35 @@ data class Feature(
         } != null
     }
 
-    fun matchResultSchemaFlagBased(patternName: String, value: Value): Result {
+    fun matchResultSchemaFlagBased(primaryPatternName: String?, secondaryPatternName: String, value: Value): Result {
         val updatedResolver = flagsBased.update(scenarios.last().resolver)
-        val pattern = DeferredPattern("($patternName)")
-        return pattern.matches(value, updatedResolver)
+        return try {
+            val pattern = primaryPatternName ?: secondaryPatternName
+            val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(pattern))
+            resolvedPattern.matches(value, updatedResolver)
+        } catch (e: Throwable) {
+            Result.Failure(e.message ?: "Couldn't match pattern $primaryPatternName, please check if this exists")
+        }
     }
 
-    fun generateSchemaValuesFlagBased(patternName: String): Pair<String, List<DiscriminatorBasedItem<Value>>> {
+    fun getAllDiscriminatorValues(patternName: String): Set<String> {
         val updatedResolver = flagsBased.update(scenarios.last().resolver)
-        val pattern = DeferredPattern("($patternName)")
-        return patternName to DiscriminatorBasedValueGenerator.generateDiscriminatorBasedValues(updatedResolver, pattern)
+        return try {
+            val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(patternName)) as? AnyPattern
+            resolvedPattern?.discriminator?.values.orEmpty()
+        } catch (e: Throwable) {
+            emptySet()
+        }
+    }
+
+    fun generateSchemaFlagBased(primaryPatternName: String?, secondaryPatternName: String): Value {
+        val updatedResolver = flagsBased.update(scenarios.last().resolver)
+        val pattern = primaryPatternName ?: secondaryPatternName
+
+        return when (val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(pattern))) {
+            is AnyPattern -> resolvedPattern.generateValue(updatedResolver, secondaryPatternName)
+            else -> resolvedPattern.generate(updatedResolver)
+        }
     }
 
     fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {

@@ -533,7 +533,7 @@ data class Feature(
         val scenarioStub = ScenarioStub.readFromFile(File(filePath))
 
         val originalScenario = scenarios.firstOrNull { scenario ->
-            scenario.matches(scenarioStub.request, scenarioStub.response) is Result.Success
+            scenario.matches(scenarioStub.request, scenarioStub.response, DefaultMismatchMessages, flagsBased) is Result.Success
         } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
 
         val concreteTestScenario = Scenario(
@@ -1660,19 +1660,20 @@ data class Feature(
         if (!testsDirectory.exists())
             return emptyMap()
 
-        val files = testsDirectory.listFiles()
+        val files = testsDirectory.walk().filterNot { it.isDirectory }.filter {
+            it.extension == "json"
+        }.toList()
 
-        if (files.isNullOrEmpty())
-            return emptyMap()
+        if (files.isEmpty()) return emptyMap()
 
-        val examlesInSubdirectories: Map<OpenApiSpecification.OperationIdentifier, List<Row>> =
+        val examplesInSubdirectories: Map<OpenApiSpecification.OperationIdentifier, List<Row>> =
             files.filter {
                 it.isDirectory
             }.fold(emptyMap()) { acc, item ->
                 acc + loadExternalisedJSONExamples(item)
             }
 
-        return examlesInSubdirectories + files.filterNot { it.isDirectory }.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
+        return examplesInSubdirectories + files.filterNot { it.isDirectory }.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
             try {
                 with(exampleFromFile) {
                     OpenApiSpecification.OperationIdentifier(

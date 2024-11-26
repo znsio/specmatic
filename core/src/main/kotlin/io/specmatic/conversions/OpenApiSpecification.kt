@@ -728,7 +728,7 @@ class OpenApiSpecification(
                         } else valueString
                     },
                 name = exampleName,
-                responseExampleForValidation = if(resolvedResponseExample != null && responseExample.isNotEmpty()) resolvedResponseExample else null,
+                exactResponseExample = if(resolvedResponseExample != null && responseExample.isNotEmpty()) resolvedResponseExample else null,
                 requestExample = requestExampleAsHttpRequests[exampleName]?.first(),
                 responseExample = responseExample
             )

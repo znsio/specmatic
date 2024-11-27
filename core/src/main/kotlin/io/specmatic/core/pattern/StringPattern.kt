@@ -25,8 +25,9 @@ data class StringPattern(
             throw IllegalArgumentException("maxLength cannot be less than minLength")
         }
         regex?.let {
-            regexMinLengthValidation(it)
-            regexMaxLengthValidation(it)
+            val regexWithoutCaretAndDollar = it.removePrefix("^").removeSuffix("$")
+            regexMinLengthValidation(regexWithoutCaretAndDollar)
+            regexMaxLengthValidation(regexWithoutCaretAndDollar)
         }
 
     }
@@ -46,10 +47,11 @@ data class StringPattern(
 
     private fun regexMaxLengthValidation(it: String) {
         maxLength?.let { maxLen ->
-            val regexWithoutCaretAndDollar = it.removePrefix("^").removeSuffix("$")
-            runCatching {
-                StringValue(generateFromRegex(regexWithoutCaretAndDollar, 5, maxLen + 1))
-            }.getOrNull() ?: throw IllegalArgumentException("Invalid Regex - max cannot be more than regex max size")
+            val generatedString = generateFromRegex(it, maxLen+1)
+
+            if (generatedString.length > maxLen) {
+                throw IllegalArgumentException("Invalid Regex - max cannot be more than regex max size")
+            }
         }
     }
 
@@ -185,7 +187,7 @@ data class StringPattern(
     override val pattern: Any = "(string)"
     override fun toString(): String = pattern.toString()
 
-    private fun generateFromRegex(regexWithoutCaretAndDollar: String, minLength: Int, maxLength: Int?): String =
+    private fun generateFromRegex(regexWithoutCaretAndDollar: String, minLength: Int, maxLength: Int? = null): String =
         maxLength?.let {
             Generex(regexWithoutCaretAndDollar).random(minLength, it)
         } ?: Generex(regexWithoutCaretAndDollar).random(minLength)

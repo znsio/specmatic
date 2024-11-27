@@ -87,7 +87,7 @@ internal class StringPatternTest {
         fun regexMinLengthAndMaxLengthAndExpectedLength(): Stream<Arguments> {
             return Stream.of(
                 Arguments.of("^[a-z]*\$", null, null, 5),
-                Arguments.of("^[a-z0-9]{6,}\$", 3, 10, 6),
+                Arguments.of("^[a-z0-9]{6,10}\$", 3, 10, 6),
                 Arguments.of(null, 1, 10, 1),
             )
         }
@@ -205,14 +205,52 @@ internal class StringPatternTest {
         val result = StringPattern(
             minLength = minLength,
             maxLength = maxLength,
-            regex = "^[^0-9]*$"
+            regex = "^[^0-9]{15}$"
         ).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
 
         assertThat(
             result.filterIsInstance<StringPattern>().filter {
-                it.regex == "^[^0-9]*\$_"
+                it.regex == "^[^0-9]{15}\$_"
             }
         ).hasSize(1)
+    }
+
+    @Test
+    @Tag(GENERATION)
+    fun `regex sould throw validation issue for patterns less than min size as per api contract`() {
+        val minLength = 2
+        val maxLength = 15
+
+        val result = runCatching {
+            StringPattern(
+                minLength = minLength,
+                maxLength = maxLength,
+                regex = "^.{0,4}$"
+            ).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
+        }
+
+        result.onFailure { exception ->
+            assertThat(exception.message).isEqualTo("Invalid Regex - min cannot be less than regex least size")
+        }
+    }
+
+    @Test
+    @Tag(GENERATION)
+    fun `regex sould throw validation issue for patterns more than max size as per api contract`() {
+        val minLength = 2
+        val maxLength = 15
+
+        val result = runCatching {
+            StringPattern(
+                minLength = minLength,
+                maxLength = maxLength,
+                regex = "^.{2,14}$"
+            ).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
+        }
+
+        result.onFailure { exception ->
+            assertThat(exception.message).isEqualTo("Invalid Regex - max cannot be more than regex max size")
+        }
     }
 
     @Test
@@ -224,7 +262,7 @@ internal class StringPatternTest {
         val result = StringPattern(
             minLength = minLength,
             maxLength = maxLength,
-            regex = "^[^0-9]*$"
+            regex = "^[^0-9]{15}$"
         ).negativeBasedOn(
             Row(),
             Resolver(),
@@ -239,7 +277,7 @@ internal class StringPatternTest {
         ).hasSize(0)
 
         assertThat(
-            result.filterIsInstance<StringPattern>().filter { it.regex == "^[^0-9]*\$_" }
+            result.filterIsInstance<StringPattern>().filter { it.regex == "^[^0-9]{15}\$_" }
         ).hasSize(1)
 
         assertThat(

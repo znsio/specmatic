@@ -87,7 +87,7 @@ internal class StringPatternTest {
         fun regexMinLengthAndMaxLengthAndExpectedLength(): Stream<Arguments> {
             return Stream.of(
                 Arguments.of("^[a-z]*\$", null, null, 5),
-                Arguments.of("^[a-z0-9]{6,10}\$", 3, 10, 6),
+                Arguments.of("^[a-z0-9]{6,10}\$", 6, 10, 6),
                 Arguments.of(null, 1, 10, 1),
             )
         }

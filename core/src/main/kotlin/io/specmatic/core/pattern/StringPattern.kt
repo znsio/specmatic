@@ -118,8 +118,8 @@ data class StringPattern(
 
         return regex?.let {
             val regexWithoutCaretAndDollar = regex.removePrefix("^").removeSuffix("$")
-            regexMinLengthValidation(it)
-            regexMaxLengthValidation(it)
+            regexMinLengthValidation(regexWithoutCaretAndDollar)
+            regexMaxLengthValidation(regexWithoutCaretAndDollar)
             StringValue(generateFromRegex(regexWithoutCaretAndDollar, randomStringLength, maxLength))
         } ?: StringValue(randomString(randomStringLength))
     }

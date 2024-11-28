@@ -169,16 +169,35 @@ data class AnyPattern(
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        resolver.resolveExample(example, pattern)?.let {
+        val updatedPatterns = discriminator?.let {
+            it.updatePatternsWithDiscriminator(pattern, resolver).let { updatedPatterns ->
+                if(updatedPatterns.any { it !is HasValue<Pattern> }) {
+                    val failures = updatedPatterns.map { pattern ->
+                        when(pattern) {
+                            is HasValue -> null
+                            is HasFailure -> pattern.failure
+                            is HasException -> pattern.toFailure()
+                        }
+                    }.filterNotNull()
+
+                    return sequenceOf(HasFailure(Failure.fromFailures(failures)))
+                }
+
+                updatedPatterns.listFold().value
+            }
+        } ?: pattern
+
+        resolver.resolveExample(example, updatedPatterns)?.let {
             return sequenceOf(HasValue(ExactValuePattern(it)))
         }
 
-        val isNullable = pattern.any { it is NullPattern }
+        val isNullable = updatedPatterns.any { it is NullPattern }
         val patternResults: Sequence<Pair<Sequence<ReturnValue<Pattern>>?, Throwable?>> =
-            pattern.asSequence().sortedBy { it is NullPattern }.map { innerPattern ->
+            updatedPatterns.asSequence().sortedBy { it is NullPattern }.map { innerPattern ->
                 try {
                     val patterns =
                         resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
+                            val row = discriminator?.removeKeyFromRow(row) ?: row
                             innerPattern.newBasedOn(row, cyclePreventedResolver).map { it.value }
                         } ?: sequenceOf()
                     Pair(patterns.map { HasValue(it) }, null)

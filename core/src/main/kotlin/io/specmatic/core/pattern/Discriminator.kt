@@ -160,4 +160,8 @@ class Discriminator(
             breadCrumb = discriminatorProperty,
             failureReason = FailureReason.DiscriminatorMismatch
         )
+
+    fun removeKeyFromRow(row: Row): Row {
+        return row.removeKey(property)
+    }
 }

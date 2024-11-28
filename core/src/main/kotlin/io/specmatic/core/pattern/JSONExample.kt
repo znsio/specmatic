@@ -5,6 +5,13 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.ScalarValue
 
 data class JSONExample(val jsonObject: JSONComposite, val originalRow: Row) {
+    fun removeKey(key: String): JSONExample {
+        if(jsonObject is JSONObjectValue)
+            return JSONExample(jsonObject.copy(jsonObject.jsonObject - key), originalRow)
+
+        return this
+    }
+
     fun hasScalarValueForKey(key: String): Boolean {
         return jsonObject.let {
             it is JSONObjectValue && it.jsonObject[key] is ScalarValue

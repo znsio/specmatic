@@ -92,7 +92,10 @@ abstract class BackwardCompatibilityCheckBaseCommand : Callable<Unit> {
         ).filter {
             File(it).exists() && File(it).isValidSpec()
         }.toSet().also {
-            if(it.isEmpty()) exitWithMessage("No specs were changed, skipping the check.")
+            it.takeIf { it.isEmpty() }?.run {
+                logger.log("$newLine No specs were changed, skipping the check.$newLine")
+                exitProcess(0)
+            }
         }
     }
 

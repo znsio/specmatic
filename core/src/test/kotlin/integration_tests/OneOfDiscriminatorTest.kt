@@ -479,18 +479,23 @@ components:
 
         val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
 
+        val petTypesSeen = mutableSetOf<String>()
+
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val jsonRequest = request.body as? JSONObjectValue ?: fail("Expected request to be a json object")
 
                 assertThat(jsonRequest.jsonObject).containsKey("petType")
-                assertThat(jsonRequest.jsonObject["petType"]?.toStringLiteral()).isIn("dog", "cat")
+
+                petTypesSeen.add(jsonRequest.jsonObject["petType"]?.toStringLiteral() ?: "")
 
                 return HttpResponse.ok(parsedJSONObject("""{"name": "Spot", "age": 2, "petType": "dog", "barkVolume": 10}"""))
             }
         })
 
         assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        assertThat(petTypesSeen).containsOnly("dog", "cat")
+        assertThat(results.testCount).isEqualTo(2)
     }
 
     @Test
@@ -688,11 +693,11 @@ components:
             - whiskerLength
         """.trimIndent()
 
-        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature().enableGenerativeTesting()
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature().enableGenerativeTesting(onlyPositive = true)
 
         val petTypesSeen = mutableSetOf<String>()
 
-        feature.executeTests(object : TestExecutor {
+        val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
                 val jsonRequest = request.body as? JSONObjectValue ?: fail("Expected request to be a json object")
 
@@ -713,5 +718,6 @@ components:
         })
 
         assertThat(petTypesSeen).containsAll(listOf("dog", "cat"))
+        assertThat(results.testCount).isEqualTo(2)
     }
 }

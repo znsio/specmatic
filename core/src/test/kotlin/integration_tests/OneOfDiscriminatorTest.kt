@@ -499,6 +499,110 @@ components:
     }
 
     @Test
+    fun `tests for api with discriminator having one example should result in one test`() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Pet Store API
+  version: 1.0.0
+paths:
+  /pets:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              ${"$"}ref: '#/components/schemas/Pet'
+            examples:
+              dog:
+                value:
+                  name: Spot
+                  age: 2
+                  petType: dog
+                  barkVolume: 10
+      responses:
+        '200':
+          description: This is a 200 response.
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Pet'
+              examples:
+                dog:
+                  value:
+                    name: Spot
+                    age: 2
+                    petType: dog
+                    barkVolume: 10
+components:
+  schemas:
+    Pet:
+      oneOf:
+        - ${"$"}ref: '#/components/schemas/Dog'
+        - ${"$"}ref: '#/components/schemas/Cat'
+      discriminator:
+        propertyName: petType
+        mapping:
+          dog: '#/components/schemas/Dog'
+          cat: '#/components/schemas/Cat'
+      
+    Pet_base:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+        petType:
+          type: string
+      required:
+        - name
+        - age
+        - petType
+
+    Dog:
+      allOf:
+        - ${"$"}ref: '#/components/schemas/Pet_base'
+        - type: object
+          properties:
+            barkVolume:
+              type: integer
+          required:
+            - barkVolume
+
+    Cat:
+      allOf:
+        - ${"$"}ref: '#/components/schemas/Pet_base'
+        - type: object
+          properties:
+            whiskerLength:
+              type: integer
+          required:
+            - whiskerLength
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val petTypesSeen = mutableSetOf<String>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonRequest = request.body as? JSONObjectValue ?: fail("Expected request to be a json object")
+
+                assertThat(jsonRequest.jsonObject).containsKey("petType")
+
+                petTypesSeen.add(jsonRequest.jsonObject["petType"]?.toStringLiteral() ?: "")
+
+                return HttpResponse.ok(parsedJSONObject("""{"name": "Spot", "age": 2, "petType": "dog", "barkVolume": 10}"""))
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        assertThat(petTypesSeen).containsOnly("dog")
+        assertThat(results.testCount).isEqualTo(1)
+    }
+
+    @Test
     fun `tests with discriminator should fail if the discriminator value is wrong`() {
         val spec = """
 openapi: 3.0.0
@@ -720,4 +824,5 @@ components:
         assertThat(petTypesSeen).containsAll(listOf("dog", "cat"))
         assertThat(results.testCount).isEqualTo(2)
     }
+
 }

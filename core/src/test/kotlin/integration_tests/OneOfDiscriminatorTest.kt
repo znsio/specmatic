@@ -587,11 +587,15 @@ components:
 
         val results = feature.executeTests(object : TestExecutor {
             override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
                 val jsonRequest = request.body as? JSONObjectValue ?: fail("Expected request to be a json object")
 
                 assertThat(jsonRequest.jsonObject).containsKey("petType")
 
                 petTypesSeen.add(jsonRequest.jsonObject["petType"]?.toStringLiteral() ?: "")
+                if(jsonRequest.jsonObject["petType"]?.toStringLiteral() == "dog") {
+                    assertThat(jsonRequest.findFirstChildByPath("barkVolume")?.toStringLiteral()).isEqualTo("10")
+                }
 
                 return HttpResponse.ok(parsedJSONObject("""{"name": "Spot", "age": 2, "petType": "dog", "barkVolume": 10}"""))
             }
@@ -807,6 +811,10 @@ components:
 
                 assertThat(jsonRequest.jsonObject).containsKey("petType")
 
+                if(jsonRequest.jsonObject["petType"]?.toStringLiteral() == "dog") {
+                    assertThat(jsonRequest.findFirstChildByPath("barkVolume")?.toStringLiteral()).isEqualTo("10")
+                }
+
                 return HttpResponse.ok(parsedJSONObject("""{"name": "Spot", "age": 2, "petType": "dog", "barkVolume": 10}"""))
             }
 
@@ -823,6 +831,7 @@ components:
 
         assertThat(petTypesSeen).containsAll(listOf("dog", "cat"))
         assertThat(results.testCount).isEqualTo(2)
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 
 }

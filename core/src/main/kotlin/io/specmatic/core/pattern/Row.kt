@@ -141,4 +141,23 @@ data class Row(
     fun hasRequestParameters(): Boolean {
         return values.isNotEmpty() || requestBodyJSONExample != null
     }
+
+    fun isEmpty(): Boolean {
+        return columnNames.isEmpty() && values.isEmpty() && requestBodyJSONExample == null
+    }
+
+    fun removeKey(property: String): Row {
+        val columnIndex = columnNames.indexOf(property)
+
+        val withoutColumn = if(columnIndex >= 0) {
+            this.copy(columnNames = columnNames.filterIndexed { index, _ -> index != columnIndex }, values = values.filterIndexed { index, _ -> index != columnIndex })
+        } else {
+            this
+        }
+
+        return withoutColumn.requestBodyJSONExample?.let { jsonExample ->
+            val updatedJSONExample = jsonExample.removeKey(property)
+            withoutColumn.copy(requestBodyJSONExample = updatedJSONExample)
+        } ?: withoutColumn
+    }
 }

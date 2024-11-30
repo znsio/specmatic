@@ -67,36 +67,26 @@ data class StringPattern (
         return JSONArrayValue(valueList)
     }
 
-    private val randomStringLength: Int =
+    private val patternMinLength: Int =
         when {
-            minLength != null && 5 < minLength -> minLength
-            maxLength != null && 5 > maxLength -> maxLength
+            minLength != null && minLength > 0 -> minLength
+            maxLength != null && maxLength < 5 -> 1
             else -> 5
         }
-    
+
     override fun generate(resolver: Resolver): Value {
-        val defaultExample: Value? = resolver.resolveExample(example, this)
+        val defaultExample = resolver.resolveExample(example, this)
 
-        if (regex != null) {
-            if(defaultExample == null)
-                return StringValue(Generex(regex.removePrefix("^").removeSuffix("$")).random(randomStringLength))
-
-            val defaultExampleMatchResult = matches(defaultExample, resolver)
-
-            if(defaultExampleMatchResult.isSuccess())
-                return defaultExample
-
-            throw ContractException("Schema example ${defaultExample.toStringLiteral()} does not match pattern $regex")
+        defaultExample?.let {
+            val result = matches(it, resolver)
+            result.throwOnFailure()
+            return it
         }
 
-        if(defaultExample != null) {
-            if(defaultExample !is StringValue)
-                throw ContractException("Schema example ${defaultExample.toStringLiteral()} is not a string")
-
-            return defaultExample
-        }
-
-        return StringValue(randomString(randomStringLength))
+        return regex?.let {
+            val regexWithoutCaretAndDollar = regex.removePrefix("^").removeSuffix("$")
+            StringValue(generateFromRegex(regexWithoutCaretAndDollar, patternMinLength, maxLength))
+        } ?: StringValue(randomString(patternMinLength))
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
@@ -157,6 +147,11 @@ data class StringPattern (
 
     override val pattern: Any = "(string)"
     override fun toString(): String = pattern.toString()
+
+    private fun generateFromRegex(regexWithoutCaretAndDollar: String, minLength: Int, maxLength: Int?): String =
+        maxLength?.let {
+            Generex(regexWithoutCaretAndDollar).random(minLength, it)
+        } ?: Generex(regexWithoutCaretAndDollar).random(minLength)
 }
 
 fun randomString(length: Int = 5): String {

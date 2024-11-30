@@ -1,6 +1,7 @@
 package io.specmatic.core.pattern
 
 import com.mifmif.common.regex.Generex
+import dk.brics.automaton.RegExp
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.mismatchResult
@@ -22,6 +23,35 @@ data class StringPattern (
         if (minLength != null && maxLength != null && minLength > maxLength) {
             throw IllegalArgumentException("maxLength cannot be less than minLength")
         }
+        regex?.let {
+            val regexWithoutCaretAndDollar = it.removePrefix("^").removeSuffix("$")
+            regexMinLengthValidation(regexWithoutCaretAndDollar)
+            regexMaxLengthValidation(regexWithoutCaretAndDollar)
+        }
+
+    }
+
+    private fun regexMinLengthValidation(it: String) {
+        val automaton = RegExp(it).toAutomaton()
+
+        minLength?.let { minLen ->
+            val min = automaton.getShortestExample(true).length
+            if (min < minLen) {
+                throw IllegalArgumentException("Invalid Regex - min cannot be less than regex least size")
+            } else if (maxLength != null && min > maxLength) {
+                throw IllegalArgumentException("Invalid Regex - min cannot be more than regex max size")
+            }
+        }
+    }
+
+    private fun regexMaxLengthValidation(it: String) {
+        maxLength?.let { maxLen ->
+            val generatedString = generateFromRegex(it, maxLen+1)
+
+            if (generatedString.length > maxLen) {
+                throw IllegalArgumentException("Invalid Regex - max cannot be more than regex max size")
+            }
+        }
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
@@ -40,7 +70,7 @@ data class StringPattern (
                     sampleData, resolver.mismatchMessages
                 )
 
-                if(regex != null && !Regex(regex).matches(sampleData.toStringLiteral())) {
+                if (regex != null && !Regex(regex).matches(sampleData.toStringLiteral())) {
                     return mismatchResult(
                         """string that matches regex /$regex/""",
                         sampleData,
@@ -67,37 +97,35 @@ data class StringPattern (
         return JSONArrayValue(valueList)
     }
 
-    private val randomStringLength: Int =
+    private val patternBaseLength: Int =
         when {
             minLength != null && 5 < minLength -> minLength
             maxLength != null && 5 > maxLength -> maxLength
             else -> 5
         }
-    
+
+
     override fun generate(resolver: Resolver): Value {
-        val defaultExample: Value? = resolver.resolveExample(example, this)
+        val defaultExample = resolver.resolveExample(example, this)
 
-        if (regex != null) {
-            if(defaultExample == null)
-                return StringValue(Generex(regex.removePrefix("^").removeSuffix("$")).random(randomStringLength))
-
-            val defaultExampleMatchResult = matches(defaultExample, resolver)
-
-            if(defaultExampleMatchResult.isSuccess())
-                return defaultExample
-
-            throw ContractException("Schema example ${defaultExample.toStringLiteral()} does not match pattern $regex")
+        defaultExample?.let {
+            val result = matches(it, resolver)
+            result.throwOnFailure()
+            return it
         }
 
-        if(defaultExample != null) {
-            if(defaultExample !is StringValue)
-                throw ContractException("Schema example ${defaultExample.toStringLiteral()} is not a string")
-
-            return defaultExample
-        }
-
-        return StringValue(randomString(randomStringLength))
+        return regex?.let {
+            val regexWithoutCaretAndDollar = regex.removePrefix("^").removeSuffix("$")
+            StringValue(generateFromRegex(regexWithoutCaretAndDollar, patternBaseLength, maxLength))
+        } ?: StringValue(randomString(patternBaseLength))
     }
+
+
+    private fun generateFromRegex(regexWithoutCaretAndDollar: String, minLength: Int, maxLength: Int? = null): String =
+        maxLength?.let {
+            Generex(regexWithoutCaretAndDollar).random(minLength, it)
+        } ?: Generex(regexWithoutCaretAndDollar).random(minLength)
+
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
         val minLengthExample: ReturnValue<Pattern>? = minLength?.let {

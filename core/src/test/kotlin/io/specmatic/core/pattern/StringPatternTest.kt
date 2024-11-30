@@ -113,6 +113,17 @@ internal class StringPatternTest {
         patternRegex?.let { assertThat(generatedString).matches(patternRegex) }
     }
 
+    @ParameterizedTest
+    @MethodSource("regexMinLengthAndMaxLengthAndExpectedLength")
+    fun `generate string value as per regex in conjunction with minLength and maxLength`(regex: String?, min: Int?, max: Int?, expectedLength: Int) {
+        val result = StringPattern(minLength = min, maxLength = max, regex = regex).generate(Resolver()) as StringValue
+        val generatedString = result.string
+        val generatedLength = generatedString.length
+
+        assertThat(generatedLength).isGreaterThanOrEqualTo(expectedLength)
+        max?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
+        regex?.let { assertThat(generatedString).matches(regex) }
+    }
 
     @Test
     fun `string should encompass enum of string`() {
@@ -198,32 +209,70 @@ internal class StringPatternTest {
     @Test
     @Tag(GENERATION)
     fun `negative value for regex should be generated when regex is provided`() {
-        val minLength = 10
+        val minLength = 2
         val maxLength = 20
 
         val result = StringPattern(
             minLength = minLength,
             maxLength = maxLength,
-            regex = "^[^0-9]*$"
+            regex = "^[^0-9]{15}$"
         ).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
 
         assertThat(
             result.filterIsInstance<StringPattern>().filter {
-                it.regex == "^[^0-9]*\$_"
+                it.regex == "^[^0-9]{15}\$_"
             }
         ).hasSize(1)
     }
 
     @Test
     @Tag(GENERATION)
+    fun `regex sould throw validation issue for patterns less than min size as per api contract`() {
+        val minLength = 2
+        val maxLength = 15
+
+        val result = runCatching {
+            StringPattern(
+                minLength = minLength,
+                maxLength = maxLength,
+                regex = "^.{0,4}$"
+            ).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
+        }
+
+        result.onFailure { exception ->
+            assertThat(exception.message).isEqualTo("Invalid Regex - min cannot be less than regex least size")
+        }
+    }
+
+    @Test
+    @Tag(GENERATION)
+    fun `regex sould throw validation issue for patterns more than max size as per api contract`() {
+        val minLength = 2
+        val maxLength = 15
+
+        val result = runCatching {
+            StringPattern(
+                minLength = minLength,
+                maxLength = maxLength,
+                regex = "^.{2,14}$"
+            ).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
+        }
+
+        result.onFailure { exception ->
+            assertThat(exception.message).isEqualTo("Invalid Regex - max cannot be more than regex max size")
+        }
+    }
+
+    @Test
+    @Tag(GENERATION)
     fun `should exclude data type based negatives when withDataTypeNegatives config is false`() {
-        val minLength = 10
+        val minLength = 2
         val maxLength = 20
 
         val result = StringPattern(
             minLength = minLength,
             maxLength = maxLength,
-            regex = "^[^0-9]*$"
+            regex = "^[^0-9]{15}$"
         ).negativeBasedOn(
             Row(),
             Resolver(),
@@ -238,7 +287,7 @@ internal class StringPatternTest {
         ).hasSize(0)
 
         assertThat(
-            result.filterIsInstance<StringPattern>().filter { it.regex == "^[^0-9]*\$_" }
+            result.filterIsInstance<StringPattern>().filter { it.regex == "^[^0-9]{15}\$_" }
         ).hasSize(1)
 
         assertThat(

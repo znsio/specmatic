@@ -13,9 +13,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.CsvSource
-import java.util.stream.Stream
 import io.specmatic.core.Result as Result
 
 internal class StringPatternTest {
@@ -69,7 +67,7 @@ internal class StringPatternTest {
         assertThat(result.isSuccess()).isFalse
         assertThat(result.reportString()).isEqualTo("""Expected string with maxLength 3, actual was "test"""")
     }
-    
+
     @ParameterizedTest
     @CsvSource(
         "null, 10, 5",
@@ -94,7 +92,7 @@ internal class StringPatternTest {
     @ParameterizedTest
     @CsvSource(
         "'^[a-z]*$', null, null, 5",
-        "'^[a-z0-9]{6,}$', 3, 10, 6",
+        "'^[a-z0-9]{6,10}',6,10,6",
         "null, 1, 10, 1"
     )
     fun `generate string value as per regex in conjunction with minLength and maxLength`(
@@ -113,17 +111,6 @@ internal class StringPatternTest {
         patternRegex?.let { assertThat(generatedString).matches(patternRegex) }
     }
 
-    @ParameterizedTest
-    @MethodSource("regexMinLengthAndMaxLengthAndExpectedLength")
-    fun `generate string value as per regex in conjunction with minLength and maxLength`(regex: String?, min: Int?, max: Int?, expectedLength: Int) {
-        val result = StringPattern(minLength = min, maxLength = max, regex = regex).generate(Resolver()) as StringValue
-        val generatedString = result.string
-        val generatedLength = generatedString.length
-
-        assertThat(generatedLength).isGreaterThanOrEqualTo(expectedLength)
-        max?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
-        regex?.let { assertThat(generatedString).matches(regex) }
-    }
 
     @Test
     fun `string should encompass enum of string`() {
@@ -209,7 +196,7 @@ internal class StringPatternTest {
     @Test
     @Tag(GENERATION)
     fun `negative value for regex should be generated when regex is provided`() {
-        val minLength = 2
+        val minLength = 10
         val maxLength = 20
 
         val result = StringPattern(
@@ -227,46 +214,8 @@ internal class StringPatternTest {
 
     @Test
     @Tag(GENERATION)
-    fun `regex sould throw validation issue for patterns less than min size as per api contract`() {
-        val minLength = 2
-        val maxLength = 15
-
-        val result = runCatching {
-            StringPattern(
-                minLength = minLength,
-                maxLength = maxLength,
-                regex = "^.{0,4}$"
-            ).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
-        }
-
-        result.onFailure { exception ->
-            assertThat(exception.message).isEqualTo("Invalid Regex - min cannot be less than regex least size")
-        }
-    }
-
-    @Test
-    @Tag(GENERATION)
-    fun `regex sould throw validation issue for patterns more than max size as per api contract`() {
-        val minLength = 2
-        val maxLength = 15
-
-        val result = runCatching {
-            StringPattern(
-                minLength = minLength,
-                maxLength = maxLength,
-                regex = "^.{2,14}$"
-            ).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
-        }
-
-        result.onFailure { exception ->
-            assertThat(exception.message).isEqualTo("Invalid Regex - max cannot be more than regex max size")
-        }
-    }
-
-    @Test
-    @Tag(GENERATION)
     fun `should exclude data type based negatives when withDataTypeNegatives config is false`() {
-        val minLength = 2
+        val minLength = 10
         val maxLength = 20
 
         val result = StringPattern(

@@ -110,6 +110,20 @@ class ExamplesInteractiveServer(
                     }
                 }
 
+                post("/_specmatic/examples/update") {
+                    val request = call.receive<SaveExampleRequest>()
+                    try {
+                        val file = File(request.exampleFile)
+                        if (!file.exists()) {
+                            throw FileNotFoundException()
+                        }
+                        file.writeText(request.exampleContent)
+                        call.respond(HttpStatusCode.OK, "File and content updated successfully!")
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, exceptionCauseMessage(e))
+                    }
+                }
+
                 post("/_specmatic/examples/generate") {
                     val contractFile = getContractFile()
 
@@ -839,6 +853,11 @@ data class ExamplePageRequest(
 
 data class ValidateExampleRequest(
     val exampleFile: String
+)
+
+data class SaveExampleRequest(
+    val exampleFile: String,
+    val exampleContent: String
 )
 
 data class ValidateExampleResponse(

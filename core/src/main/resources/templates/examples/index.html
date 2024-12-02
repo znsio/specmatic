@@ -369,6 +369,45 @@
         [hidden] {
           display: none;
         }
+
+          #error-log {
+            color: red;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .CodeMirror {
+            border: 1px solid #ccc;
+            height: auto;
+        }
+       .cm-lint-marker-error {
+            background-color: red;
+            color: white;
+            font-size: 12px;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            text-align: center;
+            border-radius: 50%;
+            margin-left: -10px;
+            display: inline-block;
+            cursor: default;
+        }
+        .cm-lint-message {
+            color: red;
+            background-color: rgba(255, 0, 0, 0.2);
+            padding: 5px;
+            font-size: 12px;
+            border-radius: 3px;
+            margin-left: 30px; /* Move it a bit to the right of the gutter marker */
+            position: absolute;
+        }
+         .CodeMirror-gutter-wrapper {
+            position: relative;
+        }
+
+    }
+
     </style>
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
@@ -796,7 +835,24 @@
                 background-color: rgba(var(--blue-dark));
             }
         }
+        button#save-example {
+        position: relative;
+        margin-top: 10px;
+        left: 50%;
+        transform: translate(-50%, 10%);
+        --_padding: 0.5rem 3rem;
+        --_radius: 0.25rem;
 
+        color: white;
+        padding: var(--_padding);
+        background-color: rgba(var(--blue));
+        border-radius: var(--_radius);
+
+        &:hover,
+        &:focus {
+        background-color: rgba(var(--blue-dark));
+        }
+    }
         #path-details {
             display: flex;
             align-items: center;
@@ -993,6 +1049,7 @@
         .hidden {
             display: none;
         }
+}
     </style>
 </head>
 
@@ -1080,6 +1137,17 @@
     const exampleDetails = /*[[${exampleDetails}]]*/ {};
     const testDetails = {};
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsonlint/1.6.0/jsonlint.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/lint.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.59.4/addon/lint/lint.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/lint.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/json-lint.js"></script>
+<script src = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/autorefresh.min.js"></script>
+
 
 </body>
 <script>
@@ -1574,54 +1642,133 @@
         return exampleDiv;
     }
 
-    function createExampleDropDown(example) {
-        const dropDownDiv = document.createElement("div");
-        dropDownDiv.classList.add("dropdown");
+function createExampleDropDown(example) {
+    const dropDownDiv = document.createElement("div");
+    dropDownDiv.classList.add("dropdown");
 
-        const examplePara = document.createElement("p");
-        const detailsPara = document.createElement("p");
+    const examplePara = document.createElement("p");
+    const detailsPara = document.createElement("p");
 
-        examplePara.textContent = "Example: ";
-        detailsPara.textContent = "Details: ";
+    examplePara.textContent = "Example: ";
+    detailsPara.textContent = "Details: ";
 
-        const examplePre = document.createElement("pre");
-        const detailsPre = document.createElement("pre");
+    const examplePreDiv = document.createElement("div");
+    examplePreDiv.setAttribute("id", "example-pre");
+    examplePreDiv.classList.add("language-json");
 
-        if (example.hasBeenValidated) {
-            detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
-            if (example.test) {
-                detailsPre.textContent = `${detailsPre.textContent}\n${example.test.details}`;
-            }
-        } else {
-            detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
-        }
-        examplePre.textContent = example.exampleJson;
 
-        const examplePreDiv = document.createElement("div");
-        const detailsPreDiv = document.createElement("div");
-
-        detailsPreDiv.appendChild(detailsPara);
-        detailsPreDiv.appendChild(detailsPre);
-
+    const detailsPre = document.createElement("pre");
+    if (example.hasBeenValidated) {
+        detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
         if (example.test) {
-            const testPara = document.createElement("p");
-            testPara.textContent = "Test Log: ";
-            examplePreDiv.appendChild(testPara);
-
-            const testPre = document.createElement("pre");
-            testPre.textContent = example.test.testLog;
-            examplePreDiv.appendChild(testPre);
+            detailsPre.textContent = `${detailsPre.textContent}\n${example.test.details}`;
         }
-
-        examplePreDiv.appendChild(examplePara);
-        examplePreDiv.appendChild(examplePre);
-
-        dropDownDiv.appendChild(detailsPreDiv);
-        dropDownDiv.appendChild(examplePreDiv);
-
-        return dropDownDiv;
+    } else {
+        detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
     }
 
+    const saveButton = document.createElement("button");
+    saveButton.textContent = "Save";
+    saveButton.id = "save-example";
+    saveButton.style.display = "none";
+
+    let isChanged = false;
+
+    const editor = CodeMirror(examplePreDiv, {
+        value: example.exampleJson,
+        autoRefresh: true,
+        mode: "application/json",
+        theme: "dracula",
+        lineNumbers: true,
+        autoCloseBrackets: true,
+        matchBrackets: true,
+        styleActiveLine: true,
+        lint: true,
+        gutters: ["CodeMirror-lint-markers"]
+    });
+
+    editor.on("change", () => {
+        if (!isChanged) {
+            isChanged = true;
+            saveButton.style.display = "inline-block";
+        }
+        updateBorderColorExampleBlock(editor, examplePreDiv);
+    });
+
+    saveButton.addEventListener("click", () => {
+        const editedText = editor.getValue();
+
+        try {
+            const parsedContent = JSON.parse(editedText);
+
+            fetch("/_specmatic/examples/update", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    exampleFile: example.absPath,
+                    exampleContent: editedText,
+                }),
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert("Example saved successfully!");
+                    isChanged = false;
+                    saveButton.style.display = "none";
+                } else {
+                    alert("Failed to save example.");
+                    console.error("Error saving example:", response.status);
+                }
+            })
+            .catch(error => {
+                console.error("Error during save request:", error);
+                alert("An error occurred while saving the example.");
+            });
+        } catch (e) {
+            alert("The content is not valid JSON.");
+        }
+    });
+
+    const detailsPreDiv = document.createElement("div");
+    detailsPreDiv.appendChild(detailsPara);
+    detailsPreDiv.appendChild(detailsPre);
+
+    if (example.test) {
+        const testPara = document.createElement("p");
+        testPara.textContent = "Test Log: ";
+        const testPre = document.createElement("pre");
+        testPre.textContent = example.test.testLog;
+        detailsPreDiv.appendChild(testPara);
+        detailsPreDiv.appendChild(testPre);
+    }
+
+    dropDownDiv.appendChild(detailsPreDiv);
+    dropDownDiv.appendChild(examplePara);
+    dropDownDiv.appendChild(examplePreDiv);
+    dropDownDiv.appendChild(saveButton);
+    return dropDownDiv;
+}
+
+function updateBorderColorExampleBlock(editor, examplePreDiv) {
+    try {
+        JSON.parse(editor.getValue());
+        editor.getWrapperElement().style.borderWidth = "2px";
+        editor.getWrapperElement().style.borderStyle = "solid";
+        editor.getWrapperElement().style.borderColor = "green";
+
+    } catch (e) {
+        editor.getWrapperElement().style.borderWidth = "2px";
+        editor.getWrapperElement().style.borderStyle = "solid";
+        editor.getWrapperElement().style.borderColor = "red";
+
+    }
+}
+
+
+    function parseFileName(path) {
+        return path.split('/').pop();
+    }
     function storeExampleData(tableRow, example) {
         const key = tableRow.getAttribute("data-key");
         tableRow.setAttribute("data-example", example.exampleFilePath);

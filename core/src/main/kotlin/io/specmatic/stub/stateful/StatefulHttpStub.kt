@@ -9,6 +9,8 @@ import io.ktor.server.plugins.cors.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.conversions.OpenApiSpecification.Companion.applyOverlay
 import io.specmatic.core.Feature
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpRequestPattern
@@ -86,7 +88,10 @@ class StatefulHttpStub(
                 staticResources("/", "swagger-ui")
 
                 get("/openapi.yaml") {
-                    call.respondFile(File(features.first().path))
+                    val openApiFilePath = features.first().path
+                    val overlayContent = OpenApiSpecification.getImplicitOverlayContent(openApiFilePath)
+                    val openApiSpec = File(openApiFilePath).readText().applyOverlay(overlayContent)
+                    call.respond(openApiSpec)
                 }
             }
 

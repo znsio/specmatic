@@ -135,6 +135,7 @@ sealed class Result {
                 .plus("$prefix$breadCrumb")
         }
 
+
         override fun ifSuccess(function: () -> Result) = this
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {
             return this

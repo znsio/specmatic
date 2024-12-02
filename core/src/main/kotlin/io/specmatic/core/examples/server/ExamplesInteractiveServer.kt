@@ -865,6 +865,11 @@ data class ValidateExampleResponse(
     val error: String? = null
 )
 
+data class ValidateExampleResponseMap(
+    val absPath: String,
+    val error: Map<String,String>? = null
+)
+
 enum class ValidateExampleVerdict {
     SUCCESS,
     FAILURE

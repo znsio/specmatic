@@ -380,28 +380,8 @@
             border: 1px solid #ccc;
             height: auto;
         }
-       .cm-lint-marker-error {
-            background-color: red;
-            color: white;
-            font-size: 12px;
-            width: 20px;
-            height: 20px;
-            line-height: 20px;
-            text-align: center;
-            border-radius: 50%;
-            margin-left: -10px;
-            display: inline-block;
-            cursor: default;
-        }
-        .cm-lint-message {
-            color: red;
-            background-color: rgba(255, 0, 0, 0.2);
-            padding: 5px;
-            font-size: 12px;
-            border-radius: 3px;
-            margin-left: 30px; /* Move it a bit to the right of the gutter marker */
-            position: absolute;
-        }
+
+
          .CodeMirror-gutter-wrapper {
             position: relative;
         }
@@ -1554,20 +1534,43 @@
     }
 
     async function goToDetails(tableRow, rowValues) {
-        const exampleAbsPath = getExampleData(tableRow);
-        let docFragment = [];
+         const exampleAbsPath = getExampleData(tableRow);
+    let docFragment = [];
+    const validateExampleRequest = {
+        exampleFile: exampleAbsPath
+    };
 
-        if (exampleAbsPath) {
-            const {example, error} = await getExampleContent(exampleAbsPath);
+    if (exampleAbsPath) {
+        try {
+            const response = await fetch(`${getHostPort()}/_specmatic/examples/validate`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(validateExampleRequest)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const validationResult = await response.json();
+            const { example, error } = await getExampleContent(exampleAbsPath);
+
             docFragment = createExampleRows([{
                 absPath: exampleAbsPath,
                 exampleJson: example,
                 error: getExampleValidationData(tableRow) || error,
                 hasBeenValidated: tableRow.getAttribute("data-valid") !== defaultAttrs["data-valid"],
-                test: getExampleTestData(tableRow)
+                test: getExampleTestData(tableRow),
+                response: validationResult
             }]);
-        }
 
+            console.log("Validation Result:", validationResult);
+        } catch (error) {
+            console.error("Error during validation:", error);
+        }
+        }
         bulkTestBtn.classList.toggle("bulk-disabled", tableRow.getAttribute("data-valid") !== "success")
         pathSummaryUl.replaceChildren(createPathSummary(rowValues));
         examplesOl.replaceChildren(docFragment);
@@ -1671,7 +1674,11 @@ function createExampleDropDown(example) {
     saveButton.textContent = "Save";
     saveButton.id = "save-example";
     saveButton.style.display = "none";
-
+    let parsedMetadata;
+    if(example.response.error)
+    {
+     parsedMetadata = parseResponse(example.response.error);
+    }
     let isChanged = false;
 
     const editor = CodeMirror(examplePreDiv, {
@@ -1686,7 +1693,11 @@ function createExampleDropDown(example) {
         lint: true,
         gutters: ["CodeMirror-lint-markers"]
     });
-
+    if(parsedMetadata)
+    {
+     const metadata = getLineNumberFromParsedResponse(parsedMetadata,editor);
+     highlightErrorLines(editor, metadata);
+     }
     editor.on("change", () => {
         if (!isChanged) {
             isChanged = true;
@@ -1730,20 +1741,20 @@ function createExampleDropDown(example) {
         }
     });
 
-    const detailsPreDiv = document.createElement("div");
-    detailsPreDiv.appendChild(detailsPara);
-    detailsPreDiv.appendChild(detailsPre);
+<!--    const detailsPreDiv = document.createElement("div");-->
+<!--    detailsPreDiv.appendChild(detailsPara);-->
+<!--    detailsPreDiv.appendChild(detailsPre);-->
 
     if (example.test) {
         const testPara = document.createElement("p");
         testPara.textContent = "Test Log: ";
         const testPre = document.createElement("pre");
         testPre.textContent = example.test.testLog;
-        detailsPreDiv.appendChild(testPara);
-        detailsPreDiv.appendChild(testPre);
+<!--        detailsPreDiv.appendChild(testPara);-->
+<!--        detailsPreDiv.appendChild(testPre);-->
     }
 
-    dropDownDiv.appendChild(detailsPreDiv);
+<!--    dropDownDiv.appendChild(detailsPreDiv);-->
     dropDownDiv.appendChild(examplePara);
     dropDownDiv.appendChild(examplePreDiv);
     dropDownDiv.appendChild(saveButton);
@@ -1765,6 +1776,96 @@ function updateBorderColorExampleBlock(editor, examplePreDiv) {
     }
 }
 
+function getLineNumberFromParsedResponse(parsedResponse, editor) {
+    const metadata = parsedResponse.map((entry) => {
+        const breadcrumbParts = entry.breadcrumb.slice(2).split(".");
+        const part1 = breadcrumbParts[0].toLowerCase().trim();
+        const mappedRequestResponse = part1 === "request" ? "http-request" : part1 === "response" ? "http-response" : null;
+
+        if (mappedRequestResponse) {
+            const processedBreadcrumb = [mappedRequestResponse, breadcrumbParts[1].toLowerCase()].join('.');
+            const jsonPath = processedBreadcrumb.split(".").join(".");
+            const jsonObject = JSON.parse(editor.getValue());
+            const jsonText = JSON.stringify(jsonObject, null, 2);
+            const lines = jsonText.split("\n");
+            const nodeText = Object.keys(getNodeFromPath(jsonPath, editor.getValue()))[0];
+            const targetLine = lines.findIndex(line => line.includes(nodeText));
+
+            if (targetLine !== -1) {
+                return {
+                    breadcrumb: processedBreadcrumb,
+                    description: entry.description,
+                    lineNumber: targetLine,
+                };
+            }
+        }
+
+        return null;
+    }).filter(item => item !== null);
+
+    return metadata;
+}
+
+function getNodeFromPath(path, jsonText) {
+    const jsonData = JSON.parse(jsonText);
+    const pathParts = path.split(".");
+    let node = jsonData;
+
+    for (let i = 0; i < pathParts.length; i++) {
+        node = node && node[pathParts[i]];
+    }
+
+    return node;
+}
+
+function parseResponse(response) {
+    const metadata = [];
+    const lines = response.split("\n");
+    let currentBreadcrumb = null;
+
+    lines.forEach((line) => {
+        if (line.trim().startsWith(">>")) {
+          currentBreadcrumb = line.trim();
+        } else if (currentBreadcrumb && line.trim()) {
+
+            metadata.push({
+                breadcrumb: currentBreadcrumb,
+                description: line.trim(),
+            });
+            currentBreadcrumb = null; // Reset for the next breadcrumb
+        }
+    });
+
+    return metadata;
+}
+function highlightErrorLines(editor, metadata) {
+
+    metadata.forEach(meta => {
+        const lineNumber = meta.lineNumber;
+        const lineLength = editor.getLine(lineNumber).length;
+
+
+        editor.markText(
+            { line: lineNumber, ch: 0 },
+            { line: lineNumber, ch: lineLength },
+            {
+                className: "CodeMirror-lint-mark-error",
+                attributes: {
+                    title: meta.description,
+                },
+            }
+        );
+
+
+        editor.setGutterMarker(lineNumber, "CodeMirror-lint-markers", createErrorMarker(meta.description));
+    });
+}
+
+ function createErrorMarker() {
+      const marker = document.createElement("div");
+      marker.className = "CodeMirror-lint-mark-error";
+      return marker;
+    }
 
     function parseFileName(path) {
         return path.split('/').pop();

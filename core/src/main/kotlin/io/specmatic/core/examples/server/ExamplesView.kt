@@ -8,6 +8,7 @@ import io.specmatic.core.Scenario
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesFromDir
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExistingExampleFiles
 import io.specmatic.core.pattern.*
+import io.specmatic.core.value.NullValue
 import org.thymeleaf.TemplateEngine
 import org.thymeleaf.context.Context
 import org.thymeleaf.templatemode.TemplateMode
@@ -80,20 +81,6 @@ class ExamplesView {
             }
         }
 
-        fun List<TableRow>.withSchemaExamples(schemaExample: List<Pair<String, Pair<SchemaExample, String>?>>): List<TableRow> {
-            return schemaExample.map { (patternName, example) ->
-                TableRow(
-                    rawPath = patternName, path = patternName,
-                    method = "", responseStatus = "", contentType = "",
-                    pathSpan = 1, methodSpan = 1, statusSpan = 1,
-                    showPath = true, showMethod = false, showStatus = false,
-                    example = example?.first?.file?.absolutePath, exampleName = example?.first?.file?.nameWithoutExtension,
-                    exampleMismatchReason = example?.second?.takeIf { it.isNotBlank() },
-                    isDiscriminatorBased = false
-                )
-            }.plus(this)
-        }
-
         fun List<Endpoint>.toTableRows(): List<TableRow> {
             val groupedEndpoint = this.sortEndpoints().groupEndpoints()
             return groupedEndpoint.flatMap { (_, pathGroup) ->
@@ -127,6 +114,59 @@ class ExamplesView {
                 }
             }
         }
+
+        // SCHEMA EXAMPLE METHODS
+        private fun getWithMissingDiscriminators(feature: Feature, mainPattern: String, examples: List<Triple<String, File?, String?>>): List<Triple<String, File?, String?>> {
+            val discriminatorValues = feature.getAllDiscriminatorValues(mainPattern)
+            if (discriminatorValues.isEmpty()) return examples
+
+            return discriminatorValues.map { value ->
+                examples.find { it.first == value && it.second != null } ?: Triple(value, null, null)
+            }
+        }
+
+        private fun List<Pair<SchemaExample, String?>>.groupByPattern(): Map<String, List<Pair<SchemaExample, String?>>> {
+            return this.groupBy { it.first.discriminatorBasedOn.takeIf { disc -> !disc.isNullOrEmpty() } ?: it.first.schemaBasedOn }
+        }
+
+        private fun Map<String, List<Pair<SchemaExample, String?>>>.withMissingDiscriminators(feature: Feature): Map<String, List<Triple<String, File?, String?>>> {
+            return this.mapValues { (mainPattern, examples) ->
+                val existingExample = examples.map { example ->
+                    if (example.first.value is NullValue) {
+                        Triple(example.first.schemaBasedOn, null, null)
+                    } else Triple(example.first.schemaBasedOn, example.first.file, example.second)
+                }
+                getWithMissingDiscriminators(feature, mainPattern, existingExample)
+            }
+        }
+
+        fun List<TableRow>.withSchemaExamples(feature: Feature, schemaExample: List<Pair<SchemaExample, String?>>): List<TableRow> {
+            val groupedSchemaExamples = schemaExample.groupByPattern()
+            return groupedSchemaExamples.withMissingDiscriminators(feature).flatMap { (mainPattern, examples) ->
+                val isDiscriminator = examples.size > 1
+                examples.mapIndexed { index, (patternName, exampleFile, mismatchReason) ->
+                    TableRow(
+                        rawPath = mainPattern,
+                        path = mainPattern,
+                        method = patternName.takeIf { isDiscriminator } ?: "",
+                        responseStatus = "",
+                        contentType = "",
+                        pathSpan = examples.size,
+                        methodSpan = 1,
+                        statusSpan = 1,
+                        showPath = index == 0,
+                        showMethod = isDiscriminator,
+                        showStatus = false,
+                        example = exampleFile?.canonicalPath,
+                        exampleName = exampleFile?.nameWithoutExtension,
+                        exampleMismatchReason = mismatchReason.takeIf { !it.isNullOrBlank() },
+                        isDiscriminatorBased = false, isSchemaBased = true,
+                        pathColSpan = if (isDiscriminator) 3 else 5,
+                        methodColSpan = if (isDiscriminator) 2 else 1
+                    )
+                }
+            }.plus(this)
+        }
     }
 }
 
@@ -150,7 +190,9 @@ data class TableRow(
     val uniqueKey: String = "${path}_${method}_${responseStatus}",
     val isDiscriminatorBased: Boolean,
     val isMainRow: Boolean = showPath || showMethod || showStatus,
-    val isSchemaBased: Boolean = method.isBlank() && responseStatus.isBlank()
+    val isSchemaBased: Boolean = false,
+    val pathColSpan: Int = 3,
+    val methodColSpan: Int = 1
 )
 
 data class StatusGroup(

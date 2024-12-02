@@ -223,16 +223,30 @@ class OpenApiSpecification(
         val name = File(openApiFilePath).name
 
         val (scenarioInfos, stubsFromExamples) = toScenarioInfos()
+        val unreferencedSchemaPatterns = parseUnreferencedSchemas()
+        val updatedScenarios = scenarioInfos.map {
+            Scenario(it).copy(
+                dictionary = dictionary,
+                attributeSelectionPattern = specmaticConfig.attributeSelectionPattern,
+                patterns = it.patterns + unreferencedSchemaPatterns
+            )
+        }
 
         return Feature(
-            scenarioInfos.map { Scenario(it).copy(dictionary = dictionary, attributeSelectionPattern = specmaticConfig.attributeSelectionPattern) }, name = name, path = openApiFilePath, sourceProvider = sourceProvider,
+            updatedScenarios, name = name, path = openApiFilePath, sourceProvider = sourceProvider,
             sourceRepository = sourceRepository,
             sourceRepositoryBranch = sourceRepositoryBranch,
             specification = specificationPath,
             serviceType = SERVICE_TYPE_HTTP,
             stubsFromExamples = stubsFromExamples,
-            specmaticConfig = specmaticConfig
+            specmaticConfig = specmaticConfig,
         )
+    }
+
+    private fun parseUnreferencedSchemas(): Map<String, Pattern> {
+        return openApiSchemas().filterNot { withPatternDelimiters(it.key) in patterns }.map {
+            withPatternDelimiters(it.key) to toSpecmaticPattern(it.value, emptyList(), it.key)
+        }.toMap()
     }
 
     override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
@@ -714,7 +728,7 @@ class OpenApiSpecification(
                         } else valueString
                     },
                 name = exampleName,
-                responseExampleForValidation = if(resolvedResponseExample != null && responseExample.isNotEmpty()) resolvedResponseExample else null,
+                exactResponseExample = if(resolvedResponseExample != null && responseExample.isNotEmpty()) resolvedResponseExample else null,
                 requestExample = requestExampleAsHttpRequests[exampleName]?.first(),
                 responseExample = responseExample
             )
@@ -790,6 +804,8 @@ class OpenApiSpecification(
         }
 
     private fun openApiPaths() = parsedOpenApi.paths.orEmpty()
+
+    private fun openApiSchemas() = parsedOpenApi.components?.schemas.orEmpty()
 
     private fun isNumber(value: String): Boolean {
         return value.toIntOrNull() != null

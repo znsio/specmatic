@@ -49,7 +49,6 @@ class OpenApiCoverageReportInput(
         allTests = addTestResultsForTestsNotGeneratedBySpecmatic(allTests, allEndpoints)
         allTests = identifyWipTestsAndUpdateResult(allTests)
         allTests = checkForInvalidTestsAndUpdateResult(allTests)
-        allTests = sortByPathMethodResponseStatus(allTests)
 
         groupedTestResultRecords = groupTestsByPathMethodAndResponseStatus(allTests)
         groupedTestResultRecords.forEach { (route, methodMap) ->

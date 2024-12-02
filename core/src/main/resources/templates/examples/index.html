@@ -1039,10 +1039,10 @@
                     <input type="checkbox" name="path-row" class="path-row">
                 </td>
                 <td></td>
-                <td th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=${row.isSchemaBased ? 5: 3}">
+                <td th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=${row.pathColSpan}">
                     <span>[[${row.path}]]</span>
                 </td>
-                <td th:class="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodSpan}">
+                <td th:class="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodSpan}, colspan=${row.methodColSpan}">
                     <p>[[${row.method}]]</p>
                 </td>
                 <td class="response-cell" th:classappend="${row.showStatus ? '' : 'hidden'}" th:attr="rowspan=${row.statusSpan}">

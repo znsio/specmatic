@@ -18,15 +18,18 @@ class OverlayParser {
             )
         }
 
-        private fun parseAndReturnUpdateMap(content: String): Map<String, Any?> {
+        private fun parseAndReturnUpdateMap(content: String): Map<String, List<Any?>> {
             try {
-                val targetMap = mutableMapOf<String, Any?>()
+                val targetMap = mutableMapOf<String, List<Any?>>()
 
                 content.actions().forEach { action ->
                     val target = action["target"] as? String
                     val update = action["update"]
 
-                    if (target != null && action.containsKey("update")) targetMap[target] = update
+                    if (target != null && action.containsKey("update")) {
+                        val updateList = targetMap[target].orEmpty()
+                        targetMap[target] = updateList.plus(update)
+                    }
                 }
 
                 return targetMap

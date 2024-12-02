@@ -73,6 +73,10 @@ paths:
           schema:
             type: integer
           description: The ID of the product to retrieve
+          examples:
+            GET_PRODUCT_BY_ID:
+              summary: Example ID of a product
+              value: 500
         - in: query
           name: columns
           schema:
@@ -85,6 +89,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Product'
+              examples:
+                GET_PRODUCT_BY_ID:
+                  summary: Example response for a single product
+                  value:
+                    id: 500
+                    name: "Inline Product"
+                    description: "Inline Product description"
+                    price: 500.50
+                    inStock: false
         '404':
           description: Product not found
           content:
@@ -140,7 +153,7 @@ paths:
           description: Specify which fields to retrieve in the response
       responses:
         '202':
-          description: Product accepted successfully
+          description: Product deletion accepted
         '204':
           description: Product deleted successfully
         '404':

@@ -531,32 +531,40 @@ class StatefulHttpStub(
     private fun stubCacheWithExampleData(): StubCache {
         val stubCache = StubCache()
 
-        scenarioStubs.forEach {
-            val httpRequest = it.request
-            if (httpRequest.method !in setOf("GET", "POST")) return@forEach
-            if (isUnsupportedResponseBodyForCaching(
-                    generatedResponse = it.response,
-                    method = httpRequest.method,
-                    pathSegments = httpRequest.pathSegments()
-                )
-            ) return@forEach
-
-            val (resourcePath, _) = resourcePathAndIdFrom(httpRequest)
-            val responseBody = it.response.body
-            if (httpRequest.method == "GET" && httpRequest.pathSegments().size == 1) {
-                val responseBodies = (it.response.body as JSONArrayValue).list.filterIsInstance<JSONObjectValue>()
-                responseBodies.forEach { body ->
-                    stubCache.addResponse(resourcePath, body)
-                }
-            } else {
-                if (responseBody !is JSONObjectValue) return@forEach
-                if(httpRequest.method == "POST" && httpRequest.body !is JSONObjectValue) return@forEach
-
-                stubCache.addResponse(resourcePath, responseBody)
+        scenarioStubs.forEach { (request, response) ->
+            stubCache.cacheSeedData(request, response)
+        }
+        features.flatMap { it.stubsFromExamples.values }.forEach {
+            it.forEach { (request, response) ->
+                stubCache.cacheSeedData(request, response)
             }
         }
 
         return stubCache
+    }
+
+    private fun StubCache.cacheSeedData(request: HttpRequest, response: HttpResponse) {
+        if (request.method !in setOf("GET", "POST")) return
+        if (isUnsupportedResponseBodyForCaching(
+                generatedResponse = response,
+                method = request.method,
+                pathSegments = request.pathSegments()
+            )
+        ) return
+
+        val (resourcePath, _) = resourcePathAndIdFrom(request)
+        val responseBody = response.body
+        if (request.method == "GET" && request.pathSegments().size == 1) {
+            val responseBodies = (response.body as JSONArrayValue).list.filterIsInstance<JSONObjectValue>()
+            responseBodies.forEach { body ->
+                this.addResponse(resourcePath, body)
+            }
+        } else {
+            if (responseBody !is JSONObjectValue) return
+            if(request.method == "POST" && request.body !is JSONObjectValue) return
+
+            this.addResponse(resourcePath, responseBody)
+        }
     }
 
     private fun responseDetailsFrom(features: List<Feature>, httpRequest: HttpRequest): Map<Int, ResponseDetails> {

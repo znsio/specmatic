@@ -378,7 +378,7 @@
         }
         .CodeMirror {
             border: 1px solid #ccc;
-            height: auto;
+            height: 500px !important;
         }
        .cm-lint-marker-error {
             background-color: red;
@@ -1682,7 +1682,8 @@ function createExampleDropDown(example) {
         matchBrackets: true,
         styleActiveLine: true,
         lint: true,
-        gutters: ["CodeMirror-lint-markers"]
+        gutters: ["CodeMirror-lint-markers"],
+        height: "auto",
     });
 
     editor.on("change", () => {

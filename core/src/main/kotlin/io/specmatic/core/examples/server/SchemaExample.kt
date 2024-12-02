@@ -1,8 +1,6 @@
 package io.specmatic.core.examples.server
 
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.attempt
-import io.specmatic.core.pattern.parsedValue
+import io.specmatic.core.pattern.*
 import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
@@ -11,8 +9,6 @@ import java.io.File
 data class SchemaExample(val json: Value, val file: File) {
     companion object {
         val SCHEMA_IDENTIFIER_REGEX = Regex("^resource(?:\\.(\\w+))?\\.(\\w+)\\.example\\.json\$")
-        const val SCHEMA_BASED = "SCHEMA_BASED"
-        const val NOT_SCHEMA_BASED = "NOT_SCHEMA_BASED"
 
         fun toSchemaExampleFileName(parentPattern: String, patternName: String): String {
             if (patternName.isBlank()) return "resource.$parentPattern.example.json"
@@ -22,15 +18,17 @@ data class SchemaExample(val json: Value, val file: File) {
         fun matchesFilePattern(file: File): Boolean {
             return SCHEMA_IDENTIFIER_REGEX.matches(file.name)
         }
+
+        fun fromFile(file: File): ReturnValue<SchemaExample> {
+            if (!matchesFilePattern(file)) {
+                return HasFailure("Skipping file ${file.canonicalPath}, because didn't match pattern ${SCHEMA_IDENTIFIER_REGEX.pattern}")
+            }
+
+            return HasValue(SchemaExample(file))
+        }
     }
 
     constructor(file: File) : this(json = attempt("Error reading example file ${file.canonicalPath}") { parsedValue(file.readText()) }, file = file)
-
-    init {
-        if (!matchesFilePattern(file)) {
-            throw ContractException(breadCrumb = NOT_SCHEMA_BASED, errorMessage = "Skipping file ${file.canonicalPath}, because didn't match pattern ${SCHEMA_IDENTIFIER_REGEX.pattern}")
-        }
-    }
 
     val discriminatorBasedOn = SCHEMA_IDENTIFIER_REGEX.find(file.name)?.groupValues?.getOrNull(1).takeUnless { it.isNullOrBlank() }
 
@@ -39,8 +37,8 @@ data class SchemaExample(val json: Value, val file: File) {
             ?: throw ContractException("File name didn't match pattern ${SCHEMA_IDENTIFIER_REGEX.pattern}")
     }
 
-    val value = when {
-        json is StringValue && json.string == "null" -> NullValue
+    val value = when(json) {
+        is StringValue -> json.takeUnless { it.string == "null" || it.string.isEmpty() } ?: NullValue
         else -> json
     }
 }

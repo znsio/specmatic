@@ -1146,9 +1146,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/lint.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/json-lint.js"></script>
-<script src = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/autorefresh.min.js"></script>
-
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/autorefresh.min.js"></script>
 </body>
 <script>
     const mainElement = document.querySelector("main");
@@ -1713,20 +1711,20 @@ function createExampleDropDown(example) {
             })
             .then(response => {
                 if (response.ok) {
-                    alert("Example saved successfully!");
+                    createAlert("Example saved", "Saved example to " + example.absPath, false);
                     isChanged = false;
                     saveButton.style.display = "none";
                 } else {
-                    alert("Failed to save example.");
+                    createAlert("Failed to save example.", "Failed to save example to " + example.absPath, true);
                     console.error("Error saving example:", response.status);
                 }
             })
             .catch(error => {
                 console.error("Error during save request:", error);
-                alert("An error occurred while saving the example.");
+                createAlert("Failed to save example.", "An error occurred while saving example to " + example.absPath, true);
             });
         } catch (e) {
-            alert("The content is not valid JSON.");
+            createAlert("Failed to save example.", "The content in file " + example.absPath + " is not valid JSON", true);
         }
     });
 

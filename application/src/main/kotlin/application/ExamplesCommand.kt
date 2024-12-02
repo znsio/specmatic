@@ -503,9 +503,11 @@ For example:
                 if (contractFile != null && !contractFile!!.exists())
                     exitWithMessage("Could not find file ${contractFile!!.path}")
 
+                val host = "0.0.0.0"
+                val port = 9001
                 server = ExamplesInteractiveServer(
-                    "0.0.0.0",
-                    9001,
+                    host,
+                    port,
                     testBaseURL,
                     contractFile,
                     filterName,
@@ -517,7 +519,7 @@ For example:
                 )
                 addShutdownHook()
 
-                consoleLog(StringLog("Examples Interactive server is running on http://0.0.0.0:9001/_specmatic/examples. Ctrl + C to stop."))
+                consoleLog(StringLog("Examples Interactive server is running on ${consolePrintableURL(host, port)}/_specmatic/examples. Ctrl + C to stop."))
                 while (true) sleep(10000)
             } catch (e: Exception) {
                 logger.log(exceptionCauseMessage(e))

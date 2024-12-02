@@ -6,6 +6,7 @@ import io.specmatic.core.Configuration.Companion.DEFAULT_PROXY_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_PROXY_PORT
 import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
 import io.specmatic.core.log.*
+import io.specmatic.core.utilities.consolePrintableURL
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.exitWithMessage
 import io.specmatic.proxy.Proxy
@@ -64,9 +65,7 @@ class ProxyCommand : Callable<Unit> {
         proxy = Proxy(host, port, targetBaseURL, proxySpecmaticDataDir, keyStoreData, timeoutInMs)
         addShutdownHook()
 
-        val protocol = keyStoreData?.let { "https" } ?: "http"
-
-        consoleLog(StringLog("Proxy server is running on $protocol://$host:$port. Ctrl + C to stop."))
+        consoleLog(StringLog("Proxy server is running on ${consolePrintableURL(host, port, keyStoreData)}. Ctrl + C to stop."))
         while(true) sleep(10000)
     }
 

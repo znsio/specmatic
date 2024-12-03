@@ -1,8 +1,6 @@
 package io.specmatic.core.examples.server
 
 import com.fasterxml.jackson.core.JsonFactory
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.jayway.jsonpath.JsonPath
@@ -46,8 +44,6 @@ import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.regex.Matcher
-import java.util.regex.Pattern
 import kotlin.system.exitProcess
 
 
@@ -166,6 +162,7 @@ class ExamplesInteractiveServer(
                             else {
                                 val breadCrumbs = extractBreadcrumbs(result.reportString())
                                 val transformedPath = transformToJsonPaths(breadCrumbs)
+
                                 getJsonNodeLineNumbersUsingJsonPath(request.exampleFile,transformedPath,breadCrumbs)
                                 ValidateExampleResponse(request.exampleFile, result.reportString())
                             }
@@ -282,14 +279,13 @@ class ExamplesInteractiveServer(
     override fun close() {
         server.stop(0, 0)
     }
-    fun extractBreadcrumbs(input: String?): List<String> {
-        val breadcrumbs: MutableList<String> = ArrayList()
-        val pattern: Pattern = Pattern.compile(">>\\s*(REQUEST|RESPONSE\\.[A-Z0-9.]+)", Pattern.CASE_INSENSITIVE)
-        val matcher: Matcher = pattern.matcher(input)
+    fun extractBreadcrumbs(input: String): List<String> {
+        val breadCrumbPrefix = ">> "
 
-        while (matcher.find()) {
-            breadcrumbs.add(matcher.group(1).trim())
-        }
+        val breadcrumbs = input.lines().map { it.trim() }.filter { it.startsWith(breadCrumbPrefix) }.map { it.removePrefix(
+            breadCrumbPrefix
+        ) }
+
         return breadcrumbs
     }
 
@@ -299,44 +295,27 @@ class ExamplesInteractiveServer(
         jsonFilePath: String,
         jsonPaths: List<String>,
         breadcrumbs: List<String>
-    ) {
+    ): Int? {
         if (jsonPaths.size != breadcrumbs.size) {
             throw IllegalArgumentException("JSON paths and breadcrumbs lists must be of the same size")
         }
 
-        val jsonFile = File(jsonFilePath)
-        val mapper = ObjectMapper()
-        val factory = JsonFactory(mapper)
-
-        factory.createParser(jsonFile).use { parser ->
-            val rootNode: JsonNode = mapper.readTree(parser)
-            val jsonContent = jsonFile.readText()
-
-            for (i in jsonPaths.indices) {
-g                val jsonPath = jsonPaths[i].substring(0,jsonPaths[i].lastIndexOf('/'))
-                val breadcrumb = breadcrumbs[i].substring(0,breadcrumbs[i].lastIndexOf('.'))
-                val jsonPathFormatted =  "$.${jsonPath.replace('/','.')}"
-                try {
-                    val result = JsonPath.read<Any>(jsonContent, jsonPathFormatted)
-                    val currentNode = rootNode.at("/${jsonPath.replace(".", "/")}")
-                    if (!currentNode.isMissingNode) {
-                        val lineNumber = parser.currentLocation.lineNr
-                        println("Breadcrumb '$breadcrumb': Found at line $lineNumber, Value: $result")
-                    } else {
-                        println("Breadcrumb '$breadcrumb': JSONPath '$jsonPath' not found in JSON.")
-                    }
-                } catch (e: Exception) {
-                    println("Error processing JSONPath '$jsonPath' for breadcrumb '$breadcrumb': ${e.message}")
-                }
-            }
+        fun transform(path: String): String {
+            return "$.${path.replace("/", ".")}"
         }
+
+        val jsonPathString = jsonPaths.firstOrNull()?.let { transform(it) } ?: return null
+
+        return findLineNumber(File(jsonFilePath), JsonPath.compile(jsonPathString))
     }
+
     fun transformToJsonPaths(breadcrumbs: List<String>): List<String> {
         val jsonPaths: MutableList<String> = ArrayList()
 
         for (breadcrumb in breadcrumbs) {
             val jsonPath = breadcrumb
                 .replace("RESPONSE", "http-response")
+                .replace("REQUEST", "http-request")
                 .replace("BODY", "body")
                 .replace(".", "/")
             jsonPaths.add(jsonPath)

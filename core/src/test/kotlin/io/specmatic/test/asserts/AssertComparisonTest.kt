@@ -134,4 +134,39 @@ class AssertComparisonTest {
             assertThat(it.isEqualityCheck).isTrue
         }
     }
+
+    @Test
+    fun `should return failure when lookup key is not present in actual store`() {
+        val assert = AssertComparison(prefix = "REQUEST.BODY", key = "name", lookupKey = "ENTITY.name", isEqualityCheck = true)
+
+        val actualStore = emptyMap<String, Value>()
+        val bodyValue = JSONObjectValue(mapOf("name" to StringValue("Jane")))
+        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+
+        val result = assert.assert(currentStore, actualStore)
+        println(result.reportString())
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        >> ENTITY.name
+        Could not resolve "ENTITY.name" in actual fact store
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should return failure when lookup key is not present in current store`() {
+        val assert = AssertComparison(prefix = "REQUEST.BODY", key = "name", lookupKey = "ENTITY.name", isEqualityCheck = true)
+
+        val actualStore = mapOf("ENTITY.name" to StringValue("John"))
+        val currentStore = emptyMap<String, Value>()
+
+        val result = assert.assert(currentStore, actualStore)
+        println(result.reportString())
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        >> REQUEST.BODY
+        Could not resolve "REQUEST.BODY" in current fact store
+        """.trimIndent())
+    }
 }

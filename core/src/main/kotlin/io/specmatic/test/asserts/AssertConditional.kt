@@ -1,5 +1,6 @@
 package io.specmatic.test.asserts
 
+import io.ktor.http.*
 import io.specmatic.core.Result
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
@@ -7,7 +8,7 @@ import io.specmatic.core.value.Value
 class AssertConditional(override val prefix: String, val conditionalAsserts: List<Assert>, val thenAsserts: List<Assert>, val elseAsserts: List<Assert>): Assert {
 
     override fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
-        val prefixValue = currentFactStore[prefix] ?: return Result.Failure(breadCrumb = prefix, message = "Could not resolve $prefix in current fact store")
+        val prefixValue = currentFactStore[prefix] ?: return Result.Failure(breadCrumb = prefix, message = "Could not resolve ${prefix.quote()} in current fact store")
 
         val dynamicAsserts = this.dynamicAsserts(prefixValue)
         val results = dynamicAsserts.map {

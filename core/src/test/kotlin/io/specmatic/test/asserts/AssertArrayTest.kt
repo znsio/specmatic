@@ -67,7 +67,7 @@ class AssertArrayTest {
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).containsIgnoringWhitespaces("""
         >> REQUEST.BODY
-        None of the values in REQUEST.BODY[*].name matched ENTITY.name of value "John"
+        None of the values in "REQUEST.BODY[*].name" matched "ENTITY.name" of value "John"
         """.trimIndent())
     }
 
@@ -85,7 +85,7 @@ class AssertArrayTest {
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.reportString()).containsIgnoringWhitespaces("""
         >> REQUEST.BODY
-        Expected REQUEST.BODY to be an array
+        Expected "REQUEST.BODY" to be an array
         """.trimIndent())
     }
 }

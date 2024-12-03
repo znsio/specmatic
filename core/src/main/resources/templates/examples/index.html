@@ -1761,7 +1761,7 @@ function createExampleDropDown(example) {
             })
             .then(response => {
                 if (response.ok) {
-                    createAlert("Example saved", "Saved example to " + example.absPath, false);
+                    createAlert("Saved", "Example saved to file", false);
                     isChanged = false;
                     saveButton.style.display = "none";
                 } else {

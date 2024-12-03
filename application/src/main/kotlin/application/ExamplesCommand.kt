@@ -1,19 +1,22 @@
 package application
 
-import io.specmatic.core.Feature
-import io.specmatic.core.Result
-import io.specmatic.core.Results
-import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
+import io.specmatic.conversions.ExampleFromFile
+import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.externaliseInlineExamples
+import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesDirPath
+import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesFromDir
+import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExistingExampleFiles
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingleExample
 import io.specmatic.core.examples.server.defaultExternalExampleDirFrom
 import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
-import io.specmatic.core.parseContractFileToFeature
-import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.*
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
+import io.specmatic.test.traverse
 import picocli.CommandLine.*
 import java.io.File
 import java.lang.Thread.sleep
@@ -31,7 +34,8 @@ private const val FAILURE_EXIT_CODE = 1
         ExamplesCommand.Validate::class,
         ExamplesCommand.Interactive::class,
         ExamplesCommand.Transform::class,
-        ExamplesCommand.Export::class
+        ExamplesCommand.Export::class,
+        ExamplesCommand.ExampleToDictionary::class
     ]
 )
 class ExamplesCommand : Callable<Int> {
@@ -594,6 +598,101 @@ For example:
             } catch(e: Exception) {
                 exitWithMessage("Failed while exporting the inline examples from ${contractFile.nameWithoutExtension}:\n${e.message}")
             }
+        }
+    }
+
+    @Command(
+        name = "dictionary",
+        mixinStandardHelpOptions = true,
+        description = ["Generate Dictionary from external example files"]
+    )
+    class ExampleToDictionary: Callable<Unit> {
+        @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
+        lateinit var contractFile: File
+
+        override fun call() {
+            val feature = parseContractFileToFeature(contractFile)
+            val examples = getExamplesDirPath(contractFile).getExamplesFromDir()
+            val dictionary = mutableMapOf<String, Value>()
+            var examplesCount = 0
+
+            feature.scenarios.forEach { scenario ->
+                val matchingExamples = getExistingExampleFiles(feature, scenario, examples)
+                examplesCount += matchingExamples.size
+                matchingExamples.map { (example, mismatch) ->
+                    if (mismatch.isNotBlank()) {
+                        return@map consoleLog("\nSkipping example ${example.file.canonicalPath} because:\n$mismatch")
+                    }
+                    val exampleDictionary = example.toDictionary(scenario)
+                    dictionary.putAll(exampleDictionary)
+                }
+            }
+
+            if (dictionary.isEmpty()) {
+                consoleLog("\nNo Values created in dictionary, Processed $examplesCount examples")
+                return
+            }
+
+            val dictionaryFile = File(contractFile.parentFile, "${contractFile.nameWithoutExtension}_dictionary.json")
+            dictionaryFile.writeText(JSONObjectValue(dictionary).toStringLiteral())
+            consoleLog("\nDictionary written to ${dictionaryFile.canonicalPath}")
+        }
+
+        private fun ExampleFromFile.toDictionary(scenario: Scenario): Map<String, Value> {
+            val requestPattern = resolvedHop(scenario.httpRequestPattern.body, scenario.resolver)
+            val responsePattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
+
+            val requestDictionary = this.request.body.toDictionary(requestPattern, scenario.resolver)
+            val responseDictionary = this.response.body.toDictionary(responsePattern, scenario.resolver)
+            return requestDictionary.plus(responseDictionary)
+        }
+
+        private fun Value.toDictionary(pattern: Pattern, resolver: Resolver): Map<String, Value> {
+            return pattern.getTypeAlias(this, resolver)?.let {
+                this.traverse(
+                    prefix = it,
+                    onScalar = { scalar, prefix -> scalar.handleScalar(this, pattern, prefix, resolver) },
+                    onComposite = { composite, prefix ->
+                        val key = prefix.split(".").last()
+                         pattern.ifKeyIsNewSchema(this, key, resolver) { subPattern ->
+                             composite.toDictionary(subPattern, resolver)
+                        } ?: composite.traverse(
+                             prefix = "$prefix[*]",
+                             onScalar = { scalar, innerPrefix -> scalar.handleScalar(this, pattern, innerPrefix, resolver) },
+                             onAssert = { _, _ -> emptyMap() }
+                        )
+                    },
+                    onAssert = { _, _ -> emptyMap() }
+                )
+            } ?: emptyMap()
+        }
+
+        private fun Value.handleScalar(patternValue: Value, pattern: Pattern, prefix: String, resolver: Resolver): Map<String, Value> {
+            val key = prefix.split(".").getOrElse(1) { prefix }
+            return pattern.ifKeyIsNewSchema(patternValue, key, resolver) { emptyMap() } ?: mapOf(prefix to this)
+        }
+
+        private fun <T> Pattern.ifKeyIsNewSchema(value: Value, key: String, resolver: Resolver, block: (pattern: Pattern) -> T): T? {
+            return when(this) {
+                is DeferredPattern -> block(resolvedHop(this, resolver))
+                is ListPattern -> this.pattern.ifKeyIsNewSchema(value, key,resolver, block)
+                is JSONObjectPattern -> {
+                    val pattern = this.pattern[key] ?: this.pattern["$key?"] ?: return null
+                    pattern.ifKeyIsNewSchema(value, key, resolver, block)
+                }
+                is AnyPattern -> {
+                    this.pattern.firstOrNull { it.matches(value, resolver) is Result.Success }?.ifKeyIsNewSchema(value, key, resolver, block)
+                }
+                else -> null
+            }
+        }
+
+        private fun Pattern.getTypeAlias(value: Value, resolver: Resolver): String? {
+            return when(this) {
+                is ListPattern -> this.typeAlias ?: this.pattern.getTypeAlias(value, resolver)
+                is AnyPattern -> this.pattern.firstOrNull { it.matches(value, resolver) is Result.Success }?.getTypeAlias(value, resolver)
+                else -> this.typeAlias
+            }?.let { withoutPatternDelimiters(it) }
         }
     }
 }

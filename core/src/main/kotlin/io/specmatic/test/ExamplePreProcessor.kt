@@ -215,7 +215,7 @@ object ExampleProcessor {
     }
 }
 
-internal fun <T> Value.traverse(
+fun <T> Value.traverse(
     prefix: String = "", onScalar: (Value, String) -> Map<String, T>,
     onComposite: ((Value, String) -> Map<String, T>)? = null, onAssert: ((Value, String) ->  Map<String, T>)? = null
 ): Map<String, T> {

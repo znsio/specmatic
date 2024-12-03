@@ -13,6 +13,7 @@ import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.*
+import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.ScenarioStub
@@ -627,7 +628,6 @@ For example:
 
             if (dictionary.isEmpty()) {
                 consoleLog("\nNo Values created in dictionary, Processed $examplesCount examples")
-                return
             }
 
             val dictionaryFile = File(contractFile.parentFile, "${contractFile.nameWithoutExtension}_dictionary.json")
@@ -639,7 +639,7 @@ For example:
             val requestPattern = resolvedHop(scenario.httpRequestPattern.body, scenario.resolver)
             val responsePattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
 
-            val updatedResolver = scenario.resolver.copy(patternMatchStrategy = matchAnything)
+            val updatedResolver = scenario.resolver.ignoreAll()
             val requestDictionary = this.request.body.toDictionary(requestPattern, updatedResolver)
             val responseDictionary = this.response.body.toDictionary(responsePattern, updatedResolver)
             return requestDictionary.plus(responseDictionary)
@@ -672,10 +672,10 @@ For example:
             val parentPatternKey = prefix.split(".").getOrElse(1) { prefix }
 
             val parentPattern = pattern.getKeySchema(patternValue, parentPatternKey, resolver)
-            val keyPattern = parentPattern?.getKeySchema(patternValue, key, resolver)
+            val keyPattern = parentPattern?.let { resolvedHop(it, resolver).getKeySchema(patternValue, key, resolver) }
 
             if (parentPattern is DeferredPattern || keyPattern == null) return emptyMap()
-            return if (keyPattern.matches(this, resolver.copy(patternMatchStrategy = actualMatch)) is Result.Success) {
+            return if (keyPattern.matches(this, resolver.validateAll()) is Result.Success) {
                 mapOf(prefix to this)
             } else emptyMap()
         }
@@ -689,12 +689,22 @@ For example:
 
         private fun Pattern.getKeySchema(value: Value, key: String, resolver: Resolver): Pattern? {
             return when(this) {
-                is ListPattern -> this.pattern.getKeySchema(value, key, resolver)
+                is ListPattern -> {
+                    val patternValue = value.getInnerValueIfList()
+                    this.pattern.getKeySchema(patternValue, key, resolver)
+                }
                 is JSONObjectPattern -> {
                     val pattern = this.pattern[key] ?: this.pattern["$key?"] ?: return null
                     pattern.getKeySchema(value, key, resolver)
                 }
                 is AnyPattern -> this.pattern.firstOrNull { it.matches(value, resolver) is Result.Success }?.getKeySchema(value, key, resolver)
+                else -> this
+            }
+        }
+
+        private fun Value.getInnerValueIfList(): Value {
+            return when(this) {
+                is JSONArrayValue -> this.list.first()
                 else -> this
             }
         }
@@ -705,6 +715,20 @@ For example:
                 is AnyPattern -> this.pattern.firstOrNull { it.matches(value, resolver) is Result.Success }?.getTypeAlias(value, resolver)
                 else -> this.typeAlias
             }?.let { withoutPatternDelimiters(it) }
+        }
+
+        private fun Resolver.ignoreAll(): Resolver {
+            return this.copy(
+                patternMatchStrategy = matchAnything,
+                findKeyErrorCheck = findKeyErrorCheck.copy(unexpectedKeyCheck = IgnoreUnexpectedKeys)
+            )
+        }
+
+        private fun Resolver.validateAll(): Resolver {
+            return this.copy(
+                patternMatchStrategy = actualMatch,
+                findKeyErrorCheck = findKeyErrorCheck.copy(unexpectedKeyCheck = ValidateUnexpectedKeys)
+            )
         }
     }
 }

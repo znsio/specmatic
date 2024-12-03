@@ -619,10 +619,7 @@ For example:
             feature.scenarios.forEach { scenario ->
                 val matchingExamples = getExistingExampleFiles(feature, scenario, examples)
                 examplesCount += matchingExamples.size
-                matchingExamples.map { (example, mismatch) ->
-                    if (mismatch.isNotBlank()) {
-                        return@map consoleLog("\nSkipping example ${example.file.canonicalPath} because:\n$mismatch")
-                    }
+                matchingExamples.map { (example, _) ->
                     val exampleDictionary = example.toDictionary(scenario)
                     dictionary.putAll(exampleDictionary)
                 }
@@ -642,8 +639,9 @@ For example:
             val requestPattern = resolvedHop(scenario.httpRequestPattern.body, scenario.resolver)
             val responsePattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
 
-            val requestDictionary = this.request.body.toDictionary(requestPattern, scenario.resolver)
-            val responseDictionary = this.response.body.toDictionary(responsePattern, scenario.resolver)
+            val updatedResolver = scenario.resolver.copy(patternMatchStrategy = matchAnything)
+            val requestDictionary = this.request.body.toDictionary(requestPattern, updatedResolver)
+            val responseDictionary = this.response.body.toDictionary(responsePattern, updatedResolver)
             return requestDictionary.plus(responseDictionary)
         }
 
@@ -670,22 +668,34 @@ For example:
         }
 
         private fun Value.handleScalar(patternValue: Value, pattern: Pattern, prefix: String, resolver: Resolver): Map<String, Value> {
-            val key = prefix.split(".").getOrElse(1) { prefix }
-            return pattern.ifKeyIsNewSchema(patternValue, key, resolver) { emptyMap() } ?: mapOf(prefix to this)
+            val key = prefix.split(".").last()
+            val parentPatternKey = prefix.split(".").getOrElse(1) { prefix }
+
+            val parentPattern = pattern.getKeySchema(patternValue, parentPatternKey, resolver)
+            val keyPattern = parentPattern?.getKeySchema(patternValue, key, resolver)
+
+            if (parentPattern is DeferredPattern || keyPattern == null) return emptyMap()
+            return if (keyPattern.matches(this, resolver.copy(patternMatchStrategy = actualMatch)) is Result.Success) {
+                mapOf(prefix to this)
+            } else emptyMap()
         }
 
         private fun <T> Pattern.ifKeyIsNewSchema(value: Value, key: String, resolver: Resolver, block: (pattern: Pattern) -> T): T? {
+            val pattern = this.getKeySchema(value, key, resolver)
+            return if (pattern is DeferredPattern) {
+                block(resolvedHop(pattern, resolver))
+            } else null
+        }
+
+        private fun Pattern.getKeySchema(value: Value, key: String, resolver: Resolver): Pattern? {
             return when(this) {
-                is DeferredPattern -> block(resolvedHop(this, resolver))
-                is ListPattern -> this.pattern.ifKeyIsNewSchema(value, key,resolver, block)
+                is ListPattern -> this.pattern.getKeySchema(value, key, resolver)
                 is JSONObjectPattern -> {
                     val pattern = this.pattern[key] ?: this.pattern["$key?"] ?: return null
-                    pattern.ifKeyIsNewSchema(value, key, resolver, block)
+                    pattern.getKeySchema(value, key, resolver)
                 }
-                is AnyPattern -> {
-                    this.pattern.firstOrNull { it.matches(value, resolver) is Result.Success }?.ifKeyIsNewSchema(value, key, resolver, block)
-                }
-                else -> null
+                is AnyPattern -> this.pattern.firstOrNull { it.matches(value, resolver) is Result.Success }?.getKeySchema(value, key, resolver)
+                else -> this
             }
         }
 

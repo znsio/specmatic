@@ -1,5 +1,6 @@
 package io.specmatic.test.asserts
 
+import io.ktor.http.*
 import io.specmatic.core.Result
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.Value
@@ -8,9 +9,9 @@ enum class ArrayAssertType { ARRAY_HAS }
 
 class AssertArray(override val prefix: String, override val key: String, val lookupKey: String, val arrayAssertType: ArrayAssertType): Assert {
     override fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
-        val prefixValue = currentFactStore[prefix] ?: return Result.Failure(breadCrumb = prefix, message = "Could not resolve $prefix in current fact store")
+        val prefixValue = currentFactStore[prefix] ?: return Result.Failure(breadCrumb = prefix, message = "Could not resolve ${prefix.quote()} in current fact store")
         if (prefixValue !is JSONArrayValue) {
-            return Result.Failure(breadCrumb = prefix, message = "Expected $prefix to be an array")
+            return Result.Failure(breadCrumb = prefix, message = "Expected ${prefix.quote()} to be an array")
         }
 
         return when (arrayAssertType) {
@@ -19,13 +20,13 @@ class AssertArray(override val prefix: String, override val key: String, val loo
     }
 
     private fun assertArrayHas(prefixValue: JSONArrayValue, currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
-        val expectedValue = actualFactStore[lookupKey] ?: return Result.Failure(breadCrumb = lookupKey, message = "Could not resolve $lookupKey in actual fact store")
+        val expectedValue = actualFactStore[lookupKey] ?: return Result.Failure(breadCrumb = lookupKey, message = "Could not resolve ${lookupKey.quote()} in actual fact store")
         val asserts = AssertComparison(prefix = prefix, key = key, lookupKey = lookupKey, isEqualityCheck = true).dynamicAsserts(prefixValue)
         val result = asserts.map { it.assert(currentFactStore, actualFactStore) }.toResultIfAny()
 
         return when (result) {
             is Result.Success -> Result.Success()
-            is Result.Failure -> Result.Failure("None of the values in $prefix[*].$key matched $lookupKey of value ${expectedValue.displayableValue()}", breadCrumb = prefix)
+            is Result.Failure -> Result.Failure("None of the values in \"$prefix[*].$key\" matched ${lookupKey.quote()} of value ${expectedValue.displayableValue()}", breadCrumb = prefix)
         }
     }
 

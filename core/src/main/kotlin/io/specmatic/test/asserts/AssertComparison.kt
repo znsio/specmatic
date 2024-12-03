@@ -1,5 +1,6 @@
 package io.specmatic.test.asserts
 
+import io.ktor.http.*
 import io.specmatic.core.Result
 import io.specmatic.core.value.Value
 
@@ -8,13 +9,13 @@ val ASSERT_PATTERN = Regex("^\\$(\\w+)\\((.*)\\)$")
 class AssertComparison(override val prefix: String, override val key: String, val lookupKey: String, val isEqualityCheck: Boolean): Assert {
 
     override fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
-        val prefixValue = currentFactStore[prefix] ?: return Result.Failure(breadCrumb = prefix, message = "Could not resolve $prefix in current fact store")
-        val expectedValue = actualFactStore[lookupKey] ?: return Result.Failure(breadCrumb = lookupKey, message = "Could not resolve $lookupKey in actual fact store")
+        val prefixValue = currentFactStore[prefix] ?: return Result.Failure(breadCrumb = prefix, message = "Could not resolve ${prefix.quote()} in current fact store")
+        val expectedValue = actualFactStore[lookupKey] ?: return Result.Failure(breadCrumb = lookupKey, message = "Could not resolve ${lookupKey.quote()} in actual fact store")
 
         val dynamicList = dynamicAsserts(prefixValue)
         val results = dynamicList.map { newAssert ->
             val finalKey = "${newAssert.prefix}.${newAssert.key}"
-            val actualValue = currentFactStore[finalKey] ?: return@map Result.Failure(breadCrumb = finalKey, message = "Could not resolve $finalKey in current fact store")
+            val actualValue = currentFactStore[finalKey] ?: return@map Result.Failure(breadCrumb = finalKey, message = "Could not resolve ${finalKey.quote()} in current fact store")
             assert(finalKey, actualValue, expectedValue)
         }
 

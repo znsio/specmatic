@@ -1,5 +1,6 @@
 package io.specmatic.test
 
+import io.ktor.http.*
 import io.ktor.util.*
 import io.specmatic.core.*
 import io.specmatic.core.log.consoleLog
@@ -23,7 +24,7 @@ object ExampleProcessor {
     private fun loadConfig(): JSONObjectValue {
         val configFilePath = runCatching {
             loadSpecmaticConfig().additionalExampleParamsFilePath
-        }.getOrNull() ?: return JSONObjectValue(emptyMap())
+        }.getOrElse { SpecmaticConfig().additionalExampleParamsFilePath } ?: return JSONObjectValue(emptyMap())
 
         val configFile = File(configFilePath)
         if (!configFile.exists()) {
@@ -41,8 +42,10 @@ object ExampleProcessor {
         }
     }
 
+    fun cleanEntityStore() { runningEntity = mapOf() }
+
     private fun defaultIfNotExits(lookupKey: String, type: SubstitutionType = SubstitutionType.SIMPLE): Value {
-        throw ContractException("Could not resolve $lookupKey, key does not exist in fact store")
+        throw ContractException(breadCrumb = lookupKey, errorMessage = "Could not resolve ${lookupKey.quote()}, key does not exist in fact store")
     }
 
     private fun ifNotExitsToLookupPattern(lookupKey: String, type: SubstitutionType = SubstitutionType.SIMPLE): Value {
@@ -61,14 +64,14 @@ object ExampleProcessor {
         if (type != SubstitutionType.DELAYED_RANDOM) return returnValue
 
         val arrayValue = returnValue as? JSONArrayValue
-            ?: throw ContractException("$key is not an array in fact store")
+            ?: throw ContractException(breadCrumb = key, errorMessage = "${key.quote()} is not an array in fact store")
 
         val entityKey = "ENTITY.${key.substringAfterLast('.')}"
         val entityValue = factStore[entityKey] ?: runningEntity[entityKey]
-            ?: throw ContractException("Could not resolve $entityKey in fact store")
+            ?: throw ContractException(breadCrumb = entityKey, errorMessage = "Could not resolve ${entityKey.quote()} in fact store")
 
         val filteredList = arrayValue.list.filterNot { it.toStringLiteral() == entityValue.toStringLiteral() }.ifEmpty {
-            throw ContractException("Couldn't pick a random value from $key that was not equal to $entityValue")
+            throw ContractException(breadCrumb = key, errorMessage = "Couldn't pick a random value from ${key.quote()} that was not equal to ${entityValue.displayableValue()}")
         }
 
         return filteredList.random()

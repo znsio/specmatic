@@ -520,6 +520,14 @@
                     }
                 }
 
+                &#save-examples {
+                --_content: "Save Example";
+                 display: none;
+                 &[data-panel="details"] {
+                        --_content: "Save Example";
+                    }
+                }
+
                 &[data-selected="0"][data-panel="table"], &.bulk-disabled {
                     --_background-color: var(--gray);
                     pointer-events: none;
@@ -1064,6 +1072,7 @@
         <button data-selected="0" id="bulk-generate" data-panel="table"></button>
         <button data-selected="0" data-panel="table" id="bulk-validate"></button>
         <button data-selected="0" data-panel="table" id="bulk-test"></button>
+        <button data-panel="table"  id="save-examples"></button>
     </div>
 </header>
 
@@ -1147,6 +1156,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/json-lint.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/autorefresh.min.js"></script>
+
 </body>
 <script>
     const mainElement = document.querySelector("main");
@@ -1158,13 +1168,38 @@
     const bulkValidateBtn = document.querySelector("button#bulk-validate");
     const bulkGenerateBtn = document.querySelector("button#bulk-generate");
     const bulkTestBtn = document.querySelector("button#bulk-test");
-
+    const saveBtn = document.querySelector("button#save-examples")
+    let savedEditorResponse = null;
     let scrollYPosition = 0;
     let selectedTableRow = null;
     let blockGenValidate = false;
     const defaultAttrs = {"data-generate": "not-generated", "data-valid": "not-validated", "data-test": "not-tested", "data-main": "false"}
-
+    let isSaved = true;
     backBtn.addEventListener("click", () => {
+        if(!isSaved)
+        {
+        const modalContainer = createModal({
+        onSave:() => {
+        const exampleAbsPath = getExampleData(selectedTableRow);
+        saveExample(exampleAbsPath);
+        },
+        onDiscard: () => {
+         examplesOl.replaceChildren();
+        mainElement.setAttribute("data-panel", "table");
+        bulkValidateBtn.setAttribute("data-panel", "table");
+        bulkGenerateBtn.setAttribute("data-panel", "table");
+        bulkTestBtn.setAttribute("data-panel", "table");
+        window.scrollTo(0, scrollYPosition);
+        console.log("Changes discarded!");
+        isSaved = true;
+        saveBtn.style.display = "none";
+        },
+
+        });
+        document.body.appendChild(modalContainer);
+       return;
+      }
+
         examplesOl.replaceChildren();
         mainElement.setAttribute("data-panel", "table");
         bulkValidateBtn.setAttribute("data-panel", "table");
@@ -1711,12 +1746,6 @@ function createExampleDropDown(example) {
         detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
     }
 
-    const saveButton = document.createElement("button");
-    saveButton.textContent = "Save";
-    saveButton.id = "save-example";
-    saveButton.style.display = "none";
-
-    let isChanged = false;
 
    const editor = CodeMirror(examplePreDiv, {
         value: example.exampleJson,
@@ -1735,53 +1764,15 @@ function createExampleDropDown(example) {
         highlightErrorLines(editor,metadata);
     }
 
-    editor.on("change", () => {
-        if (!isChanged) {
-            isChanged = true;
-            saveButton.style.display = "inline-block";
-        }
-        updateBorderColorExampleBlock(editor, examplePreDiv);
+    editor.on("change", (instance, changes) => {
+            isSaved = false;
+            saveBtn.style.display = "inline-block";
+            updateBorderColorExampleBlock(editor, examplePreDiv);
+            savedEditorResponse = editor.getValue();
     });
-
-    saveButton.addEventListener("click", () => {
-        const editedText = editor.getValue();
-
-        try {
-            const parsedContent = JSON.parse(editedText);
-
-            fetch("/_specmatic/examples/update", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    exampleFile: example.absPath,
-                    exampleContent: editedText,
-                }),
-            })
-            .then(response => {
-                if (response.ok) {
-                    createAlert("Saved", "Example saved to file", false);
-                    isChanged = false;
-                    saveButton.style.display = "none";
-                } else {
-                    createAlert("Failed to save example.", "Failed to save example to " + example.absPath, true);
-                    console.error("Error saving example:", response.status);
-                }
-            })
-            .catch(error => {
-                console.error("Error during save request:", error);
-                createAlert("Failed to save example.", "An error occurred while saving example to " + example.absPath, true);
-            });
-        } catch (e) {
-            createAlert("Failed to save example.", "The content in file " + example.absPath + " is not valid JSON", true);
-        }
-    });
-
-<!--    const detailsPreDiv = document.createElement("div");-->
-<!--    detailsPreDiv.appendChild(detailsPara);-->
-<!--    detailsPreDiv.appendChild(detailsPre);-->
-
+    saveBtn.addEventListener("click", () => {
+   saveExample(example.absPath);
+});
     if (example.test) {
         const testPara = document.createElement("p");
         testPara.textContent = "Test Log: ";
@@ -1794,8 +1785,42 @@ function createExampleDropDown(example) {
 <!--    dropDownDiv.appendChild(detailsPreDiv);-->
     dropDownDiv.appendChild(examplePara);
     dropDownDiv.appendChild(examplePreDiv);
-    dropDownDiv.appendChild(saveButton);
+
     return dropDownDiv;
+}
+
+function saveExample(examplePath) {
+    const editedText = savedEditorResponse;
+    try {
+        const parsedContent = JSON.parse(editedText);
+
+        fetch("/_specmatic/examples/update", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                exampleFile: examplePath,
+                exampleContent: editedText,
+            }),
+        })
+        .then(response => {
+            if (response.ok) {
+                createAlert("Saved", "Example saved to file", false);
+                isSaved = true;
+                saveBtn.style.display = "none";
+            } else {
+                createAlert("Failed to save example.", "Failed to save example to " + examplePath, true);
+                console.error("Error saving example:", response.status);
+            }
+        })
+        .catch(error => {
+            console.error("Error during save request:", error);
+            createAlert("Failed to save example.", "An error occurred while saving example to " + examplePath, true);
+        });
+    } catch (e) {
+        createAlert("Failed to save example.", "The content in file " + examplePath + " is not valid JSON", true);
+    }
 }
  function parseErrorResponse(errors) {
         const metadata = errors.map(err => ({
@@ -1918,7 +1943,7 @@ function createErrorMarker() {
     }
 
     async function validateExample(exampleFile) {
-        try {
+     try {
             const resp = await fetch(`${getHostPort()}/_specmatic/examples/validate`, {
                 method: "POST",
                 body: JSON.stringify({ exampleFile }),
@@ -2035,6 +2060,110 @@ function createErrorMarker() {
         bulkTestBtn.setAttribute("data-selected", "0");
         blockGenValidate = false;
     }
+function createModal({ onSave, onDiscard }) {
+    // Data for modal
+    const title = "Unsaved Changes";
+    const saveText = "Save";
+    const discardText = "Go Back";
+    const bodyText = "Your changes are not saved yet. Do you want to save them?";
+
+    // Create modal container dynamically
+    const modalContainer = document.createElement("div");
+    modalContainer.classList.add("go-back-modal");
+    modalContainer.style.position = "fixed";
+    modalContainer.style.top = "0";
+    modalContainer.style.left = "0";
+    modalContainer.style.width = "100%";
+    modalContainer.style.height = "100%";
+    modalContainer.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+    modalContainer.style.display = "flex";
+    modalContainer.style.alignItems = "center";
+    modalContainer.style.justifyContent = "center";
+    modalContainer.style.zIndex = "9999";
+
+    // Create modal content box
+    const modalContent = document.createElement("div");
+    modalContent.style.backgroundColor = "#fff";
+    modalContent.style.borderRadius = "8px";
+    modalContent.style.padding = "20px";
+    modalContent.style.width = "400px";
+    modalContent.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.2)";
+    modalContent.style.textAlign = "center";
+
+    // Create modal header
+    const modalHeader = document.createElement("div");
+    const modalTitle = document.createElement("h5");
+    modalTitle.textContent = title;
+    modalHeader.style.fontSize = "18px";
+    modalHeader.style.fontWeight = "bold";
+    modalHeader.style.marginBottom = "15px";
+    modalHeader.appendChild(modalTitle);
+
+    // Create modal body
+    const modalBody = document.createElement("div");
+    modalBody.textContent = bodyText;
+    modalBody.style.marginBottom = "15px";
+
+    // Create modal footer
+    const modalFooter = document.createElement("div");
+
+    const saveButton = document.createElement("button");
+    saveButton.textContent = saveText;
+    saveButton.style.backgroundColor = "#007bff";
+    saveButton.style.color = "#fff";
+    saveButton.style.border = "none";
+    saveButton.style.padding = "8px 16px";
+    saveButton.style.borderRadius = "4px";
+    saveButton.style.cursor = "pointer";
+    saveButton.style.marginRight = "10px";
+
+    const discardButton = document.createElement("button");
+    discardButton.textContent = discardText;
+    discardButton.style.backgroundColor = "#007bff";
+    discardButton.style.color = "#fff";
+    discardButton.style.border = "none";
+    discardButton.style.padding = "8px 16px";
+    discardButton.style.borderRadius = "4px";
+    discardButton.style.cursor = "pointer";
+
+    // Add buttons to footer
+    modalFooter.appendChild(saveButton);
+    modalFooter.appendChild(discardButton);
+
+    // Append everything to the modal content
+    modalContent.appendChild(modalHeader);
+    modalContent.appendChild(modalBody);
+    modalContent.appendChild(modalFooter);
+
+    // Append modal content to modal container
+    modalContainer.appendChild(modalContent);
+
+
+    // Button event listeners
+    saveButton.addEventListener("click", () => {
+        onSave();
+        closeModal();
+    });
+
+    discardButton.addEventListener("click", () => {
+        onDiscard();
+        closeModal();
+    });
+
+
+    modalContainer.addEventListener("click", (event) => {
+        if (event.target === modalContainer) {
+            closeModal();
+        }
+    });
+
+
+    function closeModal() {
+        modalContainer.remove();
+    }
+     return modalContainer;
+}
+
 
     (() => cleanUpSelections())();
 </script>

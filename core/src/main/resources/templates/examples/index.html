@@ -378,10 +378,30 @@
         }
         .CodeMirror {
             border: 1px solid #ccc;
-            height: auto;
+            height: 500px !important;
         }
-
-
+       .cm-lint-marker-error {
+            background-color: red;
+            color: white;
+            font-size: 12px;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            text-align: center;
+            border-radius: 50%;
+            margin-left: -10px;
+            display: inline-block;
+            cursor: default;
+        }
+        .cm-lint-message {
+            color: red;
+            background-color: rgba(255, 0, 0, 0.2);
+            padding: 5px;
+            font-size: 12px;
+            border-radius: 3px;
+            margin-left: 30px; /* Move it a bit to the right of the gutter marker */
+            position: absolute;
+        }
          .CodeMirror-gutter-wrapper {
             position: relative;
         }
@@ -1050,53 +1070,53 @@
 <main class="group" data-panel="table">
     <table th:attr="data-generated=${hasExamples},data-hostPort=${hostPort}">
         <thead>
-            <tr>
-                <th>
-                    <label for="select-all">
-                        <input type="checkbox" name="select-all" id="select-all">
-                    </label>
-                </th>
-                <th>S. No</th>
-                <th colspan="3">Path</th>
-                <th>Method</th>
-                <th>Response</th>
-                <th>Examples</th>
-                <th>Action</th>
-            </tr>
+        <tr>
+            <th>
+                <label for="select-all">
+                    <input type="checkbox" name="select-all" id="select-all">
+                </label>
+            </th>
+            <th>S. No</th>
+            <th colspan="3">Path</th>
+            <th>Method</th>
+            <th>Response</th>
+            <th>Examples</th>
+            <th>Action</th>
+        </tr>
         </thead>
         <tbody th:attr="data-test-mode=${isTestMode}">
-            <tr
+        <tr
                 th:each="row, iter : ${tableRows}"
                 th:attr="data-raw-path=${row.rawPath}, data-key=${row.uniqueKey}, data-schema-based=${row.isSchemaBased},
                         data-example=${row.example}, data-main=${row.isMainRow}, data-disc=${row.isDiscriminatorBased},
                         data-generate=${row.isGenerated ? 'success' : 'not-generated'}, data-test='not-tested',
                         data-valid=${row.isGenerated ? (row.isValid ? 'success' : 'failed') : 'not-validated'}">
-                <td>
-                    <input type="checkbox" name="path-row" class="path-row">
-                </td>
-                <td></td>
-                <td th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=${row.pathColSpan}">
-                    <span>[[${row.path}]]</span>
-                </td>
-                <td th:class="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodSpan}, colspan=${row.methodColSpan}">
-                    <p>[[${row.method}]]</p>
-                </td>
-                <td class="response-cell" th:classappend="${row.showStatus ? '' : 'hidden'}" th:attr="rowspan=${row.statusSpan}">
-                    <p>[[${row.responseStatus}]]</p>
-                    <span>[[${row.contentType}]]</span>
-                    <br th:if="${row.contentType != null}"/>
-                    <button class="multigen hidden" aria-label="Generate More"></button>
-                </td>
-                <td>
-                    <button th:unless="${row.isGenerated}" class="generate" aria-label="Generate"></button>
-                    <span th:if="${row.isGenerated}" th:text="${row.exampleName}"></span>
-                </td>
-                <td>
-                    <button class="validate hidden" aria-label="Validate"></button>
-                    <button class="test hidden" aria-label="Test"></button>
-                    <span th:class="hidden">View Details</span>
-                </td>
-            </tr>
+            <td>
+                <input type="checkbox" name="path-row" class="path-row">
+            </td>
+            <td></td>
+            <td th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=${row.pathColSpan}">
+                <span>[[${row.path}]]</span>
+            </td>
+            <td th:class="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodSpan}, colspan=${row.methodColSpan}">
+                <p>[[${row.method}]]</p>
+            </td>
+            <td class="response-cell" th:classappend="${row.showStatus ? '' : 'hidden'}" th:attr="rowspan=${row.statusSpan}">
+                <p>[[${row.responseStatus}]]</p>
+                <span>[[${row.contentType}]]</span>
+                <br th:if="${row.contentType != null}"/>
+                <button class="multigen hidden" aria-label="Generate More"></button>
+            </td>
+            <td>
+                <button th:unless="${row.isGenerated}" class="generate" aria-label="Generate"></button>
+                <span th:if="${row.isGenerated}" th:text="${row.exampleName}"></span>
+            </td>
+            <td>
+                <button class="validate hidden" aria-label="Validate"></button>
+                <button class="test hidden" aria-label="Test"></button>
+                <span th:class="hidden">View Details</span>
+            </td>
+        </tr>
         </tbody>
     </table>
     <div id="details">
@@ -1126,9 +1146,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/lint.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/json-lint.js"></script>
-<script src = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/autorefresh.min.js"></script>
-
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/autorefresh.min.js"></script>
 </body>
 <script>
     const mainElement = document.querySelector("main");
@@ -1534,13 +1552,13 @@
     }
 
     async function goToDetails(tableRow, rowValues) {
-         const exampleAbsPath = getExampleData(tableRow);
-    let docFragment = [];
-    const validateExampleRequest = {
+        const exampleAbsPath = getExampleData(tableRow);
+        let docFragment = [];
+        const validateExampleRequest = {
         exampleFile: exampleAbsPath
-    };
+        };
 
-    if (exampleAbsPath) {
+        if (exampleAbsPath) {
         try {
             const response = await fetch(`${getHostPort()}/_specmatic/examples/validate`, {
                 method: "POST",
@@ -1571,6 +1589,8 @@
             console.error("Error during validation:", error);
         }
         }
+
+
         bulkTestBtn.classList.toggle("bulk-disabled", tableRow.getAttribute("data-valid") !== "success")
         pathSummaryUl.replaceChildren(createPathSummary(rowValues));
         examplesOl.replaceChildren(docFragment);
@@ -1658,8 +1678,29 @@ function createExampleDropDown(example) {
     const examplePreDiv = document.createElement("div");
     examplePreDiv.setAttribute("id", "example-pre");
     examplePreDiv.classList.add("language-json");
-
-
+    let metadata;
+    if(example.response.error)
+    {
+    const errors = [
+    {
+        lineNumber: 5,
+        description: "Missing closing bracket for the object."
+    },
+    {
+        lineNumber: 12,
+        description: "Unexpected string value, expected a number."
+    },
+    {
+        lineNumber: 13,
+        description: "Invalid key name; keys should be in camelCase."
+    },
+    {
+        lineNumber: 14,
+        description: "Extra comma at the end of the array."
+    }
+    ];
+       metadata= parseErrorResponse(errors)
+    }
     const detailsPre = document.createElement("pre");
     if (example.hasBeenValidated) {
         detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
@@ -1674,14 +1715,10 @@ function createExampleDropDown(example) {
     saveButton.textContent = "Save";
     saveButton.id = "save-example";
     saveButton.style.display = "none";
-    let parsedMetadata;
-    if(example.response.error)
-    {
-     parsedMetadata = parseResponse(example.response.error);
-    }
+
     let isChanged = false;
 
-    const editor = CodeMirror(examplePreDiv, {
+   const editor = CodeMirror(examplePreDiv, {
         value: example.exampleJson,
         autoRefresh: true,
         mode: "application/json",
@@ -1693,11 +1730,7 @@ function createExampleDropDown(example) {
         lint: true,
         gutters: ["CodeMirror-lint-markers"]
     });
-    if(parsedMetadata)
-    {
-     const metadata = getLineNumberFromParsedResponse(parsedMetadata,editor);
-     highlightErrorLines(editor, metadata);
-     }
+    highlightErrorLines(editor,metadata)
     editor.on("change", () => {
         if (!isChanged) {
             isChanged = true;
@@ -1724,20 +1757,20 @@ function createExampleDropDown(example) {
             })
             .then(response => {
                 if (response.ok) {
-                    alert("Example saved successfully!");
+                    createAlert("Example saved", "Saved example to " + example.absPath, false);
                     isChanged = false;
                     saveButton.style.display = "none";
                 } else {
-                    alert("Failed to save example.");
+                    createAlert("Failed to save example.", "Failed to save example to " + example.absPath, true);
                     console.error("Error saving example:", response.status);
                 }
             })
             .catch(error => {
                 console.error("Error during save request:", error);
-                alert("An error occurred while saving the example.");
+                createAlert("Failed to save example.", "An error occurred while saving example to " + example.absPath, true);
             });
         } catch (e) {
-            alert("The content is not valid JSON.");
+            createAlert("Failed to save example.", "The content in file " + example.absPath + " is not valid JSON", true);
         }
     });
 
@@ -1750,8 +1783,8 @@ function createExampleDropDown(example) {
         testPara.textContent = "Test Log: ";
         const testPre = document.createElement("pre");
         testPre.textContent = example.test.testLog;
-<!--        detailsPreDiv.appendChild(testPara);-->
-<!--        detailsPreDiv.appendChild(testPre);-->
+        detailsPreDiv.appendChild(testPara);
+        detailsPreDiv.appendChild(testPre);
     }
 
 <!--    dropDownDiv.appendChild(detailsPreDiv);-->
@@ -1760,7 +1793,13 @@ function createExampleDropDown(example) {
     dropDownDiv.appendChild(saveButton);
     return dropDownDiv;
 }
-
+ function parseErrorResponse(errors) {
+        const metadata = errors.map(err => ({
+            lineNumber: err.lineNumber,
+            description: err.description
+        }));
+        return metadata;
+    }
 function updateBorderColorExampleBlock(editor, examplePreDiv) {
     try {
         JSON.parse(editor.getValue());
@@ -1775,76 +1814,10 @@ function updateBorderColorExampleBlock(editor, examplePreDiv) {
 
     }
 }
-
-function getLineNumberFromParsedResponse(parsedResponse, editor) {
-    const metadata = parsedResponse.map((entry) => {
-        const breadcrumbParts = entry.breadcrumb.slice(2).split(".");
-        const part1 = breadcrumbParts[0].toLowerCase().trim();
-        const mappedRequestResponse = part1 === "request" ? "http-request" : part1 === "response" ? "http-response" : null;
-
-        if (mappedRequestResponse) {
-            const processedBreadcrumb = [mappedRequestResponse, breadcrumbParts[1].toLowerCase()].join('.');
-            const jsonPath = processedBreadcrumb.split(".").join(".");
-            const jsonObject = JSON.parse(editor.getValue());
-            const jsonText = JSON.stringify(jsonObject, null, 2);
-            const lines = jsonText.split("\n");
-            const nodeText = Object.keys(getNodeFromPath(jsonPath, editor.getValue()))[0];
-            const targetLine = lines.findIndex(line => line.includes(nodeText));
-
-            if (targetLine !== -1) {
-                return {
-                    breadcrumb: processedBreadcrumb,
-                    description: entry.description,
-                    lineNumber: targetLine,
-                };
-            }
-        }
-
-        return null;
-    }).filter(item => item !== null);
-
-    return metadata;
-}
-
-function getNodeFromPath(path, jsonText) {
-    const jsonData = JSON.parse(jsonText);
-    const pathParts = path.split(".");
-    let node = jsonData;
-
-    for (let i = 0; i < pathParts.length; i++) {
-        node = node && node[pathParts[i]];
-    }
-
-    return node;
-}
-
-function parseResponse(response) {
-    const metadata = [];
-    const lines = response.split("\n");
-    let currentBreadcrumb = null;
-
-    lines.forEach((line) => {
-        if (line.trim().startsWith(">>")) {
-          currentBreadcrumb = line.trim();
-        } else if (currentBreadcrumb && line.trim()) {
-
-            metadata.push({
-                breadcrumb: currentBreadcrumb,
-                description: line.trim(),
-            });
-            currentBreadcrumb = null; // Reset for the next breadcrumb
-        }
-    });
-
-    return metadata;
-}
 function highlightErrorLines(editor, metadata) {
-
     metadata.forEach(meta => {
-        const lineNumber = meta.lineNumber;
+        const lineNumber = meta.lineNumber - 1;
         const lineLength = editor.getLine(lineNumber).length;
-
-
         editor.markText(
             { line: lineNumber, ch: 0 },
             { line: lineNumber, ch: lineLength },
@@ -1856,16 +1829,17 @@ function highlightErrorLines(editor, metadata) {
             }
         );
 
-
         editor.setGutterMarker(lineNumber, "CodeMirror-lint-markers", createErrorMarker(meta.description));
     });
 }
 
- function createErrorMarker() {
-      const marker = document.createElement("div");
-      marker.className = "CodeMirror-lint-mark-error";
-      return marker;
-    }
+
+function createErrorMarker() {
+     const marker = document.createElement("div");
+     marker.className = "CodeMirror-lint-mark-error";
+     return marker;
+   }
+
 
     function parseFileName(path) {
         return path.split('/').pop();

@@ -5,7 +5,7 @@ import io.specmatic.core.value.Value
 
 val ASSERT_PATTERN = Regex("^\\$(\\w+)\\((.*)\\)$")
 
-class AssertComparison(override val prefix: String, override val key: String, val lookupKey: String, private val isEqualityCheck: Boolean): Assert {
+class AssertComparison(override val prefix: String, override val key: String, val lookupKey: String, val isEqualityCheck: Boolean): Assert {
 
     override fun assert(currentFactStore: Map<String, Value>, actualFactStore: Map<String, Value>): Result {
         val prefixValue = currentFactStore[prefix] ?: return Result.Failure(breadCrumb = prefix, message = "Could not resolve $prefix in current fact store")

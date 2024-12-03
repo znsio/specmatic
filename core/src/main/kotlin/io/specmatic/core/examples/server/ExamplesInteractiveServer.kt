@@ -1,8 +1,5 @@
 package io.specmatic.core.examples.server
 
-import com.fasterxml.jackson.core.JsonFactory
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.jayway.jsonpath.JsonPath
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
@@ -163,7 +160,8 @@ class ExamplesInteractiveServer(
                                 val breadCrumbs = extractBreadcrumbs(result.reportString())
                                 val transformedPath = transformToJsonPaths(breadCrumbs)
                                 val lineNumber = getJsonNodeLineNumbersUsingJsonPath(request.exampleFile,transformedPath,breadCrumbs)
-                                val map = mapOf(lineNumber to result.reportString())
+//                                val map = mapOf(lineNumber to result.reportString())
+                                val map: List<Map<String, Any?>> = listOf(mapOf("lineNumber" to lineNumber, "description" to result.reportString()))
                                 ValidateExampleResponseMap(request.exampleFile, map)
                             }
                         } catch (e: FileNotFoundException) {
@@ -918,7 +916,7 @@ data class ValidateExampleResponse(
 
 data class ValidateExampleResponseMap(
     val absPath: String,
-    val error: Map<Int?,String?>? = null
+    val error: List<Map<String, Any?>> = emptyList()
 )
 
 enum class ValidateExampleVerdict {

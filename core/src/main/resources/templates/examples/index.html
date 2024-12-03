@@ -1699,7 +1699,7 @@ function createExampleDropDown(example) {
         description: "Extra comma at the end of the array."
     }
     ];
-       metadata= parseErrorResponse(errors)
+       metadata= parseErrorResponse(example.response.error)
     }
     const detailsPre = document.createElement("pre");
     if (example.hasBeenValidated) {
@@ -1730,7 +1730,11 @@ function createExampleDropDown(example) {
         lint: true,
         gutters: ["CodeMirror-lint-markers"]
     });
-    highlightErrorLines(editor,metadata)
+
+    if(metadata) {
+        highlightErrorLines(editor,metadata);
+    }
+
     editor.on("change", () => {
         if (!isChanged) {
             isChanged = true;

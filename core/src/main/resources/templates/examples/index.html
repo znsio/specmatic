@@ -1554,17 +1554,42 @@
     async function goToDetails(tableRow, rowValues) {
         const exampleAbsPath = getExampleData(tableRow);
         let docFragment = [];
+        const validateExampleRequest = {
+        exampleFile: exampleAbsPath
+        };
 
         if (exampleAbsPath) {
-            const {example, error} = await getExampleContent(exampleAbsPath);
+        try {
+            const response = await fetch(`${getHostPort()}/_specmatic/examples/validate`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(validateExampleRequest)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const validationResult = await response.json();
+            const { example, error } = await getExampleContent(exampleAbsPath);
+
             docFragment = createExampleRows([{
                 absPath: exampleAbsPath,
                 exampleJson: example,
                 error: getExampleValidationData(tableRow) || error,
                 hasBeenValidated: tableRow.getAttribute("data-valid") !== defaultAttrs["data-valid"],
-                test: getExampleTestData(tableRow)
+                test: getExampleTestData(tableRow),
+                response: validationResult
             }]);
+
+            console.log("Validation Result:", validationResult);
+        } catch (error) {
+            console.error("Error during validation:", error);
         }
+        }
+
 
         bulkTestBtn.classList.toggle("bulk-disabled", tableRow.getAttribute("data-valid") !== "success")
         pathSummaryUl.replaceChildren(createPathSummary(rowValues));
@@ -1653,8 +1678,29 @@ function createExampleDropDown(example) {
     const examplePreDiv = document.createElement("div");
     examplePreDiv.setAttribute("id", "example-pre");
     examplePreDiv.classList.add("language-json");
-
-
+    let metadata;
+    if(example.response.error)
+    {
+    const errors = [
+    {
+        lineNumber: 5,
+        description: "Missing closing bracket for the object."
+    },
+    {
+        lineNumber: 12,
+        description: "Unexpected string value, expected a number."
+    },
+    {
+        lineNumber: 13,
+        description: "Invalid key name; keys should be in camelCase."
+    },
+    {
+        lineNumber: 14,
+        description: "Extra comma at the end of the array."
+    }
+    ];
+       metadata= parseErrorResponse(errors)
+    }
     const detailsPre = document.createElement("pre");
     if (example.hasBeenValidated) {
         detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
@@ -1672,7 +1718,7 @@ function createExampleDropDown(example) {
 
     let isChanged = false;
 
-    const editor = CodeMirror(examplePreDiv, {
+   const editor = CodeMirror(examplePreDiv, {
         value: example.exampleJson,
         autoRefresh: true,
         mode: "application/json",
@@ -1684,7 +1730,7 @@ function createExampleDropDown(example) {
         lint: true,
         gutters: ["CodeMirror-lint-markers"]
     });
-
+    highlightErrorLines(editor,metadata)
     editor.on("change", () => {
         if (!isChanged) {
             isChanged = true;
@@ -1728,9 +1774,9 @@ function createExampleDropDown(example) {
         }
     });
 
-    const detailsPreDiv = document.createElement("div");
-    detailsPreDiv.appendChild(detailsPara);
-    detailsPreDiv.appendChild(detailsPre);
+<!--    const detailsPreDiv = document.createElement("div");-->
+<!--    detailsPreDiv.appendChild(detailsPara);-->
+<!--    detailsPreDiv.appendChild(detailsPre);-->
 
     if (example.test) {
         const testPara = document.createElement("p");
@@ -1741,13 +1787,19 @@ function createExampleDropDown(example) {
         detailsPreDiv.appendChild(testPre);
     }
 
-    dropDownDiv.appendChild(detailsPreDiv);
+<!--    dropDownDiv.appendChild(detailsPreDiv);-->
     dropDownDiv.appendChild(examplePara);
     dropDownDiv.appendChild(examplePreDiv);
     dropDownDiv.appendChild(saveButton);
     return dropDownDiv;
 }
-
+ function parseErrorResponse(errors) {
+        const metadata = errors.map(err => ({
+            lineNumber: err.lineNumber,
+            description: err.description
+        }));
+        return metadata;
+    }
 function updateBorderColorExampleBlock(editor, examplePreDiv) {
     try {
         JSON.parse(editor.getValue());
@@ -1762,6 +1814,31 @@ function updateBorderColorExampleBlock(editor, examplePreDiv) {
 
     }
 }
+function highlightErrorLines(editor, metadata) {
+    metadata.forEach(meta => {
+        const lineNumber = meta.lineNumber - 1;
+        const lineLength = editor.getLine(lineNumber).length;
+        editor.markText(
+            { line: lineNumber, ch: 0 },
+            { line: lineNumber, ch: lineLength },
+            {
+                className: "CodeMirror-lint-mark-error",
+                attributes: {
+                    title: meta.description,
+                },
+            }
+        );
+
+        editor.setGutterMarker(lineNumber, "CodeMirror-lint-markers", createErrorMarker(meta.description));
+    });
+}
+
+
+function createErrorMarker() {
+     const marker = document.createElement("div");
+     marker.className = "CodeMirror-lint-mark-error";
+     return marker;
+   }
 
 
     function parseFileName(path) {

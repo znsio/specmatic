@@ -652,19 +652,21 @@ For example:
                 this.traverse(
                     prefix = it,
                     onScalar = { scalar, prefix -> scalar.handleScalar(this, pattern, prefix, resolver) },
-                    onComposite = { composite, prefix ->
-                        val key = prefix.split(".").last()
-                         pattern.ifKeyIsNewSchema(this, key, resolver) { subPattern ->
-                             composite.toDictionary(subPattern, resolver)
-                        } ?: composite.traverse(
-                             prefix = "$prefix[*]",
-                             onScalar = { scalar, innerPrefix -> scalar.handleScalar(this, pattern, innerPrefix, resolver) },
-                             onAssert = { _, _ -> emptyMap() }
-                        )
-                    },
+                    onComposite = { composite, prefix -> composite.handleComposite(this, pattern, prefix, resolver) },
                     onAssert = { _, _ -> emptyMap() }
                 )
-            } ?: emptyMap()
+            }.orEmpty()
+        }
+
+        private fun Value.handleComposite(patternValue: Value, pattern: Pattern, prefix: String, resolver: Resolver): Map<String, Value> {
+            val key = prefix.split(".").last()
+            return pattern.ifKeyIsNewSchema(patternValue, key, resolver) { subPattern ->
+                this.toDictionary(subPattern, resolver)
+            } ?: this.traverse(
+                prefix = "$prefix[*]",
+                onScalar = { scalar, innerPrefix -> scalar.handleScalar(patternValue, pattern, innerPrefix, resolver) },
+                onAssert = { _, _ -> emptyMap() }
+            )
         }
 
         private fun Value.handleScalar(patternValue: Value, pattern: Pattern, prefix: String, resolver: Resolver): Map<String, Value> {

@@ -1,5 +1,11 @@
 package io.specmatic.core.examples.server
 
+import com.fasterxml.jackson.core.JsonFactory
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.core.JsonToken
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.jayway.jsonpath.JsonPath
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
@@ -31,9 +37,6 @@ import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.core.value.*
 import io.specmatic.mock.MOCK_HTTP_REQUEST
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.Value
 import io.specmatic.mock.MOCK_HTTP_RESPONSE
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.test.ContractTest
@@ -43,7 +46,10 @@ import java.io.Closeable
 import java.io.File
 import java.io.FileNotFoundException
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 import kotlin.system.exitProcess
+
 
 class ExamplesInteractiveServer(
     private val serverHost: String,
@@ -157,8 +163,12 @@ class ExamplesInteractiveServer(
                             val result = validateSingleExample(contractFile, File(request.exampleFile))
                             if(result.isSuccess())
                                 ValidateExampleResponse(request.exampleFile)
-                            else
+                            else {
+                                val breadCrumbs = extractBreadcrumbs(result.reportString())
+                                val transformedPath = transformToJsonPaths(breadCrumbs)
+                                getJsonNodeLineNumbersUsingJsonPath(request.exampleFile,transformedPath,breadCrumbs)
                                 ValidateExampleResponse(request.exampleFile, result.reportString())
+                            }
                         } catch (e: FileNotFoundException) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
                         } catch (e: ContractException) {
@@ -271,6 +281,68 @@ class ExamplesInteractiveServer(
 
     override fun close() {
         server.stop(0, 0)
+    }
+    fun extractBreadcrumbs(input: String?): List<String> {
+        val breadcrumbs: MutableList<String> = ArrayList()
+        val pattern: Pattern = Pattern.compile(">>\\s*(REQUEST|RESPONSE\\.[A-Z0-9.]+)", Pattern.CASE_INSENSITIVE)
+        val matcher: Matcher = pattern.matcher(input)
+
+        while (matcher.find()) {
+            breadcrumbs.add(matcher.group(1).trim())
+        }
+        return breadcrumbs
+    }
+
+
+
+    fun getJsonNodeLineNumbersUsingJsonPath(
+        jsonFilePath: String,
+        jsonPaths: List<String>,
+        breadcrumbs: List<String>
+    ) {
+        if (jsonPaths.size != breadcrumbs.size) {
+            throw IllegalArgumentException("JSON paths and breadcrumbs lists must be of the same size")
+        }
+
+        val jsonFile = File(jsonFilePath)
+        val mapper = ObjectMapper()
+        val factory = JsonFactory(mapper)
+
+        factory.createParser(jsonFile).use { parser ->
+            val rootNode: JsonNode = mapper.readTree(parser)
+            val jsonContent = jsonFile.readText()
+
+            for (i in jsonPaths.indices) {
+g                val jsonPath = jsonPaths[i].substring(0,jsonPaths[i].lastIndexOf('/'))
+                val breadcrumb = breadcrumbs[i].substring(0,breadcrumbs[i].lastIndexOf('.'))
+                val jsonPathFormatted =  "$.${jsonPath.replace('/','.')}"
+                try {
+                    val result = JsonPath.read<Any>(jsonContent, jsonPathFormatted)
+                    val currentNode = rootNode.at("/${jsonPath.replace(".", "/")}")
+                    if (!currentNode.isMissingNode) {
+                        val lineNumber = parser.currentLocation.lineNr
+                        println("Breadcrumb '$breadcrumb': Found at line $lineNumber, Value: $result")
+                    } else {
+                        println("Breadcrumb '$breadcrumb': JSONPath '$jsonPath' not found in JSON.")
+                    }
+                } catch (e: Exception) {
+                    println("Error processing JSONPath '$jsonPath' for breadcrumb '$breadcrumb': ${e.message}")
+                }
+            }
+        }
+    }
+    fun transformToJsonPaths(breadcrumbs: List<String>): List<String> {
+        val jsonPaths: MutableList<String> = ArrayList()
+
+        for (breadcrumb in breadcrumbs) {
+            val jsonPath = breadcrumb
+                .replace("RESPONSE", "http-response")
+                .replace("BODY", "body")
+                .replace(".", "/")
+            jsonPaths.add(jsonPath)
+        }
+
+        return jsonPaths
     }
 
     private suspend fun getContractFileOrBadRequest(call: ApplicationCall): File? {

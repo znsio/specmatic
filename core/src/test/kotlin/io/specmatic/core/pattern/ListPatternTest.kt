@@ -160,7 +160,9 @@ Feature: Recursive test
         val negativePatterns =
             ListPattern(StringPattern()).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
         assertThat(negativePatterns.map { it.typeName }).containsExactlyInAnyOrder(
-            "null"
+            "list of null",
+            "list of number",
+            "list of boolean"
         )
     }
 

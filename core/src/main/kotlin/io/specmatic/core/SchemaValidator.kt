@@ -46,6 +46,6 @@ fun main() {
             stub:
               - validate-regex-spec.yaml
     """
-    val schemaUrl = "https://my-schema-json.netlify.app/schema/json-schema.json"
+    val schemaUrl = "https://my-schema-json.netlify.app/schema/specmatic-json-schema.json"
     schemaValidator.validateYamlAgainstSchema(yaml, schemaUrl)
 }

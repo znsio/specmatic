@@ -520,13 +520,7 @@
                     }
                 }
 
-                &#save-examples {
-                --_content: "Save Example";
-                 display: none;
-                 &[data-panel="details"] {
-                        --_content: "Save Example";
-                    }
-                }
+
 
                 &[data-selected="0"][data-panel="table"], &.bulk-disabled {
                     --_background-color: var(--gray);
@@ -1072,7 +1066,7 @@
         <button data-selected="0" id="bulk-generate" data-panel="table"></button>
         <button data-selected="0" data-panel="table" id="bulk-validate"></button>
         <button data-selected="0" data-panel="table" id="bulk-test"></button>
-        <button data-panel="table"  id="save-examples"></button>
+
     </div>
 </header>
 
@@ -1168,7 +1162,6 @@
     const bulkValidateBtn = document.querySelector("button#bulk-validate");
     const bulkGenerateBtn = document.querySelector("button#bulk-generate");
     const bulkTestBtn = document.querySelector("button#bulk-test");
-    const saveBtn = document.querySelector("button#save-examples")
     let savedEditorResponse = null;
     let scrollYPosition = 0;
     let selectedTableRow = null;
@@ -1192,7 +1185,6 @@
         window.scrollTo(0, scrollYPosition);
         console.log("Changes discarded!");
         isSaved = true;
-        saveBtn.style.display = "none";
         },
 
         });
@@ -1298,8 +1290,7 @@
 
             case "details": {
                 await validateRowExamples(selectedTableRow);
-                const originalYScroll = scrollYPosition
-                await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
+                const originalYScroll = scrollYPosition;
                 scrollYPosition = originalYScroll;
                 break;
             }
@@ -1468,6 +1459,14 @@
     async function validateRowExamples(tableRow, bulkMode = false) {
         tableRow.setAttribute("data-valid", "processing");
         const exampleData = getExampleData(tableRow);
+        let exampleSaved;
+        if(!isSaved)
+        {
+        exampleSaved = await saveExample(exampleData);
+        if (!exampleSaved) {
+            return false;
+            }
+        }
         const { exampleAbsPath, error } = await validateExample(exampleData);
 
         if (error && !exampleAbsPath) {
@@ -1486,7 +1485,7 @@
             return false;
         }
 
-        if (!bulkMode) createAlert("Valid Example", `Example name: ${parseFileName(exampleAbsPath)}`, false);
+         if (!bulkMode) createAlert("Valid Example", `Example name: ${parseFileName(exampleAbsPath)}`, false);
         return true;
     }
 
@@ -1766,13 +1765,10 @@ function createExampleDropDown(example) {
 
     editor.on("change", (instance, changes) => {
             isSaved = false;
-            saveBtn.style.display = "inline-block";
             updateBorderColorExampleBlock(editor, examplePreDiv);
             savedEditorResponse = editor.getValue();
     });
-    saveBtn.addEventListener("click", () => {
-   saveExample(example.absPath);
-});
+
     if (example.test) {
         const testPara = document.createElement("p");
         testPara.textContent = "Test Log: ";
@@ -1789,12 +1785,12 @@ function createExampleDropDown(example) {
     return dropDownDiv;
 }
 
-function saveExample(examplePath) {
+async function saveExample(examplePath) {
     const editedText = savedEditorResponse;
     try {
         const parsedContent = JSON.parse(editedText);
 
-        fetch("/_specmatic/examples/update", {
+        const response = await fetch("/_specmatic/examples/update", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -1803,25 +1799,25 @@ function saveExample(examplePath) {
                 exampleFile: examplePath,
                 exampleContent: editedText,
             }),
-        })
-        .then(response => {
-            if (response.ok) {
-                createAlert("Saved", "Example saved to file", false);
-                isSaved = true;
-                saveBtn.style.display = "none";
-            } else {
-                createAlert("Failed to save example.", "Failed to save example to " + examplePath, true);
-                console.error("Error saving example:", response.status);
-            }
-        })
-        .catch(error => {
-            console.error("Error during save request:", error);
-            createAlert("Failed to save example.", "An error occurred while saving example to " + examplePath, true);
         });
+
+        if (response.ok) {
+            createAlert("Saved", "Example saved to file", false);
+            isSaved = true;
+            return true;
+        } else {
+            const errorMessage = await response.text();
+            createAlert("Failed to save example.", `Failed to save example to ${examplePath}: ${errorMessage}`, true);
+            console.error("Error saving example:", response.status);
+            return false;
+        }
     } catch (e) {
-        createAlert("Failed to save example.", "The content in file " + examplePath + " is not valid JSON", true);
+        console.error("Error during save request:", e);
+        createAlert("Failed to save example.", `An error occurred while saving example to ${examplePath}: ${e.message}`, true);
+        return false;
     }
 }
+
  function parseErrorResponse(errors) {
         const metadata = errors.map(err => ({
             lineNumber: err.lineNumber,

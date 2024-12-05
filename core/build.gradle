@@ -6,6 +6,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'signing'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 apply plugin: "jacoco"
@@ -44,9 +45,11 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.24"
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
-
+    implementation(group: 'com.networknt', name: 'json-schema-validator', version: '1.5.4');
     implementation 'com.flipkart.zjsonpatch:zjsonpatch:0.4.16'
-
+    implementation 'com.networknt:json-schema-validator:1.0.78'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.3'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.18.1'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.0'
 
     implementation 'io.swagger.parser.v3:swagger-parser:2.1.22'

@@ -176,7 +176,7 @@ object ExampleProcessor {
     }
 
     /* PARSER HELPERS */
-    private fun Value.toFactStore(prefix: String = ""): Map<String, Value> {
+    fun Value.toFactStore(prefix: String = ""): Map<String, Value> {
         return this.traverse(
             prefix = prefix,
             onScalar = { scalar, key -> mapOf(key to scalar) },

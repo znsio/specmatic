@@ -211,6 +211,10 @@ class OpenApiSpecification(
 
             return OverlayMerger().merge(this, OverlayParser.parse(overlayContent))
         }
+
+        fun fromOpenApi(openAPI: OpenAPI): OpenApiSpecification {
+            return OpenApiSpecification(openApiFilePath = "", parsedOpenApi = openAPI)
+        }
     }
 
     val patterns = mutableMapOf<String, Pattern>()
@@ -243,7 +247,8 @@ class OpenApiSpecification(
         )
     }
 
-    private fun parseUnreferencedSchemas(): Map<String, Pattern> {
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun parseUnreferencedSchemas(): Map<String, Pattern> {
         return openApiSchemas().filterNot { withPatternDelimiters(it.key) in patterns }.map {
             withPatternDelimiters(it.key) to toSpecmaticPattern(it.value, emptyList(), it.key)
         }.toMap()
@@ -472,7 +477,8 @@ class OpenApiSpecification(
                             sourceRepository = sourceRepository,
                             sourceRepositoryBranch = sourceRepositoryBranch,
                             specification = specificationPath,
-                            serviceType = SERVICE_TYPE_HTTP
+                            serviceType = SERVICE_TYPE_HTTP,
+                            operationId = operation.operationId
                         )
                     }
 

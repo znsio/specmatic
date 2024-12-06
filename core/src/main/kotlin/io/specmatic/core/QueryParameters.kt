@@ -38,6 +38,16 @@ data class QueryParameters(val paramPairs: List<Pair<String, String>> = emptyLis
         }.toMap()
     }
 
+    fun asJsonMap(): Map<String, Any> {
+        return paramPairs.groupBy { it.first }.map { (parameterName, parameterValues) ->
+            if (parameterValues.size > 1) {
+                parameterName to parameterValues.map { it.second }
+            } else {
+                parameterName to parameterValues.single().second
+            }
+        }.toMap()
+    }
+
     fun getValues(key: String): List<String> {
         return paramPairs.filter { it.first == key }.map { it.second }
     }

@@ -83,7 +83,8 @@ data class Scenario(
     val descriptionFromPlugin: String? = null,
     val dictionary: Map<String, Value> = emptyMap(),
     val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
-    val exampleRow: Row? = null
+    val exampleRow: Row? = null,
+    val operationId: String = ""
 ): ScenarioDetailsForResult {
     constructor(scenarioInfo: ScenarioInfo) : this(
         scenarioInfo.scenarioName,
@@ -100,7 +101,8 @@ data class Scenario(
         sourceRepository = scenarioInfo.sourceRepository,
         sourceRepositoryBranch = scenarioInfo.sourceRepositoryBranch,
         specification = scenarioInfo.specification,
-        serviceType = scenarioInfo.serviceType
+        serviceType = scenarioInfo.serviceType,
+        operationId = scenarioInfo.operationId.orEmpty()
     )
 
     val apiIdentifier: String

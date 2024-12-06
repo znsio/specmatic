@@ -1467,8 +1467,8 @@
             return false;
             }
         }
-        const { exampleAbsPath, error } = await validateExample(exampleData);
-
+        const { response, error } = await validateExample(exampleData);
+        const exampleAbsPath = response.absPath
         if (error && !exampleAbsPath) {
             if (!bulkMode) createAlert("Validation Failed", `Error: ${error ?? "Unknown Error"}`, true);
             tableRow.setAttribute("data-valid", "failed");
@@ -1588,42 +1588,17 @@
     async function goToDetails(tableRow, rowValues) {
         const exampleAbsPath = getExampleData(tableRow);
         let docFragment = [];
-        const validateExampleRequest = {
-        exampleFile: exampleAbsPath
-        };
 
-        if (exampleAbsPath) {
-        try {
-            const response = await fetch(`${getHostPort()}/_specmatic/examples/validate`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(validateExampleRequest)
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const validationResult = await response.json();
-            const { example, error } = await getExampleContent(exampleAbsPath);
-
-            docFragment = createExampleRows([{
+        const { example,err } = await getExampleContent(exampleAbsPath);
+        const { response, error } = await validateExample(exampleAbsPath);
+        docFragment = createExampleRows([{
                 absPath: exampleAbsPath,
                 exampleJson: example,
                 error: getExampleValidationData(tableRow) || error,
                 hasBeenValidated: tableRow.getAttribute("data-valid") !== defaultAttrs["data-valid"],
                 test: getExampleTestData(tableRow),
-                response: validationResult
+                response: response
             }]);
-
-            console.log("Validation Result:", validationResult);
-        } catch (error) {
-            console.error("Error during validation:", error);
-        }
-        }
-
 
         bulkTestBtn.classList.toggle("bulk-disabled", tableRow.getAttribute("data-valid") !== "success")
         pathSummaryUl.replaceChildren(createPathSummary(rowValues));
@@ -1953,9 +1928,9 @@ function createErrorMarker() {
                 throw new Error(data.error);
             }
 
-            return { exampleAbsPath: data.absPath, error: data.error };
+            return { response: data, error: data.error };
         } catch (error) {
-            return { error: error.message, exampleAbsPath: null };
+            return { error: error.message, response: null };
         }
     }
 

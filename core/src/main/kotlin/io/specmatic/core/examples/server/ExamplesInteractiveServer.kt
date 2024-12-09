@@ -144,7 +144,7 @@ class ExamplesInteractiveServer(
                             if(result.isSuccess())
                                 ValidateExampleResponse(request.exampleFile)
                             else
-                                ValidateExampleResponse(request.exampleFile, result.reportString())
+                                ValidateExampleResponse(request.exampleFile, result.reportString(), result.isPartialFailure())
                         } catch (e: FileNotFoundException) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
                         } catch (e: ContractException) {
@@ -654,10 +654,10 @@ class ExamplesInteractiveServer(
             return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
         }
 
-        fun getExistingExampleFiles(feature: Feature, scenario: Scenario, examples: List<ExampleFromFile>): List<Pair<ExampleFromFile, String>> {
+        fun getExistingExampleFiles(feature: Feature, scenario: Scenario, examples: List<ExampleFromFile>): List<Pair<ExampleFromFile, Result>> {
             return examples.mapNotNull { example ->
                 when (val matchResult = scenario.matches(example.request, example.response, InteractiveExamplesMismatchMessages, feature.flagsBased)) {
-                    is Result.Success -> example to ""
+                    is Result.Success -> example to Result.Success()
                     is Result.Failure -> {
                         val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs("").none { breadCrumb ->
                             breadCrumb.contains(PATH_BREAD_CRUMB)
@@ -665,7 +665,7 @@ class ExamplesInteractiveServer(
                                     || breadCrumb.contains("REQUEST.HEADERS.Content-Type")
                                     || breadCrumb.contains("STATUS")
                         }
-                        if (isFailureRelatedToScenario) example to matchResult.reportString() else null
+                        if (isFailureRelatedToScenario) { example to matchResult } else null
                     }
                 }
             }
@@ -688,10 +688,10 @@ class ExamplesInteractiveServer(
             } ?: emptyList()
         }
 
-        fun File.getSchemaExamplesWithValidation(feature: Feature): List<Pair<SchemaExample, String?>> {
+        fun File.getSchemaExamplesWithValidation(feature: Feature): List<Pair<SchemaExample, Result?>> {
             return getSchemaExamples().map {
                 it to if(it.value !is NullValue) {
-                    feature.matchResultSchemaFlagBased(it.discriminatorBasedOn, it.schemaBasedOn, it.value).reportString()
+                    feature.matchResultSchemaFlagBased(it.discriminatorBasedOn, it.schemaBasedOn, it.value)
                 } else null
             }
         }
@@ -843,7 +843,8 @@ data class ValidateExampleRequest(
 
 data class ValidateExampleResponse(
     val absPath: String,
-    val error: String? = null
+    val error: String? = null,
+    val isPartiallyValid: Boolean = error != null
 )
 
 enum class ValidateExampleVerdict {

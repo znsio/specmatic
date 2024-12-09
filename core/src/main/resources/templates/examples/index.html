@@ -382,6 +382,7 @@
             --white: 255, 255, 255;
             --black: 0, 0, 0;
             --slate: 241, 245, 249;
+            --yellow: 255, 207, 51;
             --blue: 52, 115, 217;
             --green: 34, 197, 94;
             --red: 239, 68, 68;
@@ -638,6 +639,11 @@
                     line-height: 1.5rem;
                     text-decoration: underline;
                 }
+            }
+
+            &[data-valid="partial"] button.validate {
+                --_background-color: var(--yellow);
+                --_text-color: var(--smoky-black);
             }
 
             &[data-valid="failed"] button.validate, &[data-generate="failed"] button.generate, &[data-test="failed"] button.test {
@@ -903,6 +909,10 @@
             color: black;
         }
 
+        .pill.yellow {
+            --_background-color: rgb(var(--yellow));
+            color: black;
+        }
 
         /* ALERT STYLES */
 
@@ -1033,7 +1043,7 @@
                 th:attr="data-raw-path=${row.rawPath}, data-key=${row.uniqueKey}, data-schema-based=${row.isSchemaBased},
                         data-example=${row.example}, data-main=${row.isMainRow}, data-disc=${row.isDiscriminatorBased},
                         data-generate=${row.isGenerated ? 'success' : 'not-generated'}, data-test='not-tested',
-                        data-valid=${row.isGenerated ? (row.isValid ? 'success' : 'failed') : 'not-validated'}">
+                        data-valid=${row.isGenerated ? (row.isValid ? 'success' : row.isPartialFailure ? 'partial' : 'failed') : 'not-validated'}">
                 <td>
                     <input type="checkbox" name="path-row" class="path-row">
                 </td>
@@ -1097,6 +1107,7 @@
     let selectedTableRow = null;
     let blockGenValidate = false;
     const defaultAttrs = {"data-generate": "not-generated", "data-valid": "not-validated", "data-test": "not-tested", "data-main": "false"}
+    const dataValidationSuccessValues = ["success", "partial"]
 
     backBtn.addEventListener("click", () => {
         examplesOl.replaceChildren();
@@ -1166,7 +1177,7 @@
         const testPreSelectCount = getPreSelectCount(bulkTestBtn, "data-selected");
 
         const hasBeenGenerated = nearestTableRow.getAttribute("data-generate") === "success";
-        const hasBeenValidated = nearestTableRow.getAttribute("data-valid") === "success";
+        const hasBeenValidated = dataValidationSuccessValues.includes(nearestTableRow.getAttribute("data-valid"));
         const isDiscriminatorRow = nearestTableRow.getAttribute("data-disc") === "true";
         const isMainRow = nearestTableRow.getAttribute("data-main") === "true";
 
@@ -1278,7 +1289,7 @@
 
     async function testAllSelected() {
         const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
-        const rowsWithValidations = selectedRows.filter(row => row.getAttribute("data-valid") === "success");
+        const rowsWithValidations = selectedRows.filter(row => dataValidationSuccessValues.includes(row.getAttribute("data-valid")));
 
         for (const row of rowsWithValidations) {
             row.setAttribute("data-test", "processing");
@@ -1309,7 +1320,7 @@
         const tableRows = table.querySelectorAll("tbody > tr");
         return Array.from(tableRows).reduce((acc, row) => {
             const isRowGenerated = row.getAttribute("data-generate") === "success";
-            const isRowValidated = row.getAttribute("data-valid") === "success";
+            const isRowValidated = dataValidationSuccessValues.includes(row.getAttribute("data-valid"));
             const isRowDiscAndMain = row.getAttribute("data-main") === "true" && row.getAttribute("data-disc") === "true";
 
             acc.validatedCount += isRowValidated ? 1 : 0;
@@ -1367,7 +1378,7 @@
     async function validateRowExamples(tableRow, bulkMode = false) {
         tableRow.setAttribute("data-valid", "processing");
         const exampleData = getExampleData(tableRow);
-        const { exampleAbsPath, error } = await validateExample(exampleData);
+        const { exampleAbsPath, error, isPartiallyValid } = await validateExample(exampleData);
 
         if (error && !exampleAbsPath) {
             if (!bulkMode) createAlert("Validation Failed", `Error: ${error ?? "Unknown Error"}`, true);
@@ -1375,12 +1386,12 @@
             return false;
         }
 
-        tableRow.setAttribute("data-valid", error ? "failed": "success");
+        tableRow.setAttribute("data-valid", isPartiallyValid ? "partial":  error ? "failed": "success");
         storeExampleValidationData(tableRow, error);
         storeExampleTestData(tableRow, null);
         tableRow.setAttribute("data-test", defaultAttrs["data-test"]);
 
-        if (error) {
+        if (error && isPartiallyValid === false) {
             if (!bulkMode) createAlert("Invalid Example", `Example name: ${parseFileName(exampleAbsPath)}`, true);
             return false;
         }
@@ -1496,6 +1507,7 @@
                 exampleJson: example,
                 error: getExampleValidationData(tableRow) || error,
                 hasBeenValidated: tableRow.getAttribute("data-valid") !== defaultAttrs["data-valid"],
+                isPartiallyValid: tableRow.getAttribute("data-valid") === "partial",
                 test: getExampleTestData(tableRow)
             }]);
         }
@@ -1526,6 +1538,12 @@
     function createPathSummary(rowValues) {
         const docFragment = document.createDocumentFragment();
 
+        if (rowValues.isSchemaBased) {
+            rowValues = {"schema": rowValues["path"], ...rowValues };
+            delete rowValues["path"];
+            delete rowValues["isSchemaBased"];
+        }
+
         for (const [key, value] of Object.entries(rowValues)) {
             if (!value) continue;
 
@@ -1550,11 +1568,12 @@
         const testBadge = document.createElement("span");
 
         exampleDiv.classList.add("example");
-        exampleBadge.classList.add("pill", example.hasBeenValidated ? example.error ? "red" : "green" : "blue");
+        exampleBadge.classList.add("pill", example.hasBeenValidated ? example.isPartiallyValid ? "yellow" : example.error ? "red" : "green" : "blue")
         exampleName.textContent = example.absPath;
 
         if (example.hasBeenValidated) {
-            exampleBadge.textContent = `${example.error ? "Invalid" : "Valid"} Example`;
+            exampleBadge.textContent = example.isPartiallyValid ? "Valid" : example.error ? "Invalid" : "Valid";
+            exampleBadge.textContent += " Example";
         } else {
             exampleBadge.textContent = "Example";
         }
@@ -1706,9 +1725,9 @@
                 throw new Error(data.error);
             }
 
-            return { exampleAbsPath: data.absPath, error: data.error };
+            return { exampleAbsPath: data.absPath, error: data.error, isPartiallyValid : data.isPartiallyValid };
         } catch (error) {
-            return { error: error.message, exampleAbsPath: null };
+            return { error: error.message, exampleAbsPath: null, isPartiallyValid: false };
         }
     }
 

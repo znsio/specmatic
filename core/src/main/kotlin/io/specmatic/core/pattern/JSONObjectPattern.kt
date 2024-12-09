@@ -273,10 +273,11 @@ data class JSONObjectPattern(
             } else it.key
         }
 
-        val keyErrors: List<Result.Failure> =
-            resolverWithNullType.findKeyErrorList(adjustedPattern, sampleData.jsonObject).map {
+        val keyErrors: List<Result.Failure> = resolverWithNullType.findKeyErrorList(adjustedPattern, sampleData.jsonObject).map {
+            if (pattern[it.name] != null) {
                 it.missingKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
-            }
+            } else it.missingOptionalKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
+        }
 
         val updatedResolver = resolverWithNullType.addPatternAsSeen(this)
 

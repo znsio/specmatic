@@ -657,7 +657,7 @@ class ExamplesInteractiveServer(
         fun getExistingExampleFiles(feature: Feature, scenario: Scenario, examples: List<ExampleFromFile>): List<Pair<ExampleFromFile, Result>> {
             return examples.mapNotNull { example ->
                 when (val matchResult = scenario.matches(example.request, example.response, InteractiveExamplesMismatchMessages, feature.flagsBased)) {
-                    is Result.Success -> example to Result.Success()
+                    is Result.Success -> example to matchResult
                     is Result.Failure -> {
                         val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs("").none { breadCrumb ->
                             breadCrumb.contains(PATH_BREAD_CRUMB)
@@ -844,7 +844,7 @@ data class ValidateExampleRequest(
 data class ValidateExampleResponse(
     val absPath: String,
     val error: String? = null,
-    val isPartiallyValid: Boolean = error != null
+    val isPartialFailure: Boolean = false
 )
 
 enum class ValidateExampleVerdict {

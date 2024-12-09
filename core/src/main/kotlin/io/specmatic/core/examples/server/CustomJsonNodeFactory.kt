@@ -13,14 +13,6 @@ class CustomJsonNodeFactory(
 ) : JsonNodeFactory() {
     private val delegate: JsonNodeFactory = nodeFactory
 
-    /*
-    * "Why isn't this a map?" you might be wondering. Well, when the nodes are created, they're all
-    * empty and a node's hashCode is based on its children. So if you use a map and put the node
-    * in, then the node's hashCode is based on no children, then when you lookup your node, it is
-    * *with* children, so the hashcodes are different. Instead of all of this, you have to iterate
-    * through a listing and find their matches once the objects have been populated, which is only
-    * after the document has been completely parsed
-    */
     private val locationMapping: MutableList<Pair<JsonNode, JsonLocation>> = mutableListOf()
 
     /**

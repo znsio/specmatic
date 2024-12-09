@@ -1,5 +1,8 @@
 package io.specmatic.core.examples.server
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ArrayNode
 import com.jayway.jsonpath.JsonPath
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
@@ -157,11 +160,13 @@ class ExamplesInteractiveServer(
                             if(result.isSuccess())
                                 ValidateExampleResponse(request.exampleFile)
                             else {
-                                val breadCrumbs = extractBreadcrumbs(result.reportString())
+                                val breadCrumbs = extractBreadCrumbs(result.reportString())
                                 val transformedPath = transformToJsonPaths(breadCrumbs)
-                                val lineNumber = getJsonNodeLineNumbersUsingJsonPath(request.exampleFile,transformedPath,breadCrumbs)
-//                                val map = mapOf(lineNumber to result.reportString())
-                                val map: List<Map<String, Any?>> = listOf(mapOf("lineNumber" to lineNumber, "description" to result.reportString()))
+                                val lineNumbers = getJsonNodeLineNumbersUsingJsonPath(request.exampleFile,transformedPath,breadCrumbs)
+                                val descriptions = extractDescriptions(result.reportString())
+                                val map: List<Map<String, Any?>> =  lineNumbers.zip(descriptions) { lineNumber, description ->
+                                    mapOf("lineNumber" to lineNumber, "description" to description);
+                                }
                                 ValidateExampleResponseMap(request.exampleFile, map)
                             }
                         } catch (e: FileNotFoundException) {
@@ -277,7 +282,7 @@ class ExamplesInteractiveServer(
     override fun close() {
         server.stop(0, 0)
     }
-    fun extractBreadcrumbs(input: String): List<String> {
+    fun extractBreadCrumbs(input: String): List<String> {
         val breadCrumbPrefix = ">> "
 
         val breadcrumbs = input.lines().map { it.trim() }.filter { it.startsWith(breadCrumbPrefix) }.map { it.removePrefix(
@@ -293,21 +298,27 @@ class ExamplesInteractiveServer(
         jsonFilePath: String,
         jsonPaths: List<String>,
         breadcrumbs: List<String>
-    ): Int? {
+    ): List<Int?> {
         if (jsonPaths.size != breadcrumbs.size) {
             throw IllegalArgumentException("JSON paths and breadcrumbs lists must be of the same size")
         }
 
         fun transform(path: String): String {
-            return "$.${path.replace("/", ".")}"
+            return "${path.replace("/", ".")}"
         }
 
-        val jsonPathString = jsonPaths.firstOrNull()?.let { transform(it) } ?: return null
+        val lineNumbers = mutableListOf<Int?>()
+        jsonPaths.forEach { path ->
+            val jsonPathString = transform(path)
+            val lineNumber = findLineNumber(File(jsonFilePath), jsonPathString)
+            lineNumbers.add(lineNumber)
+        }
 
-        return findLineNumber(File(jsonFilePath), JsonPath.compile(jsonPathString))
+
+        return lineNumbers
     }
 
-    fun transformToJsonPaths(breadcrumbs: List<String>): List<String> {
+    private fun transformToJsonPaths(breadcrumbs: List<String>): List<String> {
         val jsonPaths: MutableList<String> = ArrayList()
 
         for (breadcrumb in breadcrumbs) {
@@ -996,6 +1007,13 @@ fun loadExternalExamples(
     return examplesDir to examplesDir.walk().mapNotNull {
         it.takeIf { it.isFile && it.extension == "json" }
     }.toList()
+}
+fun extractDescriptions(reportString: String): List<String> {
+    val parts = reportString.split(">>")
+
+    return parts.drop(1)
+        .map { ">>$it".trim() }
+        .filter { it.isNotBlank() }
 }
 
 fun defaultExternalExampleDirFrom(contractFile: File): File {

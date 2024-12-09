@@ -3,8 +3,10 @@ package io.specmatic.core.examples.server
 import CustomJsonNodeFactory
 import CustomParserFactory
 import com.fasterxml.jackson.core.JsonLocation
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.databind.node.IntNode
 import com.jayway.jsonpath.Configuration
 import com.jayway.jsonpath.DocumentContext
 import com.jayway.jsonpath.JsonPath
@@ -13,7 +15,7 @@ import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider
 import java.io.File
 
-fun findLineNumber(filePath: File, jsonPath: JsonPath): Int? {
+fun findLineNumber(filePath: File, jsonPath: String): Int? {
     val customParserFactory: CustomParserFactory = CustomParserFactory()
     val om: ObjectMapper = ObjectMapper(customParserFactory)
     val factory = CustomJsonNodeFactory(
@@ -28,12 +30,15 @@ fun findLineNumber(filePath: File, jsonPath: JsonPath): Int? {
         .build()
 
     val parsedDocument: DocumentContext = JsonPath.parse(filePath, config)
-    val findings: ArrayNode = parsedDocument.read(jsonPath)
-
-    val lineNumbers = findings.map { finding ->
-        val location: JsonLocation = factory.getLocationForNode(finding) ?: return@map null
-        location.getLineNr()
+    val objectMapper = ObjectMapper()
+    val rootNode: JsonNode = objectMapper.readTree(filePath)
+    val pathParts = jsonPath.split(".").dropLast(1);
+    var textArrayNode: JsonNode = rootNode;
+    for (part in pathParts) {
+        textArrayNode = textArrayNode.findPath(part)
     }
 
-    return lineNumbers.filterNotNull().firstOrNull()
+    val location: JsonLocation = factory.getLocationForNode(textArrayNode)?: return null;
+    return location.lineNr;
+
 }

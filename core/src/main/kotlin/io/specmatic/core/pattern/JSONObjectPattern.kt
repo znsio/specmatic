@@ -251,6 +251,15 @@ data class JSONObjectPattern(
         return !resolver.hasSeenPattern(patternToCheck)
     }
 
+    private fun addPatternToSeen(pattern: Pattern, resolver: Resolver): Resolver {
+        val patternToAdd = when(pattern) {
+            is ListPattern -> pattern.typeAlias?.let { pattern } ?: pattern.pattern
+            else -> pattern.typeAlias?.let { pattern } ?: this
+        }
+
+        return resolver.addPatternAsSeen(patternToAdd)
+    }
+
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         val resolverWithNullType = withNullPattern(resolver)
         if (sampleData !is JSONObjectValue)
@@ -285,7 +294,7 @@ data class JSONObjectPattern(
 
         val resultsWithDiscriminator: List<ResultWithDiscriminatorStatus> =
             mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
-                val innerResolver = updatedResolver.addPatternAsSeen(patternValue)
+                val innerResolver = addPatternToSeen(patternValue, updatedResolver)
                 val result = innerResolver.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
 
                 val isDiscrimintor = patternValue.isDiscriminator()

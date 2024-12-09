@@ -1,5 +1,7 @@
 package application
 
+import io.specmatic.conversions.SPECMATIC_BASIC_AUTH_TOKEN
+import io.specmatic.conversions.SPECMATIC_OAUTH2_TOKEN
 import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.Configuration
 import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
@@ -157,6 +159,9 @@ For example:
     @Option(names = ["--overlay-file"], description = ["Overlay file for the specification"], required = false)
     var overlayFilePath: String? = null
 
+    @Option(names = ["--token"],description = ["For passing token in the specification"], required = false)
+    var token: String? = null
+
     override fun call() = try {
         setParallelism()
 
@@ -194,6 +199,7 @@ For example:
         System.setProperty(FILTER, filter.joinToString(";"))
         System.setProperty(FILTER_NOT, filterNot.joinToString(";"))
         System.setProperty(OVERLAY_FILE_PATH, overlayFilePath.orEmpty())
+        System.setProperty(SPECMATIC_OAUTH2_TOKEN,token.orEmpty());
 
         if(exampleDirs.isNotEmpty()) {
             System.setProperty(EXAMPLE_DIRECTORIES, exampleDirs.joinToString(","))

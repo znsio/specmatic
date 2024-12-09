@@ -1145,6 +1145,7 @@ class OpenApiSpecification(
         environmentVariable: String,
     ): BearerSecurityScheme {
         val token = getSecurityTokenForBearerScheme(securitySchemeConfiguration, environmentVariable)
+        println(token)
         return BearerSecurityScheme(token)
     }
 

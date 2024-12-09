@@ -579,7 +579,7 @@ class ExamplesInteractiveServer(
                 validateExample(feature, scenarioStub).toResultIfAny()
             }.getOrElse {
                 val schemaExample = SchemaExample(exampleFile)
-                feature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value)
+                feature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value, InteractiveExamplesMismatchMessages)
             }
         }
 
@@ -631,7 +631,7 @@ class ExamplesInteractiveServer(
                 }.getOrElse {
                     val schemaExample = SchemaExample(example)
                     if (schemaExample.value !is NullValue) {
-                        updatedFeature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value)
+                        updatedFeature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value, InteractiveExamplesMismatchMessages)
                     } else {
                         if (enableLogging) logger.log("Skipping empty schema example ${example.name}"); null
                     }
@@ -691,7 +691,7 @@ class ExamplesInteractiveServer(
         fun File.getSchemaExamplesWithValidation(feature: Feature): List<Pair<SchemaExample, Result?>> {
             return getSchemaExamples().map {
                 it to if(it.value !is NullValue) {
-                    feature.matchResultSchemaFlagBased(it.discriminatorBasedOn, it.schemaBasedOn, it.value)
+                    feature.matchResultSchemaFlagBased(it.discriminatorBasedOn, it.schemaBasedOn, it.value, InteractiveExamplesMismatchMessages)
                 } else null
             }
         }
@@ -825,6 +825,10 @@ object InteractiveExamplesMismatchMessages : MismatchMessages {
 
     override fun unexpectedKey(keyLabel: String, keyName: String): String {
         return "${keyLabel.capitalizeFirstChar()} $keyName in the example is not in the specification"
+    }
+
+    override fun optionalKeyMissing(keyLabel: String, keyName: String): String {
+        return "Optional ${keyLabel.capitalizeFirstChar()} $keyName in the specification is missing from the example"
     }
 
     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {

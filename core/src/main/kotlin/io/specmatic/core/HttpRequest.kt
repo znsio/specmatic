@@ -11,7 +11,6 @@ import io.ktor.http.*
 import io.ktor.http.content.*
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_PRETTY_PRINT
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
-import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.apache.http.client.utils.URLEncodedUtils
 import org.apache.http.message.BasicNameValuePair
 import java.io.File
@@ -130,7 +129,7 @@ data class HttpRequest(
         method?.let { requestMap["method"] = StringValue(it) }
             ?: throw ContractException("Can't serialise the request without a method.")
 
-        setIfNotEmpty(requestMap, "query", queryParams.asMap())
+        setIfNotEmpty(requestMap, "query", queryParams.asJsonMap())
         setIfNotEmpty(requestMap, "headers", headers)
 
         when {
@@ -387,9 +386,17 @@ data class HttpRequest(
     }
 }
 
-private fun setIfNotEmpty(dest: MutableMap<String, Value>, key: String, data: Map<String, String>) {
+private fun setIfNotEmpty(dest: MutableMap<String, Value>, key: String, data: Map<String, Any>) {
     if (data.isNotEmpty())
-        dest[key] = JSONObjectValue(data.mapValues { StringValue(it.value) })
+        dest[key] = JSONObjectValue(data.mapValues {
+            if (it.value is List<*>) {
+                JSONArrayValue((it.value as List<*>).map { listValue ->
+                    StringValue(listValue.toString())
+                })
+            } else {
+                StringValue(it.value.toString())
+            }
+        })
 }
 
 fun nativeString(json: Map<String, Value>, key: String): String? {

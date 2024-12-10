@@ -25,21 +25,33 @@ fun findLineNumber(filePath: File, jsonPath: String): Int? {
         }
         token = parser.nextToken()
     }
-    val customParserFactory: CustomParserFactory = CustomParserFactory()
-    val om: ObjectMapper = ObjectMapper(customParserFactory)
+    val lineNumbers = getLineNumberOfParentNode(filePath, jsonPath)
+    return lineNumbers.filterNotNull().firstOrNull()
+}
+
+private fun getLineNumberOfParentNode(filePath: File, jsonPath: String): List<Int?> {
+    val customParserFactory = CustomParserFactory()
+    val om = ObjectMapper(customParserFactory)
     val factory = CustomJsonNodeFactory(
         om.getDeserializationConfig().getNodeFactory(),
         customParserFactory
     )
-    val parsedDocument: DocumentContext = JsonPath.parse(filePath)
+    om.setConfig(om.getDeserializationConfig().with(factory))
+    val config = Configuration.builder()
+        .mappingProvider(JacksonMappingProvider(om))
+        .jsonProvider(JacksonJsonNodeJsonProvider(om))
+        .options(Option.ALWAYS_RETURN_LIST)
+        .build()
+
+    val parsedDocument: DocumentContext = JsonPath.parse(filePath, config)
     val dollarJsonPath = "$.${jsonPath}";
     val pathParts = dollarJsonPath.split(".")
-    val requiredPath = JsonPath.compile(pathParts.dropLast (1).joinToString ("."))
-    val findings:JsonNode = parsedDocument.read(requiredPath)
+    val requiredPath = JsonPath.compile(pathParts.dropLast(1).joinToString("."))
+    val findings: JsonNode = parsedDocument.read(requiredPath)
     val lineNumbers = findings.map { finding ->
         val location: JsonLocation = factory.getLocationForNode(finding) ?: return@map null
         location.getLineNr()
     }
-    return lineNumbers.filterNotNull().firstOrNull()
+    return lineNumbers
 }
 

@@ -1180,10 +1180,6 @@
         if(!isSaved)
         {
         const modalContainer = createModal({
-        onSave:() => {
-        const exampleAbsPath = getExampleData(selectedTableRow);
-        saveExample(exampleAbsPath);
-        },
         onDiscard: () => {
          examplesOl.replaceChildren();
         mainElement.setAttribute("data-panel", "table");
@@ -2043,9 +2039,9 @@ function createErrorMarker() {
 function createModal({ onSave, onDiscard }) {
     // Data for modal
     const title = "Unsaved Changes";
-    const saveText = "Save";
-    const discardText = "Go Back";
-    const bodyText = "Your changes are not saved yet. Do you want to save them?";
+    const closeText = "No";
+    const discardText = "Yes";
+    const bodyText = "Your changes are not saved & validated. Go Back Anyway?";
 
     // Create modal container dynamically
     const modalContainer = document.createElement("div");
@@ -2087,15 +2083,15 @@ function createModal({ onSave, onDiscard }) {
     // Create modal footer
     const modalFooter = document.createElement("div");
 
-    const saveButton = document.createElement("button");
-    saveButton.textContent = saveText;
-    saveButton.style.backgroundColor = "#007bff";
-    saveButton.style.color = "#fff";
-    saveButton.style.border = "none";
-    saveButton.style.padding = "8px 16px";
-    saveButton.style.borderRadius = "4px";
-    saveButton.style.cursor = "pointer";
-    saveButton.style.marginRight = "10px";
+    const closeButton = document.createElement("button");
+    closeButton.textContent = closeText;
+    closeButton.style.backgroundColor = "#007bff";
+    closeButton.style.color = "#fff";
+    closeButton.style.border = "none";
+    closeButton.style.padding = "8px 16px";
+    closeButton.style.borderRadius = "4px";
+    closeButton.style.cursor = "pointer";
+    closeButton.style.marginRight = "10px";
 
     const discardButton = document.createElement("button");
     discardButton.textContent = discardText;
@@ -2107,7 +2103,7 @@ function createModal({ onSave, onDiscard }) {
     discardButton.style.cursor = "pointer";
 
     // Add buttons to footer
-    modalFooter.appendChild(saveButton);
+    modalFooter.appendChild(closeButton);
     modalFooter.appendChild(discardButton);
 
     // Append everything to the modal content
@@ -2120,8 +2116,7 @@ function createModal({ onSave, onDiscard }) {
 
 
     // Button event listeners
-    saveButton.addEventListener("click", () => {
-        onSave();
+    closeButton.addEventListener("click", () => {
         closeModal();
     });
 

@@ -44,6 +44,9 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.24"
     implementation "org.eclipse.jgit:org.eclipse.jgit:$jgit_version"
     implementation "org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgit_version"
+    implementation 'com.jayway.jsonpath:json-path:2.8.0'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.15.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.0'
 
     implementation 'com.flipkart.zjsonpatch:zjsonpatch:0.4.16'
 

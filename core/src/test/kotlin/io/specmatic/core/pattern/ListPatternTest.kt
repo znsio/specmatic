@@ -202,44 +202,43 @@ Feature: Recursive test
     }
 
     @Test
-    fun `should not result in failure when list is empty but pattern is cycling and resolver is set to allPatternsAsMandatory`() {
+    fun `should not result in failure when list is empty but pattern is cycling and failure when not and resolver is set to allPatternsAsMandatory`() {
         val basePattern = ListPattern(parsedPattern("""{
             "topLevelMandatoryKey": "(number)",
             "topLevelOptionalKey?": "(string)",
-            "subMandatoryObject": {
-                "subMandatoryKey": "(string)",
-                "subOptionalKey?": "(number)"
-            }
+            "subList": "(baseListPattern)"
         }
         """.trimIndent(), typeAlias = "(baseJsonPattern)"), typeAlias = "(baseListPattern)")
-        val listPattern = ListPattern(basePattern, typeAlias = "(baseListPattern)")
+        val listPattern = ListPattern(basePattern)
 
         val matchingValue = parsedValue("""[
             [
                 {
                     "topLevelMandatoryKey": 10,
                     "topLevelOptionalKey": "abc",
-                    "subMandatoryObject": {
-                        "subMandatoryKey": "abc",
-                        "subOptionalKey": 10
-                    }
+                    "subList": []
                 },
                 {
                     "topLevelMandatoryKey": 10,
                     "topLevelOptionalKey": "abc",
-                    "subMandatoryObject": {
-                        "subMandatoryKey": "abc",
-                        "subOptionalKey": 10
-                    }
+                    "subList": []
                 }
-            ],
-            []
+            ]
         ]
-        """.trimIndent())
-        val result = listPattern.matches(matchingValue, Resolver().withAllPatternsAsMandatory())
-        println(result.reportString())
+        """.trimIndent()) as JSONArrayValue
+        val matchingResult = listPattern.matches(matchingValue, Resolver(newPatterns = mapOf("(baseListPattern)" to basePattern)).withAllPatternsAsMandatory())
+        println(matchingResult.reportString())
+        assertThat(matchingResult).isInstanceOf(Result.Success::class.java)
+        assertThat(matchingResult.reportString()).isEmpty()
 
-        assertThat(result).isInstanceOf(Result.Success::class.java)
+        val nonMatchingValue = JSONArrayValue(matchingValue.list.plus(JSONArrayValue(emptyList())))
+        val nonMatchingResult = listPattern.matches(nonMatchingValue, Resolver(newPatterns = mapOf("(baseListPattern)" to basePattern)).withAllPatternsAsMandatory())
+        println(nonMatchingResult.reportString())
+        assertThat(nonMatchingResult).isInstanceOf(Result.Failure::class.java)
+        assertThat(nonMatchingResult.reportString()).containsIgnoringWhitespaces("""
+        >> [1]
+        List cannot be empty
+        """.trimIndent())
     }
 
     @Test

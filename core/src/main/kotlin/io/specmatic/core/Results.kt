@@ -20,7 +20,7 @@ data class Results(val results: List<Result> = emptyList()) {
         }
 
     fun toResultIfAny(): Result {
-        return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { it.toReport().toText() })
+        return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { it.toReport().toText() }, isPartial = results.all { it.isPartialFailure() })
     }
 
     val failureCount

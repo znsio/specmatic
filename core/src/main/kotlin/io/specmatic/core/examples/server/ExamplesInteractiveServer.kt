@@ -1,5 +1,6 @@
 package io.specmatic.core.examples.server
 
+import com.jayway.jsonpath.JsonPath
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
@@ -31,9 +32,6 @@ import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.core.value.*
 import io.specmatic.mock.MOCK_HTTP_REQUEST
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.Value
 import io.specmatic.mock.MOCK_HTTP_RESPONSE
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.test.ContractTest
@@ -110,6 +108,20 @@ class ExamplesInteractiveServer(
                     }
                 }
 
+                post("/_specmatic/examples/update") {
+                    val request = call.receive<SaveExampleRequest>()
+                    try {
+                        val file = File(request.exampleFile)
+                        if (!file.exists()) {
+                            throw FileNotFoundException()
+                        }
+                        file.writeText(request.exampleContent)
+                        call.respond(HttpStatusCode.OK, "File and content updated successfully!")
+                    } catch (e: Exception) {
+                        call.respond(HttpStatusCode.InternalServerError, exceptionCauseMessage(e))
+                    }
+                }
+
                 post("/_specmatic/examples/generate") {
                     val contractFile = getContractFile()
 
@@ -143,8 +155,9 @@ class ExamplesInteractiveServer(
                             val result = validateSingleExample(contractFile, File(request.exampleFile))
                             if(result.isSuccess())
                                 ValidateExampleResponse(request.exampleFile)
-                            else
-                                ValidateExampleResponse(request.exampleFile, result.reportString())
+                            else {
+                                ValidateExampleResponse(request.exampleFile, result.reportString(), result.isPartialFailure())
+                            }
                         } catch (e: FileNotFoundException) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
                         } catch (e: ContractException) {
@@ -257,6 +270,50 @@ class ExamplesInteractiveServer(
 
     override fun close() {
         server.stop(0, 0)
+    }
+    fun extractBreadcrumbs(input: String): List<String> {
+        val breadCrumbPrefix = ">> "
+
+        val breadcrumbs = input.lines().map { it.trim() }.filter { it.startsWith(breadCrumbPrefix) }.map { it.removePrefix(
+            breadCrumbPrefix
+        ) }
+
+        return breadcrumbs
+    }
+
+
+
+    fun getJsonNodeLineNumbersUsingJsonPath(
+        jsonFilePath: String,
+        jsonPaths: List<String>,
+        breadcrumbs: List<String>
+    ): Int? {
+        if (jsonPaths.size != breadcrumbs.size) {
+            throw IllegalArgumentException("JSON paths and breadcrumbs lists must be of the same size")
+        }
+
+        fun transform(path: String): String {
+            return "$.${path.replace("/", ".")}"
+        }
+
+        val jsonPathString = jsonPaths.firstOrNull()?.let { transform(it) } ?: return null
+
+        return findLineNumber(File(jsonFilePath), JsonPath.compile(jsonPathString))
+    }
+
+    fun transformToJsonPaths(breadcrumbs: List<String>): List<String> {
+        val jsonPaths: MutableList<String> = ArrayList()
+
+        for (breadcrumb in breadcrumbs) {
+            val jsonPath = breadcrumb
+                .replace("RESPONSE", "http-response")
+                .replace("REQUEST", "http-request")
+                .replace("BODY", "body")
+                .replace(".", "/")
+            jsonPaths.add(jsonPath)
+        }
+
+        return jsonPaths
     }
 
     private suspend fun getContractFileOrBadRequest(call: ApplicationCall): File? {
@@ -579,7 +636,7 @@ class ExamplesInteractiveServer(
                 validateExample(feature, scenarioStub).toResultIfAny()
             }.getOrElse {
                 val schemaExample = SchemaExample(exampleFile)
-                feature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value)
+                feature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value, InteractiveExamplesMismatchMessages)
             }
         }
 
@@ -631,7 +688,7 @@ class ExamplesInteractiveServer(
                 }.getOrElse {
                     val schemaExample = SchemaExample(example)
                     if (schemaExample.value !is NullValue) {
-                        updatedFeature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value)
+                        updatedFeature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value, InteractiveExamplesMismatchMessages)
                     } else {
                         if (enableLogging) logger.log("Skipping empty schema example ${example.name}"); null
                     }
@@ -654,10 +711,10 @@ class ExamplesInteractiveServer(
             return this.copy(headers = this.headers.minus(SPECMATIC_RESULT_HEADER))
         }
 
-        fun getExistingExampleFiles(feature: Feature, scenario: Scenario, examples: List<ExampleFromFile>): List<Pair<ExampleFromFile, String>> {
+        fun getExistingExampleFiles(feature: Feature, scenario: Scenario, examples: List<ExampleFromFile>): List<Pair<ExampleFromFile, Result>> {
             return examples.mapNotNull { example ->
                 when (val matchResult = scenario.matches(example.request, example.response, InteractiveExamplesMismatchMessages, feature.flagsBased)) {
-                    is Result.Success -> example to ""
+                    is Result.Success -> example to matchResult
                     is Result.Failure -> {
                         val isFailureRelatedToScenario = matchResult.getFailureBreadCrumbs("").none { breadCrumb ->
                             breadCrumb.contains(PATH_BREAD_CRUMB)
@@ -665,7 +722,7 @@ class ExamplesInteractiveServer(
                                     || breadCrumb.contains("REQUEST.HEADERS.Content-Type")
                                     || breadCrumb.contains("STATUS")
                         }
-                        if (isFailureRelatedToScenario) example to matchResult.reportString() else null
+                        if (isFailureRelatedToScenario) { example to matchResult } else null
                     }
                 }
             }
@@ -688,10 +745,10 @@ class ExamplesInteractiveServer(
             } ?: emptyList()
         }
 
-        fun File.getSchemaExamplesWithValidation(feature: Feature): List<Pair<SchemaExample, String?>> {
+        fun File.getSchemaExamplesWithValidation(feature: Feature): List<Pair<SchemaExample, Result?>> {
             return getSchemaExamples().map {
                 it to if(it.value !is NullValue) {
-                    feature.matchResultSchemaFlagBased(it.discriminatorBasedOn, it.schemaBasedOn, it.value).reportString()
+                    feature.matchResultSchemaFlagBased(it.discriminatorBasedOn, it.schemaBasedOn, it.value, InteractiveExamplesMismatchMessages)
                 } else null
             }
         }
@@ -827,6 +884,10 @@ object InteractiveExamplesMismatchMessages : MismatchMessages {
         return "${keyLabel.capitalizeFirstChar()} $keyName in the example is not in the specification"
     }
 
+    override fun optionalKeyMissing(keyLabel: String, keyName: String): String {
+        return "Optional ${keyLabel.capitalizeFirstChar()} $keyName in the specification is missing from the example"
+    }
+
     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
         return "${keyLabel.capitalizeFirstChar()} $keyName in the specification is missing from the example"
     }
@@ -841,9 +902,20 @@ data class ValidateExampleRequest(
     val exampleFile: String
 )
 
+data class SaveExampleRequest(
+    val exampleFile: String,
+    val exampleContent: String
+)
+
 data class ValidateExampleResponse(
     val absPath: String,
-    val error: String? = null
+    val error: String? = null,
+    val isPartialFailure: Boolean = false
+)
+
+data class ValidateExampleResponseMap(
+    val absPath: String,
+    val error: List<Map<String, Any?>> = emptyList()
 )
 
 enum class ValidateExampleVerdict {

@@ -1688,6 +1688,7 @@ function createExampleDropDown(example) {
     const examplePreDiv = document.createElement("div");
     examplePreDiv.setAttribute("id", "example-pre");
     examplePreDiv.classList.add("language-json");
+    const detailsPreDiv = document.createElement("div");
    /* let metadata;
     if(example.response.error)
     {
@@ -1705,6 +1706,9 @@ function createExampleDropDown(example) {
         detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
     }
 
+
+    detailsPreDiv.appendChild(detailsPara);
+    detailsPreDiv.appendChild(detailsPre);
 
    const editor = CodeMirror(examplePreDiv, {
         value: example.exampleJson,
@@ -1738,7 +1742,7 @@ function createExampleDropDown(example) {
         detailsPreDiv.appendChild(testPre);
     }
 
-    // dropDownDiv.appendChild(detailsPreDiv);
+    dropDownDiv.appendChild(detailsPreDiv);
     dropDownDiv.appendChild(examplePara);
     dropDownDiv.appendChild(examplePreDiv);
 

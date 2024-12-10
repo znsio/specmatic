@@ -261,9 +261,14 @@ open class SpecmaticJUnitSupport {
                 }
                 else -> {
                     val configFile = configFile
+
                     if(File(configFile).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
 
                     createIfDoesNotExist(workingDirectory.path)
+
+                    val schemaValidator = SchemaValidator()
+                    val schemaUrl = "https://my-schema-json.netlify.app/schema/specmatic-json-schema.json"
+                    schemaValidator.validateYamlAgainstSchema(File(configFile), schemaUrl)
 
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
 

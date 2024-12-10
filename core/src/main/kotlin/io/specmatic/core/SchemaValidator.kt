@@ -7,8 +7,10 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.networknt.schema.SpecVersion
+import java.io.File
 import java.io.InputStreamReader
 import java.net.URL
+import java.nio.file.Files
 
 class SchemaValidator {
 
@@ -21,7 +23,8 @@ class SchemaValidator {
         return factory.getSchema(schemaNode)
     }
 
-    fun validateYamlAgainstSchema(text: String, schemaUrl: String) {
+    fun validateYamlAgainstSchema(file: File, schemaUrl: String) {
+        val text = String(Files.readAllBytes(file.toPath()))
         val schema = loadSchemaFromUrl(schemaUrl)
         val jsonNode: JsonNode = objectMapper.readTree(text)
         val validationMessages: Set<ValidationMessage> = schema.validate(jsonNode)
@@ -34,18 +37,4 @@ class SchemaValidator {
             }
         }
     }
-}
-
-fun main() {
-    val schemaValidator = SchemaValidator()
-    val yaml = """
-        sources:
-          - provider: web
-            test:
-              - validate-regex-spec.yaml
-            stub:
-              - validate-regex-spec.yaml
-    """
-    val schemaUrl = "https://my-schema-json.netlify.app/schema/specmatic-json-schema.json"
-    schemaValidator.validateYamlAgainstSchema(yaml, schemaUrl)
 }

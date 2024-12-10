@@ -44,7 +44,7 @@ const val EXAMPLES_DIR_SUFFIX = "_examples"
 const val DICTIONARY_FILE_SUFFIX = "_dictionary.json"
 const val SPECMATIC_GITHUB_ISSUES = "https://github.com/znsio/specmatic/issues"
 const val DEFAULT_WORKING_DIRECTORY = ".$APPLICATION_NAME_LOWER_CASE"
-
+const val SPECMATIC_SCHEMA_URL = "https://my-schema-json.netlify.app/schema/specmatic-json-schema.json"
 const val SPECMATIC_STUB_DICTIONARY = "SPECMATIC_STUB_DICTIONARY"
 
 const val MISSING_CONFIG_FILE_MESSAGE = "Config file does not exist. (Could not find file ./specmatic.json OR ./specmatic.yaml OR ./specmatic.yml)"
@@ -319,6 +319,9 @@ fun loadSpecmaticConfigOrDefault(configFileName: String? = null): SpecmaticConfi
     return if(configFileName == null)
         SpecmaticConfig()
     else try {
+        val schemaValidator = SchemaValidator()
+        val schemaUrl = SPECMATIC_SCHEMA_URL
+        schemaValidator.validateYamlAgainstSchema(File(configFileName), schemaUrl)
         loadSpecmaticConfig(configFileName)
     }
     catch (e: ContractException) {

@@ -24,7 +24,7 @@ class StubLoaderEngine {
                 logger.log("$contractPath does not exist.")
             }
         }
-
+        
         val specmaticConfig = loadSpecmaticConfigOrDefault(specmaticConfigPath ?: getConfigFilePath())
 
         return when {

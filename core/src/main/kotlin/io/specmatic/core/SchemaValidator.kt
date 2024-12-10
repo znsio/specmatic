@@ -7,16 +7,18 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.networknt.schema.SpecVersion
+import io.specmatic.core.utilities.exitWithMessage
 import java.io.File
 import java.io.InputStreamReader
 import java.net.URL
 import java.nio.file.Files
+import kotlin.system.exitProcess
 
 class SchemaValidator {
 
     private val objectMapper = ObjectMapper(YAMLFactory())
 
-    fun loadSchemaFromUrl(schemaUrl: String): JsonSchema {
+    private fun loadSchemaFromUrl(schemaUrl: String): JsonSchema {
         val url = URL(schemaUrl)
         val schemaNode: JsonNode = objectMapper.readTree(InputStreamReader(url.openStream()))
         val factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7)
@@ -29,12 +31,13 @@ class SchemaValidator {
         val jsonNode: JsonNode = objectMapper.readTree(text)
         val validationMessages: Set<ValidationMessage> = schema.validate(jsonNode)
         if (validationMessages.isEmpty()) {
-            println("Yaml is valid according to the schema.")
+            print("Yaml is valid according to the schema.\n")
         } else {
-            println("Yaml is invalid. Validation errors:")
+            println("Yaml is invalid. Validation errors:\n")
             validationMessages.forEach { message ->
                 println(" - ${message.message}")
             }
+            exitProcess(1);
         }
     }
 }

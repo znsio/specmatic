@@ -71,6 +71,7 @@ open class SpecmaticJUnitSupport {
         const val FILTER_NOT_NAME_ENVIRONMENT_VARIABLE = "FILTER_NOT_NAME"
         const val OVERLAY_FILE_PATH = "overlayFilePath"
         private const val ENDPOINTS_API = "endpointsAPI"
+        const val SCHEMA_SPECMATIC_URL = "https://my-schema-json.netlify.app/schema/specmatic-json-schema.json"
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
         private var specmaticConfig: SpecmaticConfig? = null
@@ -263,13 +264,11 @@ open class SpecmaticJUnitSupport {
                     val configFile = configFile
 
                     if(File(configFile).exists().not()) exitWithMessage(MISSING_CONFIG_FILE_MESSAGE)
-
                     createIfDoesNotExist(workingDirectory.path)
 
                     val schemaValidator = SchemaValidator()
-                    val schemaUrl = "https://my-schema-json.netlify.app/schema/specmatic-json-schema.json"
+                    val schemaUrl = SCHEMA_SPECMATIC_URL
                     schemaValidator.validateYamlAgainstSchema(File(configFile), schemaUrl)
-
                     val contractFilePaths = contractTestPathsFrom(configFile, workingDirectory.path)
 
                     exitIfAnyDoNotExist("The following specifications do not exist", contractFilePaths.map { it.path })

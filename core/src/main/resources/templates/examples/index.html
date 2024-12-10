@@ -1291,6 +1291,7 @@
             case "details": {
                 await validateRowExamples(selectedTableRow);
                 const originalYScroll = scrollYPosition;
+                await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
                 scrollYPosition = originalYScroll;
                 break;
             }
@@ -1687,29 +1688,13 @@ function createExampleDropDown(example) {
     const examplePreDiv = document.createElement("div");
     examplePreDiv.setAttribute("id", "example-pre");
     examplePreDiv.classList.add("language-json");
-<!--    let metadata;-->
-<!--    if(example.response.error)-->
-<!--    {-->
-<!--    const errors = [-->
-<!--    {-->
-<!--        lineNumber: 5,-->
-<!--        description: "Missing closing bracket for the object."-->
-<!--    },-->
-<!--    {-->
-<!--        lineNumber: 12,-->
-<!--        description: "Unexpected string value, expected a number."-->
-<!--    },-->
-<!--    {-->
-<!--        lineNumber: 13,-->
-<!--        description: "Invalid key name; keys should be in camelCase."-->
-<!--    },-->
-<!--    {-->
-<!--        lineNumber: 14,-->
-<!--        description: "Extra comma at the end of the array."-->
-<!--    }-->
-<!--    ];-->
-<!--       metadata= parseErrorResponse(example.response.error)-->
-<!--    }-->
+   /* let metadata;
+    if(example.response.error)
+    {
+
+       metadata= parseErrorResponse(example.response.error)
+    }
+    */
     const detailsPre = document.createElement("pre");
     if (example.hasBeenValidated) {
         detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
@@ -1733,11 +1718,11 @@ function createExampleDropDown(example) {
         lint: true,
         gutters: ["CodeMirror-lint-markers"]
     });
-
-<!--    if(metadata) {-->
-<!--        highlightErrorLines(editor,metadata);-->
-<!--    }-->
-
+/*
+    if(metadata) {
+        highlightErrorLines(editor,metadata);
+    }
+*/
     editor.on("change", (instance, changes) => {
             isSaved = false;
             updateBorderColorExampleBlock(editor, examplePreDiv);
@@ -1753,7 +1738,7 @@ function createExampleDropDown(example) {
         detailsPreDiv.appendChild(testPre);
     }
 
-<!--    dropDownDiv.appendChild(detailsPreDiv);-->
+    // dropDownDiv.appendChild(detailsPreDiv);
     dropDownDiv.appendChild(examplePara);
     dropDownDiv.appendChild(examplePreDiv);
 

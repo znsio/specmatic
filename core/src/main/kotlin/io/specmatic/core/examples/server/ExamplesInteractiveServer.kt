@@ -157,12 +157,12 @@ class ExamplesInteractiveServer(
                             if(result.isSuccess())
                                 ValidateExampleResponse(request.exampleFile)
                             else {
-                                val breadCrumbs = extractBreadcrumbs(result.reportString())
-                                val transformedPath = transformToJsonPaths(breadCrumbs)
-                                val lineNumber = getJsonNodeLineNumbersUsingJsonPath(request.exampleFile,transformedPath,breadCrumbs)
-//                                val map = mapOf(lineNumber to result.reportString())
-                                val map: List<Map<String, Any?>> = listOf(mapOf("lineNumber" to lineNumber, "description" to result.reportString()))
-                                ValidateExampleResponseMap(request.exampleFile, map)
+//                                val breadCrumbs = extractBreadcrumbs(result.reportString())
+//                                val transformedPath = transformToJsonPaths(breadCrumbs)
+//                                val lineNumber = getJsonNodeLineNumbersUsingJsonPath(request.exampleFile,transformedPath,breadCrumbs)
+////                                val map = mapOf(lineNumber to result.reportString())
+//                                val map: List<Map<String, Any?>> = listOf(mapOf("lineNumber" to lineNumber, "description" to result.reportString()))
+                                ValidateExampleResponse(request.exampleFile, result.reportString())
                             }
                         } catch (e: FileNotFoundException) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")

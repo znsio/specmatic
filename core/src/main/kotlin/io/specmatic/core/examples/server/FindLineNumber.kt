@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonLocation
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ArrayNode
 import com.jayway.jsonpath.Configuration
 import com.jayway.jsonpath.DocumentContext
 import com.jayway.jsonpath.JsonPath
@@ -30,16 +31,15 @@ fun findLineNumber(filePath: File, jsonPath: String): Int? {
         om.getDeserializationConfig().getNodeFactory(),
         customParserFactory
     )
-    om.setConfig(om.getDeserializationConfig().with(factory))
-    val config = Configuration.builder()
-        .mappingProvider(JacksonMappingProvider(om))
-        .jsonProvider(JacksonJsonNodeJsonProvider(om))
-        .options(Option.ALWAYS_RETURN_LIST)
-        .build()
-
-    val parsedDocument: DocumentContext = JsonPath.parse(filePath, config)
-    val requiredPath = JsonPath(jsonPath.split(".").dropLast(1))
-    val testArrayNode: JsonNode = parsedDocument.read<JsonNode>()
-    val location: JsonLocation = factory.getLocationForNode(textArrayNode)?: return null;
+    val parsedDocument: DocumentContext = JsonPath.parse(filePath)
+    val dollarJsonPath = "$.${jsonPath}";
+    val pathParts = dollarJsonPath.split(".")
+    val requiredPath = JsonPath.compile(pathParts.dropLast (1).joinToString ("."))
+    val findings:JsonNode = parsedDocument.read(requiredPath)
+    val lineNumbers = findings.map { finding ->
+        val location: JsonLocation = factory.getLocationForNode(finding) ?: return@map null
+        location.getLineNr()
+    }
+    return lineNumbers.filterNotNull().firstOrNull()
 }
 

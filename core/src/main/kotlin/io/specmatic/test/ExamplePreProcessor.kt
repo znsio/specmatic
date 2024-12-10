@@ -19,7 +19,7 @@ enum class StoreType { REPLACE, MERGE }
 
 object ExampleProcessor {
     private var runningEntity: Map<String, Value> = mapOf()
-    private val factStore: Map<String, Value> = loadConfig().toFactStore("CONFIG")
+    private var factStore: Map<String, Value> = loadConfig().toFactStore("CONFIG")
 
     private fun loadConfig(): JSONObjectValue {
         val configFilePath = runCatching {
@@ -42,7 +42,10 @@ object ExampleProcessor {
         }
     }
 
-    fun cleanEntityStore() { runningEntity = mapOf() }
+    fun cleanStores() {
+        factStore = loadConfig().toFactStore("CONFIG")
+        runningEntity = emptyMap()
+    }
 
     private fun defaultIfNotExits(lookupKey: String, type: SubstitutionType = SubstitutionType.SIMPLE): Value {
         throw ContractException(breadCrumb = lookupKey, errorMessage = "Could not resolve ${lookupKey.quote()}, key does not exist in fact store")

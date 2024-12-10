@@ -13,8 +13,8 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.test.asserts.AssertComparisonTest.Companion.toFactStore
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -68,7 +68,6 @@ class ExampleProcessorTest {
         @JvmStatic
         @BeforeAll
         fun setup(@TempDir tempDir: File) {
-
             val configFile = File(tempDir, "config.json")
             configFile.writeText(payloadConfig.toStringLiteral())
             System.setProperty(ADDITIONAL_EXAMPLE_PARAMS_FILE, configFile.canonicalPath)
@@ -78,11 +77,12 @@ class ExampleProcessorTest {
         @AfterAll
         fun cleanup() {
             System.clearProperty(ADDITIONAL_EXAMPLE_PARAMS_FILE)
+            ExampleProcessor.cleanStores()
         }
     }
 
-    @AfterEach
-    fun cleanEntityStore() { ExampleProcessor.cleanEntityStore() }
+    @BeforeEach
+    fun cleanStores() { ExampleProcessor.cleanStores() }
 
     @Nested
     inner class DelayedRandomSubstitution {

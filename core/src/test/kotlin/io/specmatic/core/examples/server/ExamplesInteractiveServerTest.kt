@@ -1,16 +1,13 @@
 package io.specmatic.core.examples.server
 
 import io.specmatic.conversions.ExampleFromFile
-import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
-import io.specmatic.core.Result
-import io.specmatic.core.utilities.Flags.Companion.ALL_PATTERNS_MANDATORY
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.NumberValue
-import io.specmatic.core.value.StringValue
-import io.specmatic.mock.ScenarioStub
+import io.specmatic.core.QueryParameters
+import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
+import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.utilities.Flags
+import io.specmatic.core.value.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -20,6 +17,58 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
 class ExamplesInteractiveServerTest {
+    companion object {
+        private val externalDictionaryWithoutHeaders =
+            parsedJSONObject("""
+                {
+                    "QUERY-PARAMS.name": "Jane Doe",
+                    "QUERY-PARAMS.address": "123-Main-Street",
+                    "PATH-PARAMS.name": "Jane-Doe",
+                    "PATH-PARAMS.address": "123-Main-Street",
+                    "Tracker.name": "Jane Doe",
+                    "Tracker.address": "123-Main-Street",
+                    "Tracker.trackerId": 100,
+                    "Tracker_FVO.name": "Jane Doe",
+                    "Tracker_FVO.address": "123-Main-Street"
+                }
+                """.trimIndent())
+
+        private val externalDictionary =
+            parsedJSONObject("""
+                {
+                    "HEADERS.Authentication": "Bearer 123",
+                    "QUERY-PARAMS.name": "Jane Doe",
+                    "QUERY-PARAMS.address": "123-Main-Street",
+                    "PATH-PARAMS.name": "Jane-Doe",
+                    "PATH-PARAMS.address": "123-Main-Street",
+                    "Tracker.name": "Jane Doe",
+                    "Tracker.address": "123-Main-Street",
+                    "Tracker.trackerId": 100,
+                    "Tracker_FVO.name": "Jane Doe",
+                    "Tracker_FVO.address": "123-Main-Street"
+                }
+                """.trimIndent())
+
+        fun assertHeaders(headers: Map<String, String>, apiKey: String) {
+            assertThat(headers["Authentication"]).isEqualTo(apiKey)
+        }
+
+        fun assertPathParameters(path: String?, name: String, address: String) {
+            assertThat(path).contains("/generate/names/$name/address/$address")
+        }
+
+        fun assertQueryParameters(queryParameters: QueryParameters, name: String, address: String) {
+            assertThat(queryParameters.getValues("name")).contains(name)
+            assertThat(queryParameters.getValues("address")).contains(address)
+        }
+
+        fun assertRequestBody(body: Value, name: String, address: String) {
+            body as JSONObjectValue
+            assertThat(body.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo(name)
+            assertThat(body.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo(address)
+        }
+    }
+
     @BeforeEach
     fun resetCounter() {
         ExamplesInteractiveServer.resetExampleFileNameCounter()
@@ -132,196 +181,148 @@ class ExamplesInteractiveServerTest {
     }
 
     @Nested
-    inner class AllPatternsMandatoryTests {
-        private val spec = """
-        openapi: 3.0.0
-        info:
-          title: test
-          version: 1.0.0
-        paths:
-          /products:
-            post:
-              requestBody:
-                required: true
-                content:
-                  application/json:
-                    schema:
-                      ${'$'}ref: '#/components/schemas/ProductRequest'
-              responses:
-                200:
-                  description: OK
-                  content:
-                    application/json:
-                      schema:
-                        type: array
-                        items:
-                          ${'$'}ref: '#/components/schemas/Product'
-        components:
-          schemas:
-            ProductRequest:
-              type: object
-              properties:
-                name:
-                  type: string
-                type:
-                  type: string
-                inventory:
-                  type: number
-              required:
-                - name
-            Product:
-              type: object
-              properties:
-                id:
-                  type: number
-                name:
-                  type: string
-                type:
-                  type: string
-                inventory:
-                  type: number
-              required:
-                - id
-                - name
-            """.trimIndent()
-
-        @BeforeEach
-        fun setup() {
-            System.setProperty(ALL_PATTERNS_MANDATORY, "true")
-        }
-
+    inner class DictionaryExamplesGenerationTests {
         @AfterEach
-        fun reset() {
-            System.clearProperty(ALL_PATTERNS_MANDATORY)
+        fun cleanUp() {
+            val examplesFolder = File("src/test/resources/openapi/tracker_examples")
+            if (examplesFolder.exists()) {
+                examplesFolder.listFiles()?.forEach { it.delete() }
+                examplesFolder.delete()
+            }
         }
 
         @Test
-        fun `should warn about missing optional keys`(@TempDir tempDir: File) {
-            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        fun `should generate all random values when no dictionary is provided`() {
+            val examples = ExamplesInteractiveServer.generate(
+                contractFile = File("src/test/resources/openapi/tracker.yaml"),
+                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter("", ""), extensive = false,
+            ).map { File(it) }
 
-            val exampleFile = tempDir.resolve("example.json")
-            val example = ScenarioStub(
-                request = HttpRequest(path = "/products", method = "POST", body = JSONObjectValue(mapOf("name" to StringValue("iPhone")))),
-                response = HttpResponse(status = 200, body = JSONArrayValue(
-                    List(2) { JSONObjectValue(mapOf("id" to NumberValue(1), "name" to StringValue("iPhone")))}
-                ))
-            )
-            exampleFile.writeText(example.toJSON().toStringLiteral())
+            examples.forEach {
+                val example = ExampleFromFile(it)
+                val request = example.request
+                val response = example.response
+                val responseBody = response.body as JSONArrayValue
 
-            val result = ExamplesInteractiveServer.validateSingleExample(feature, exampleFile)
-            println(result.reportString())
+                assertThat(request.headers["Authentication"])
+                    .withFailMessage("Header values should be randomly generated")
+                    .isNotEqualTo("Bearer 123")
 
-            assertThat(result).isInstanceOf(Result.Failure::class.java)
-            assertThat(result.isPartialFailure()).isTrue()
-            assertThat(result.reportString()).containsIgnoringWhitespaces("""
-            >> REQUEST.BODY.type
-            Optional Key type in the specification is missing from the example
-            >> REQUEST.BODY.inventory
-            Optional Key inventory in the specification is missing from the example
-            
-            >> RESPONSE.BODY[0].type
-            Optional Key type in the specification is missing from the example
-            >> RESPONSE.BODY[0].inventory
-            Optional Key inventory in the specification is missing from the example
+                when(request.method) {
+                    "POST" -> {
+                        val body = request.body as JSONObjectValue
+                        assertThat(body.findFirstChildByPath("name")?.toStringLiteral()).isNotEqualTo("John-Doe")
+                        assertThat(body.findFirstChildByPath("address")?.toStringLiteral()).isNotEqualTo("123-Main-Street")
 
-            >> RESPONSE.BODY[1].type
-            Optional Key type in the specification is missing from the example
-            >> RESPONSE.BODY[1].inventory
-            Optional Key inventory in the specification is missing from the example
-            """.trimIndent())
+                    }
+                    "GET" -> {
+                        val queryParameters = request.queryParams
+                        assertThat(queryParameters.getValues("name")).doesNotContain("John-Doe")
+                        assertThat(queryParameters.getValues("address")).doesNotContain("123-Main-Street")
+                    }
+                    "DELETE" -> {
+                        val path = request.path as String
+                        assertThat(path).doesNotContain("/generate/names/John-Doe/address/123-Main-Street")
+                        assertThat(path.trim('/').split('/').last()).isNotEqualTo("(string)")
+                    }
+                    else -> throw IllegalArgumentException("Unexpected method ${request.method}")
+                }
+
+                responseBody.list.forEachIndexed { index, value ->
+                    value as JSONObjectValue
+                    val (name, address) = when(index) {
+                        0 -> "John Doe" to "123 Main Street"
+                        else -> "Jane Doe" to "456 Main Street"
+                    }
+
+                    assertThat(value.findFirstChildByPath("name")?.toStringLiteral()).isNotEqualTo(name)
+                    assertThat(value.findFirstChildByPath("address")?.toStringLiteral()).isNotEqualTo(address)
+                }
+            }
         }
 
         @Test
-        fun `should not be partial failure when mandatory key is missing`(@TempDir tempDir: File) {
-            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        fun `should use values from dictionary when provided`(@TempDir tempDir: File) {
+            val dictionaryFileName = "dictionary.json"
 
-            val exampleFile = tempDir.resolve("example.json")
-            val example = ScenarioStub(
-                request = HttpRequest(path = "/products", method = "POST", body = JSONObjectValue(mapOf("name" to StringValue("iPhone")))),
-                response = HttpResponse(status = 200, body = JSONArrayValue(
-                    List(1) { JSONObjectValue(mapOf("id" to NumberValue(1))) }
-                ))
-            )
-            exampleFile.writeText(example.toJSON().toStringLiteral())
+            val dictionaryFile = tempDir.resolve(dictionaryFileName)
+            dictionaryFile.writeText(externalDictionary.toStringLiteral())
 
-            val result = ExamplesInteractiveServer.validateSingleExample(feature, exampleFile)
-            assertThat(result).isInstanceOf(Result.Failure::class.java)
-            assertThat(result.isPartialFailure()).isFalse()
+            val examples = Flags.using(SPECMATIC_STUB_DICTIONARY to dictionaryFile.path) {
+                ExamplesInteractiveServer.generate(
+                    contractFile = File("src/test/resources/openapi/tracker.yaml"),
+                    scenarioFilter = ExamplesInteractiveServer.ScenarioFilter("", ""), extensive = false,
+                ).map { File(it) }
+            }
 
-            val report = result.reportString()
-            println(report)
-            assertThat(report).containsIgnoringWhitespaces("""
-            >> REQUEST.BODY.type
-            Optional Key type in the specification is missing from the example
-            >> REQUEST.BODY.inventory
-            Optional Key inventory in the specification is missing from the example
+            examples.forEach {
+                val example = ExampleFromFile(it)
+                val request = example.request
+                val response = example.response
 
-            >> RESPONSE.BODY[0].name
-            Key name in the specification is missing from the example
-            >> RESPONSE.BODY[0].type
-            Optional Key type in the specification is missing from the example
-            >> RESPONSE.BODY[0].inventory
-            Optional Key inventory in the specification is missing from the example
-            """.trimIndent())
+                assertHeaders(request.headers, "Bearer 123")
+
+                when(request.method) {
+                    "POST" -> assertRequestBody(request.body, "Jane Doe", "123-Main-Street")
+                    "GET"  -> assertQueryParameters(request.queryParams, "Jane Doe", "123-Main-Street")
+                    "DELETE" -> {
+                        assertPathParameters(request.path, "Jane-Doe", "123-Main-Street")
+                        assertThat(request.path!!.trim('/').split('/').last()).isNotEqualTo("(string)")
+                    }
+                    else -> throw IllegalArgumentException("Unexpected method ${request.method}")
+                }
+
+                val jsonResponseBody = response.body as JSONArrayValue
+                assertThat(jsonResponseBody.list).allSatisfy {
+                    it as JSONObjectValue
+
+                    assertThat(it.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo("Jane Doe")
+                    assertThat(it.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo("123-Main-Street")
+                }
+            }
         }
 
         @Test
-        fun `should not be partial failure when type mismatch`(@TempDir tempDir: File) {
-            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+        fun `should only replace values if key is in dictionary`(@TempDir tempDir: File) {
+            val dictionaryFileName = "dictionary.json"
 
-            val exampleFile = tempDir.resolve("example.json")
-            val example = ScenarioStub(
-                request = HttpRequest(path = "/products", method = "POST", body = JSONObjectValue(
-                    mapOf("name" to StringValue("iPhone"), "type" to StringValue("phone"), "inventory" to NumberValue(1))
-                )),
-                response = HttpResponse(status = 200, body = JSONArrayValue(
-                    List(2) { JSONObjectValue(mapOf("id" to NumberValue(1), "name" to NumberValue(123))) }
-                ))
-            )
-            exampleFile.writeText(example.toJSON().toStringLiteral())
+            val dictionaryFile = tempDir.resolve(dictionaryFileName)
+            dictionaryFile.writeText(externalDictionaryWithoutHeaders.toStringLiteral())
 
-            val result = ExamplesInteractiveServer.validateSingleExample(feature, exampleFile)
-            assertThat(result).isInstanceOf(Result.Failure::class.java)
-            assertThat(result.isPartialFailure()).isFalse()
+            val examples = Flags.using(SPECMATIC_STUB_DICTIONARY to dictionaryFile.path) {
+                ExamplesInteractiveServer.generate(
+                    contractFile = File("src/test/resources/openapi/tracker.yaml"),
+                    scenarioFilter = ExamplesInteractiveServer.ScenarioFilter("", ""), extensive = false,
+                ).map { File(it) }
+            }
 
-            val report = result.reportString()
-            println(report)
-            assertThat(report).containsIgnoringWhitespaces("""
-            >> RESPONSE.BODY[0].type
-            Optional Key type in the specification is missing from the example
-            >> RESPONSE.BODY[0].inventory
-            Optional Key inventory in the specification is missing from the example
-            >> RESPONSE.BODY[0].name
-            Specification expected string but example contained 123 (number)
-            
-            >> RESPONSE.BODY[1].type
-            Optional Key type in the specification is missing from the example
-            >> RESPONSE.BODY[1].inventory
-            Optional Key inventory in the specification is missing from the example
-            >> RESPONSE.BODY[1].name
-            Specification expected string but example contained 123 (number)
-            """.trimIndent())
-        }
+            examples.forEach {
+                val example = ExampleFromFile(it)
+                val request = example.request
+                val response = example.response
+                val responseBody = response.body as JSONArrayValue
 
-        @Test
-        fun `should not complain about missing optional keys when all patterns mandatory is false`(@TempDir tempDir: File) {
-            System.setProperty(ALL_PATTERNS_MANDATORY, "false")
-            val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+                assertThat(request.headers["Authentication"])
+                    .withFailMessage("Header values should be randomly generated")
+                    .isNotEqualTo("Bearer 123")
 
-            val exampleFile = tempDir.resolve("example.json")
-            val example = ScenarioStub(
-                request = HttpRequest(path = "/products", method = "POST", body = JSONObjectValue(mapOf("name" to StringValue("iPhone")))),
-                response = HttpResponse(status = 200, body = JSONArrayValue(
-                    List(2) { JSONObjectValue(mapOf("id" to NumberValue(1), "name" to StringValue("iPhone")))}
-                ))
-            )
-            exampleFile.writeText(example.toJSON().toStringLiteral())
+                when(request.method) {
+                    "POST" -> assertRequestBody(request.body, "Jane Doe", "123-Main-Street")
+                    "GET"  -> assertQueryParameters(request.queryParams, "Jane Doe", "123-Main-Street")
+                    "DELETE" -> {
+                        assertPathParameters(request.path, "Jane-Doe", "123-Main-Street")
+                        assertThat(request.path!!.trim('/').split('/').last()).isNotEqualTo("(string)")
+                    }
+                    else -> throw IllegalArgumentException("Unexpected method ${request.method}")
+                }
 
-            val result = ExamplesInteractiveServer.validateSingleExample(feature, exampleFile)
-            println(result.reportString())
+                assertThat(responseBody.list).allSatisfy { value ->
+                    value as JSONObjectValue
 
-            assertThat(result).isInstanceOf(Result.Success::class.java)
-            assertThat(result.reportString()).isEmpty()
+                    assertThat(value.findFirstChildByPath("name")?.toStringLiteral()).isEqualTo("Jane Doe")
+                    assertThat(value.findFirstChildByPath("address")?.toStringLiteral()).isEqualTo("123-Main-Street")
+                }
+            }
         }
     }
 }

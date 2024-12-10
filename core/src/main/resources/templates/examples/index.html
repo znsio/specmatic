@@ -421,6 +421,7 @@
             --white: 255, 255, 255;
             --black: 0, 0, 0;
             --slate: 241, 245, 249;
+            --yellow: 255, 207, 51;
             --blue: 52, 115, 217;
             --green: 34, 197, 94;
             --red: 239, 68, 68;
@@ -519,8 +520,6 @@
                         --_content: "Validate Examples";
                     }
                 }
-
-
 
                 &[data-selected="0"][data-panel="table"], &.bulk-disabled {
                     --_background-color: var(--gray);
@@ -679,6 +678,11 @@
                     line-height: 1.5rem;
                     text-decoration: underline;
                 }
+            }
+
+            &[data-valid="partial"] button.validate {
+                --_background-color: var(--yellow);
+                --_text-color: var(--smoky-black);
             }
 
             &[data-valid="failed"] button.validate, &[data-generate="failed"] button.generate, &[data-test="failed"] button.test {
@@ -961,6 +965,10 @@
             color: black;
         }
 
+        .pill.yellow {
+            --_background-color: rgb(var(--yellow));
+            color: black;
+        }
 
         /* ALERT STYLES */
 
@@ -1051,7 +1059,6 @@
         .hidden {
             display: none;
         }
-}
     </style>
 </head>
 
@@ -1066,60 +1073,59 @@
         <button data-selected="0" id="bulk-generate" data-panel="table"></button>
         <button data-selected="0" data-panel="table" id="bulk-validate"></button>
         <button data-selected="0" data-panel="table" id="bulk-test"></button>
-
     </div>
 </header>
 
 <main class="group" data-panel="table">
     <table th:attr="data-generated=${hasExamples},data-hostPort=${hostPort}">
         <thead>
-        <tr>
-            <th>
-                <label for="select-all">
-                    <input type="checkbox" name="select-all" id="select-all">
-                </label>
-            </th>
-            <th>S. No</th>
-            <th colspan="3">Path</th>
-            <th>Method</th>
-            <th>Response</th>
-            <th>Examples</th>
-            <th>Action</th>
-        </tr>
+            <tr>
+                <th>
+                    <label for="select-all">
+                        <input type="checkbox" name="select-all" id="select-all">
+                    </label>
+                </th>
+                <th>S. No</th>
+                <th colspan="3">Path</th>
+                <th>Method</th>
+                <th>Response</th>
+                <th>Examples</th>
+                <th>Action</th>
+            </tr>
         </thead>
         <tbody th:attr="data-test-mode=${isTestMode}">
-        <tr
+            <tr
                 th:each="row, iter : ${tableRows}"
                 th:attr="data-raw-path=${row.rawPath}, data-key=${row.uniqueKey}, data-schema-based=${row.isSchemaBased},
                         data-example=${row.example}, data-main=${row.isMainRow}, data-disc=${row.isDiscriminatorBased},
                         data-generate=${row.isGenerated ? 'success' : 'not-generated'}, data-test='not-tested',
-                        data-valid=${row.isGenerated ? (row.isValid ? 'success' : 'failed') : 'not-validated'}">
-            <td>
-                <input type="checkbox" name="path-row" class="path-row">
-            </td>
-            <td></td>
-            <td th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=${row.pathColSpan}">
-                <span>[[${row.path}]]</span>
-            </td>
-            <td th:class="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodSpan}, colspan=${row.methodColSpan}">
-                <p>[[${row.method}]]</p>
-            </td>
-            <td class="response-cell" th:classappend="${row.showStatus ? '' : 'hidden'}" th:attr="rowspan=${row.statusSpan}">
-                <p>[[${row.responseStatus}]]</p>
-                <span>[[${row.contentType}]]</span>
-                <br th:if="${row.contentType != null}"/>
-                <button class="multigen hidden" aria-label="Generate More"></button>
-            </td>
-            <td>
-                <button th:unless="${row.isGenerated}" class="generate" aria-label="Generate"></button>
-                <span th:if="${row.isGenerated}" th:text="${row.exampleName}"></span>
-            </td>
-            <td>
-                <button class="validate hidden" aria-label="Validate"></button>
-                <button class="test hidden" aria-label="Test"></button>
-                <span th:class="hidden">View Details</span>
-            </td>
-        </tr>
+                        data-valid=${row.isGenerated ? (row.isValid ? 'success' : row.isPartialFailure ? 'partial' : 'failed') : 'not-validated'}">
+                <td>
+                    <input type="checkbox" name="path-row" class="path-row">
+                </td>
+                <td></td>
+                <td th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=${row.pathColSpan}">
+                    <span>[[${row.path}]]</span>
+                </td>
+                <td th:class="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodSpan}, colspan=${row.methodColSpan}">
+                    <p>[[${row.method}]]</p>
+                </td>
+                <td class="response-cell" th:classappend="${row.showStatus ? '' : 'hidden'}" th:attr="rowspan=${row.statusSpan}">
+                    <p>[[${row.responseStatus}]]</p>
+                    <span>[[${row.contentType}]]</span>
+                    <br th:if="${row.contentType != null}"/>
+                    <button class="multigen hidden" aria-label="Generate More"></button>
+                </td>
+                <td>
+                    <button th:unless="${row.isGenerated}" class="generate" aria-label="Generate"></button>
+                    <span th:if="${row.isGenerated}" th:text="${row.exampleName}"></span>
+                </td>
+                <td>
+                    <button class="validate hidden" aria-label="Validate"></button>
+                    <button class="test hidden" aria-label="Test"></button>
+                    <span th:class="hidden">View Details</span>
+                </td>
+            </tr>
         </tbody>
     </table>
     <div id="details">
@@ -1167,7 +1173,9 @@
     let selectedTableRow = null;
     let blockGenValidate = false;
     const defaultAttrs = {"data-generate": "not-generated", "data-valid": "not-validated", "data-test": "not-tested", "data-main": "false"}
+    const dataValidationSuccessValues = ["success", "partial"]
     let isSaved = true;
+
     backBtn.addEventListener("click", () => {
         if(!isSaved)
         {
@@ -1259,7 +1267,7 @@
         const testPreSelectCount = getPreSelectCount(bulkTestBtn, "data-selected");
 
         const hasBeenGenerated = nearestTableRow.getAttribute("data-generate") === "success";
-        const hasBeenValidated = nearestTableRow.getAttribute("data-valid") === "success";
+        const hasBeenValidated = dataValidationSuccessValues.includes(nearestTableRow.getAttribute("data-valid"));
         const isDiscriminatorRow = nearestTableRow.getAttribute("data-disc") === "true";
         const isMainRow = nearestTableRow.getAttribute("data-main") === "true";
 
@@ -1371,7 +1379,7 @@
 
     async function testAllSelected() {
         const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
-        const rowsWithValidations = selectedRows.filter(row => row.getAttribute("data-valid") === "success");
+        const rowsWithValidations = selectedRows.filter(row => dataValidationSuccessValues.includes(row.getAttribute("data-valid")));
 
         for (const row of rowsWithValidations) {
             row.setAttribute("data-test", "processing");
@@ -1402,7 +1410,7 @@
         const tableRows = table.querySelectorAll("tbody > tr");
         return Array.from(tableRows).reduce((acc, row) => {
             const isRowGenerated = row.getAttribute("data-generate") === "success";
-            const isRowValidated = row.getAttribute("data-valid") === "success";
+            const isRowValidated = dataValidationSuccessValues.includes(row.getAttribute("data-valid"));
             const isRowDiscAndMain = row.getAttribute("data-main") === "true" && row.getAttribute("data-disc") === "true";
 
             acc.validatedCount += isRowValidated ? 1 : 0;
@@ -1460,33 +1468,33 @@
     async function validateRowExamples(tableRow, bulkMode = false) {
         tableRow.setAttribute("data-valid", "processing");
         const exampleData = getExampleData(tableRow);
-        let exampleSaved;
-        if(!isSaved)
-        {
-        exampleSaved = await saveExample(exampleData);
+
+        if(!isSaved) {
+        const exampleSaved = await saveExample(exampleData);
         if (!exampleSaved) {
             return false;
             }
         }
-        const { response, error } = await validateExample(exampleData);
-        const exampleAbsPath = response.absPath
+
+        const { exampleAbsPath, error, isPartialFailure } = await validateExample(exampleData);
+
         if (error && !exampleAbsPath) {
             if (!bulkMode) createAlert("Validation Failed", `Error: ${error ?? "Unknown Error"}`, true);
             tableRow.setAttribute("data-valid", "failed");
             return false;
         }
 
-        tableRow.setAttribute("data-valid", error ? "failed": "success");
+        tableRow.setAttribute("data-valid", error ? isPartialFailure ? "partial" : "failed" : "success");
         storeExampleValidationData(tableRow, error);
         storeExampleTestData(tableRow, null);
         tableRow.setAttribute("data-test", defaultAttrs["data-test"]);
 
-        if (error) {
+        if (error && !isPartialFailure) {
             if (!bulkMode) createAlert("Invalid Example", `Example name: ${parseFileName(exampleAbsPath)}`, true);
             return false;
         }
 
-         if (!bulkMode) createAlert("Valid Example", `Example name: ${parseFileName(exampleAbsPath)}`, false);
+        if (!bulkMode) createAlert("Valid Example", `Example name: ${parseFileName(exampleAbsPath)}`, false);
         return true;
     }
 
@@ -1590,16 +1598,17 @@
         const exampleAbsPath = getExampleData(tableRow);
         let docFragment = [];
 
-        const { example,err } = await getExampleContent(exampleAbsPath);
-        const { response, error } = await validateExample(exampleAbsPath);
-        docFragment = createExampleRows([{
+        if (exampleAbsPath) {
+            const {example, error} = await getExampleContent(exampleAbsPath);
+            docFragment = createExampleRows([{
                 absPath: exampleAbsPath,
                 exampleJson: example,
                 error: getExampleValidationData(tableRow) || error,
                 hasBeenValidated: tableRow.getAttribute("data-valid") !== defaultAttrs["data-valid"],
-                test: getExampleTestData(tableRow),
-                response: response
+                isPartialFailure: tableRow.getAttribute("data-valid") === "partial",
+                test: getExampleTestData(tableRow)
             }]);
+        }
 
         bulkTestBtn.classList.toggle("bulk-disabled", tableRow.getAttribute("data-valid") !== "success")
         pathSummaryUl.replaceChildren(createPathSummary(rowValues));
@@ -1627,6 +1636,12 @@
     function createPathSummary(rowValues) {
         const docFragment = document.createDocumentFragment();
 
+        if (rowValues.isSchemaBased) {
+            rowValues = {"schema": rowValues["path"], ...rowValues };
+            delete rowValues["path"];
+            delete rowValues["isSchemaBased"];
+        }
+
         for (const [key, value] of Object.entries(rowValues)) {
             if (!value) continue;
 
@@ -1651,11 +1666,12 @@
         const testBadge = document.createElement("span");
 
         exampleDiv.classList.add("example");
-        exampleBadge.classList.add("pill", example.hasBeenValidated ? example.error ? "red" : "green" : "blue");
+        exampleBadge.classList.add("pill", example.hasBeenValidated ? example.error ? example.isPartialFailure ? "yellow" : "red" : "green" : "blue");
         exampleName.textContent = example.absPath;
 
         if (example.hasBeenValidated) {
-            exampleBadge.textContent = `${example.error ? "Invalid" : "Valid"} Example`;
+            exampleBadge.textContent = example.error && !example.isPartialFailure ? "Invalid" : "Valid";
+            exampleBadge.textContent += " Example";
         } else {
             exampleBadge.textContent = "Example";
         }
@@ -1675,20 +1691,17 @@
         return exampleDiv;
     }
 
-function createExampleDropDown(example) {
+    function createExampleDropDown(example) {
     const dropDownDiv = document.createElement("div");
     dropDownDiv.classList.add("dropdown");
 
     const examplePara = document.createElement("p");
     const detailsPara = document.createElement("p");
+    const detailsPre = document.createElement("pre");
 
     examplePara.textContent = "Example: ";
     detailsPara.textContent = "Details: ";
 
-    const examplePreDiv = document.createElement("div");
-    examplePreDiv.setAttribute("id", "example-pre");
-    examplePreDiv.classList.add("language-json");
-    const detailsPreDiv = document.createElement("div");
    /* let metadata;
     if(example.response.error)
     {
@@ -1696,7 +1709,7 @@ function createExampleDropDown(example) {
        metadata= parseErrorResponse(example.response.error)
     }
     */
-    const detailsPre = document.createElement("pre");
+
     if (example.hasBeenValidated) {
         detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
         if (example.test) {
@@ -1705,6 +1718,11 @@ function createExampleDropDown(example) {
     } else {
         detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
     }
+
+    const examplePreDiv = document.createElement("div");
+    examplePreDiv.setAttribute("id", "example-pre");
+    examplePreDiv.classList.add("language-json");
+    const detailsPreDiv = document.createElement("div");
 
 
     detailsPreDiv.appendChild(detailsPara);
@@ -1722,15 +1740,17 @@ function createExampleDropDown(example) {
         lint: true,
         gutters: ["CodeMirror-lint-markers"]
     });
+
 /*
     if(metadata) {
         highlightErrorLines(editor,metadata);
     }
 */
+
     editor.on("change", (instance, changes) => {
-            isSaved = false;
-            updateBorderColorExampleBlock(editor, examplePreDiv);
-            savedEditorResponse = editor.getValue();
+        isSaved = false;
+        updateBorderColorExampleBlock(editor, examplePreDiv);
+        savedEditorResponse = editor.getValue();
     });
 
     if (example.test) {
@@ -1903,7 +1923,7 @@ function createErrorMarker() {
     }
 
     async function validateExample(exampleFile) {
-     try {
+        try {
             const resp = await fetch(`${getHostPort()}/_specmatic/examples/validate`, {
                 method: "POST",
                 body: JSON.stringify({ exampleFile }),
@@ -1917,9 +1937,9 @@ function createErrorMarker() {
                 throw new Error(data.error);
             }
 
-            return { response: data, error: data.error };
+            return { exampleAbsPath: data.absPath, error: data.error, isPartialFailure : data.isPartialFailure };
         } catch (error) {
-            return { error: error.message, response: null };
+            return { error: error.message, exampleAbsPath: null, isPartialFailure: false };
         }
     }
 

@@ -1,10 +1,14 @@
 package io.specmatic.stub.stateful
 
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.*
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.QueryParameters
+import io.specmatic.core.loadSpecmaticConfig
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.ContractPathData
-import io.specmatic.core.value.*
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.StringValue
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.loadContractStubsFromImplicitPaths
 import org.assertj.core.api.Assertions.assertThat
@@ -107,9 +111,12 @@ class StatefulHttpStubTest {
         assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
         val responseBody = response.body as JSONArrayValue
 
-        assertThat(responseBody.list.size).isEqualTo(2)
+        assertThat(responseBody.list.size).isEqualTo(3)
 
-        val responseObjectFromResponseBody = responseBody.list.first() as JSONObjectValue
+        val responseObjectFromResponseBody = responseBody.list.first {
+            it as JSONObjectValue
+            it.getStringValue("name") == "Product A"
+        } as JSONObjectValue
 
         assertThat(responseObjectFromResponseBody.getStringValue("name")).isEqualTo("Product A")
         assertThat(responseObjectFromResponseBody.getStringValue("description")).isEqualTo("A detailed description of Product A.")
@@ -403,7 +410,10 @@ class StatefulHttpStubWithAttributeSelectionTest {
         assertThat(response.status).isEqualTo(200)
         assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
 
-        val responseObjectFromResponseBody = (response.body as JSONArrayValue).list.first() as JSONObjectValue
+        val responseObjectFromResponseBody = (response.body as JSONArrayValue).list.first {
+            it as JSONObjectValue
+            it.getStringValue("price") == "19.99"
+        } as JSONObjectValue
 
         assertThat(responseObjectFromResponseBody.jsonObject.keys).containsExactlyInAnyOrder("id", "price", "inStock")
 
@@ -517,7 +527,7 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
 
         val responseBody = (response.body as JSONArrayValue)
-        assertThat(responseBody.list.size).isEqualTo(4)
+        assertThat(responseBody.list.size).isEqualTo(5)
 
         val responseObjectFromResponseBody = (response.body as JSONArrayValue)
             .list.filterIsInstance<JSONObjectValue>().first { it.getStringValue("id") == "300" }
@@ -528,7 +538,6 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         assertThat(responseObjectFromResponseBody.getStringValue("price")).isEqualTo("942")
         assertThat(responseObjectFromResponseBody.getStringValue("inStock")).isEqualTo("true")
     }
-
 
     @Test
     fun `should get the product from seed data loaded from examples`() {
@@ -549,6 +558,23 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
     }
 
+    @Test
+    fun `should get the list of products from seed data loaded from inline examples`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products/500"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONObjectValue::class.java)
+
+        val responseBody = response.body as JSONObjectValue
+
+        assertThat(responseBody.getStringValue("id")).isEqualTo("500")
+        assertThat(responseBody.getStringValue("name")).isEqualTo("Inline Product")
+    }
 
 }
 
@@ -581,6 +607,7 @@ class StatefulHttpStubConcurrencyTest {
     @Test
     fun `should handle concurrent additions and updates without corruption`() {
         val numberOfThreads = 10
+        val numberOfInlineExamples = 1
         val executor = Executors.newFixedThreadPool(numberOfThreads)
         val latch = CountDownLatch(numberOfThreads)
 
@@ -624,8 +651,11 @@ class StatefulHttpStubConcurrencyTest {
         assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
 
         val products = (response.body as JSONArrayValue).list
-        assertThat(products.size).isEqualTo(numberOfThreads)
-        products.sortedBy { (it as JSONObjectValue).getStringValue("name") }.forEachIndexed { index, product ->
+        assertThat(products.size).isEqualTo(numberOfThreads + numberOfInlineExamples)
+        products.sortedBy { (it as JSONObjectValue).getStringValue("name") }.filter {
+            val productObject = it as JSONObjectValue
+            productObject.getStringValue("name") != "Inline Product"
+        }.forEachIndexed { index, product ->
             val productObject = product as JSONObjectValue
             assertThat(productObject.getStringValue("name")).isEqualTo("Product $index")
             assertThat(productObject.getStringValue("price")).isEqualTo("${index * 10}")

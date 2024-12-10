@@ -91,7 +91,7 @@ class VirtualServiceCommand  : Callable<Int> {
         server = StatefulHttpStub(
             host,
             port,
-            stubData.map { it.first },
+            stubData.map { it.first }.also { it.logInlineExamplesCachedAsSeedData() },
             Configuration.configFilePath,
             stubData.flatMap { it.second }.also { it.logExamplesCachedAsSeedData() }
         )
@@ -100,8 +100,13 @@ class VirtualServiceCommand  : Callable<Int> {
     }
 
     private fun List<ScenarioStub>.logExamplesCachedAsSeedData() {
-        logger.log("${newLine}Injecting the data read from the following stub files into the stub server's state..".prependIndent("  "))
+        logger.log("${newLine}Injecting the externalised data read from the following stub files into the stub server's state..".prependIndent("  "))
         this.forEach { logger.log(it.filePath.orEmpty().prependIndent("  ")) }
+    }
+
+    private fun List<Feature>.logInlineExamplesCachedAsSeedData() {
+        logger.log("${newLine}Injecting the data read from the following inline examples into the stub server's state..".prependIndent("  "))
+        this.forEach { logger.log(it.stubsFromExamples.keys.joinToString(newLine).prependIndent("  ")) }
     }
 }
 

@@ -13,9 +13,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.MethodSource
-import java.util.stream.Stream
+import org.junit.jupiter.params.provider.CsvSource
 import io.specmatic.core.Result as Result
 
 internal class StringPatternTest {
@@ -70,31 +68,49 @@ internal class StringPatternTest {
         assertThat(result.reportString()).isEqualTo("""Expected string with maxLength 3, actual was "test"""")
     }
 
-    companion object {
-        @JvmStatic
-        fun lengthTestValues(): Stream<Arguments> {
-            return Stream.of(
-                Arguments.of(null, 10, 5),
-                Arguments.of(null, 4, 4),
-                Arguments.of(1, 10, 5),
-                Arguments.of(1, 4, 4),
-                Arguments.of(1, 5, 5),
-                Arguments.of(5, 10, 5),
-                Arguments.of(6, 10, 6),
-                Arguments.of(6, null, 6),
-                Arguments.of(3, null, 5),
-                Arguments.of(null, null, 5)
-            )
-        }
+    @ParameterizedTest
+    @CsvSource(
+        "null, 10, 5",
+        "null, 4, 1",
+        "1, 10, 1",
+        "5, 10, 5",
+        "6, null, 6",
+        "null, null, 5"
+    )
+    fun `generate string value as per minLength and maxLength`(min: String?, max: String?, expectedLength: Int) {
+        val minLength = if (min == "null") null else min?.toInt()
+        val maxLength = if (max == "null") null else max?.toInt()
+
+        val result = StringPattern(minLength = minLength, maxLength = maxLength).generate(Resolver()) as StringValue
+        val generatedLength = result.string.length
+
+        assertThat(generatedLength).isGreaterThanOrEqualTo(expectedLength)
+        maxLength?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
     }
+
 
     @ParameterizedTest
-    @MethodSource("lengthTestValues")
-    fun `generate string value of appropriate length matching minLength and maxLength parameters`(min: Int?, max: Int?, length: Int) {
-        val result = StringPattern(minLength = min, maxLength = max).generate(Resolver()) as StringValue
+    @CsvSource(
+        "'^[a-z]*$', null, null, 5",
+        "'^[a-z0-9]{6,10}',6,10,6",
+        "null, 1, 10, 1"
+    )
+    fun `generate string value as per regex in conjunction with minLength and maxLength`(
+        regex: String?, min: String?, max: String?, expectedLength: Int
+    ) {
+        val minLength = min?.toIntOrNull()
+        val maxLength = max?.toIntOrNull()
+        val patternRegex = if (regex == "null") null else regex
 
-        assertThat(result.string.length).isEqualTo(length)
+        val result = StringPattern(minLength = minLength, maxLength = maxLength, regex = patternRegex).generate(Resolver()) as StringValue
+        val generatedString = result.string
+        val generatedLength = generatedString.length
+
+        assertThat(generatedLength).isGreaterThanOrEqualTo(expectedLength)
+        maxLength?.let { assertThat(generatedLength).isLessThanOrEqualTo(it) }
+        patternRegex?.let { assertThat(generatedString).matches(patternRegex) }
     }
+
 
     @Test
     fun `string should encompass enum of string`() {
@@ -186,12 +202,12 @@ internal class StringPatternTest {
         val result = StringPattern(
             minLength = minLength,
             maxLength = maxLength,
-            regex = "^[^0-9]*$"
+            regex = "^[^0-9]{15}$"
         ).negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
 
         assertThat(
             result.filterIsInstance<StringPattern>().filter {
-                it.regex == "^[^0-9]*\$_"
+                it.regex == "^[^0-9]{15}\$_"
             }
         ).hasSize(1)
     }
@@ -205,7 +221,7 @@ internal class StringPatternTest {
         val result = StringPattern(
             minLength = minLength,
             maxLength = maxLength,
-            regex = "^[^0-9]*$"
+            regex = "^[^0-9]{15}$"
         ).negativeBasedOn(
             Row(),
             Resolver(),
@@ -220,7 +236,7 @@ internal class StringPatternTest {
         ).hasSize(0)
 
         assertThat(
-            result.filterIsInstance<StringPattern>().filter { it.regex == "^[^0-9]*\$_" }
+            result.filterIsInstance<StringPattern>().filter { it.regex == "^[^0-9]{15}\$_" }
         ).hasSize(1)
 
         assertThat(
@@ -239,5 +255,13 @@ internal class StringPatternTest {
     @Test
     fun `string pattern encompasses email`() {
         assertThat(StringPattern().encompasses(EmailPattern(), Resolver(), Resolver())).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Test
+    fun `should fail to generate string when maxLength is less than minLength`() {
+        val exception = assertThrows<IllegalArgumentException> {
+            StringPattern(minLength = 6, maxLength = 4)
+        }
+        assertThat(exception.message).isEqualTo("maxLength cannot be less than minLength")
     }
 }

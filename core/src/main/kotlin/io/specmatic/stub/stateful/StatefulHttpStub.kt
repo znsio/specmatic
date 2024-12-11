@@ -341,18 +341,26 @@ class StatefulHttpStub(
         if(statusCode.toString().startsWith("4").not()) {
             throw IllegalArgumentException("The statusCode should be of 4xx type")
         }
+        val warningMessage = "WARNING: The response is in string format since no schema found in the specification for $statusCode response"
 
-        if (responseBodyPattern == null || responseBodyPattern !is JSONObjectPattern) {
-            return HttpResponse(statusCode, message)
+        val resolver = scenario?.resolver
+        if (
+            responseBodyPattern == null ||
+            responseBodyPattern !is PossibleJsonObjectPatternContainer ||
+            resolver == null
+        ) {
+            return HttpResponse(statusCode, "$message${System.lineSeparator()}$warningMessage")
         }
+        val responseBodyJsonObjectPattern =
+            (responseBodyPattern as PossibleJsonObjectPatternContainer).jsonObjectPattern(resolver)
         val messageKey =
-            responseBodyPattern.pattern.entries.firstOrNull { it.value is StringPattern }?.key
-        if (messageKey == null || scenario?.resolver == null) {
-            return HttpResponse(statusCode, message)
+            responseBodyJsonObjectPattern?.pattern?.entries?.firstOrNull { it.value is StringPattern }?.key
+        if (messageKey == null) {
+            return HttpResponse(statusCode, "$message${System.lineSeparator()}$warningMessage")
         }
 
-        val jsonObjectWithNotFoundMessage = responseBodyPattern.generate(
-            scenario.resolver
+        val jsonObjectWithNotFoundMessage = responseBodyJsonObjectPattern.generate(
+            resolver
         ).jsonObject.plus(
             mapOf(withoutOptionality(messageKey) to StringValue(message))
         )

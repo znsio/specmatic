@@ -272,7 +272,7 @@ class StatefulHttpStubTest {
 
     @Order(9)
     @Test
-    fun `should get a 400 response as a string for an invalid get request where 400 sceham is not defined for the same in the spec`() {
+    fun `should get a 400 response as a string for an invalid get request where 400 schema is not defined for the same in the spec`() {
         val response = httpStub.client.execute(
             HttpRequest(
                 method = "GET",
@@ -284,6 +284,7 @@ class StatefulHttpStubTest {
         val responseBody = (response.body as StringValue).toStringLiteral()
         assertThat(responseBody).contains(">> REQUEST.PATH.id")
         assertThat(responseBody).contains("Contract expected number but request contained \"invalid-id\"")
+        assertThat(responseBody).contains("WARNING: The response is in string format since no schema found in the specification for 400 response")
     }
 
     @Test
@@ -314,9 +315,9 @@ class StatefulHttpStubTest {
 
         assertThat(response.status).isEqualTo(404)
         val responseBody = response.body as StringValue
-        assertThat(responseBody.toStringLiteral()).isEqualTo("Resource with resourceId '0' not found")
+        assertThat(responseBody.toStringLiteral()).contains("Resource with resourceId '0' not found")
+        assertThat(responseBody.toStringLiteral()).contains("WARNING: The response is in string format since no schema found in the specification for 404 response")
     }
-
 }
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)

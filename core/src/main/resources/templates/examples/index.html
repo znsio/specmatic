@@ -1794,12 +1794,28 @@ async function saveExample(examplePath) {
 }
 
  function parseErrorResponse(errors) {
-        const metadata = errors.map(err => ({
-            lineNumber: err.lineNumber,
-            description: err.description
-        }));
-        return metadata;
-    }
+    const metadata = errors.map(err => ({
+        lineNumber: err.lineNumber,
+        description: err.description
+    }));
+
+
+    const groupedErrors = metadata.reduce((acc, err) => {
+        // If the lineNumber already exists, concatenate the descriptions
+        if (acc[err.lineNumber]) {
+            acc[err.lineNumber] += '\n\n' + err.description;
+        } else {
+            acc[err.lineNumber] = err.description;
+        }
+        return acc;
+    }, {});
+
+
+    return Object.entries(groupedErrors).map(([lineNumber, description]) => ({
+        lineNumber: parseInt(lineNumber, 10),
+        description: description
+    }));
+}
 function updateBorderColorExampleBlock(editor, examplePreDiv) {
     try {
         JSON.parse(editor.getValue());

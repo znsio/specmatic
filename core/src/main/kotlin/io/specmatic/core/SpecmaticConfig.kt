@@ -130,6 +130,11 @@ data class SpecmaticConfig(
     val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY)
 ) {
     @JsonIgnore
+    fun attributeSelectionQueryParamKey(): String {
+        return attributeSelectionPattern.queryParamKey
+    }
+
+    @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {
         return (test?.allowExtensibleSchema == true)
     }

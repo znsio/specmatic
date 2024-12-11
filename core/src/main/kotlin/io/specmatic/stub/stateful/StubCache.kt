@@ -17,12 +17,6 @@ class StubCache {
     private val cachedResponses = mutableListOf<CachedResponse>()
     private val lock = ReentrantLock()
 
-    fun addResponse(path: String, responseBody: JSONObjectValue) = lock.withLock {
-        cachedResponses.add(
-            CachedResponse(path, responseBody)
-        )
-    }
-
     fun addResponse(
         path: String,
         responseBody: JSONObjectValue,

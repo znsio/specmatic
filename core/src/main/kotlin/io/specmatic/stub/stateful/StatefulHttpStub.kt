@@ -165,7 +165,7 @@ class StatefulHttpStub(
     }
 
     private val specmaticConfig = loadSpecmaticConfig()
-    private val stubCache = stubCacheWithExampleData()
+    private val stubCache = stubCacheWithExampleSeedData()
 
     private fun cachedHttpResponse(
         httpRequest: HttpRequest,
@@ -539,7 +539,7 @@ class StatefulHttpStub(
             SpecmaticConfig()
     }
 
-    private fun stubCacheWithExampleData(): StubCache {
+    private fun stubCacheWithExampleSeedData(): StubCache {
         val stubCache = StubCache()
 
         scenarioStubs.forEach {
@@ -554,8 +554,11 @@ class StatefulHttpStub(
 
             val (resourcePath, _) = resourcePathAndIdFrom(httpRequest)
             val responseBody = it.response.body
-            // ignore entry with an existing id in the cache
             if (httpRequest.method == "GET" && httpRequest.pathSegments().size == 1) {
+                if (httpRequest.queryParams.asMap().containsKey(specmaticConfig.attributeSelectionQueryParamKey())) {
+                    return@forEach
+                }
+
                 val responseBodies = (it.response.body as JSONArrayValue).list.filterIsInstance<JSONObjectValue>()
                 responseBodies.forEach { body ->
                     stubCache.addResponse(
@@ -565,17 +568,17 @@ class StatefulHttpStub(
                         idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, body)
                     )
                 }
-            } else {
-                if (responseBody !is JSONObjectValue) return@forEach
-                if(httpRequest.method == "POST" && httpRequest.body !is JSONObjectValue) return@forEach
-
-                stubCache.addResponse(
-                    path = resourcePath,
-                    responseBody = responseBody,
-                    idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
-                    idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, responseBody)
-                )
+                return@forEach
             }
+
+            if (responseBody !is JSONObjectValue) return@forEach
+            if(httpRequest.method == "POST" && httpRequest.body !is JSONObjectValue) return@forEach
+            stubCache.addResponse(
+                path = resourcePath,
+                responseBody = responseBody,
+                idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
+                idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, responseBody)
+            )
         }
 
         return stubCache

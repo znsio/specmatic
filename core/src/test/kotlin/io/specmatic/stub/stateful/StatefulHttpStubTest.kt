@@ -573,6 +573,30 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         assertThat(responseObjectFromResponseBody.getStringValue("id")).isEqualTo("300")
         assertThat(responseObjectFromResponseBody.getStringValue("name")).isEqualTo("iPhone 16")
     }
+
+    @Test
+    fun `should not load the example which has products with ids 500 and 600 as it involves attribute selection`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = (response.body as JSONArrayValue)
+        assertThat(responseBody.list.size).isEqualTo(4)
+
+        val productsWithIds500And600 = (response.body as JSONArrayValue)
+            .list.filterIsInstance<JSONObjectValue>().filter {
+                it.getStringValue("id") == "500" ||
+                        it.getStringValue("id") == "600"
+            }
+
+        assertThat(productsWithIds500And600).isEmpty()
+    }
 }
 
 class StatefulHttpStubConcurrencyTest {

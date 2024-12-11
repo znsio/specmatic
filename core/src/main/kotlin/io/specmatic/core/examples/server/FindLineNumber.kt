@@ -1,5 +1,7 @@
 package io.specmatic.core.examples.server
 
+import CustomJsonNodeFactory
+import CustomParserFactory
 import com.fasterxml.jackson.core.JsonLocation
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.JsonNode
@@ -31,14 +33,18 @@ fun findLineNumber(filePath: File, jsonPath: String): Int? {
 }
 
 private fun getLineNumberOfParentNode(filePath: File, jsonPath: String): List<Int?> {
-    val objectMapper = ObjectMapper()
-
+    val customParserFactory: CustomParserFactory = CustomParserFactory()
+    val objectMapper = ObjectMapper(customParserFactory)
     val config = Configuration.builder()
         .mappingProvider(JacksonMappingProvider(objectMapper))
         .jsonProvider(JacksonJsonNodeJsonProvider(objectMapper))
         .options(Option.ALWAYS_RETURN_LIST)
         .build()
 
+    val factory = CustomJsonNodeFactory(
+        objectMapper.getDeserializationConfig().getNodeFactory(),
+        customParserFactory
+    )
     val parsedDocument: DocumentContext = JsonPath.parse(filePath, config)
     val dollarJsonPath = "$.${jsonPath}"
     val pathParts = dollarJsonPath.split(".")
@@ -52,22 +58,23 @@ private fun getLineNumberOfParentNode(filePath: File, jsonPath: String): List<In
         is ArrayNode -> findings.map { node ->
             getLineNumberFromNode(node, objectMapper)
         }
-        is JsonNode -> getLineNumbersFromJsonNode(findings, objectMapper)
+        is JsonNode -> getLineNumbersFromJsonNode(findings, objectMapper,factory)
 
         else -> emptyList()
     }
 }
 
-private fun getLineNumbersFromJsonNode(node: JsonNode, objectMapper: ObjectMapper): List<Int?> {
+private fun getLineNumbersFromJsonNode(node: JsonNode, objectMapper: ObjectMapper,factory: CustomJsonNodeFactory): List<Int?> {
     val lineNumbers = mutableListOf<Int?>()
     node.fields().forEach { (_, value) ->
-        lineNumbers.add(getLineNumberFromNode(value, objectMapper))
+        lineNumbers.add(getLineNumberFromNode(value, objectMapper,factory))
     }
     return lineNumbers
 }
 
-private fun getLineNumberFromNode(node: JsonNode, objectMapper: ObjectMapper): Int? {
+private fun getLineNumberFromNode(node: JsonNode, objectMapper: ObjectMapper,factory: CustomJsonNodeFactory): Int? {
     val jsonString = objectMapper.writeValueAsString(node)
+
     return 0;
 }
 

@@ -549,7 +549,30 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
     }
 
+    @Test
+    fun `should not load the xiaomi product from the seed data as it has the same id (300) as that of iphone example`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products"
+            )
+        )
 
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = (response.body as JSONArrayValue)
+        assertThat(responseBody.list.size).isEqualTo(4)
+
+        val responseObjectsFromResponseBody = (response.body as JSONArrayValue)
+            .list.filterIsInstance<JSONObjectValue>().filter { it.getStringValue("id") == "300" }
+
+        assertThat(responseObjectsFromResponseBody.size).isEqualTo(1)
+
+        val responseObjectFromResponseBody = responseObjectsFromResponseBody.first()
+        assertThat(responseObjectFromResponseBody.getStringValue("id")).isEqualTo("300")
+        assertThat(responseObjectFromResponseBody.getStringValue("name")).isEqualTo("iPhone 16")
+    }
 }
 
 class StatefulHttpStubConcurrencyTest {

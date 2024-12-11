@@ -6,6 +6,8 @@ import io.specmatic.core.value.Value
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
+const val DEFAULT_CACHE_RESPONSE_ID_KEY = "id"
+
 data class CachedResponse(
     val path: String,
     val responseBody: JSONObjectValue
@@ -21,6 +23,20 @@ class StubCache {
         )
     }
 
+    fun addResponse(
+        path: String,
+        responseBody: JSONObjectValue,
+        idKey: String,
+        idValue: String
+    ) = lock.withLock {
+        val existingResponse = findResponseFor(path, idKey, idValue)
+        if(existingResponse == null) {
+            cachedResponses.add(
+                CachedResponse(path, responseBody)
+            )
+        }
+    }
+
     fun updateResponse(
         path: String,
         responseBody: JSONObjectValue,
@@ -28,15 +44,19 @@ class StubCache {
         idValue: String
     ) = lock.withLock {
         deleteResponse(path, idKey, idValue)
-        addResponse(path, responseBody)
+        addResponse(
+            path,
+            responseBody,
+            idKey,
+            idValue
+        )
     }
 
     fun findResponseFor(path: String, idKey: String, idValue: String): CachedResponse? = lock.withLock {
         return cachedResponses.filter {
             it.path == path
         }.firstOrNull {
-            val body = it.responseBody
-            body.findFirstChildByPath(idKey)?.toStringLiteral() == idValue
+            idValueFor(idKey, it.responseBody) == idValue
         }
     }
 
@@ -70,6 +90,12 @@ class StubCache {
 
             val actualValue = this.getValue(filterKey)
             actualValue.toStringLiteral() == filterValue
+        }
+    }
+
+    companion object {
+        fun idValueFor(idKey: String, body: JSONObjectValue): String {
+            return body.findFirstChildByPath(idKey)?.toStringLiteral().orEmpty()
         }
     }
 }

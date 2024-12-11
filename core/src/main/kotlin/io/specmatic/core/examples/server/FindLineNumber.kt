@@ -33,7 +33,7 @@ fun findLineNumber(filePath: File, jsonPath: String): Int? {
 }
 
 private fun getLineNumberOfParentNode(filePath: File, jsonPath: String): List<Int?> {
-    val customParserFactory: CustomParserFactory = CustomParserFactory()
+    val customParserFactory = CustomParserFactory()
     val objectMapper = ObjectMapper(customParserFactory)
     val config = Configuration.builder()
         .mappingProvider(JacksonMappingProvider(objectMapper))
@@ -56,7 +56,7 @@ private fun getLineNumberOfParentNode(filePath: File, jsonPath: String): List<In
 
     return when (findings) {
         is ArrayNode -> findings.map { node ->
-            getLineNumberFromNode(node, objectMapper)
+            getLineNumberFromNode(node, objectMapper,factory)
         }
         is JsonNode -> getLineNumbersFromJsonNode(findings, objectMapper,factory)
 
@@ -73,8 +73,7 @@ private fun getLineNumbersFromJsonNode(node: JsonNode, objectMapper: ObjectMappe
 }
 
 private fun getLineNumberFromNode(node: JsonNode, objectMapper: ObjectMapper,factory: CustomJsonNodeFactory): Int? {
-    val jsonString = objectMapper.writeValueAsString(node)
-
+    val location: JsonLocation = factory.getLocationForNode(node)?: return null;
     return 0;
 }
 

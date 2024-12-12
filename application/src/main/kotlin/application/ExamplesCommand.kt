@@ -13,9 +13,7 @@ import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.*
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.test.traverse
 import picocli.CommandLine.*
@@ -647,13 +645,23 @@ For example:
 
         private fun Value.toDictionary(pattern: Pattern, resolver: Resolver): Map<String, Value> {
             return pattern.getTypeAlias(this, resolver)?.let {
-                this.traverse(
+                pattern.toDefaultDictionary(resolver, it) + this.traverse(
                     prefix = it,
                     onScalar = { scalar, prefix -> scalar.handleScalar(this, pattern, prefix, resolver) },
                     onComposite = { composite, prefix -> composite.handleComposite(this, pattern, prefix, resolver) },
                     onAssert = { _, _ -> emptyMap() }
                 )
             }.orEmpty()
+        }
+
+        private fun Pattern.toDefaultDictionary(resolver: Resolver, typeAlias: String): Map<String, Value> {
+            val patternDefault = this.toDefault()
+            return patternDefault.traverse(
+                prefix = typeAlias,
+                onScalar = { scalar, prefix -> scalar.handleScalar(patternDefault, this, prefix, resolver) },
+                onComposite = { composite, prefix -> composite.handleComposite(patternDefault, this, prefix, resolver) },
+                onAssert = { _, _ -> emptyMap() }
+            )
         }
 
         private fun Value.handleComposite(patternValue: Value, pattern: Pattern, prefix: String, resolver: Resolver): Map<String, Value> {
@@ -675,9 +683,12 @@ For example:
             val keyPattern = parentPattern?.let { resolvedHop(it, resolver).getKeySchema(patternValue, key, resolver) }
 
             if (parentPattern is DeferredPattern || keyPattern == null) return emptyMap()
-            return if (keyPattern.matches(this, resolver.validateAll()) is Result.Success) {
-                mapOf(prefix to this)
-            } else emptyMap()
+            if (keyPattern.matches(this, resolver.validateAll()) is Result.Success) {
+                return mapOf(prefix to this)
+            }
+
+            val defaultValue = keyPattern.toDefault().takeIf { it !is NullValue } ?: return emptyMap()
+            return mapOf(prefix to defaultValue)
         }
 
         private fun <T> Pattern.ifKeyIsNewSchema(value: Value, key: String, resolver: Resolver, block: (pattern: Pattern) -> T): T? {
@@ -729,6 +740,18 @@ For example:
                 patternMatchStrategy = actualMatch,
                 findKeyErrorCheck = findKeyErrorCheck.copy(unexpectedKeyCheck = ValidateUnexpectedKeys)
             )
+        }
+
+        private fun Pattern.toDefault(): Value {
+            return when(this) {
+                is JSONObjectPattern -> JSONObjectValue(this.pattern.map { (key, pattern) -> withoutOptionality(key) to pattern.toDefault() }.toMap())
+                is ListPattern -> this.pattern.toDefault()
+                is AnyPattern -> this.pattern.firstOrNull()?.toDefault() ?: NullValue
+                is StringPattern -> StringValue("TODO")
+                is NumberPattern -> NumberValue(999)
+                is BooleanPattern -> BooleanValue(false)
+                else -> NullValue
+            }
         }
     }
 }

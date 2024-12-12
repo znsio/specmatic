@@ -195,7 +195,8 @@ class ExamplesInteractiveServerTest {
         fun `should generate all random values when no dictionary is provided`() {
             val examples = ExamplesInteractiveServer.generate(
                 contractFile = File("src/test/resources/openapi/tracker.yaml"),
-                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter("", ""), extensive = false,
+                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter("", ""),
+                extensive = false, allowOnlyMandatoryKeysInJSONObject = false
             ).map { File(it) }
 
             examples.forEach {
@@ -251,7 +252,8 @@ class ExamplesInteractiveServerTest {
             val examples = Flags.using(SPECMATIC_STUB_DICTIONARY to dictionaryFile.path) {
                 ExamplesInteractiveServer.generate(
                     contractFile = File("src/test/resources/openapi/tracker.yaml"),
-                    scenarioFilter = ExamplesInteractiveServer.ScenarioFilter("", ""), extensive = false,
+                    scenarioFilter = ExamplesInteractiveServer.ScenarioFilter("", ""),
+                    extensive = false, allowOnlyMandatoryKeysInJSONObject = false
                 ).map { File(it) }
             }
 
@@ -292,7 +294,8 @@ class ExamplesInteractiveServerTest {
             val examples = Flags.using(SPECMATIC_STUB_DICTIONARY to dictionaryFile.path) {
                 ExamplesInteractiveServer.generate(
                     contractFile = File("src/test/resources/openapi/tracker.yaml"),
-                    scenarioFilter = ExamplesInteractiveServer.ScenarioFilter("", ""), extensive = false,
+                    scenarioFilter = ExamplesInteractiveServer.ScenarioFilter("", ""),
+                    extensive = false, allowOnlyMandatoryKeysInJSONObject = false
                 ).map { File(it) }
             }
 

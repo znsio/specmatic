@@ -609,9 +609,13 @@ For example:
         @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
         lateinit var contractFile: File
 
+        @Option(names = ["--base"], description = ["Base dictionary"], required = false)
+        private var baseDictionaryFile: File? = null
+
         private val patternsToDefaultDictionary: MutableMap<String, Map<String, Value>> = mutableMapOf()
 
         override fun call() {
+            val baseDictionary = getBaseDictionary()
             val feature = parseContractFileToFeature(contractFile)
             val examples = getExamplesDirPath(contractFile).getExamplesFromDir()
             val dictionary = mutableMapOf<String, Value>()
@@ -631,8 +635,15 @@ For example:
             }
 
             val dictionaryFile = File(contractFile.parentFile, "${contractFile.nameWithoutExtension}_dictionary.json")
-            dictionaryFile.writeText(JSONObjectValue(dictionary).toStringLiteral())
+            val combinedDictionary = baseDictionary.plus(dictionary)
+            dictionaryFile.writeText(JSONObjectValue(combinedDictionary).toStringLiteral())
             consoleLog("\nDictionary written to ${dictionaryFile.canonicalPath}")
+        }
+
+        private fun getBaseDictionary(): Map<String, Value> {
+            return baseDictionaryFile?.let {
+                parsedJSONObject(it.readText()).jsonObject
+            } ?: emptyMap()
         }
 
         private fun ExampleFromFile.toDictionary(scenario: Scenario): Map<String, Value> {

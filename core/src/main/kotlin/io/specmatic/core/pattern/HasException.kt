@@ -5,11 +5,16 @@ import io.specmatic.core.utilities.exceptionCauseMessage
 
 data class HasException<T>(val t: Throwable, val message: String = "", val breadCrumb: String? = null) : ReturnValue<T>, ReturnFailure {
     fun toHasFailure(): HasFailure<T> {
+        val failure: Result.Failure = toFailure()
+        return HasFailure(failure, message)
+    }
+
+    override fun toFailure(): Result.Failure {
         val failure: Result.Failure = Result.Failure(
             message = exceptionCauseMessage(t),
             breadCrumb = breadCrumb ?: ""
         )
-        return HasFailure(failure, message)
+        return failure
     }
 
     override fun <U> withDefault(default: U, fn: (T) -> U): U {

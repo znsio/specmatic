@@ -108,6 +108,18 @@ class OpenApiSpecification(
             return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences()) != null
         }
 
+        fun getImplicitOverlayContent(openApiFilePath: String): String {
+            return File(openApiFilePath).let { openApiFile ->
+                if(!openApiFile.isFile)
+                    return@let ""
+
+                val overlayFile = openApiFile.canonicalFile.parentFile.resolve(openApiFile.nameWithoutExtension + "_overlay.yaml")
+                if(overlayFile.isFile) return@let overlayFile.readText()
+
+                return@let ""
+            }
+        }
+
         fun fromYAML(
             yamlContent: String,
             openApiFilePath: String,
@@ -120,16 +132,7 @@ class OpenApiSpecification(
             specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
             overlayContent: String = ""
         ): OpenApiSpecification {
-            val implicitOverlayFile = File(openApiFilePath).let { openApiFile ->
-                if(!openApiFile.isFile)
-                    return@let ""
-
-                val overlayFile = openApiFile.canonicalFile.parentFile.resolve(openApiFile.nameWithoutExtension + "_overlay.yaml")
-                if(overlayFile.isFile)
-                    return@let overlayFile.readText()
-
-                return@let ""
-            }
+            val implicitOverlayFile = getImplicitOverlayContent(openApiFilePath)
 
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(
@@ -205,7 +208,7 @@ class OpenApiSpecification(
 
         private fun resolveExternalReferences(): ParseOptions = ParseOptions().also { it.isResolve = true }
 
-        private fun String.applyOverlay(overlayContent: String): String {
+        fun String.applyOverlay(overlayContent: String): String {
             if(overlayContent.isBlank())
                 return this
 
@@ -223,16 +226,30 @@ class OpenApiSpecification(
         val name = File(openApiFilePath).name
 
         val (scenarioInfos, stubsFromExamples) = toScenarioInfos()
+        val unreferencedSchemaPatterns = parseUnreferencedSchemas()
+        val updatedScenarios = scenarioInfos.map {
+            Scenario(it).copy(
+                dictionary = dictionary,
+                attributeSelectionPattern = specmaticConfig.attributeSelectionPattern,
+                patterns = it.patterns + unreferencedSchemaPatterns
+            )
+        }
 
         return Feature(
-            scenarioInfos.map { Scenario(it).copy(dictionary = dictionary, attributeSelectionPattern = specmaticConfig.attributeSelectionPattern) }, name = name, path = openApiFilePath, sourceProvider = sourceProvider,
+            updatedScenarios, name = name, path = openApiFilePath, sourceProvider = sourceProvider,
             sourceRepository = sourceRepository,
             sourceRepositoryBranch = sourceRepositoryBranch,
             specification = specificationPath,
             serviceType = SERVICE_TYPE_HTTP,
             stubsFromExamples = stubsFromExamples,
-            specmaticConfig = specmaticConfig
+            specmaticConfig = specmaticConfig,
         )
+    }
+
+    private fun parseUnreferencedSchemas(): Map<String, Pattern> {
+        return openApiSchemas().filterNot { withPatternDelimiters(it.key) in patterns }.map {
+            withPatternDelimiters(it.key) to toSpecmaticPattern(it.value, emptyList(), it.key)
+        }.toMap()
     }
 
     override fun toScenarioInfos(): Pair<List<ScenarioInfo>, Map<String, List<Pair<HttpRequest, HttpResponse>>>> {
@@ -714,7 +731,7 @@ class OpenApiSpecification(
                         } else valueString
                     },
                 name = exampleName,
-                responseExampleForValidation = if(resolvedResponseExample != null && responseExample.isNotEmpty()) resolvedResponseExample else null,
+                exactResponseExample = if(resolvedResponseExample != null && responseExample.isNotEmpty()) resolvedResponseExample else null,
                 requestExample = requestExampleAsHttpRequests[exampleName]?.first(),
                 responseExample = responseExample
             )
@@ -790,6 +807,8 @@ class OpenApiSpecification(
         }
 
     private fun openApiPaths() = parsedOpenApi.paths.orEmpty()
+
+    private fun openApiSchemas() = parsedOpenApi.components?.schemas.orEmpty()
 
     private fun isNumber(value: String): Boolean {
         return value.toIntOrNull() != null

@@ -2,7 +2,6 @@ package io.specmatic.test
 
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
-import io.specmatic.core.filters.ScenarioMetadata
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.logger
@@ -88,37 +87,47 @@ data class ScenarioAsTest(
             workflow.updateRequest(it, originalScenario)
         }
 
-        return try {
+        try {
+            val updatedRequest = ExampleProcessor.resolve(request)
+
+            val substitutionResult = originalScenario.httpRequestPattern.matches(updatedRequest, flagsBased.update(originalScenario.resolver))
+            if (substitutionResult is Result.Failure && !testScenario.isA4xxScenario() && !testScenario.isNegative) {
+                return Pair(substitutionResult.updateScenario(testScenario), null)
+            }
+
             testExecutor.setServerState(testScenario.serverState)
+            testExecutor.preExecuteScenario(testScenario, updatedRequest)
+            val response = testExecutor.execute(updatedRequest)
 
-            testExecutor.preExecuteScenario(testScenario, request)
-
-            val response = testExecutor.execute(request)
-
+            //TODO: Review - Do we need workflow anymore
             workflow.extractDataFrom(response, originalScenario)
 
             val validatorResult = validators.asSequence().map { it.validate(scenario, response) }.filterNotNull().firstOrNull()
-            val result = validatorResult ?: testResult(request, response, testScenario, flagsBased)
+            if (validatorResult is Result.Failure) {
+                return Pair(validatorResult.withBindings(testScenario.bindings, response), response)
+            }
 
-            Pair(result.withBindings(testScenario.bindings, response), response)
+            val testResult = testResult(updatedRequest, response, testScenario, flagsBased)
+            if (testResult is Result.Failure) {
+                return Pair(testResult.withBindings(testScenario.bindings, response), response)
+            }
+
+            val postValidateResult = validators.asSequence().map { it.postValidate(testScenario, updatedRequest, response) }.filterNotNull().firstOrNull()
+            val result = postValidateResult ?: testResult
+
+            testScenario.exampleRow?.let { ExampleProcessor.store(it, updatedRequest, response) }
+            return Pair(result.withBindings(testScenario.bindings, response), response)
         } catch (exception: Throwable) {
-            Pair(
+            return Pair(
                 Result.Failure(exceptionCauseMessage(exception))
                 .also { failure -> failure.updateScenario(testScenario) }, null)
         }
     }
 
-    private fun testResult(
-        request: HttpRequest,
-        response: HttpResponse,
-        testScenario: Scenario,
-        flagsBased: FlagsBased? = null
-    ): Result {
-
+    private fun testResult(request: HttpRequest, response: HttpResponse, testScenario: Scenario, flagsBased: FlagsBased): Result {
         val result = when {
-            response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral())
-                .updateScenario(testScenario)
-            else -> testScenario.matches(request, response, ContractAndResponseMismatch, flagsBased?.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
+            response.specmaticResultHeaderValue() == "failure" -> Result.Failure(response.body.toStringLiteral()).updateScenario(testScenario)
+            else -> testScenario.matchesResponse(request, response, ContractAndResponseMismatch, flagsBased.unexpectedKeyCheck ?: ValidateUnexpectedKeys)
         }
 
         if (result is Result.Success && result.isPartialSuccess()) {
@@ -128,7 +137,6 @@ data class ScenarioAsTest(
 
         return result
     }
-
 }
 
 private fun LogMessage.withComment(comment: String?): LogMessage {

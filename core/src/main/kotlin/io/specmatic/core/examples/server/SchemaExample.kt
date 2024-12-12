@@ -10,8 +10,9 @@ data class SchemaExample(val json: Value, val file: File) {
     companion object {
         val SCHEMA_IDENTIFIER_REGEX = Regex("^resource\\.(.*)\\.example\\.json$")
 
-        fun toSchemaExampleFileName(patternName: String): String {
-            return SCHEMA_IDENTIFIER_REGEX.replace(patternName, "resource.$1.example.json")
+        fun toSchemaExampleFileName(parentPattern: String, patternName: String): String {
+            if (patternName.isBlank()) return "resource.$parentPattern.example.json"
+            return "resource.$parentPattern.$patternName.example.json"
         }
 
         fun matchesFilePattern(file: File): Boolean {
@@ -29,8 +30,10 @@ data class SchemaExample(val json: Value, val file: File) {
 
     constructor(file: File) : this(json = attempt("Error reading example file ${file.canonicalPath}") { parsedValue(file.readText()) }, file = file)
 
-    val getSchemaBasedOn = attempt(breadCrumb = "Error parsing schema from example name ${file.name}") {
-        SCHEMA_IDENTIFIER_REGEX.find(file.name)?.groupValues?.get(1)
+    val discriminatorBasedOn = SCHEMA_IDENTIFIER_REGEX.find(file.name)?.groupValues?.getOrNull(1).takeUnless { it.isNullOrBlank() }
+
+    val schemaBasedOn = attempt(breadCrumb = "Error parsing schema from example name ${file.name}") {
+        SCHEMA_IDENTIFIER_REGEX.find(file.name)?.groupValues?.let { match -> match[2].ifEmpty { match[1] } }
             ?: throw ContractException("File name didn't match pattern ${SCHEMA_IDENTIFIER_REGEX.pattern}")
     }
 

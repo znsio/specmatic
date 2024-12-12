@@ -6,10 +6,12 @@ import io.specmatic.core.HttpResponse
 import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.stub.HttpStub
+import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
@@ -770,5 +772,308 @@ class AllOfDiscriminatorTest {
                 assertThat(it.status).withFailMessage(it.toLogString()).isEqualTo(400)
             }
         }
+    }
+
+    @Test
+    fun `test generation with allOf discriminator and no examples`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: 3.0.3
+            info:
+              title: Vehicle API
+              version: 1.0.0
+            paths:
+              /vehicle:
+                post:
+                  summary: Add a new vehicle
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Vehicle'
+                  responses:
+                    '201':
+                      description: Vehicle created successfully
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+
+            components:
+              schemas:
+                VehicleType:
+                  type: object
+                  required:
+                  - type
+                  properties:
+                    type:
+                      type: string
+
+                Vehicle:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/VehicleType'
+                    - type: object
+                      required:
+                      - seatingCapacity
+                      properties:
+                        seatingCapacity:
+                          type: integer
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "car": "#/components/schemas/Transmission"
+                      "bike": "#/components/schemas/SideCar"
+
+                Transmission:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      required:
+                        - gearType
+                      properties:
+                        gearType:
+                          type: string
+
+                SideCar:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      required:
+                        - sidecarAvailable
+                      properties:
+                        sidecarAvailable:
+                          type: boolean
+        """.trimIndent(), "").toFeature()
+
+        val vehicleTypes = mutableSetOf<String>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
+                val vehicleType = request.body.let { (it as JSONObjectValue).findFirstChildByPath("type")?.toStringLiteral() ?: "" }
+
+                vehicleTypes.add(vehicleType)
+
+                return HttpResponse.ok("success")
+            }
+        })
+
+        assertThat(vehicleTypes).containsAll(listOf("car", "bike"))
+        assertThat(results.testCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `test execution with allOf discriminator and one example`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: 3.0.3
+            info:
+              title: Vehicle API
+              version: 1.0.0
+            paths:
+              /vehicle:
+                post:
+                  summary: Add a new vehicle
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Vehicle'
+                        examples:
+                          car:
+                            value:
+                              type: "car"
+                              seatingCapacity: 4
+                              gearType: "MT"
+                  responses:
+                    '201':
+                      description: Vehicle created successfully
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            car:
+                              value: "success"
+
+            components:
+              schemas:
+                VehicleType:
+                  type: object
+                  required:
+                  - type
+                  properties:
+                    type:
+                      type: string
+
+                Vehicle:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/VehicleType'
+                    - type: object
+                      required:
+                      - seatingCapacity
+                      properties:
+                        seatingCapacity:
+                          type: integer
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "car": "#/components/schemas/Transmission"
+                      "bike": "#/components/schemas/SideCar"
+
+                Transmission:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      required:
+                        - gearType
+                      properties:
+                        gearType:
+                          type: string
+
+                SideCar:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      required:
+                        - sidecarAvailable
+                      properties:
+                        sidecarAvailable:
+                          type: boolean
+        """.trimIndent(), "").toFeature()
+
+        val vehicleTypes = mutableSetOf<String>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
+
+                val requestJSON = request.body as JSONObjectValue
+
+                val vehicleType = request.body.let { requestJSON.findFirstChildByPath("type")?.toStringLiteral() ?: "" }
+
+                vehicleTypes.add(vehicleType)
+
+                if(vehicleType == "car") {
+                    assertThat(requestJSON.findFirstChildByPath("gearType")?.toStringLiteral()).isEqualTo("MT")
+                    assertThat(requestJSON.findFirstChildByPath("seatingCapacity")?.toStringLiteral()).isEqualTo("4")
+                }
+
+                return HttpResponse(201, "success")
+            }
+        })
+
+        assertThat(vehicleTypes).containsOnly("car")
+        assertThat(results.testCount).isEqualTo(1)
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
+    @Test
+    fun `generative tests with allOf discriminator and one example`() {
+        val feature = OpenApiSpecification.fromYAML("""
+            ---
+            openapi: 3.0.3
+            info:
+              title: Vehicle API
+              version: 1.0.0
+            paths:
+              /vehicle:
+                post:
+                  summary: Add a new vehicle
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          ${'$'}ref: '#/components/schemas/Vehicle'
+                        examples:
+                          car:
+                            value:
+                              type: "car"
+                              seatingCapacity: 4
+                              gearType: "MT"
+                  responses:
+                    '201':
+                      description: Vehicle created successfully
+                      content:
+                        text/plain:
+                          schema:
+                            type: string
+                          examples:
+                            car:
+                              value: "success"
+
+            components:
+              schemas:
+                VehicleType:
+                  type: object
+                  required:
+                  - type
+                  properties:
+                    type:
+                      type: string
+
+                Vehicle:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/VehicleType'
+                    - type: object
+                      required:
+                      - seatingCapacity
+                      properties:
+                        seatingCapacity:
+                          type: integer
+                  discriminator:
+                    propertyName: "type"
+                    mapping:
+                      "car": "#/components/schemas/Transmission"
+                      "bike": "#/components/schemas/SideCar"
+
+                Transmission:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      required:
+                        - gearType
+                      properties:
+                        gearType:
+                          type: string
+
+                SideCar:
+                  allOf:
+                    - ${'$'}ref: '#/components/schemas/Vehicle'
+                    - type: object
+                      required:
+                        - sidecarAvailable
+                      properties:
+                        sidecarAvailable:
+                          type: boolean
+        """.trimIndent(), "").toFeature().enableGenerativeTesting(onlyPositive = true)
+
+        val vehicleTypes = mutableSetOf<String>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
+                val requestJSON = request.body as JSONObjectValue
+
+                val vehicleType = request.body.let {
+                    requestJSON.findFirstChildByPath("type")?.toStringLiteral() ?: "" }
+
+                vehicleTypes.add(vehicleType)
+
+                if(vehicleType == "car") {
+                    assertThat(requestJSON.findFirstChildByPath("gearType")?.toStringLiteral()).isEqualTo("MT")
+                    assertThat(requestJSON.findFirstChildByPath("seatingCapacity")?.toStringLiteral()).isEqualTo("4")
+                }
+
+                return HttpResponse(201, body = "success")
+            }
+        })
+
+        assertThat(vehicleTypes).containsAll(listOf("car", "bike"))
+        assertThat(results.testCount).isEqualTo(2)
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 }

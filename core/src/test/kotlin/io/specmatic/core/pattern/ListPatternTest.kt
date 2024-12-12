@@ -1,6 +1,7 @@
 package io.specmatic.core.pattern
 
 import io.specmatic.GENERATION
+import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.value.JSONArrayValue
 import org.assertj.core.api.Assertions.assertThat
@@ -205,39 +206,81 @@ Feature: Recursive test
         val basePattern = ListPattern(parsedPattern("""{
             "topLevelMandatoryKey": "(number)",
             "topLevelOptionalKey?": "(string)",
-            "subMandatoryObject": {
-                "subMandatoryKey": "(string)",
-                "subOptionalKey?": "(number)"
-            }
+            "subList": "(baseListPattern)"
         }
         """.trimIndent(), typeAlias = "(baseJsonPattern)"), typeAlias = "(baseListPattern)")
-        val listPattern = ListPattern(basePattern, typeAlias = "(baseListPattern)")
+        val listPattern = ListPattern(basePattern)
 
-        val matchingValue = parsedValue("""[
+        val value = parsedValue("""[
             [
                 {
                     "topLevelMandatoryKey": 10,
                     "topLevelOptionalKey": "abc",
-                    "subMandatoryObject": {
-                        "subMandatoryKey": "abc",
-                        "subOptionalKey": 10
-                    }
+                    "subList": []
                 },
                 {
                     "topLevelMandatoryKey": 10,
                     "topLevelOptionalKey": "abc",
-                    "subMandatoryObject": {
-                        "subMandatoryKey": "abc",
-                        "subOptionalKey": 10
-                    }
+                    "subList": []
                 }
-            ],
-            []
+            ]
         ]
-        """.trimIndent())
-        val result = listPattern.matches(matchingValue, Resolver().withAllPatternsAsMandatory())
-        println(result.reportString())
+        """.trimIndent()) as JSONArrayValue
+        val result = listPattern.matches(value, Resolver(newPatterns = mapOf("(baseListPattern)" to basePattern)).withAllPatternsAsMandatory())
 
+        println(result.reportString())
         assertThat(result).isInstanceOf(Result.Success::class.java)
+        assertThat(result.reportString()).isEmpty()
+    }
+
+    @Test
+    fun `should not result in failure for missing keys when pattern is cycling with an allOf schema`() {
+        val spec = """
+        openapi: 3.0.0
+        info:
+          title: Sample API
+          description: Sample API
+          version: 0.1.9
+        paths:
+          /hello:
+            get:
+              responses:
+                '200':
+                  description: Says hello
+                  content:
+                    application/json:
+                      schema:
+                        ${"$"}ref: '#/components/schemas/MainMessage'
+        components:
+          schemas:
+            MainMessage:
+              allOf:
+                - ${"$"}ref: '#/components/schemas/Message'
+            Message:
+              type: object
+              properties:
+                message:
+                  type: string
+                details:
+                  type: array
+                  items:
+                    ${"$"}ref: '#/components/schemas/Details'
+            Details:
+              oneOf:
+                - ${"$"}ref: '#/components/schemas/Message'
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val scenario = feature.scenarios.first()
+        val resolver = scenario.resolver.copy(allPatternsAreMandatory = true)
+
+        val responsePattern = scenario.httpResponsePattern.body
+        val value = responsePattern.generate(resolver)
+        println(value.toStringLiteral())
+
+        val matchResult = responsePattern.matches(value, resolver)
+        println(matchResult.reportString())
+
+        assertThat(matchResult).isInstanceOf(Result.Success::class.java)
     }
 }

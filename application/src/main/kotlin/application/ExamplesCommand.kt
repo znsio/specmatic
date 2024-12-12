@@ -609,6 +609,8 @@ For example:
         @Option(names = ["--contract-file"], description = ["Contract file path"], required = true)
         lateinit var contractFile: File
 
+        private val patternsToDefaultDictionary: MutableMap<String, Map<String, Value>> = mutableMapOf()
+
         override fun call() {
             val feature = parseContractFileToFeature(contractFile)
             val examples = getExamplesDirPath(contractFile).getExamplesFromDir()
@@ -655,13 +657,15 @@ For example:
         }
 
         private fun Pattern.toDefaultDictionary(resolver: Resolver, typeAlias: String): Map<String, Value> {
-            val patternDefault = this.toDefault()
-            return patternDefault.traverse(
-                prefix = typeAlias,
-                onScalar = { scalar, prefix -> scalar.handleScalar(patternDefault, this, prefix, resolver) },
-                onComposite = { composite, prefix -> composite.handleComposite(patternDefault, this, prefix, resolver) },
-                onAssert = { _, _ -> emptyMap() }
-            )
+            return patternsToDefaultDictionary.computeIfAbsent(typeAlias) {
+                val defaultValue = this.toDefault()
+                defaultValue.traverse(
+                    prefix = typeAlias,
+                    onScalar = { scalar, prefix -> scalar.handleScalar(defaultValue, this, prefix, resolver) },
+                    onComposite = { composite, prefix -> composite.handleComposite(defaultValue, this, prefix, resolver) },
+                    onAssert = { _, _ -> emptyMap() }
+                )
+            }
         }
 
         private fun Value.handleComposite(patternValue: Value, pattern: Pattern, prefix: String, resolver: Resolver): Map<String, Value> {

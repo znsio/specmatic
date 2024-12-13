@@ -625,6 +625,10 @@ class ExamplesInteractiveServer(
         }
 
         private fun validateExample(feature: Feature, schemaExample: SchemaExample): Result {
+            if (schemaExample.value is NullValue) {
+                return Result.Success()
+            }
+
             return feature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value, InteractiveExamplesMismatchMessages)
         }
 
@@ -817,7 +821,7 @@ object InteractiveExamplesMismatchMessages : MismatchMessages {
     }
 
     override fun optionalKeyMissing(keyLabel: String, keyName: String): String {
-        return "Optional ${keyLabel.capitalizeFirstChar()} $keyName in the specification is missing from the example"
+        return "Warning: Optional ${keyLabel.capitalizeFirstChar()} $keyName in the specification is missing from the example"
     }
 
     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {

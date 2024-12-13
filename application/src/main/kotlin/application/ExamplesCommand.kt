@@ -607,7 +607,7 @@ For example:
         @Option(names = ["--base"], description = ["Base dictionary"], required = false)
         private var baseDictionaryFile: File? = null
 
-        @Option(names = ["--out", "o"], description = ["Output file path, defaults to contractfile_dictionary.json"], required = false)
+        @Option(names = ["--out", "--o"], description = ["Output file path, defaults to contractfile_dictionary.json"], required = false)
         private var outputFilePath: File? = null
 
         override fun call() {
@@ -682,12 +682,10 @@ For example:
             val keyPattern = parentPattern?.let { resolvedHop(it, resolver).getKeySchema(patternValue, key, resolver) }
 
             if (parentPattern is DeferredPattern || keyPattern == null) return emptyMap()
-            if (keyPattern.matches(this, resolver.validateAll()) is Result.Success) {
-                return mapOf(prefix to this)
-            }
 
-            val defaultValue = keyPattern.toDefault().takeIf { it !is NullValue } ?: return emptyMap()
-            return mapOf(prefix to defaultValue)
+            return if (keyPattern.matches(this, resolver.validateAll()) is Result.Success) {
+                mapOf(prefix to this)
+            } else emptyMap()
         }
 
         private fun <T> Pattern.ifKeyIsNewSchema(value: Value, key: String, resolver: Resolver, block: (pattern: Pattern) -> T): T? {
@@ -739,18 +737,6 @@ For example:
                 patternMatchStrategy = actualMatch,
                 findKeyErrorCheck = findKeyErrorCheck.copy(unexpectedKeyCheck = ValidateUnexpectedKeys)
             )
-        }
-
-        private fun Pattern.toDefault(): Value {
-            return when(this) {
-                is JSONObjectPattern -> JSONObjectValue(this.pattern.map { (key, pattern) -> withoutOptionality(key) to pattern.toDefault() }.toMap())
-                is ListPattern -> this.pattern.toDefault()
-                is AnyPattern -> this.pattern.firstOrNull()?.toDefault() ?: NullValue
-                is StringPattern -> StringValue("TODO")
-                is NumberPattern -> NumberValue(999)
-                is BooleanPattern -> BooleanValue(false)
-                else -> NullValue
-            }
         }
     }
 }

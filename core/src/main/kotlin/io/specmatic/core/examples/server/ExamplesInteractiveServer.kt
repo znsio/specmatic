@@ -232,6 +232,7 @@ class ExamplesInteractiveServer(
     override fun close() {
         server.stop(0, 0)
     }
+
     fun extractBreadcrumbs(input: String): List<String> {
         val breadCrumbPrefix = ">> "
 
@@ -241,8 +242,6 @@ class ExamplesInteractiveServer(
 
         return breadcrumbs
     }
-
-
 
     fun getJsonNodeLineNumbersUsingJsonPath(
         jsonFilePath: String,
@@ -398,9 +397,15 @@ class ExamplesInteractiveServer(
                 val examplesDir = getExamplesDirPath(contractFile).also { if (it.exists()) it.mkdirs() }
                 val allExistingExamples = examplesDir.getExamplesFromDir()
 
+                val schemaExamples = emptyList<TableRow>().withSchemaExamples(feature, examplesDir.getSchemaExamplesWithValidation(feature)).flatMap {
+                    if (it.example != null) {
+                        listOf(ExamplePathInfo(path = it.example, created = false, status = ExampleGenerationStatus.EXISTED))
+                    } else generateForSchemaBased(contractFile, it.rawPath, it.method)
+                }
+
                 val allExamples = feature.scenarios.flatMap { scenario ->
                     generateAndLogScenarioExamples(contractFile, feature, scenario, allExistingExamples, allowOnlyMandatoryKeysInJSONObject)
-                }
+                }.plus(schemaExamples)
 
                 generationSummary(contractFile, allExamples).map { it.path }
             } catch (e: StackOverflowError) {

@@ -8,7 +8,7 @@ import java.io.File
 
 data class SchemaExample(val json: Value, val file: File) {
     companion object {
-        val SCHEMA_IDENTIFIER_REGEX = Regex("^resource\\.(.*)\\.example\\.json$")
+        val SCHEMA_IDENTIFIER_REGEX = Regex("^resource(?:\\.(\\w+))?\\.(\\w+)\\.example\\.json\$")
 
         fun toSchemaExampleFileName(parentPattern: String, patternName: String): String {
             if (patternName.isBlank()) return "resource.$parentPattern.example.json"

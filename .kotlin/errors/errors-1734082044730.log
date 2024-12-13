@@ -1,0 +1,193 @@
+kotlin version: 2.1.0
+error message: org.jetbrains.kotlin.backend.common.BackendException: Backend Internal error: Exception during IR lowering
+File being compiled: /Users/samy/Desktop/Projects/specmatic/core/src/test/kotlin/io/specmatic/conversions/OpenApiSpecificationTest.kt
+The root cause java.lang.RuntimeException was thrown at: org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:48)
+	at org.jetbrains.kotlin.backend.common.CodegenUtil.reportBackendException(CodegenUtil.kt:253)
+	at org.jetbrains.kotlin.backend.common.CodegenUtil.reportBackendException$default(CodegenUtil.kt:236)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invokeSequential(performByIrFile.kt:55)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invoke(performByIrFile.kt:42)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invoke(performByIrFile.kt:28)
+	at org.jetbrains.kotlin.backend.common.phaser.NamedCompilerPhase.phaseBody(CompilerPhase.kt:166)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:27)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:14)
+	at org.jetbrains.kotlin.backend.common.phaser.NamedCompilerPhase.phaseBody(CompilerPhase.kt:166)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.CompilerPhaseKt.invokeToplevel(CompilerPhase.kt:62)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.invokeCodegen(JvmIrCodegenFactory.kt:371)
+	at org.jetbrains.kotlin.codegen.CodegenFactory.generateModule(CodegenFactory.kt:47)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.generateModuleInFrontendIRMode(JvmIrCodegenFactory.kt:433)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineKt.generateCodeFromIr(jvmCompilerPipeline.kt:192)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineKt.runBackend(jvmCompilerPipeline.kt:80)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineLightTreeKt.compileModule(jvmCompilerPipelineLightTree.kt:264)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineLightTreeKt.compileSingleModuleUsingFrontendIrAndLightTree(jvmCompilerPipelineLightTree.kt:231)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineLightTreeKt.compileModulesUsingFrontendIrAndLightTree(jvmCompilerPipelineLightTree.kt:86)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecute(K2JVMCompiler.kt:146)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecute(K2JVMCompiler.kt:43)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.execImpl(CLICompiler.kt:102)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.exec(CLICompiler.kt:316)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunner.runCompiler(IncrementalJvmCompilerRunner.kt:464)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunner.runCompiler(IncrementalJvmCompilerRunner.kt:73)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.doCompile(IncrementalCompilerRunner.kt:506)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileImpl(IncrementalCompilerRunner.kt:423)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileNonIncrementally(IncrementalCompilerRunner.kt:301)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compile(IncrementalCompilerRunner.kt:129)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.execIncrementalCompiler(CompileServiceImpl.kt:674)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.access$execIncrementalCompiler(CompileServiceImpl.kt:91)
+	at org.jetbrains.kotlin.daemon.CompileServiceImpl.compile(CompileServiceImpl.kt:1659)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.rmi/sun.rmi.server.UnicastServerRef.dispatch(UnicastServerRef.java:360)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Transport.java:200)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Transport.java:197)
+	at java.base/java.security.AccessController.doPrivileged(AccessController.java:712)
+	at java.rmi/sun.rmi.transport.Transport.serviceCall(Transport.java:196)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport.handleMessages(TCPTransport.java:587)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0(TCPTransport.java:828)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.lambda$run$0(TCPTransport.java:705)
+	at java.base/java.security.AccessController.doPrivileged(AccessController.java:399)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run(TCPTransport.java:704)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Caused by: java.lang.RuntimeException: Exception while generating code for:
+FUN name:requestBody is required by default visibility:public modality:FINAL <> ($this:io.specmatic.conversions.OpenApiSpecificationTest) returnType:kotlin.Unit
+  annotations:
+    Test
+  $this: VALUE_PARAMETER name:<this> type:io.specmatic.conversions.OpenApiSpecificationTest
+  BLOCK_BODY
+    VAR name:feature type:io.specmatic.core.Feature [val]
+      CALL 'public final fun toFeature (): io.specmatic.core.Feature declared in io.specmatic.conversions.OpenApiSpecification' type=io.specmatic.core.Feature origin=null
+        $this: CALL 'public final fun fromYAML$default ($this: io.specmatic.conversions.OpenApiSpecification.Companion, yamlContent: kotlin.String, openApiFilePath: kotlin.String, loggerForErrors: io.specmatic.core.log.LogStrategy?, sourceProvider: kotlin.String?, sourceRepository: kotlin.String?, sourceRepositoryBranch: kotlin.String?, specificationPath: kotlin.String?, securityConfiguration: io.specmatic.core.SecurityConfiguration?, specmaticConfig: io.specmatic.core.SpecmaticConfig?, overlayContent: kotlin.String?, $mask0: kotlin.Int, $handler: kotlin.Any?): io.specmatic.conversions.OpenApiSpecification declared in io.specmatic.conversions.OpenApiSpecification.Companion' type=io.specmatic.conversions.OpenApiSpecification origin=DEFAULT_DISPATCH_CALL
+          $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:Companion type:io.specmatic.conversions.OpenApiSpecification.Companion visibility:public [final,static] declared in io.specmatic.conversions.OpenApiSpecification' type=io.specmatic.conversions.OpenApiSpecification.Companion origin=null
+          yamlContent: CONST String type=kotlin.String value="---\nopenapi: \"3.0.1\"\ninfo:\n  title: \"Person API\"\n  version: \"1\"\npaths:\n  /person:\n    post:\n      summary: \"Get person by id\"\n      requestBody:\n        content:\n          application/json:\n            schema:\n              required:\n              - id\n              properties:\n                id:\n                  type: string\n      responses:\n        200:\n          description: \"Get person by id\"\n          content:\n            text/plain:\n              schema:\n                type: string"
+          openApiFilePath: CONST String type=kotlin.String value=""
+          loggerForErrors: COMPOSITE type=io.specmatic.core.log.LogStrategy? origin=DEFAULT_VALUE
+            CONST Null type=io.specmatic.core.log.LogStrategy? value=null
+          sourceProvider: COMPOSITE type=kotlin.String? origin=DEFAULT_VALUE
+            CONST Null type=kotlin.String? value=null
+          sourceRepository: COMPOSITE type=kotlin.String? origin=DEFAULT_VALUE
+            CONST Null type=kotlin.String? value=null
+          sourceRepositoryBranch: COMPOSITE type=kotlin.String? origin=DEFAULT_VALUE
+            CONST Null type=kotlin.String? value=null
+          specificationPath: COMPOSITE type=kotlin.String? origin=DEFAULT_VALUE
+            CONST Null type=kotlin.String? value=null
+          securityConfiguration: COMPOSITE type=io.specmatic.core.SecurityConfiguration? origin=DEFAULT_VALUE
+            CONST Null type=io.specmatic.core.SecurityConfiguration? value=null
+          specmaticConfig: COMPOSITE type=io.specmatic.core.SpecmaticConfig? origin=DEFAULT_VALUE
+            CONST Null type=io.specmatic.core.SpecmaticConfig? value=null
+          overlayContent: COMPOSITE type=kotlin.String? origin=DEFAULT_VALUE
+            CONST Null type=kotlin.String? value=null
+          $mask0: CONST Int type=kotlin.Int value=1020
+          $handler: CONST Null type=kotlin.Any? value=null
+    COMPOSITE type=kotlin.Unit origin=null
+      CALL 'public final fun let <T, R> (block: kotlin.Function1<T of kotlin.StandardKt.let, R of kotlin.StandardKt.let>): R of kotlin.StandardKt.let [inline] declared in kotlin.StandardKt' type=@[FlexibleNullability] org.assertj.core.api.ObjectAssert<@[FlexibleNullability] io.specmatic.core.Result?>? origin=null
+        <T>: io.specmatic.core.Result
+        <R>: @[FlexibleNullability] org.assertj.core.api.ObjectAssert<@[FlexibleNullability] io.specmatic.core.Result?>?
+        $receiver: CALL 'public final fun matchResult (request: io.specmatic.core.HttpRequest, response: io.specmatic.core.HttpResponse): io.specmatic.core.Result declared in io.specmatic.core.Feature' type=io.specmatic.core.Result origin=null
+          $this: GET_VAR 'val feature: io.specmatic.core.Feature [val] declared in io.specmatic.conversions.OpenApiSpecificationTest.requestBody is required by default' type=io.specmatic.core.Feature origin=null
+          request: CONSTRUCTOR_CALL 'public constructor <init> (method: kotlin.String?, path: kotlin.String?, headers: kotlin.collections.Map<kotlin.String, kotlin.String>?, body: io.specmatic.core.value.Value?, queryParams: io.specmatic.core.QueryParameters?, formFields: kotlin.collections.Map<kotlin.String, kotlin.String>?, multiPartFormData: kotlin.collections.List<io.specmatic.core.MultiPartFormDataValue>?, metadata: io.specmatic.core.HttpRequestMetadata?, $mask0: kotlin.Int, $marker: kotlin.jvm.internal.DefaultConstructorMarker?) declared in io.specmatic.core.HttpRequest' type=io.specmatic.core.HttpRequest origin=DEFAULT_DISPATCH_CALL
+            method: CONST String type=kotlin.String value="POST"
+            path: CONST String type=kotlin.String value="/person"
+            headers: COMPOSITE type=kotlin.collections.Map<kotlin.String, kotlin.String>? origin=DEFAULT_VALUE
+              CONST Null type=kotlin.collections.Map<kotlin.String, kotlin.String>? value=null
+            body: CALL 'public final fun parsedJSONObject$default (content: kotlin.String, mismatchMessages: io.specmatic.core.MismatchMessages?, $mask0: kotlin.Int, $handler: kotlin.Any?): io.specmatic.core.value.JSONObjectValue declared in io.specmatic.core.pattern.GrammarKt' type=io.specmatic.core.value.JSONObjectValue origin=DEFAULT_DISPATCH_CALL
+              content: CONST String type=kotlin.String value="{\"id\": \"abc123\"}"
+              mismatchMessages: COMPOSITE type=io.specmatic.core.MismatchMessages? origin=DEFAULT_VALUE
+                CONST Null type=io.specmatic.core.MismatchMessages? value=null
+              $mask0: CONST Int type=kotlin.Int value=2
+              $handler: CONST Null type=kotlin.Any? value=null
+            queryParams: COMPOSITE type=io.specmatic.core.QueryParameters? origin=DEFAULT_VALUE
+              CONST Null type=io.specmatic.core.QueryParameters? value=null
+            formFields: COMPOSITE type=kotlin.collections.Map<kotlin.String, kotlin.String>? origin=DEFAULT_VALUE
+              CONST Null type=kotlin.collections.Map<kotlin.String, kotlin.String>? value=null
+            multiPartFormData: COMPOSITE type=kotlin.collections.List<io.specmatic.core.MultiPartFormDataValue>? origin=DEFAULT_VALUE
+              CONST Null type=kotlin.collections.List<io.specmatic.core.MultiPartFormDataValue>? value=null
+            metadata: COMPOSITE type=io.specmatic.core.HttpRequestMetadata? origin=DEFAULT_VALUE
+              CONST Null type=io.specmatic.core.HttpRequestMetadata? value=null
+            $mask0: CONST Int type=kotlin.Int value=244
+            $marker: CONST Null type=kotlin.jvm.internal.DefaultConstructorMarker? value=null
+          response: CALL 'public final fun <get-OK> (): io.specmatic.core.HttpResponse declared in io.specmatic.core.HttpResponse.Companion' type=io.specmatic.core.HttpResponse origin=GET_PROPERTY
+            $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:Companion type:io.specmatic.core.HttpResponse.Companion visibility:public [final,static] declared in io.specmatic.core.HttpResponse' type=io.specmatic.core.HttpResponse.Companion origin=null
+        block: BLOCK type=kotlin.Function1<io.specmatic.core.Result, @[FlexibleNullability] org.assertj.core.api.ObjectAssert<@[FlexibleNullability] io.specmatic.core.Result?>?> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun requestBody_is_required_by_default$lambda$100 (matchResult: io.specmatic.core.Result): @[FlexibleNullability] org.assertj.core.api.ObjectAssert<@[FlexibleNullability] io.specmatic.core.Result?>? declared in io.specmatic.conversions.OpenApiSpecificationTest' type=kotlin.Function1<io.specmatic.core.Result, @[FlexibleNullability] org.assertj.core.api.ObjectAssert<@[FlexibleNullability] io.specmatic.core.Result?>?> origin=INLINE_LAMBDA reflectionTarget=null
+      COMPOSITE type=kotlin.Unit origin=null
+    COMPOSITE type=kotlin.Unit origin=null
+      CALL 'public final fun let <T, R> (block: kotlin.Function1<T of kotlin.StandardKt.let, R of kotlin.StandardKt.let>): R of kotlin.StandardKt.let [inline] declared in kotlin.StandardKt' type=@[FlexibleNullability] org.assertj.core.api.ObjectAssert<@[FlexibleNullability] io.specmatic.core.Result?>? origin=null
+        <T>: io.specmatic.core.Result
+        <R>: @[FlexibleNullability] org.assertj.core.api.ObjectAssert<@[FlexibleNullability] io.specmatic.core.Result?>?
+        $receiver: CALL 'public final fun matchResult (request: io.specmatic.core.HttpRequest, response: io.specmatic.core.HttpResponse): io.specmatic.core.Result declared in io.specmatic.core.Feature' type=io.specmatic.core.Result origin=null
+          $this: GET_VAR 'val feature: io.specmatic.core.Feature [val] declared in io.specmatic.conversions.OpenApiSpecificationTest.requestBody is required by default' type=io.specmatic.core.Feature origin=null
+          request: CONSTRUCTOR_CALL 'public constructor <init> (method: kotlin.String?, path: kotlin.String?, headers: kotlin.collections.Map<kotlin.String, kotlin.String>?, body: io.specmatic.core.value.Value?, queryParams: io.specmatic.core.QueryParameters?, formFields: kotlin.collections.Map<kotlin.String, kotlin.String>?, multiPartFormData: kotlin.collections.List<io.specmatic.core.MultiPartFormDataValue>?, metadata: io.specmatic.core.HttpRequestMetadata?, $mask0: kotlin.Int, $marker: kotlin.jvm.internal.DefaultConstructorMarker?) declared in io.specmatic.core.HttpRequest' type=io.specmatic.core.HttpRequest origin=DEFAULT_DISPATCH_CALL
+            method: CONST String type=kotlin.String value="POST"
+            path: CONST String type=kotlin.String value="/person"
+            headers: COMPOSITE type=kotlin.collections.Map<kotlin.String, kotlin.String>? origin=DEFAULT_VALUE
+              CONST Null type=kotlin.collections.Map<kotlin.String, kotlin.String>? value=null
+            body: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:io.specmatic.core.NoBodyValue visibility:public [final,static] declared in io.specmatic.core.NoBodyValue' type=io.specmatic.core.NoBodyValue origin=null
+            queryParams: COMPOSITE type=io.specmatic.core.QueryParameters? origin=DEFAULT_VALUE
+              CONST Null type=io.specmatic.core.QueryParameters? value=null
+            formFields: COMPOSITE type=kotlin.collections.Map<kotlin.String, kotlin.String>? origin=DEFAULT_VALUE
+              CONST Null type=kotlin.collections.Map<kotlin.String, kotlin.String>? value=null
+            multiPartFormData: COMPOSITE type=kotlin.collections.List<io.specmatic.core.MultiPartFormDataValue>? origin=DEFAULT_VALUE
+              CONST Null type=kotlin.collections.List<io.specmatic.core.MultiPartFormDataValue>? value=null
+            metadata: COMPOSITE type=io.specmatic.core.HttpRequestMetadata? origin=DEFAULT_VALUE
+              CONST Null type=io.specmatic.core.HttpRequestMetadata? value=null
+            $mask0: CONST Int type=kotlin.Int value=244
+            $marker: CONST Null type=kotlin.jvm.internal.DefaultConstructorMarker? value=null
+          response: CALL 'public final fun <get-OK> (): io.specmatic.core.HttpResponse declared in io.specmatic.core.HttpResponse.Companion' type=io.specmatic.core.HttpResponse origin=GET_PROPERTY
+            $this: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:Companion type:io.specmatic.core.HttpResponse.Companion visibility:public [final,static] declared in io.specmatic.core.HttpResponse' type=io.specmatic.core.HttpResponse.Companion origin=null
+        block: BLOCK type=kotlin.Function1<io.specmatic.core.Result, @[FlexibleNullability] org.assertj.core.api.ObjectAssert<@[FlexibleNullability] io.specmatic.core.Result?>?> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun requestBody_is_required_by_default$lambda$101 (matchResult: io.specmatic.core.Result): @[FlexibleNullability] org.assertj.core.api.ObjectAssert<@[FlexibleNullability] io.specmatic.core.Result?>? declared in io.specmatic.conversions.OpenApiSpecificationTest' type=kotlin.Function1<io.specmatic.core.Result, @[FlexibleNullability] org.assertj.core.api.ObjectAssert<@[FlexibleNullability] io.specmatic.core.Result?>?> origin=INLINE_LAMBDA reflectionTarget=null
+      COMPOSITE type=kotlin.Unit origin=null
+
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:48)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate$default(FunctionCodegen.kt:41)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethodNode(ClassCodegen.kt:407)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethod(ClassCodegen.kt:424)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generate(ClassCodegen.kt:169)
+	at org.jetbrains.kotlin.backend.jvm.FileCodegen.lower(JvmPhases.kt:39)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseFactoriesKt.createFilePhase$lambda$4(PhaseFactories.kt:71)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseBuildersKt$createSimpleNamedCompilerPhase$1.phaseBody(PhaseBuilders.kt:69)
+	at org.jetbrains.kotlin.backend.common.phaser.SimpleNamedCompilerPhase.phaseBody(CompilerPhase.kt:226)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invokeSequential(performByIrFile.kt:52)
+	... 47 more
+Caused by: java.lang.OutOfMemoryError: GC overhead limit exceeded
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:643)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:134)
+	at org.jetbrains.kotlin.ir.expressions.IrCall.accept(IrCall.kt:24)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:524)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitContainerExpression(ExpressionCodegen.kt:538)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitContainerExpression(ExpressionCodegen.kt:134)
+	at org.jetbrains.kotlin.ir.visitors.IrElementVisitor$DefaultImpls.visitComposite(IrElementVisitor.kt:129)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitComposite(ExpressionCodegen.kt:134)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitComposite(ExpressionCodegen.kt:134)
+	at org.jetbrains.kotlin.ir.expressions.IrComposite.accept(IrComposite.kt:18)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:524)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:529)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:134)
+	at org.jetbrains.kotlin.ir.expressions.IrBlockBody.accept(IrBlockBody.kt:20)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.generate(ExpressionCodegen.kt:236)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.doGenerate(FunctionCodegen.kt:124)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:45)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate$default(FunctionCodegen.kt:41)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethodNode(ClassCodegen.kt:407)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethod(ClassCodegen.kt:424)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generate(ClassCodegen.kt:169)
+	at org.jetbrains.kotlin.backend.jvm.FileCodegen.lower(JvmPhases.kt:39)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseFactoriesKt.createFilePhase$lambda$4(PhaseFactories.kt:71)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseFactoriesKt$$Lambda$183/0x0000007801142778.invoke(Unknown Source)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseBuildersKt$createSimpleNamedCompilerPhase$1.phaseBody(PhaseBuilders.kt:69)
+	at org.jetbrains.kotlin.backend.common.phaser.SimpleNamedCompilerPhase.phaseBody(CompilerPhase.kt:226)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invokeSequential(performByIrFile.kt:52)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invoke(performByIrFile.kt:42)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invoke(performByIrFile.kt:28)
+	at org.jetbrains.kotlin.backend.common.phaser.NamedCompilerPhase.phaseBody(CompilerPhase.kt:166)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+
+

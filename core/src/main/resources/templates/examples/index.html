@@ -369,6 +369,45 @@
         [hidden] {
           display: none;
         }
+
+          #error-log {
+            color: red;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .CodeMirror {
+            border: 1px solid #ccc;
+            height: 500px !important;
+        }
+       .cm-lint-marker-error {
+            background-color: red;
+            color: white;
+            font-size: 12px;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            text-align: center;
+            border-radius: 50%;
+            margin-left: -10px;
+            display: inline-block;
+            cursor: default;
+        }
+        .cm-lint-message {
+            color: red;
+            background-color: rgba(255, 0, 0, 0.2);
+            padding: 5px;
+            font-size: 12px;
+            border-radius: 3px;
+            margin-left: 30px; /* Move it a bit to the right of the gutter marker */
+            position: absolute;
+        }
+         .CodeMirror-gutter-wrapper {
+            position: relative;
+        }
+
+    }
+
     </style>
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
@@ -382,6 +421,7 @@
             --white: 255, 255, 255;
             --black: 0, 0, 0;
             --slate: 241, 245, 249;
+            --yellow: 255, 207, 51;
             --blue: 52, 115, 217;
             --green: 34, 197, 94;
             --red: 239, 68, 68;
@@ -495,13 +535,14 @@
                     color: white;
                 }
 
+                /* Temporarily Remove Selected Count */
+                &#bulk-generate[data-selected][data-panel="table"]::before {
+                    content: var(--_after_content);
+                    color: white;
+                }
+
                 &#bulk-generate {
                     --_content: "Generate Selected";
-
-                    /* Temporarily Remove Selected Count */
-                    &::before {
-                        content: '';
-                    }
 
                     &::after {
                         content: var(--_content, "Generate Selected");
@@ -638,6 +679,11 @@
                     line-height: 1.5rem;
                     text-decoration: underline;
                 }
+            }
+
+            &[data-valid="partial"] button.validate {
+                --_background-color: var(--yellow);
+                --_text-color: var(--smoky-black);
             }
 
             &[data-valid="failed"] button.validate, &[data-generate="failed"] button.generate, &[data-test="failed"] button.test {
@@ -796,7 +842,24 @@
                 background-color: rgba(var(--blue-dark));
             }
         }
+        button#save-example {
+        position: relative;
+        margin-top: 10px;
+        left: 50%;
+        transform: translate(-50%, 10%);
+        --_padding: 0.5rem 3rem;
+        --_radius: 0.25rem;
 
+        color: white;
+        padding: var(--_padding);
+        background-color: rgba(var(--blue));
+        border-radius: var(--_radius);
+
+        &:hover,
+        &:focus {
+        background-color: rgba(var(--blue-dark));
+        }
+    }
         #path-details {
             display: flex;
             align-items: center;
@@ -903,6 +966,10 @@
             color: black;
         }
 
+        .pill.yellow {
+            --_background-color: rgb(var(--yellow));
+            color: black;
+        }
 
         /* ALERT STYLES */
 
@@ -1033,7 +1100,7 @@
                 th:attr="data-raw-path=${row.rawPath}, data-key=${row.uniqueKey}, data-schema-based=${row.isSchemaBased},
                         data-example=${row.example}, data-main=${row.isMainRow}, data-disc=${row.isDiscriminatorBased},
                         data-generate=${row.isGenerated ? 'success' : 'not-generated'}, data-test='not-tested',
-                        data-valid=${row.isGenerated ? (row.isValid ? 'success' : 'failed') : 'not-validated'}">
+                        data-valid=${row.isGenerated ? (row.isValid ? 'success' : row.isPartialFailure ? 'partial' : 'failed') : 'not-validated'}">
                 <td>
                     <input type="checkbox" name="path-row" class="path-row">
                 </td>
@@ -1080,6 +1147,16 @@
     const exampleDetails = /*[[${exampleDetails}]]*/ {};
     const testDetails = {};
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsonlint/1.6.0/jsonlint.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/lint.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.59.4/addon/lint/lint.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/lint.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/json-lint.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/autorefresh.min.js"></script>
 
 </body>
 <script>
@@ -1092,13 +1169,34 @@
     const bulkValidateBtn = document.querySelector("button#bulk-validate");
     const bulkGenerateBtn = document.querySelector("button#bulk-generate");
     const bulkTestBtn = document.querySelector("button#bulk-test");
-
+    let savedEditorResponse = null;
     let scrollYPosition = 0;
     let selectedTableRow = null;
     let blockGenValidate = false;
     const defaultAttrs = {"data-generate": "not-generated", "data-valid": "not-validated", "data-test": "not-tested", "data-main": "false"}
+    const dataValidationSuccessValues = ["success", "partial"]
+    let isSaved = true;
 
     backBtn.addEventListener("click", () => {
+        if(!isSaved)
+        {
+        const modalContainer = createModal({
+        onDiscard: () => {
+         examplesOl.replaceChildren();
+        mainElement.setAttribute("data-panel", "table");
+        bulkValidateBtn.setAttribute("data-panel", "table");
+        bulkGenerateBtn.setAttribute("data-panel", "table");
+        bulkTestBtn.setAttribute("data-panel", "table");
+        window.scrollTo(0, scrollYPosition);
+        console.log("Changes discarded!");
+        isSaved = true;
+        },
+
+        });
+        document.body.appendChild(modalContainer);
+       return;
+      }
+
         examplesOl.replaceChildren();
         mainElement.setAttribute("data-panel", "table");
         bulkValidateBtn.setAttribute("data-panel", "table");
@@ -1166,7 +1264,7 @@
         const testPreSelectCount = getPreSelectCount(bulkTestBtn, "data-selected");
 
         const hasBeenGenerated = nearestTableRow.getAttribute("data-generate") === "success";
-        const hasBeenValidated = nearestTableRow.getAttribute("data-valid") === "success";
+        const hasBeenValidated = dataValidationSuccessValues.includes(nearestTableRow.getAttribute("data-valid"));
         const isDiscriminatorRow = nearestTableRow.getAttribute("data-disc") === "true";
         const isMainRow = nearestTableRow.getAttribute("data-main") === "true";
 
@@ -1197,7 +1295,7 @@
 
             case "details": {
                 await validateRowExamples(selectedTableRow);
-                const originalYScroll = scrollYPosition
+                const originalYScroll = scrollYPosition;
                 await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
                 scrollYPosition = originalYScroll;
                 break;
@@ -1278,7 +1376,7 @@
 
     async function testAllSelected() {
         const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
-        const rowsWithValidations = selectedRows.filter(row => row.getAttribute("data-valid") === "success");
+        const rowsWithValidations = selectedRows.filter(row => dataValidationSuccessValues.includes(row.getAttribute("data-valid")));
 
         for (const row of rowsWithValidations) {
             row.setAttribute("data-test", "processing");
@@ -1309,7 +1407,7 @@
         const tableRows = table.querySelectorAll("tbody > tr");
         return Array.from(tableRows).reduce((acc, row) => {
             const isRowGenerated = row.getAttribute("data-generate") === "success";
-            const isRowValidated = row.getAttribute("data-valid") === "success";
+            const isRowValidated = dataValidationSuccessValues.includes(row.getAttribute("data-valid"));
             const isRowDiscAndMain = row.getAttribute("data-main") === "true" && row.getAttribute("data-disc") === "true";
 
             acc.validatedCount += isRowValidated ? 1 : 0;
@@ -1367,7 +1465,15 @@
     async function validateRowExamples(tableRow, bulkMode = false) {
         tableRow.setAttribute("data-valid", "processing");
         const exampleData = getExampleData(tableRow);
-        const { exampleAbsPath, error } = await validateExample(exampleData);
+
+        if(!isSaved) {
+        const exampleSaved = await saveExample(exampleData);
+        if (!exampleSaved) {
+            return false;
+            }
+        }
+
+        const { exampleAbsPath, error, isPartialFailure } = await validateExample(exampleData);
 
         if (error && !exampleAbsPath) {
             if (!bulkMode) createAlert("Validation Failed", `Error: ${error ?? "Unknown Error"}`, true);
@@ -1375,12 +1481,12 @@
             return false;
         }
 
-        tableRow.setAttribute("data-valid", error ? "failed": "success");
+        tableRow.setAttribute("data-valid", error ? isPartialFailure ? "partial" : "failed" : "success");
         storeExampleValidationData(tableRow, error);
         storeExampleTestData(tableRow, null);
         tableRow.setAttribute("data-test", defaultAttrs["data-test"]);
 
-        if (error) {
+        if (error && !isPartialFailure) {
             if (!bulkMode) createAlert("Invalid Example", `Example name: ${parseFileName(exampleAbsPath)}`, true);
             return false;
         }
@@ -1496,6 +1602,7 @@
                 exampleJson: example,
                 error: getExampleValidationData(tableRow) || error,
                 hasBeenValidated: tableRow.getAttribute("data-valid") !== defaultAttrs["data-valid"],
+                isPartialFailure: tableRow.getAttribute("data-valid") === "partial",
                 test: getExampleTestData(tableRow)
             }]);
         }
@@ -1526,6 +1633,12 @@
     function createPathSummary(rowValues) {
         const docFragment = document.createDocumentFragment();
 
+        if (rowValues.isSchemaBased) {
+            rowValues = {"schema": rowValues["path"], ...rowValues };
+            delete rowValues["path"];
+            delete rowValues["isSchemaBased"];
+        }
+
         for (const [key, value] of Object.entries(rowValues)) {
             if (!value) continue;
 
@@ -1550,11 +1663,12 @@
         const testBadge = document.createElement("span");
 
         exampleDiv.classList.add("example");
-        exampleBadge.classList.add("pill", example.hasBeenValidated ? example.error ? "red" : "green" : "blue");
+        exampleBadge.classList.add("pill", example.hasBeenValidated ? example.error ? example.isPartialFailure ? "yellow" : "red" : "green" : "blue");
         exampleName.textContent = example.absPath;
 
         if (example.hasBeenValidated) {
-            exampleBadge.textContent = `${example.error ? "Invalid" : "Valid"} Example`;
+            exampleBadge.textContent = example.error && !example.isPartialFailure ? "Invalid" : "Valid";
+            exampleBadge.textContent += " Example";
         } else {
             exampleBadge.textContent = "Example";
         }
@@ -1575,53 +1689,167 @@
     }
 
     function createExampleDropDown(example) {
-        const dropDownDiv = document.createElement("div");
-        dropDownDiv.classList.add("dropdown");
+    const dropDownDiv = document.createElement("div");
+    dropDownDiv.classList.add("dropdown");
 
-        const examplePara = document.createElement("p");
-        const detailsPara = document.createElement("p");
+    const examplePara = document.createElement("p");
+    const detailsPara = document.createElement("p");
+    const detailsPre = document.createElement("pre");
 
-        examplePara.textContent = "Example: ";
-        detailsPara.textContent = "Details: ";
+    examplePara.textContent = "Example: ";
+    detailsPara.textContent = "Details: ";
 
-        const examplePre = document.createElement("pre");
-        const detailsPre = document.createElement("pre");
+   /* let metadata;
+    if(example.response.error)
+    {
 
-        if (example.hasBeenValidated) {
-            detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
-            if (example.test) {
-                detailsPre.textContent = `${detailsPre.textContent}\n${example.test.details}`;
-            }
-        } else {
-            detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
-        }
-        examplePre.textContent = example.exampleJson;
+       metadata= parseErrorResponse(example.response.error)
+    }
+    */
 
-        const examplePreDiv = document.createElement("div");
-        const detailsPreDiv = document.createElement("div");
-
-        detailsPreDiv.appendChild(detailsPara);
-        detailsPreDiv.appendChild(detailsPre);
-
+    if (example.hasBeenValidated) {
+        detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
         if (example.test) {
-            const testPara = document.createElement("p");
-            testPara.textContent = "Test Log: ";
-            examplePreDiv.appendChild(testPara);
-
-            const testPre = document.createElement("pre");
-            testPre.textContent = example.test.testLog;
-            examplePreDiv.appendChild(testPre);
+            detailsPre.textContent = `${detailsPre.textContent}\n${example.test.details}`;
         }
-
-        examplePreDiv.appendChild(examplePara);
-        examplePreDiv.appendChild(examplePre);
-
-        dropDownDiv.appendChild(detailsPreDiv);
-        dropDownDiv.appendChild(examplePreDiv);
-
-        return dropDownDiv;
+    } else {
+        detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
     }
 
+    const examplePreDiv = document.createElement("div");
+    examplePreDiv.setAttribute("id", "example-pre");
+    examplePreDiv.classList.add("language-json");
+    const detailsPreDiv = document.createElement("div");
+
+
+    detailsPreDiv.appendChild(detailsPara);
+    detailsPreDiv.appendChild(detailsPre);
+
+   const editor = CodeMirror(examplePreDiv, {
+        value: example.exampleJson,
+        autoRefresh: true,
+        mode: "application/json",
+        theme: "dracula",
+        lineNumbers: true,
+        autoCloseBrackets: true,
+        matchBrackets: true,
+        styleActiveLine: true,
+        lint: true,
+        gutters: ["CodeMirror-lint-markers"]
+    });
+
+/*
+    if(metadata) {
+        highlightErrorLines(editor,metadata);
+    }
+*/
+
+    editor.on("change", (instance, changes) => {
+        isSaved = false;
+        updateBorderColorExampleBlock(editor, examplePreDiv);
+        savedEditorResponse = editor.getValue();
+    });
+
+    if (example.test) {
+        const testPara = document.createElement("p");
+        testPara.textContent = "Test Log: ";
+        const testPre = document.createElement("pre");
+        testPre.textContent = example.test.testLog;
+        detailsPreDiv.appendChild(testPara);
+        detailsPreDiv.appendChild(testPre);
+    }
+
+    dropDownDiv.appendChild(detailsPreDiv);
+    dropDownDiv.appendChild(examplePara);
+    dropDownDiv.appendChild(examplePreDiv);
+
+    return dropDownDiv;
+}
+
+async function saveExample(examplePath) {
+    const editedText = savedEditorResponse;
+    try {
+        const parsedContent = JSON.parse(editedText);
+
+        const response = await fetch("/_specmatic/examples/update", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                exampleFile: examplePath,
+                exampleContent: editedText,
+            }),
+        });
+
+        if (response.ok) {
+            createAlert("Saved", "Example saved to file", false);
+            isSaved = true;
+            return true;
+        } else {
+            const errorMessage = await response.text();
+            createAlert("Failed to save example.", `Failed to save example to ${examplePath}: ${errorMessage}`, true);
+            console.error("Error saving example:", response.status);
+            return false;
+        }
+    } catch (e) {
+        console.error("Error during save request:", e);
+        createAlert("Failed to save example.", `An error occurred while saving example to ${examplePath}: ${e.message}`, true);
+        return false;
+    }
+}
+
+ function parseErrorResponse(errors) {
+        const metadata = errors.map(err => ({
+            lineNumber: err.lineNumber,
+            description: err.description
+        }));
+        return metadata;
+    }
+function updateBorderColorExampleBlock(editor, examplePreDiv) {
+    try {
+        JSON.parse(editor.getValue());
+        editor.getWrapperElement().style.borderWidth = "2px";
+        editor.getWrapperElement().style.borderStyle = "solid";
+        editor.getWrapperElement().style.borderColor = "green";
+
+    } catch (e) {
+        editor.getWrapperElement().style.borderWidth = "2px";
+        editor.getWrapperElement().style.borderStyle = "solid";
+        editor.getWrapperElement().style.borderColor = "red";
+
+    }
+}
+function highlightErrorLines(editor, metadata) {
+    metadata.forEach(meta => {
+        const lineNumber = meta.lineNumber - 1;
+        const lineLength = editor.getLine(lineNumber).length;
+        editor.markText(
+            { line: lineNumber, ch: 0 },
+            { line: lineNumber, ch: lineLength },
+            {
+                className: "CodeMirror-lint-mark-error",
+                attributes: {
+                    title: meta.description,
+                },
+            }
+        );
+
+        editor.setGutterMarker(lineNumber, "CodeMirror-lint-markers", createErrorMarker(meta.description));
+    });
+}
+
+
+function createErrorMarker() {
+     const marker = document.createElement("div");
+     marker.className = "CodeMirror-lint-mark-error";
+     return marker;
+   }
+
+
+    function parseFileName(path) {
+        return path.split('/').pop();
+    }
     function storeExampleData(tableRow, example) {
         const key = tableRow.getAttribute("data-key");
         tableRow.setAttribute("data-example", example.exampleFilePath);
@@ -1706,9 +1934,9 @@
                 throw new Error(data.error);
             }
 
-            return { exampleAbsPath: data.absPath, error: data.error };
+            return { exampleAbsPath: data.absPath, error: data.error, isPartialFailure : data.isPartialFailure };
         } catch (error) {
-            return { error: error.message, exampleAbsPath: null };
+            return { error: error.message, exampleAbsPath: null, isPartialFailure: false };
         }
     }
 
@@ -1809,6 +2037,109 @@
         bulkTestBtn.setAttribute("data-selected", "0");
         blockGenValidate = false;
     }
+function createModal({ onSave, onDiscard }) {
+    // Data for modal
+    const title = "Unsaved Changes";
+    const closeText = "No";
+    const discardText = "Yes";
+    const bodyText = "Your changes are not saved & validated. Go Back Anyway?";
+
+    // Create modal container dynamically
+    const modalContainer = document.createElement("div");
+    modalContainer.classList.add("go-back-modal");
+    modalContainer.style.position = "fixed";
+    modalContainer.style.top = "0";
+    modalContainer.style.left = "0";
+    modalContainer.style.width = "100%";
+    modalContainer.style.height = "100%";
+    modalContainer.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+    modalContainer.style.display = "flex";
+    modalContainer.style.alignItems = "center";
+    modalContainer.style.justifyContent = "center";
+    modalContainer.style.zIndex = "9999";
+
+    // Create modal content box
+    const modalContent = document.createElement("div");
+    modalContent.style.backgroundColor = "#fff";
+    modalContent.style.borderRadius = "8px";
+    modalContent.style.padding = "20px";
+    modalContent.style.width = "400px";
+    modalContent.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.2)";
+    modalContent.style.textAlign = "center";
+
+    // Create modal header
+    const modalHeader = document.createElement("div");
+    const modalTitle = document.createElement("h5");
+    modalTitle.textContent = title;
+    modalHeader.style.fontSize = "18px";
+    modalHeader.style.fontWeight = "bold";
+    modalHeader.style.marginBottom = "15px";
+    modalHeader.appendChild(modalTitle);
+
+    // Create modal body
+    const modalBody = document.createElement("div");
+    modalBody.textContent = bodyText;
+    modalBody.style.marginBottom = "15px";
+
+    // Create modal footer
+    const modalFooter = document.createElement("div");
+
+    const closeButton = document.createElement("button");
+    closeButton.textContent = closeText;
+    closeButton.style.backgroundColor = "#007bff";
+    closeButton.style.color = "#fff";
+    closeButton.style.border = "none";
+    closeButton.style.padding = "8px 16px";
+    closeButton.style.borderRadius = "4px";
+    closeButton.style.cursor = "pointer";
+    closeButton.style.marginRight = "10px";
+
+    const discardButton = document.createElement("button");
+    discardButton.textContent = discardText;
+    discardButton.style.backgroundColor = "#007bff";
+    discardButton.style.color = "#fff";
+    discardButton.style.border = "none";
+    discardButton.style.padding = "8px 16px";
+    discardButton.style.borderRadius = "4px";
+    discardButton.style.cursor = "pointer";
+
+    // Add buttons to footer
+    modalFooter.appendChild(closeButton);
+    modalFooter.appendChild(discardButton);
+
+    // Append everything to the modal content
+    modalContent.appendChild(modalHeader);
+    modalContent.appendChild(modalBody);
+    modalContent.appendChild(modalFooter);
+
+    // Append modal content to modal container
+    modalContainer.appendChild(modalContent);
+
+
+    // Button event listeners
+    closeButton.addEventListener("click", () => {
+        closeModal();
+    });
+
+    discardButton.addEventListener("click", () => {
+        onDiscard();
+        closeModal();
+    });
+
+
+    modalContainer.addEventListener("click", (event) => {
+        if (event.target === modalContainer) {
+            closeModal();
+        }
+    });
+
+
+    function closeModal() {
+        modalContainer.remove();
+    }
+     return modalContainer;
+}
+
 
     (() => cleanUpSelections())();
 </script>

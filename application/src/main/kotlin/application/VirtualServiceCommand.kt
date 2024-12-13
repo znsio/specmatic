@@ -8,10 +8,7 @@ import io.specmatic.core.Feature
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
-import io.specmatic.core.utilities.ContractPathData
-import io.specmatic.core.utilities.contractFilePathsFrom
-import io.specmatic.core.utilities.contractStubPaths
-import io.specmatic.core.utilities.exitIfAnyDoNotExist
+import io.specmatic.core.utilities.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.stateful.StatefulHttpStub
 import picocli.CommandLine.Command
@@ -98,7 +95,7 @@ class VirtualServiceCommand  : Callable<Int> {
             Configuration.configFilePath,
             stubData.flatMap { it.second }.also { it.logExamplesCachedAsSeedData() }
         )
-        logger.log("Virtual service started on http://$host:$port")
+        logger.log("Virtual service is running on ${consolePrintableURL(host, port)}. Ctrl + C to stop.")
         latch.await()
     }
 

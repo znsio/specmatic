@@ -374,8 +374,8 @@ data class Feature(
         } != null
     }
 
-    fun matchResultSchemaFlagBased(primaryPatternName: String?, secondaryPatternName: String, value: Value): Result {
-        val updatedResolver = flagsBased.update(scenarios.last().resolver)
+    fun matchResultSchemaFlagBased(primaryPatternName: String?, secondaryPatternName: String, value: Value, mismatchMessages: MismatchMessages): Result {
+        val updatedResolver = flagsBased.update(scenarios.last().resolver).copy(mismatchMessages = mismatchMessages)
         return try {
             val pattern = primaryPatternName ?: secondaryPatternName
             val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(pattern))

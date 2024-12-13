@@ -20,7 +20,7 @@ data class Results(val results: List<Result> = emptyList()) {
         }
 
     fun toResultIfAny(): Result {
-        return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { it.toReport().toText() })
+        return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { it.toReport().toText() }, isPartial = results.all { it.isPartialFailure() })
     }
 
     val failureCount
@@ -95,10 +95,20 @@ data class Results(val results: List<Result> = emptyList()) {
         return Results(uniqueResults)
     }
 
+    fun getResultCounts(): Triple<Int, Int, Int> {
+        val successCount = successCount
+        val failureCount = failureCount
+        val partialFailureCount = results.count { it.isPartialFailure() }
+
+        return Triple(successCount, failureCount - partialFailureCount, partialFailureCount)
+    }
+
     fun summary(): String {
+        val (successCount, failureCount, partialFailureCount) = getResultCounts()
         return when {
-            successCount > 0 && failureCount == 0 -> "All $successCount example(s) are valid."
-            successCount == 0 && failureCount > 0 -> "All $failureCount example(s) are invalid."
+            successCount == results.size -> "All $successCount example(s) are valid."
+            failureCount == results.size -> "All $failureCount example(s) are invalid."
+            partialFailureCount > 0 -> "$successCount example(s) are valid. $failureCount example(s) are invalid. $partialFailureCount example(s) have warnings."
             else -> "$successCount example(s) are valid. $failureCount example(s) are invalid."
         }
     }

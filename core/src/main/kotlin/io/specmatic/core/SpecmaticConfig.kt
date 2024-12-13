@@ -134,6 +134,11 @@ data class SpecmaticConfig(
     val defaultPatternValues: Map<String, Any> = emptyMap()
 ) {
     @JsonIgnore
+    fun attributeSelectionQueryParamKey(): String {
+        return attributeSelectionPattern.queryParamKey
+    }
+
+    @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {
         return (test?.allowExtensibleSchema == true)
     }

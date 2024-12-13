@@ -272,7 +272,7 @@ class StatefulHttpStubTest {
 
     @Order(9)
     @Test
-    fun `should get a 400 response as a string for an invalid get request where 400 sceham is not defined for the same in the spec`() {
+    fun `should get a 400 response as a string for an invalid get request where 400 schema is not defined for the same in the spec`() {
         val response = httpStub.client.execute(
             HttpRequest(
                 method = "GET",
@@ -284,6 +284,7 @@ class StatefulHttpStubTest {
         val responseBody = (response.body as StringValue).toStringLiteral()
         assertThat(responseBody).contains(">> REQUEST.PATH.id")
         assertThat(responseBody).contains("Contract expected number but request contained \"invalid-id\"")
+        assertThat(responseBody).contains("WARNING: The response is in string format since no schema found in the specification for 400 response")
     }
 
     @Test
@@ -314,9 +315,9 @@ class StatefulHttpStubTest {
 
         assertThat(response.status).isEqualTo(404)
         val responseBody = response.body as StringValue
-        assertThat(responseBody.toStringLiteral()).isEqualTo("Resource with resourceId '0' not found")
+        assertThat(responseBody.toStringLiteral()).contains("Resource with resourceId '0' not found")
+        assertThat(responseBody.toStringLiteral()).contains("WARNING: The response is in string format since no schema found in the specification for 404 response")
     }
-
 }
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
@@ -549,7 +550,54 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
     }
 
+    @Test
+    fun `should not load the xiaomi product from the seed data as it has the same id (300) as that of iphone example`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products"
+            )
+        )
 
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = (response.body as JSONArrayValue)
+        assertThat(responseBody.list.size).isEqualTo(4)
+
+        val responseObjectsFromResponseBody = (response.body as JSONArrayValue)
+            .list.filterIsInstance<JSONObjectValue>().filter { it.getStringValue("id") == "300" }
+
+        assertThat(responseObjectsFromResponseBody.size).isEqualTo(1)
+
+        val responseObjectFromResponseBody = responseObjectsFromResponseBody.first()
+        assertThat(responseObjectFromResponseBody.getStringValue("id")).isEqualTo("300")
+        assertThat(responseObjectFromResponseBody.getStringValue("name")).isEqualTo("iPhone 16")
+    }
+
+    @Test
+    fun `should not load the example which has products with ids 500 and 600 as it involves attribute selection`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = (response.body as JSONArrayValue)
+        assertThat(responseBody.list.size).isEqualTo(4)
+
+        val productsWithIds500And600 = (response.body as JSONArrayValue)
+            .list.filterIsInstance<JSONObjectValue>().filter {
+                it.getStringValue("id") == "500" ||
+                        it.getStringValue("id") == "600"
+            }
+
+        assertThat(productsWithIds500And600).isEmpty()
+    }
 }
 
 class StatefulHttpStubConcurrencyTest {

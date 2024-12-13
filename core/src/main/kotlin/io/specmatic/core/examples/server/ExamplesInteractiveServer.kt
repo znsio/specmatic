@@ -163,6 +163,11 @@ class ExamplesInteractiveServer(
                             if(result.isSuccess())
                                 ValidateExampleResponse(request.exampleFile)
                             else {
+                                val breadCrumbs = extractBreadCrumbs(result.reportString())
+                                val transformedPath = transformToJsonPaths(breadCrumbs)
+                                val descriptions = extractDescriptions(result.reportString())
+
+                                ValidateExampleResponseMap(request.exampleFile, transformedPath, descriptions)
                                 ValidateExampleResponse(request.exampleFile, result.reportString(), result.isPartialFailure())
                             }
                         } catch (e: FileNotFoundException) {
@@ -857,6 +862,7 @@ data class ValidateExampleResponse(
 data class ValidateExampleResponseMap(
     val absPath: String,
     val error: List<Map<String, Any?>> = emptyList()
+    val isPartialFailure: Boolean = false
 )
 
 data class GenerateExampleRequest(

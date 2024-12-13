@@ -625,6 +625,10 @@ class ExamplesInteractiveServer(
         }
 
         private fun validateExample(feature: Feature, schemaExample: SchemaExample): Result {
+            if (schemaExample.value is NullValue) {
+                return Result.Success()
+            }
+
             return feature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value, InteractiveExamplesMismatchMessages)
         }
 
@@ -672,13 +676,13 @@ class ExamplesInteractiveServer(
         }
 
         fun File.getExamplesFromDir(): List<ExampleFromFile> {
-            return this.listFiles()?.mapNotNull {
+            return this.listFiles().orEmpty().filter { it.extension == "json" }.mapNotNull {
                 ExampleFromFile.fromFile(it).realise(
                     hasValue = { example, _ -> example },
                     orException = { err -> consoleDebug(exceptionCauseMessage(err.t)); null },
                     orFailure = { null }
                 )
-            } ?: emptyList()
+            }
         }
 
         fun File.getSchemaExamplesWithValidation(feature: Feature): List<Pair<SchemaExample, Result?>> {
@@ -690,13 +694,13 @@ class ExamplesInteractiveServer(
         }
 
         private fun File.getSchemaExamples(): List<SchemaExample> {
-            return this.listFiles()?.mapNotNull {
+            return this.listFiles().orEmpty().filter { it.extension == "json" }.mapNotNull {
                 SchemaExample.fromFile(it).realise(
                     hasValue = { example, _ -> example },
                     orException = { err -> consoleDebug(exceptionCauseMessage(err.t)); null },
                     orFailure = { null }
                 )
-            } ?: emptyList()
+            }
         }
 
         private fun getExampleFileNameBasedOn(

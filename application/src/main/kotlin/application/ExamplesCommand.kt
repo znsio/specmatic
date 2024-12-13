@@ -369,13 +369,14 @@ For example:
 
             val titleTag = tag.split(" ").joinToString(" ") { if (it.isBlank()) it else it.capitalizeFirstChar() }
 
-            if (validationResults.containsFailure()) {
+            if (validationResults.containsFailureWithPartials()) {
                 println()
                 logger.log("=============== $titleTag Validation Results ===============")
 
                 validationResults.forEach { (exampleFileName, result) ->
                     if (!result.isSuccess()) {
-                        logger.log(System.lineSeparator() + "$tag $exampleFileName has the following validation error(s):")
+                        val failureType = if (result.isPartialFailure()) "warning" else "error"
+                        logger.log(System.lineSeparator() + "$tag $exampleFileName has the following validation $failureType(s):")
                         logger.log(result.reportString())
                     }
                 }
@@ -389,6 +390,10 @@ For example:
         }
 
         private fun Map<String, Result>.containsFailure(): Boolean {
+            return this.any { it.value is Result.Failure && !it.value.isPartialFailure() }
+        }
+
+        private fun Map<String, Result>.containsFailureWithPartials(): Boolean {
             return this.any { it.value is Result.Failure }
         }
 

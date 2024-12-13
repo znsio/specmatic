@@ -212,12 +212,7 @@ data class Feature(
         mismatchMessages: MismatchMessages = DefaultMismatchMessages
     ): Pair<ResponseBuilder?, Results> {
         try {
-            val scenarioSequence = scenarios.asSequence()
-
-            val localCopyOfServerState = serverState
-            val resultList = scenarioSequence.zip(scenarioSequence.map {
-                it.matchesStub(httpRequest, localCopyOfServerState, mismatchMessages)
-            })
+            val resultList = matchingScenarioToResultList(httpRequest, serverState, mismatchMessages)
 
             return matchingScenario(resultList)?.let {
                 Pair(ResponseBuilder(it, serverState), Results())
@@ -232,6 +227,49 @@ data class Feature(
         } finally {
             serverState = emptyMap()
         }
+    }
+
+    fun stubResponseMap(
+        httpRequest: HttpRequest,
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages,
+        unexpectedKeyCheck: UnexpectedKeyCheck
+    ): Map<Int, Pair<ResponseBuilder?, Results>> {
+        try {
+            val resultList = matchingScenarioToResultList(httpRequest, serverState, mismatchMessages, unexpectedKeyCheck)
+            val matchingScenarios = matchingScenarios(resultList)
+
+            if(matchingScenarios.toList().isEmpty()) {
+                val results = Results(
+                    resultList.map { it.second }.toList()
+                ).withoutFluff()
+                return mapOf(
+                    400 to Pair(
+                        ResponseBuilder(null, serverState),
+                        results
+                    )
+                )
+            }
+
+            return matchingScenarios.map { (status, scenario) ->
+                status to Pair(ResponseBuilder(scenario, serverState), Results())
+            }.toMap()
+
+        } finally {
+            serverState = emptyMap()
+        }
+    }
+
+    private fun matchingScenarioToResultList(
+        httpRequest: HttpRequest,
+        serverState: Map<String, Value>,
+        mismatchMessages: MismatchMessages,
+        unexpectedKeyCheck: UnexpectedKeyCheck = ValidateUnexpectedKeys
+    ): Sequence<Pair<Scenario, Result>> {
+        val scenarioSequence = scenarios.asSequence()
+
+        return scenarioSequence.zip(scenarioSequence.map {
+            it.matchesStub(httpRequest, serverState, mismatchMessages, unexpectedKeyCheck)
+        })
     }
 
     fun compatibilityLookup(httpRequest: HttpRequest, mismatchMessages: MismatchMessages = NewAndOldContractRequestMismatches): List<Pair<Scenario, Result>> {
@@ -273,6 +311,12 @@ data class Feature(
         return resultList.find {
             it.second is Result.Success
         }?.first
+    }
+
+    private fun matchingScenarios(resultList: Sequence<Pair<Scenario, Result>>): Sequence<Pair<Int, Scenario>> {
+        return resultList.filter { it.second is Result.Success }.map {
+            Pair(it.first.status, it.first)
+        }
     }
 
     private fun lookupScenario(
@@ -330,6 +374,37 @@ data class Feature(
         } != null
     }
 
+    fun matchResultSchemaFlagBased(primaryPatternName: String?, secondaryPatternName: String, value: Value, mismatchMessages: MismatchMessages): Result {
+        val updatedResolver = flagsBased.update(scenarios.last().resolver).copy(mismatchMessages = mismatchMessages)
+        return try {
+            val pattern = primaryPatternName ?: secondaryPatternName
+            val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(pattern))
+            resolvedPattern.matches(value, updatedResolver)
+        } catch (e: Throwable) {
+            Result.Failure(e.message ?: "Couldn't match pattern $primaryPatternName, please check if this exists")
+        }
+    }
+
+    fun getAllDiscriminatorValues(patternName: String): Set<String> {
+        val updatedResolver = flagsBased.update(scenarios.last().resolver)
+        return try {
+            val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(patternName)) as? AnyPattern
+            resolvedPattern?.discriminator?.values.orEmpty()
+        } catch (e: Throwable) {
+            emptySet()
+        }
+    }
+
+    fun generateSchemaFlagBased(primaryPatternName: String?, secondaryPatternName: String): Value {
+        val updatedResolver = flagsBased.update(scenarios.last().resolver)
+        val pattern = primaryPatternName ?: secondaryPatternName
+
+        return when (val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(pattern))) {
+            is AnyPattern -> resolvedPattern.generateValue(updatedResolver, secondaryPatternName)
+            else -> resolvedPattern.generate(updatedResolver)
+        }
+    }
+
     fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {
         return matchResultFlagBased(scenarioStub.request, scenarioStub.response, mismatchMessages)
     }
@@ -347,7 +422,7 @@ data class Feature(
         if(deepErrors.isNotEmpty())
             return Results(deepErrors)
 
-        return Results(listOf(Result.Failure("No matching found for this example")))
+        return Results(listOf(Result.Failure("No matching specification found for this example")))
     }
 
     fun matchResult(request: HttpRequest, response: HttpResponse): Result {
@@ -458,7 +533,7 @@ data class Feature(
         val scenarioStub = ScenarioStub.readFromFile(File(filePath))
 
         val originalScenario = scenarios.firstOrNull { scenario ->
-            scenario.matches(scenarioStub.request, scenarioStub.response) is Result.Success
+            scenario.matches(scenarioStub.request, scenarioStub.response, DefaultMismatchMessages, flagsBased) is Result.Success
         } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
 
         val concreteTestScenario = Scenario(
@@ -486,6 +561,7 @@ data class Feature(
         concreteTestScenario.specification,
         concreteTestScenario.serviceType,
         comment,
+        validators = listOf(ExamplePostValidator),
         workflow = workflow,
         originalScenario = originalScenario
     )
@@ -517,7 +593,9 @@ data class Feature(
     }
 
     private fun positiveTestScenarios(suggestions: List<Scenario>, fn: (Scenario, Row) -> Scenario = { s, _ -> s }): Sequence<Pair<Scenario, ReturnValue<Scenario>>> =
-        scenarios.asSequence().filter { it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario }.map {
+        scenarios.asSequence().filter {
+            it.isA2xxScenario() || it.examples.isNotEmpty() || it.isGherkinScenario
+        }.map {
             it.newBasedOn(suggestions)
         }.flatMap { originalScenario ->
             val resolverStrategies = if(originalScenario.isA2xxScenario())
@@ -1582,19 +1660,20 @@ data class Feature(
         if (!testsDirectory.exists())
             return emptyMap()
 
-        val files = testsDirectory.listFiles()
+        val files = testsDirectory.walk().filterNot { it.isDirectory }.filter {
+            it.extension == "json"
+        }.toList()
 
-        if (files.isNullOrEmpty())
-            return emptyMap()
+        if (files.isEmpty()) return emptyMap()
 
-        val examlesInSubdirectories: Map<OpenApiSpecification.OperationIdentifier, List<Row>> =
+        val examplesInSubdirectories: Map<OpenApiSpecification.OperationIdentifier, List<Row>> =
             files.filter {
                 it.isDirectory
             }.fold(emptyMap()) { acc, item ->
                 acc + loadExternalisedJSONExamples(item)
             }
 
-        return examlesInSubdirectories + files.filterNot { it.isDirectory }.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
+        return examplesInSubdirectories + files.filterNot { it.isDirectory }.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
             try {
                 with(exampleFromFile) {
                     OpenApiSpecification.OperationIdentifier(

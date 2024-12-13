@@ -120,6 +120,10 @@ data class JSONObjectPattern(
         })
     }
 
+    override fun jsonObjectPattern(resolver: Resolver): JSONObjectPattern? {
+        return this
+    }
+
     override fun equals(other: Any?): Boolean = when (other) {
         is JSONObjectPattern -> this.pattern == other.pattern
         else -> false
@@ -236,6 +240,26 @@ data class JSONObjectPattern(
         return JSONArrayValue(valueList)
     }
 
+    private fun shouldMakePropertyMandatory(pattern: Pattern, resolver: Resolver): Boolean {
+        if (!resolver.allPatternsAreMandatory) return false
+
+        val patternToCheck = when(pattern) {
+            is ListPattern -> pattern.typeAlias?.let { pattern } ?: pattern.pattern
+            else -> pattern.typeAlias?.let { pattern } ?: this
+        }
+
+        return !resolver.hasSeenPattern(patternToCheck)
+    }
+
+    private fun addPatternToSeen(pattern: Pattern, resolver: Resolver): Resolver {
+        val patternToAdd = when(pattern) {
+            is ListPattern -> pattern.typeAlias?.let { pattern } ?: pattern.pattern
+            else -> pattern.typeAlias?.let { pattern } ?: this
+        }
+
+        return resolver.addPatternAsSeen(patternToAdd)
+    }
+
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         val resolverWithNullType = withNullPattern(resolver)
         if (sampleData !is JSONObjectValue)
@@ -252,16 +276,26 @@ data class JSONObjectPattern(
             else
                 emptyList()
 
-        val keyErrors: List<Result.Failure> =
-            resolverWithNullType.findKeyErrorList(pattern, sampleData.jsonObject).map {
+        val adjustedPattern = pattern.mapKeys {
+            if (shouldMakePropertyMandatory(it.value, resolver)) {
+                withoutOptionality(it.key)
+            } else it.key
+        }
+
+        val keyErrors: List<Result.Failure> = resolverWithNullType.findKeyErrorList(adjustedPattern, sampleData.jsonObject).map {
+            if (pattern[it.name] != null) {
                 it.missingKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
-            }
+            } else it.missingOptionalKeyToResult("key", resolver.mismatchMessages).breadCrumb(it.name)
+        }
+
+        val updatedResolver = resolverWithNullType.addPatternAsSeen(this)
 
         data class ResultWithDiscriminatorStatus(val result: Result, val isDiscriminator: Boolean)
 
         val resultsWithDiscriminator: List<ResultWithDiscriminatorStatus> =
             mapZip(pattern, sampleData.jsonObject).map { (key, patternValue, sampleValue) ->
-                val result = resolverWithNullType.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
+                val innerResolver = addPatternToSeen(patternValue, updatedResolver)
+                val result = innerResolver.matchesPattern(key, patternValue, sampleValue).breadCrumb(key)
 
                 val isDiscrimintor = patternValue.isDiscriminator()
 
@@ -307,7 +341,7 @@ data class JSONObjectPattern(
             generate(
                 selectPropertiesWithinMaxAndMin(pattern, minProperties, maxProperties),
                 withNullPattern(resolver),
-                typeAlias
+                this
             )
         )
     }
@@ -387,21 +421,52 @@ data class JSONObjectPattern(
     }
 
     override val typeName: String = "json object"
+
+    fun keysInNonOptionalFormat(): Set<String> {
+        return this.pattern.map { withoutOptionality(it.key) }.toSet()
+    }
+
+    fun patternForKey(key: String): Pattern? {
+        return pattern[withoutOptionality(key)] ?: pattern[withOptionality(key)]
+    }
 }
 
-fun generate(jsonPattern: Map<String, Pattern>, resolver: Resolver, typeAlias: String?): Map<String, Value> {
+fun generate(jsonPatternMap: Map<String, Pattern>, resolver: Resolver, jsonPattern: JSONObjectPattern): Map<String, Value> {
     val resolverWithNullType = withNullPattern(resolver)
 
-    val optionalProps = jsonPattern.keys.filter { isOptional(it) }.map { withoutOptionality(it) }
+    val optionalProps = jsonPatternMap.keys.filter { isOptional(it) }.map { withoutOptionality(it) }
 
-    return jsonPattern
+    return jsonPatternMap
         .mapKeys { entry -> withoutOptionality(entry.key) }
         .mapValues { (key, pattern) ->
             attempt(breadCrumb = key) {
                 // Handle cycle (represented by null value) by marking this property as removable
-                Optional.ofNullable(resolverWithNullType.withCyclePrevention(pattern, optionalProps.contains(key)) {
-                    it.generate(typeAlias, key, pattern)
-                })
+                val canBeOmitted = optionalProps.contains(key)
+
+                val value = Optional.ofNullable(
+                    resolverWithNullType.withCyclePrevention(
+                        jsonPattern,
+                        key,
+                        canBeOmitted
+                    ) {
+                        it.generate(jsonPattern.typeAlias, key, pattern)
+                    })
+
+                if (value.isPresent || resolverWithNullType.hasSeenLookupPath(jsonPattern, key))
+                    return@attempt value
+
+                val resolverWithCycleMarker = resolverWithNullType.cyclePast(jsonPattern, key)
+
+                val valueWithOneCycle = Optional.ofNullable(
+                    resolverWithCycleMarker.withCyclePrevention(
+                        jsonPattern,
+                        key,
+                        canBeOmitted
+                    ) {
+                        it.generate(jsonPattern.typeAlias, key, pattern)
+                    })
+
+                valueWithOneCycle
             }
         }
         .filterValues { it.isPresent }

@@ -10,6 +10,7 @@ import io.specmatic.core.pattern.withoutOptionality
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.Value
+import io.specmatic.core.value.mergeWith
 
 object DiscriminatorBasedValueGenerator {
 
@@ -102,7 +103,7 @@ object DiscriminatorBasedValueGenerator {
                     val eventKey = if (eventContainerMap.containsKey("event")) "event" else "event?"
 
                     val updatedEventContainerMap = eventContainerMap.mapValues {
-                        if (it.key == eventKey) return@mapValues discriminatorBasedValue.value
+                        if (it.key == eventKey) return@mapValues it.value.mergeWith(discriminatorBasedValue.value)
                         it.value
                     }
                     discriminatorBasedValue.copy(

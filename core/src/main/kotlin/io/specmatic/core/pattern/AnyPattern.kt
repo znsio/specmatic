@@ -34,11 +34,20 @@ data class AnyPattern(
 
     override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {
         if(keys.isEmpty()) return this
-        if(this.hasNoAmbiguousPatterns().not()) return this
+
+        return this.copy(pattern = this.pattern.map {
+            if (it !is PossibleJsonObjectPatternContainer) return@map it
+            it.removeKeysNotPresentIn(keys, resolver)
+        })
+    }
+
+    override fun jsonObjectPattern(resolver: Resolver): JSONObjectPattern? {
+        if (this.hasNoAmbiguousPatterns().not()) return null
 
         val pattern = this.pattern.first { it !is NullPattern }
-        if(pattern is PossibleJsonObjectPatternContainer) return pattern.removeKeysNotPresentIn(keys, resolver)
-        return this
+        if (pattern is JSONObjectPattern) return pattern
+        if (pattern is PossibleJsonObjectPatternContainer) return pattern.jsonObjectPattern(resolver)
+        return null
     }
 
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
@@ -155,20 +164,40 @@ data class AnyPattern(
     }
 
     override fun generate(resolver: Resolver): Value {
-        return resolver.resolveExample(example, pattern) ?: generateValue(resolver)
+        return resolver.resolveExample(example, pattern)
+            ?: generateValue(resolver)
     }
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {
-        resolver.resolveExample(example, pattern)?.let {
+        val updatedPatterns = discriminator?.let {
+            it.updatePatternsWithDiscriminator(pattern, resolver).let { updatedPatterns ->
+                if(updatedPatterns.any { it !is HasValue<Pattern> }) {
+                    val failures = updatedPatterns.map { pattern ->
+                        when(pattern) {
+                            is HasValue -> null
+                            is HasFailure -> pattern.failure
+                            is HasException -> pattern.toFailure()
+                        }
+                    }.filterNotNull()
+
+                    return sequenceOf(HasFailure(Failure.fromFailures(failures)))
+                }
+
+                updatedPatterns.listFold().value
+            }
+        } ?: pattern
+
+        resolver.resolveExample(example, updatedPatterns)?.let {
             return sequenceOf(HasValue(ExactValuePattern(it)))
         }
 
-        val isNullable = pattern.any { it is NullPattern }
+        val isNullable = updatedPatterns.any { it is NullPattern }
         val patternResults: Sequence<Pair<Sequence<ReturnValue<Pattern>>?, Throwable?>> =
-            pattern.asSequence().sortedBy { it is NullPattern }.map { innerPattern ->
+            updatedPatterns.asSequence().sortedBy { it is NullPattern }.map { innerPattern ->
                 try {
                     val patterns =
                         resolver.withCyclePrevention(innerPattern, isNullable) { cyclePreventedResolver ->
+                            val row = discriminator?.removeKeyFromRow(row) ?: row
                             innerPattern.newBasedOn(row, cyclePreventedResolver).map { it.value }
                         } ?: sequenceOf()
                     Pair(patterns.map { HasValue(it) }, null)
@@ -293,15 +322,50 @@ data class AnyPattern(
         }
     }
 
-    private fun generateValue(resolver: Resolver, discriminatorValue: String = ""): Value {
+    fun generateValue(resolver: Resolver, discriminatorValue: String = ""): Value {
         if (this.isScalarBasedPattern()) {
             return this.pattern.filterNot { it is NullPattern }.let { discriminator?.updatePatternsWithDiscriminator(pattern, resolver)?.listFold()?.value ?: pattern }.first { it is ScalarType }
                 .generate(resolver)
         }
 
-        val updatedPatterns = discriminator?.updatePatternsWithDiscriminator(pattern, resolver)?.listFold()?.value ?: pattern
+        val updatedPatterns =
+            if(discriminator != null)
+                discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().value
+            else
+                pattern
 
-        val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue) ?: updatedPatterns.random()
+        val chosenByDiscriminator = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue)
+        if(chosenByDiscriminator != null)
+            return generate(resolver, chosenByDiscriminator)
+
+        data class GenerationResult(val value: Value? = null, val exception: Throwable? = null) {
+            val isCycle = exception is ContractException && exception.isCycle
+        }
+
+        val generationResults = updatedPatterns.asSequence().map { chosenPattern ->
+            try {
+                GenerationResult(value = generate(resolver, chosenPattern))
+            } catch (e: Throwable) {
+                GenerationResult(exception = e)
+            }
+        }
+
+        val successfulGeneration = generationResults.map { it.value }.filterNotNull().firstOrNull()
+
+        if(successfulGeneration != null)
+            return successfulGeneration
+
+        val cycle = generationResults.filter { it.isCycle }.map { it.exception }.firstOrNull()
+        if(cycle != null)
+            throw cycle
+
+        throw generationResults.firstOrNull { it.exception != null }?.exception ?: ContractException("Could not generate value")
+    }
+
+    private fun generate(
+        resolver: Resolver,
+        chosenPattern: Pattern
+    ): Value {
         val isNullable = pattern.any { it is NullPattern }
         return resolver.withCyclePrevention(chosenPattern, isNullable) { cyclePreventedResolver ->
             when (key) {

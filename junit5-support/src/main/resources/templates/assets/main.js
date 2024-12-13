@@ -18,7 +18,8 @@ const mainElement = document.querySelector("main");
 const responseSummary = document.querySelector("ul#response-summary");
 const scenariosList = document.querySelector("ul#scenarios");
 const reportTable = document.querySelector("table#reports");
-const [coverageTh, firstGroupTh, secondGroupTh, thirdGroupTh, ...rest] = Array.from(document.querySelector("table > thead > tr").children);
+const columns = Array.from(document.querySelector("table > thead > tr").children);
+const [coverageTh, firstGroupTh, secondGroupTh, thirdGroupTh, ...rest] = columns.length > 4 ? columns: [undefined, ...columns];
 
 /* Functions */
 function readJsonData() {

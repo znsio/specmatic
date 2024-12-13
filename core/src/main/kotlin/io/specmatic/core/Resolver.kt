@@ -42,7 +42,11 @@ data class Resolver(
     val generation: GenerationStrategies = NonGenerativeTests,
     val dictionary: Map<String, Value> = emptyMap(),
     val dictionaryLookupPath: String = "",
-    val jsonObjectResolver: JSONObjectResolver = JSONObjectResolver()
+    val jsonObjectResolver: JSONObjectResolver = JSONObjectResolver(),
+    val allPatternsAreMandatory: Boolean = false,
+    val patternsSeenSoFar: Set<String> = setOf(),
+    val lookupPathsSeenSoFar: Set<String> = setOf(),
+    val cycleMarker: String = "",
 ) {
     constructor(facts: Map<String, Value> = emptyMap(), mockMode: Boolean = false, newPatterns: Map<String, Pattern> = emptyMap()) : this(CheckFacts(facts), mockMode, newPatterns)
     constructor() : this(emptyMap(), false)
@@ -63,6 +67,10 @@ data class Resolver(
 
     fun withOnlyMandatoryKeysInJSONObject(): Resolver {
         return this.copy(jsonObjectResolver = this.jsonObjectResolver.copy(allowOnlyMandatoryKeys = true))
+    }
+
+    fun withAllPatternsAsMandatory(): Resolver {
+        return this.copy(allPatternsAreMandatory = true)
     }
 
     fun disableOverrideUnexpectedKeycheck(): Resolver {
@@ -120,11 +128,42 @@ data class Resolver(
         return withCyclePrevention(pattern, false, toResult)!!
     }
 
+    fun <T> withCyclePrevention(pattern: Pattern, key: String, returnNullOnCycle: Boolean = false, toResult: (r: Resolver) -> T) : T? {
+        if(!allPatternsAreMandatory)
+            return withCyclePrevention(pattern, returnNullOnCycle, toResult)
+
+        val lookupPath = lookupPath(pattern.typeAlias, key)
+
+        return try {
+            if (key.isNotBlank() && lookupPathSeen(lookupPath) && cycleMarker.isEmpty()) {
+                // Terminate what would otherwise be an infinite cycle.
+                throw ContractException("Invalid pattern cycle: $lookupPath", isCycle = true)
+            } else if (key.isNotBlank() && lookupPathSeen(lookupPath) && cycleMarker.isNotEmpty()) {
+                toResult(this.clearCycleMarker())
+            } else {
+                toResult(this)
+            }
+        } catch (e: ContractException) {
+            if (!e.isCycle || !returnNullOnCycle)
+                throw e
+
+            // Returns null if (and only if) a cycle has been detected and returnNullOnCycle=true
+            null
+        }
+    }
+
+    private fun clearCycleMarker(): Resolver {
+        return this.copy(cycleMarker = "")
+    }
+
     /**
      * Returns non-null if no cycle. If there is a cycle then ContractException(cycle=true) is thrown - unless
      * returnNullOnCycle=true in which case null is returned. Null is never returned if returnNullOnCycle=false.
      */
     fun <T> withCyclePrevention(pattern: Pattern, returnNullOnCycle: Boolean = false, toResult: (r: Resolver) -> T) : T? {
+        if(allPatternsAreMandatory)
+            return withCyclePrevention(pattern, "", returnNullOnCycle, toResult)
+
         val count = cyclePreventionStack.filter { it == pattern }.size
         val newCyclePreventionStack = cyclePreventionStack.plus(pattern)
 
@@ -168,24 +207,58 @@ data class Resolver(
         if (factStore.has(lookupKey))
             return generate(lookupKey, pattern)
 
-        val lookupPath = if(typeAlias.isNullOrBlank()) {
-            if(lookupKey.isBlank())
-                ""
-            else if(lookupKey == "[*]")
-                "$dictionaryLookupPath$lookupKey"
-            else
-                "$dictionaryLookupPath.$lookupKey"
-        } else {
-            "${withoutPatternDelimiters(typeAlias)}.$lookupKey"
-        }
+        val updatedResolver = updateLookupPath(typeAlias, lookupKey)
 
-        val updatedResolver = if(lookupPath.isNotBlank()) {
-            this.copy(dictionaryLookupPath = lookupPath)
+        return updatedResolver.generate(pattern)
+    }
+
+    fun updateLookupPath(typeAlias: String?, lookupKey: String): Resolver {
+        val lookupPath = lookupPath(typeAlias, lookupKey)
+
+        val updatedResolver = if (lookupPath.isNotBlank()) {
+            val updatedLookupPathsSeenSoFar =
+                if(lookupKey.isNotBlank())
+                    lookupPathsSeenSoFar.plus(lookupPath)
+                else
+                    lookupPathsSeenSoFar
+
+            this.copy(dictionaryLookupPath = lookupPath, lookupPathsSeenSoFar = updatedLookupPathsSeenSoFar)
         } else {
             this
         }
 
-        return updatedResolver.generate(pattern)
+        return updatedResolver
+    }
+
+    private fun lookupPath(typeAlias: String?, lookupKey: String): String {
+        val lookupPath = if (typeAlias.isNullOrBlank()) {
+            if (lookupKey.isBlank())
+                ""
+            else if (lookupKey == "[*]")
+                "$dictionaryLookupPath$lookupKey"
+            else
+                "$dictionaryLookupPath.$lookupKey"
+        } else {
+            if (lookupKey.isBlank())
+                "${withoutPatternDelimiters(typeAlias)}"
+            else
+                "${withoutPatternDelimiters(typeAlias)}.$lookupKey"
+        }
+        return lookupPath
+    }
+
+    fun lookupPathSeen(lookupPath: String): Boolean {
+        if(lookupPath.isBlank())
+            return false
+
+        if(lookupPathsSeenSoFar.contains(lookupPath))
+            return true
+
+        val dotTerminatedPath = "$lookupPath."
+        if(lookupPathsSeenSoFar.any { it.startsWith(dotTerminatedPath) })
+            return true
+
+        return false
     }
 
     fun generateList(pattern: Pattern): Value {
@@ -306,6 +379,26 @@ ${matchResult.reportString()}
 
     fun getDictionaryToken(key: String): Value {
         return dictionary.getValue(key)
+    }
+
+    fun hasSeenPattern(pattern: Pattern): Boolean {
+        return patternsSeenSoFar.contains(pattern.typeAlias)
+    }
+
+    fun hasSeenLookupPath(pattern: Pattern, key: String): Boolean {
+        val lookupPath = lookupPath(pattern.typeAlias, key)
+
+        return lookupPathSeen(lookupPath)
+    }
+
+    fun addPatternAsSeen(pattern: Pattern): Resolver {
+        return this.copy(
+            patternsSeenSoFar = pattern.typeAlias?.let { patternsSeenSoFar.plus(it) } ?: patternsSeenSoFar
+        )
+    }
+
+    fun cyclePast(jsonPattern: Pattern, key: String): Resolver {
+        return this.copy(cycleMarker = lookupPath(jsonPattern.typeAlias, key))
     }
 }
 

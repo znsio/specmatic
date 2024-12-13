@@ -34,6 +34,17 @@ data class DeferredPattern(
         return this
     }
 
+    override fun jsonObjectPattern(resolver: Resolver): JSONObjectPattern? {
+        val resolvedPattern = resolver.withCyclePrevention(this) { updatedResolver ->
+            resolvedHop(this, updatedResolver)
+        }
+        if(resolvedPattern is JSONObjectPattern) return resolvedPattern
+        if(resolvedPattern is PossibleJsonObjectPatternContainer) {
+            return resolvedPattern.jsonObjectPattern(resolver)
+        }
+        return null
+    }
+
     override fun equals(other: Any?): Boolean = when(other) {
         is DeferredPattern -> other.pattern == pattern
         else -> false

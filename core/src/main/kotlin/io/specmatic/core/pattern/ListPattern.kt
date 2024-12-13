@@ -77,9 +77,14 @@ data class ListPattern(
             }
 
         val resolverWithEmptyType = withEmptyType(pattern, resolver)
+        val patternToCheck = this.typeAlias?.let { this } ?: this.pattern
+        if (resolverWithEmptyType.allPatternsAreMandatory && !resolverWithEmptyType.hasSeenPattern(patternToCheck) && sampleData.list.isEmpty()) {
+            return Result.Failure(message = "List cannot be empty")
+        }
 
+        val updatedResolver = resolverWithEmptyType.addPatternAsSeen(this)
         val failures: List<Result.Failure> = sampleData.list.map {
-            resolverWithEmptyType.matchesPattern(null, pattern, it)
+            updatedResolver.matchesPattern(null, pattern, it)
         }.mapIndexed { index, result ->
             ResultWithIndex(index, result)
         }.filter {
@@ -197,6 +202,10 @@ data class ListPattern(
             return this.copy(pattern = pattern.removeKeysNotPresentIn(keys, resolver))
         }
         return this
+    }
+
+    override fun jsonObjectPattern(resolver: Resolver): JSONObjectPattern? {
+        return null
     }
 }
 

@@ -30,6 +30,7 @@ import java.util.concurrent.Callable
             ExamplesCommand::class,
             SamplesCommand::class,
             StubCommand::class,
+            VirtualServiceCommand::class,
             SubscribeCommand::class,
             TestCommand::class,
             ValidateViaLogs::class,

@@ -34,22 +34,22 @@ data class StringPattern (
     private fun regexMinLengthValidation(it: String) {
         val automaton = RegExp(it).toAutomaton()
 
-        minLength?.let { minLen ->
-            val min = automaton.getShortestExample(true).length
-            if (min < minLen) {
-                throw IllegalArgumentException("Invalid Regex - min cannot be less than regex least size")
-            } else if (maxLength != null && min > maxLength) {
-                throw IllegalArgumentException("Invalid Regex - min cannot be more than regex max size")
+        minLength?.let {
+            val shortestPossibleLengthOfRegex = automaton.getShortestExample(true).length
+            if (shortestPossibleLengthOfRegex < it) {
+                throw IllegalArgumentException("Invalid String Constraints - minLength cannot be greater than length of shortest possible string that matches regex")
+            } else if (maxLength != null && shortestPossibleLengthOfRegex > maxLength) {
+                throw IllegalArgumentException("Invalid String Constraints - maxLength cannot be less than length of shortest possible string that matches regex")
             }
         }
     }
 
-    private fun regexMaxLengthValidation(it: String) {
-        maxLength?.let { maxLen ->
-            val generatedString = generateFromRegex(it, maxLen+1)
+    private fun regexMaxLengthValidation(regexWithoutCaretAndDollar: String) {
+        maxLength?.let {
+            val generatedString = generateFromRegex(regexWithoutCaretAndDollar, it+1)
 
-            if (generatedString.length > maxLen) {
-                throw IllegalArgumentException("Invalid Regex - max cannot be more than regex max size")
+            if (generatedString.length > it) {
+                throw IllegalArgumentException("Invalid String Constraints - regex cannot generate / match string greater than maxLength")
             }
         }
     }

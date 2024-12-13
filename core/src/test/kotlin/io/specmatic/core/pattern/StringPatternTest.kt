@@ -4,6 +4,7 @@ import io.specmatic.GENERATION
 import io.specmatic.core.Resolver
 import io.specmatic.core.UseDefaultExample
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
+import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.shouldNotMatch
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import java.lang.Exception
 import io.specmatic.core.Result as Result
 
 internal class StringPatternTest {
@@ -23,7 +25,7 @@ internal class StringPatternTest {
     }
 
     @Test
-    fun `should not be allow maxLength less than minLength`() {
+    fun `should not allow maxLength less than minLength`() {
         val exception = assertThrows<IllegalArgumentException> { StringPattern(minLength = 6, maxLength = 4) }
         assertThat(exception.message).isEqualTo("maxLength cannot be less than minLength")
     }
@@ -39,30 +41,30 @@ internal class StringPatternTest {
     }
 
     @Test
-    fun `should generate random string when minLength`() {
+    fun `should generate random string based on minLength`() {
         assertThat(StringPattern(minLength = 8).generate(Resolver()).toStringLiteral().length).isEqualTo(8)
     }
 
     @Test
-    fun `should match empty String when min and max are not specified`() {
+    fun `should match empty string when min and max are not specified`() {
         assertThat(StringPattern().matches(StringValue(""), Resolver()).isSuccess()).isTrue
     }
 
     @Test
-    fun `should match String of any length when min and max are not specified`() {
+    fun `should match string of any length when min and max are not specified`() {
         val randomString = RandomStringUtils.randomAlphabetic((0..99).random())
         assertThat(StringPattern().matches(StringValue(randomString), Resolver()).isSuccess()).isTrue
     }
 
     @Test
-    fun `should not match when String is shorter than minLength`() {
+    fun `should not match when string is shorter than minLength`() {
         val result = StringPattern(minLength = 4).matches(StringValue("abc"), Resolver())
         assertThat(result.isSuccess()).isFalse
         assertThat(result.reportString()).isEqualTo("""Expected string with minLength 4, actual was "abc"""")
     }
 
     @Test
-    fun `should not match when String is longer than maxLength`() {
+    fun `should not match when string is longer than maxLength`() {
         val result = StringPattern(maxLength = 3).matches(StringValue("test"), Resolver())
         assertThat(result.isSuccess()).isFalse
         assertThat(result.reportString()).isEqualTo("""Expected string with maxLength 3, actual was "test"""")
@@ -75,7 +77,7 @@ internal class StringPatternTest {
         "1, 10, 1",
         "5, 10, 5",
         "6, null, 6",
-        "null, null, 5"
+        "null, null, 5",
     )
     fun `generate string value as per minLength and maxLength`(min: String?, max: String?, expectedLength: Int) {
         val minLength = if (min == "null") null else min?.toInt()
@@ -149,7 +151,7 @@ internal class StringPatternTest {
 
     @Test
     @Tag(GENERATION)
-    fun `negative values should be generated`() {
+    fun `generates other data types and null for negative inputs`() {
         val result = StringPattern().negativeBasedOn(Row(), Resolver()).map { it.value }.toList()
         assertThat(result.map { it.typeName }).containsExactlyInAnyOrder(
             "null",
@@ -263,5 +265,26 @@ internal class StringPatternTest {
             StringPattern(minLength = 6, maxLength = 4)
         }
         assertThat(exception.message).isEqualTo("maxLength cannot be less than minLength")
+    }
+
+    @Test
+    fun `should not allow construction of string with minLength is greater that what is possible with regex`() {
+        val tenOccurrencesOfAlphabetA = "^a{10}\$"
+        assertThrows<Exception> { StringPattern(minLength = 15, maxLength = 20, regex = tenOccurrencesOfAlphabetA) }
+            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - minLength cannot be greater than length of shortest possible string that matches regex") }
+    }
+
+    @Test
+    fun `should not allow construction of string with maxLength is lesser that what is possible with regex`() {
+        val tenOccurrencesOfAlphabetA = "^a{10}\$"
+        assertThrows<Exception> { StringPattern(minLength = 5, maxLength = 8, regex = tenOccurrencesOfAlphabetA) }
+            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - maxLength cannot be less than length of shortest possible string that matches regex") }
+    }
+
+    @Test
+    fun `should not allow construction of string with maxLength is greater that what is possible with regex`() {
+        val fiveToElevenOccurrencesOfAlphabetA = "^a{5,11}\$"
+        assertThrows<Exception> { StringPattern(minLength = 5, maxLength = 10, regex = fiveToElevenOccurrencesOfAlphabetA) }
+            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - regex cannot generate / match string greater than maxLength") }
     }
 }

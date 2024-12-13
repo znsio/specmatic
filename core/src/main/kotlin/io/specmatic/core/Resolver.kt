@@ -188,7 +188,7 @@ data class Resolver(
         if(dictionaryLookupPath.isBlank())
             return pattern.generate(this)
 
-        val value = dictionary[dictionaryLookupPath] ?: return pattern.generate(this)
+        val value = dictionary[dictionaryLookupPath] ?: dictionary[withPatternDelimiters(pattern.typeName)] ?: return pattern.generate(this)
 
         val dictionaryValueMatchResult = pattern.matches(value, this)
 

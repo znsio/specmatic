@@ -37,7 +37,6 @@ import java.util.*
 import java.util.stream.Stream
 import javax.management.ObjectName
 import kotlin.streams.asStream
-import org.json.JSONObject
 
 interface ContractTestStatisticsMBean {
     fun testsExecuted(): Int
@@ -467,33 +466,40 @@ open class SpecmaticJUnitSupport {
         response: HttpResponse?,
         contextMap: MutableMap<String, ScenarioContext>
     ) {
-        // Create a new ScenarioContext
-        val context = ScenarioContext()
+        if (response?.body == null) return
 
-        // Extract the `id` field from the response body
-        response?.body?.let { body ->
-            val jsonObject = (response.body as JSONObjectValue).jsonObject // Assuming `body` is a JSON object
-            val id = jsonObject.get("id")?.toString() // Safely get the "id" as a string
+        scenario.scenario.links.forEach { (_, link) ->
+            val operationId = link.operationId ?: return@forEach
+            val context = contextMap.getOrPut(operationId) { ScenarioContext() }
 
-            // Add the extracted id to the context parameters
-            if (id != null) {
-                context.parameters["id"] = id
+            link.parameters?.forEach { (paramKey, paramValue) ->
+                if (paramValue.toString().startsWith("\$response.body#")) {
+                    val extractedValue = extractValueFromResponse(response.body, paramValue.toString())
+                    if (extractedValue != null) {
+                        context.parameters[paramKey] = extractedValue
+                    }
+                }
             }
         }
-
-        // Update the contextMap with the operationId as the key
-        contextMap[scenario.scenario.links.values.first().operationId!!] = context
     }
 
+    private fun extractValueFromResponse(responseBody: Value, expression: String): String? {
+        try {
+            val path = expression.removePrefix("\$response.body#").trim('/').split('/')
 
-    private fun extractParametersFromResponse(response: HttpResponse?): Map<String, Any> {
-        // Implement logic to extract parameter values from the response
-        return mapOf() // Placeholder
-    }
+            var current: Any? = when (responseBody) {
+                is JSONObjectValue -> responseBody.jsonObject
+                else -> return null
+            }
 
-    private fun extractBodyValuesFromResponse(response: HttpResponse?): Map<String, Any> {
-        // Implement logic to extract body values from the response
-        return mapOf() // Placeholder
+            path.forEach { key ->
+                current = (current as? Map<*, *>)?.get(key)
+            }
+
+            return current?.toString()
+        } catch (e: Exception) {
+            return null
+        }
     }
 
     fun constructTestBaseURL(): String {

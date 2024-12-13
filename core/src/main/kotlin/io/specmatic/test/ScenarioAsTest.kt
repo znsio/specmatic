@@ -88,7 +88,7 @@ data class ScenarioAsTest(
         val request = testScenario.generateHttpRequest(flagsBased).let {
             workflow.updateRequest(it, originalScenario)
         }.let{
-            updateRequestBasedOnLink(it, inputContext)
+            updateRequestBasedOnLink(it, inputContext, originalScenario)
         }
 
         try {
@@ -128,60 +128,81 @@ data class ScenarioAsTest(
         }
     }
 
-    private fun updateRequestBasedOnLink(request: HttpRequest, inputContext: ScenarioContext): HttpRequest {
-        // do nothing if context is empty
-        // otherwise update the path with the id that has been reeive in parameters
-        if (inputContext.isEmpty()) return request
+    private fun updateRequestBasedOnLink(request: HttpRequest, inputContext: ScenarioContext, originalScenario: Scenario): HttpRequest {
 
-//        // Create a mutable copy of the request
-//        var updatedRequest = request.copy()
-//
-//        // Handle parameters
-//        link.parameters?.forEach { (paramName, value) ->
-//            // Parse runtime expression from value
-//            val resolvedValue = resolveRuntimeExpression(value.toString(), previousResponse)
-//
-//            // Update request based on parameter location (path, query, header)
-//            when {
-//                paramName.startsWith("path.") -> {
-//                    val pathParamName = paramName.removePrefix("path.")
-//                    updatedRequest = updatedRequest.updatePathParameter(pathParamName, resolvedValue)
-//                }
-//                paramName.startsWith("query.") -> {
-//                    val queryParamName = paramName.removePrefix("query.")
-//                    updatedRequest = updatedRequest.updateQueryParameter(queryParamName, resolvedValue)
-//                }
-//                paramName.startsWith("header.") -> {
-//                    val headerName = paramName.removePrefix("header.")
-//                    updatedRequest = updatedRequest.updateHeader(headerName, resolvedValue)
-//                }
-//            }
-//        }
-//
-//        // Handle request body if specified
-//        link.requestBody?.let { bodyExpr ->
-//            val resolvedBody = resolveRuntimeExpression(bodyExpr.toString(), previousResponse)
-//            updatedRequest = updatedRequest.updateBody(resolvedBody)
-//        }
+        if(inputContext.isEmpty()) return request
 
-        return request
-    }
+        val updatedRequest = request.copy()
 
-    // Helper function to resolve runtime expressions
-    private fun resolveRuntimeExpression(expression: String, response: HttpResponse): String {
-        return when {
-            expression.startsWith("$response.body#") -> {
-                val jsonPath = expression.removePrefix("$response.body#")
-                // Use JsonPath or similar to extract value from response body
-                JsonPath.parse(response.body).read<String>(jsonPath)
+        val updatedQueryParams = request.queryParams.paramPairs.toMutableList()
+        val updatedHeaders = request.headers.toMutableMap()
+        val updatedPath = StringBuilder(request.path)
+
+        inputContext.parameters.forEach { (key, value) ->
+            when {
+                key.startsWith("path.") -> {
+                    val pathParam = key.removePrefix("path.")
+                    val pathParamIndex = originalScenario.httpRequestPattern.httpPathPattern?.pathSegmentPatterns?.indexOfFirst { it.key == pathParam } ?: -1
+
+                    if (pathParamIndex != -1) {
+                        val pathSegments = updatedPath.split("/").toMutableList()
+                        val indexToUpdate = if(pathSegments.getOrNull(0) == "") pathParamIndex + 1 else pathParamIndex
+                        if (indexToUpdate < pathSegments.size) {
+                            pathSegments[indexToUpdate] = value.toString()
+                            updatedPath.clear()
+                            updatedPath.append(pathSegments.joinToString("/"))
+                        }
+                    }
+                }
+                key.startsWith("query.") -> {
+                    val queryParam = key.removePrefix("query.")
+                    updatedQueryParams.removeIf { it.first == queryParam }
+                    updatedQueryParams.add(queryParam to value.toString())
+                }
+                key.startsWith("header.") -> {
+                    val headerKey = key.removePrefix("header.")
+                    updatedHeaders[headerKey] = value.toString()
+                }
+                key.startsWith("cookie.") -> {
+                    // Handle cookies (not shown in the provided HttpRequest structure, so skipping this for now)
+                }
+                else -> {
+                    // Search for the parameter in all sections (path, query, header)
+                    val paramName = key
+
+                    // Search in path
+                    val pathParamIndex = originalScenario.httpRequestPattern.httpPathPattern?.pathSegmentPatterns?.indexOfFirst { it.key == paramName } ?: -1
+                    if (pathParamIndex != -1) {
+                        val pathSegments = updatedPath.split("/").toMutableList()
+                        val indexToUpdate = if(pathSegments.getOrNull(0) == "") pathParamIndex + 1 else pathParamIndex
+                        if (indexToUpdate < pathSegments.size) {
+                            pathSegments[indexToUpdate] = value.toString()
+                            updatedPath.clear()
+                            updatedPath.append(pathSegments.joinToString("/"))
+                        }
+                    }
+
+                    // Search in query
+                    val existingQuery = updatedQueryParams.find { it.first == paramName }
+                    if (existingQuery != null) {
+                        updatedQueryParams.remove(existingQuery)
+                        updatedQueryParams.add(paramName to value.toString())
+                    }
+
+                    // Search in headers
+                    if (updatedHeaders.containsKey(paramName)) {
+                        updatedHeaders[paramName] = value.toString()
+                    }
+                }
             }
-            expression.startsWith("$response.header.") -> {
-                val headerName = expression.removePrefix("$response.header.")
-                response.headers[headerName] ?: ""
-            }
-            // Add other cases for different runtime expressions
-            else -> expression
         }
+
+        return updatedRequest.copy(
+            path = updatedPath.toString(),
+            headers = updatedHeaders.toMap(),
+            queryParams = QueryParameters(updatedQueryParams),
+            body = request.body
+        )
     }
 
     private fun testResult(request: HttpRequest, response: HttpResponse, testScenario: Scenario, flagsBased: FlagsBased): Result {

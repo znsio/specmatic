@@ -626,7 +626,7 @@ class ExamplesInteractiveServer(
 
         private fun validateExample(feature: Feature, schemaExample: SchemaExample): Result {
             if (schemaExample.value is NullValue) {
-                return Result.Success()
+                return Result.Failure("Empty Resource Example", isPartial = true)
             }
 
             return feature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value, InteractiveExamplesMismatchMessages)

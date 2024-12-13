@@ -1,6 +1,5 @@
 package io.specmatic.test
 
-import com.jayway.jsonpath.JsonPath
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
 import io.specmatic.core.log.HttpLogMessage

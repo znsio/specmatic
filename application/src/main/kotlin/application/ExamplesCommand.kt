@@ -612,7 +612,8 @@ For example:
         @Option(names = ["--base"], description = ["Base dictionary"], required = false)
         private var baseDictionaryFile: File? = null
 
-        private val patternsToDefaultDictionary: MutableMap<String, Map<String, Value>> = mutableMapOf()
+        @Option(names = ["--out", "o"], description = ["Output file path, defaults to contractfile_dictionary.json"], required = false)
+        private var outputFilePath: File? = null
 
         override fun call() {
             val baseDictionary = getBaseDictionary()
@@ -634,7 +635,7 @@ For example:
                 consoleLog("\nNo Values created in dictionary, Processed $examplesCount examples")
             }
 
-            val dictionaryFile = File(contractFile.parentFile, "${contractFile.nameWithoutExtension}_dictionary.json")
+            val dictionaryFile = outputFilePath ?: File(contractFile.parentFile, "${contractFile.nameWithoutExtension}_dictionary.json")
             val combinedDictionary = baseDictionary.plus(dictionary)
             dictionaryFile.writeText(JSONObjectValue(combinedDictionary).toStringLiteral())
             consoleLog("\nDictionary written to ${dictionaryFile.canonicalPath}")
@@ -658,25 +659,13 @@ For example:
 
         private fun Value.toDictionary(pattern: Pattern, resolver: Resolver): Map<String, Value> {
             return pattern.getTypeAlias(this, resolver)?.let {
-                pattern.toDefaultDictionary(resolver, it) + this.traverse(
+                this.traverse(
                     prefix = it,
                     onScalar = { scalar, prefix -> scalar.handleScalar(this, pattern, prefix, resolver) },
                     onComposite = { composite, prefix -> composite.handleComposite(this, pattern, prefix, resolver) },
                     onAssert = { _, _ -> emptyMap() }
                 )
             }.orEmpty()
-        }
-
-        private fun Pattern.toDefaultDictionary(resolver: Resolver, typeAlias: String): Map<String, Value> {
-            return patternsToDefaultDictionary.computeIfAbsent(typeAlias) {
-                val defaultValue = this.toDefault()
-                defaultValue.traverse(
-                    prefix = typeAlias,
-                    onScalar = { scalar, prefix -> scalar.handleScalar(defaultValue, this, prefix, resolver) },
-                    onComposite = { composite, prefix -> composite.handleComposite(defaultValue, this, prefix, resolver) },
-                    onAssert = { _, _ -> emptyMap() }
-                )
-            }
         }
 
         private fun Value.handleComposite(patternValue: Value, pattern: Pattern, prefix: String, resolver: Resolver): Map<String, Value> {

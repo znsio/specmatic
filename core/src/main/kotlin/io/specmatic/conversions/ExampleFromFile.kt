@@ -2,7 +2,6 @@ package io.specmatic.conversions
 
 import io.specmatic.core.*
 import io.specmatic.core.examples.server.SchemaExample
-import io.specmatic.core.examples.server.SchemaExample.Companion.SCHEMA_BASED
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.URIUtils.parseQuery
@@ -15,6 +14,15 @@ import java.io.File
 import java.net.URI
 
 class ExampleFromFile(val json: JSONObjectValue, val file: File) {
+    companion object {
+        fun fromFile(file: File): ReturnValue<ExampleFromFile> {
+            if (SchemaExample.matchesFilePattern(file)) {
+                return HasFailure("Skipping file ${file.canonicalPath}, because it contains schema-based example")
+            }
+            return HasValue(ExampleFromFile(file))
+        }
+    }
+
     fun toRow(specmaticConfig: SpecmaticConfig = SpecmaticConfig()): Row {
         logger.log("Loading test file ${this.expectationFilePath}")
 
@@ -47,12 +55,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         ).let { ExampleProcessor.resolveLookupIfPresent(it) }
     }
 
-    constructor(file: File) : this(
-        json = if (SchemaExample.matchesFilePattern(file)) {
-            throw ContractException(breadCrumb = SCHEMA_BASED, errorMessage = "Skipping file ${file.canonicalPath}, because it contains schema-based example")
-        } else attempt("Error reading example file ${file.canonicalPath}") {parsedJSONObject(file.readText()) },
-        file = file
-    )
+    constructor(file: File) : this(json = attempt("Error reading example file ${file.canonicalPath}") { parsedJSONObject(file.readText()) }, file = file)
 
     private fun JSONObjectValue.findByPath(path: String): Value? {
         return  findFirstChildByPath("partial.$path") ?: findFirstChildByPath(path)

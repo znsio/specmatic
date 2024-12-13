@@ -375,8 +375,9 @@ For example:
 
                 validationResults.forEach { (exampleFileName, result) ->
                     if (!result.isSuccess()) {
-                        val failureType = if (result.isPartialFailure()) "warning" else "error"
-                        logger.log(System.lineSeparator() + "$tag $exampleFileName has the following validation $failureType(s):")
+                        val errorPrefix = if (result.isPartialFailure()) "Warning" else "Error"
+
+                        logger.log("\n$errorPrefix(s) found in the following $tag $exampleFileName:")
                         logger.log(result.reportString())
                     }
                 }

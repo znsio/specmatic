@@ -821,7 +821,7 @@ object InteractiveExamplesMismatchMessages : MismatchMessages {
     }
 
     override fun optionalKeyMissing(keyLabel: String, keyName: String): String {
-        return "Optional ${keyLabel.capitalizeFirstChar()} $keyName in the specification is missing from the example"
+        return "Warning: Optional ${keyLabel.capitalizeFirstChar()} $keyName in the specification is missing from the example"
     }
 
     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {

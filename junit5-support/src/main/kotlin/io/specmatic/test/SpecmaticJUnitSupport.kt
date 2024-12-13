@@ -37,7 +37,7 @@ import java.util.*
 import java.util.stream.Stream
 import javax.management.ObjectName
 import kotlin.streams.asStream
-
+import org.json.JSONObject
 
 interface ContractTestStatisticsMBean {
     fun testsExecuted(): Int
@@ -342,42 +342,158 @@ open class SpecmaticJUnitSupport {
 
         logger.newLine()
 
-        return testScenarios.map { contractTest ->
-            DynamicTest.dynamicTest(contractTest.testDescription()) {
-                threads.add(Thread.currentThread().name)
+        val scenarios = testScenarios.toList()
 
-                var testResult: Pair<Result, HttpResponse?>? = null
+        val hasLinks = scenarios.any { scenario ->
+            scenario is ScenarioAsTest && scenario.scenario.links.isNotEmpty()
+        }
 
-                try {
-                    testResult = contractTest.runTest(testBaseURL, timeoutInMilliseconds)
-                    val (result, response) = testResult
+        if (!hasLinks) {
+            // Old flow for backward compatibility with OAS versions < 3.0
+            return scenarios.map { contractTest ->
+                DynamicTest.dynamicTest(contractTest.testDescription()) {
+                    executeSingleScenario(contractTest, testBaseURL, timeoutInMilliseconds)
+                }
+            }.stream()
+        }
 
-                    if (result is Result.Success && result.isPartialSuccess()) {
-                        partialSuccesses.add(result)
-                    }
+        // Collect all scenarios (root and linked) into DynamicTests
+        val allDynamicTests = mutableListOf<DynamicTest>()
+        // Shared context map to hold the context for each operation
+        val contextMap = mutableMapOf<String, ScenarioContext>()
 
-                    when {
-                        result.shouldBeIgnored() -> {
-                            val message =
-                                "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${
-                                    result.toReport().toText().prependIndent("  ")
-                                }"
-                            throw TestAbortedException(message)
-                        }
+        val targetOperationIds = scenarios.filterIsInstance<ScenarioAsTest>()
+            .flatMap { scenario ->
+                scenario.scenario.links.values.map { link -> link.operationId }
+            }.toSet()
 
-                        else -> ResultAssert.assertThat(result).isSuccess()
-                    }
+        val rootScenarios = scenarios.filterIsInstance<ScenarioAsTest>()
+            .filter { scenario ->
+                !targetOperationIds.contains(scenario.scenario.operationId)
+            }
 
-                } catch (e: Throwable) {
-                    throw e
-                } finally {
-                    if (testResult != null) {
-                        val (result, response) = testResult
-                        contractTest.testResultRecord(result, response)?.let { testREsultRecord -> openApiCoverageReportInput.addTestReportRecords(testREsultRecord) }
-                    }
+        rootScenarios.forEach { rootScenario ->
+            allDynamicTests.addAll(
+                generateScenarioChainTests(
+                    rootScenario,
+                    scenarios.filterIsInstance<ScenarioAsTest>(),
+                    testBaseURL,
+                    timeoutInMilliseconds,
+                    contextMap
+                )
+            )
+        }
+
+        return allDynamicTests.stream()
+    }
+
+    private fun generateScenarioChainTests(
+        currentScenario: ScenarioAsTest,
+        allScenarios: List<ScenarioAsTest>,
+        testBaseURL: String,
+        timeoutInMilliseconds: Long,
+        contextMap: MutableMap<String, ScenarioContext>
+    ): List<DynamicTest> {
+        val tests = mutableListOf<DynamicTest>()
+
+        // Add the current scenario as a DynamicTest
+        tests.add(
+            DynamicTest.dynamicTest(currentScenario.testDescription()) {
+                executeSingleScenario(currentScenario, testBaseURL, timeoutInMilliseconds, contextMap)
+            }
+        )
+
+        // Generate DynamicTests for linked scenarios
+        currentScenario.scenario.links.values.forEach { link ->
+            val linkedScenario = allScenarios.find { scenario ->
+                scenario.scenario.operationId == link.operationId
+            }
+
+            linkedScenario?.let {
+                tests.addAll(
+                    generateScenarioChainTests(it, allScenarios, testBaseURL, timeoutInMilliseconds, contextMap)
+                )
+            }
+        }
+
+        return tests
+    }
+
+    private fun executeSingleScenario(
+        contractTest: ContractTest,
+        testBaseURL: String,
+        timeoutInMilliseconds: Long,
+        contextMap: MutableMap<String, ScenarioContext> = mutableMapOf()
+    ) {
+        contractTest as ScenarioAsTest
+        val inputContext = contextMap[contractTest.scenario.operationId] ?: ScenarioContext()
+        var testResult: Pair<Result, HttpResponse?>? = null
+        try {
+            testResult = contractTest.runTest(testBaseURL, timeoutInMilliseconds, inputContext)
+            val (result, response) = testResult
+
+            if(result is Result.Success && contractTest.scenario.links.isNotEmpty())
+            {
+                updateContextMap(contractTest, result, response, contextMap)
+            }
+
+            if (result is Result.Success && result.isPartialSuccess()) {
+                partialSuccesses.add(result)
+            }
+
+            when {
+                result.shouldBeIgnored() -> {
+                    val message = "Test FAILED, ignoring since the scenario is tagged @WIP${System.lineSeparator()}${
+                        result.toReport().toText().prependIndent("  ")
+                    }"
+                    throw TestAbortedException(message)
+                }
+                else -> ResultAssert.assertThat(result).isSuccess()
+            }
+        } catch (e: Throwable) {
+            throw e
+        } finally {
+            testResult?.let { (result, response) ->
+                contractTest.testResultRecord(result, response)?.let { testResultRecord ->
+                    openApiCoverageReportInput.addTestReportRecords(testResultRecord)
                 }
             }
-        }.asStream()
+        }
+    }
+
+    private fun updateContextMap(
+        scenario: ScenarioAsTest,
+        result: Result,
+        response: HttpResponse?,
+        contextMap: MutableMap<String, ScenarioContext>
+    ) {
+        // Create a new ScenarioContext
+        val context = ScenarioContext()
+
+        // Extract the `id` field from the response body
+        response?.body?.let { body ->
+            val jsonObject = (response.body as JSONObjectValue).jsonObject // Assuming `body` is a JSON object
+            val id = jsonObject.get("id")?.toString() // Safely get the "id" as a string
+
+            // Add the extracted id to the context parameters
+            if (id != null) {
+                context.parameters["id"] = id
+            }
+        }
+
+        // Update the contextMap with the operationId as the key
+        contextMap[scenario.scenario.links.values.first().operationId!!] = context
+    }
+
+
+    private fun extractParametersFromResponse(response: HttpResponse?): Map<String, Any> {
+        // Implement logic to extract parameter values from the response
+        return mapOf() // Placeholder
+    }
+
+    private fun extractBodyValuesFromResponse(response: HttpResponse?): Map<String, Any> {
+        // Implement logic to extract body values from the response
+        return mapOf() // Placeholder
     }
 
     fun constructTestBaseURL(): String {

@@ -34,6 +34,9 @@ dependencies {
     implementation 'org.junit.platform:junit-platform-launcher:1.11.3'
     implementation 'org.junit.platform:junit-platform-reporting:1.11.3'
     implementation 'org.fusesource.jansi:jansi:2.4.1'
+
+    implementation("com.jayway.jsonpath:json-path:2.9.0")
+    implementation 'org.json:json:20240303'
 }
 
 test {

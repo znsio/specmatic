@@ -19,11 +19,11 @@ class ScenarioTestGenerationFailure(
         return scenario.testDescription()
     }
 
-    override fun runTest(testBaseURL: String, timeoutInMilliseconds: Long): Pair<Result, HttpResponse?> {
+    override fun runTest(testBaseURL: String, timeoutInMilliseconds: Long, inputContext: ScenarioContext): Pair<Result, HttpResponse?> {
         return Pair(failure.updateScenario(scenario), null)
     }
 
-    override fun runTest(testExecutor: TestExecutor): Pair<Result, HttpResponse?> {
+    override fun runTest(testExecutor: TestExecutor, inputContext: ScenarioContext): Pair<Result, HttpResponse?> {
         return Pair(failure.updateScenario(scenario), null)
     }
 

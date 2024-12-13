@@ -20,8 +20,8 @@ interface ContractTest {
     fun toScenarioMetadata(): ScenarioMetadata
     fun testResultRecord(result: Result, response: HttpResponse?): TestResultRecord?
     fun testDescription(): String
-    fun runTest(testBaseURL: String, timeoutInMilliseconds: Long): Pair<Result, HttpResponse?>
-    fun runTest(testExecutor: TestExecutor): Pair<Result, HttpResponse?>
+    fun runTest(testBaseURL: String, timeoutInMilliseconds: Long, inputContext: ScenarioContext = ScenarioContext()): Pair<Result, HttpResponse?>
+    fun runTest(testExecutor: TestExecutor, inputContext: ScenarioContext = ScenarioContext()): Pair<Result, HttpResponse?>
 
     fun plusValidator(validator: ResponseValidator): ContractTest
 }

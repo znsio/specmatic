@@ -20,7 +20,9 @@ data class ScenarioInfo(
     val sourceRepository:String? = null,
     val sourceRepositoryBranch:String? = null,
     val specification:String? = null,
-    val serviceType:String? = null
+    val serviceType:String? = null,
+    val links: Map<String, Link> = emptyMap(),
+    val operationId: String? = null,
 ) {
 
     fun matchesGherkinWrapperPath(scenarioInfos: List<ScenarioInfo>, apiSpecification: ApiSpecification): List<ScenarioInfo> =

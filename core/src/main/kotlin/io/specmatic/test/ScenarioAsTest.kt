@@ -1,5 +1,6 @@
 package io.specmatic.test
 
+import com.jayway.jsonpath.JsonPath
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
 import io.specmatic.core.log.HttpLogMessage
@@ -50,19 +51,19 @@ data class ScenarioAsTest(
         return scenario.testDescription()
     }
 
-    override fun runTest(testBaseURL: String, timeoutInMilliseconds: Long): Pair<Result, HttpResponse?> {
+    override fun runTest(testBaseURL: String, timeoutInMilliseconds: Long, inputContext: ScenarioContext): Pair<Result, HttpResponse?> {
         val log: (LogMessage) -> Unit = { logMessage ->
             logger.log(logMessage.withComment(this.annotations))
         }
 
         val httpClient = HttpClient(testBaseURL, log = log, timeoutInMilliseconds = timeoutInMilliseconds)
 
-        return runTest(httpClient)
+        return runTest(httpClient, inputContext)
     }
 
-    override fun runTest(testExecutor: TestExecutor): Pair<Result, HttpResponse?> {
+    override fun runTest(testExecutor: TestExecutor, inputContext: ScenarioContext): Pair<Result, HttpResponse?> {
 
-        val (result, response) = executeTestAndReturnResultAndResponse(scenario, testExecutor, flagsBased)
+        val (result, response) = executeTestAndReturnResultAndResponse(scenario, testExecutor, flagsBased, inputContext)
         return Pair(result.updateScenario(scenario), response)
     }
 
@@ -81,10 +82,13 @@ data class ScenarioAsTest(
     private fun executeTestAndReturnResultAndResponse(
         testScenario: Scenario,
         testExecutor: TestExecutor,
-        flagsBased: FlagsBased
+        flagsBased: FlagsBased,
+        inputContext: ScenarioContext
     ): Pair<Result, HttpResponse?> {
         val request = testScenario.generateHttpRequest(flagsBased).let {
             workflow.updateRequest(it, originalScenario)
+        }.let{
+            updateRequestBasedOnLink(it, inputContext)
         }
 
         try {
@@ -121,6 +125,62 @@ data class ScenarioAsTest(
             return Pair(
                 Result.Failure(exceptionCauseMessage(exception))
                 .also { failure -> failure.updateScenario(testScenario) }, null)
+        }
+    }
+
+    private fun updateRequestBasedOnLink(request: HttpRequest, inputContext: ScenarioContext): HttpRequest {
+        // do nothing if context is empty
+        // otherwise update the path with the id that has been reeive in parameters
+        if (inputContext.isEmpty()) return request
+
+//        // Create a mutable copy of the request
+//        var updatedRequest = request.copy()
+//
+//        // Handle parameters
+//        link.parameters?.forEach { (paramName, value) ->
+//            // Parse runtime expression from value
+//            val resolvedValue = resolveRuntimeExpression(value.toString(), previousResponse)
+//
+//            // Update request based on parameter location (path, query, header)
+//            when {
+//                paramName.startsWith("path.") -> {
+//                    val pathParamName = paramName.removePrefix("path.")
+//                    updatedRequest = updatedRequest.updatePathParameter(pathParamName, resolvedValue)
+//                }
+//                paramName.startsWith("query.") -> {
+//                    val queryParamName = paramName.removePrefix("query.")
+//                    updatedRequest = updatedRequest.updateQueryParameter(queryParamName, resolvedValue)
+//                }
+//                paramName.startsWith("header.") -> {
+//                    val headerName = paramName.removePrefix("header.")
+//                    updatedRequest = updatedRequest.updateHeader(headerName, resolvedValue)
+//                }
+//            }
+//        }
+//
+//        // Handle request body if specified
+//        link.requestBody?.let { bodyExpr ->
+//            val resolvedBody = resolveRuntimeExpression(bodyExpr.toString(), previousResponse)
+//            updatedRequest = updatedRequest.updateBody(resolvedBody)
+//        }
+
+        return request
+    }
+
+    // Helper function to resolve runtime expressions
+    private fun resolveRuntimeExpression(expression: String, response: HttpResponse): String {
+        return when {
+            expression.startsWith("$response.body#") -> {
+                val jsonPath = expression.removePrefix("$response.body#")
+                // Use JsonPath or similar to extract value from response body
+                JsonPath.parse(response.body).read<String>(jsonPath)
+            }
+            expression.startsWith("$response.header.") -> {
+                val headerName = expression.removePrefix("$response.header.")
+                response.headers[headerName] ?: ""
+            }
+            // Add other cases for different runtime expressions
+            else -> expression
         }
     }
 

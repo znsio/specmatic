@@ -120,6 +120,7 @@ class OpenApiSpecification(
             specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
             overlayContent: String = ""
         ): OpenApiSpecification {
+            // Read implicit overlay file.
             val implicitOverlayFile = File(openApiFilePath).let { openApiFile ->
                 if(!openApiFile.isFile)
                     return@let ""
@@ -453,6 +454,9 @@ class OpenApiSpecification(
                         val (httpRequestPattern, requestExamples: Map<String, List<HttpRequest>>, openApiRequest) = requestPatternData
                         val (response, _: MediaType, httpResponsePattern, responseExamples: Map<String, HttpResponse>) = responsePatternData
 
+                        val links = attempt("In $httpMethod $openApiPath response links"){
+                            extractLinksFromResponse(response)
+                        }
                         val specmaticExampleRows: List<Row> =
                             testRowsFromExamples(responseExamples, requestExamples, operation, openApiRequest, first2xxResponseStatus)
                         val scenarioName = scenarioName(operation, response, httpRequestPattern)
@@ -472,7 +476,9 @@ class OpenApiSpecification(
                             sourceRepository = sourceRepository,
                             sourceRepositoryBranch = sourceRepositoryBranch,
                             specification = specificationPath,
-                            serviceType = SERVICE_TYPE_HTTP
+                            serviceType = SERVICE_TYPE_HTTP,
+                            links = links,
+                            operationId = operation.operationId,
                         )
                     }
 
@@ -543,6 +549,27 @@ class OpenApiSpecification(
 
         logger.newLine()
         return scenarioInfos to examples
+    }
+
+    private fun extractLinksFromResponse(response: ApiResponse): Map<String, Link> {
+        return try {
+            response.links?.let { links ->
+                links.mapValues { (_, linkValue) ->
+                    Link(
+                        operationId = linkValue.operationId,
+                        operationRef = linkValue.operationRef,
+                        parameters = linkValue.parameters?.mapValues { it.value.toString() } ?: emptyMap(),
+                        requestBody = linkValue.requestBody?.toString(),
+                        description = linkValue.description,
+                        server = linkValue.server?.let {
+                            LinkServer(it.url, it.description)
+                        }
+                    )
+                }
+            } ?: emptyMap()
+        } catch (e: Exception) {
+            emptyMap()
+        }
     }
 
 

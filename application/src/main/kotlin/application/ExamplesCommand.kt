@@ -6,7 +6,7 @@ import io.specmatic.core.Results
 import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.externaliseInlineExamples
-import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateSingleExample
+import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.validateExample
 import io.specmatic.core.examples.server.defaultExternalExampleDirFrom
 import io.specmatic.core.examples.server.loadExternalExamples
 import io.specmatic.core.log.*
@@ -107,6 +107,13 @@ For example:
     )
     var filterNot: List<String> = emptyList()
 
+    @Option(
+        names = ["--allow-only-mandatory-keys-in-payload"],
+        description = ["Generate examples with only mandatory keys in the json request and response payloads"],
+        required = false
+    )
+    var allowOnlyMandatoryKeysInJSONObject: Boolean = false
+
     override fun call(): Int {
         if (contractFile == null) {
             println("No contract file provided. Use a subcommand or provide a contract file. Use --help for more details.")
@@ -127,7 +134,7 @@ For example:
             ExamplesInteractiveServer.generate(
                 contractFile!!,
                 ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter, filterNot),
-                extensive,
+                extensive, allowOnlyMandatoryKeysInJSONObject
             )
         } catch (e: Throwable) {
             logger.log(e)
@@ -222,6 +229,8 @@ For example:
         var filterNotName: String = ""
 
         override fun call(): Int {
+            configureLogger(this.verbose)
+
             if (contractFile != null && exampleFile != null) return validateExampleFile(contractFile!!, exampleFile)
 
             if (contractFile != null && examplesDir != null) {
@@ -229,7 +238,7 @@ For example:
 
                 printValidationResult(validationResults, "Example directory")
                 if (exitCode == 1) return FAILURE_EXIT_CODE
-                if (validationResults.containsFailure()) return FAILURE_EXIT_CODE
+                if (validationResults.containsOnlyCompleteFailures()) return FAILURE_EXIT_CODE
                 return SUCCESS_EXIT_CODE
             }
 
@@ -254,11 +263,8 @@ For example:
                 return FAILURE_EXIT_CODE
             }
 
-            configureLogger(this.verbose)
-
             try {
-                validateSingleExample(contractFile, exampleFile).throwOnFailure()
-
+                validateExample(contractFile, exampleFile).throwOnFailure()
                 logger.log("The provided example ${exampleFile.name} is valid.")
                 return SUCCESS_EXIT_CODE
             } catch (e: ContractException) {
@@ -268,7 +274,7 @@ For example:
             }
         }
 
-        private fun validateExamplesDir(contractFile: File, examplesDir: File, enableLogging: Boolean = true): Pair<Int, Map<String, Result>> {
+        private fun validateExamplesDir(contractFile: File, examplesDir: File): Pair<Int, Map<String, Result>> {
             val feature = parseContractFileToFeature(contractFile)
             val (externalExampleDir, externalExamples) = loadExternalExamples(examplesDir = examplesDir)
             if (!externalExampleDir.exists()) {
@@ -279,18 +285,15 @@ For example:
                 logger.log("No example files found in $externalExampleDir")
                 return FAILURE_EXIT_CODE to emptyMap()
             }
-            return SUCCESS_EXIT_CODE to validateExternalExamples(feature, externalExamples, enableLogging)
+            return SUCCESS_EXIT_CODE to validateExternalExamples(feature, externalExamples)
         }
 
-        private fun validateAllExamplesAssociatedToEachSpecIn(
-            specsDir: File,
-            examplesBaseDir: File
-        ): Int {
+        private fun validateAllExamplesAssociatedToEachSpecIn(specsDir: File, examplesBaseDir: File): Int {
             val validationResults = specsDir.walk().filter { it.isFile }.flatMapIndexed { index, it ->
                 val associatedExamplesDir = examplesBaseDir.associatedExampleDirFor(it) ?: return@flatMapIndexed emptyList()
 
                 logger.log("${index.inc()}. Validating examples in ${associatedExamplesDir.name} associated to ${it.name}...${System.lineSeparator()}")
-                val results = validateExamplesDir(it, associatedExamplesDir, false).second.entries.map { entry ->
+                val results = validateExamplesDir(it, associatedExamplesDir).second.entries.map { entry ->
                     entry.toPair()
                 }
 
@@ -300,7 +303,7 @@ For example:
             }.toMap()
             logger.log("Summary:")
             printValidationResult(validationResults, "Overall")
-            if (validationResults.containsFailure()) return FAILURE_EXIT_CODE
+            if (validationResults.containsOnlyCompleteFailures()) return FAILURE_EXIT_CODE
             return SUCCESS_EXIT_CODE
         }
 
@@ -321,7 +324,7 @@ For example:
             }
 
             val hasFailures =
-                inlineExampleValidationResults.containsFailure() || externalExampleValidationResults.containsFailure()
+                inlineExampleValidationResults.containsOnlyCompleteFailures() || externalExampleValidationResults.containsOnlyCompleteFailures()
 
             printValidationResult(inlineExampleValidationResults, "Inline example")
             printValidationResult(externalExampleValidationResults, "Example file")
@@ -331,38 +334,22 @@ For example:
         }
 
         private fun validateInlineExamples(feature: Feature): Map<String, Result> {
-            return ExamplesInteractiveServer.validateExamples(
+            return ExamplesInteractiveServer.validateInlineExamples(
                 feature,
                 examples = feature.stubsFromExamples.mapValues { (_, stub) ->
                     stub.map { (request, response) ->
                         ScenarioStub(request, response)
                     }
                 },
-                inline = true,
-                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(
-                    filterName,
-                    filterNotName,
-                    filter,
-                    filterNot
-                )
+                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter, filterNot)
             )
         }
 
-        private fun validateExternalExamples(
-            feature: Feature,
-            externalExamples: List<File>,
-            enableLogging: Boolean = true
-        ): Map<String, Result> {
+        private fun validateExternalExamples(feature: Feature, externalExamples: List<File>): Map<String, Result> {
             return ExamplesInteractiveServer.validateExamples(
                 feature,
                 examples = externalExamples,
-                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(
-                    filterName,
-                    filterNotName,
-                    filter,
-                    filterNot
-                ),
-                enableLogging = enableLogging
+                scenarioFilter = ExamplesInteractiveServer.ScenarioFilter(filterName, filterNotName, filter, filterNot)
             )
         }
 
@@ -382,13 +369,15 @@ For example:
 
             val titleTag = tag.split(" ").joinToString(" ") { if (it.isBlank()) it else it.capitalizeFirstChar() }
 
-            if (validationResults.containsFailure()) {
+            if (validationResults.containsFailuresOrPartialFailures()) {
                 println()
                 logger.log("=============== $titleTag Validation Results ===============")
 
                 validationResults.forEach { (exampleFileName, result) ->
                     if (!result.isSuccess()) {
-                        logger.log(System.lineSeparator() + "$tag $exampleFileName has the following validation error(s):")
+                        val errorPrefix = if (result.isPartialFailure()) "Warning" else "Error"
+
+                        logger.log("\n$errorPrefix(s) found in the following $tag $exampleFileName:")
                         logger.log(result.reportString())
                     }
                 }
@@ -401,7 +390,11 @@ For example:
             logger.log("=".repeat(summaryTitle.length))
         }
 
-        private fun Map<String, Result>.containsFailure(): Boolean {
+        private fun Map<String, Result>.containsOnlyCompleteFailures(): Boolean {
+            return this.any { it.value is Result.Failure && !it.value.isPartialFailure() }
+        }
+
+        private fun Map<String, Result>.containsFailuresOrPartialFailures(): Boolean {
             return this.any { it.value is Result.Failure }
         }
 

@@ -1766,7 +1766,7 @@
         try {
             const parsedContent = JSON.parse(editedText);
 
-            const response = await fetch("${getHostPort()}/_specmatic/examples/update", {
+            const response = await fetch(`${getHostPort()}/_specmatic/examples/update`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

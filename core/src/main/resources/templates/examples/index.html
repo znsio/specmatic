@@ -1663,13 +1663,23 @@
         const testBadge = document.createElement("span");
 
         exampleDiv.classList.add("example");
-        exampleBadge.classList.add("pill", example.hasBeenValidated ? example.error.length!== 0 ? example.isPartialFailure ? "yellow" : "red" : "green" : "blue");
+        exampleBadge.classList.add(
+        "pill",
+        example.hasBeenValidated
+        ? (example.error && example.error.length > 0
+            ? (example.isPartialFailure ? "yellow" : "red")
+            : "green")
+        : "blue"
+    );
+
         exampleName.textContent = example.absPath;
 
         if (example.hasBeenValidated) {
-            exampleBadge.textContent = example.error.length !== 0 && !example.isPartialFailure
-            ? "Invalid"
-            : "Valid";
+           exampleBadge.textContent = (example.error && example.error.length > 0)
+            ? "Invalid":
+             (example.isPartialFailure ? "Invalid" : "Valid");
+
+
             exampleBadge.textContent += " Example";
         } else {
             exampleBadge.textContent = "Example";

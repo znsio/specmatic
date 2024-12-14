@@ -1157,9 +1157,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/json-lint.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/autorefresh.min.js"></script>
-<script src="../static/json-source-map.bundle.js"></script>
+<script>var escapedChars={b:"\b",f:"\f",n:"\n",r:"\r",t:"	",'"':'"',"/":"/","\\":"\\"},A_CODE="a".charCodeAt();const jsonMapParser=function(e,n,r){var a={},t=0,o=0,c=0,i=r&&r.bigint&&"undefined"!=typeof BigInt;return{data:function n(r,a){f(),E(r,"value");var t,o,$,g,S=l();switch(S){case"t":s("rue"),g=!0;break;case"f":s("alse"),g=!1;break;case"n":s("ull"),g=null;break;case'"':g=u();break;case"[":g=function e(r){f();var a=[],t=0;if("]"==l())return a;for(v();;){var o=r+"/"+t;a.push(n(o)),f();var c=l();if("]"==c)break;","!=c&&k(),f(),t++}return a}(r);break;case"{":g=function e(r){f();var a={};if("}"==l())return a;for(v();;){var t=d();'"'!=l()&&k();var o=u(),c=r+"/"+escapeJsonPointer(o);b(c,"key",t),E(c,"keyEnd"),f(),":"!=l()&&k(),f(),a[o]=n(c),f();var i=l();if("}"==i)break;","!=i&&k(),f()}return a}(r);break;default:v(),"-0123456789".indexOf(S)>=0?g=(t="",o=!0,"-"==e[c]&&(t+=l()),t+="0"==e[c]?l():p(),"."==e[c]&&(t+=l()+p(),o=!1),("e"==e[c]||"E"==e[c])&&(t+=l(),("+"==e[c]||"-"==e[c])&&(t+=l()),t+=p(),o=!1),$=+t,i&&o&&($>Number.MAX_SAFE_INTEGER||$<Number.MIN_SAFE_INTEGER)?BigInt(t):$):h()}return E(r,"valueEnd"),f(),a&&c<e.length&&h(),g}("",!0),pointers:a};function f(){loop:for(;c<e.length;){switch(e[c]){case" ":o++;break;case"	":o+=4;break;case"\r":o=0;break;case"\n":o=0,t++;break;default:break loop}c++}}function u(){for(var e,n="";'"'!=(e=l());)"\\"==e?(e=l())in escapedChars?n+=escapedChars[e]:"u"==e?n+=$():k():n+=e;return n}function s(e){for(var n=0;n<e.length;n++)l()!==e[n]&&k()}function l(){g();var n=e[c];return c++,o++,n}function v(){c--,o--}function $(){for(var e=4,n=0;e--;){n<<=4;var r=l().toLowerCase();r>="a"&&r<="f"?n+=r.charCodeAt()-A_CODE+10:r>="0"&&r<="9"?n+=+r:k()}return String.fromCharCode(n)}function p(){for(var n="";e[c]>="0"&&e[c]<="9";)n+=l();if(n.length)return n;g(),h()}function E(e,n){b(e,n,d())}function b(e,n,r){a[e]=a[e]||{},a[e][n]=r}function d(){return{line:t,column:o,pos:c}}function h(){throw SyntaxError("Unexpected token "+e[c]+" in JSON at position "+c)}function k(){v(),h()}function g(){if(c>=e.length)throw SyntaxError("Unexpected end of JSON input")}},jsonMapStringify=function(e,n,r){if(validType(e)){var a,t,o=0,c="object"==typeof r?r.space:r;switch(typeof c){case"number":var i=c>10?10:c<0?0:Math.floor(c);c=i&&k(i," "),a=i,t=i;break;case"string":c=c.slice(0,10),a=0,t=0;for(var f=0;f<c.length;f++){var u=c[f];switch(u){case" ":t++;break;case"	":t+=4;break;case"\r":t=0;break;case"\n":t=0,o++;break;default:throw Error("whitespace characters not allowed in JSON")}a++}break;default:c=void 0}var s="",l={},v=0,$=0,p=0,E=r&&r.es6&&"function"==typeof Map;return function e(n,r,a){switch(h(a,"value"),typeof n){case"number":case"bigint":case"boolean":b(""+n);break;case"string":b(quoted(n));break;case"object":null===n?b("null"):"function"==typeof n.toJSON?b(quoted(n.toJSON())):Array.isArray(n)?t():E?n.constructor.BYTES_PER_ELEMENT?t():n instanceof Map?i():n instanceof Set?i(!0):o():o()}function t(){if(n.length){b("[");for(var t=r+1,o=0;o<n.length;o++){o&&b(","),d(t);var c=validType(n[o])?n[o]:null;e(c,t,a+"/"+o)}d(r),b("]")}else b("[]")}function o(){var t=Object.keys(n);if(t.length){b("{");for(var o=r+1,i=0;i<t.length;i++){var f=t[i],u=n[f];if(validType(u)){i&&b(",");var s=a+"/"+escapeJsonPointer(f);d(o),h(s,"key"),b(quoted(f)),h(s,"keyEnd"),b(":"),c&&b(" "),e(u,o,s)}}d(r),b("}")}else b("{}")}function i(t){if(n.size){b("{");for(var o=r+1,i=!0,f=n.entries(),u=f.next();!u.done;){var s=u.value,l=s[0],v=!!t||s[1];if(validType(v)){i||b(","),i=!1;var $=a+"/"+escapeJsonPointer(l);d(o),h($,"key"),b(quoted(l)),h($,"keyEnd"),b(":"),c&&b(" "),e(v,o,$)}u=f.next()}d(r),b("}")}else b("{}")}h(a,"valueEnd")}(e,0,""),{json:s,pointers:l}}function b(e){$+=e.length,p+=e.length,s+=e}function d(e){if(c){for(s+="\n"+k(e,c),v++,$=0;e--;)o?(v+=o,$=t):$+=t,p+=a;p+=1}}function h(e,n){l[e]=l[e]||{},l[e][n]={line:v,column:$,pos:p}}function k(e,n){return Array(e+1).join(n)}};var VALID_TYPES=["number","bigint","boolean","string","object"];function validType(e){return VALID_TYPES.indexOf(typeof e)>=0}var ESC_QUOTE=/"|\\/g,ESC_B=/[\b]/g,ESC_F=/\f/g,ESC_N=/\n/g,ESC_R=/\r/g,ESC_T=/\t/g;function quoted(e){return'"'+(e=e.replace(ESC_QUOTE,"\\$&").replace(ESC_F,"\\f").replace(ESC_B,"\\b").replace(ESC_N,"\\n").replace(ESC_R,"\\r").replace(ESC_T,"\\t"))+'"'}var ESC_0=/~/g,ESC_1=/\//g;function escapeJsonPointer(e){return e.replace(ESC_0,"~0").replace(ESC_1,"~1")}</script>
 </body>
 <script>
+
     const mainElement = document.querySelector("main");
     const table = document.querySelector("table");
     const backBtn = document.querySelector("button#back");
@@ -1173,29 +1174,28 @@
     let scrollYPosition = 0;
     let selectedTableRow = null;
     let blockGenValidate = false;
-    const defaultAttrs = {"data-generate": "not-generated", "data-valid": "not-validated", "data-test": "not-tested", "data-main": "false"}
+    const defaultAttrs = { "data-generate": "not-generated", "data-valid": "not-validated", "data-test": "not-tested", "data-main": "false" }
     const dataValidationSuccessValues = ["success", "partial"]
     let isSaved = true;
 
     backBtn.addEventListener("click", () => {
-        if(!isSaved)
-        {
-        const modalContainer = createModal({
-        onDiscard: () => {
-         examplesOl.replaceChildren();
-        mainElement.setAttribute("data-panel", "table");
-        bulkValidateBtn.setAttribute("data-panel", "table");
-        bulkGenerateBtn.setAttribute("data-panel", "table");
-        bulkTestBtn.setAttribute("data-panel", "table");
-        window.scrollTo(0, scrollYPosition);
-        console.log("Changes discarded!");
-        isSaved = true;
-        },
+        if (!isSaved) {
+            const modalContainer = createModal({
+                onDiscard: () => {
+                    examplesOl.replaceChildren();
+                    mainElement.setAttribute("data-panel", "table");
+                    bulkValidateBtn.setAttribute("data-panel", "table");
+                    bulkGenerateBtn.setAttribute("data-panel", "table");
+                    bulkTestBtn.setAttribute("data-panel", "table");
+                    window.scrollTo(0, scrollYPosition);
+                    console.log("Changes discarded!");
+                    isSaved = true;
+                },
 
-        });
-        document.body.appendChild(modalContainer);
-       return;
-      }
+            });
+            document.body.appendChild(modalContainer);
+            return;
+        }
 
         examplesOl.replaceChildren();
         mainElement.setAttribute("data-panel", "table");
@@ -1233,10 +1233,10 @@
 
                 case "INPUT": {
                     if (target.matches("th > label > input")) {
-                        const {validatedCount, generatedCount, discAndMainCount, totalCount} = getRowsCount();
+                        const { validatedCount, generatedCount, discAndMainCount, totalCount } = getRowsCount();
                         toggleAllSelects(target.checked);
 
-                        if (table.hasAttribute("data-generated") ) {
+                        if (table.hasAttribute("data-generated")) {
                             bulkValidateBtn.setAttribute("data-selected", target.checked ? generatedCount : 0);
                             bulkTestBtn.setAttribute("data-selected", target.checked ? validatedCount : 0);
                         }
@@ -1318,7 +1318,7 @@
 
         for (const row of rowsWithNoExamplesOrDiscriminator) {
             const rowValues = extractRowValues(row);
-            const {success, created, existed, count} = await generateRowExamples(row, rowValues, true);
+            const { success, created, existed, count } = await generateRowExamples(row, rowValues, true);
 
             if (!success) failedCount += count;
             createdCount += created;
@@ -1416,7 +1416,7 @@
             acc.totalCount += 1;
             return acc;
 
-        }, {validatedCount: 0, generatedCount: 0, discAndMainCount: 0, totalCount: 0});
+        }, { validatedCount: 0, generatedCount: 0, discAndMainCount: 0, totalCount: 0 });
     }
 
     function toggleAllSelects(isSelected = true) {
@@ -1435,11 +1435,11 @@
 
         if (error) {
             if (!bulkMode) createAlert("Example Generation Failed", error, true);
-            tableRow.setAttribute("data-generate", originalState === defaultAttrs["data-generate"] ? "failed": originalState);
-            return {success: false, created: 0, existed: 0, count: 0};
+            tableRow.setAttribute("data-generate", originalState === defaultAttrs["data-generate"] ? "failed" : originalState);
+            return { success: false, created: 0, existed: 0, count: 0 };
         }
 
-        const {createdCount, existedCount, totalCount} = getExamplesCount(examples);
+        const { createdCount, existedCount, totalCount } = getExamplesCount(examples);
         const newExamples = getOnlyNewExamples(tableRow, examples);
         const thisRowIsGenerated = tableRow.getAttribute("data-generate") === "success";
         const newRows = newExamples.map((ex, idx) => updateRowWithExample(tableRow, thisRowIsGenerated || idx > 0, ex));
@@ -1459,17 +1459,17 @@
             createAlert(alertTitle, alertMessage, false)
         };
 
-        return {success: true, created: createdCount, existed: existedCount, count: totalCount};
+        return { success: true, created: createdCount, existed: existedCount, count: totalCount };
     }
 
     async function validateRowExamples(tableRow, bulkMode = false) {
         tableRow.setAttribute("data-valid", "processing");
         const exampleData = getExampleData(tableRow);
 
-        if(!isSaved) {
-        const exampleSaved = await saveExample(exampleData);
-        if (!exampleSaved) {
-            return false;
+        if (!isSaved) {
+            const exampleSaved = await saveExample(exampleData);
+            if (!exampleSaved) {
+                return false;
             }
         }
 
@@ -1505,7 +1505,7 @@
         }
 
         const exampleData = getExampleData(tableRow);
-        const {data, error} = await testExample({
+        const { data, error } = await testExample({
             exampleFile: exampleData
         });
 
@@ -1515,7 +1515,7 @@
             return false;
         }
 
-        tableRow.setAttribute("data-test", (error || data?.result !== "Success") ? "failed": "success");
+        tableRow.setAttribute("data-test", (error || data?.result !== "Success") ? "failed" : "success");
         storeExampleTestData(tableRow, data);
 
         if (error || data?.result !== "Success") {
@@ -1596,7 +1596,7 @@
         let docFragment = [];
 
         if (exampleAbsPath) {
-            const {example, error} = await getExampleContent(exampleAbsPath);
+            const { example, error } = await getExampleContent(exampleAbsPath);
             docFragment = createExampleRows([{
                 absPath: exampleAbsPath,
                 exampleJson: example,
@@ -1634,7 +1634,7 @@
         const docFragment = document.createDocumentFragment();
 
         if (rowValues.isSchemaBased) {
-            rowValues = {"schema": rowValues["path"], ...rowValues };
+            rowValues = { "schema": rowValues["path"], ...rowValues };
             delete rowValues["path"];
             delete rowValues["isSchemaBased"];
         }
@@ -1689,162 +1689,163 @@
     }
 
     function createExampleDropDown(example) {
-    const dropDownDiv = document.createElement("div");
-    dropDownDiv.classList.add("dropdown");
+        const dropDownDiv = document.createElement("div");
+        dropDownDiv.classList.add("dropdown");
 
-    const examplePara = document.createElement("p");
-    const detailsPara = document.createElement("p");
-    const detailsPre = document.createElement("pre");
+        const examplePara = document.createElement("p");
+        const detailsPara = document.createElement("p");
+        const detailsPre = document.createElement("pre");
 
-    examplePara.textContent = "Example: ";
-    detailsPara.textContent = "Details: ";
+        examplePara.textContent = "Example: ";
+        detailsPara.textContent = "Details: ";
 
-   /* let metadata;
-    if(example.response.error)
-    {
-
-       metadata= parseErrorResponse(example.response.error)
-    }
-    */
-
-    if (example.hasBeenValidated) {
-        detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
-        if (example.test) {
-            detailsPre.textContent = `${detailsPre.textContent}\n${example.test.details}`;
+        if (example.hasBeenValidated) {
+            detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
+            if (example.test) {
+                detailsPre.textContent = `${detailsPre.textContent}\n${example.test.details}`;
+            }
+        } else {
+            detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
         }
-    } else {
-        detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
-    }
 
-    const examplePreDiv = document.createElement("div");
-    examplePreDiv.setAttribute("id", "example-pre");
-    examplePreDiv.classList.add("language-json");
-    const detailsPreDiv = document.createElement("div");
+        const examplePreDiv = document.createElement("div");
+        examplePreDiv.setAttribute("id", "example-pre");
+        examplePreDiv.classList.add("language-json");
+        //const detailsPreDiv = document.createElement("div");
 
 
-    detailsPreDiv.appendChild(detailsPara);
-    detailsPreDiv.appendChild(detailsPre);
+        //detailsPreDiv.appendChild(detailsPara);
+        //detailsPreDiv.appendChild(detailsPre);
 
-   const editor = CodeMirror(examplePreDiv, {
-        value: example.exampleJson,
-        autoRefresh: true,
-        mode: "application/json",
-        theme: "dracula",
-        lineNumbers: true,
-        autoCloseBrackets: true,
-        matchBrackets: true,
-        styleActiveLine: true,
-        lint: true,
-        gutters: ["CodeMirror-lint-markers"]
-    });
-
-/*
-    if(metadata) {
-        highlightErrorLines(editor,metadata);
-    }
-*/
-
-    editor.on("change", (instance, changes) => {
-        isSaved = false;
-        updateBorderColorExampleBlock(editor, examplePreDiv);
-        savedEditorResponse = editor.getValue();
-    });
-
-    if (example.test) {
-        const testPara = document.createElement("p");
-        testPara.textContent = "Test Log: ";
-        const testPre = document.createElement("pre");
-        testPre.textContent = example.test.testLog;
-        detailsPreDiv.appendChild(testPara);
-        detailsPreDiv.appendChild(testPre);
-    }
-
-    dropDownDiv.appendChild(detailsPreDiv);
-    dropDownDiv.appendChild(examplePara);
-    dropDownDiv.appendChild(examplePreDiv);
-
-    return dropDownDiv;
-}
-
-async function saveExample(examplePath) {
-    const editedText = savedEditorResponse;
-    try {
-        const parsedContent = JSON.parse(editedText);
-
-        const response = await fetch("/_specmatic/examples/update", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                exampleFile: examplePath,
-                exampleContent: editedText,
-            }),
+        const editor = CodeMirror(examplePreDiv, {
+            value: example.exampleJson,
+            autoRefresh: true,
+            mode: "application/json",
+            theme: "dracula",
+            lineNumbers: true,
+            autoCloseBrackets: true,
+            matchBrackets: true,
+            styleActiveLine: true,
+            lint: true,
+            gutters: ["CodeMirror-lint-markers"]
         });
 
-        if (response.ok) {
-            createAlert("Saved", "Example saved to file", false);
-            isSaved = true;
-            return true;
-        } else {
-            const errorMessage = await response.text();
-            createAlert("Failed to save example.", `Failed to save example to ${examplePath}: ${errorMessage}`, true);
-            console.error("Error saving example:", response.status);
+
+        if (example.error) {
+            highlightErrorLines(editor, example.error, example.exampleJson);
+        }
+
+
+        editor.on("change", (instance, changes) => {
+            isSaved = false;
+            updateBorderColorExampleBlock(editor, examplePreDiv);
+            savedEditorResponse = editor.getValue();
+        });
+
+        if (example.test) {
+            const testPara = document.createElement("p");
+            testPara.textContent = "Test Log: ";
+            const testPre = document.createElement("pre");
+            testPre.textContent = example.test.testLog;
+            detailsPreDiv.appendChild(testPara);
+            detailsPreDiv.appendChild(testPre);
+        }
+
+        //dropDownDiv.appendChild(detailsPreDiv);
+        dropDownDiv.appendChild(examplePara);
+        dropDownDiv.appendChild(examplePreDiv);
+
+        return dropDownDiv;
+    }
+
+    async function saveExample(examplePath) {
+        const editedText = savedEditorResponse;
+        try {
+            const parsedContent = JSON.parse(editedText);
+
+            const response = await fetch("${getHostPort()}/_specmatic/examples/update", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    exampleFile: examplePath,
+                    exampleContent: editedText,
+                }),
+            });
+
+            if (response.ok) {
+                createAlert("Saved", "Example saved to file", false);
+                isSaved = true;
+                return true;
+            } else {
+                const errorMessage = await response.text();
+                createAlert("Failed to save example.", `Failed to save example to ${examplePath}: ${errorMessage}`, true);
+                console.error("Error saving example:", response.status);
+                return false;
+            }
+        } catch (e) {
+            console.error("Error during save request:", e);
+            createAlert("Failed to save example.", `An error occurred while saving example to ${examplePath}: ${e.message}`, true);
             return false;
         }
-    } catch (e) {
-        console.error("Error during save request:", e);
-        createAlert("Failed to save example.", `An error occurred while saving example to ${examplePath}: ${e.message}`, true);
-        return false;
     }
-}
 
- function parseErrorResponse(errors) {
-        const metadata = errors.map(err => ({
-            lineNumber: err.lineNumber,
-            description: err.description
-        }));
-        return metadata;
+
+    function updateBorderColorExampleBlock(editor, examplePreDiv) {
+        try {
+            JSON.parse(editor.getValue());
+            editor.getWrapperElement().style.borderWidth = "2px";
+            editor.getWrapperElement().style.borderStyle = "solid";
+            editor.getWrapperElement().style.borderColor = "green";
+
+        } catch (e) {
+            editor.getWrapperElement().style.borderWidth = "2px";
+            editor.getWrapperElement().style.borderStyle = "solid";
+            editor.getWrapperElement().style.borderColor = "red";
+
+        }
     }
-function updateBorderColorExampleBlock(editor, examplePreDiv) {
-    try {
-        JSON.parse(editor.getValue());
-        editor.getWrapperElement().style.borderWidth = "2px";
-        editor.getWrapperElement().style.borderStyle = "solid";
-        editor.getWrapperElement().style.borderColor = "green";
 
-    } catch (e) {
-        editor.getWrapperElement().style.borderWidth = "2px";
-        editor.getWrapperElement().style.borderStyle = "solid";
-        editor.getWrapperElement().style.borderColor = "red";
-
-    }
-}
-function highlightErrorLines(editor, metadata) {
-    metadata.forEach(meta => {
-        const lineNumber = meta.lineNumber - 1;
-        const lineLength = editor.getLine(lineNumber).length;
-        editor.markText(
-            { line: lineNumber, ch: 0 },
-            { line: lineNumber, ch: lineLength },
-            {
-                className: "CodeMirror-lint-mark-error",
-                attributes: {
-                    title: meta.description,
-                },
+    function highlightErrorLines(editor, metadata, exampleJson) {
+        const { data, pointers } = jsonMapParser(exampleJson);
+        metadata.forEach(meta => {
+            var location = findObjectByPath(pointers, meta.jsonPath);
+            if (location == null) {
+                meta.jsonPath = meta.jsonPath.substring(0, meta.jsonPath.lastIndexOf('/'));
+                location = findObjectByPath(pointers, meta.jsonPath);
             }
-        );
+            const lineNumber = location.key ? location.key.line : (location.value ? location.value.line : null);
+            const lineLength = editor.getLine(lineNumber).length;
+            editor.markText(
+                { line: lineNumber, ch: 0 },
+                { line: lineNumber, ch: lineLength },
+                {
+                    className: "CodeMirror-lint-mark-error",
+                    attributes: {
+                        title: meta.description,
+                    },
+                }
+            );
 
-        editor.setGutterMarker(lineNumber, "CodeMirror-lint-markers", createErrorMarker(meta.description));
-    });
-}
+            editor.setGutterMarker(lineNumber, "CodeMirror-lint-markers", createErrorMarker(meta.description));
+        });
+    }
 
+    function findObjectByPath(pointers, patch) {
+        for (const path in pointers) {
+            if (path === patch) {
+                return pointers[path];
+            }
+        }
+        return null;
+    }
 
-function createErrorMarker() {
-     const marker = document.createElement("div");
-     marker.className = "CodeMirror-lint-mark-error";
-     return marker;
-   }
+    function createErrorMarker() {
+        const marker = document.createElement("div");
+        marker.className = "CodeMirror-lint-mark-error";
+        return marker;
+    }
 
 
     function parseFileName(path) {
@@ -1902,7 +1903,7 @@ function createErrorMarker() {
         try {
             const resp = await fetch(`${getHostPort()}/_specmatic/examples/generate`, {
                 method: "POST",
-                body: JSON.stringify({...pathInfo, bulkMode }),
+                body: JSON.stringify({ ...pathInfo, bulkMode }),
                 headers: {
                     "Content-Type": "application/json",
                 }
@@ -1934,7 +1935,7 @@ function createErrorMarker() {
                 throw new Error(data.error);
             }
 
-            return { exampleAbsPath: data.absPath, error: data.error, isPartialFailure : data.isPartialFailure };
+            return { exampleAbsPath: data.absPath, error: data.error, isPartialFailure: data.isPartialFailure };
         } catch (error) {
             return { error: error.message, exampleAbsPath: null, isPartialFailure: false };
         }
@@ -1950,9 +1951,9 @@ function createErrorMarker() {
                 throw new Error(data.error);
             }
 
-            return {example: data.content, error: null};
+            return { example: data.content, error: null };
         } catch (e) {
-            return {example: null, error: e.message}
+            return { example: null, error: e.message }
         }
     }
 
@@ -1971,9 +1972,9 @@ function createErrorMarker() {
                 throw new Error(data.error);
             }
 
-            return {data, error: data.error}
+            return { data, error: data.error }
         } catch (error) {
-            return {data: null, error: error.message}
+            return { data: null, error: error.message }
         }
     }
 
@@ -2037,108 +2038,108 @@ function createErrorMarker() {
         bulkTestBtn.setAttribute("data-selected", "0");
         blockGenValidate = false;
     }
-function createModal({ onSave, onDiscard }) {
-    // Data for modal
-    const title = "Unsaved Changes";
-    const closeText = "No";
-    const discardText = "Yes";
-    const bodyText = "Your changes are not saved & validated. Go Back Anyway?";
+    function createModal({ onSave, onDiscard }) {
+        // Data for modal
+        const title = "Unsaved Changes";
+        const closeText = "No";
+        const discardText = "Yes";
+        const bodyText = "Your changes are not saved & validated. Go Back Anyway?";
 
-    // Create modal container dynamically
-    const modalContainer = document.createElement("div");
-    modalContainer.classList.add("go-back-modal");
-    modalContainer.style.position = "fixed";
-    modalContainer.style.top = "0";
-    modalContainer.style.left = "0";
-    modalContainer.style.width = "100%";
-    modalContainer.style.height = "100%";
-    modalContainer.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
-    modalContainer.style.display = "flex";
-    modalContainer.style.alignItems = "center";
-    modalContainer.style.justifyContent = "center";
-    modalContainer.style.zIndex = "9999";
+        // Create modal container dynamically
+        const modalContainer = document.createElement("div");
+        modalContainer.classList.add("go-back-modal");
+        modalContainer.style.position = "fixed";
+        modalContainer.style.top = "0";
+        modalContainer.style.left = "0";
+        modalContainer.style.width = "100%";
+        modalContainer.style.height = "100%";
+        modalContainer.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+        modalContainer.style.display = "flex";
+        modalContainer.style.alignItems = "center";
+        modalContainer.style.justifyContent = "center";
+        modalContainer.style.zIndex = "9999";
 
-    // Create modal content box
-    const modalContent = document.createElement("div");
-    modalContent.style.backgroundColor = "#fff";
-    modalContent.style.borderRadius = "8px";
-    modalContent.style.padding = "20px";
-    modalContent.style.width = "400px";
-    modalContent.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.2)";
-    modalContent.style.textAlign = "center";
+        // Create modal content box
+        const modalContent = document.createElement("div");
+        modalContent.style.backgroundColor = "#fff";
+        modalContent.style.borderRadius = "8px";
+        modalContent.style.padding = "20px";
+        modalContent.style.width = "400px";
+        modalContent.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.2)";
+        modalContent.style.textAlign = "center";
 
-    // Create modal header
-    const modalHeader = document.createElement("div");
-    const modalTitle = document.createElement("h5");
-    modalTitle.textContent = title;
-    modalHeader.style.fontSize = "18px";
-    modalHeader.style.fontWeight = "bold";
-    modalHeader.style.marginBottom = "15px";
-    modalHeader.appendChild(modalTitle);
+        // Create modal header
+        const modalHeader = document.createElement("div");
+        const modalTitle = document.createElement("h5");
+        modalTitle.textContent = title;
+        modalHeader.style.fontSize = "18px";
+        modalHeader.style.fontWeight = "bold";
+        modalHeader.style.marginBottom = "15px";
+        modalHeader.appendChild(modalTitle);
 
-    // Create modal body
-    const modalBody = document.createElement("div");
-    modalBody.textContent = bodyText;
-    modalBody.style.marginBottom = "15px";
+        // Create modal body
+        const modalBody = document.createElement("div");
+        modalBody.textContent = bodyText;
+        modalBody.style.marginBottom = "15px";
 
-    // Create modal footer
-    const modalFooter = document.createElement("div");
+        // Create modal footer
+        const modalFooter = document.createElement("div");
 
-    const closeButton = document.createElement("button");
-    closeButton.textContent = closeText;
-    closeButton.style.backgroundColor = "#007bff";
-    closeButton.style.color = "#fff";
-    closeButton.style.border = "none";
-    closeButton.style.padding = "8px 16px";
-    closeButton.style.borderRadius = "4px";
-    closeButton.style.cursor = "pointer";
-    closeButton.style.marginRight = "10px";
+        const closeButton = document.createElement("button");
+        closeButton.textContent = closeText;
+        closeButton.style.backgroundColor = "#007bff";
+        closeButton.style.color = "#fff";
+        closeButton.style.border = "none";
+        closeButton.style.padding = "8px 16px";
+        closeButton.style.borderRadius = "4px";
+        closeButton.style.cursor = "pointer";
+        closeButton.style.marginRight = "10px";
 
-    const discardButton = document.createElement("button");
-    discardButton.textContent = discardText;
-    discardButton.style.backgroundColor = "#007bff";
-    discardButton.style.color = "#fff";
-    discardButton.style.border = "none";
-    discardButton.style.padding = "8px 16px";
-    discardButton.style.borderRadius = "4px";
-    discardButton.style.cursor = "pointer";
+        const discardButton = document.createElement("button");
+        discardButton.textContent = discardText;
+        discardButton.style.backgroundColor = "#007bff";
+        discardButton.style.color = "#fff";
+        discardButton.style.border = "none";
+        discardButton.style.padding = "8px 16px";
+        discardButton.style.borderRadius = "4px";
+        discardButton.style.cursor = "pointer";
 
-    // Add buttons to footer
-    modalFooter.appendChild(closeButton);
-    modalFooter.appendChild(discardButton);
+        // Add buttons to footer
+        modalFooter.appendChild(closeButton);
+        modalFooter.appendChild(discardButton);
 
-    // Append everything to the modal content
-    modalContent.appendChild(modalHeader);
-    modalContent.appendChild(modalBody);
-    modalContent.appendChild(modalFooter);
+        // Append everything to the modal content
+        modalContent.appendChild(modalHeader);
+        modalContent.appendChild(modalBody);
+        modalContent.appendChild(modalFooter);
 
-    // Append modal content to modal container
-    modalContainer.appendChild(modalContent);
-
-
-    // Button event listeners
-    closeButton.addEventListener("click", () => {
-        closeModal();
-    });
-
-    discardButton.addEventListener("click", () => {
-        onDiscard();
-        closeModal();
-    });
+        // Append modal content to modal container
+        modalContainer.appendChild(modalContent);
 
 
-    modalContainer.addEventListener("click", (event) => {
-        if (event.target === modalContainer) {
+        // Button event listeners
+        closeButton.addEventListener("click", () => {
             closeModal();
+        });
+
+        discardButton.addEventListener("click", () => {
+            onDiscard();
+            closeModal();
+        });
+
+
+        modalContainer.addEventListener("click", (event) => {
+            if (event.target === modalContainer) {
+                closeModal();
+            }
+        });
+
+
+        function closeModal() {
+            modalContainer.remove();
         }
-    });
-
-
-    function closeModal() {
-        modalContainer.remove();
+        return modalContainer;
     }
-     return modalContainer;
-}
 
 
     (() => cleanUpSelections())();

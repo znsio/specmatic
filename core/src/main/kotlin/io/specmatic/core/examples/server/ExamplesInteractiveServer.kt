@@ -158,7 +158,7 @@ class ExamplesInteractiveServer(
                             else {
                                 ValidateExampleResponseMap(
                                     request.exampleFile,
-                                    jsonPathToErrorDescriptionMapping(result.reportString()),
+                                    ExampleValidationErrorMessage(result.reportString()).jsonPathToErrorDescriptionMapping(),
                                     result.isPartialFailure()
                                 )
                             }
@@ -220,16 +220,6 @@ class ExamplesInteractiveServer(
         }
     }
 
-    private fun jsonPathToErrorDescriptionMapping(errorMessage: String): List<Map<String, String>> {
-        val breadCrumbs = extractBreadCrumbs(errorMessage)
-        val transformedPath = transformToJsonPaths(breadCrumbs)
-        val descriptions = extractDescriptions(errorMessage)
-        val map: List<Map<String, String>> = transformedPath.zip(descriptions) { jsonPath, description ->
-            mapOf("jsonPath" to jsonPath, "description" to description)
-        }
-        return map
-    }
-
     private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {
         this.requestQueueLimit = 1000
         this.callGroupSize = 5
@@ -287,12 +277,13 @@ class ExamplesInteractiveServer(
             keyGroup.associateBy(
                 { it.example ?: "null" },
                 {
-                    jsonPathToErrorDescriptionMapping(it.exampleMismatchReason ?: "null")
+                    ExampleValidationErrorMessage(
+                        it.exampleMismatchReason ?: "null"
+                    ).jsonPathToErrorDescriptionMapping()
                 }
             )
         }
     }
-
 
     class ScenarioFilter(filterName: String = "", filterNotName: String = "", filterClauses: List<String> = emptyList(), private val filterNotClauses: List<String> = emptyList()) {
         private val filter = filterClauses.joinToString(";")
@@ -902,12 +893,3 @@ fun loadExternalExamples(
 fun defaultExternalExampleDirFrom(contractFile: File): File {
     return contractFile.absoluteFile.parentFile.resolve(contractFile.nameWithoutExtension + "_examples")
 }
-
-fun extractDescriptions(reportString: String): List<String> {
-    val parts = reportString.split(">>")
-
-    return parts.drop(1)
-        .map { ">>$it".trim() }
-        .filter { it.isNotBlank() }
-}
-

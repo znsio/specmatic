@@ -60,14 +60,14 @@ class ExampleValidationErrorMessageTest {
 
     @Test
     fun `should handle errors with nested objects`() {
-        val errorMessage = ">> RESPONSE.body.order.details.shipping.address \n Address is missing"
+        val errorMessage = ">> RESPONSE.body.order.details.shipping.address\n Address is missing"
         val example = ExampleValidationErrorMessage(errorMessage)
 
         val result = example.jsonPathToErrorDescriptionMapping()
         val expected = listOf(
             mapOf(
                 "jsonPath" to "/http-response/body/order/details/shipping/address",
-                "description" to ">> RESPONSE.body.order.details.shipping.address \n Address is missing"
+                "description" to ">> RESPONSE.body.order.details.shipping.address\n Address is missing"
             )
         )
 

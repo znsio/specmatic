@@ -299,8 +299,8 @@ class StatefulHttpStubTest {
 
         assertThat(response.status).isEqualTo(404)
         val responseBody = response.body as JSONObjectValue
-        val error = responseBody.getStringValue("error")
-        assertThat(error).isEqualTo("Resource with resourceId '0' not found")
+        val message = responseBody.getStringValue("message")
+        assertThat(message).isEqualTo("Resource with resourceId '0' not found")
     }
 
     @Test

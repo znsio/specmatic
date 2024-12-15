@@ -46,7 +46,8 @@ internal val builtInPatterns = mapOf(
     "(url-http)" to URLPattern(URLScheme.HTTP),
     "(url-https)" to URLPattern(URLScheme.HTTPS),
     "(url-path)" to URLPattern(URLScheme.PATH),
-    "(anything)" to AnythingPattern
+    "(anything)" to AnythingPattern,
+    "(anyvalue)" to AnyValuePattern
 )
 
 fun isBuiltInPattern(pattern: Any): Boolean =

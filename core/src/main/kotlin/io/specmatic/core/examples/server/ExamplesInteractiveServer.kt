@@ -1,6 +1,5 @@
 package io.specmatic.core.examples.server
 
-import com.jayway.jsonpath.JsonPath
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
@@ -26,9 +25,7 @@ import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
-import io.specmatic.core.utilities.capitalizeFirstChar
-import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.utilities.uniqueNameForApiOperation
+import io.specmatic.core.utilities.*
 import io.specmatic.core.value.*
 import io.specmatic.mock.MOCK_HTTP_REQUEST
 import io.specmatic.core.value.JSONArrayValue
@@ -89,6 +86,7 @@ class ExamplesInteractiveServer(
             }
 
             configureHealthCheckModule()
+
             routing {
                 get("/_specmatic/examples") {
                     val contractFile = getContractFileOrBadRequest(call) ?: return@get
@@ -158,7 +156,11 @@ class ExamplesInteractiveServer(
                             if(result.isSuccess())
                                 ValidateExampleResponse(request.exampleFile)
                             else {
-                                ValidateExampleResponse(request.exampleFile, result.reportString(), result.isPartialFailure())
+                                ValidateExampleResponseMap(
+                                    request.exampleFile,
+                                    ExampleValidationErrorMessage(result.reportString()).jsonPathToErrorDescriptionMapping(),
+                                    result.isPartialFailure()
+                                )
                             }
                         } catch (e: FileNotFoundException) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
@@ -233,48 +235,6 @@ class ExamplesInteractiveServer(
         server.stop(0, 0)
     }
 
-    fun extractBreadcrumbs(input: String): List<String> {
-        val breadCrumbPrefix = ">> "
-
-        val breadcrumbs = input.lines().map { it.trim() }.filter { it.startsWith(breadCrumbPrefix) }.map { it.removePrefix(
-            breadCrumbPrefix
-        ) }
-
-        return breadcrumbs
-    }
-
-    fun getJsonNodeLineNumbersUsingJsonPath(
-        jsonFilePath: String,
-        jsonPaths: List<String>,
-        breadcrumbs: List<String>
-    ): Int? {
-        if (jsonPaths.size != breadcrumbs.size) {
-            throw IllegalArgumentException("JSON paths and breadcrumbs lists must be of the same size")
-        }
-
-        fun transform(path: String): String {
-            return "$.${path.replace("/", ".")}"
-        }
-
-        val jsonPathString = jsonPaths.firstOrNull()?.let { transform(it) } ?: return null
-
-        return findLineNumber(File(jsonFilePath), JsonPath.compile(jsonPathString))
-    }
-
-    fun transformToJsonPaths(breadcrumbs: List<String>): List<String> {
-        val jsonPaths: MutableList<String> = ArrayList()
-
-        for (breadcrumb in breadcrumbs) {
-            val jsonPath = breadcrumb
-                .replace("RESPONSE", "http-response")
-                .replace("REQUEST", "http-request")
-                .replace("BODY", "body")
-                .replace(".", "/")
-            jsonPaths.add(jsonPath)
-        }
-
-        return jsonPaths
-    }
 
     private suspend fun getContractFileOrBadRequest(call: ApplicationCall): File? {
         return try {
@@ -312,9 +272,16 @@ class ExamplesInteractiveServer(
         )
     }
 
-    private fun List<TableRow>.transform(): Map<String, Map<String, String?>> {
+    private fun List<TableRow>.transform(): Map<String, Map<String, List<Map<String, String>>>> {
         return this.groupBy { it.uniqueKey }.mapValues { (_, keyGroup) ->
-            keyGroup.associateBy({ it.example ?: "null" }, { it.exampleMismatchReason })
+            keyGroup.associateBy(
+                { it.example ?: "null" },
+                {
+                    ExampleValidationErrorMessage(
+                        it.exampleMismatchReason ?: "null"
+                    ).jsonPathToErrorDescriptionMapping()
+                }
+            )
         }
     }
 
@@ -851,7 +818,8 @@ data class ValidateExampleResponse(
 
 data class ValidateExampleResponseMap(
     val absPath: String,
-    val error: List<Map<String, Any?>> = emptyList()
+    val error: List<Map<String, Any?>> = emptyList(),
+    val isPartialFailure: Boolean = false
 )
 
 data class GenerateExampleRequest(

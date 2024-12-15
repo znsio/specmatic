@@ -10,6 +10,7 @@ import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.Value
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.*
@@ -401,6 +402,30 @@ class LoadTestsFromExternalisedFiles {
 
         assertThat(results.testCount).isEqualTo(3)
         assertThat(results.failureCount).isEqualTo(3)
+    }
+
+    @Test
+    fun `should load anyvalue pattern based examples`() {
+        val feature = OpenApiSpecification.fromFile(
+            "src/test/resources/openapi/spec_with_path_param.yaml"
+        ).toFeature().loadExternalisedExamples()
+
+        val results = feature.executeTests(object: TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                if(request.queryParams.asMap().getValue("item") == "10") {
+                    return HttpResponse(status = 200, body = JSONObjectValue(
+                        mapOf("id" to NumberValue(10))
+                    ))
+                }
+
+                return HttpResponse(status = 200, body = JSONObjectValue(
+                    mapOf("id" to NumberValue(10000))
+                ))
+            }
+        })
+
+        assertThat(results.successCount).isEqualTo(2)
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
     }
 
     @Nested

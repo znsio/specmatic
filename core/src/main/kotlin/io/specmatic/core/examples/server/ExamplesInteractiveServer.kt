@@ -1,11 +1,9 @@
 package io.specmatic.core.examples.server
 
-import com.jayway.jsonpath.JsonPath
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
-import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
@@ -158,13 +156,11 @@ class ExamplesInteractiveServer(
                             if(result.isSuccess())
                                 ValidateExampleResponse(request.exampleFile)
                             else {
-                                val breadCrumbs = extractBreadCrumbs(result.reportString())
-                                val transformedPath = transformToJsonPaths(breadCrumbs)
-                                val descriptions = extractDescriptions(result.reportString())
-                                val map: List<Map<String, Any?>> = transformedPath.zip(descriptions) { path, description ->
-                                    mapOf("jsonPath" to path, "description" to description)
-                                }
-                                ValidateExampleResponseMap(request.exampleFile, map, result.isPartialFailure())
+                                ValidateExampleResponseMap(
+                                    request.exampleFile,
+                                    jsonPathToErrorDescriptionMapping(result.reportString()),
+                                    result.isPartialFailure()
+                                )
                             }
                         } catch (e: FileNotFoundException) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
@@ -224,6 +220,16 @@ class ExamplesInteractiveServer(
         }
     }
 
+    private fun jsonPathToErrorDescriptionMapping(errorMessage: String): List<Map<String, String>> {
+        val breadCrumbs = extractBreadCrumbs(errorMessage)
+        val transformedPath = transformToJsonPaths(breadCrumbs)
+        val descriptions = extractDescriptions(errorMessage)
+        val map: List<Map<String, String>> = transformedPath.zip(descriptions) { jsonPath, description ->
+            mapOf("jsonPath" to jsonPath, "description" to description)
+        }
+        return map
+    }
+
     private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {
         this.requestQueueLimit = 1000
         this.callGroupSize = 5
@@ -281,15 +287,7 @@ class ExamplesInteractiveServer(
             keyGroup.associateBy(
                 { it.example ?: "null" },
                 {
-                    val breadCrumbs = extractBreadCrumbs(it.exampleMismatchReason ?: "null")
-                    val jsonPaths = transformToJsonPaths(breadCrumbs)
-                    val descriptions = extractDescriptions(it.exampleMismatchReason ?: "null")
-                    List(jsonPaths.size) { index ->
-                        mapOf(
-                            "jsonPath" to (jsonPaths.getOrNull(index) ?: "null"),
-                            "description" to (descriptions.getOrNull(index) ?: "null")
-                        )
-                    }
+                    jsonPathToErrorDescriptionMapping(it.exampleMismatchReason ?: "null")
                 }
             )
         }

@@ -384,19 +384,19 @@ fun consolePrintableURL(host: String, port: Int, keyStoreData: KeyData? = null):
     return "$protocol://$displayableHost:$port"
 }
 
-fun transformToJsonPaths(breadcrumbs: List<String?>): List<String?> {
+fun transformToJsonPaths(breadcrumbs: List<String>): List<String> {
     return breadcrumbs.map { breadcrumb ->
         breadcrumb
-            ?.replace("RESPONSE", "http-response")
-            ?.replace("REQUEST", "http-request")
-            ?.replace("BODY", "body")
-            ?.replace(".", "/")
-            ?.replace(Regex("\\[(\\d+)]")) { matchResult -> "/${matchResult.groupValues[1]}" }
-            ?.let { if (it.startsWith("http-response") || it.startsWith("http-request")) "/$it" else it }
+            .replace("RESPONSE", "http-response")
+            .replace("REQUEST", "http-request")
+            .replace("BODY", "body")
+            .replace(".", "/")
+            .replace(Regex("\\[(\\d+)]")) { matchResult -> "/${matchResult.groupValues[1]}" }
+            .let { if (it.startsWith("http-response") || it.startsWith("http-request")) "/$it" else it }
     }
 }
 
-fun extractBreadCrumbs(input: String): List<String?> {
+fun extractBreadCrumbs(input: String): List<String> {
     val breadCrumbPrefix = ">> "
 
     val breadcrumbs = input.lines().map { it.trim() }.filter { it.startsWith(breadCrumbPrefix) }.map { it.removePrefix(

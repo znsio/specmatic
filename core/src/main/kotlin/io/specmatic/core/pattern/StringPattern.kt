@@ -129,9 +129,11 @@ data class StringPattern (
 
 
     private fun generateFromRegex(regexWithoutCaretAndDollar: String, minLength: Int, maxLength: Int? = null): String =
-        maxLength?.let {
-            Generex(regexWithoutCaretAndDollar).random(minLength, it)
-        } ?: Generex(regexWithoutCaretAndDollar).random(minLength)
+        if(maxLength != null) {
+            Generex(regexWithoutCaretAndDollar).random(minLength, maxLength)
+        } else {
+            Generex(regexWithoutCaretAndDollar).random(minLength)
+        }
 
 
     override fun newBasedOn(row: Row, resolver: Resolver): Sequence<ReturnValue<Pattern>> {

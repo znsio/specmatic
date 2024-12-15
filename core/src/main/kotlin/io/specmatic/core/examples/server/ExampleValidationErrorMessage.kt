@@ -7,7 +7,7 @@ private const val DESCRIPTION = "description"
 private const val BREADCRUMB_PREFIX = ">>"
 private const val BREADCRUMB_REQUEST = "REQUEST"
 private const val BREADCRUMB_RESPONSE = "RESPONSE"
-private const val BREADCRUMB_BODY = "RESPONSE"
+private const val BREADCRUMB_BODY = "BODY"
 private const val BREADCRUMB_PREFIX_WITH_TRAILING_SPACE = "$BREADCRUMB_PREFIX "
 private const val BREADCRUMB_DELIMITER = "."
 

@@ -58,31 +58,38 @@ data class StringPattern (
         if (sampleData?.hasTemplate() == true)
             return Result.Success()
 
-        return when (sampleData) {
-            is StringValue -> {
-                if (minLength != null && sampleData.toStringLiteral().length < minLength) return mismatchResult(
-                    "string with minLength $minLength",
-                    sampleData, resolver.mismatchMessages
-                )
+        if (sampleData !is StringValue)
+            return mismatchResult("string", sampleData, resolver.mismatchMessages)
 
-                if (maxLength != null && sampleData.toStringLiteral().length > maxLength) return mismatchResult(
-                    "string with maxLength $maxLength",
-                    sampleData, resolver.mismatchMessages
-                )
+        if (lengthBelowLowerBound(sampleData)) return mismatchResult(
+            "string with minLength $minLength",
+            sampleData, resolver.mismatchMessages
+        )
 
-                if (regex != null && !Regex(regex).matches(sampleData.toStringLiteral())) {
-                    return mismatchResult(
-                        """string that matches regex /$regex/""",
-                        sampleData,
-                        resolver.mismatchMessages
-                    )
-                }
+        if (lengthAboveUpperBound(sampleData)) return mismatchResult(
+            "string with maxLength $maxLength",
+            sampleData, resolver.mismatchMessages
+        )
 
-                return Result.Success()
-            }
-            else -> mismatchResult("string", sampleData, resolver.mismatchMessages)
+        if (doesNotMatchRegex(sampleData)) {
+            return mismatchResult(
+                """string that matches regex /$regex/""",
+                sampleData,
+                resolver.mismatchMessages
+            )
         }
+
+        return Result.Success()
     }
+
+    private fun doesNotMatchRegex(sampleData: StringValue) =
+        regex != null && !Regex(regex).matches(sampleData.toStringLiteral())
+
+    private fun lengthAboveUpperBound(sampleData: StringValue) =
+        maxLength != null && sampleData.toStringLiteral().length > maxLength
+
+    private fun lengthBelowLowerBound(sampleData: StringValue) =
+        minLength != null && sampleData.toStringLiteral().length < minLength
 
     override fun encompasses(
         otherPattern: Pattern,

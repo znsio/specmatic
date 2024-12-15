@@ -36,7 +36,7 @@ fun parseContractFileToFeature(
     sourceRepositoryBranch: String? = null,
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    specmaticConfig: SpecmaticConfig = loadSpecmaticConfigOrDefault(getConfigFilePath()),
     overlayContent: String = ""
 ): Feature {
     return parseContractFileToFeature(
@@ -65,7 +65,7 @@ fun parseContractFileToFeature(
     sourceRepositoryBranch: String? = null,
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    specmaticConfig: SpecmaticConfig = loadSpecmaticConfigOrDefault(getConfigFilePath()),
     overlayContent: String = ""
 ): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")

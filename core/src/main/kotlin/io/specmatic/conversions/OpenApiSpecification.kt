@@ -229,7 +229,7 @@ class OpenApiSpecification(
         val unreferencedSchemaPatterns = parseUnreferencedSchemas()
         val updatedScenarios = scenarioInfos.map {
             Scenario(it).copy(
-                dictionary = dictionary,
+                dictionary = dictionary.plus(specmaticConfig.parsedDefaultPatternValues()),
                 attributeSelectionPattern = specmaticConfig.attributeSelectionPattern,
                 patterns = it.patterns + unreferencedSchemaPatterns
             )

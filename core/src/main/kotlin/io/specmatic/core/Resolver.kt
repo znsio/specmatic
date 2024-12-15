@@ -202,13 +202,23 @@ data class Resolver(
         if(dictionaryLookupPath.isBlank())
             return pattern.generate(this)
 
-        val value = dictionary[dictionaryLookupPath] ?: return pattern.generate(this)
+        val value = dictionary[dictionaryLookupPath] ?: defaultPatternValueFromDictionary(pattern) ?: return pattern.generate(this)
 
         val dictionaryValueMatchResult = pattern.matches(value, this)
 
         dictionaryValueMatchResult.throwOnFailure()
 
         return value
+    }
+
+    private fun defaultPatternValueFromDictionary(pattern: Pattern): Value? {
+        val defaultPatternValue = dictionary[withPatternDelimiters(pattern.typeName)]
+
+        return pattern
+            .matches(defaultPatternValue, this)
+            .onSuccessElseNull {
+                defaultPatternValue
+            }
     }
 
     fun generate(typeAlias: String?, rawLookupKey: String, pattern: Pattern): Value {

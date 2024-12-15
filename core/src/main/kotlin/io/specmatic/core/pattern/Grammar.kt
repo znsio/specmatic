@@ -9,7 +9,7 @@ import io.specmatic.core.value.*
 const val XML_ATTR_OPTIONAL_SUFFIX = ".opt"
 const val DEFAULT_OPTIONAL_SUFFIX = "?"
 
-internal fun withoutOptionality(key: String): String {
+fun withoutOptionality(key: String): String {
     return when {
         key.endsWith(DEFAULT_OPTIONAL_SUFFIX) -> key.removeSuffix(DEFAULT_OPTIONAL_SUFFIX)
         key.endsWith(XML_ATTR_OPTIONAL_SUFFIX) -> key.removeSuffix(XML_ATTR_OPTIONAL_SUFFIX)

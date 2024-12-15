@@ -636,7 +636,7 @@ class ExamplesInteractiveServer(
             }
         }
 
-        private fun getExamplesDirPath(contractFile: File): File {
+        fun getExamplesDirPath(contractFile: File): File {
             return contractFile.canonicalFile
                 .parentFile
                 .resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")

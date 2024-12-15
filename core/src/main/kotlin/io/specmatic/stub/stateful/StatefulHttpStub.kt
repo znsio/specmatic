@@ -370,15 +370,15 @@ class StatefulHttpStub(
     private fun messageKeyFor4xxResponseMessage(
         responseBodyJsonObjectPattern: JSONObjectPattern?
     ): String? {
-        val firstKeyWithStringType = responseBodyJsonObjectPattern?.pattern?.entries?.firstOrNull {
-            it.value is StringPattern
-        }?.key
-
         val messageKeyWithStringType = responseBodyJsonObjectPattern?.pattern?.entries?.firstOrNull {
             it.value is StringPattern && withoutOptionality(it.key) in setOf("message", "msg")
         }?.key
 
-        return messageKeyWithStringType ?: firstKeyWithStringType
+        if (messageKeyWithStringType != null) return messageKeyWithStringType
+
+        return responseBodyJsonObjectPattern?.pattern?.entries?.firstOrNull {
+            it.value is StringPattern
+        }?.key
     }
 
     private fun resourcePathAndIdFrom(httpRequest: HttpRequest): Pair<String, String> {

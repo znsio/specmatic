@@ -238,7 +238,7 @@ For example:
 
                 printValidationResult(validationResults, "Example directory")
                 if (exitCode == 1) return FAILURE_EXIT_CODE
-                if (validationResults.containsFailure()) return FAILURE_EXIT_CODE
+                if (validationResults.containsOnlyCompleteFailures()) return FAILURE_EXIT_CODE
                 return SUCCESS_EXIT_CODE
             }
 
@@ -303,7 +303,7 @@ For example:
             }.toMap()
             logger.log("Summary:")
             printValidationResult(validationResults, "Overall")
-            if (validationResults.containsFailure()) return FAILURE_EXIT_CODE
+            if (validationResults.containsOnlyCompleteFailures()) return FAILURE_EXIT_CODE
             return SUCCESS_EXIT_CODE
         }
 
@@ -324,7 +324,7 @@ For example:
             }
 
             val hasFailures =
-                inlineExampleValidationResults.containsFailure() || externalExampleValidationResults.containsFailure()
+                inlineExampleValidationResults.containsOnlyCompleteFailures() || externalExampleValidationResults.containsOnlyCompleteFailures()
 
             printValidationResult(inlineExampleValidationResults, "Inline example")
             printValidationResult(externalExampleValidationResults, "Example file")
@@ -369,13 +369,15 @@ For example:
 
             val titleTag = tag.split(" ").joinToString(" ") { if (it.isBlank()) it else it.capitalizeFirstChar() }
 
-            if (validationResults.containsFailure()) {
+            if (validationResults.containsFailuresOrPartialFailures()) {
                 println()
                 logger.log("=============== $titleTag Validation Results ===============")
 
                 validationResults.forEach { (exampleFileName, result) ->
                     if (!result.isSuccess()) {
-                        logger.log(System.lineSeparator() + "$tag $exampleFileName has the following validation error(s):")
+                        val errorPrefix = if (result.isPartialFailure()) "Warning" else "Error"
+
+                        logger.log("\n$errorPrefix(s) found in the following $tag $exampleFileName:")
                         logger.log(result.reportString())
                     }
                 }
@@ -388,7 +390,11 @@ For example:
             logger.log("=".repeat(summaryTitle.length))
         }
 
-        private fun Map<String, Result>.containsFailure(): Boolean {
+        private fun Map<String, Result>.containsOnlyCompleteFailures(): Boolean {
+            return this.any { it.value is Result.Failure && !it.value.isPartialFailure() }
+        }
+
+        private fun Map<String, Result>.containsFailuresOrPartialFailures(): Boolean {
             return this.any { it.value is Result.Failure }
         }
 

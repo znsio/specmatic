@@ -109,18 +109,18 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
 
     val responseStatus: Int = attempt("Error reading status in file ${file.canonicalPath}") {
         json.findByPath("http-response.status")?.toStringLiteral()?.toInt()
-    } ?: throw ContractException("Response status code was not found.")
+    } ?: throw ContractException("Response status code was not found in ${file.path}.")
 
     val requestMethod: String = attempt("Error reading method in file ${file.canonicalPath}") {
         json.findByPath("http-request.method")?.toStringLiteral()
-    } ?: throw ContractException("Request method was not found.")
+    } ?: throw ContractException("Request method was not found in ${file.path}.")
 
     private val rawPath: String? =
         json.findByPath("http-request.path")?.toStringLiteral()
 
     val requestPath: String = attempt("Error reading path in file ${file.canonicalPath}") {
         rawPath?.let { pathOnly(it) }
-    } ?: throw ContractException("Request path was not found.")
+    } ?: throw ContractException("Request path was not found in ${file.path}.")
 
     private fun pathOnly(requestPath: String): String {
         return URI(requestPath).path ?: ""

@@ -20,6 +20,7 @@ class RegexSupportTest {
 
     @Test
     fun `invalid regex results in exception`() {
+        assertThatThrownBy {
         val feature = OpenApiSpecification.fromYAML(
             """
                 ---
@@ -46,17 +47,7 @@ class RegexSupportTest {
                         204:
                           description: "Get person by id"
                           content: {}
-                """.trimIndent(), "").toFeature()
-
-        val executor = object : TestExecutor {
-            override fun execute(request: HttpRequest): HttpResponse {
-                return HttpResponse(204)
-            }
-        }
-
-        assertThatThrownBy {
-            feature.executeTests(executor)
-        }.satisfies(Consumer {
+                """.trimIndent(), "").toFeature()}.satisfies(Consumer {
             assertThat(it).isInstanceOf(ContractException::class.java)
         })
     }

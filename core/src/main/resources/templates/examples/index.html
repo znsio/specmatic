@@ -1744,7 +1744,7 @@
         });
 
         if (example.error) {
-            if (typeof example.error === 'object' && !Array.isArray(example.error)) {
+            if (Array.isArray(example.error) && example.error.every(item => typeof item === 'object')) {
                 highlightErrorLines(editor, example.error, example.exampleJson);
             } else {
                 createAlert("Example Validation Failed", example.error, true);

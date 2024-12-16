@@ -1743,11 +1743,13 @@
             gutters: ["CodeMirror-lint-markers"]
         });
 
-
         if (example.error) {
-            highlightErrorLines(editor, example.error, example.exampleJson);
+            if (typeof example.error === 'object' && !Array.isArray(example.error)) {
+                highlightErrorLines(editor, example.error, example.exampleJson);
+            } else {
+                createAlert("Example Validation Failed", example.error, true);
+            }
         }
-
 
         editor.on("change", (instance, changes) => {
             isSaved = false;

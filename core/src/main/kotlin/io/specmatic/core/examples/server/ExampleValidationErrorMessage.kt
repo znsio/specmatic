@@ -37,7 +37,7 @@ data class ExampleValidationErrorMessage(val fullErrorMessageString: String) {
     }
 
     private fun extractDescriptions(reportString: String): List<String> {
-        val parts = reportString.split("$BREADCRUMB_PREFIX")
+        val parts = reportString.split(BREADCRUMB_PREFIX)
 
         return parts.drop(1)
             .map { "$BREADCRUMB_PREFIX$it".trim() }

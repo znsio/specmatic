@@ -348,7 +348,7 @@ open class SpecmaticJUnitSupport {
         }
 
         if (!hasLinks) {
-            // Old flow for backward compatibility with OAS versions < 3.0
+            // Old flow for backward compatibility with OAS versions < 3.0, or with specs with no links.
             return scenarios.map { contractTest ->
                 DynamicTest.dynamicTest(contractTest.testDescription()) {
                     executeSingleScenario(contractTest, testBaseURL, timeoutInMilliseconds)
@@ -373,7 +373,7 @@ open class SpecmaticJUnitSupport {
 
         rootScenarios.forEach { rootScenario ->
             allDynamicTests.addAll(
-                generateScenarioChainTests(
+                generateScenarioChains(
                     rootScenario,
                     scenarios.filterIsInstance<ScenarioAsTest>(),
                     testBaseURL,
@@ -386,7 +386,7 @@ open class SpecmaticJUnitSupport {
         return allDynamicTests.stream()
     }
 
-    private fun generateScenarioChainTests(
+    private fun generateScenarioChains(
         currentScenario: ScenarioAsTest,
         allScenarios: List<ScenarioAsTest>,
         testBaseURL: String,
@@ -395,14 +395,12 @@ open class SpecmaticJUnitSupport {
     ): List<DynamicTest> {
         val tests = mutableListOf<DynamicTest>()
 
-        // Add the current scenario as a DynamicTest
         tests.add(
             DynamicTest.dynamicTest(currentScenario.testDescription()) {
                 executeSingleScenario(currentScenario, testBaseURL, timeoutInMilliseconds, contextMap)
             }
         )
 
-        // Generate DynamicTests for linked scenarios
         currentScenario.scenario.links.values.forEach { link ->
             val linkedScenario = allScenarios.find { scenario ->
                 scenario.scenario.operationId == link.operationId
@@ -410,7 +408,7 @@ open class SpecmaticJUnitSupport {
 
             linkedScenario?.let {
                 tests.addAll(
-                    generateScenarioChainTests(it, allScenarios, testBaseURL, timeoutInMilliseconds, contextMap)
+                    generateScenarioChains(it, allScenarios, testBaseURL, timeoutInMilliseconds, contextMap)
                 )
             }
         }
@@ -425,6 +423,7 @@ open class SpecmaticJUnitSupport {
         contextMap: MutableMap<String, ScenarioContext> = mutableMapOf()
     ) {
         contractTest as ScenarioAsTest
+        // Here the lookup should be based on linkname
         val inputContext = contextMap[contractTest.scenario.operationId] ?: ScenarioContext()
         var testResult: Pair<Result, HttpResponse?>? = null
         try {
@@ -453,7 +452,7 @@ open class SpecmaticJUnitSupport {
             throw e
         } finally {
             testResult?.let { (result, response) ->
-                contractTest.testResultRecord(result, response)?.let { testResultRecord ->
+                contractTest.testResultRecord(result, response).let { testResultRecord ->
                     openApiCoverageReportInput.addTestReportRecords(testResultRecord)
                 }
             }
@@ -461,18 +460,19 @@ open class SpecmaticJUnitSupport {
     }
 
     private fun updateContextMap(
-        scenario: ScenarioAsTest,
+        scenarioAsTest: ScenarioAsTest,
         result: Result,
         response: HttpResponse?,
         contextMap: MutableMap<String, ScenarioContext>
     ) {
         if (response?.body == null) return
 
-        scenario.scenario.links.forEach { (_, link) ->
+        scenarioAsTest.scenario.links.forEach { (_, link) ->
             val operationId = link.operationId ?: return@forEach
+            // here the key should be link name
             val context = contextMap.getOrPut(operationId) { ScenarioContext() }
 
-            link.parameters?.forEach { (paramKey, paramValue) ->
+            link.parameters.forEach { (paramKey, paramValue) ->
                 if (paramValue.toString().startsWith("\$response.body#")) {
                     val extractedValue = extractValueFromResponse(response.body, paramValue.toString())
                     if (extractedValue != null) {

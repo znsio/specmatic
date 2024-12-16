@@ -358,7 +358,7 @@ open class SpecmaticJUnitSupport {
 
         // Collect all scenarios (root and linked) into DynamicTests
         val allDynamicTests = mutableListOf<DynamicTest>()
-        // Shared context map to hold the context for each operation
+        // Shared context map to hold the context for each link which will execute a scenario.
         val contextMap = mutableMapOf<String, ScenarioContext>()
 
         val targetOperationIds = scenarios.filterIsInstance<ScenarioAsTest>()
@@ -391,24 +391,25 @@ open class SpecmaticJUnitSupport {
         allScenarios: List<ScenarioAsTest>,
         testBaseURL: String,
         timeoutInMilliseconds: Long,
-        contextMap: MutableMap<String, ScenarioContext>
+        contextMap: MutableMap<String, ScenarioContext>,
+        linkName: String = ""
     ): List<DynamicTest> {
         val tests = mutableListOf<DynamicTest>()
 
         tests.add(
             DynamicTest.dynamicTest(currentScenario.testDescription()) {
-                executeSingleScenario(currentScenario, testBaseURL, timeoutInMilliseconds, contextMap)
+                executeSingleScenario(currentScenario, testBaseURL, timeoutInMilliseconds, contextMap, linkName)
             }
         )
 
-        currentScenario.scenario.links.values.forEach { link ->
+        currentScenario.scenario.links.forEach { linkName, linkVal ->
             val linkedScenario = allScenarios.find { scenario ->
-                scenario.scenario.operationId == link.operationId
+                scenario.scenario.operationId == linkVal.operationId
             }
 
             linkedScenario?.let {
                 tests.addAll(
-                    generateScenarioChains(it, allScenarios, testBaseURL, timeoutInMilliseconds, contextMap)
+                    generateScenarioChains(it, allScenarios, testBaseURL, timeoutInMilliseconds, contextMap, linkName)
                 )
             }
         }
@@ -420,11 +421,12 @@ open class SpecmaticJUnitSupport {
         contractTest: ContractTest,
         testBaseURL: String,
         timeoutInMilliseconds: Long,
-        contextMap: MutableMap<String, ScenarioContext> = mutableMapOf()
+        contextMap: MutableMap<String, ScenarioContext> = mutableMapOf(),
+        linkName: String = ""
     ) {
         contractTest as ScenarioAsTest
         // Here the lookup should be based on linkname
-        val inputContext = contextMap[contractTest.scenario.operationId] ?: ScenarioContext()
+        val inputContext = contextMap[linkName] ?: ScenarioContext()
         var testResult: Pair<Result, HttpResponse?>? = null
         try {
             testResult = contractTest.runTest(testBaseURL, timeoutInMilliseconds, inputContext)
@@ -467,10 +469,10 @@ open class SpecmaticJUnitSupport {
     ) {
         if (response?.body == null) return
 
-        scenarioAsTest.scenario.links.forEach { (_, link) ->
+        scenarioAsTest.scenario.links.forEach { (linkName, link) ->
             val operationId = link.operationId ?: return@forEach
             // here the key should be link name
-            val context = contextMap.getOrPut(operationId) { ScenarioContext() }
+            val context = contextMap.getOrPut(linkName) { ScenarioContext() }
 
             link.parameters.forEach { (paramKey, paramValue) ->
                 if (paramValue.toString().startsWith("\$response.body#")) {

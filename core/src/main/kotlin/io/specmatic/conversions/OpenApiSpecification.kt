@@ -1177,6 +1177,16 @@ class OpenApiSpecification(
     ) = if (mediaType.encoding.isNullOrEmpty()) false
     else mediaType.encoding[formFieldName]?.contentType == "application/json"
 
+    private fun List<Schema<Any>>.defaultMappings(): Map<String, String> {
+        return this.filter { it.`$ref` != null }.associate {
+            it.`$ref`.split("/").last() to it.`$ref`
+        }
+    }
+
+    private fun Map<String, String>.distinctByValue(): Map<String, String> {
+        return this.entries.distinctBy { it.value }.associate { it.key to it.value }
+    }
+
     private fun toSpecmaticPattern(mediaType: MediaType, section: String, jsonInFormData: Boolean = false): Pattern =
         toSpecmaticPattern(mediaType.schema ?: throw ContractException("${section.capitalizeFirstChar()} body definition is missing"), emptyList(), jsonInFormData = jsonInFormData)
 
@@ -1402,10 +1412,13 @@ class OpenApiSpecification(
                     val nullable =
                         if (schema.oneOf.any { nullableEmptyObject(it) }) listOf(NullPattern) else emptyList()
 
+                    val defaultMappings = schema.oneOf.defaultMappings()
+                    val finalMappings = schema.discriminator?.mapping.orEmpty().plus(defaultMappings).distinctByValue()
+
                     AnyPattern(
                         candidatePatterns.plus(nullable),
                         typeAlias = "(${patternName})",
-                        discriminator = Discriminator.create(schema.discriminator?.propertyName, schema.discriminator?.mapping?.keys?.toSet().orEmpty(), schema.discriminator?.mapping.orEmpty())
+                        discriminator = Discriminator.create(schema.discriminator?.propertyName, finalMappings.keys.toSet(), finalMappings)
                     )
                 } else if (schema.anyOf != null) {
                     throw UnsupportedOperationException("Specmatic does not support anyOf")

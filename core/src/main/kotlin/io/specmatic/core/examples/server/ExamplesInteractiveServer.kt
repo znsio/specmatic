@@ -272,13 +272,13 @@ class ExamplesInteractiveServer(
         )
     }
 
-    private fun List<TableRow>.transform(): Map<String, Map<String, List<Map<String, String>>>> {
+    private fun List<TableRow>.transform(): Map<String, Map<String, List<Map<String, Any>>>> {
         return this.groupBy { it.uniqueKey }.mapValues { (_, keyGroup) ->
             keyGroup.associateBy(
                 { it.example ?: "null" },
                 {
                     ExampleValidationErrorMessage(
-                        it.exampleMismatchReason ?: "null"
+                        failureDetails = it.failureDetails
                     ).jsonPathToErrorDescriptionMapping()
                 }
             )
@@ -818,7 +818,7 @@ data class ValidateExampleResponse(
 
 data class ValidateExampleResponseMap(
     val absPath: String,
-    val error: List<Map<String, Any?>> = emptyList(),
+    val errorDetails: List<Map<String, Any?>> = emptyList(),
     val isPartialFailure: Boolean = false
 )
 

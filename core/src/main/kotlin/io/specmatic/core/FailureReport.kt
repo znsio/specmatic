@@ -41,12 +41,12 @@ data class FailureReport(val contractPath: String?, private val scenarioMessage:
     }
 
     private fun matchFailureDetails(matchFailureDetails: MatchFailureDetails): String {
-        return matchFailureDetails.let { (breadCrumbs, errorMessages,isPartialFailure) ->
+        return matchFailureDetails.let { (breadCrumbs, errorMessages) ->
             val breadCrumbString = startOfBreadCrumbPrefix(breadCrumbString(breadCrumbs))
 
             val errorMessagesString = errorMessagesToString(errorMessages)
 
-            "$breadCrumbString${System.lineSeparator()}${System.lineSeparator()}$isPartialFailure${errorMessagesString.prependIndent("   ")}".trim()
+            "$breadCrumbString${System.lineSeparator()}${System.lineSeparator()}${errorMessagesString.prependIndent("   ")}".trim()
         }
     }
 

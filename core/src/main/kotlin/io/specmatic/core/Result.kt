@@ -189,12 +189,16 @@ sealed class Result {
 
         fun toMatchFailureDetails(): MatchFailureDetails {
             return (cause?.toMatchFailureDetails() ?: MatchFailureDetails()).let { reason ->
-                reason.copy(
-                    errorMessages = if (message.isNotEmpty()) listOf(message) + reason.errorMessages else reason.errorMessages,
-                    breadCrumbs = if (breadCrumb.isNotEmpty()) listOf(breadCrumb) + reason.breadCrumbs else reason.breadCrumbs,
-                    isPartial = this.isPartial || reason.isPartial
-                )
-            }
+                when {
+                    message.isNotEmpty() -> reason.copy(errorMessages = listOf(message).plus(reason.errorMessages))
+                    else -> reason
+                }
+            }.let { reason ->
+                when {
+                    breadCrumb.isNotEmpty() -> reason.copy(breadCrumbs = listOf(breadCrumb).plus(reason.breadCrumbs))
+                    else -> reason
+                }
+            }.copy(isPartial = isPartial)
         }
 
 
@@ -209,7 +213,7 @@ sealed class Result {
                     when {
                         breadCrumb.isNotEmpty() -> withReason.copy(breadCrumbs = listOf(breadCrumb).plus(withReason.breadCrumbs))
                         else -> withReason
-                    }
+                    }.copy(isPartial = isPartial)
                 }
             }
         }

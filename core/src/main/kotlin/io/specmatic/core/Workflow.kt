@@ -7,6 +7,52 @@ import io.specmatic.core.value.Value
 class Workflow(
     val workflow: WorkflowConfiguration = WorkflowConfiguration(),
 ) {
+    companion object {
+        fun transformLinksToWorkflow(scenarios: List<Scenario>): Map<String, WorkflowIDOperation> {
+
+            val workflow = LinkedHashMap<String, WorkflowIDOperation>()
+
+            for (scenario in scenarios) {
+                if (scenario.links.isNotEmpty()) {
+                    for (link in scenario.links) {
+                        val workflowIdOperation = link.value.parameters.let {
+                            WorkflowIDOperation(
+                                extract = transformLinkRefToExtract((link.value.parameters as MutableMap).iterator().next().value)
+                            )
+                        }
+                        workflow[scenario.apiDescription] = workflowIdOperation
+
+                        val linkedScenario = scenarios.find { it.operationId == link.value.operationId }
+                        if (linkedScenario != null) {
+                            processLinkedScenario(scenarios, linkedScenario, workflow, (link.value.parameters as MutableMap).iterator().next().key)
+                        }
+                    }
+                }
+            }
+
+            return workflow.toMap()
+        }
+
+        private fun processLinkedScenario(scenarios: List<Scenario>, scenario: Scenario, workflow: LinkedHashMap<String, WorkflowIDOperation>, useKey: String) {
+            workflow[scenario.apiDescription] = WorkflowIDOperation(
+                use = useKey
+            )
+
+            if (scenario.links.isNotEmpty()) {
+                for (link in scenario.links) {
+                    val linkedScenario = scenarios.find { it.operationId == link.key }
+                    if (linkedScenario != null) {
+                        processLinkedScenario(scenarios, linkedScenario, workflow, (link.value.parameters as MutableMap).iterator().next().key)
+                    }
+                }
+            }
+        }
+
+        private fun transformLinkRefToExtract(input: String): String {
+            val parts = input.removePrefix("\$response.").split("#/")
+            return parts.joinToString(".")
+        }
+    }
     var id: Value? = null
 
     fun extractDataFrom(response: HttpResponse, originalScenario: Scenario) {

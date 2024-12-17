@@ -343,99 +343,25 @@ open class SpecmaticJUnitSupport {
 
         val scenarios = testScenarios.toList()
 
-        val hasLinks = scenarios.any { scenario ->
-            scenario is ScenarioAsTest && scenario.scenario.links.isNotEmpty()
-        }
-
-        if (!hasLinks) {
-            // Old flow for backward compatibility with OAS versions < 3.0, or with specs with no links.
-            return scenarios.map { contractTest ->
-                DynamicTest.dynamicTest(contractTest.testDescription()) {
-                    executeSingleScenario(contractTest, testBaseURL, timeoutInMilliseconds)
-                }
-            }.stream()
-        }
-
-        // Collect all scenarios (root and linked) into DynamicTests
-        val allDynamicTests = mutableListOf<DynamicTest>()
-        // Shared context map to hold the context for each link which will execute a scenario.
-        val contextMap = mutableMapOf<String, ScenarioContext>()
-
-        val targetOperationIds = scenarios.filterIsInstance<ScenarioAsTest>()
-            .flatMap { scenario ->
-                scenario.scenario.links.values.map { link -> link.operationId }
-            }.toSet()
-
-        val rootScenarios = scenarios.filterIsInstance<ScenarioAsTest>()
-            .filter { scenario ->
-                !targetOperationIds.contains(scenario.scenario.operationId)
+        return scenarios.map { contractTest ->
+            DynamicTest.dynamicTest(contractTest.testDescription()) {
+                executeSingleScenario(contractTest, testBaseURL, timeoutInMilliseconds)
             }
+        }.stream()
 
-        rootScenarios.forEach { rootScenario ->
-            allDynamicTests.addAll(
-                generateScenarioChains(
-                    rootScenario,
-                    scenarios.filterIsInstance<ScenarioAsTest>(),
-                    testBaseURL,
-                    timeoutInMilliseconds,
-                    contextMap
-                )
-            )
-        }
-
-        return allDynamicTests.stream()
-    }
-
-    private fun generateScenarioChains(
-        currentScenario: ScenarioAsTest,
-        allScenarios: List<ScenarioAsTest>,
-        testBaseURL: String,
-        timeoutInMilliseconds: Long,
-        contextMap: MutableMap<String, ScenarioContext>,
-        linkName: String = ""
-    ): List<DynamicTest> {
-        val tests = mutableListOf<DynamicTest>()
-
-        tests.add(
-            DynamicTest.dynamicTest(currentScenario.testDescription()) {
-                executeSingleScenario(currentScenario, testBaseURL, timeoutInMilliseconds, contextMap, linkName)
-            }
-        )
-
-        currentScenario.scenario.links.forEach { linkName, linkVal ->
-            val linkedScenario = allScenarios.find { scenario ->
-                scenario.scenario.operationId == linkVal.operationId
-            }
-
-            linkedScenario?.let {
-                tests.addAll(
-                    generateScenarioChains(it, allScenarios, testBaseURL, timeoutInMilliseconds, contextMap, linkName)
-                )
-            }
-        }
-
-        return tests
     }
 
     private fun executeSingleScenario(
         contractTest: ContractTest,
         testBaseURL: String,
         timeoutInMilliseconds: Long,
-        contextMap: MutableMap<String, ScenarioContext> = mutableMapOf(),
-        linkName: String = ""
     ) {
         contractTest as ScenarioAsTest
-        // Here the lookup should be based on linkname
-        val inputContext = contextMap[linkName] ?: ScenarioContext()
+        // Here the lookup should be based on link name
         var testResult: Pair<Result, HttpResponse?>? = null
         try {
-            testResult = contractTest.runTest(testBaseURL, timeoutInMilliseconds, inputContext)
+            testResult = contractTest.runTest(testBaseURL, timeoutInMilliseconds)
             val (result, response) = testResult
-
-            if(result is Result.Success && contractTest.scenario.links.isNotEmpty())
-            {
-                updateContextMap(contractTest, result, response, contextMap)
-            }
 
             if (result is Result.Success && result.isPartialSuccess()) {
                 partialSuccesses.add(result)
@@ -458,49 +384,6 @@ open class SpecmaticJUnitSupport {
                     openApiCoverageReportInput.addTestReportRecords(testResultRecord)
                 }
             }
-        }
-    }
-
-    private fun updateContextMap(
-        scenarioAsTest: ScenarioAsTest,
-        result: Result,
-        response: HttpResponse?,
-        contextMap: MutableMap<String, ScenarioContext>
-    ) {
-        if (response?.body == null) return
-
-        scenarioAsTest.scenario.links.forEach { (linkName, link) ->
-            val operationId = link.operationId ?: return@forEach
-            // here the key should be link name
-            val context = contextMap.getOrPut(linkName) { ScenarioContext() }
-
-            link.parameters.forEach { (paramKey, paramValue) ->
-                if (paramValue.toString().startsWith("\$response.body#")) {
-                    val extractedValue = extractValueFromResponse(response.body, paramValue.toString())
-                    if (extractedValue != null) {
-                        context.parameters[paramKey] = extractedValue
-                    }
-                }
-            }
-        }
-    }
-
-    private fun extractValueFromResponse(responseBody: Value, expression: String): String? {
-        try {
-            val path = expression.removePrefix("\$response.body#").trim('/').split('/')
-
-            var current: Any? = when (responseBody) {
-                is JSONObjectValue -> responseBody.jsonObject
-                else -> return null
-            }
-
-            path.forEach { key ->
-                current = (current as? Map<*, *>)?.get(key)
-            }
-
-            return current?.toString()
-        } catch (e: Exception) {
-            return null
         }
     }
 

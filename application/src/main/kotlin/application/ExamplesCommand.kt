@@ -620,9 +620,12 @@ For example, to filter by HTTP methods:
         private fun Pattern.getPatternWithTypeAlias(value: Value, resolver: Resolver): Pattern? {
             return when(this) {
                 is ListPattern -> this.copy(typeAlias = this.pattern.typeAlias)
-                is AnyPattern -> this.getMatchingPattern(value, resolver) ?: return null
+                is AnyPattern -> when {
+                    this.pattern.size > 1 -> this.getMatchingPattern(value, resolver)
+                    else -> this.getUpdatedPattern(resolver).firstOrNull()
+                }
                 else -> this
-            }.takeIf { it.typeAlias != null }
+            }?.takeIf { it.typeAlias != null }
         }
 
         private fun Resolver.ignoreAll(): Resolver {

@@ -201,13 +201,16 @@ data class AnyPattern(
     }
 
     fun getMatchingPattern(sampleData: Value?, resolver: Resolver): Pattern? {
-        val updatedPatterns = if (discriminator != null) {
+        val updatedPatterns = getUpdatedPattern(resolver)
+        return updatedPatterns.firstOrNull { resolver.matchesPattern(key, it, sampleData ?: EmptyString).isSuccess() }
+    }
+
+    fun getUpdatedPattern(resolver: Resolver): List<Pattern> {
+        return if (discriminator != null) {
             discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().takeIf {
                 it is HasValue<List<Pattern>>
-            }?.value ?: return null
+            }?.value ?: return emptyList()
         } else pattern
-
-        return updatedPatterns.firstOrNull { resolver.matchesPattern(key, it, sampleData ?: EmptyString).isSuccess() }
     }
 
     override fun generate(resolver: Resolver): Value {

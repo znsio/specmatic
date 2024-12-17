@@ -32,7 +32,7 @@ data class ExampleValidationErrorMessage(val fullErrorMessageString: String) {
                 .replace("BODY", "body")
                 .replace(BREADCRUMB_DELIMITER, JSONPATH_DELIMITER)
                 .replace(Regex("\\[(\\d+)]")) { matchResult -> "/${matchResult.groupValues[1]}" }
-                .let { if (it.startsWith(HTTP_RESPONSE) || it.startsWith(HTTP_REQUEST)) "/$it" else it }
+                .let { "/${it.trimStart('/')}" }
         }
     }
 

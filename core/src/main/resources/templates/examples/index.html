@@ -1768,7 +1768,7 @@
         examplePara.textContent = "Example: ";
 
         if (example.errorMessage) {
-            detailsPara.textContent = `Example has ${example.errorList.length} issues`;
+            detailsPara.textContent = `Example has ${example.errorList.length || "} issues`;
         } else {
             detailsPara.textContent = example.hasBeenValidated ? "Example has no errors" : "Example has not yet been validated";
         }

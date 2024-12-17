@@ -36,6 +36,7 @@ import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
+import io.specmatic.core.value.mergeWith
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.ContractAndRequestsMismatch
 import io.specmatic.stub.ContractStub
@@ -595,12 +596,23 @@ class StatefulHttpStub(
 
             if (responseBody !is JSONObjectValue) return@forEach
             if(httpRequest.method == "POST" && httpRequest.body !is JSONObjectValue) return@forEach
-            stubCache.addResponse(
-                path = resourcePath,
-                responseBody = responseBody,
-                idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
-                idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, responseBody)
-            )
+
+            val requestBody = httpRequest.body
+            if(requestBody is JSONObjectValue) {
+                stubCache.addResponse(
+                    path = resourcePath,
+                    responseBody = requestBody.mergeWith(responseBody) as JSONObjectValue,
+                    idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
+                    idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, responseBody)
+                )
+            } else {
+                stubCache.addResponse(
+                    path = resourcePath,
+                    responseBody = responseBody,
+                    idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
+                    idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, responseBody)
+                )
+            }
         }
 
         return stubCache

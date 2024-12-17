@@ -412,10 +412,10 @@
       display: inline-block;
     }
 
-    [data-validation-error-message]:hover::before {
+    [data-validation-error-message]:hover::after {
       content: attr(data-validation-error-message);
       position: absolute;
-      bottom: 100%;
+      top: 100%;
       left: 0;
       background: white;
       color: black;

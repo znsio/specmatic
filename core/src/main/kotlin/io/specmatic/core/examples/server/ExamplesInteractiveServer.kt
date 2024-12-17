@@ -813,7 +813,7 @@ data class SaveExampleRequest(
 data class ValidateExampleResponse(
     val absPath: String,
     val errorMessage: String? = null,
-    val errorList: List<Map<String, Any?>> = emptyList(),
+    val errorList: List<Map<String, String>> = emptyList(),
     val isPartialFailure: Boolean = false
 )
 

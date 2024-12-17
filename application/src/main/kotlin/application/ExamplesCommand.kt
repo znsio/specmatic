@@ -654,10 +654,7 @@ For example:
         private fun Pattern.getPatternWithTypeAlias(value: Value, resolver: Resolver): Pattern? {
             return when(this) {
                 is ListPattern -> this.copy(typeAlias = this.pattern.typeAlias)
-                is AnyPattern -> when {
-                    this.pattern.size > 1 -> this.getMatchingPattern(value, resolver)
-                    else -> this.getUpdatedPattern(resolver).firstOrNull()
-                }
+                is AnyPattern -> this.matchingPatternOrNull(value, resolver)
                 else -> this
             }?.takeIf { it.typeAlias != null }
         }
@@ -723,8 +720,15 @@ For example:
         private fun Pattern.getKeySchema(value: Value, resolver: Resolver, key: String): Pattern? {
             return when(this) {
                 is JSONObjectPattern -> this.pattern[key] ?: this.pattern["$key?"]
-                is AnyPattern -> this.pattern.firstOrNull { it.matches(value, resolver).isSuccess() }?.getKeySchema(value, resolver, key)
+                is AnyPattern -> this.matchingPatternOrNull(value, resolver)?.getKeySchema(value,resolver, key)
                 else -> null
+            }
+        }
+
+        private fun AnyPattern.matchingPatternOrNull(value: Value, resolver: Resolver): Pattern? {
+            return when {
+                this.pattern.size > 1 -> this.getMatchingPattern(value, resolver)
+                else -> this.getUpdatedPattern(resolver).firstOrNull()
             }
         }
     }

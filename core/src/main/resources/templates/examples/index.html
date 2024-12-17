@@ -1795,7 +1795,10 @@
         if (example.errorMessage) {
             const issueCount = example.errorList.length;
             const issueOrIssues = issueCount === 1 ? "issue" : "issues";
-            detailsPara.textContent = `<span style='color: red'>Example has ${issueCount || ""} ${issueOrIssues}</span>`;
+            detailsPara.textContent = `Example has ${issueCount || ""} ${issueOrIssues}`;
+            if (issueCount > 0) {
+                detailsPara.style.color = "red";
+            }
         } else {
             detailsPara.textContent = example.hasBeenValidated ? "Example has no errors" : "Example has not yet been validated";
         }

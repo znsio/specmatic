@@ -1768,7 +1768,7 @@
         examplePara.textContent = "Example: ";
 
         if (example.errorMessage) {
-            detailsPara.textContent = `Example has ${example.errorList.length} errors`;
+            detailsPara.textContent = `Example has ${example.errorList.length} issues`;
         } else {
             detailsPara.textContent = example.hasBeenValidated ? "Example has no errors" : "Example has not yet been validated";
         }
@@ -1830,7 +1830,9 @@
         detailsDiv.appendChild(examplePara);
 
         const fragment = document.createDocumentFragment();
-        fragment.appendChild(detailsDiv)
+        if (example.errorMessage) {
+            fragment.appendChild(detailsDiv);
+        }
         fragment.appendChild(examplePreDiv);
 
         return fragment;

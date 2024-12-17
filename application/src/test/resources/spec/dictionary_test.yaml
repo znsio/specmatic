@@ -39,7 +39,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OneOfBase'
+              $ref: '#/components/schemas/OneOfSchema'
       responses:
         '200':
           description: OK
@@ -49,7 +49,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AllOfBase'
+              $ref: '#/components/schemas/AllOfSchema'
       responses:
         '200':
           description: OK
@@ -90,7 +90,7 @@ components:
                 type: string
       required:
         - id
-    OneOfBase:
+    OneOfSchema:
       oneOf:
         - $ref: '#/components/schemas/Nested'
         - $ref: '#/components/schemas/Base'
@@ -99,12 +99,11 @@ components:
         mapping:
           Nested: '#/components/schemas/Nested'
           Base: '#/components/schemas/Base'
-    AllOfBase:
+    AllOfSchema:
       allOf:
         - $ref: '#/components/schemas/Nested'
         - $ref: '#/components/schemas/Base'
       discriminator:
         propertyName: type
         mapping:
-          Nested: '#/components/schemas/Nested'
-          Base: '#/components/schemas/Base'
+          AllOf: '#/components/schemas/AllOfSchema'

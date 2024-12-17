@@ -8,6 +8,7 @@ import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.get
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.mock.ScenarioStub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -516,7 +517,7 @@ paths:
         private val feature = parseContractFileToFeature(contractFile)
 
         @Test
-        fun `should convert simple object and array example bodies to dictionary`() {
+        fun `should convert simple object and array example bodies`() {
             val scenario = feature.scenarios.first { it.path == "/base" && it.method == "POST" }
             val httpRequest = HttpRequest(
                 path = "/base", method = "POST",
@@ -542,10 +543,10 @@ paths:
                     "Base[*].terms[*]": "Term1"
                 }
                 """.trimIndent())
-                println(dictionary)
+                println(JSONObjectValue(dictionary).toStringLiteral())
 
                 assertThat(dictionary).isNotEmpty
-                assertThat(dictionary).containsAllEntriesOf(expectedDictionary.jsonObject)
+                assertThat(dictionary).containsExactlyEntriesOf(expectedDictionary.jsonObject)
             }
         }
 
@@ -574,10 +575,189 @@ paths:
                     "Base[*].terms[*]": "Term1"
                 }
                 """.trimIndent())
-                println(dictionary)
+                println(JSONObjectValue(dictionary).toStringLiteral())
 
                 assertThat(dictionary).isNotEmpty
-                assertThat(dictionary).containsAllEntriesOf(expectedDictionary.jsonObject)
+                assertThat(dictionary).containsExactlyEntriesOf(expectedDictionary.jsonObject)
+            }
+        }
+
+        @Test
+        fun `should convert nested objects and array example bodies`() {
+            val scenario = feature.scenarios.first { it.path == "/nested" && it.method == "POST" }
+            val httpRequest = HttpRequest(
+                path = "/nested", method = "POST",
+                body = parsedJSONObject("""
+                {
+                    "type": "Nested",
+                    "base": {
+                        "id": 123,
+                        "type": "Base",
+                        "terms": ["Term1", "Term2"]
+                    },
+                    "details": {
+                        "price": 100,
+                        "description": ["Desc1", "Desc2"]
+                    }
+                }
+                """.trimIndent())
+            )
+            val httpResponse = HttpResponse(status = 200, body = JSONArrayValue(List(2) { httpRequest.body }))
+
+            withExampleFile(httpRequest, httpResponse, contractFile) { example ->
+                val dictionary = ExamplesCommand.ExampleToDictionary().exampleToDictionary(example, scenario)
+                val expectedDictionary = parsedJSONObject("""
+                {
+                    "Nested.type": "Nested",
+                    "Base.id": 123,
+                    "Base.type": "Base",
+                    "Base.terms[*]": "Term1",
+                    "Nested.details.price": 100,
+                    "Nested.details.description[*]": "Desc1",
+                    "Nested[*].type": "Nested",
+                    "Nested[*].details.price": 100,
+                    "Nested[*].details.description[*]": "Desc1"
+                }
+                """.trimIndent())
+                println(JSONObjectValue(dictionary).toStringLiteral())
+
+                assertThat(dictionary).isNotEmpty
+                assertThat(dictionary).containsExactlyEntriesOf(expectedDictionary.jsonObject)
+            }
+        }
+
+        @Test
+        fun `should convert oneOf schema example bodies`() {
+            val scenario = feature.scenarios.first { it.path == "/oneOf" && it.method == "POST" }
+            val httpRequestNested = HttpRequest(
+                path = "/oneOf", method = "POST",
+                body = parsedJSONObject("""
+                {
+                    "type": "Nested",
+                    "base": {
+                        "id": 123,
+                        "type": "Base",
+                        "terms": ["Term1", "Term2"]
+                    },
+                    "details": {
+                        "price": 100,
+                        "description": ["Desc1", "Desc2"]
+                    }
+                }
+                """.trimIndent())
+            )
+            val httpResponseNested = HttpResponse(status = 200)
+            withExampleFile(httpRequestNested, httpResponseNested, contractFile) { example ->
+                val dictionary = ExamplesCommand.ExampleToDictionary().exampleToDictionary(example, scenario)
+                val expectedDictionary = parsedJSONObject("""
+                {
+                    "Nested.type": "Nested",
+                    "Base.id": 123,
+                    "Base.type": "Base",
+                    "Base.terms[*]": "Term1",
+                    "Nested.details.price": 100,
+                    "Nested.details.description[*]": "Desc1"
+                }
+                """.trimIndent())
+                println(JSONObjectValue(dictionary).toStringLiteral())
+
+                assertThat(dictionary).isNotEmpty
+                assertThat(dictionary).containsExactlyEntriesOf(expectedDictionary.jsonObject)
+            }
+
+            val httpRequestBase = HttpRequest(
+                path = "/oneOf", method = "POST",
+                body = parsedJSONObject("""
+                {
+                    "id": 123,
+                    "type": "Base",
+                    "terms": ["Term1", "Term2"]
+                }
+                """.trimIndent())
+            )
+            val httpResponseBase = HttpResponse(status = 200)
+            withExampleFile(httpRequestBase, httpResponseBase, contractFile) { example ->
+                val dictionary = ExamplesCommand.ExampleToDictionary().exampleToDictionary(example, scenario)
+                val expectedDictionary = parsedJSONObject("""
+                {
+                    "Base.id": 123,
+                    "Base.type": "Base",
+                    "Base.terms[*]": "Term1"
+                }
+                """.trimIndent())
+                println(JSONObjectValue(dictionary).toStringLiteral())
+
+                assertThat(dictionary).isNotEmpty
+                assertThat(dictionary).containsExactlyEntriesOf(expectedDictionary.jsonObject)
+            }
+        }
+
+        @Test
+        fun `should convert allOf schema example bodies`() {
+            val scenario = feature.scenarios.first { it.path == "/allOf" && it.method == "POST" }
+            val httpRequest = HttpRequest(
+                path = "/allOf", method = "POST",
+                body = parsedJSONObject("""
+                {
+                    "type": "AllOf",
+                    "base": {
+                        "id": 123,
+                        "type": "Base",
+                        "terms": ["Term1", "Term2"]
+                    },
+                    "details": {
+                        "price": 100,
+                        "description": ["Desc1", "Desc2"]
+                    }
+                }
+                """.trimIndent())
+            )
+            val httpResponse = HttpResponse(status = 200)
+            withExampleFile(httpRequest, httpResponse, contractFile) { example ->
+                val dictionary = ExamplesCommand.ExampleToDictionary().exampleToDictionary(example, scenario)
+                val expectedDictionary = parsedJSONObject("""
+                {
+                    "AllOfSchema.type": "AllOf",
+                    "Base.id": 123,
+                    "Base.type": "Base",
+                    "Base.terms[*]": "Term1",
+                    "AllOfSchema.details.price": 100,
+                    "AllOfSchema.details.description[*]": "Desc1"
+                }
+                """.trimIndent())
+                println(JSONObjectValue(dictionary).toStringLiteral())
+
+                assertThat(dictionary).isNotEmpty
+                assertThat(dictionary).containsExactlyEntriesOf(expectedDictionary.jsonObject)
+            }
+        }
+
+        @Test
+        fun `should not add entries if discriminator mismatches`() {
+            val scenario = feature.scenarios.first { it.path == "/oneOf" && it.method == "POST" }
+            val httpRequestNested = HttpRequest(
+                path = "/oneOf", method = "POST",
+                body = parsedJSONObject("""
+                {
+                    "type": "UNKNOWN",
+                    "base": {
+                        "id": 123,
+                        "type": "Base",
+                        "terms": ["Term1", "Term2"]
+                    },
+                    "details": {
+                        "price": 100,
+                        "description": ["Desc1", "Desc2"]
+                    }
+                }
+                """.trimIndent())
+            )
+            val httpResponseNested = HttpResponse(status = 200)
+
+            withExampleFile(httpRequestNested, httpResponseNested, contractFile) { example ->
+                val dictionary = ExamplesCommand.ExampleToDictionary().exampleToDictionary(example, scenario)
+                println(JSONObjectValue(dictionary).toStringLiteral())
+                assertThat(dictionary).isEmpty()
             }
         }
     }

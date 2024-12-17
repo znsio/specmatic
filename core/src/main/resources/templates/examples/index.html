@@ -407,7 +407,32 @@
         }
 
     }
+    [data-validation-error-message] {
+      position: relative;
+      display: inline-block;
+    }
 
+    [data-validation-error-message]:hover::before {
+      content: attr(data-validation-error-message);
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      background: white;
+      color: black;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 20px;
+      white-space: pre-wrap;
+      z-index: 1000;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      pointer-events: none;
+      margin-bottom: 5px;
+      border: 1px solid #ddd;
+      min-width: max-content;
+      width: auto;
+      max-width: 400px;
+      word-break: normal;
+    }
     </style>
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
@@ -1903,7 +1928,7 @@
                 {
                     className: "CodeMirror-lint-mark-error",
                     attributes: {
-                        title: meta.description,
+                        "data-validation-error-message": meta.description
                     },
                 }
             );

@@ -654,23 +654,19 @@ For example:
         private fun Pattern.getPatternWithTypeAlias(value: Value, resolver: Resolver): Pattern? {
             return when(this) {
                 is ListPattern -> this.copy(typeAlias = this.pattern.typeAlias)
-                is AnyPattern -> this.pattern.firstOrNull { it.matches(value, resolver).isSuccess() } ?: return null
+                is AnyPattern -> this.getMatchingPattern(value, resolver) ?: return null
                 else -> this
             }.takeIf { it.typeAlias != null }
         }
 
         private fun Resolver.ignoreAll(): Resolver {
             return this.copy(
-                patternMatchStrategy = matchAnything,
-                findKeyErrorCheck = findKeyErrorCheck.copy(unexpectedKeyCheck = IgnoreUnexpectedKeys)
+                findKeyErrorCheck = findKeyErrorCheck.copy(unexpectedKeyCheck = IgnoreUnexpectedKeys, patternKeyCheck = noPatternKeyCheck)
             )
         }
 
         private fun Resolver.validateAll(): Resolver {
-            return this.copy(
-                patternMatchStrategy = actualMatch,
-                findKeyErrorCheck = findKeyErrorCheck.copy(unexpectedKeyCheck = ValidateUnexpectedKeys)
-            )
+            return this.copy(patternMatchStrategy = actualMatch, findKeyErrorCheck = DefaultKeyCheck)
         }
 
         private fun Value.toEntry(prefix: String, pattern: Pattern, resolver: Resolver): Map<String, Value> {
@@ -678,7 +674,7 @@ For example:
             val suffix = if (pattern is ListPattern) "[*]" else ""
 
             val result = pattern.matches(this, resolver.validateAll())
-            return if (result.isSuccess() && pattern is ScalarType) {
+            return if (result.isSuccess() && (pattern is ScalarType || pattern.isDiscriminator())) {
                 mapOf("$prefix$typeAlias$suffix" to this)
             } else emptyMap()
         }

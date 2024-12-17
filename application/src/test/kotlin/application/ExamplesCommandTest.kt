@@ -1,6 +1,14 @@
 package application
 
+import io.specmatic.conversions.ExampleFromFile
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
+import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesDirPath
+import io.specmatic.core.parseContractFileToFeature
+import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.mock.ScenarioStub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Nested
@@ -11,6 +19,21 @@ import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
 
 class ExamplesCommandTest {
+    companion object {
+        fun withExampleFile(request: HttpRequest, response: HttpResponse, contractFile: File, block: (exampleFile: ExampleFromFile) -> Unit) {
+            val example = ScenarioStub(request, response).toJSON()
+            val examplesDirectory = getExamplesDirPath(contractFile).also { it.mkdirs() }
+            val exampleFile = examplesDirectory.resolve("example.json")
+            exampleFile.writeText(example.toStringLiteral())
+
+            try {
+                block(ExampleFromFile(exampleFile))
+            } finally {
+                exampleFile.delete()
+            }
+        }
+    }
+
     @AfterEach
     fun resetCounter() {
         ExamplesInteractiveServer.resetExampleFileNameCounter()
@@ -483,6 +506,78 @@ paths:
                 val examplesToValidate = ExamplesCommand.Validate.ExamplesToValidateConverter().convert(it)
                 println("$it -> $examplesToValidate")
                 assertThat(examplesToValidate.name).isEqualTo(expected)
+            }
+        }
+    }
+
+    @Nested
+    inner class DictionaryTests {
+        private val contractFile = File("src/test/resources/spec/dictionary_test.yaml")
+        private val feature = parseContractFileToFeature(contractFile)
+
+        @Test
+        fun `should convert simple object and array example bodies to dictionary`() {
+            val scenario = feature.scenarios.first { it.path == "/base" && it.method == "POST" }
+            val httpRequest = HttpRequest(
+                path = "/base", method = "POST",
+                body = parsedJSONObject("""
+                {
+                    "id": 123,
+                    "type": "Base",
+                    "terms": ["Term1", "Term2"]
+                }
+                """.trimIndent())
+            )
+            val httpResponse = HttpResponse(status = 200, body = JSONArrayValue(List(2) { httpRequest.body }))
+
+            withExampleFile(httpRequest, httpResponse, contractFile) { example ->
+                val dictionary = ExamplesCommand.ExampleToDictionary().exampleToDictionary(example, scenario)
+                val expectedDictionary = parsedJSONObject("""
+                {
+                    "Base.id": 123,
+                    "Base.type": "Base",
+                    "Base.terms[*]": "Term1",
+                    "Base[*].id": 123,
+                    "Base[*].type": "Base",
+                    "Base[*].terms[*]": "Term1"
+                }
+                """.trimIndent())
+                println(dictionary)
+
+                assertThat(dictionary).isNotEmpty
+                assertThat(dictionary).containsAllEntriesOf(expectedDictionary.jsonObject)
+            }
+        }
+
+        @Test
+        fun `should not add entries from examples for invalid values`() {
+            val scenario = feature.scenarios.first { it.path == "/base" && it.method == "POST" }
+            val httpRequest = HttpRequest(
+                path = "/base", method = "POST",
+                body = parsedJSONObject("""
+                {
+                    "id": "THIS_SHOULD_BE_NUMBER",
+                    "type": "Base",
+                    "terms": ["Term1", "Term2"]
+                }
+                """.trimIndent())
+            )
+            val httpResponse = HttpResponse(status = 200, body = JSONArrayValue(List(2) { httpRequest.body }))
+
+            withExampleFile(httpRequest, httpResponse, contractFile) { example ->
+                val dictionary = ExamplesCommand.ExampleToDictionary().exampleToDictionary(example, scenario)
+                val expectedDictionary = parsedJSONObject("""
+                {
+                    "Base.type": "Base",
+                    "Base.terms[*]": "Term1",
+                    "Base[*].type": "Base",
+                    "Base[*].terms[*]": "Term1"
+                }
+                """.trimIndent())
+                println(dictionary)
+
+                assertThat(dictionary).isNotEmpty
+                assertThat(dictionary).containsAllEntriesOf(expectedDictionary.jsonObject)
             }
         }
     }

@@ -353,9 +353,9 @@ class StatefulHttpStub(
         }
         val responseBodyJsonObjectPattern =
             (responseBodyPattern as PossibleJsonObjectPatternContainer).jsonObjectPattern(resolver)
-        val messageKey =
-            responseBodyJsonObjectPattern?.pattern?.entries?.firstOrNull { it.value is StringPattern }?.key
-        if (messageKey == null) {
+
+        val messageKey = messageKeyFor4xxResponseMessage(responseBodyJsonObjectPattern)
+        if (messageKey == null || responseBodyJsonObjectPattern == null) {
             return HttpResponse(statusCode, "$message${System.lineSeparator()}$warningMessage")
         }
 
@@ -365,6 +365,20 @@ class StatefulHttpStub(
             mapOf(withoutOptionality(messageKey) to StringValue(message))
         )
         return HttpResponse(statusCode, JSONObjectValue(jsonObject = jsonObjectWithNotFoundMessage))
+    }
+
+    private fun messageKeyFor4xxResponseMessage(
+        responseBodyJsonObjectPattern: JSONObjectPattern?
+    ): String? {
+        val messageKeyWithStringType = responseBodyJsonObjectPattern?.pattern?.entries?.firstOrNull {
+            it.value is StringPattern && withoutOptionality(it.key) in setOf("message", "msg")
+        }?.key
+
+        if (messageKeyWithStringType != null) return messageKeyWithStringType
+
+        return responseBodyJsonObjectPattern?.pattern?.entries?.firstOrNull {
+            it.value is StringPattern
+        }?.key
     }
 
     private fun resourcePathAndIdFrom(httpRequest: HttpRequest): Pair<String, String> {

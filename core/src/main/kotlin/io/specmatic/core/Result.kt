@@ -76,6 +76,7 @@ sealed class Result {
     abstract fun withFailureReason(urlPathMisMatch: FailureReason): Result
     abstract fun throwOnFailure(): Success
     abstract fun <T> toReturnValue(returnValue: T, errorMessage: String): ReturnValue<T>
+    abstract fun <V> onSuccessElseNull(function: () -> V): V?
 
     data class FailureCause(val message: String="", var cause: Failure? = null) {
         fun hasReason(failureReason: FailureReason): Boolean {
@@ -170,6 +171,10 @@ sealed class Result {
 
         override fun <T> toReturnValue(returnValue: T, errorMessage: String): ReturnValue<T> {
             return HasFailure(this)
+        }
+
+        override fun <V> onSuccessElseNull(function: () -> V): V? {
+            return null
         }
 
         fun reason(errorMessage: String) = Failure(errorMessage, this)
@@ -304,6 +309,10 @@ sealed class Result {
 
         override fun <T> toReturnValue(returnValue: T, errorMessage: String): ReturnValue<T> {
             return HasValue(returnValue)
+        }
+
+        override fun <V> onSuccessElseNull(function: () -> V): V? {
+            return function()
         }
     }
 }

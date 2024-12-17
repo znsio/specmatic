@@ -130,5 +130,38 @@ class ExampleValidationErrorMessageTest {
 
         assertEquals(expected, result)
     }
+    @Test
+    fun `should map query parameter error to description`() {
+        val errorMessage = ">> RESPONSE.QUERY-PARAMS.id\n ID is invalid"
+        val example = ExampleValidationErrorMessage(errorMessage)
+
+        val result = example.jsonPathToErrorDescriptionMapping()
+
+        val expected = listOf(
+            mapOf(
+                "jsonPath" to "/http-response/query/id",
+                "description" to ">> RESPONSE.QUERY-PARAMS.id\n ID is invalid"
+            )
+        )
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `should map header error to description`() {
+        val errorMessage = ">> RESPONSE.HEADERS.Content-Type\n Content-Type is missing"
+        val example = ExampleValidationErrorMessage(errorMessage)
+
+        val result = example.jsonPathToErrorDescriptionMapping()
+
+        val expected = listOf(
+            mapOf(
+                "jsonPath" to "/http-response/headers/Content-Type",
+                "description" to ">> RESPONSE.HEADERS.Content-Type\n Content-Type is missing"
+            )
+        )
+
+        assertEquals(expected, result)
+    }
 
 }

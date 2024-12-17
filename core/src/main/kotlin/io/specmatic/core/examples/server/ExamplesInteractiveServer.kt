@@ -156,10 +156,10 @@ class ExamplesInteractiveServer(
                             if(result.isSuccess())
                                 ValidateExampleResponse(request.exampleFile)
                             else {
-                                ValidateExampleResponseMap(
-                                    request.exampleFile,
-                                    ExampleValidationErrorMessage(result.reportString()).jsonPathToErrorDescriptionMapping(),
-                                    result.isPartialFailure()
+                                ValidateExampleResponse(
+                                    absPath = request.exampleFile, errorMessage = result.reportString(),
+                                    errorList = ExampleValidationErrorMessage(result.reportString()).jsonPathToErrorDescriptionMapping(),
+                                    isPartialFailure = result.isPartialFailure()
                                 )
                             }
                         } catch (e: FileNotFoundException) {
@@ -171,7 +171,7 @@ class ExamplesInteractiveServer(
                         }
                         call.respond(HttpStatusCode.OK, validationResultResponse)
                     } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("errorMessage" to exceptionCauseMessage(e)))
                     }
                 }
 
@@ -235,7 +235,6 @@ class ExamplesInteractiveServer(
         server.stop(0, 0)
     }
 
-
     private suspend fun getContractFileOrBadRequest(call: ApplicationCall): File? {
         return try {
             getContractFile()
@@ -272,14 +271,15 @@ class ExamplesInteractiveServer(
         )
     }
 
-    private fun List<TableRow>.transform(): Map<String, Map<String, List<Map<String, String>>>> {
+    private fun List<TableRow>.transform(): Map<String, Map<String, Map<String, Any?>>> {
         return this.groupBy { it.uniqueKey }.mapValues { (_, keyGroup) ->
             keyGroup.associateBy(
                 { it.example ?: "null" },
                 {
-                    ExampleValidationErrorMessage(
-                        it.exampleMismatchReason ?: "null"
-                    ).jsonPathToErrorDescriptionMapping()
+                    mapOf(
+                        "errorList" to ExampleValidationErrorMessage(it.exampleMismatchReason ?: "null").jsonPathToErrorDescriptionMapping(),
+                        "errorMessage" to it.exampleMismatchReason
+                    )
                 }
             )
         }
@@ -636,7 +636,7 @@ class ExamplesInteractiveServer(
             }
         }
 
-        private fun getExamplesDirPath(contractFile: File): File {
+        fun getExamplesDirPath(contractFile: File): File {
             return contractFile.canonicalFile
                 .parentFile
                 .resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
@@ -812,13 +812,8 @@ data class SaveExampleRequest(
 
 data class ValidateExampleResponse(
     val absPath: String,
-    val error: String? = null,
-    val isPartialFailure: Boolean = false
-)
-
-data class ValidateExampleResponseMap(
-    val absPath: String,
-    val error: List<Map<String, Any?>> = emptyList(),
+    val errorMessage: String? = null,
+    val errorList: List<Map<String, String>> = emptyList(),
     val isPartialFailure: Boolean = false
 )
 

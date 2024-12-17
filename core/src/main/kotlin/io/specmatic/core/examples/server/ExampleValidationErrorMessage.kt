@@ -1,19 +1,17 @@
 package io.specmatic.core.examples.server
 
 private const val JSON_PATH = "jsonPath"
-private const val JSONPATH_DELIMITER = "/"
 private const val DESCRIPTION = "description"
-
 private const val BREADCRUMB_PREFIX = ">>"
-private const val BREADCRUMB_REQUEST = "REQUEST"
-private const val BREADCRUMB_RESPONSE = "RESPONSE"
-private const val BREADCRUMB_BODY = "BODY"
 private const val BREADCRUMB_PREFIX_WITH_TRAILING_SPACE = "$BREADCRUMB_PREFIX "
 private const val BREADCRUMB_DELIMITER = "."
-
+private const val JSONPATH_DELIMITER = "/"
 private const val HTTP_RESPONSE = "http-response"
 private const val HTTP_REQUEST = "http-request"
-private const val HTTP_BODY = "body"
+private const val BREAD_CRUMB_HEADERS = "HEADERS"
+private const val HTTP_HEADERS = "headers"
+const val BREADCRUMB_QUERY_PARAMS = "QUERY-PARAMS"
+private const val HTTP_QUERY_PARAMS = "query"
 
 data class ExampleValidationErrorMessage(val fullErrorMessageString: String) {
     fun jsonPathToErrorDescriptionMapping(): List<Map<String, String>> {
@@ -33,12 +31,14 @@ data class ExampleValidationErrorMessage(val fullErrorMessageString: String) {
         }
         return breadcrumbs.map { breadcrumb ->
             breadcrumb
-                .replace(BREADCRUMB_RESPONSE, HTTP_RESPONSE)
-                .replace(BREADCRUMB_REQUEST, HTTP_REQUEST)
-                .replace(BREADCRUMB_BODY, HTTP_BODY)
+                .replace("RESPONSE", HTTP_RESPONSE)
+                .replace("REQUEST", HTTP_REQUEST)
+                .replace("BODY", "body")
+                .replace(BREAD_CRUMB_HEADERS, HTTP_HEADERS)
+                .replace(BREADCRUMB_QUERY_PARAMS, HTTP_QUERY_PARAMS)
                 .replace(BREADCRUMB_DELIMITER, JSONPATH_DELIMITER)
                 .replace(Regex("\\[(\\d+)]")) { matchResult -> "/${matchResult.groupValues[1]}" }
-                .let { if (it.startsWith(HTTP_RESPONSE) || it.startsWith(HTTP_REQUEST)) "/$it" else it }
+                .let { "/${it.trimStart('/')}" }
         }
     }
 

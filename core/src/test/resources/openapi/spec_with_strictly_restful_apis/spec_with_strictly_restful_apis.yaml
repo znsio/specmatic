@@ -219,5 +219,5 @@ components:
       properties:
         error:
           type: string
-        message:
+        reason:
           type: string

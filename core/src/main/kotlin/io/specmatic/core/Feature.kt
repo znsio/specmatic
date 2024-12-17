@@ -474,7 +474,15 @@ data class Feature(
             scenario.newBasedOnAttributeSelectionFields(request.queryParams)
         }.map { scenario ->
             try {
-                when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
+                val keyCheck = if(flagsBased.unexpectedKeyCheck != null)
+                    DefaultKeyCheck.copy(unexpectedKeyCheck = flagsBased.unexpectedKeyCheck)
+                else DefaultKeyCheck
+                when (val matchResult = scenario.matchesMock(
+                    request,
+                    response,
+                    mismatchMessages,
+                    keyCheck
+                )) {
                     is Result.Success -> Pair(
                         scenario.resolverAndResponseForExpectation(response).let { (resolver, resolvedResponse) ->
                             val newRequestType = scenario.httpRequestPattern.generate(request, resolver)

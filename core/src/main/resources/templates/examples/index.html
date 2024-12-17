@@ -412,7 +412,11 @@
       display: inline-block;
     }
 
-    [data-validation-error-message]:hover::after {
+    .CodeMirror pre.CodeMirror-line[role="presentation"] {
+        position: initial;
+    }
+
+    [data-validation-error-message]:hover::before {
       content: attr(data-validation-error-message);
       position: absolute;
       top: 100%;

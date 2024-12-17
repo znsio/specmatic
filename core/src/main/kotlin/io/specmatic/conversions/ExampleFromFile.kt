@@ -66,13 +66,17 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         return json.findByPath("partial") != null
     }
 
+    fun isInvalid(): Boolean {
+        return (requestMethod == null || requestPath == null || responseStatus == null)
+    }
+
     val expectationFilePath: String = file.canonicalPath
 
     val response: HttpResponse
         get() {
             if(responseBody == null && responseHeaders == null)
                 return HttpResponse(
-                    responseStatus,
+                    responseStatus ?: 0,
                     body = NoBodyValue,
                     headers = emptyMap()
                 )
@@ -80,7 +84,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
             val body = responseBody ?: EmptyString
             val headers = responseHeaders ?: JSONObjectValue()
 
-            return HttpResponse(responseStatus, headers.jsonObject.mapValues { it.value.toStringLiteral() }, body)
+            return HttpResponse(responseStatus ?: 0, headers.jsonObject.mapValues { it.value.toStringLiteral() }, body)
         }
 
     val request: HttpRequest
@@ -102,25 +106,25 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         val headers = json.findByPath("http-response.headers") ?: return@attempt null
 
         if(headers !is JSONObjectValue)
-            throw ContractException("http-response.headers should be a JSON object, but instead it was ${headers.toStringLiteral()}")
+            return@attempt null
 
         headers
     }
 
-    val responseStatus: Int = attempt("Error reading status in file ${file.canonicalPath}") {
+    val responseStatus: Int? = attempt("Error reading status in file ${file.canonicalPath}") {
         json.findByPath("http-response.status")?.toStringLiteral()?.toInt()
-    } ?: throw ContractException("Response status code was not found in ${file.path}.")
+    }
 
-    val requestMethod: String = attempt("Error reading method in file ${file.canonicalPath}") {
+    val requestMethod: String? = attempt("Error reading method in file ${file.canonicalPath}") {
         json.findByPath("http-request.method")?.toStringLiteral()
-    } ?: throw ContractException("Request method was not found in ${file.path}.")
+    }
 
     private val rawPath: String? =
         json.findByPath("http-request.path")?.toStringLiteral()
 
-    val requestPath: String = attempt("Error reading path in file ${file.canonicalPath}") {
+    val requestPath: String? = attempt("Error reading path in file ${file.canonicalPath}") {
         rawPath?.let { pathOnly(it) }
-    } ?: throw ContractException("Request path was not found in ${file.path}.")
+    }
 
     private fun pathOnly(requestPath: String): String {
         return URI(requestPath).path ?: ""
@@ -133,7 +137,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
     val queryParams: Map<String, String>
         get() {
             val path = attempt("Error reading path in file ${file.canonicalPath}") {
-                rawPath ?: throw ContractException("Request path was not found.")
+                rawPath ?: ""
             }
 
             val uri = URI.create(path)

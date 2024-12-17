@@ -1,0 +1,220 @@
+openapi: 3.0.0
+info:
+  title: Product API
+  version: '1.0'
+  description: Simple API to demonstrate product operations
+paths:
+  /products:
+    post:
+      summary: Create a new product
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - price
+              properties:
+                name:
+                  type: string
+                  description: Name of the product
+                price:
+                  type: integer
+                  description: Price of the product
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                  - price
+                properties:
+                  id:
+                    type: string
+                    description: Unique identifier for the product
+                  name:
+                    type: string
+                  price:
+                    type: integer
+          links:
+            getProduct:
+              operationId: getProductById
+              parameters:
+                path.id: "$response.body#/id"
+            updateProduct:
+              operationId: updateProductById
+              parameters:
+                path.id: "$response.body#/id"
+            deleteProduct:
+              operationId: deleteProductById
+              parameters:
+                path.id: "$response.body#/id"
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                  - details
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                        error:
+                          type: string
+
+  /products/{id}:
+    get:
+      summary: Get a product by ID
+      operationId: getProductById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the product to retrieve
+          schema:
+            type: string
+        - name: X-Token
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Product found successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                  - price
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  price:
+                    type: integer
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+    put:
+      summary: Update a product by ID
+      operationId: updateProductById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the product to update
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - price
+              properties:
+                name:
+                  type: string
+                price:
+                  type: integer
+      responses:
+        '200':
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                  - price
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  price:
+                    type: integer
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+    delete:
+      summary: Delete a product by ID
+      operationId: deleteProductById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the product to delete
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Product deleted successfully
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+ 

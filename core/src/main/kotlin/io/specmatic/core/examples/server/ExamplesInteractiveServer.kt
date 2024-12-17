@@ -11,7 +11,21 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.specmatic.conversions.ExampleFromFile
-import io.specmatic.core.*
+import io.specmatic.core.AttributeSelectionPattern
+import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
+import io.specmatic.core.DiscriminatorBasedRequestResponse
+import io.specmatic.core.EXAMPLES_DIR_SUFFIX
+import io.specmatic.core.Feature
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
+import io.specmatic.core.METHOD_BREAD_CRUMB
+import io.specmatic.core.NoBodyValue
+import io.specmatic.core.PATH_BREAD_CRUMB
+import io.specmatic.core.Result
+import io.specmatic.core.Results
+import io.specmatic.core.SPECMATIC_RESULT_HEADER
+import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
+import io.specmatic.core.Scenario
 import io.specmatic.core.discriminator.DiscriminatorExampleInjector
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.examples.server.ExamplesView.Companion.isScenarioMultiGen
@@ -23,14 +37,18 @@ import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
+import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
-import io.specmatic.core.utilities.*
-import io.specmatic.core.value.*
-import io.specmatic.mock.MOCK_HTTP_REQUEST
+import io.specmatic.core.utilities.exceptionCauseMessage
+import io.specmatic.core.utilities.uniqueNameForApiOperation
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NullValue
+import io.specmatic.core.value.ScalarValue
+import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
+import io.specmatic.mock.MOCK_HTTP_REQUEST
 import io.specmatic.mock.MOCK_HTTP_RESPONSE
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.test.ContractTest
@@ -156,10 +174,10 @@ class ExamplesInteractiveServer(
                             if(result.isSuccess())
                                 ValidateExampleResponse(request.exampleFile)
                             else {
-                                ValidateExampleResponseMap(
-                                    request.exampleFile,
-                                    ExampleValidationErrorMessage(result.reportString()).jsonPathToErrorDescriptionMapping(),
-                                    result.isPartialFailure()
+                                ValidateExampleResponse(
+                                    absPath = request.exampleFile, errorMessage = result.reportString(),
+                                    errorList = ExampleValidationErrorMessage(result.reportString()).jsonPathToErrorDescriptionMapping(),
+                                    isPartialFailure = result.isPartialFailure()
                                 )
                             }
                         } catch (e: FileNotFoundException) {
@@ -171,7 +189,7 @@ class ExamplesInteractiveServer(
                         }
                         call.respond(HttpStatusCode.OK, validationResultResponse)
                     } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("errorMessage" to exceptionCauseMessage(e)))
                     }
                 }
 
@@ -235,7 +253,6 @@ class ExamplesInteractiveServer(
         server.stop(0, 0)
     }
 
-
     private suspend fun getContractFileOrBadRequest(call: ApplicationCall): File? {
         return try {
             getContractFile()
@@ -251,7 +268,12 @@ class ExamplesInteractiveServer(
     }
 
     private fun getExamplePageHtmlContent(contractFile: File, hostPort: String): String {
-        val feature = ScenarioFilter(filterName, filterNotName, filter, filterNot).filter(parseContractFileToFeature(contractFile))
+        val feature = ScenarioFilter(
+            filterName,
+            filterNotName,
+            filter,
+            filterNot
+        ).filter(parseContractFileToFeature(contractFile))
 
         val examplesDir = getExamplesDirPath(contractFile)
         val endpoints = ExamplesView.getEndpoints(feature, examplesDir)
@@ -272,14 +294,15 @@ class ExamplesInteractiveServer(
         )
     }
 
-    private fun List<TableRow>.transform(): Map<String, Map<String, List<Map<String, String>>>> {
+    private fun List<TableRow>.transform(): Map<String, Map<String, Map<String, Any?>>> {
         return this.groupBy { it.uniqueKey }.mapValues { (_, keyGroup) ->
             keyGroup.associateBy(
                 { it.example ?: "null" },
                 {
-                    ExampleValidationErrorMessage(
-                        it.exampleMismatchReason ?: "null"
-                    ).jsonPathToErrorDescriptionMapping()
+                    mapOf(
+                        "errorList" to ExampleValidationErrorMessage(it.exampleMismatchReason ?: "null").jsonPathToErrorDescriptionMapping(),
+                        "errorMessage" to it.exampleMismatchReason
+                    )
                 }
             )
         }
@@ -774,105 +797,6 @@ class ExamplesInteractiveServer(
             println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
             file.writeText(stubJSON.toStringLiteral())
             return file
-        }
-    }
-}
-
-object InteractiveExamplesMismatchMessages : MismatchMessages {
-    override fun mismatchMessage(expected: String, actual: String): String {
-        return "Specification expected $expected but example contained $actual"
-    }
-
-    override fun unexpectedKey(keyLabel: String, keyName: String): String {
-        return "${keyLabel.capitalizeFirstChar()} $keyName in the example is not in the specification"
-    }
-
-    override fun optionalKeyMissing(keyLabel: String, keyName: String): String {
-        return "Warning: Optional ${keyLabel.capitalizeFirstChar()} $keyName in the specification is missing from the example"
-    }
-
-    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
-        return "${keyLabel.capitalizeFirstChar()} $keyName in the specification is missing from the example"
-    }
-}
-
-data class ExamplePageRequest(
-    val contractFile: String,
-    val hostPort: String
-)
-
-data class ValidateExampleRequest(
-    val exampleFile: String
-)
-
-data class SaveExampleRequest(
-    val exampleFile: String,
-    val exampleContent: String
-)
-
-data class ValidateExampleResponse(
-    val absPath: String,
-    val error: String? = null,
-    val isPartialFailure: Boolean = false
-)
-
-data class ValidateExampleResponseMap(
-    val absPath: String,
-    val error: List<Map<String, Any?>> = emptyList(),
-    val isPartialFailure: Boolean = false
-)
-
-data class GenerateExampleRequest(
-    val method: String,
-    val path: String,
-    val responseStatusCode: Int,
-    val contentType: String? = null,
-    val bulkMode: Boolean = false,
-    val isSchemaBased: Boolean = false
-)
-
-data class GenerateExample(
-    val exampleFilePath: String,
-    val created: Boolean
-)
-
-data class GenerateExampleResponse (
-    val examples: List<GenerateExample>
-) {
-    companion object {
-        fun from(infos: List<ExamplesInteractiveServer.Companion.ExamplePathInfo>): GenerateExampleResponse {
-            return GenerateExampleResponse(infos.map { GenerateExample(it.path, it.created) })
-        }
-    }
-}
-
-data class ExampleTestRequest(
-    val exampleFile: String
-)
-
-data class ExampleTestResponse(
-    val result: TestResult,
-    val details: String,
-    val testLog: String
-) {
-    constructor(result: Result, testLog: String, exampleFile: File): this (
-        result = result.testResult(),
-        details = resultToDetails(result, exampleFile),
-        testLog = when(result.isSuccess()) {
-            true -> testLog
-            false -> "${result.reportString()}\n\n$testLog"
-        }
-    )
-
-    companion object {
-        fun resultToDetails(result: Result, exampleFile: File): String {
-            val postFix = when(result.testResult()) {
-                TestResult.Success -> "has SUCCEEDED"
-                TestResult.Error -> "has ERROR"
-                else -> "has FAILED"
-            }
-
-            return "Example test for ${exampleFile.nameWithoutExtension} $postFix"
         }
     }
 }

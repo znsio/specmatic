@@ -619,7 +619,8 @@ data class Scenario(
     fun matchesMock(
         request: HttpRequest,
         response: HttpResponse,
-        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages,
+        keyCheck: KeyCheck = DefaultKeyCheck
     ): Result {
         scenarioBreadCrumb(this) {
             val updatedMismatchMessages =
@@ -631,7 +632,7 @@ data class Scenario(
                 IgnoreFacts(),
                 true,
                 patterns,
-                findKeyErrorCheck = DefaultKeyCheck.disableOverrideUnexpectedKeycheck(),
+                findKeyErrorCheck = keyCheck.disableOverrideUnexpectedKeycheck(),
                 mismatchMessages = updatedMismatchMessages
             )
 

@@ -620,7 +620,7 @@ For example:
                 val matchingExamples = getExistingExampleFiles(feature, scenario, examples)
                 examplesCount += matchingExamples.size
                 matchingExamples.map { (example, _) ->
-                    val exampleDictionary = example.toDictionary(scenario)
+                    val exampleDictionary = exampleToDictionary(example, scenario)
                     dictionary.putAll(exampleDictionary)
                 }
             }
@@ -641,13 +641,13 @@ For example:
             } ?: emptyMap()
         }
 
-        private fun ExampleFromFile.toDictionary(scenario: Scenario): Map<String, Value> {
+        fun exampleToDictionary(example: ExampleFromFile, scenario: Scenario): Map<String, Value> {
             val requestPattern = resolvedHop(scenario.httpRequestPattern.body, scenario.resolver)
             val responsePattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
 
             val updatedResolver = scenario.resolver.ignoreAll()
-            val requestDictionary = this.request.body.toDictionary(requestPattern, updatedResolver)
-            val responseDictionary = this.response.body.toDictionary(responsePattern, updatedResolver)
+            val requestDictionary = example.request.body.toDictionary(requestPattern, updatedResolver)
+            val responseDictionary = example.response.body.toDictionary(responsePattern, updatedResolver)
             return requestDictionary.plus(responseDictionary)
         }
 

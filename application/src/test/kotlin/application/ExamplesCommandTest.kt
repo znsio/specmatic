@@ -6,7 +6,9 @@ import io.specmatic.core.HttpResponse
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesDirPath
 import io.specmatic.core.parseContractFileToFeature
+import io.specmatic.core.pattern.AnyPattern
 import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.pattern.resolvedHop
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.mock.ScenarioStub
@@ -758,6 +760,55 @@ paths:
                 val dictionary = ExamplesCommand.ExampleToDictionary().exampleToDictionary(example, scenario)
                 println(JSONObjectValue(dictionary).toStringLiteral())
                 assertThat(dictionary).isEmpty()
+            }
+        }
+
+        @Test
+        fun `should fallback to first AnyPattern if none matches and there's only one pattern`() {
+            val scenario = feature.scenarios.first { it.path == "/oneOf" && it.method == "POST" }
+            val bodyPatten = resolvedHop(scenario.httpRequestPattern.body, scenario.resolver) as AnyPattern
+
+            // Filtering AnyPattern to contain only (Nested) Pattern, removes (Base) Pattern
+            val updatedScenario = scenario.copy(
+                httpRequestPattern = scenario.httpRequestPattern.copy(
+                    body = bodyPatten.copy(pattern = bodyPatten.pattern.filter { it.typeAlias == "(Nested)" })
+                )
+            )
+
+            val httpRequestNested = HttpRequest(
+                path = "/oneOf", method = "POST",
+                body = parsedJSONObject("""
+                {
+                    "type": "UNKNOWN",
+                    "base": {
+                        "id": 123,
+                        "type": "Base",
+                        "terms": ["Term1", "Term2"]
+                    },
+                    "details": {
+                        "price": 100,
+                        "description": ["Desc1", "Desc2"]
+                    }
+                }
+                """.trimIndent())
+            )
+            val httpResponseNested = HttpResponse(status = 200)
+
+            withExampleFile(httpRequestNested, httpResponseNested, contractFile) { example ->
+                val dictionary = ExamplesCommand.ExampleToDictionary().exampleToDictionary(example, updatedScenario)
+                val expectedDictionary = parsedJSONObject("""
+                {
+                    "Base.id": 123,
+                    "Base.type": "Base",
+                    "Base.terms[*]": "Term1",
+                    "Nested.details.price": 100,
+                    "Nested.details.description[*]": "Desc1"
+                }
+                """.trimIndent())
+                println(JSONObjectValue(dictionary).toStringLiteral())
+
+                assertThat(dictionary).isNotEmpty
+                assertThat(dictionary).containsExactlyEntriesOf(expectedDictionary.jsonObject)
             }
         }
     }

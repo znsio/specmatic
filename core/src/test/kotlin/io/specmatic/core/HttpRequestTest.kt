@@ -9,10 +9,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import io.specmatic.core.pattern.*
-import io.specmatic.core.value.EmptyString
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.NumberValue
-import io.specmatic.core.value.StringValue
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.optionalPattern
 import io.ktor.client.request.*
@@ -21,6 +17,7 @@ import io.mockk.every
 import io.mockk.spyk
 import io.mockk.verify
 import io.specmatic.core.utilities.Flags
+import io.specmatic.core.value.*
 import java.util.stream.Stream
 import org.junit.jupiter.api.Assertions.assertEquals
 
@@ -40,6 +37,33 @@ internal class HttpRequestTest {
         val json = HttpRequest("POST", "/").copy(formFields = mapOf("Data" to "10")).toJSON()
         val value = json.jsonObject.getValue("form-fields") as JSONObjectValue
         assertThat(value.jsonObject.getValue("Data")).isEqualTo(StringValue("10"))
+    }
+
+    @Test
+    fun `when serialised to json, the request should contain form fields with single query parameters`() {
+        val queryParams = QueryParameters(
+            mapOf("key1" to "value1", "key2" to "value2")
+        )
+        val json = HttpRequest("POST", "/").copy(formFields = mapOf("Data" to "10"), queryParams = queryParams).toJSON()
+        val value = json.jsonObject.getValue("query") as JSONObjectValue
+        assertThat(value.jsonObject.getValue("key1")).isEqualTo(StringValue("value1"))
+        assertThat(value.jsonObject.getValue("key2")).isEqualTo(StringValue("value2"))
+    }
+
+    @Test
+    fun `when serialised to json, the request should contain form fields with multiple query parameters`() {
+        val queryParams = QueryParameters(listOf("key1" to "value1", "key1" to "value2", "key1" to "value3"))
+        val json = HttpRequest("POST", "/").copy(formFields = mapOf("Data" to "10"), queryParams = queryParams).toJSON()
+        val value = json.jsonObject.getValue("query") as JSONObjectValue
+        assertThat(value.jsonObject.getValue("key1")).isEqualTo(
+            JSONArrayValue(
+                listOf(
+                    StringValue("value1"),
+                    StringValue("value2"),
+                    StringValue("value3")
+                )
+            )
+        )
     }
 
     @Test

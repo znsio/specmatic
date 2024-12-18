@@ -9,11 +9,13 @@ private const val BREADCRUMB_DELIMITER = "."
 private const val JSONPATH_DELIMITER = "/"
 private const val HTTP_RESPONSE = "http-response"
 private const val HTTP_REQUEST = "http-request"
+private const val BREADCRUMB_PREFIX = ">>"
+private const val BREADCRUMB_PREFIX_WITH_TRAILING_SPACE = "$BREADCRUMB_PREFIX "
 
 data class ExampleValidationErrorMessage(val failureDetails : List<MatchFailureDetails>) {
     fun jsonPathToErrorDescriptionMapping(): List<Map<String, Any>> {
         return failureDetails.flatMap { failureDetail ->
-            val transformedJsonPaths = failureDetail.breadCrumbs.transformBreadcrumbs()
+            val transformedJsonPaths = transformBreadcrumbs(failureDetail.errorMessages)
             listOf(
                 mapOf(
                     JSON_PATH to transformedJsonPaths,
@@ -25,8 +27,13 @@ data class ExampleValidationErrorMessage(val failureDetails : List<MatchFailureD
         }
 
 
-    private fun List<String>.transformBreadcrumbs(): String {
-        return this
+    private fun transformBreadcrumbs(errorMessages: List<String>): String {
+        val breadcrumbs = errorMessages.map { it.trim() }.filter { it.startsWith(BREADCRUMB_PREFIX_WITH_TRAILING_SPACE) }.map {
+            it.removePrefix(
+                BREADCRUMB_PREFIX_WITH_TRAILING_SPACE
+            )
+        }
+        return breadcrumbs
             .joinToString("/") { breadcrumb ->
                 breadcrumb
                     .replace("RESPONSE", HTTP_RESPONSE)

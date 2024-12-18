@@ -518,7 +518,7 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
 
         val responseBody = (response.body as JSONArrayValue)
-        assertThat(responseBody.list.size).isEqualTo(4)
+        assertThat(responseBody.list.size).isEqualTo(5)
 
         val responseObjectFromResponseBody = (response.body as JSONArrayValue)
             .list.filterIsInstance<JSONObjectValue>().first { it.getStringValue("id") == "300" }
@@ -529,7 +529,6 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         assertThat(responseObjectFromResponseBody.getStringValue("price")).isEqualTo("942")
         assertThat(responseObjectFromResponseBody.getStringValue("inStock")).isEqualTo("true")
     }
-
 
     @Test
     fun `should get the product from seed data loaded from examples`() {
@@ -551,6 +550,25 @@ class StatefulHttpStubSeedDataFromExamplesTest {
     }
 
     @Test
+    fun `should get the Samsung Ultra product from seed data loaded from examples which is a merge of request and response bodies`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products/700"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        val responseBody = response.body as JSONObjectValue
+
+        assertThat(responseBody.getStringValue("id")).isEqualTo("700")
+        assertThat(responseBody.getStringValue("name")).isEqualTo("Samsung Ultra")
+        assertThat(responseBody.getStringValue("description")).isEqualTo("Samsung Ultra Description")
+        assertThat(responseBody.getStringValue("price")).isEqualTo("1000")
+        assertThat(responseBody.getStringValue("inStock")).isEqualTo("false")
+    }
+
+    @Test
     fun `should not load the xiaomi product from the seed data as it has the same id (300) as that of iphone example`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -563,7 +581,7 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
 
         val responseBody = (response.body as JSONArrayValue)
-        assertThat(responseBody.list.size).isEqualTo(4)
+        assertThat(responseBody.list.size).isEqualTo(5)
 
         val responseObjectsFromResponseBody = (response.body as JSONArrayValue)
             .list.filterIsInstance<JSONObjectValue>().filter { it.getStringValue("id") == "300" }
@@ -588,7 +606,7 @@ class StatefulHttpStubSeedDataFromExamplesTest {
         assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
 
         val responseBody = (response.body as JSONArrayValue)
-        assertThat(responseBody.list.size).isEqualTo(4)
+        assertThat(responseBody.list.size).isEqualTo(5)
 
         val productsWithIds500And600 = (response.body as JSONArrayValue)
             .list.filterIsInstance<JSONObjectValue>().filter {

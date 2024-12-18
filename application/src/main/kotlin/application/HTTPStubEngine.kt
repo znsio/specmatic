@@ -5,6 +5,7 @@ import io.specmatic.core.WorkingDirectory
 import io.specmatic.core.log.NewLineLogMessage
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleLog
+import io.specmatic.core.utilities.consolePrintableURL
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.HttpClientFactory
 import io.specmatic.stub.HttpStub
@@ -46,8 +47,7 @@ class HTTPStubEngine {
             timeoutMillis = gracefulRestartTimeoutInMs
         ).also {
             consoleLog(NewLineLogMessage)
-            val protocol = if (keyStoreData != null) "https" else "http"
-            consoleLog(StringLog("Stub server is running on ${protocol}://$host:$port. Ctrl + C to stop."))
+            consoleLog(StringLog("Stub server is running on ${consolePrintableURL(host, port, keyStoreData)}. Ctrl + C to stop."))
         }
     }
 }

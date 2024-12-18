@@ -70,10 +70,13 @@ sealed class Result {
     abstract fun partialSuccess(message: String): Result
     abstract fun isPartialSuccess(): Boolean
 
+    abstract fun isPartialFailure(): Boolean
+
     abstract fun testResult(): TestResult
     abstract fun withFailureReason(urlPathMisMatch: FailureReason): Result
     abstract fun throwOnFailure(): Success
     abstract fun <T> toReturnValue(returnValue: T, errorMessage: String): ReturnValue<T>
+    abstract fun <V> onSuccessElseNull(function: () -> V): V?
 
     data class FailureCause(val message: String="", var cause: Failure? = null) {
         fun hasReason(failureReason: FailureReason): Boolean {
@@ -111,14 +114,14 @@ sealed class Result {
         }
     }
 
-    data class Failure(val causes: List<FailureCause> = emptyList(), val breadCrumb: String = "", val failureReason: FailureReason? = null) : Result() {
-        constructor(message: String="", cause: Failure? = null, breadCrumb: String = "", failureReason: FailureReason? = null): this(listOf(FailureCause(message, cause)), breadCrumb, failureReason)
+    data class Failure(val causes: List<FailureCause> = emptyList(), val breadCrumb: String = "", val failureReason: FailureReason? = null, val isPartial: Boolean = false) : Result() {
+        constructor(message: String="", cause: Failure? = null, breadCrumb: String = "", failureReason: FailureReason? = null, isPartial: Boolean? = false): this(listOf(FailureCause(message, cause)), breadCrumb, failureReason, isPartial ?: false)
 
         companion object {
             fun fromFailures(failures: List<Failure>): Failure {
                 return Failure(failures.map {
                     it.toFailureCause()
-                })
+                }, isPartial = failures.all { it.isPartial })
             }
         }
 
@@ -135,6 +138,7 @@ sealed class Result {
                 .plus("$prefix$breadCrumb")
         }
 
+
         override fun ifSuccess(function: () -> Result) = this
         override fun withBindings(bindings: Map<String, String>, response: HttpResponse): Result {
             return this
@@ -149,6 +153,7 @@ sealed class Result {
         }
 
         override fun isPartialSuccess(): Boolean = false
+        override fun isPartialFailure(): Boolean = isPartial
         override fun testResult(): TestResult {
             if(shouldBeIgnored())
                 return TestResult.Error
@@ -168,8 +173,12 @@ sealed class Result {
             return HasFailure(this)
         }
 
+        override fun <V> onSuccessElseNull(function: () -> V): V? {
+            return null
+        }
+
         fun reason(errorMessage: String) = Failure(errorMessage, this)
-        override fun breadCrumb(breadCrumb: String) = Failure(cause = this, breadCrumb = breadCrumb)
+        override fun breadCrumb(breadCrumb: String) = Failure(cause = this, breadCrumb = breadCrumb, isPartial = isPartial)
         override fun failureReason(failureReason: FailureReason?): Result {
             return this.copy(failureReason = failureReason)
         }
@@ -285,6 +294,7 @@ sealed class Result {
         }
 
         override fun isPartialSuccess(): Boolean = partialSuccessMessage != null
+        override fun isPartialFailure(): Boolean = false
         override fun testResult(): TestResult {
             return TestResult.Success
         }
@@ -299,6 +309,10 @@ sealed class Result {
 
         override fun <T> toReturnValue(returnValue: T, errorMessage: String): ReturnValue<T> {
             return HasValue(returnValue)
+        }
+
+        override fun <V> onSuccessElseNull(function: () -> V): V? {
+            return function()
         }
     }
 }
@@ -333,6 +347,9 @@ interface MismatchMessages {
     fun mismatchMessage(expected: String, actual: String): String
     fun unexpectedKey(keyLabel: String, keyName: String): String
     fun expectedKeyWasMissing(keyLabel: String, keyName: String): String
+    fun optionalKeyMissing(keyLabel: String, keyName: String): String {
+        return expectedKeyWasMissing("optional ${keyLabel.lowercase()}", keyName)
+    }
     fun valueMismatchFailure(expected: String, actual: Value?, mismatchMessages: MismatchMessages = DefaultMismatchMessages): Failure {
         return mismatchResult(expected, valueError(actual) ?: "null", mismatchMessages)
     }
@@ -349,6 +366,10 @@ object DefaultMismatchMessages: MismatchMessages {
 
     override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
         return "Expected ${keyLabel.lowercase()} named \"$keyName\" was missing"
+    }
+
+    override fun optionalKeyMissing(keyLabel: String, keyName: String): String {
+        return "Expected optional ${keyLabel.lowercase()} named \"$keyName\" was missing"
     }
 }
 

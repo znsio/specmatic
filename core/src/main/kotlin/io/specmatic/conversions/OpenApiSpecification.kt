@@ -108,6 +108,18 @@ class OpenApiSpecification(
             return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences()) != null
         }
 
+        fun getImplicitOverlayContent(openApiFilePath: String): String {
+            return File(openApiFilePath).let { openApiFile ->
+                if(!openApiFile.isFile)
+                    return@let ""
+
+                val overlayFile = openApiFile.canonicalFile.parentFile.resolve(openApiFile.nameWithoutExtension + "_overlay.yaml")
+                if(overlayFile.isFile) return@let overlayFile.readText()
+
+                return@let ""
+            }
+        }
+
         fun fromYAML(
             yamlContent: String,
             openApiFilePath: String,
@@ -120,16 +132,7 @@ class OpenApiSpecification(
             specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
             overlayContent: String = ""
         ): OpenApiSpecification {
-            val implicitOverlayFile = File(openApiFilePath).let { openApiFile ->
-                if(!openApiFile.isFile)
-                    return@let ""
-
-                val overlayFile = openApiFile.canonicalFile.parentFile.resolve(openApiFile.nameWithoutExtension + "_overlay.yaml")
-                if(overlayFile.isFile)
-                    return@let overlayFile.readText()
-
-                return@let ""
-            }
+            val implicitOverlayFile = getImplicitOverlayContent(openApiFilePath)
 
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(
@@ -203,9 +206,15 @@ class OpenApiSpecification(
             }
         }
 
-        private fun resolveExternalReferences(): ParseOptions = ParseOptions().also { it.isResolve = true }
+        private fun resolveExternalReferences(): ParseOptions {
+            return ParseOptions().also {
+                it.isResolve = true
+                it.isResolveRequestBody = true
+                it.isResolveResponses = true
+            }
+        }
 
-        private fun String.applyOverlay(overlayContent: String): String {
+        fun String.applyOverlay(overlayContent: String): String {
             if(overlayContent.isBlank())
                 return this
 
@@ -226,7 +235,7 @@ class OpenApiSpecification(
         val unreferencedSchemaPatterns = parseUnreferencedSchemas()
         val updatedScenarios = scenarioInfos.map {
             Scenario(it).copy(
-                dictionary = dictionary,
+                dictionary = dictionary.plus(specmaticConfig.parsedDefaultPatternValues()),
                 attributeSelectionPattern = specmaticConfig.attributeSelectionPattern,
                 patterns = it.patterns + unreferencedSchemaPatterns
             )

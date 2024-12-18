@@ -204,4 +204,28 @@ class OverlayMergerTest {
         - "PENDING"
         """.trimIndent())
     }
+
+    @Test
+    fun `should gracefully return the original if the jsonpath does not exist`() {
+        val yamlContent = """
+            node1: "existing node1 content"
+        """.trimIndent()
+
+        val overlayContent = """
+            overlay: 1.0.0
+            info:
+              title: Targeted Overlay
+              version: 1.0.0
+            actions:
+              - target: ${'$'}.node2
+                update: new additional content
+        """.trimIndent()
+
+        val updatedContent = OverlayMerger().merge(
+            baseContent = yamlContent,
+            overlay = OverlayParser.parse(overlayContent)
+        )
+
+        assertThat(updatedContent).isEqualTo(yamlContent)
+    }
 }

@@ -90,11 +90,15 @@ data class Resolver(
     }
 
     fun actualPatternMatch(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
+        val patternFromSampleValue = patternFromTokenBased(sampleValue)
+
         if (mockMode
-                && sampleValue is StringValue
-                && isPatternToken(sampleValue.string)
-                && pattern.encompasses(getPattern(sampleValue.string).let { if(it is LookupRowPattern) resolvedHop(it.pattern, this) else it }, this, this).isSuccess())
+            && patternFromSampleValue != null
+            && (patternFromSampleValue is AnyValuePattern ||
+                    pattern.encompasses(patternFromSampleValue, this, this).isSuccess())
+            ) {
             return Result.Success()
+        }
 
         return pattern.matches(sampleValue, this).ifSuccess {
             if (factKey != null && factStore.has(factKey)) {
@@ -106,6 +110,16 @@ data class Resolver(
             }
 
             Result.Success()
+        }
+    }
+
+    private fun patternFromTokenBased(sampleValue: Value): Pattern? {
+        if (sampleValue !is StringValue || !isPatternToken(sampleValue.string)) return null
+        return getPattern(sampleValue.string).let {
+            if (it is LookupRowPattern) resolvedHop(
+                it.pattern,
+                this
+            ) else it
         }
     }
 
@@ -188,13 +202,23 @@ data class Resolver(
         if(dictionaryLookupPath.isBlank())
             return pattern.generate(this)
 
-        val value = dictionary[dictionaryLookupPath] ?: return pattern.generate(this)
+        val value = dictionary[dictionaryLookupPath] ?: defaultPatternValueFromDictionary(pattern) ?: return pattern.generate(this)
 
         val dictionaryValueMatchResult = pattern.matches(value, this)
 
         dictionaryValueMatchResult.throwOnFailure()
 
         return value
+    }
+
+    private fun defaultPatternValueFromDictionary(pattern: Pattern): Value? {
+        val defaultPatternValue = dictionary[withPatternDelimiters(pattern.typeName)]
+
+        return pattern
+            .matches(defaultPatternValue, this)
+            .onSuccessElseNull {
+                defaultPatternValue
+            }
     }
 
     fun generate(typeAlias: String?, rawLookupKey: String, pattern: Pattern): Value {

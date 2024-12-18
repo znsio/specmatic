@@ -36,7 +36,7 @@ fun parseContractFileToFeature(
     sourceRepositoryBranch: String? = null,
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    specmaticConfig: SpecmaticConfig = loadSpecmaticConfigOrDefault(getConfigFilePath()),
     overlayContent: String = ""
 ): Feature {
     return parseContractFileToFeature(
@@ -65,7 +65,7 @@ fun parseContractFileToFeature(
     sourceRepositoryBranch: String? = null,
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    specmaticConfig: SpecmaticConfig = loadSpecmaticConfigOrDefault(getConfigFilePath()),
     overlayContent: String = ""
 ): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
@@ -374,8 +374,8 @@ data class Feature(
         } != null
     }
 
-    fun matchResultSchemaFlagBased(primaryPatternName: String?, secondaryPatternName: String, value: Value): Result {
-        val updatedResolver = flagsBased.update(scenarios.last().resolver)
+    fun matchResultSchemaFlagBased(primaryPatternName: String?, secondaryPatternName: String, value: Value, mismatchMessages: MismatchMessages): Result {
+        val updatedResolver = flagsBased.update(scenarios.last().resolver).copy(mismatchMessages = mismatchMessages)
         return try {
             val pattern = primaryPatternName ?: secondaryPatternName
             val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(pattern))
@@ -474,7 +474,15 @@ data class Feature(
             scenario.newBasedOnAttributeSelectionFields(request.queryParams)
         }.map { scenario ->
             try {
-                when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
+                val keyCheck = if(flagsBased.unexpectedKeyCheck != null)
+                    DefaultKeyCheck.copy(unexpectedKeyCheck = flagsBased.unexpectedKeyCheck)
+                else DefaultKeyCheck
+                when (val matchResult = scenario.matchesMock(
+                    request,
+                    response,
+                    mismatchMessages,
+                    keyCheck
+                )) {
                     is Result.Success -> Pair(
                         scenario.resolverAndResponseForExpectation(response).let { (resolver, resolvedResponse) ->
                             val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
@@ -1673,13 +1681,22 @@ data class Feature(
                 acc + loadExternalisedJSONExamples(item)
             }
 
-        return examplesInSubdirectories + files.filterNot { it.isDirectory }.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
+        logger.log("Loading externalised examples in ${testsDirectory.path}: ")
+        return examplesInSubdirectories + files.asSequence().filterNot {
+            it.isDirectory
+        }.map {
+            val exampleFromFile = ExampleFromFile(it)
+            if(exampleFromFile.isInvalid()) {
+                throw ContractException("Error loading example from file '${it.name}' as it is in invalid format. Please fix the example format to load this example.")
+            }
+            exampleFromFile
+        }.mapNotNull { exampleFromFile ->
             try {
                 with(exampleFromFile) {
                     OpenApiSpecification.OperationIdentifier(
-                        requestMethod,
-                        requestPath,
-                        responseStatus,
+                        requestMethod.orEmpty(),
+                        requestPath.orEmpty(),
+                        responseStatus ?: 0,
                         exampleFromFile.headers.filter { it.key.lowercase() == "content-type" }.values.firstOrNull(),
                         exampleFromFile.responseHeaders?.let { it.jsonObject.filter { it.key.lowercase() == "content-type" }.values.firstOrNull()?.toStringLiteral() }
                     ) to exampleFromFile.toRow(specmaticConfig)

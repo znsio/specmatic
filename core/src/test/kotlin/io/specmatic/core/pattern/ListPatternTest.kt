@@ -206,40 +206,31 @@ Feature: Recursive test
         val basePattern = ListPattern(parsedPattern("""{
             "topLevelMandatoryKey": "(number)",
             "topLevelOptionalKey?": "(string)",
-            "subMandatoryObject": {
-                "subMandatoryKey": "(string)",
-                "subOptionalKey?": "(number)"
-            }
+            "subList": "(baseListPattern)"
         }
         """.trimIndent(), typeAlias = "(baseJsonPattern)"), typeAlias = "(baseListPattern)")
-        val listPattern = ListPattern(basePattern, typeAlias = "(baseListPattern)")
+        val listPattern = ListPattern(basePattern)
 
-        val matchingValue = parsedValue("""[
+        val value = parsedValue("""[
             [
                 {
                     "topLevelMandatoryKey": 10,
                     "topLevelOptionalKey": "abc",
-                    "subMandatoryObject": {
-                        "subMandatoryKey": "abc",
-                        "subOptionalKey": 10
-                    }
+                    "subList": []
                 },
                 {
                     "topLevelMandatoryKey": 10,
                     "topLevelOptionalKey": "abc",
-                    "subMandatoryObject": {
-                        "subMandatoryKey": "abc",
-                        "subOptionalKey": 10
-                    }
+                    "subList": []
                 }
-            ],
-            []
+            ]
         ]
-        """.trimIndent())
-        val result = listPattern.matches(matchingValue, Resolver().withAllPatternsAsMandatory())
-        println(result.reportString())
+        """.trimIndent()) as JSONArrayValue
+        val result = listPattern.matches(value, Resolver(newPatterns = mapOf("(baseListPattern)" to basePattern)).withAllPatternsAsMandatory())
 
+        println(result.reportString())
         assertThat(result).isInstanceOf(Result.Success::class.java)
+        assertThat(result.reportString()).isEmpty()
     }
 
     @Test

@@ -278,7 +278,7 @@ class ExamplesInteractiveServer(
                 { it.example ?: "null" },
                 {
                     ExampleValidationErrorMessage(
-                        reportString = it.reportString(),
+                        reportString = it.exampleMismatchReason,
                         failureDetails = it.failureDetails
                     ).jsonPathToErrorDescriptionMapping()
                 }

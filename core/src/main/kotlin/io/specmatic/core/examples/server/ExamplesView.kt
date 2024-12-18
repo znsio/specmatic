@@ -27,6 +27,7 @@ class ExamplesView {
                     responseStatus = scenario.httpResponsePattern.status,
                     contentType = scenario.httpRequestPattern.headersPattern.contentType,
                     exampleFile = example?.first,
+                    exampleMismatchReason = example?.second?.reportString()?.takeIf { it.isNotBlank() },
                     failureDetails = if (example?.second is Result.Failure) {
                         (example.second as Result.Failure).toMatchFailureDetailList()
                     } else {
@@ -108,6 +109,7 @@ class ExamplesView {
                                     contentType = it.contentType,
                                     example = it.exampleFile?.absolutePath,
                                     exampleName = it.exampleFile?.nameWithoutExtension,
+                                    exampleMismatchReason = it.exampleMismatchReason?.takeIf { reason -> reason.isNotBlank() },
                                     failureDetails = it.failureDetails,
                                     isPartialFailure = it.isPartialFailure,
                                     isDiscriminatorBased = it.isDiscriminatorBased
@@ -163,6 +165,7 @@ class ExamplesView {
                         showStatus = false,
                         example = exampleFile?.canonicalPath,
                         exampleName = exampleFile?.nameWithoutExtension,
+                        exampleMismatchReason = result?.reportString()?.takeIf { it.isNotBlank() },
                         failureDetails = if (result is Result.Failure) result.toMatchFailureDetailList() else emptyList(),
                         isPartialFailure = result?.isPartialFailure() ?: false,
                         isDiscriminatorBased = false, isSchemaBased = true,
@@ -189,6 +192,7 @@ data class TableRow(
     val showStatus: Boolean,
     val example: String? = null,
     val exampleName: String? = null,
+    val exampleMismatchReason:String? = null,
     val failureDetails : List<MatchFailureDetails> = emptyList() ,
     val isPartialFailure: Boolean = false,
     val isGenerated: Boolean = exampleName != null,
@@ -223,6 +227,7 @@ data class Endpoint(
     val responseStatus: Int,
     val contentType: String? = null,
     val exampleFile: File? = null,
+    val exampleMismatchReason: String? = null,
     val failureDetails: List<MatchFailureDetails> = emptyList(),
     val isPartialFailure: Boolean = false,
     val isDiscriminatorBased: Boolean

@@ -8,6 +8,7 @@ import com.jayway.jsonpath.Configuration
 import com.jayway.jsonpath.DocumentContext
 import com.jayway.jsonpath.JsonPath
 import com.jayway.jsonpath.Option
+import io.specmatic.core.log.logger
 
 class OverlayMerger {
 
@@ -22,6 +23,13 @@ class OverlayMerger {
             val rootNode = yamlMapper.readTree(baseContent) as ObjectNode
             val documentContext = documentContextFor(rootNode)
 
+            fun attemptElsePrintError(jsonPath: String, operationName: String, fn: () -> Unit) {
+                try {
+                    fn()
+                } catch (e: Exception) {
+                    logger.debug("${operationName.replaceFirstChar { it.uppercaseChar() }} operation failed at JSON at path $jsonPath with error: ${e.message}")
+                }
+            }
 
             overlay.updateMap.forEach { (jsonPath, contentList) ->
                 val targetNodes = documentContext.read<List<Any>>(jsonPath)
@@ -34,18 +42,26 @@ class OverlayMerger {
                             (content as Map<String, Any?>).forEach { (key, value) ->
                                 mergedContent[key] = value
                             }
-                            documentContext.set(jsonPath, mergedContent)
+                            attemptElsePrintError(jsonPath, "merge") {
+                                documentContext.set(jsonPath, mergedContent)
+                            }
                         }
 
-                        is List<*> -> documentContext.add(jsonPath, content)
+                        is List<*> -> attemptElsePrintError(jsonPath, "append") {
+                            documentContext.add(jsonPath, content)
+                        }
 
-                        else -> documentContext.set(jsonPath, content)
+                        else -> attemptElsePrintError(jsonPath, "update") {
+                            documentContext.set(jsonPath, content)
+                        }
                     }
                 }
             }
 
             overlay.removalMap.filter { it.value }.forEach { (jsonPath, _) ->
-                documentContext.delete(jsonPath)
+                attemptElsePrintError(jsonPath, "delete") {
+                    documentContext.delete(jsonPath)
+                }
             }
 
             return yamlMapper.writeValueAsString(

@@ -1,6 +1,5 @@
 package io.specmatic.core.examples.server
 
-import com.jayway.jsonpath.JsonPath
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
@@ -12,25 +11,43 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.specmatic.conversions.ExampleFromFile
-import io.specmatic.core.*
+import io.specmatic.core.AttributeSelectionPattern
+import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
+import io.specmatic.core.DiscriminatorBasedRequestResponse
+import io.specmatic.core.EXAMPLES_DIR_SUFFIX
+import io.specmatic.core.Feature
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
+import io.specmatic.core.METHOD_BREAD_CRUMB
+import io.specmatic.core.NoBodyValue
+import io.specmatic.core.PATH_BREAD_CRUMB
+import io.specmatic.core.Result
+import io.specmatic.core.Results
+import io.specmatic.core.SPECMATIC_RESULT_HEADER
+import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
+import io.specmatic.core.Scenario
 import io.specmatic.core.discriminator.DiscriminatorExampleInjector
 import io.specmatic.core.discriminator.DiscriminatorMetadata
+import io.specmatic.core.examples.server.ExamplesView.Companion.isScenarioMultiGen
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
 import io.specmatic.core.examples.server.ExamplesView.Companion.withSchemaExamples
-import io.specmatic.core.examples.server.SchemaExample.Companion.NOT_SCHEMA_BASED
-import io.specmatic.core.examples.server.SchemaExample.Companion.SCHEMA_BASED
 import io.specmatic.core.examples.server.SchemaExample.Companion.toSchemaExampleFileName
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.consoleDebug
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.log.logger
+import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
-import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.uniqueNameForApiOperation
-import io.specmatic.core.value.*
+import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.JSONObjectValue
+import io.specmatic.core.value.NullValue
+import io.specmatic.core.value.ScalarValue
+import io.specmatic.core.value.StringValue
+import io.specmatic.core.value.Value
 import io.specmatic.mock.MOCK_HTTP_REQUEST
 import io.specmatic.mock.MOCK_HTTP_RESPONSE
 import io.specmatic.mock.ScenarioStub
@@ -87,6 +104,7 @@ class ExamplesInteractiveServer(
             }
 
             configureHealthCheckModule()
+
             routing {
                 get("/_specmatic/examples") {
                     val contractFile = getContractFileOrBadRequest(call) ?: return@get
@@ -152,11 +170,15 @@ class ExamplesInteractiveServer(
                     try {
                         val contractFile = getContractFile()
                         val validationResultResponse = try {
-                            val result = validateSingleExample(contractFile, File(request.exampleFile))
+                            val result = validateExample(contractFile, File(request.exampleFile))
                             if(result.isSuccess())
                                 ValidateExampleResponse(request.exampleFile)
                             else {
-                                ValidateExampleResponse(request.exampleFile, result.reportString(), result.isPartialFailure())
+                                ValidateExampleResponse(
+                                    absPath = request.exampleFile, errorMessage = result.reportString(),
+                                    errorList = ExampleValidationErrorMessage(result.reportString()).jsonPathToErrorDescriptionMapping(),
+                                    isPartialFailure = result.isPartialFailure()
+                                )
                             }
                         } catch (e: FileNotFoundException) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
@@ -167,48 +189,7 @@ class ExamplesInteractiveServer(
                         }
                         call.respond(HttpStatusCode.OK, validationResultResponse)
                     } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
-                    }
-                }
-
-                post("/_specmatic/v2/examples/validate") {
-                    val request = call.receive<List<ValidateExampleRequest>>()
-                    try {
-                        val contractFile = getContractFile()
-
-                        val examples = request.associate {
-                            val exampleFilePath = it.exampleFile
-                            exampleFilePath to listOf(ScenarioStub.readFromFile(File(exampleFilePath)))
-                        }
-
-                        val results = validateExamples(contractFile, examples = examples)
-
-                        val validationResults = results.map { (exampleFilePath, result) ->
-                            try {
-                                result.throwOnFailure()
-                                ValidateExampleResponseV2(
-                                    ValidateExampleVerdict.SUCCESS,
-                                    "The provided example is valid",
-                                    exampleFilePath
-                                )
-                            } catch (e: ContractException) {
-                                ValidateExampleResponseV2(
-                                    ValidateExampleVerdict.FAILURE,
-                                    exceptionCauseMessage(e),
-                                    exampleFilePath
-                                )
-                            } catch (e: Exception) {
-                                ValidateExampleResponseV2(
-                                    ValidateExampleVerdict.FAILURE,
-                                    e.message ?: "An unexpected error occurred",
-                                    exampleFilePath
-                                )
-                            }
-                        }
-
-                        call.respond(HttpStatusCode.OK, validationResults)
-                    } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("errorMessage" to exceptionCauseMessage(e)))
                     }
                 }
 
@@ -271,50 +252,6 @@ class ExamplesInteractiveServer(
     override fun close() {
         server.stop(0, 0)
     }
-    fun extractBreadcrumbs(input: String): List<String> {
-        val breadCrumbPrefix = ">> "
-
-        val breadcrumbs = input.lines().map { it.trim() }.filter { it.startsWith(breadCrumbPrefix) }.map { it.removePrefix(
-            breadCrumbPrefix
-        ) }
-
-        return breadcrumbs
-    }
-
-
-
-    fun getJsonNodeLineNumbersUsingJsonPath(
-        jsonFilePath: String,
-        jsonPaths: List<String>,
-        breadcrumbs: List<String>
-    ): Int? {
-        if (jsonPaths.size != breadcrumbs.size) {
-            throw IllegalArgumentException("JSON paths and breadcrumbs lists must be of the same size")
-        }
-
-        fun transform(path: String): String {
-            return "$.${path.replace("/", ".")}"
-        }
-
-        val jsonPathString = jsonPaths.firstOrNull()?.let { transform(it) } ?: return null
-
-        return findLineNumber(File(jsonFilePath), JsonPath.compile(jsonPathString))
-    }
-
-    fun transformToJsonPaths(breadcrumbs: List<String>): List<String> {
-        val jsonPaths: MutableList<String> = ArrayList()
-
-        for (breadcrumb in breadcrumbs) {
-            val jsonPath = breadcrumb
-                .replace("RESPONSE", "http-response")
-                .replace("REQUEST", "http-request")
-                .replace("BODY", "body")
-                .replace(".", "/")
-            jsonPaths.add(jsonPath)
-        }
-
-        return jsonPaths
-    }
 
     private suspend fun getContractFileOrBadRequest(call: ApplicationCall): File? {
         return try {
@@ -331,7 +268,12 @@ class ExamplesInteractiveServer(
     }
 
     private fun getExamplePageHtmlContent(contractFile: File, hostPort: String): String {
-        val feature = ScenarioFilter(filterName, filterNotName, filter, filterNot).filter(parseContractFileToFeature(contractFile))
+        val feature = ScenarioFilter(
+            filterName,
+            filterNotName,
+            filter,
+            filterNot
+        ).filter(parseContractFileToFeature(contractFile))
 
         val examplesDir = getExamplesDirPath(contractFile)
         val endpoints = ExamplesView.getEndpoints(feature, examplesDir)
@@ -352,9 +294,17 @@ class ExamplesInteractiveServer(
         )
     }
 
-    private fun List<TableRow>.transform(): Map<String, Map<String, String?>> {
+    private fun List<TableRow>.transform(): Map<String, Map<String, Map<String, Any?>>> {
         return this.groupBy { it.uniqueKey }.mapValues { (_, keyGroup) ->
-            keyGroup.associateBy({ it.example ?: "null" }, { it.exampleMismatchReason })
+            keyGroup.associateBy(
+                { it.example ?: "null" },
+                {
+                    mapOf(
+                        "errorList" to ExampleValidationErrorMessage(it.exampleMismatchReason ?: "null").jsonPathToErrorDescriptionMapping(),
+                        "errorMessage" to it.exampleMismatchReason
+                    )
+                }
+            )
         }
     }
 
@@ -395,17 +345,16 @@ class ExamplesInteractiveServer(
 
     companion object {
         private val exampleFileNamePostFixCounter = AtomicInteger(0)
-        enum class ExampleGenerationStatus {
-            CREATED, EXISTED, ERROR
-        }
-
         fun resetExampleFileNameCounter() {
             exampleFileNamePostFixCounter.set(0)
         }
 
-        class ExampleGenerationResult private constructor (val path: String?, val status: ExampleGenerationStatus) {
-            constructor(path: String, created: Boolean) : this(path, if(created) ExampleGenerationStatus.CREATED else ExampleGenerationStatus.EXISTED)
-            constructor(): this(null, ExampleGenerationStatus.ERROR)
+        enum class ExampleGenerationStatus { CREATED, EXISTED }
+        data class ExamplePathInfo(val path: String, val created: Boolean, val status: ExampleGenerationStatus) {
+            constructor(path: String, created: Boolean): this(path, created, if (created) ExampleGenerationStatus.CREATED else ExampleGenerationStatus.EXISTED)
+            fun relativeTo(file: File): String {
+                return File(path).canonicalFile.relativeTo(file.canonicalFile.parentFile).path
+            }
         }
 
         fun testExample(test: ContractTest, testBaseUrl: String): Pair<Result, String> {
@@ -415,8 +364,8 @@ class ExamplesInteractiveServer(
             return testResult.first to (testLog?.combineLog() ?: "No Test Logs Found")
         }
 
-        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean): List<String> {
-            try {
+        fun generate(contractFile: File, scenarioFilter: ScenarioFilter, extensive: Boolean, allowOnlyMandatoryKeysInJSONObject: Boolean): List<String> {
+            return try {
                 val feature: Feature = parseContractFileToFeature(contractFile).let { feature ->
                     val filteredScenarios = if (!extensive) {
                         feature.scenarios.filter {
@@ -430,59 +379,74 @@ class ExamplesInteractiveServer(
                         it.copy(examples = emptyList())
                     })).copy(stubsFromExamples = emptyMap())
                 }
-
-                val examplesDir =
-                    getExamplesDirPath(contractFile)
-
-                examplesDir.mkdirs()
-
                 if (feature.scenarios.isEmpty()) {
                     logger.log("All examples were filtered out by the filter expression")
                     return emptyList()
                 }
 
-                return feature.scenarios.flatMap { scenario ->
-                    try {
-                        val examples = getExistingExampleFiles(feature, scenario, examplesDir.getExamplesFromDir())
-                            .map { ExamplePathInfo(it.first.file.absolutePath, false) }
-                            .ifEmpty { listOf(generateExampleFile(contractFile, feature, scenario)) }
+                val examplesDir = getExamplesDirPath(contractFile).also { if (it.exists()) it.mkdirs() }
+                val allExistingExamples = examplesDir.getExamplesFromDir()
 
-                        examples.forEach {
-                            val loggablePath =
-                                File(it.path).canonicalFile.relativeTo(contractFile.canonicalFile.parentFile).path
+                val schemaExamples = emptyList<TableRow>().withSchemaExamples(feature, examplesDir.getSchemaExamplesWithValidation(feature)).flatMap {
+                    if (it.example != null) {
+                        listOf(ExamplePathInfo(path = it.example, created = false, status = ExampleGenerationStatus.EXISTED))
+                    } else generateForSchemaBased(contractFile, it.rawPath, it.method)
+                }
 
-                            val trimmedScenarioDescription = scenario.testDescription().trim()
+                val allExamples = feature.scenarios.flatMap { scenario ->
+                    generateAndLogScenarioExamples(contractFile, feature, scenario, allExistingExamples, allowOnlyMandatoryKeysInJSONObject)
+                }.plus(schemaExamples)
 
-                            if (!it.created) {
-                                println("Example exists for $trimmedScenarioDescription: $loggablePath")
-                            } else {
-                                println("Created example for $trimmedScenarioDescription: $loggablePath")
-                            }
-                        }
-
-                        examples.map { ExampleGenerationResult(it.path, it.created) }
-                    } catch(e: Throwable) {
-                        logger.log(e, "Exception generating example for ${scenario.testDescription()}")
-                        emptyList()
-                    }
-                }.also { exampleFiles ->
-                    val resultCounts = exampleFiles.groupBy { it.status }.mapValues { it.value.size }
-                    val createdFileCount = resultCounts[ExampleGenerationStatus.CREATED] ?: 0
-                    val errorCount = resultCounts[ExampleGenerationStatus.ERROR] ?: 0
-                    val existingFileCount = resultCounts[ExampleGenerationStatus.EXISTED] ?: 0
-
-                    logger.log(System.lineSeparator() + "NOTE: All examples may be found in ${getExamplesDirPath(contractFile).canonicalFile}" + System.lineSeparator())
-
-                    val errorsClause = if(errorCount > 0) ", $errorCount examples could not be generated due to errors" else ""
-
-                    logger.log("=============== Example Generation Summary ===============")
-                    logger.log("$createdFileCount example(s) created, $existingFileCount examples already existed$errorsClause")
-                    logger.log("==========================================================")
-                }.mapNotNull { it.path }
+                generationSummary(contractFile, allExamples).map { it.path }
             } catch (e: StackOverflowError) {
                 logger.log("Got a stack overflow error. You probably have a recursive data structure definition in the contract.")
                 throw e
             }
+        }
+
+        private fun generateAndLogScenarioExamples(contractFile: File, feature: Feature, scenario: Scenario, allExistingExamples: List<ExampleFromFile>, allowOnlyMandatoryKeysInJSONObject: Boolean): List<ExamplePathInfo> {
+            return try {
+                val trimmedDescription = scenario.testDescription().trim()
+                val existingExamples = getExistingExampleFiles(feature, scenario, allExistingExamples).map { it.first }
+                val scenarioIsMultiGen = isScenarioMultiGen(scenario, scenario.resolver)
+
+                val generatedExamples = if (scenarioIsMultiGen || existingExamples.isEmpty()) {
+                    generateExampleFiles(contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject, existingExamples)
+                } else emptyList()
+
+                val allExamples = existingExamples.map {
+                    ExamplePathInfo(it.file.canonicalPath, created = false)
+                }.plus(generatedExamples)
+
+                allExamples.also { logExamples(contractFile, trimmedDescription, it) }
+            } catch (e: Throwable) {
+                logger.log(e, "Exception generating example for ${scenario.testDescription()}")
+                emptyList()
+            }
+        }
+
+        private fun logExamples(contractFile: File, description: String, examples: List<ExamplePathInfo>) {
+            examples.forEach { example ->
+                val loggablePath = example.relativeTo(contractFile)
+                if (!example.created) {
+                    consoleLog("Example already existed for $description: $loggablePath")
+                } else {
+                    consoleLog("Created example for $description: $loggablePath")
+                }
+            }
+        }
+
+        private fun generationSummary(contractFile: File, exampleFiles: List<ExamplePathInfo>): List<ExamplePathInfo> {
+            val resultCounts = exampleFiles.groupBy { it.status }.mapValues { it.value.size }
+            val createdFileCount = resultCounts[ExampleGenerationStatus.CREATED] ?: 0
+            val existingFileCount = resultCounts[ExampleGenerationStatus.EXISTED] ?: 0
+
+            logger.log(System.lineSeparator() + "NOTE: All examples may be found in ${getExamplesDirPath(contractFile).canonicalFile}" + System.lineSeparator())
+            logger.log("=============== Example Generation Summary ===============")
+            logger.log("$createdFileCount example(s) created, $existingFileCount examples already existed")
+            logger.log("==========================================================")
+
+            return exampleFiles
         }
 
         fun generate(
@@ -504,14 +468,11 @@ class ExamplesInteractiveServer(
             val examplesDir = getExamplesDirPath(contractFile)
             val examples = examplesDir.getExamplesFromDir()
 
-            val existingExamples = getExistingExampleFiles(feature, scenario, examples).map { it.first }
-            val examplesToCheck = if (bulkMode) existingExamples else emptyList()
-
-            val newExamples = generateExampleFiles(
-                contractFile, feature, scenario, allowOnlyMandatoryKeysInJSONObject, existingExamples = examplesToCheck
+            return generateAndLogScenarioExamples(
+                contractFile, feature, scenario,
+                allExistingExamples = if(bulkMode) examples else emptyList(),
+                allowOnlyMandatoryKeysInJSONObject
             )
-
-            return existingExamples.map { ExamplePathInfo(it.file.absolutePath, false) }.plus(newExamples)
         }
 
         fun generateForSchemaBased(contractFile: File, mainPattern: String, subPattern: String): List<ExamplePathInfo> {
@@ -530,27 +491,6 @@ class ExamplesInteractiveServer(
             exampleFile.writeText(value.toStringLiteral())
             return listOf(ExamplePathInfo(path = exampleFile.absolutePath, created = true))
         }
-
-        data class ExamplePathInfo(val path: String, val created: Boolean)
-
-        private fun generateExampleFile(
-            contractFile: File,
-            feature: Feature,
-            scenario: Scenario,
-        ): ExamplePathInfo {
-            val examplesDir = getExamplesDirPath(contractFile)
-            if(!examplesDir.exists()) examplesDir.mkdirs()
-
-            val file = writeToExampleFile(
-                ScenarioStub(
-                    request = scenario.generateHttpRequest(),
-                    response = feature.lookupResponse(scenario).cleanup()
-                ),
-                contractFile
-            )
-            return ExamplePathInfo(file.absolutePath, true)
-        }
-
 
         private fun generateExampleFiles(
             contractFile: File,
@@ -625,44 +565,19 @@ class ExamplesInteractiveServer(
             return discriminatorValues.contains(requestDiscriminator.discriminatorValue to responseDiscriminator.discriminatorValue)
         }
 
-        fun validateSingleExample(contractFile: File, exampleFile: File): Result {
-            val feature = parseContractFileToFeature(contractFile)
-            return validateSingleExample(feature, exampleFile)
-        }
-
-        fun validateSingleExample(feature: Feature, exampleFile: File): Result {
-            return kotlin.runCatching {
-                val scenarioStub = ScenarioStub.readFromFile(exampleFile)
-                validateExample(feature, scenarioStub).toResultIfAny()
-            }.getOrElse {
-                val schemaExample = SchemaExample(exampleFile)
-                feature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value, InteractiveExamplesMismatchMessages)
-            }
-        }
-
-        fun validateExamples(contractFile: File, examples: Map<String, List<ScenarioStub>> = emptyMap(), scenarioFilter: ScenarioFilter = ScenarioFilter()): Map<String, Result> {
-            val feature = parseContractFileToFeature(contractFile)
-            return validateExamples(feature, examples, false, scenarioFilter)
-        }
-
-        fun validateExamples(
+        fun validateInlineExamples(
             feature: Feature,
             examples: Map<String, List<ScenarioStub>> = emptyMap(),
-            inline: Boolean = false,
-            scenarioFilter: ScenarioFilter = ScenarioFilter(),
-            enableLogging: Boolean = true
+            scenarioFilter: ScenarioFilter = ScenarioFilter()
         ): Map<String, Result> {
             val updatedFeature = scenarioFilter.filter(feature)
 
             val results = examples.mapValues { (name, exampleList) ->
-                if(enableLogging) logger.log("Validating $name")
+                logger.debug("Validating $name")
 
                 exampleList.mapNotNull { example ->
                     val results = validateExample(updatedFeature, example)
-                    if (inline && !results.hasResults()) return@mapNotNull null
-                    if (!results.hasResults()) return@mapNotNull Result.Failure(results.report(example.request))
-
-                    results.toResultIfAny()
+                    if (!results.hasResults()) return@mapNotNull null else results.toResultIfAny()
                 }.let {
                     Result.fromResults(it)
                 }
@@ -674,37 +589,53 @@ class ExamplesInteractiveServer(
         fun validateExamples(
             feature: Feature,
             examples: List<File> = emptyList(),
-            scenarioFilter: ScenarioFilter = ScenarioFilter(),
-            enableLogging: Boolean = true
+            scenarioFilter: ScenarioFilter = ScenarioFilter()
         ): Map<String, Result> {
             val updatedFeature = scenarioFilter.filter(feature)
 
-            val results = examples.mapNotNull { example ->
-                if (enableLogging) logger.log("Validating ${example.name}")
-
-                val result = kotlin.runCatching {
-                    val scenarioStub = ScenarioStub.readFromFile(example)
-                    validateExample(updatedFeature, scenarioStub).toResultIfAny()
-                }.getOrElse {
-                    val schemaExample = SchemaExample(example)
-                    if (schemaExample.value !is NullValue) {
-                        updatedFeature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value, InteractiveExamplesMismatchMessages)
-                    } else {
-                        if (enableLogging) logger.log("Skipping empty schema example ${example.name}"); null
-                    }
-                } ?: return@mapNotNull null
-
-                example.name to result
-            }.toMap()
+            val results = examples.associate { exampleFile ->
+                logger.debug("Validating ${exampleFile.name}")
+                exampleFile.name to validateExample(updatedFeature, exampleFile)
+            }
 
             return results
         }
 
-        private fun validateExample(
-            feature: Feature,
-            scenarioStub: ScenarioStub
-        ): Results {
+        fun validateExample(contractFile: File, exampleFile: File): Result {
+            val feature = parseContractFileToFeature(contractFile)
+            return validateExample(feature, exampleFile)
+        }
+
+        private fun validateExample(feature: Feature, scenarioStub: ScenarioStub): Results {
             return feature.matchResultFlagBased(scenarioStub, InteractiveExamplesMismatchMessages)
+        }
+
+        private fun validateExample(feature: Feature, example: ExampleFromFile): Result {
+            return feature.matchResultFlagBased(example.request, example.response, InteractiveExamplesMismatchMessages).toResultIfAny()
+        }
+
+        private fun validateExample(feature: Feature, schemaExample: SchemaExample): Result {
+            if (schemaExample.value is NullValue) {
+                return Result.Success()
+            }
+
+            return feature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value, InteractiveExamplesMismatchMessages)
+        }
+
+        private fun validateExample(feature: Feature, exampleFile: File): Result {
+            return ExampleFromFile.fromFile(exampleFile).realise(
+                hasValue = { example, _ -> validateExample(feature, example) },
+                orFailure = { validateSchemaExample(feature, exampleFile) },
+                orException = { it.toHasFailure().failure }
+            )
+        }
+
+        private fun validateSchemaExample(feature: Feature, exampleFile: File): Result {
+            return SchemaExample.fromFile(exampleFile).realise(
+                hasValue = { example, _ -> validateExample(feature, example) },
+                orException = { it.toHasFailure().failure },
+                orFailure = { it.failure }
+            )
         }
 
         private fun HttpResponse.cleanup(): HttpResponse {
@@ -728,21 +659,20 @@ class ExamplesInteractiveServer(
             }
         }
 
-        private fun getExamplesDirPath(contractFile: File): File {
+        fun getExamplesDirPath(contractFile: File): File {
             return contractFile.canonicalFile
                 .parentFile
                 .resolve("""${contractFile.nameWithoutExtension}$EXAMPLES_DIR_SUFFIX""")
         }
 
         fun File.getExamplesFromDir(): List<ExampleFromFile> {
-            return this.listFiles()?.mapNotNull {
-                runCatching {
-                    ExampleFromFile(it)
-                }.onFailure { err ->
-                    val isExampleSchemaBased = err is ContractException && err.breadCrumb == SCHEMA_BASED
-                    if (!isExampleSchemaBased) consoleDebug(exceptionCauseMessage(err))
-                }.getOrNull()
-            } ?: emptyList()
+            return this.listFiles().orEmpty().filter { it.extension == "json" }.mapNotNull {
+                ExampleFromFile.fromFile(it).realise(
+                    hasValue = { example, _ -> example },
+                    orException = { err -> consoleDebug(exceptionCauseMessage(err.t)); null },
+                    orFailure = { null }
+                )
+            }
         }
 
         fun File.getSchemaExamplesWithValidation(feature: Feature): List<Pair<SchemaExample, Result?>> {
@@ -754,14 +684,13 @@ class ExamplesInteractiveServer(
         }
 
         private fun File.getSchemaExamples(): List<SchemaExample> {
-            return this.listFiles()?.mapNotNull { exampleFile ->
-                runCatching {
-                    SchemaExample(exampleFile)
-                }.onFailure { err ->
-                    val isExampleSchemaBased = err is ContractException && err.breadCrumb != NOT_SCHEMA_BASED
-                    if (isExampleSchemaBased) consoleDebug(exceptionCauseMessage(err))
-                }.getOrNull()
-            } ?: emptyList()
+            return this.listFiles().orEmpty().filter { it.extension == "json" }.mapNotNull {
+                SchemaExample.fromFile(it).realise(
+                    hasValue = { example, _ -> example },
+                    orException = { err -> consoleDebug(exceptionCauseMessage(err.t)); null },
+                    orFailure = { null }
+                )
+            }
         }
 
         private fun getExampleFileNameBasedOn(
@@ -857,10 +786,7 @@ class ExamplesInteractiveServer(
             return getExamplesDirPath(contractFile)
         }
 
-        private fun writeToExampleFile(
-            scenarioStub: ScenarioStub,
-            contractFile: File
-        ): File {
+        private fun writeToExampleFile(scenarioStub: ScenarioStub, contractFile: File): File {
             val examplesDir = getExamplesDirPath(contractFile)
             if(examplesDir.exists().not()) examplesDir.mkdirs()
             val stubJSON = scenarioStub.toJSON()
@@ -871,115 +797,6 @@ class ExamplesInteractiveServer(
             println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
             file.writeText(stubJSON.toStringLiteral())
             return file
-        }
-    }
-}
-
-object InteractiveExamplesMismatchMessages : MismatchMessages {
-    override fun mismatchMessage(expected: String, actual: String): String {
-        return "Specification expected $expected but example contained $actual"
-    }
-
-    override fun unexpectedKey(keyLabel: String, keyName: String): String {
-        return "${keyLabel.capitalizeFirstChar()} $keyName in the example is not in the specification"
-    }
-
-    override fun optionalKeyMissing(keyLabel: String, keyName: String): String {
-        return "Optional ${keyLabel.capitalizeFirstChar()} $keyName in the specification is missing from the example"
-    }
-
-    override fun expectedKeyWasMissing(keyLabel: String, keyName: String): String {
-        return "${keyLabel.capitalizeFirstChar()} $keyName in the specification is missing from the example"
-    }
-}
-
-data class ExamplePageRequest(
-    val contractFile: String,
-    val hostPort: String
-)
-
-data class ValidateExampleRequest(
-    val exampleFile: String
-)
-
-data class SaveExampleRequest(
-    val exampleFile: String,
-    val exampleContent: String
-)
-
-data class ValidateExampleResponse(
-    val absPath: String,
-    val error: String? = null,
-    val isPartialFailure: Boolean = false
-)
-
-data class ValidateExampleResponseMap(
-    val absPath: String,
-    val error: List<Map<String, Any?>> = emptyList()
-)
-
-enum class ValidateExampleVerdict {
-    SUCCESS,
-    FAILURE
-}
-
-data class ValidateExampleResponseV2(
-    val verdict: ValidateExampleVerdict,
-    val message: String,
-    val exampleFilePath: String
-)
-
-data class GenerateExampleRequest(
-    val method: String,
-    val path: String,
-    val responseStatusCode: Int,
-    val contentType: String? = null,
-    val bulkMode: Boolean = false,
-    val isSchemaBased: Boolean = false
-)
-
-data class GenerateExample(
-    val exampleFilePath: String,
-    val created: Boolean
-)
-
-data class GenerateExampleResponse (
-    val examples: List<GenerateExample>
-) {
-    companion object {
-        fun from(infos: List<ExamplesInteractiveServer.Companion.ExamplePathInfo>): GenerateExampleResponse {
-            return GenerateExampleResponse(infos.map { GenerateExample(it.path, it.created) })
-        }
-    }
-}
-
-data class ExampleTestRequest(
-    val exampleFile: String
-)
-
-data class ExampleTestResponse(
-    val result: TestResult,
-    val details: String,
-    val testLog: String
-) {
-    constructor(result: Result, testLog: String, exampleFile: File): this (
-        result = result.testResult(),
-        details = resultToDetails(result, exampleFile),
-        testLog = when(result.isSuccess()) {
-            true -> testLog
-            false -> "${result.reportString()}\n\n$testLog"
-        }
-    )
-
-    companion object {
-        fun resultToDetails(result: Result, exampleFile: File): String {
-            val postFix = when(result.testResult()) {
-                TestResult.Success -> "has SUCCEEDED"
-                TestResult.Error -> "has ERROR"
-                else -> "has FAILED"
-            }
-
-            return "Example test for ${exampleFile.nameWithoutExtension} $postFix"
         }
     }
 }

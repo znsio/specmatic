@@ -1,0 +1,12 @@
+{
+  "http-request": {
+    "method": "GET",
+    "path": "/users/(userId:string)?item=20"
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": "(anyvalue)"
+    }
+  }
+}

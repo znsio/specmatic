@@ -22,7 +22,7 @@ class QueryParametersTest {
     }
 
     @Test
-    fun `should return single value when there is only one value for the parameter`() {
+    fun `should return single value when there is only one query parameter`() {
         val queryParameters = QueryParameters(
             listOf("category_id" to "10")
         )

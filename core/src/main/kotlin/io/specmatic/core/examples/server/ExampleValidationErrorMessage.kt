@@ -16,7 +16,7 @@ private const val HTTP_HEADERS = "headers"
 const val BREADCRUMB_QUERY_PARAMS = "QUERY-PARAMS"
 private const val HTTP_QUERY_PARAMS = "query"
 
-data class ExampleValidationErrorMessage(val failureDetails: List<MatchFailureDetails>) {
+data class ExampleValidationErrorMessage(val failureDetails: List<MatchFailureDetails>, val reportString: String) {
     fun jsonPathToErrorDescriptionMapping(): List<Map<String, Any>> {
         return failureDetails.flatMap { failureDetail ->
             val transformedJsonPaths = failureDetail.transformBreadcrumbs()

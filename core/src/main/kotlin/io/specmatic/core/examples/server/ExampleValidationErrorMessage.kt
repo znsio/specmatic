@@ -27,21 +27,22 @@ data class ExampleValidationErrorMessage(val failureDetails : List<MatchFailureD
         }
 
 
-    private fun transformBreadcrumbs(errorMessages: List<String>): String {
+    private fun transformBreadcrumbs(errorMessages: List<String>): List<String> {
         val breadcrumbs = errorMessages.map { it.trim() }.filter { it.startsWith(BREADCRUMB_PREFIX_WITH_TRAILING_SPACE) }.map {
             it.removePrefix(
                 BREADCRUMB_PREFIX_WITH_TRAILING_SPACE
             )
         }
-        return breadcrumbs
-            .joinToString("/") { breadcrumb ->
-                breadcrumb
-                    .replace("RESPONSE", HTTP_RESPONSE)
-                    .replace("REQUEST", HTTP_REQUEST)
-                    .replace("BODY", "body")
-                    .replace(BREADCRUMB_DELIMITER, JSONPATH_DELIMITER)
-                    .replace(Regex("\\[(\\d+)]")) { "/${it.groupValues[1]}" }
-                    .let { if (it.startsWith(HTTP_RESPONSE) || it.startsWith(HTTP_REQUEST)) "/$it" else it }
-            }
+        return breadcrumbs.map { breadcrumb ->
+            breadcrumb
+                .replace("RESPONSE", HTTP_RESPONSE)
+                .replace("REQUEST", HTTP_REQUEST)
+                .replace("BODY", "body")
+                .replace(BREAD_CRUMB_HEADERS, HTTP_HEADERS)
+                .replace(BREADCRUMB_QUERY_PARAMS, HTTP_QUERY_PARAMS)
+                .replace(BREADCRUMB_DELIMITER, JSONPATH_DELIMITER)
+                .replace(Regex("\\[(\\d+)]")) { matchResult -> "/${matchResult.groupValues[1]}" }
+                .let { "/${it.trimStart('/')}" }
+        }
     }
 }

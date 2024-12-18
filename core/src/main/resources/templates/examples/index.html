@@ -1823,9 +1823,9 @@
     function highlightErrorLines(editor, metadata, exampleJson) {
         const { data, pointers } = jsonMapParser(exampleJson);
         metadata.forEach(meta => {
-            var location = findObjectByPath(pointers, meta.jsonPath);
+            var location = findObjectByPath(pointers, meta.jsonPath.toString());
             if (location == null) {
-                meta.jsonPath = meta.jsonPath.substring(0, meta.jsonPath.lastIndexOf('/'));
+                meta.jsonPath = meta.jsonPath.toString().substring(0, meta.jsonPath.toString().lastIndexOf('/'));
                 location = findObjectByPath(pointers, meta.jsonPath);
             }
             const lineNumber = location.key ? location.key.line : (location.value ? location.value.line : null);

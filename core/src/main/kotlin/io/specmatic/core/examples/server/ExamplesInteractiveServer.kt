@@ -156,7 +156,7 @@ class ExamplesInteractiveServer(
                             if(result is Result.Failure)
                                 ValidateExampleResponseMap(
                                     request.exampleFile,
-                                    ExampleValidationErrorMessage(result.toMatchFailureDetailList()).jsonPathToErrorDescriptionMapping(),
+                                    ExampleValidationErrorMessage(result.toMatchFailureDetailList(),result.reportString()).jsonPathToErrorDescriptionMapping(),
                                     result.isPartialFailure()
                                 )
                             else {
@@ -278,7 +278,8 @@ class ExamplesInteractiveServer(
                 { it.example ?: "null" },
                 {
                     ExampleValidationErrorMessage(
-                        failureDetails = it.failureDetails
+                        failureDetails = it.failureDetails,
+                        reportString = result.reportString()
                     ).jsonPathToErrorDescriptionMapping()
                 }
             )

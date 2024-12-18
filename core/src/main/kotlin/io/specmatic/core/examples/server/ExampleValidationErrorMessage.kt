@@ -10,9 +10,13 @@ private const val JSONPATH_DELIMITER = "/"
 private const val HTTP_RESPONSE = "http-response"
 private const val HTTP_REQUEST = "http-request"
 private const val BREADCRUMB_PREFIX = ">>"
-private const val BREADCRUMB_PREFIX_WITH_TRAILING_SPACE = "$BREADCRUMB_PREFIX "
 
-data class ExampleValidationErrorMessage(val failureDetails : List<MatchFailureDetails>) {
+private const val BREAD_CRUMB_HEADERS = "HEADERS"
+private const val HTTP_HEADERS = "headers"
+const val BREADCRUMB_QUERY_PARAMS = "QUERY-PARAMS"
+private const val HTTP_QUERY_PARAMS = "query"
+
+data class ExampleValidationErrorMessage(val failureDetails: List<MatchFailureDetails>, val reportString: String) {
     fun jsonPathToErrorDescriptionMapping(): List<Map<String, Any>> {
         return failureDetails.flatMap { failureDetail ->
             val transformedJsonPaths = failureDetail.transformBreadcrumbs()
@@ -27,16 +31,29 @@ data class ExampleValidationErrorMessage(val failureDetails : List<MatchFailureD
         }
 
 
-    private fun MatchFailureDetails.transformBreadcrumbs(): String {
-        return this
-            .joinToString("/") { breadcrumb ->
-                breadcrumb
-                    .replace("RESPONSE", HTTP_RESPONSE)
-                    .replace("REQUEST", HTTP_REQUEST)
-                    .replace("BODY", "body")
-                    .replace(BREADCRUMB_DELIMITER, JSONPATH_DELIMITER)
-                    .replace(Regex("\\[(\\d+)]")) { "/${it.groupValues[1]}" }
-                    .let { if (it.startsWith(HTTP_RESPONSE) || it.startsWith(HTTP_REQUEST)) "/$it" else it }
-            }
+    private fun MatchFailureDetails.transformBreadcrumbs(): List<String> {
+         val breadCrumbs = if (this.breadCrumbs.isEmpty()) {
+             this.errorMessages
+                 .flatMap { message ->
+                     message.lines()
+                 }
+                 .filter { it.trim().startsWith(BREADCRUMB_PREFIX) }
+                 .map {
+                     it.removePrefix(BREADCRUMB_PREFIX).trim()
+                 }
+         } else {
+             listOf(this.breadCrumbs.joinToString("."))
+         }
+        return breadCrumbs.map { breadcrumb ->
+            breadcrumb
+                .replace("RESPONSE", HTTP_RESPONSE)
+                .replace("REQUEST", HTTP_REQUEST)
+                .replace("BODY", "body")
+                .replace(BREAD_CRUMB_HEADERS, HTTP_HEADERS)
+                .replace(BREADCRUMB_QUERY_PARAMS, HTTP_QUERY_PARAMS)
+                .replace(BREADCRUMB_DELIMITER, JSONPATH_DELIMITER)
+                .replace(Regex("\\[(\\d+)]")) { matchResult -> "/${matchResult.groupValues[1]}" }
+                .let { "/${it.trimStart('/')}" }
+        }
     }
 }

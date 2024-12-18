@@ -14,37 +14,50 @@ class Workflow(
 
             for (scenario in scenarios) {
                 if (scenario.links.isNotEmpty()) {
-                    for (link in scenario.links) {
-                        val workflowIdOperation = link.value.parameters.let {
-                            WorkflowIDOperation(
-                                extract = transformLinkRefToExtract((link.value.parameters as MutableMap).iterator().next().value)
-                            )
-                        }
-                        workflow[scenario.apiDescription] = workflowIdOperation
-
-                        val linkedScenario = scenarios.find { it.operationId == link.value.operationId }
-                        if (linkedScenario != null) {
-                            processLinkedScenario(scenarios, linkedScenario, workflow, (link.value.parameters as MutableMap).iterator().next().key)
-                        }
-                    }
+                    processForExtractWorkflow(scenario, workflow, scenarios)
                 }
             }
 
             return workflow.toMap()
         }
 
-        private fun processLinkedScenario(scenarios: List<Scenario>, scenario: Scenario, workflow: LinkedHashMap<String, WorkflowIDOperation>, useKey: String) {
-            workflow[scenario.apiDescription] = WorkflowIDOperation(
+        private fun processForExtractWorkflow(
+            scenario: Scenario,
+            workflow: LinkedHashMap<String, WorkflowIDOperation>,
+            scenarios: List<Scenario>
+        ) {
+            for (link in scenario.links) {
+                var workflowIdOperation = workflow[scenario.apiDescription] ?: WorkflowIDOperation()
+                workflowIdOperation = link.value.parameters.let {
+                    workflowIdOperation.copy(
+                        extract = transformLinkRefToExtract(
+                            (link.value.parameters as MutableMap).iterator().next().value
+                        )
+                    )
+                }
+                workflow[scenario.apiDescription] = workflowIdOperation
+
+                val linkedScenario = scenarios.find { it.operationId == link.value.operationId }
+                if (linkedScenario != null) {
+                    processForUseWorkflow(
+                        scenarios,
+                        linkedScenario,
+                        workflow,
+                        (link.value.parameters as MutableMap).iterator().next().key
+                    )
+                }
+            }
+        }
+
+        private fun processForUseWorkflow(scenarios: List<Scenario>, scenario: Scenario, workflow: LinkedHashMap<String, WorkflowIDOperation>, useKey: String) {
+            val workflowIdOperation = workflow[scenario.apiDescription] ?: WorkflowIDOperation()
+
+            workflow[scenario.apiDescription] = workflowIdOperation.copy(
                 use = useKey
             )
 
             if (scenario.links.isNotEmpty()) {
-                for (link in scenario.links) {
-                    val linkedScenario = scenarios.find { it.operationId == link.key }
-                    if (linkedScenario != null) {
-                        processLinkedScenario(scenarios, linkedScenario, workflow, (link.value.parameters as MutableMap).iterator().next().key)
-                    }
-                }
+                processForExtractWorkflow(scenario, workflow, scenarios)
             }
         }
 

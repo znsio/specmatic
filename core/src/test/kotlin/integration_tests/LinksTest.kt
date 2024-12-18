@@ -10,7 +10,20 @@ import org.junit.jupiter.api.Test
 
 class LinksTest {
     @Test
-    fun `a spec with links should be transformed to internal workflows`() {
+    fun `a spec with links, in the post action, should be transformed to internal workflows`() {
+        val feature = OpenApiSpecification
+            .fromFile("src/test/resources/openapi/spec_for_links_crud_test.yaml")
+            .toFeature()
+
+        val testExecutor = TestExecutorWithWorkflowValidation()
+
+        feature.executeTests(testExecutor)
+
+        testExecutor.verifyWorkflow()
+    }
+
+    @Test
+    fun `a spec with with links chained from one action to another should be converted to internal workflow`() {
         val feature = OpenApiSpecification
             .fromFile("src/test/resources/openapi/spec_for_links_crud_test.yaml")
             .toFeature()

@@ -10,7 +10,7 @@ private const val JSONPATH_DELIMITER = "/"
 private const val HTTP_RESPONSE = "http-response"
 private const val HTTP_REQUEST = "http-request"
 private const val BREADCRUMB_PREFIX = ">>"
-
+private const val BREADCRUMB_PREFIX_WITH_TRAILING_SPACE = ">> "
 private const val BREAD_CRUMB_HEADERS = "HEADERS"
 private const val HTTP_HEADERS = "headers"
 const val BREADCRUMB_QUERY_PARAMS = "QUERY-PARAMS"
@@ -31,20 +31,13 @@ data class ExampleValidationErrorMessage(val failureDetails: List<MatchFailureDe
         }
 
 
-    private fun MatchFailureDetails.transformBreadcrumbs(): List<String> {
-         val breadCrumbs = if (this.breadCrumbs.isEmpty()) {
-             this.errorMessages
-                 .flatMap { message ->
-                     message.lines()
-                 }
-                 .filter { it.trim().startsWith(BREADCRUMB_PREFIX) }
-                 .map {
-                     it.removePrefix(BREADCRUMB_PREFIX).trim()
-                 }
-         } else {
-             listOf(this.breadCrumbs.joinToString("."))
-         }
-        return breadCrumbs.map { breadcrumb ->
+    private fun jsonPathsForAllErrors(errorMessage: String): List<String> {
+        val breadcrumbs = errorMessage.lines().map { it.trim() }.filter { it.startsWith(BREADCRUMB_PREFIX_WITH_TRAILING_SPACE) }.map {
+            it.removePrefix(
+                BREADCRUMB_PREFIX_WITH_TRAILING_SPACE
+            )
+        }
+        return breadcrumbs.map { breadcrumb ->
             breadcrumb
                 .replace("RESPONSE", HTTP_RESPONSE)
                 .replace("REQUEST", HTTP_REQUEST)
@@ -55,5 +48,13 @@ data class ExampleValidationErrorMessage(val failureDetails: List<MatchFailureDe
                 .replace(Regex("\\[(\\d+)]")) { matchResult -> "/${matchResult.groupValues[1]}" }
                 .let { "/${it.trimStart('/')}" }
         }
+    }
+
+    private fun extractDescriptions(reportString: String): List<String> {
+        val parts = reportString.split(BREADCRUMB_PREFIX)
+
+        return parts.drop(1)
+            .map { "$BREADCRUMB_PREFIX$it".trim() }
+            .filter { it.isNotBlank() }
     }
 }

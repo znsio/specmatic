@@ -206,7 +206,13 @@ class OpenApiSpecification(
             }
         }
 
-        private fun resolveExternalReferences(): ParseOptions = ParseOptions().also { it.isResolve = true }
+        private fun resolveExternalReferences(): ParseOptions {
+            return ParseOptions().also {
+                it.isResolve = true
+                it.isResolveRequestBody = true
+                it.isResolveResponses = true
+            }
+        }
 
         fun String.applyOverlay(overlayContent: String): String {
             if(overlayContent.isBlank())

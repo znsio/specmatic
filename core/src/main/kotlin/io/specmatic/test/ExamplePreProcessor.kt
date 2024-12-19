@@ -47,11 +47,11 @@ object ExampleProcessor {
         runningEntity = emptyMap()
     }
 
-    private fun defaultIfNotExits(lookupKey: String, type: SubstitutionType = SubstitutionType.SIMPLE): Value {
+    fun defaultIfNotExits(lookupKey: String, type: SubstitutionType = SubstitutionType.SIMPLE): Value {
         throw ContractException(breadCrumb = lookupKey, errorMessage = "Could not resolve ${lookupKey.quote()}, key does not exist in fact store")
     }
 
-    private fun ifNotExitsToLookupPattern(lookupKey: String, type: SubstitutionType = SubstitutionType.SIMPLE): Value {
+    fun ifNotExitsToLookupPattern(lookupKey: String, type: SubstitutionType = SubstitutionType.SIMPLE): Value {
         return when (type) {
             SubstitutionType.SIMPLE -> StringValue("$($lookupKey)")
             SubstitutionType.DELAYED_RANDOM -> StringValue("$delayedRandomSubstitutionKey($lookupKey)")
@@ -121,21 +121,21 @@ object ExampleProcessor {
         return value.mapValues { (_, value) -> resolve(value, ifNotExists) }
     }
 
-    private fun resolve(value: String, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value): String {
-        return value.ifSubstitutionToken { token, type ->
-            if (type == SubstitutionType.DELAYED_RANDOM && ifNotExists == ::ifNotExitsToLookupPattern ) {
-                return@ifSubstitutionToken ifNotExitsToLookupPattern(token, type).toStringLiteral()
-            } else getValue(token, type)?.toStringLiteral() ?: ifNotExists(token, type).toStringLiteral()
-        } ?: value
-    }
-
-    private fun resolve(value: Value, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value): Value {
+    fun resolve(value: Value, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value): Value {
         return when (value) {
             is StringValue -> resolve(value, ifNotExists)
             is JSONObjectValue -> resolve(value, ifNotExists)
             is JSONArrayValue -> resolve(value, ifNotExists)
             else -> value
         }
+    }
+
+    private fun resolve(value: String, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value): String {
+        return value.ifSubstitutionToken { token, type ->
+            if (type == SubstitutionType.DELAYED_RANDOM && ifNotExists == ::ifNotExitsToLookupPattern ) {
+                return@ifSubstitutionToken ifNotExitsToLookupPattern(token, type).toStringLiteral()
+            } else getValue(token, type)?.toStringLiteral() ?: ifNotExists(token, type).toStringLiteral()
+        } ?: value
     }
 
     private fun resolve(value: StringValue, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value): Value {
@@ -170,6 +170,10 @@ object ExampleProcessor {
         }
     }
 
+    fun store(exampleValue: Value) {
+        runningEntity = exampleValue.toFactStore(prefix = "ENTITY")
+    }
+
     private fun Value.ifContainsStoreToken(block: (storeType: StoreType) -> Unit) {
         if (this !is JSONObjectValue) return
 
@@ -182,7 +186,7 @@ object ExampleProcessor {
     }
 
     /* PARSER HELPERS */
-    private fun Value.toFactStore(prefix: String = ""): Map<String, Value> {
+    fun Value.toFactStore(prefix: String = ""): Map<String, Value> {
         return this.traverse(
             prefix = prefix,
             onScalar = { scalar, key -> mapOf(key to scalar) },

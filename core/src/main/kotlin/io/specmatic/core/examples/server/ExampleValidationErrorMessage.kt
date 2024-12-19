@@ -16,17 +16,18 @@ private const val HTTP_HEADERS = "headers"
 const val BREADCRUMB_QUERY_PARAMS = "QUERY-PARAMS"
 private const val HTTP_QUERY_PARAMS = "query"
 
-data class ExampleValidationErrorMessage(val failureDetails: List<MatchFailureDetails>, val reportString: String?) {
+data class ExampleValidationErrorMessage(val failureDetails: List<MatchFailureDetails>, val reportString: String) {
     fun jsonPathToErrorDescriptionMapping(): List<Map<String, Any>> {
+        val jsonPaths = jsonPathsForAllErrors(reportString)
+        val descriptions = extractDescriptions(reportString)
         return failureDetails.flatMap { failureDetail ->
-            val transformedJsonPaths = failureDetail.transformBreadcrumbs()
-            listOf(
+            jsonPaths.zip(descriptions).map { (jsonPath, description) ->
                 mapOf(
-                    JSON_PATH to transformedJsonPaths,
-                    DESCRIPTION to failureDetail.errorMessages.joinToString(", "),
-                    SEVERITY to if (failureDetail.isPartial) "warning" else "error"
+                    "jsonPath" to jsonPath,
+                    "description" to description,
+                    "severity" to if (failureDetail.isPartial) "warning" else "error"
                 )
-            )
+            }
             }
         }
 

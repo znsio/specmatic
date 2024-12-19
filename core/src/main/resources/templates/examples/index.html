@@ -1139,6 +1139,7 @@
         .hidden {
             display: none;
         }
+
     </style>
 </head>
 
@@ -1230,15 +1231,39 @@
     const testDetails = {};
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsonlint/1.6.0/jsonlint.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/lint.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.59.4/addon/lint/lint.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/lint.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/json-lint.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/autorefresh.min.js"></script>
+<!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.css">-->
+<!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/lint.css">-->
+<!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css">-->
+<!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.59.4/addon/lint/lint.min.css">-->
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.js"></script>-->
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/lint.js"></script>-->
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.js"></script>-->
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/json-lint.js"></script>-->
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/autorefresh.min.js"></script>-->
+<script src="codemirror-bundle.js"></script>
+<script>
+      window.onload = function () {
+        const examplePreDiv = document.createElement("div");
+        examplePreDiv.style.height = "400px";
+        examplePreDiv.style.width = "600px";
+        examplePreDiv.style.border = "1px solid #ccc";
+
+        // Create the editor
+        const editor = new window.EditorView({
+          state: window.EditorState.create({
+            doc: '{"hello":"hello"}',
+            extensions: [
+              window.basicSetup,
+              window.javascript()
+            ],
+          }),
+          parent: examplePreDiv,
+        });
+
+        // Append the div to the body
+        document.body.appendChild(examplePreDiv);
+      };
+</script>
 <script>var escapedChars={b:"\b",f:"\f",n:"\n",r:"\r",t:"	",'"':'"',"/":"/","\\":"\\"},A_CODE="a".charCodeAt();const jsonMapParser=function(e,n,r){var a={},t=0,o=0,c=0,i=r&&r.bigint&&"undefined"!=typeof BigInt;return{data:function n(r,a){f(),E(r,"value");var t,o,$,g,S=l();switch(S){case"t":s("rue"),g=!0;break;case"f":s("alse"),g=!1;break;case"n":s("ull"),g=null;break;case'"':g=u();break;case"[":g=function e(r){f();var a=[],t=0;if("]"==l())return a;for(v();;){var o=r+"/"+t;a.push(n(o)),f();var c=l();if("]"==c)break;","!=c&&k(),f(),t++}return a}(r);break;case"{":g=function e(r){f();var a={};if("}"==l())return a;for(v();;){var t=d();'"'!=l()&&k();var o=u(),c=r+"/"+escapeJsonPointer(o);b(c,"key",t),E(c,"keyEnd"),f(),":"!=l()&&k(),f(),a[o]=n(c),f();var i=l();if("}"==i)break;","!=i&&k(),f()}return a}(r);break;default:v(),"-0123456789".indexOf(S)>=0?g=(t="",o=!0,"-"==e[c]&&(t+=l()),t+="0"==e[c]?l():p(),"."==e[c]&&(t+=l()+p(),o=!1),("e"==e[c]||"E"==e[c])&&(t+=l(),("+"==e[c]||"-"==e[c])&&(t+=l()),t+=p(),o=!1),$=+t,i&&o&&($>Number.MAX_SAFE_INTEGER||$<Number.MIN_SAFE_INTEGER)?BigInt(t):$):h()}return E(r,"valueEnd"),f(),a&&c<e.length&&h(),g}("",!0),pointers:a};function f(){loop:for(;c<e.length;){switch(e[c]){case" ":o++;break;case"	":o+=4;break;case"\r":o=0;break;case"\n":o=0,t++;break;default:break loop}c++}}function u(){for(var e,n="";'"'!=(e=l());)"\\"==e?(e=l())in escapedChars?n+=escapedChars[e]:"u"==e?n+=$():k():n+=e;return n}function s(e){for(var n=0;n<e.length;n++)l()!==e[n]&&k()}function l(){g();var n=e[c];return c++,o++,n}function v(){c--,o--}function $(){for(var e=4,n=0;e--;){n<<=4;var r=l().toLowerCase();r>="a"&&r<="f"?n+=r.charCodeAt()-A_CODE+10:r>="0"&&r<="9"?n+=+r:k()}return String.fromCharCode(n)}function p(){for(var n="";e[c]>="0"&&e[c]<="9";)n+=l();if(n.length)return n;g(),h()}function E(e,n){b(e,n,d())}function b(e,n,r){a[e]=a[e]||{},a[e][n]=r}function d(){return{line:t,column:o,pos:c}}function h(){throw SyntaxError("Unexpected token "+e[c]+" in JSON at position "+c)}function k(){v(),h()}function g(){if(c>=e.length)throw SyntaxError("Unexpected end of JSON input")}},jsonMapStringify=function(e,n,r){if(validType(e)){var a,t,o=0,c="object"==typeof r?r.space:r;switch(typeof c){case"number":var i=c>10?10:c<0?0:Math.floor(c);c=i&&k(i," "),a=i,t=i;break;case"string":c=c.slice(0,10),a=0,t=0;for(var f=0;f<c.length;f++){var u=c[f];switch(u){case" ":t++;break;case"	":t+=4;break;case"\r":t=0;break;case"\n":t=0,o++;break;default:throw Error("whitespace characters not allowed in JSON")}a++}break;default:c=void 0}var s="",l={},v=0,$=0,p=0,E=r&&r.es6&&"function"==typeof Map;return function e(n,r,a){switch(h(a,"value"),typeof n){case"number":case"bigint":case"boolean":b(""+n);break;case"string":b(quoted(n));break;case"object":null===n?b("null"):"function"==typeof n.toJSON?b(quoted(n.toJSON())):Array.isArray(n)?t():E?n.constructor.BYTES_PER_ELEMENT?t():n instanceof Map?i():n instanceof Set?i(!0):o():o()}function t(){if(n.length){b("[");for(var t=r+1,o=0;o<n.length;o++){o&&b(","),d(t);var c=validType(n[o])?n[o]:null;e(c,t,a+"/"+o)}d(r),b("]")}else b("[]")}function o(){var t=Object.keys(n);if(t.length){b("{");for(var o=r+1,i=0;i<t.length;i++){var f=t[i],u=n[f];if(validType(u)){i&&b(",");var s=a+"/"+escapeJsonPointer(f);d(o),h(s,"key"),b(quoted(f)),h(s,"keyEnd"),b(":"),c&&b(" "),e(u,o,s)}}d(r),b("}")}else b("{}")}function i(t){if(n.size){b("{");for(var o=r+1,i=!0,f=n.entries(),u=f.next();!u.done;){var s=u.value,l=s[0],v=!!t||s[1];if(validType(v)){i||b(","),i=!1;var $=a+"/"+escapeJsonPointer(l);d(o),h($,"key"),b(quoted(l)),h($,"keyEnd"),b(":"),c&&b(" "),e(v,o,$)}u=f.next()}d(r),b("}")}else b("{}")}h(a,"valueEnd")}(e,0,""),{json:s,pointers:l}}function b(e){$+=e.length,p+=e.length,s+=e}function d(e){if(c){for(s+="\n"+k(e,c),v++,$=0;e--;)o?(v+=o,$=t):$+=t,p+=a;p+=1}}function h(e,n){l[e]=l[e]||{},l[e][n]={line:v,column:$,pos:p}}function k(e,n){return Array(e+1).join(n)}};var VALID_TYPES=["number","bigint","boolean","string","object"];function validType(e){return VALID_TYPES.indexOf(typeof e)>=0}var ESC_QUOTE=/"|\\/g,ESC_B=/[\b]/g,ESC_F=/\f/g,ESC_N=/\n/g,ESC_R=/\r/g,ESC_T=/\t/g;function quoted(e){return'"'+(e=e.replace(ESC_QUOTE,"\\$&").replace(ESC_F,"\\f").replace(ESC_B,"\\b").replace(ESC_N,"\\n").replace(ESC_R,"\\r").replace(ESC_T,"\\t"))+'"'}var ESC_0=/~/g,ESC_1=/\//g;function escapeJsonPointer(e){return e.replace(ESC_0,"~0").replace(ESC_1,"~1")}</script>
 </body>
 <script>
@@ -1824,19 +1849,30 @@
         detailsFragment.appendChild(detailsDropdown);
         detailsFragment.appendChild(detailsPre);
 
-        const editor = CodeMirror(examplePreDiv, {
-            value: example.exampleJson,
-            autoRefresh: true,
-            mode: "application/json",
-            theme: "dracula",
-            lineNumbers: true,
-            autoCloseBrackets: true,
-            matchBrackets: true,
-            styleActiveLine: true,
-            lint: true,
-            gutters: ["CodeMirror-lint-markers"]
-        });
+    console.log(window.EditorView);
+    console.log(window.EditorState);
+    console.log(window.basicSetup);
+    console.log(window.javascript);
+    console.log(window.autocompletion);
+    console.log(window.lintGutter);
+    console.log(window.lineNumbers);
+    console.log(window.oneDark);
 
+
+    const editor = new window.EditorView({
+    state: window.EditorState.create({
+      doc: '{"hello":"hello"}',
+      extensions: [
+        window.basicSetup,
+        window.javascript(),
+        window.autocompletion(),
+        window.lintGutter(),
+        window.lineNumbers(),
+        window.oneDark
+      ],
+    }),
+    parent: examplePrevDiv
+  });
         if (example.errorList) {
             if (Array.isArray(example.errorList) && example.errorList.every(item => typeof item === 'object')) {
                 highlightErrorLines(editor, example.errorList, example.exampleJson);

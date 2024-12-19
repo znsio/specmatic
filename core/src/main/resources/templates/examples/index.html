@@ -376,11 +376,38 @@
             font-family: monospace;
             white-space: pre-wrap;
         }
-        .CodeMirror {
+
+    .CodeMirror {
             border: 1px solid #ccc;
-           height: 100% !important;
-            width: 100%;
+           height: 100vh !important;
+           overflow-y: auto;
+            width: 100% !important;
         }
+
+    .error-widget {
+    display: flex;
+    align-items: center;
+    background-color: #ffe5e5;
+    padding: 2px 5px;
+    border: 1px solid #ffcccc;
+    border-radius: 3px;
+    margin-left: 5px;
+    }
+    .error-navigation-button {
+    background-color: #ffcccc;
+    color: #333;
+    border: none;
+    border-radius: 4px;
+    padding: 3px 5px;
+    cursor: pointer;
+    font-size: 15px;
+    }
+
+    .error-navigation-button:hover {
+    background-color: #ff9999;
+    }
+
+
        .cm-lint-marker-error {
             background-color: red;
             color: white;
@@ -479,7 +506,6 @@
 
         body {
             font-family: var(--roboto);
-
             & > .chevron {
                 display: none;
             }
@@ -487,10 +513,9 @@
 
         main {
             display: flex;
-            align-items: start;
             overflow: hidden;
+            align-items: start;
             flex: 1;
-            max-height: 100vh !important;
             background-color: rgba(var(--alice-blue));
         }
 
@@ -1924,37 +1949,78 @@
     }
 
     function highlightErrorLines(editor, metadata, exampleJson) {
-        const { data, pointers } = jsonMapParser(exampleJson);
-        const existingMarkers = new Map();
-        metadata.forEach(meta => {
-            var location = findObjectByPath(pointers, meta.jsonPath);
-            if (location == null) {
-                meta.jsonPath = meta.jsonPath.substring(0, meta.jsonPath.lastIndexOf('/'));
-                location = findObjectByPath(pointers, meta.jsonPath);
+    const { data, pointers } = jsonMapParser(exampleJson);
+    const existingMarkers = new Map();
+    const errorLines = [];
+    metadata.forEach(meta => {
+        var location = findObjectByPath(pointers, meta.jsonPath);
+        if (location == null) {
+            meta.jsonPath = meta.jsonPath.substring(0, meta.jsonPath.lastIndexOf('/'));
+            location = findObjectByPath(pointers, meta.jsonPath);
+        }
+        const lineNumber = location.key ? location.key.line : (location.value ? location.value.line : null);
+        const lineLength = editor.getLine(lineNumber).length;
+        if (!existingMarkers.has(lineNumber)) {
+            existingMarkers.set(lineNumber, []);
+            errorLines.push(lineNumber);
+        }
+
+        existingMarkers.get(lineNumber).push(meta.description);
+        const combinedDescriptions = existingMarkers.get(lineNumber).join('\n\n');
+        editor.markText(
+            { line: lineNumber, ch: 0 },
+            { line: lineNumber, ch: lineLength },
+            {
+                className: "CodeMirror-lint-mark-error",
+                attributes: {
+                    "data-validation-error-message": combinedDescriptions
+                },
             }
-            const lineNumber = location.key ? location.key.line : (location.value ? location.value.line : null);
-            const lineLength = editor.getLine(lineNumber).length;
-            if (!existingMarkers.has(lineNumber)) {
-             existingMarkers.set(lineNumber, []);
-            }
-
-            existingMarkers.get(lineNumber).push(meta.description);
-            const combinedDescriptions = existingMarkers.get(lineNumber).join('\n\n');
-            editor.markText(
-                { line: lineNumber, ch: 0 },
-                { line: lineNumber, ch: lineLength },
-                {
-                    className: "CodeMirror-lint-mark-error",
-                    attributes: {
-                        "data-validation-error-message": combinedDescriptions
-                    },
-                }
-            );
-
-
-        });
+        );
+    });
+    if (errorLines.length > 0) {
+        addNavigationButton(editor, errorLines);
     }
+}
 
+function addNavigationButton(editor, errorLines) {
+    let currentIndex = -1;
+
+
+   const button = document.createElement("button");
+    button.innerText = "Go To Errors";
+    button.className = "error-navigation-button";
+    button.style.position = "absolute";
+    button.style.zIndex = "10";
+
+    const wrapper = editor.getWrapperElement();
+    wrapper.style.position = "relative";
+    button.style.top = "10px";
+    button.style.right = "10px";
+
+    wrapper.appendChild(button);
+
+
+    button.onclick = () => {
+        if (currentIndex === -1) {
+            button.innerText = "Next Error";
+        }
+        currentIndex = (currentIndex + 1) % errorLines.length;
+        const nextLine = errorLines[currentIndex];
+
+        console.log(`Navigating to line: ${nextLine}`);
+
+        editor.scrollIntoView({ line: nextLine, ch: 0 }, 100);
+        editor.focus();
+        editor.setCursor({ line: nextLine, ch: nextLine.length });
+    };
+
+
+    const container = editor.getWrapperElement();
+    container.appendChild(button);
+
+    console.log("Navigation button added"); // Debugging log
+}
     function findObjectByPath(pointers, patch) {
         for (const path in pointers) {
             if (path === patch) {

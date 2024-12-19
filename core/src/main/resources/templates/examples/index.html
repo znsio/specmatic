@@ -378,7 +378,8 @@
         }
         .CodeMirror {
             border: 1px solid #ccc;
-            height: 500px !important;
+           height: 100% !important;
+            width: 100%;
         }
        .cm-lint-marker-error {
             background-color: red;
@@ -489,6 +490,7 @@
             align-items: start;
             overflow: hidden;
             flex: 1;
+            max-height: 100vh !important;
             background-color: rgba(var(--alice-blue));
         }
 
@@ -1923,6 +1925,7 @@
 
     function highlightErrorLines(editor, metadata, exampleJson) {
         const { data, pointers } = jsonMapParser(exampleJson);
+        const existingMarkers = new Map();
         metadata.forEach(meta => {
             var location = findObjectByPath(pointers, meta.jsonPath);
             if (location == null) {
@@ -1931,18 +1934,24 @@
             }
             const lineNumber = location.key ? location.key.line : (location.value ? location.value.line : null);
             const lineLength = editor.getLine(lineNumber).length;
+            if (!existingMarkers.has(lineNumber)) {
+             existingMarkers.set(lineNumber, []);
+            }
+
+            existingMarkers.get(lineNumber).push(meta.description);
+            const combinedDescriptions = existingMarkers.get(lineNumber).join('\n\n');
             editor.markText(
                 { line: lineNumber, ch: 0 },
                 { line: lineNumber, ch: lineLength },
                 {
                     className: "CodeMirror-lint-mark-error",
                     attributes: {
-                        "data-validation-error-message": meta.description
+                        "data-validation-error-message": combinedDescriptions
                     },
                 }
             );
 
-            editor.setGutterMarker(lineNumber, "CodeMirror-lint-markers", createErrorMarker(meta.description));
+
         });
     }
 

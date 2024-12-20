@@ -3086,7 +3086,7 @@ RangeValue.prototype.mapMode = MapMode.TrackDel;
 /**
 A range associates a value with a range of positions.
 */
-let Range$1 = class Range {
+class Range$1 {
     constructor(
     /**
     The range's start position.
@@ -3108,9 +3108,9 @@ let Range$1 = class Range {
     @internal
     */
     static create(from, to, value) {
-        return new Range(from, to, value);
+        return new Range$1(from, to, value);
     }
-};
+}
 function cmpRange(a, b) {
     return a.from - b.from || a.value.startSide - b.value.startSide;
 }
@@ -4970,9 +4970,9 @@ const gecko = !ie && /*@__PURE__*//gecko\/(\d+)/i.test(nav.userAgent);
 const chrome = !ie && /*@__PURE__*//Chrome\/(\d+)/.exec(nav.userAgent);
 const webkit = "webkitFontSmoothing" in doc.documentElement.style;
 const safari = !ie && /*@__PURE__*//Apple Computer/.test(nav.vendor);
-const ios = safari && (/*@__PURE__*//Mobile\/\w+/.test(nav.userAgent) || nav.maxTouchPoints > 2);
+const ios$1 = safari && (/*@__PURE__*//Mobile\/\w+/.test(nav.userAgent) || nav.maxTouchPoints > 2);
 var browser = {
-    mac: ios || /*@__PURE__*//Mac/.test(nav.platform),
+    mac: ios$1 || /*@__PURE__*//Mac/.test(nav.platform),
     windows: /*@__PURE__*//Win/.test(nav.platform),
     linux: /*@__PURE__*//Linux|X11/.test(nav.platform),
     ie,
@@ -4981,7 +4981,7 @@ var browser = {
     gecko_version: gecko ? +(/*@__PURE__*//Firefox\/(\d+)/.exec(nav.userAgent) || [0, 0])[1] : 0,
     chrome: !!chrome,
     chrome_version: chrome ? +chrome[1] : 0,
-    ios,
+    ios: ios$1,
     android: /*@__PURE__*//Android\b/.test(nav.userAgent),
     webkit,
     safari,
@@ -13827,7 +13827,7 @@ that was dragged over will be selected, as one selection
 [range](https://codemirror.net/6/docs/ref/#state.SelectionRange) per line.
 */
 function rectangularSelection(options) {
-    let filter = (e => e.altKey && e.button == 0);
+    let filter = (options === null || options === void 0 ? void 0 : options.eventFilter) || (e => e.altKey && e.button == 0);
     return EditorView.mouseSelectionStyle.of((view, event) => filter(event) ? rectangleSelectionStyle(view, event) : null);
 }
 const keys = {
@@ -13877,8 +13877,8 @@ function crosshairCursor(options = {}) {
     ];
 }
 
-const Outside = "-10000px";
-class TooltipViewManager {
+const Outside$1 = "-10000px";
+class TooltipViewManager$1 {
     constructor(view, facet, createTooltipView, removeTooltipView) {
         this.facet = facet;
         this.createTooltipView = createTooltipView;
@@ -13936,22 +13936,28 @@ class TooltipViewManager {
         return true;
     }
 }
-function windowSpace(view) {
+/**
+Creates an extension that configures tooltip behavior.
+*/
+function tooltips(config = {}) {
+    return tooltipConfig$1.of(config);
+}
+function windowSpace$1(view) {
     let { win } = view;
     return { top: 0, left: 0, bottom: win.innerHeight, right: win.innerWidth };
 }
-const tooltipConfig = /*@__PURE__*/Facet.define({
+const tooltipConfig$1 = /*@__PURE__*/Facet.define({
     combine: values => {
         var _a, _b, _c;
         return ({
             position: browser.ios ? "absolute" : ((_a = values.find(conf => conf.position)) === null || _a === void 0 ? void 0 : _a.position) || "fixed",
             parent: ((_b = values.find(conf => conf.parent)) === null || _b === void 0 ? void 0 : _b.parent) || null,
-            tooltipSpace: ((_c = values.find(conf => conf.tooltipSpace)) === null || _c === void 0 ? void 0 : _c.tooltipSpace) || windowSpace,
+            tooltipSpace: ((_c = values.find(conf => conf.tooltipSpace)) === null || _c === void 0 ? void 0 : _c.tooltipSpace) || windowSpace$1,
         });
     }
 });
 const knownHeight = /*@__PURE__*/new WeakMap();
-const tooltipPlugin = /*@__PURE__*/ViewPlugin.fromClass(class {
+const tooltipPlugin$1 = /*@__PURE__*/ViewPlugin.fromClass(class {
     constructor(view) {
         this.view = view;
         this.above = [];
@@ -13959,14 +13965,14 @@ const tooltipPlugin = /*@__PURE__*/ViewPlugin.fromClass(class {
         this.madeAbsolute = false;
         this.lastTransaction = 0;
         this.measureTimeout = -1;
-        let config = view.state.facet(tooltipConfig);
+        let config = view.state.facet(tooltipConfig$1);
         this.position = config.position;
         this.parent = config.parent;
         this.classes = view.themeClasses;
         this.createContainer();
         this.measureReq = { read: this.readMeasure.bind(this), write: this.writeMeasure.bind(this), key: this };
         this.resizeObserver = typeof ResizeObserver == "function" ? new ResizeObserver(() => this.measureSoon()) : null;
-        this.manager = new TooltipViewManager(view, showTooltip, (t, p) => this.createTooltip(t, p), t => {
+        this.manager = new TooltipViewManager$1(view, showTooltip$1, (t, p) => this.createTooltip(t, p), t => {
             if (this.resizeObserver)
                 this.resizeObserver.unobserve(t.dom);
             t.dom.remove();
@@ -14013,7 +14019,7 @@ const tooltipPlugin = /*@__PURE__*/ViewPlugin.fromClass(class {
         if (updated)
             this.observeIntersection();
         let shouldMeasure = updated || update.geometryChanged;
-        let newConfig = update.state.facet(tooltipConfig);
+        let newConfig = update.state.facet(tooltipConfig$1);
         if (newConfig.position != this.position && !this.madeAbsolute) {
             this.position = newConfig.position;
             for (let t of this.manager.tooltipViews)
@@ -14045,7 +14051,7 @@ const tooltipPlugin = /*@__PURE__*/ViewPlugin.fromClass(class {
             tooltipView.dom.appendChild(arrow);
         }
         tooltipView.dom.style.position = this.position;
-        tooltipView.dom.style.top = Outside;
+        tooltipView.dom.style.top = Outside$1;
         tooltipView.dom.style.left = "0px";
         this.container.insertBefore(tooltipView.dom, before);
         if (tooltipView.mount)
@@ -14077,7 +14083,7 @@ const tooltipPlugin = /*@__PURE__*/ViewPlugin.fromClass(class {
                 // positioning.
                 makeAbsolute = dom.offsetParent != this.container.ownerDocument.body;
             }
-            else if (dom.style.top == Outside && dom.style.left == "0px") {
+            else if (dom.style.top == Outside$1 && dom.style.left == "0px") {
                 // On other browsers, we have to awkwardly try and use other
                 // information to detect a transform.
                 let rect = dom.getBoundingClientRect();
@@ -14108,7 +14114,7 @@ const tooltipPlugin = /*@__PURE__*/ViewPlugin.fromClass(class {
                 return tv.getCoords ? tv.getCoords(t.pos) : this.view.coordsAtPos(t.pos);
             }),
             size: this.manager.tooltipViews.map(({ dom }) => dom.getBoundingClientRect()),
-            space: this.view.state.facet(tooltipConfig).tooltipSpace(this.view),
+            space: this.view.state.facet(tooltipConfig$1).tooltipSpace(this.view),
             scaleX, scaleY, makeAbsolute
         };
     }
@@ -14130,13 +14136,13 @@ const tooltipPlugin = /*@__PURE__*/ViewPlugin.fromClass(class {
                 pos.top >= Math.min(visible.bottom, space.bottom) ||
                 pos.right < Math.max(visible.left, space.left) - .1 ||
                 pos.left > Math.min(visible.right, space.right) + .1)) {
-                dom.style.top = Outside;
+                dom.style.top = Outside$1;
                 continue;
             }
             let arrow = tooltip.arrow ? tView.dom.querySelector(".cm-tooltip-arrow") : null;
             let arrowHeight = arrow ? 7 /* Arrow.Size */ : 0;
             let width = size.right - size.left, height = (_a = knownHeight.get(tView)) !== null && _a !== void 0 ? _a : size.bottom - size.top;
-            let offset = tView.offset || noOffset, ltr = this.view.textDirection == Direction.LTR;
+            let offset = tView.offset || noOffset$1, ltr = this.view.textDirection == Direction.LTR;
             let left = size.width > space.right - space.left
                 ? (ltr ? space.left : space.right - size.width)
                 : ltr ? Math.max(space.left, Math.min(pos.left - (arrow ? 14 /* Arrow.Offset */ : 0) + offset.x, space.right - width))
@@ -14150,7 +14156,7 @@ const tooltipPlugin = /*@__PURE__*/ViewPlugin.fromClass(class {
             let spaceVert = (above ? pos.top - space.top : space.bottom - pos.bottom) - arrowHeight;
             if (spaceVert < height && tView.resize !== false) {
                 if (spaceVert < this.view.defaultLineHeight) {
-                    dom.style.top = Outside;
+                    dom.style.top = Outside$1;
                     continue;
                 }
                 knownHeight.set(tView, height);
@@ -14193,7 +14199,7 @@ const tooltipPlugin = /*@__PURE__*/ViewPlugin.fromClass(class {
                 this.inView = this.view.inView;
                 if (!this.inView)
                     for (let tv of this.manager.tooltipViews)
-                        tv.dom.style.top = Outside;
+                        tv.dom.style.top = Outside$1;
             }
         }
     }
@@ -14207,7 +14213,7 @@ function setLeftStyle(elt, value) {
     if (isNaN(current) || Math.abs(value - current) > 1)
         elt.style.left = value + "px";
 }
-const baseTheme$4 = /*@__PURE__*/EditorView.baseTheme({
+const baseTheme$5 = /*@__PURE__*/EditorView.baseTheme({
     ".cm-tooltip": {
         zIndex: 500,
         boxSizing: "border-box"
@@ -14269,27 +14275,27 @@ const baseTheme$4 = /*@__PURE__*/EditorView.baseTheme({
         }
     }
 });
-const noOffset = { x: 0, y: 0 };
+const noOffset$1 = { x: 0, y: 0 };
 /**
 Facet to which an extension can add a value to show a tooltip.
 */
-const showTooltip = /*@__PURE__*/Facet.define({
-    enables: [tooltipPlugin, baseTheme$4]
+const showTooltip$1 = /*@__PURE__*/Facet.define({
+    enables: [tooltipPlugin$1, baseTheme$5]
 });
-const showHoverTooltip = /*@__PURE__*/Facet.define({
+const showHoverTooltip$1 = /*@__PURE__*/Facet.define({
     combine: inputs => inputs.reduce((a, i) => a.concat(i), [])
 });
-class HoverTooltipHost {
+class HoverTooltipHost$1 {
     // Needs to be static so that host tooltip instances always match
     static create(view) {
-        return new HoverTooltipHost(view);
+        return new HoverTooltipHost$1(view);
     }
     constructor(view) {
         this.view = view;
         this.mounted = false;
         this.dom = document.createElement("div");
         this.dom.classList.add("cm-tooltip-hover");
-        this.manager = new TooltipViewManager(view, showHoverTooltip, (t, p) => this.createHostedView(t, p), t => t.dom.remove());
+        this.manager = new TooltipViewManager$1(view, showHoverTooltip$1, (t, p) => this.createHostedView(t, p), t => t.dom.remove());
     }
     createHostedView(tooltip, prev) {
         let hostedView = tooltip.create(this.view);
@@ -14338,19 +14344,19 @@ class HoverTooltipHost {
     get overlap() { return this.passProp("overlap"); }
     get resize() { return this.passProp("resize"); }
 }
-const showHoverTooltipHost = /*@__PURE__*/showTooltip.compute([showHoverTooltip], state => {
-    let tooltips = state.facet(showHoverTooltip);
+const showHoverTooltipHost$1 = /*@__PURE__*/showTooltip$1.compute([showHoverTooltip$1], state => {
+    let tooltips = state.facet(showHoverTooltip$1);
     if (tooltips.length === 0)
         return null;
     return {
         pos: Math.min(...tooltips.map(t => t.pos)),
         end: Math.max(...tooltips.map(t => { var _a; return (_a = t.end) !== null && _a !== void 0 ? _a : t.pos; })),
-        create: HoverTooltipHost.create,
+        create: HoverTooltipHost$1.create,
         above: tooltips[0].above,
         arrow: tooltips.some(t => t.arrow),
     };
 });
-class HoverPlugin {
+class HoverPlugin$1 {
     constructor(view, source, field, setHover, hoverTime) {
         this.view = view;
         this.source = source;
@@ -14425,8 +14431,8 @@ class HoverPlugin {
         }
     }
     get tooltip() {
-        let plugin = this.view.plugin(tooltipPlugin);
-        let index = plugin ? plugin.manager.tooltips.findIndex(t => t.create == HoverTooltipHost.create) : -1;
+        let plugin = this.view.plugin(tooltipPlugin$1);
+        let index = plugin ? plugin.manager.tooltips.findIndex(t => t.create == HoverTooltipHost$1.create) : -1;
         return index > -1 ? plugin.manager.tooltipViews[index] : null;
     }
     mousemove(event) {
@@ -14435,10 +14441,10 @@ class HoverPlugin {
         if (this.hoverTimeout < 0)
             this.hoverTimeout = setTimeout(this.checkHover, this.hoverTime);
         let { active, tooltip } = this;
-        if (active.length && tooltip && !isInTooltip(tooltip.dom, event) || this.pending) {
+        if (active.length && tooltip && !isInTooltip$1(tooltip.dom, event) || this.pending) {
             let { pos } = active[0] || this.pending, end = (_b = (_a = active[0]) === null || _a === void 0 ? void 0 : _a.end) !== null && _b !== void 0 ? _b : pos;
             if ((pos == end ? this.view.posAtCoords(this.lastMove) != pos
-                : !isOverRange(this.view, pos, end, event.clientX, event.clientY))) {
+                : !isOverRange$1(this.view, pos, end, event.clientX, event.clientY))) {
                 this.view.dispatch({ effects: this.setHover.of([]) });
                 this.pending = null;
             }
@@ -14472,7 +14478,7 @@ class HoverPlugin {
     }
 }
 const tooltipMargin = 4;
-function isInTooltip(tooltip, event) {
+function isInTooltip$1(tooltip, event) {
     let { left, right, top, bottom } = tooltip.getBoundingClientRect(), arrow;
     if (arrow = tooltip.querySelector(".cm-tooltip-arrow")) {
         let arrowRect = arrow.getBoundingClientRect();
@@ -14482,7 +14488,7 @@ function isInTooltip(tooltip, event) {
     return event.clientX >= left - tooltipMargin && event.clientX <= right + tooltipMargin &&
         event.clientY >= top - tooltipMargin && event.clientY <= bottom + tooltipMargin;
 }
-function isOverRange(view, from, to, x, y, margin) {
+function isOverRange$1(view, from, to, x, y, margin) {
     let rect = view.scrollDOM.getBoundingClientRect();
     let docBottom = view.documentTop + view.documentPadding.top + view.contentHeight;
     if (rect.left > x || rect.right < x || rect.top > y || Math.min(rect.bottom, docBottom) < y)
@@ -14508,7 +14514,7 @@ but also provides an `active` property holding a state field that
 can be used to read the currently active tooltips produced by this
 extension.
 */
-function hoverTooltip(source, options = {}) {
+function hoverTooltip$1(source, options = {}) {
     let setHover = StateEffect.define();
     let hoverState = StateField.define({
         create() { return []; },
@@ -14536,19 +14542,19 @@ function hoverTooltip(source, options = {}) {
             for (let effect of tr.effects) {
                 if (effect.is(setHover))
                     value = effect.value;
-                if (effect.is(closeHoverTooltipEffect))
+                if (effect.is(closeHoverTooltipEffect$1))
                     value = [];
             }
             return value;
         },
-        provide: f => showHoverTooltip.from(f)
+        provide: f => showHoverTooltip$1.from(f)
     });
     return {
         active: hoverState,
         extension: [
             hoverState,
-            ViewPlugin.define(view => new HoverPlugin(view, source, hoverState, setHover, options.hoverTime || 300 /* Hover.Time */)),
-            showHoverTooltipHost
+            ViewPlugin.define(view => new HoverPlugin$1(view, source, hoverState, setHover, options.hoverTime || 300 /* Hover.Time */)),
+            showHoverTooltipHost$1
         ]
     };
 }
@@ -14556,13 +14562,13 @@ function hoverTooltip(source, options = {}) {
 Get the active tooltip view for a given tooltip, if available.
 */
 function getTooltip(view, tooltip) {
-    let plugin = view.plugin(tooltipPlugin);
+    let plugin = view.plugin(tooltipPlugin$1);
     if (!plugin)
         return null;
     let found = plugin.manager.tooltips.indexOf(tooltip);
     return found < 0 ? null : plugin.manager.tooltipViews[found];
 }
-const closeHoverTooltipEffect = /*@__PURE__*/StateEffect.define();
+const closeHoverTooltipEffect$1 = /*@__PURE__*/StateEffect.define();
 
 const panelConfig = /*@__PURE__*/Facet.define({
     combine(configs) {
@@ -14810,6 +14816,8 @@ function gutters(config) {
     let result = [
         gutterView,
     ];
+    if (config && config.fixed === false)
+        result.push(unfixGutters.of(true));
     return result;
 }
 const gutterView = /*@__PURE__*/ViewPlugin.fromClass(class {
@@ -15225,7 +15233,7 @@ function highlightActiveLineGutter() {
 /**
 The default maximum length of a `TreeBuffer` node.
 */
-const DefaultBufferLength = 1024;
+const DefaultBufferLength$1 = 1024;
 let nextPropID$1 = 0;
 class Range {
     constructor(from, to) {
@@ -15238,7 +15246,7 @@ Each [node type](#common.NodeType) or [individual tree](#common.Tree)
 can have metadata associated with it in props. Instances of this
 class represent prop names.
 */
-let NodeProp$1 = class NodeProp {
+class NodeProp$1 {
     /**
     Create a new node prop type.
     */
@@ -15268,7 +15276,7 @@ let NodeProp$1 = class NodeProp {
             return result === undefined ? null : [this, result];
         };
     }
-};
+}
 /**
 Prop that is used to describe matching delimiters. For opening
 delimiters, this holds an array of node names (written as a
@@ -15363,7 +15371,7 @@ const noProps$1 = Object.create(null);
 /**
 Each node in a syntax tree has a node type associated with it.
 */
-let NodeType$1 = class NodeType {
+class NodeType$1 {
     /**
     @internal
     */
@@ -15400,7 +15408,7 @@ let NodeType$1 = class NodeType {
         let props = spec.props && spec.props.length ? Object.create(null) : noProps$1;
         let flags = (spec.top ? 1 /* NodeFlag.Top */ : 0) | (spec.skipped ? 2 /* NodeFlag.Skipped */ : 0) |
             (spec.error ? 4 /* NodeFlag.Error */ : 0) | (spec.name == null ? 8 /* NodeFlag.Anonymous */ : 0);
-        let type = new NodeType(spec.name || "", props, spec.id, flags);
+        let type = new NodeType$1(spec.name || "", props, spec.id, flags);
         if (spec.props)
             for (let src of spec.props) {
                 if (!Array.isArray(src))
@@ -15469,7 +15477,7 @@ let NodeType$1 = class NodeType {
             }
         };
     }
-};
+}
 /**
 An empty dummy node type to use when no actual type is available.
 */
@@ -15520,7 +15528,7 @@ class NodeSet {
         return new NodeSet(newTypes);
     }
 }
-const CachedNode = new WeakMap(), CachedInnerNode = new WeakMap();
+const CachedNode$1 = new WeakMap(), CachedInnerNode$1 = new WeakMap();
 /**
 Options that control iteration. Can be combined with the `|`
 operator to enable multiple ones.
@@ -15569,7 +15577,7 @@ use the [`TreeCursor`](#common.TreeCursor) or
 a view on some part of this data structure, and can be used to
 move around to adjacent nodes.
 */
-class Tree {
+class Tree$1 {
     /**
     Construct a new tree. See also [`Tree.build`](#common.Tree^build).
     */
@@ -15635,7 +15643,7 @@ class Tree {
     nodes the cursor visits.
     */
     cursor(mode = 0) {
-        return new TreeCursor(this.topNode, mode);
+        return new TreeCursor$1(this.topNode, mode);
     }
     /**
     Get a [tree cursor](#common.TreeCursor) pointing into this tree
@@ -15643,10 +15651,10 @@ class Tree {
     [`moveTo`](#common.TreeCursor.moveTo).
     */
     cursorAt(pos, side = 0, mode = 0) {
-        let scope = CachedNode.get(this) || this.topNode;
-        let cursor = new TreeCursor(scope);
+        let scope = CachedNode$1.get(this) || this.topNode;
+        let cursor = new TreeCursor$1(scope);
         cursor.moveTo(pos, side);
-        CachedNode.set(this, cursor._tree);
+        CachedNode$1.set(this, cursor._tree);
         return cursor;
     }
     /**
@@ -15654,7 +15662,7 @@ class Tree {
     tree.
     */
     get topNode() {
-        return new TreeNode(this, 0, 0, null);
+        return new TreeNode$1(this, 0, 0, null);
     }
     /**
     Get the [syntax node](#common.SyntaxNode) at the given position.
@@ -15668,8 +15676,8 @@ class Tree {
     [`resolveInner`](#common.Tree.resolveInner) instead.
     */
     resolve(pos, side = 0) {
-        let node = resolveNode(CachedNode.get(this) || this.topNode, pos, side, false);
-        CachedNode.set(this, node);
+        let node = resolveNode$1(CachedNode$1.get(this) || this.topNode, pos, side, false);
+        CachedNode$1.set(this, node);
         return node;
     }
     /**
@@ -15680,8 +15688,8 @@ class Tree {
     the host trees).
     */
     resolveInner(pos, side = 0) {
-        let node = resolveNode(CachedInnerNode.get(this) || this.topNode, pos, side, true);
-        CachedInnerNode.set(this, node);
+        let node = resolveNode$1(CachedInnerNode$1.get(this) || this.topNode, pos, side, true);
+        CachedInnerNode$1.set(this, node);
         return node;
     }
     /**
@@ -15748,19 +15756,19 @@ class Tree {
     */
     balance(config = {}) {
         return this.children.length <= 8 /* Balance.BranchFactor */ ? this :
-            balanceRange(NodeType$1.none, this.children, this.positions, 0, this.children.length, 0, this.length, (children, positions, length) => new Tree(this.type, children, positions, length, this.propValues), config.makeTree || ((children, positions, length) => new Tree(NodeType$1.none, children, positions, length)));
+            balanceRange$1(NodeType$1.none, this.children, this.positions, 0, this.children.length, 0, this.length, (children, positions, length) => new Tree$1(this.type, children, positions, length, this.propValues), config.makeTree || ((children, positions, length) => new Tree$1(NodeType$1.none, children, positions, length)));
     }
     /**
     Build a tree from a postfix-ordered buffer of node information,
     or a cursor over such a buffer.
     */
-    static build(data) { return buildTree(data); }
+    static build(data) { return buildTree$1(data); }
 }
 /**
 The empty tree
 */
-Tree.empty = new Tree(NodeType$1.none, [], [], 0);
-class FlatBufferCursor {
+Tree$1.empty = new Tree$1(NodeType$1.none, [], [], 0);
+class FlatBufferCursor$1 {
     constructor(buffer, index) {
         this.buffer = buffer;
         this.index = index;
@@ -15771,7 +15779,7 @@ class FlatBufferCursor {
     get size() { return this.buffer[this.index - 1]; }
     get pos() { return this.index; }
     next() { this.index -= 4; }
-    fork() { return new FlatBufferCursor(this.buffer, this.index); }
+    fork() { return new FlatBufferCursor$1(this.buffer, this.index); }
 }
 /**
 Tree buffers contain (type, start, end, endIndex) quads for each
@@ -15779,7 +15787,7 @@ node. In such a buffer, nodes are stored in prefix order (parents
 before children, with the endIndex of the parent indicating which
 children belong to it).
 */
-class TreeBuffer {
+class TreeBuffer$1 {
     /**
     Create a tree buffer.
     */
@@ -15839,7 +15847,7 @@ class TreeBuffer {
     findChild(startIndex, endIndex, dir, pos, side) {
         let { buffer } = this, pick = -1;
         for (let i = startIndex; i != endIndex; i = buffer[i + 3]) {
-            if (checkSide(side, pos, buffer[i + 1], buffer[i + 2])) {
+            if (checkSide$1(side, pos, buffer[i + 1], buffer[i + 2])) {
                 pick = i;
                 if (dir > 0)
                     break;
@@ -15860,10 +15868,10 @@ class TreeBuffer {
             copy[j++] = b[i++] - startI;
             len = Math.max(len, to);
         }
-        return new TreeBuffer(copy, len, this.set);
+        return new TreeBuffer$1(copy, len, this.set);
     }
 }
-function checkSide(side, pos, from, to) {
+function checkSide$1(side, pos, from, to) {
     switch (side) {
         case -2 /* Side.Before */: return from < pos;
         case -1 /* Side.AtOrBefore */: return to >= pos && from < pos;
@@ -15873,13 +15881,13 @@ function checkSide(side, pos, from, to) {
         case 4 /* Side.DontCare */: return true;
     }
 }
-function resolveNode(node, pos, side, overlays) {
+function resolveNode$1(node, pos, side, overlays) {
     var _a;
     // Move up to a node that actually holds the position, if possible
     while (node.from == node.to ||
         (side < 1 ? node.from >= pos : node.from > pos) ||
         (side > -1 ? node.to <= pos : node.to < pos)) {
-        let parent = !overlays && node instanceof TreeNode && node.index < 0 ? null : node.parent;
+        let parent = !overlays && node instanceof TreeNode$1 && node.index < 0 ? null : node.parent;
         if (!parent)
             return node;
         node = parent;
@@ -15888,7 +15896,7 @@ function resolveNode(node, pos, side, overlays) {
     // Must go up out of overlays when those do not overlap with pos
     if (overlays)
         for (let scan = node, parent = scan.parent; parent; scan = parent, parent = scan.parent) {
-            if (scan instanceof TreeNode && scan.index < 0 && ((_a = parent.enter(pos, side, mode)) === null || _a === void 0 ? void 0 : _a.from) != scan.from)
+            if (scan instanceof TreeNode$1 && scan.index < 0 && ((_a = parent.enter(pos, side, mode)) === null || _a === void 0 ? void 0 : _a.from) != scan.from)
                 node = parent;
         }
     for (;;) {
@@ -15899,22 +15907,22 @@ function resolveNode(node, pos, side, overlays) {
     }
 }
 class BaseNode {
-    cursor(mode = 0) { return new TreeCursor(this, mode); }
+    cursor(mode = 0) { return new TreeCursor$1(this, mode); }
     getChild(type, before = null, after = null) {
-        let r = getChildren(this, type, before, after);
+        let r = getChildren$1(this, type, before, after);
         return r.length ? r[0] : null;
     }
     getChildren(type, before = null, after = null) {
-        return getChildren(this, type, before, after);
+        return getChildren$1(this, type, before, after);
     }
     resolve(pos, side = 0) {
-        return resolveNode(this, pos, side, false);
+        return resolveNode$1(this, pos, side, false);
     }
     resolveInner(pos, side = 0) {
-        return resolveNode(this, pos, side, true);
+        return resolveNode$1(this, pos, side, true);
     }
     matchContext(context) {
-        return matchNodeContext(this.parent, context);
+        return matchNodeContext$1(this.parent, context);
     }
     enterUnfinishedNodesBefore(pos) {
         let scan = this.childBefore(pos), node = this;
@@ -15935,7 +15943,7 @@ class BaseNode {
     get node() { return this; }
     get next() { return this.parent; }
 }
-class TreeNode extends BaseNode {
+class TreeNode$1 extends BaseNode {
     constructor(_tree, from, 
     // Index in parent node, set to -1 if the node is not a direct child of _parent.node (overlay)
     index, _parent) {
@@ -15952,20 +15960,20 @@ class TreeNode extends BaseNode {
         for (let parent = this;;) {
             for (let { children, positions } = parent._tree, e = dir > 0 ? children.length : -1; i != e; i += dir) {
                 let next = children[i], start = positions[i] + parent.from;
-                if (!checkSide(side, pos, start, start + next.length))
+                if (!checkSide$1(side, pos, start, start + next.length))
                     continue;
-                if (next instanceof TreeBuffer) {
+                if (next instanceof TreeBuffer$1) {
                     if (mode & IterMode$1.ExcludeBuffers)
                         continue;
                     let index = next.findChild(0, next.buffer.length, dir, pos - start, side);
                     if (index > -1)
-                        return new BufferNode(new BufferContext(parent, next, i, start), null, index);
+                        return new BufferNode$1(new BufferContext$1(parent, next, i, start), null, index);
                 }
-                else if ((mode & IterMode$1.IncludeAnonymous) || (!next.type.isAnonymous || hasChild(next))) {
+                else if ((mode & IterMode$1.IncludeAnonymous) || (!next.type.isAnonymous || hasChild$1(next))) {
                     let mounted;
                     if (!(mode & IterMode$1.IgnoreMounts) && (mounted = MountedTree.get(next)) && !mounted.overlay)
-                        return new TreeNode(mounted.tree, start, i, parent);
-                    let inner = new TreeNode(next, start, i, parent);
+                        return new TreeNode$1(mounted.tree, start, i, parent);
+                    let inner = new TreeNode$1(next, start, i, parent);
                     return (mode & IterMode$1.IncludeAnonymous) || !inner.type.isAnonymous ? inner
                         : inner.nextChild(dir < 0 ? next.children.length - 1 : 0, dir, pos, side);
                 }
@@ -15992,7 +16000,7 @@ class TreeNode extends BaseNode {
             for (let { from, to } of mounted.overlay) {
                 if ((side > 0 ? from <= rPos : from < rPos) &&
                     (side < 0 ? to >= rPos : to > rPos))
-                    return new TreeNode(mounted.tree, mounted.overlay[0].from + this.from, -1, this);
+                    return new TreeNode$1(mounted.tree, mounted.overlay[0].from + this.from, -1, this);
             }
         }
         return this.nextChild(0, 1, pos, side, mode);
@@ -16019,7 +16027,7 @@ class TreeNode extends BaseNode {
     */
     toString() { return this._tree.toString(); }
 }
-function getChildren(node, type, before, after) {
+function getChildren$1(node, type, before, after) {
     let cur = node.cursor(), result = [];
     if (!cur.firstChild())
         return result;
@@ -16038,7 +16046,7 @@ function getChildren(node, type, before, after) {
             return after == null ? result : [];
     }
 }
-function matchNodeContext(node, context, i = context.length - 1) {
+function matchNodeContext$1(node, context, i = context.length - 1) {
     for (let p = node; i >= 0; p = p.parent) {
         if (!p)
             return false;
@@ -16050,7 +16058,7 @@ function matchNodeContext(node, context, i = context.length - 1) {
     }
     return true;
 }
-class BufferContext {
+class BufferContext$1 {
     constructor(parent, buffer, index, start) {
         this.parent = parent;
         this.buffer = buffer;
@@ -16058,7 +16066,7 @@ class BufferContext {
         this.start = start;
     }
 }
-class BufferNode extends BaseNode {
+class BufferNode$1 extends BaseNode {
     get name() { return this.type.name; }
     get from() { return this.context.start + this.context.buffer.buffer[this.index + 1]; }
     get to() { return this.context.start + this.context.buffer.buffer[this.index + 2]; }
@@ -16072,7 +16080,7 @@ class BufferNode extends BaseNode {
     child(dir, pos, side) {
         let { buffer } = this.context;
         let index = buffer.findChild(this.index + 4, buffer.buffer[this.index + 3], dir, pos - this.context.start, side);
-        return index < 0 ? null : new BufferNode(this.context, this, index);
+        return index < 0 ? null : new BufferNode$1(this.context, this, index);
     }
     get firstChild() { return this.child(1, 0, 4 /* Side.DontCare */); }
     get lastChild() { return this.child(-1, 0, 4 /* Side.DontCare */); }
@@ -16083,7 +16091,7 @@ class BufferNode extends BaseNode {
             return null;
         let { buffer } = this.context;
         let index = buffer.findChild(this.index + 4, buffer.buffer[this.index + 3], side > 0 ? 1 : -1, pos - this.context.start, side);
-        return index < 0 ? null : new BufferNode(this.context, this, index);
+        return index < 0 ? null : new BufferNode$1(this.context, this, index);
     }
     get parent() {
         return this._parent || this.context.parent.nextSignificantParent();
@@ -16095,7 +16103,7 @@ class BufferNode extends BaseNode {
         let { buffer } = this.context;
         let after = buffer.buffer[this.index + 3];
         if (after < (this._parent ? buffer.buffer[this._parent.index + 3] : buffer.buffer.length))
-            return new BufferNode(this.context, this._parent, after);
+            return new BufferNode$1(this.context, this._parent, after);
         return this.externalSibling(1);
     }
     get prevSibling() {
@@ -16103,7 +16111,7 @@ class BufferNode extends BaseNode {
         let parentStart = this._parent ? this._parent.index + 4 : 0;
         if (this.index == parentStart)
             return this.externalSibling(-1);
-        return new BufferNode(this.context, this._parent, buffer.findChild(parentStart, this.index, -1, 0, 4 /* Side.DontCare */));
+        return new BufferNode$1(this.context, this._parent, buffer.findChild(parentStart, this.index, -1, 0, 4 /* Side.DontCare */));
     }
     get tree() { return null; }
     toTree() {
@@ -16115,7 +16123,7 @@ class BufferNode extends BaseNode {
             children.push(buffer.slice(startI, endI, from));
             positions.push(0);
         }
-        return new Tree(this.type, children, positions, this.to - this.from);
+        return new Tree$1(this.type, children, positions, this.to - this.from);
     }
     /**
     @internal
@@ -16133,7 +16141,7 @@ function iterStack(heads) {
             pick = i;
         }
     }
-    let next = picked instanceof TreeNode && picked.index < 0 ? null : picked.parent;
+    let next = picked instanceof TreeNode$1 && picked.index < 0 ? null : picked.parent;
     let newHeads = heads.slice();
     if (next)
         newHeads[pick] = next;
@@ -16150,7 +16158,7 @@ class StackIterator {
 }
 function stackIterator(tree, pos, side) {
     let inner = tree.resolveInner(pos, side), layers = null;
-    for (let scan = inner instanceof TreeNode ? inner : inner.context.parent; scan; scan = scan.parent) {
+    for (let scan = inner instanceof TreeNode$1 ? inner : inner.context.parent; scan; scan = scan.parent) {
         if (scan.index < 0) { // This is an overlay root
             let parent = scan.parent;
             (layers || (layers = [inner])).push(parent.resolve(pos, side));
@@ -16160,8 +16168,8 @@ function stackIterator(tree, pos, side) {
             let mount = MountedTree.get(scan.tree);
             // Relevant overlay branching off
             if (mount && mount.overlay && mount.overlay[0].from <= pos && mount.overlay[mount.overlay.length - 1].to >= pos) {
-                let root = new TreeNode(mount.tree, mount.overlay[0].from + scan.from, -1, scan);
-                (layers || (layers = [inner])).push(resolveNode(root, pos, side, false));
+                let root = new TreeNode$1(mount.tree, mount.overlay[0].from + scan.from, -1, scan);
+                (layers || (layers = [inner])).push(resolveNode$1(root, pos, side, false));
             }
         }
     }
@@ -16171,7 +16179,7 @@ function stackIterator(tree, pos, side) {
 A tree cursor object focuses on a given node in a syntax tree, and
 allows you to move to adjacent nodes.
 */
-class TreeCursor {
+class TreeCursor$1 {
     /**
     Shorthand for `.type.name`.
     */
@@ -16195,7 +16203,7 @@ class TreeCursor {
         */
         this.index = 0;
         this.bufferNode = null;
-        if (node instanceof TreeNode) {
+        if (node instanceof TreeNode$1) {
             this.yieldNode(node);
         }
         else {
@@ -16230,7 +16238,7 @@ class TreeCursor {
     yield(node) {
         if (!node)
             return false;
-        if (node instanceof TreeNode) {
+        if (node instanceof TreeNode$1) {
             this.buffer = null;
             return this.yieldNode(node);
         }
@@ -16348,9 +16356,9 @@ class TreeCursor {
                 for (let i = index + dir, e = dir < 0 ? -1 : parent._tree.children.length; i != e; i += dir) {
                     let child = parent._tree.children[i];
                     if ((this.mode & IterMode$1.IncludeAnonymous) ||
-                        child instanceof TreeBuffer ||
+                        child instanceof TreeBuffer$1 ||
                         !child.type.isAnonymous ||
-                        hasChild(child))
+                        hasChild$1(child))
                         return false;
                 }
         }
@@ -16419,8 +16427,8 @@ class TreeCursor {
             }
         }
         for (let i = depth; i < this.stack.length; i++)
-            result = new BufferNode(this.buffer, result, this.stack[i]);
-        return this.bufferNode = new BufferNode(this.buffer, result, this.index);
+            result = new BufferNode$1(this.buffer, result, this.stack[i]);
+        return this.bufferNode = new BufferNode$1(this.buffer, result, this.index);
     }
     /**
     Get the [tree](#common.Tree) that represents the current node, if
@@ -16468,11 +16476,11 @@ class TreeCursor {
     */
     matchContext(context) {
         if (!this.buffer)
-            return matchNodeContext(this.node.parent, context);
+            return matchNodeContext$1(this.node.parent, context);
         let { buffer } = this.buffer, { types } = buffer.set;
         for (let i = context.length - 1, d = this.stack.length - 1; i >= 0; d--) {
             if (d < 0)
-                return matchNodeContext(this._tree, context, i);
+                return matchNodeContext$1(this._tree, context, i);
             let type = types[buffer.buffer[this.stack[d]]];
             if (!type.isAnonymous) {
                 if (context[i] && context[i] != type.name)
@@ -16483,13 +16491,13 @@ class TreeCursor {
         return true;
     }
 }
-function hasChild(tree) {
-    return tree.children.some(ch => ch instanceof TreeBuffer || !ch.type.isAnonymous || hasChild(ch));
+function hasChild$1(tree) {
+    return tree.children.some(ch => ch instanceof TreeBuffer$1 || !ch.type.isAnonymous || hasChild$1(ch));
 }
-function buildTree(data) {
+function buildTree$1(data) {
     var _a;
-    let { buffer, nodeSet, maxBufferLength = DefaultBufferLength, reused = [], minRepeatType = nodeSet.types.length } = data;
-    let cursor = Array.isArray(buffer) ? new FlatBufferCursor(buffer, buffer.length) : buffer;
+    let { buffer, nodeSet, maxBufferLength = DefaultBufferLength$1, reused = [], minRepeatType = nodeSet.types.length } = data;
+    let cursor = Array.isArray(buffer) ? new FlatBufferCursor$1(buffer, buffer.length) : buffer;
     let types = nodeSet.types;
     let contextHash = 0, lookAhead = 0;
     function takeNode(parentStart, minPos, children, positions, inRepeat, depth) {
@@ -16523,7 +16531,7 @@ function buildTree(data) {
             let endPos = cursor.pos - buffer.size, index = data.length;
             while (cursor.pos > endPos)
                 index = copyToBuffer(buffer.start, data, index);
-            node = new TreeBuffer(data, end - buffer.start, nodeSet);
+            node = new TreeBuffer$1(data, end - buffer.start, nodeSet);
             startPos = buffer.start - parentStart;
         }
         else { // Make it a node
@@ -16554,7 +16562,7 @@ function buildTree(data) {
             localPositions.reverse();
             if (localInRepeat > -1 && lastGroup > 0) {
                 let make = makeBalanced(type, contextAtStart);
-                node = balanceRange(type, localChildren, localPositions, 0, localChildren.length, 0, end - start, make, make);
+                node = balanceRange$1(type, localChildren, localPositions, 0, localChildren.length, 0, end - start, make, make);
             }
             else {
                 node = makeTree(type, localChildren, localPositions, end - start, lookAheadAtStart - end, contextAtStart);
@@ -16591,14 +16599,14 @@ function buildTree(data) {
                 buffer[j++] = nodes[i + 2] - start;
                 buffer[j++] = j;
             }
-            children.push(new TreeBuffer(buffer, nodes[2] - start, nodeSet));
+            children.push(new TreeBuffer$1(buffer, nodes[2] - start, nodeSet));
             positions.push(start - parentStart);
         }
     }
     function makeBalanced(type, contextHash) {
         return (children, positions, length) => {
             let lookAhead = 0, lastI = children.length - 1, last, lookAheadProp;
-            if (lastI >= 0 && (last = children[lastI]) instanceof Tree) {
+            if (lastI >= 0 && (last = children[lastI]) instanceof Tree$1) {
                 if (!lastI && last.type == type && last.length == length)
                     return last;
                 if (lookAheadProp = last.prop(NodeProp$1.lookAhead))
@@ -16625,7 +16633,7 @@ function buildTree(data) {
             let pair = [NodeProp$1.lookAhead, lookAhead];
             props = props ? [pair].concat(props) : [pair];
         }
-        return new Tree(type, children, positions, length, props);
+        return new Tree$1(type, children, positions, length, props);
     }
     function findBufferSize(maxSize, inRepeat) {
         // Scan through the buffer to find previous siblings that fit
@@ -16707,27 +16715,27 @@ function buildTree(data) {
     while (cursor.pos > 0)
         takeNode(data.start || 0, data.bufferStart || 0, children, positions, -1, 0);
     let length = (_a = data.length) !== null && _a !== void 0 ? _a : (children.length ? positions[0] + children[0].length : 0);
-    return new Tree(types[data.topID], children.reverse(), positions.reverse(), length);
+    return new Tree$1(types[data.topID], children.reverse(), positions.reverse(), length);
 }
-const nodeSizeCache = new WeakMap;
-function nodeSize(balanceType, node) {
-    if (!balanceType.isAnonymous || node instanceof TreeBuffer || node.type != balanceType)
+const nodeSizeCache$1 = new WeakMap;
+function nodeSize$1(balanceType, node) {
+    if (!balanceType.isAnonymous || node instanceof TreeBuffer$1 || node.type != balanceType)
         return 1;
-    let size = nodeSizeCache.get(node);
+    let size = nodeSizeCache$1.get(node);
     if (size == null) {
         size = 1;
         for (let child of node.children) {
-            if (child.type != balanceType || !(child instanceof Tree)) {
+            if (child.type != balanceType || !(child instanceof Tree$1)) {
                 size = 1;
                 break;
             }
-            size += nodeSize(balanceType, child);
+            size += nodeSize$1(balanceType, child);
         }
-        nodeSizeCache.set(node, size);
+        nodeSizeCache$1.set(node, size);
     }
     return size;
 }
-function balanceRange(
+function balanceRange$1(
 // The type the balanced tree's inner nodes.
 balanceType, 
 // The direct children and their positions
@@ -16744,15 +16752,15 @@ mkTop,
 mkTree) {
     let total = 0;
     for (let i = from; i < to; i++)
-        total += nodeSize(balanceType, children[i]);
+        total += nodeSize$1(balanceType, children[i]);
     let maxChild = Math.ceil((total * 1.5) / 8 /* Balance.BranchFactor */);
     let localChildren = [], localPositions = [];
     function divide(children, positions, from, to, offset) {
         for (let i = from; i < to;) {
-            let groupFrom = i, groupStart = positions[i], groupSize = nodeSize(balanceType, children[i]);
+            let groupFrom = i, groupStart = positions[i], groupSize = nodeSize$1(balanceType, children[i]);
             i++;
             for (; i < to; i++) {
-                let nextSize = nodeSize(balanceType, children[i]);
+                let nextSize = nodeSize$1(balanceType, children[i]);
                 if (groupSize + nextSize >= maxChild)
                     break;
                 groupSize += nextSize;
@@ -16767,7 +16775,7 @@ mkTree) {
             }
             else {
                 let length = positions[i - 1] + children[i - 1].length - groupStart;
-                localChildren.push(balanceRange(balanceType, children, positions, groupFrom, i, groupStart, length, null, mkTree));
+                localChildren.push(balanceRange$1(balanceType, children, positions, groupFrom, i, groupStart, length, null, mkTree));
             }
             localPositions.push(groupStart + offset - start);
         }
@@ -16798,17 +16806,17 @@ class NodeWeakMap {
     Set the value for this syntax node.
     */
     set(node, value) {
-        if (node instanceof BufferNode)
+        if (node instanceof BufferNode$1)
             this.setBuffer(node.context.buffer, node.index, value);
-        else if (node instanceof TreeNode)
+        else if (node instanceof TreeNode$1)
             this.map.set(node.tree, value);
     }
     /**
     Retrieve value for this syntax node, if it exists in the map.
     */
     get(node) {
-        return node instanceof BufferNode ? this.getBuffer(node.context.buffer, node.index)
-            : node instanceof TreeNode ? this.map.get(node.tree) : undefined;
+        return node instanceof BufferNode$1 ? this.getBuffer(node.context.buffer, node.index)
+            : node instanceof TreeNode$1 ? this.map.get(node.tree) : undefined;
     }
     /**
     Set the value for the node that a cursor currently points to.
@@ -17968,7 +17976,7 @@ class Language {
             }
             for (let i = 0; i < tree.children.length; i++) {
                 let ch = tree.children[i];
-                if (ch instanceof Tree)
+                if (ch instanceof Tree$1)
                     explore(ch, tree.positions[i] + from);
             }
         };
@@ -18030,7 +18038,7 @@ language available.
 */
 function syntaxTree(state) {
     let field = state.field(Language.state, false);
-    return field ? field.tree : Tree.empty;
+    return field ? field.tree : Tree$1.empty;
 }
 /**
 Lezer-style
@@ -18125,7 +18133,7 @@ class ParseContext {
     @internal
     */
     static create(parser, state, viewport) {
-        return new ParseContext(parser, state, [], Tree.empty, 0, viewport, [], null);
+        return new ParseContext(parser, state, [], Tree$1.empty, 0, viewport, [], null);
     }
     startParse() {
         return this.parser.startParse(new DocInput(this.state.doc), this.fragments);
@@ -18136,7 +18144,7 @@ class ParseContext {
     work(until, upto) {
         if (upto != null && upto >= this.state.doc.length)
             upto = undefined;
-        if (this.tree != Tree.empty && this.isDone(upto !== null && upto !== void 0 ? upto : this.state.doc.length)) {
+        if (this.tree != Tree$1.empty && this.isDone(upto !== null && upto !== void 0 ? upto : this.state.doc.length)) {
             this.takeTree();
             return true;
         }
@@ -18208,7 +18216,7 @@ class ParseContext {
             let ranges = [];
             changes.iterChangedRanges((fromA, toA, fromB, toB) => ranges.push({ fromA, toA, fromB, toB }));
             fragments = TreeFragment.applyChanges(fragments, ranges);
-            tree = Tree.empty;
+            tree = Tree$1.empty;
             treeLen = 0;
             viewport = { from: changes.mapPos(viewport.from, -1), to: changes.mapPos(viewport.to, 1) };
             if (this.skipped.length) {
@@ -18283,7 +18291,7 @@ class ParseContext {
                                 cx.scheduleOn = cx.scheduleOn ? Promise.all([cx.scheduleOn, until]) : until;
                         }
                         this.parsedPos = to;
-                        return new Tree(NodeType$1.none, [], [], to - from);
+                        return new Tree$1(NodeType$1.none, [], [], to - from);
                     },
                     stoppedAt: null,
                     stopAt() { }
@@ -19142,6 +19150,8 @@ Create an extension that configures code folding.
 */
 function codeFolding(config) {
     let result = [foldState, baseTheme$1$2];
+    if (config)
+        result.push(foldConfig.of(config));
     return result;
 }
 function widgetToDOM(view, prepared) {
@@ -19435,7 +19445,7 @@ const defaultHighlightStyle = /*@__PURE__*/HighlightStyle.define([
         color: "#f00" }
 ]);
 
-const baseTheme$3 = /*@__PURE__*/EditorView.baseTheme({
+const baseTheme$4 = /*@__PURE__*/EditorView.baseTheme({
     "&.cm-focused .cm-matchingBracket": { backgroundColor: "#328c8252" },
     "&.cm-focused .cm-nonmatchingBracket": { backgroundColor: "#bb555544" }
 });
@@ -19483,7 +19493,7 @@ const bracketMatchingState = /*@__PURE__*/StateField.define({
 });
 const bracketMatchingUnique = [
     bracketMatchingState,
-    baseTheme$3
+    baseTheme$4
 ];
 /**
 Create an extension that enables bracket matching. Whenever the
@@ -19671,6 +19681,7 @@ function createTokenType(extra, tagStr) {
 // FIXME profile adding a per-Tree TreeNode cache, validating it by
 // parent pointer
 /// The default maximum length of a `TreeBuffer` node (1024).
+const DefaultBufferLength = 1024;
 let nextPropID = 0;
 /// Each [node type](#common.NodeType) or [individual tree](#common.Tree)
 /// can have metadata associated with it in props. Instances of this
@@ -19812,6 +19823,7 @@ class NodeType {
 }
 /// An empty dummy node type to use when no actual type is available.
 NodeType.none = new NodeType("", Object.create(null), 0, 8 /* Anonymous */);
+const CachedNode = new WeakMap(), CachedInnerNode = new WeakMap();
 /// Options that control iteration. Can be combined with the `|`
 /// operator to enable multiple ones.
 var IterMode;
@@ -19834,6 +19846,1027 @@ var IterMode;
     /// position.
     IterMode[IterMode["IgnoreOverlays"] = 8] = "IgnoreOverlays";
 })(IterMode || (IterMode = {}));
+/// A piece of syntax tree. There are two ways to approach these
+/// trees: the way they are actually stored in memory, and the
+/// convenient way.
+///
+/// Syntax trees are stored as a tree of `Tree` and `TreeBuffer`
+/// objects. By packing detail information into `TreeBuffer` leaf
+/// nodes, the representation is made a lot more memory-efficient.
+///
+/// However, when you want to actually work with tree nodes, this
+/// representation is very awkward, so most client code will want to
+/// use the [`TreeCursor`](#common.TreeCursor) or
+/// [`SyntaxNode`](#common.SyntaxNode) interface instead, which provides
+/// a view on some part of this data structure, and can be used to
+/// move around to adjacent nodes.
+class Tree {
+    /// Construct a new tree. See also [`Tree.build`](#common.Tree^build).
+    constructor(
+    /// The type of the top node.
+    type, 
+    /// This node's child nodes.
+    children, 
+    /// The positions (offsets relative to the start of this tree) of
+    /// the children.
+    positions, 
+    /// The total length of this tree
+    length, 
+    /// Per-node [node props](#common.NodeProp) to associate with this node.
+    props) {
+        this.type = type;
+        this.children = children;
+        this.positions = positions;
+        this.length = length;
+        /// @internal
+        this.props = null;
+        if (props && props.length) {
+            this.props = Object.create(null);
+            for (let [prop, value] of props)
+                this.props[typeof prop == "number" ? prop : prop.id] = value;
+        }
+    }
+    /// @internal
+    toString() {
+        let mounted = this.prop(NodeProp.mounted);
+        if (mounted && !mounted.overlay)
+            return mounted.tree.toString();
+        let children = "";
+        for (let ch of this.children) {
+            let str = ch.toString();
+            if (str) {
+                if (children)
+                    children += ",";
+                children += str;
+            }
+        }
+        return !this.type.name ? children :
+            (/\W/.test(this.type.name) && !this.type.isError ? JSON.stringify(this.type.name) : this.type.name) +
+                (children.length ? "(" + children + ")" : "");
+    }
+    /// Get a [tree cursor](#common.TreeCursor) positioned at the top of
+    /// the tree. Mode can be used to [control](#common.IterMode) which
+    /// nodes the cursor visits.
+    cursor(mode = 0) {
+        return new TreeCursor(this.topNode, mode);
+    }
+    /// Get a [tree cursor](#common.TreeCursor) pointing into this tree
+    /// at the given position and side (see
+    /// [`moveTo`](#common.TreeCursor.moveTo).
+    cursorAt(pos, side = 0, mode = 0) {
+        let scope = CachedNode.get(this) || this.topNode;
+        let cursor = new TreeCursor(scope);
+        cursor.moveTo(pos, side);
+        CachedNode.set(this, cursor._tree);
+        return cursor;
+    }
+    /// Get a [syntax node](#common.SyntaxNode) object for the top of the
+    /// tree.
+    get topNode() {
+        return new TreeNode(this, 0, 0, null);
+    }
+    /// Get the [syntax node](#common.SyntaxNode) at the given position.
+    /// If `side` is -1, this will move into nodes that end at the
+    /// position. If 1, it'll move into nodes that start at the
+    /// position. With 0, it'll only enter nodes that cover the position
+    /// from both sides.
+    resolve(pos, side = 0) {
+        let node = resolveNode(CachedNode.get(this) || this.topNode, pos, side, false);
+        CachedNode.set(this, node);
+        return node;
+    }
+    /// Like [`resolve`](#common.Tree.resolve), but will enter
+    /// [overlaid](#common.MountedTree.overlay) nodes, producing a syntax node
+    /// pointing into the innermost overlaid tree at the given position
+    /// (with parent links going through all parent structure, including
+    /// the host trees).
+    resolveInner(pos, side = 0) {
+        let node = resolveNode(CachedInnerNode.get(this) || this.topNode, pos, side, true);
+        CachedInnerNode.set(this, node);
+        return node;
+    }
+    /// Iterate over the tree and its children, calling `enter` for any
+    /// node that touches the `from`/`to` region (if given) before
+    /// running over such a node's children, and `leave` (if given) when
+    /// leaving the node. When `enter` returns `false`, that node will
+    /// not have its children iterated over (or `leave` called).
+    iterate(spec) {
+        let { enter, leave, from = 0, to = this.length } = spec;
+        for (let c = this.cursor((spec.mode || 0) | IterMode.IncludeAnonymous);;) {
+            let entered = false;
+            if (c.from <= to && c.to >= from && (c.type.isAnonymous || enter(c) !== false)) {
+                if (c.firstChild())
+                    continue;
+                entered = true;
+            }
+            for (;;) {
+                if (entered && leave && !c.type.isAnonymous)
+                    leave(c);
+                if (c.nextSibling())
+                    break;
+                if (!c.parent())
+                    return;
+                entered = true;
+            }
+        }
+    }
+    /// Get the value of the given [node prop](#common.NodeProp) for this
+    /// node. Works with both per-node and per-type props.
+    prop(prop) {
+        return !prop.perNode ? this.type.prop(prop) : this.props ? this.props[prop.id] : undefined;
+    }
+    /// Returns the node's [per-node props](#common.NodeProp.perNode) in a
+    /// format that can be passed to the [`Tree`](#common.Tree)
+    /// constructor.
+    get propValues() {
+        let result = [];
+        if (this.props)
+            for (let id in this.props)
+                result.push([+id, this.props[id]]);
+        return result;
+    }
+    /// Balance the direct children of this tree, producing a copy of
+    /// which may have children grouped into subtrees with type
+    /// [`NodeType.none`](#common.NodeType^none).
+    balance(config = {}) {
+        return this.children.length <= 8 /* BranchFactor */ ? this :
+            balanceRange(NodeType.none, this.children, this.positions, 0, this.children.length, 0, this.length, (children, positions, length) => new Tree(this.type, children, positions, length, this.propValues), config.makeTree || ((children, positions, length) => new Tree(NodeType.none, children, positions, length)));
+    }
+    /// Build a tree from a postfix-ordered buffer of node information,
+    /// or a cursor over such a buffer.
+    static build(data) { return buildTree(data); }
+}
+/// The empty tree
+Tree.empty = new Tree(NodeType.none, [], [], 0);
+class FlatBufferCursor {
+    constructor(buffer, index) {
+        this.buffer = buffer;
+        this.index = index;
+    }
+    get id() { return this.buffer[this.index - 4]; }
+    get start() { return this.buffer[this.index - 3]; }
+    get end() { return this.buffer[this.index - 2]; }
+    get size() { return this.buffer[this.index - 1]; }
+    get pos() { return this.index; }
+    next() { this.index -= 4; }
+    fork() { return new FlatBufferCursor(this.buffer, this.index); }
+}
+/// Tree buffers contain (type, start, end, endIndex) quads for each
+/// node. In such a buffer, nodes are stored in prefix order (parents
+/// before children, with the endIndex of the parent indicating which
+/// children belong to it)
+class TreeBuffer {
+    /// Create a tree buffer.
+    constructor(
+    /// The buffer's content.
+    buffer, 
+    /// The total length of the group of nodes in the buffer.
+    length, 
+    /// The node set used in this buffer.
+    set) {
+        this.buffer = buffer;
+        this.length = length;
+        this.set = set;
+    }
+    /// @internal
+    get type() { return NodeType.none; }
+    /// @internal
+    toString() {
+        let result = [];
+        for (let index = 0; index < this.buffer.length;) {
+            result.push(this.childString(index));
+            index = this.buffer[index + 3];
+        }
+        return result.join(",");
+    }
+    /// @internal
+    childString(index) {
+        let id = this.buffer[index], endIndex = this.buffer[index + 3];
+        let type = this.set.types[id], result = type.name;
+        if (/\W/.test(result) && !type.isError)
+            result = JSON.stringify(result);
+        index += 4;
+        if (endIndex == index)
+            return result;
+        let children = [];
+        while (index < endIndex) {
+            children.push(this.childString(index));
+            index = this.buffer[index + 3];
+        }
+        return result + "(" + children.join(",") + ")";
+    }
+    /// @internal
+    findChild(startIndex, endIndex, dir, pos, side) {
+        let { buffer } = this, pick = -1;
+        for (let i = startIndex; i != endIndex; i = buffer[i + 3]) {
+            if (checkSide(side, pos, buffer[i + 1], buffer[i + 2])) {
+                pick = i;
+                if (dir > 0)
+                    break;
+            }
+        }
+        return pick;
+    }
+    /// @internal
+    slice(startI, endI, from, to) {
+        let b = this.buffer;
+        let copy = new Uint16Array(endI - startI);
+        for (let i = startI, j = 0; i < endI;) {
+            copy[j++] = b[i++];
+            copy[j++] = b[i++] - from;
+            copy[j++] = b[i++] - from;
+            copy[j++] = b[i++] - startI;
+        }
+        return new TreeBuffer(copy, to - from, this.set);
+    }
+}
+function checkSide(side, pos, from, to) {
+    switch (side) {
+        case -2 /* Before */: return from < pos;
+        case -1 /* AtOrBefore */: return to >= pos && from < pos;
+        case 0 /* Around */: return from < pos && to > pos;
+        case 1 /* AtOrAfter */: return from <= pos && to > pos;
+        case 2 /* After */: return to > pos;
+        case 4 /* DontCare */: return true;
+    }
+}
+function enterUnfinishedNodesBefore(node, pos) {
+    let scan = node.childBefore(pos);
+    while (scan) {
+        let last = scan.lastChild;
+        if (!last || last.to != scan.to)
+            break;
+        if (last.type.isError && last.from == last.to) {
+            node = scan;
+            scan = last.prevSibling;
+        }
+        else {
+            scan = last;
+        }
+    }
+    return node;
+}
+function resolveNode(node, pos, side, overlays) {
+    var _a;
+    // Move up to a node that actually holds the position, if possible
+    while (node.from == node.to ||
+        (side < 1 ? node.from >= pos : node.from > pos) ||
+        (side > -1 ? node.to <= pos : node.to < pos)) {
+        let parent = !overlays && node instanceof TreeNode && node.index < 0 ? null : node.parent;
+        if (!parent)
+            return node;
+        node = parent;
+    }
+    let mode = overlays ? 0 : IterMode.IgnoreOverlays;
+    // Must go up out of overlays when those do not overlap with pos
+    if (overlays)
+        for (let scan = node, parent = scan.parent; parent; scan = parent, parent = scan.parent) {
+            if (scan instanceof TreeNode && scan.index < 0 && ((_a = parent.enter(pos, side, mode)) === null || _a === void 0 ? void 0 : _a.from) != scan.from)
+                node = parent;
+        }
+    for (;;) {
+        let inner = node.enter(pos, side, mode);
+        if (!inner)
+            return node;
+        node = inner;
+    }
+}
+class TreeNode {
+    constructor(_tree, from, 
+    // Index in parent node, set to -1 if the node is not a direct child of _parent.node (overlay)
+    index, _parent) {
+        this._tree = _tree;
+        this.from = from;
+        this.index = index;
+        this._parent = _parent;
+    }
+    get type() { return this._tree.type; }
+    get name() { return this._tree.type.name; }
+    get to() { return this.from + this._tree.length; }
+    nextChild(i, dir, pos, side, mode = 0) {
+        for (let parent = this;;) {
+            for (let { children, positions } = parent._tree, e = dir > 0 ? children.length : -1; i != e; i += dir) {
+                let next = children[i], start = positions[i] + parent.from;
+                if (!checkSide(side, pos, start, start + next.length))
+                    continue;
+                if (next instanceof TreeBuffer) {
+                    if (mode & IterMode.ExcludeBuffers)
+                        continue;
+                    let index = next.findChild(0, next.buffer.length, dir, pos - start, side);
+                    if (index > -1)
+                        return new BufferNode(new BufferContext(parent, next, i, start), null, index);
+                }
+                else if ((mode & IterMode.IncludeAnonymous) || (!next.type.isAnonymous || hasChild(next))) {
+                    let mounted;
+                    if (!(mode & IterMode.IgnoreMounts) &&
+                        next.props && (mounted = next.prop(NodeProp.mounted)) && !mounted.overlay)
+                        return new TreeNode(mounted.tree, start, i, parent);
+                    let inner = new TreeNode(next, start, i, parent);
+                    return (mode & IterMode.IncludeAnonymous) || !inner.type.isAnonymous ? inner
+                        : inner.nextChild(dir < 0 ? next.children.length - 1 : 0, dir, pos, side);
+                }
+            }
+            if ((mode & IterMode.IncludeAnonymous) || !parent.type.isAnonymous)
+                return null;
+            if (parent.index >= 0)
+                i = parent.index + dir;
+            else
+                i = dir < 0 ? -1 : parent._parent._tree.children.length;
+            parent = parent._parent;
+            if (!parent)
+                return null;
+        }
+    }
+    get firstChild() { return this.nextChild(0, 1, 0, 4 /* DontCare */); }
+    get lastChild() { return this.nextChild(this._tree.children.length - 1, -1, 0, 4 /* DontCare */); }
+    childAfter(pos) { return this.nextChild(0, 1, pos, 2 /* After */); }
+    childBefore(pos) { return this.nextChild(this._tree.children.length - 1, -1, pos, -2 /* Before */); }
+    enter(pos, side, mode = 0) {
+        let mounted;
+        if (!(mode & IterMode.IgnoreOverlays) && (mounted = this._tree.prop(NodeProp.mounted)) && mounted.overlay) {
+            let rPos = pos - this.from;
+            for (let { from, to } of mounted.overlay) {
+                if ((side > 0 ? from <= rPos : from < rPos) &&
+                    (side < 0 ? to >= rPos : to > rPos))
+                    return new TreeNode(mounted.tree, mounted.overlay[0].from + this.from, -1, this);
+            }
+        }
+        return this.nextChild(0, 1, pos, side, mode);
+    }
+    nextSignificantParent() {
+        let val = this;
+        while (val.type.isAnonymous && val._parent)
+            val = val._parent;
+        return val;
+    }
+    get parent() {
+        return this._parent ? this._parent.nextSignificantParent() : null;
+    }
+    get nextSibling() {
+        return this._parent && this.index >= 0 ? this._parent.nextChild(this.index + 1, 1, 0, 4 /* DontCare */) : null;
+    }
+    get prevSibling() {
+        return this._parent && this.index >= 0 ? this._parent.nextChild(this.index - 1, -1, 0, 4 /* DontCare */) : null;
+    }
+    cursor(mode = 0) { return new TreeCursor(this, mode); }
+    get tree() { return this._tree; }
+    toTree() { return this._tree; }
+    resolve(pos, side = 0) {
+        return resolveNode(this, pos, side, false);
+    }
+    resolveInner(pos, side = 0) {
+        return resolveNode(this, pos, side, true);
+    }
+    enterUnfinishedNodesBefore(pos) { return enterUnfinishedNodesBefore(this, pos); }
+    getChild(type, before = null, after = null) {
+        let r = getChildren(this, type, before, after);
+        return r.length ? r[0] : null;
+    }
+    getChildren(type, before = null, after = null) {
+        return getChildren(this, type, before, after);
+    }
+    /// @internal
+    toString() { return this._tree.toString(); }
+    get node() { return this; }
+    matchContext(context) { return matchNodeContext(this, context); }
+}
+function getChildren(node, type, before, after) {
+    let cur = node.cursor(), result = [];
+    if (!cur.firstChild())
+        return result;
+    if (before != null)
+        while (!cur.type.is(before))
+            if (!cur.nextSibling())
+                return result;
+    for (;;) {
+        if (after != null && cur.type.is(after))
+            return result;
+        if (cur.type.is(type))
+            result.push(cur.node);
+        if (!cur.nextSibling())
+            return after == null ? result : [];
+    }
+}
+function matchNodeContext(node, context, i = context.length - 1) {
+    for (let p = node.parent; i >= 0; p = p.parent) {
+        if (!p)
+            return false;
+        if (!p.type.isAnonymous) {
+            if (context[i] && context[i] != p.name)
+                return false;
+            i--;
+        }
+    }
+    return true;
+}
+class BufferContext {
+    constructor(parent, buffer, index, start) {
+        this.parent = parent;
+        this.buffer = buffer;
+        this.index = index;
+        this.start = start;
+    }
+}
+class BufferNode {
+    constructor(context, _parent, index) {
+        this.context = context;
+        this._parent = _parent;
+        this.index = index;
+        this.type = context.buffer.set.types[context.buffer.buffer[index]];
+    }
+    get name() { return this.type.name; }
+    get from() { return this.context.start + this.context.buffer.buffer[this.index + 1]; }
+    get to() { return this.context.start + this.context.buffer.buffer[this.index + 2]; }
+    child(dir, pos, side) {
+        let { buffer } = this.context;
+        let index = buffer.findChild(this.index + 4, buffer.buffer[this.index + 3], dir, pos - this.context.start, side);
+        return index < 0 ? null : new BufferNode(this.context, this, index);
+    }
+    get firstChild() { return this.child(1, 0, 4 /* DontCare */); }
+    get lastChild() { return this.child(-1, 0, 4 /* DontCare */); }
+    childAfter(pos) { return this.child(1, pos, 2 /* After */); }
+    childBefore(pos) { return this.child(-1, pos, -2 /* Before */); }
+    enter(pos, side, mode = 0) {
+        if (mode & IterMode.ExcludeBuffers)
+            return null;
+        let { buffer } = this.context;
+        let index = buffer.findChild(this.index + 4, buffer.buffer[this.index + 3], side > 0 ? 1 : -1, pos - this.context.start, side);
+        return index < 0 ? null : new BufferNode(this.context, this, index);
+    }
+    get parent() {
+        return this._parent || this.context.parent.nextSignificantParent();
+    }
+    externalSibling(dir) {
+        return this._parent ? null : this.context.parent.nextChild(this.context.index + dir, dir, 0, 4 /* DontCare */);
+    }
+    get nextSibling() {
+        let { buffer } = this.context;
+        let after = buffer.buffer[this.index + 3];
+        if (after < (this._parent ? buffer.buffer[this._parent.index + 3] : buffer.buffer.length))
+            return new BufferNode(this.context, this._parent, after);
+        return this.externalSibling(1);
+    }
+    get prevSibling() {
+        let { buffer } = this.context;
+        let parentStart = this._parent ? this._parent.index + 4 : 0;
+        if (this.index == parentStart)
+            return this.externalSibling(-1);
+        return new BufferNode(this.context, this._parent, buffer.findChild(parentStart, this.index, -1, 0, 4 /* DontCare */));
+    }
+    cursor(mode = 0) { return new TreeCursor(this, mode); }
+    get tree() { return null; }
+    toTree() {
+        let children = [], positions = [];
+        let { buffer } = this.context;
+        let startI = this.index + 4, endI = buffer.buffer[this.index + 3];
+        if (endI > startI) {
+            let from = buffer.buffer[this.index + 1], to = buffer.buffer[this.index + 2];
+            children.push(buffer.slice(startI, endI, from, to));
+            positions.push(0);
+        }
+        return new Tree(this.type, children, positions, this.to - this.from);
+    }
+    resolve(pos, side = 0) {
+        return resolveNode(this, pos, side, false);
+    }
+    resolveInner(pos, side = 0) {
+        return resolveNode(this, pos, side, true);
+    }
+    enterUnfinishedNodesBefore(pos) { return enterUnfinishedNodesBefore(this, pos); }
+    /// @internal
+    toString() { return this.context.buffer.childString(this.index); }
+    getChild(type, before = null, after = null) {
+        let r = getChildren(this, type, before, after);
+        return r.length ? r[0] : null;
+    }
+    getChildren(type, before = null, after = null) {
+        return getChildren(this, type, before, after);
+    }
+    get node() { return this; }
+    matchContext(context) { return matchNodeContext(this, context); }
+}
+/// A tree cursor object focuses on a given node in a syntax tree, and
+/// allows you to move to adjacent nodes.
+class TreeCursor {
+    /// @internal
+    constructor(node, 
+    /// @internal
+    mode = 0) {
+        this.mode = mode;
+        /// @internal
+        this.buffer = null;
+        this.stack = [];
+        /// @internal
+        this.index = 0;
+        this.bufferNode = null;
+        if (node instanceof TreeNode) {
+            this.yieldNode(node);
+        }
+        else {
+            this._tree = node.context.parent;
+            this.buffer = node.context;
+            for (let n = node._parent; n; n = n._parent)
+                this.stack.unshift(n.index);
+            this.bufferNode = node;
+            this.yieldBuf(node.index);
+        }
+    }
+    /// Shorthand for `.type.name`.
+    get name() { return this.type.name; }
+    yieldNode(node) {
+        if (!node)
+            return false;
+        this._tree = node;
+        this.type = node.type;
+        this.from = node.from;
+        this.to = node.to;
+        return true;
+    }
+    yieldBuf(index, type) {
+        this.index = index;
+        let { start, buffer } = this.buffer;
+        this.type = type || buffer.set.types[buffer.buffer[index]];
+        this.from = start + buffer.buffer[index + 1];
+        this.to = start + buffer.buffer[index + 2];
+        return true;
+    }
+    yield(node) {
+        if (!node)
+            return false;
+        if (node instanceof TreeNode) {
+            this.buffer = null;
+            return this.yieldNode(node);
+        }
+        this.buffer = node.context;
+        return this.yieldBuf(node.index, node.type);
+    }
+    /// @internal
+    toString() {
+        return this.buffer ? this.buffer.buffer.childString(this.index) : this._tree.toString();
+    }
+    /// @internal
+    enterChild(dir, pos, side) {
+        if (!this.buffer)
+            return this.yield(this._tree.nextChild(dir < 0 ? this._tree._tree.children.length - 1 : 0, dir, pos, side, this.mode));
+        let { buffer } = this.buffer;
+        let index = buffer.findChild(this.index + 4, buffer.buffer[this.index + 3], dir, pos - this.buffer.start, side);
+        if (index < 0)
+            return false;
+        this.stack.push(this.index);
+        return this.yieldBuf(index);
+    }
+    /// Move the cursor to this node's first child. When this returns
+    /// false, the node has no child, and the cursor has not been moved.
+    firstChild() { return this.enterChild(1, 0, 4 /* DontCare */); }
+    /// Move the cursor to this node's last child.
+    lastChild() { return this.enterChild(-1, 0, 4 /* DontCare */); }
+    /// Move the cursor to the first child that ends after `pos`.
+    childAfter(pos) { return this.enterChild(1, pos, 2 /* After */); }
+    /// Move to the last child that starts before `pos`.
+    childBefore(pos) { return this.enterChild(-1, pos, -2 /* Before */); }
+    /// Move the cursor to the child around `pos`. If side is -1 the
+    /// child may end at that position, when 1 it may start there. This
+    /// will also enter [overlaid](#common.MountedTree.overlay)
+    /// [mounted](#common.NodeProp^mounted) trees unless `overlays` is
+    /// set to false.
+    enter(pos, side, mode = this.mode) {
+        if (!this.buffer)
+            return this.yield(this._tree.enter(pos, side, mode));
+        return mode & IterMode.ExcludeBuffers ? false : this.enterChild(1, pos, side);
+    }
+    /// Move to the node's parent node, if this isn't the top node.
+    parent() {
+        if (!this.buffer)
+            return this.yieldNode((this.mode & IterMode.IncludeAnonymous) ? this._tree._parent : this._tree.parent);
+        if (this.stack.length)
+            return this.yieldBuf(this.stack.pop());
+        let parent = (this.mode & IterMode.IncludeAnonymous) ? this.buffer.parent : this.buffer.parent.nextSignificantParent();
+        this.buffer = null;
+        return this.yieldNode(parent);
+    }
+    /// @internal
+    sibling(dir) {
+        if (!this.buffer)
+            return !this._tree._parent ? false
+                : this.yield(this._tree.index < 0 ? null
+                    : this._tree._parent.nextChild(this._tree.index + dir, dir, 0, 4 /* DontCare */, this.mode));
+        let { buffer } = this.buffer, d = this.stack.length - 1;
+        if (dir < 0) {
+            let parentStart = d < 0 ? 0 : this.stack[d] + 4;
+            if (this.index != parentStart)
+                return this.yieldBuf(buffer.findChild(parentStart, this.index, -1, 0, 4 /* DontCare */));
+        }
+        else {
+            let after = buffer.buffer[this.index + 3];
+            if (after < (d < 0 ? buffer.buffer.length : buffer.buffer[this.stack[d] + 3]))
+                return this.yieldBuf(after);
+        }
+        return d < 0 ? this.yield(this.buffer.parent.nextChild(this.buffer.index + dir, dir, 0, 4 /* DontCare */, this.mode)) : false;
+    }
+    /// Move to this node's next sibling, if any.
+    nextSibling() { return this.sibling(1); }
+    /// Move to this node's previous sibling, if any.
+    prevSibling() { return this.sibling(-1); }
+    atLastNode(dir) {
+        let index, parent, { buffer } = this;
+        if (buffer) {
+            if (dir > 0) {
+                if (this.index < buffer.buffer.buffer.length)
+                    return false;
+            }
+            else {
+                for (let i = 0; i < this.index; i++)
+                    if (buffer.buffer.buffer[i + 3] < this.index)
+                        return false;
+            }
+            ({ index, parent } = buffer);
+        }
+        else {
+            ({ index, _parent: parent } = this._tree);
+        }
+        for (; parent; { index, _parent: parent } = parent) {
+            if (index > -1)
+                for (let i = index + dir, e = dir < 0 ? -1 : parent._tree.children.length; i != e; i += dir) {
+                    let child = parent._tree.children[i];
+                    if ((this.mode & IterMode.IncludeAnonymous) ||
+                        child instanceof TreeBuffer ||
+                        !child.type.isAnonymous ||
+                        hasChild(child))
+                        return false;
+                }
+        }
+        return true;
+    }
+    move(dir, enter) {
+        if (enter && this.enterChild(dir, 0, 4 /* DontCare */))
+            return true;
+        for (;;) {
+            if (this.sibling(dir))
+                return true;
+            if (this.atLastNode(dir) || !this.parent())
+                return false;
+        }
+    }
+    /// Move to the next node in a
+    /// [pre-order](https://en.wikipedia.org/wiki/Tree_traversal#Pre-order_(NLR))
+    /// traversal, going from a node to its first child or, if the
+    /// current node is empty or `enter` is false, its next sibling or
+    /// the next sibling of the first parent node that has one.
+    next(enter = true) { return this.move(1, enter); }
+    /// Move to the next node in a last-to-first pre-order traveral. A
+    /// node is followed by its last child or, if it has none, its
+    /// previous sibling or the previous sibling of the first parent
+    /// node that has one.
+    prev(enter = true) { return this.move(-1, enter); }
+    /// Move the cursor to the innermost node that covers `pos`. If
+    /// `side` is -1, it will enter nodes that end at `pos`. If it is 1,
+    /// it will enter nodes that start at `pos`.
+    moveTo(pos, side = 0) {
+        // Move up to a node that actually holds the position, if possible
+        while (this.from == this.to ||
+            (side < 1 ? this.from >= pos : this.from > pos) ||
+            (side > -1 ? this.to <= pos : this.to < pos))
+            if (!this.parent())
+                break;
+        // Then scan down into child nodes as far as possible
+        while (this.enterChild(1, pos, side)) { }
+        return this;
+    }
+    /// Get a [syntax node](#common.SyntaxNode) at the cursor's current
+    /// position.
+    get node() {
+        if (!this.buffer)
+            return this._tree;
+        let cache = this.bufferNode, result = null, depth = 0;
+        if (cache && cache.context == this.buffer) {
+            scan: for (let index = this.index, d = this.stack.length; d >= 0;) {
+                for (let c = cache; c; c = c._parent)
+                    if (c.index == index) {
+                        if (index == this.index)
+                            return c;
+                        result = c;
+                        depth = d + 1;
+                        break scan;
+                    }
+                index = this.stack[--d];
+            }
+        }
+        for (let i = depth; i < this.stack.length; i++)
+            result = new BufferNode(this.buffer, result, this.stack[i]);
+        return this.bufferNode = new BufferNode(this.buffer, result, this.index);
+    }
+    /// Get the [tree](#common.Tree) that represents the current node, if
+    /// any. Will return null when the node is in a [tree
+    /// buffer](#common.TreeBuffer).
+    get tree() {
+        return this.buffer ? null : this._tree._tree;
+    }
+    /// Iterate over the current node and all its descendants, calling
+    /// `enter` when entering a node and `leave`, if given, when leaving
+    /// one. When `enter` returns `false`, any children of that node are
+    /// skipped, and `leave` isn't called for it.
+    iterate(enter, leave) {
+        for (let depth = 0;;) {
+            let mustLeave = false;
+            if (this.type.isAnonymous || enter(this) !== false) {
+                if (this.firstChild()) {
+                    depth++;
+                    continue;
+                }
+                if (!this.type.isAnonymous)
+                    mustLeave = true;
+            }
+            for (;;) {
+                if (mustLeave && leave)
+                    leave(this);
+                mustLeave = this.type.isAnonymous;
+                if (this.nextSibling())
+                    break;
+                if (!depth)
+                    return;
+                this.parent();
+                depth--;
+                mustLeave = true;
+            }
+        }
+    }
+    /// Test whether the current node matches a given context—a sequence
+    /// of direct parent node names. Empty strings in the context array
+    /// are treated as wildcards.
+    matchContext(context) {
+        if (!this.buffer)
+            return matchNodeContext(this.node, context);
+        let { buffer } = this.buffer, { types } = buffer.set;
+        for (let i = context.length - 1, d = this.stack.length - 1; i >= 0; d--) {
+            if (d < 0)
+                return matchNodeContext(this.node, context, i);
+            let type = types[buffer.buffer[this.stack[d]]];
+            if (!type.isAnonymous) {
+                if (context[i] && context[i] != type.name)
+                    return false;
+                i--;
+            }
+        }
+        return true;
+    }
+}
+function hasChild(tree) {
+    return tree.children.some(ch => ch instanceof TreeBuffer || !ch.type.isAnonymous || hasChild(ch));
+}
+function buildTree(data) {
+    var _a;
+    let { buffer, nodeSet, maxBufferLength = DefaultBufferLength, reused = [], minRepeatType = nodeSet.types.length } = data;
+    let cursor = Array.isArray(buffer) ? new FlatBufferCursor(buffer, buffer.length) : buffer;
+    let types = nodeSet.types;
+    let contextHash = 0, lookAhead = 0;
+    function takeNode(parentStart, minPos, children, positions, inRepeat) {
+        let { id, start, end, size } = cursor;
+        let lookAheadAtStart = lookAhead;
+        while (size < 0) {
+            cursor.next();
+            if (size == -1 /* Reuse */) {
+                let node = reused[id];
+                children.push(node);
+                positions.push(start - parentStart);
+                return;
+            }
+            else if (size == -3 /* ContextChange */) { // Context change
+                contextHash = id;
+                return;
+            }
+            else if (size == -4 /* LookAhead */) {
+                lookAhead = id;
+                return;
+            }
+            else {
+                throw new RangeError(`Unrecognized record size: ${size}`);
+            }
+        }
+        let type = types[id], node, buffer;
+        let startPos = start - parentStart;
+        if (end - start <= maxBufferLength && (buffer = findBufferSize(cursor.pos - minPos, inRepeat))) {
+            // Small enough for a buffer, and no reused nodes inside
+            let data = new Uint16Array(buffer.size - buffer.skip);
+            let endPos = cursor.pos - buffer.size, index = data.length;
+            while (cursor.pos > endPos)
+                index = copyToBuffer(buffer.start, data, index);
+            node = new TreeBuffer(data, end - buffer.start, nodeSet);
+            startPos = buffer.start - parentStart;
+        }
+        else { // Make it a node
+            let endPos = cursor.pos - size;
+            cursor.next();
+            let localChildren = [], localPositions = [];
+            let localInRepeat = id >= minRepeatType ? id : -1;
+            let lastGroup = 0, lastEnd = end;
+            while (cursor.pos > endPos) {
+                if (localInRepeat >= 0 && cursor.id == localInRepeat && cursor.size >= 0) {
+                    if (cursor.end <= lastEnd - maxBufferLength) {
+                        makeRepeatLeaf(localChildren, localPositions, start, lastGroup, cursor.end, lastEnd, localInRepeat, lookAheadAtStart);
+                        lastGroup = localChildren.length;
+                        lastEnd = cursor.end;
+                    }
+                    cursor.next();
+                }
+                else {
+                    takeNode(start, endPos, localChildren, localPositions, localInRepeat);
+                }
+            }
+            if (localInRepeat >= 0 && lastGroup > 0 && lastGroup < localChildren.length)
+                makeRepeatLeaf(localChildren, localPositions, start, lastGroup, start, lastEnd, localInRepeat, lookAheadAtStart);
+            localChildren.reverse();
+            localPositions.reverse();
+            if (localInRepeat > -1 && lastGroup > 0) {
+                let make = makeBalanced(type);
+                node = balanceRange(type, localChildren, localPositions, 0, localChildren.length, 0, end - start, make, make);
+            }
+            else {
+                node = makeTree(type, localChildren, localPositions, end - start, lookAheadAtStart - end);
+            }
+        }
+        children.push(node);
+        positions.push(startPos);
+    }
+    function makeBalanced(type) {
+        return (children, positions, length) => {
+            let lookAhead = 0, lastI = children.length - 1, last, lookAheadProp;
+            if (lastI >= 0 && (last = children[lastI]) instanceof Tree) {
+                if (!lastI && last.type == type && last.length == length)
+                    return last;
+                if (lookAheadProp = last.prop(NodeProp.lookAhead))
+                    lookAhead = positions[lastI] + last.length + lookAheadProp;
+            }
+            return makeTree(type, children, positions, length, lookAhead);
+        };
+    }
+    function makeRepeatLeaf(children, positions, base, i, from, to, type, lookAhead) {
+        let localChildren = [], localPositions = [];
+        while (children.length > i) {
+            localChildren.push(children.pop());
+            localPositions.push(positions.pop() + base - from);
+        }
+        children.push(makeTree(nodeSet.types[type], localChildren, localPositions, to - from, lookAhead - to));
+        positions.push(from - base);
+    }
+    function makeTree(type, children, positions, length, lookAhead = 0, props) {
+        if (contextHash) {
+            let pair = [NodeProp.contextHash, contextHash];
+            props = props ? [pair].concat(props) : [pair];
+        }
+        if (lookAhead > 25) {
+            let pair = [NodeProp.lookAhead, lookAhead];
+            props = props ? [pair].concat(props) : [pair];
+        }
+        return new Tree(type, children, positions, length, props);
+    }
+    function findBufferSize(maxSize, inRepeat) {
+        // Scan through the buffer to find previous siblings that fit
+        // together in a TreeBuffer, and don't contain any reused nodes
+        // (which can't be stored in a buffer).
+        // If `inRepeat` is > -1, ignore node boundaries of that type for
+        // nesting, but make sure the end falls either at the start
+        // (`maxSize`) or before such a node.
+        let fork = cursor.fork();
+        let size = 0, start = 0, skip = 0, minStart = fork.end - maxBufferLength;
+        let result = { size: 0, start: 0, skip: 0 };
+        scan: for (let minPos = fork.pos - maxSize; fork.pos > minPos;) {
+            let nodeSize = fork.size;
+            // Pretend nested repeat nodes of the same type don't exist
+            if (fork.id == inRepeat && nodeSize >= 0) {
+                // Except that we store the current state as a valid return
+                // value.
+                result.size = size;
+                result.start = start;
+                result.skip = skip;
+                skip += 4;
+                size += 4;
+                fork.next();
+                continue;
+            }
+            let startPos = fork.pos - nodeSize;
+            if (nodeSize < 0 || startPos < minPos || fork.start < minStart)
+                break;
+            let localSkipped = fork.id >= minRepeatType ? 4 : 0;
+            let nodeStart = fork.start;
+            fork.next();
+            while (fork.pos > startPos) {
+                if (fork.size < 0) {
+                    if (fork.size == -3 /* ContextChange */)
+                        localSkipped += 4;
+                    else
+                        break scan;
+                }
+                else if (fork.id >= minRepeatType) {
+                    localSkipped += 4;
+                }
+                fork.next();
+            }
+            start = nodeStart;
+            size += nodeSize;
+            skip += localSkipped;
+        }
+        if (inRepeat < 0 || size == maxSize) {
+            result.size = size;
+            result.start = start;
+            result.skip = skip;
+        }
+        return result.size > 4 ? result : undefined;
+    }
+    function copyToBuffer(bufferStart, buffer, index) {
+        let { id, start, end, size } = cursor;
+        cursor.next();
+        if (size >= 0 && id < minRepeatType) {
+            let startIndex = index;
+            if (size > 4) {
+                let endPos = cursor.pos - (size - 4);
+                while (cursor.pos > endPos)
+                    index = copyToBuffer(bufferStart, buffer, index);
+            }
+            buffer[--index] = startIndex;
+            buffer[--index] = end - bufferStart;
+            buffer[--index] = start - bufferStart;
+            buffer[--index] = id;
+        }
+        else if (size == -3 /* ContextChange */) {
+            contextHash = id;
+        }
+        else if (size == -4 /* LookAhead */) {
+            lookAhead = id;
+        }
+        return index;
+    }
+    let children = [], positions = [];
+    while (cursor.pos > 0)
+        takeNode(data.start || 0, data.bufferStart || 0, children, positions, -1);
+    let length = (_a = data.length) !== null && _a !== void 0 ? _a : (children.length ? positions[0] + children[0].length : 0);
+    return new Tree(types[data.topID], children.reverse(), positions.reverse(), length);
+}
+const nodeSizeCache = new WeakMap;
+function nodeSize(balanceType, node) {
+    if (!balanceType.isAnonymous || node instanceof TreeBuffer || node.type != balanceType)
+        return 1;
+    let size = nodeSizeCache.get(node);
+    if (size == null) {
+        size = 1;
+        for (let child of node.children) {
+            if (child.type != balanceType || !(child instanceof Tree)) {
+                size = 1;
+                break;
+            }
+            size += nodeSize(balanceType, child);
+        }
+        nodeSizeCache.set(node, size);
+    }
+    return size;
+}
+function balanceRange(
+// The type the balanced tree's inner nodes.
+balanceType, 
+// The direct children and their positions
+children, positions, 
+// The index range in children/positions to use
+from, to, 
+// The start position of the nodes, relative to their parent.
+start, 
+// Length of the outer node
+length, 
+// Function to build the top node of the balanced tree
+mkTop, 
+// Function to build internal nodes for the balanced tree
+mkTree) {
+    let total = 0;
+    for (let i = from; i < to; i++)
+        total += nodeSize(balanceType, children[i]);
+    let maxChild = Math.ceil((total * 1.5) / 8 /* BranchFactor */);
+    let localChildren = [], localPositions = [];
+    function divide(children, positions, from, to, offset) {
+        for (let i = from; i < to;) {
+            let groupFrom = i, groupStart = positions[i], groupSize = nodeSize(balanceType, children[i]);
+            i++;
+            for (; i < to; i++) {
+                let nextSize = nodeSize(balanceType, children[i]);
+                if (groupSize + nextSize >= maxChild)
+                    break;
+                groupSize += nextSize;
+            }
+            if (i == groupFrom + 1) {
+                if (groupSize > maxChild) {
+                    let only = children[groupFrom]; // Only trees can have a size > 1
+                    divide(only.children, only.positions, 0, only.children.length, positions[groupFrom] + offset);
+                    continue;
+                }
+                localChildren.push(children[groupFrom]);
+            }
+            else {
+                let length = positions[i - 1] + children[i - 1].length - groupStart;
+                localChildren.push(balanceRange(balanceType, children, positions, groupFrom, i, groupStart, length, null, mkTree));
+            }
+            localPositions.push(groupStart + offset - start);
+        }
+    }
+    divide(children, positions, from, to, 0);
+    return (mkTop || mkTree)(localChildren, localPositions, length);
+}
 new NodeProp({ perNode: true });
 
 /**
@@ -20500,7 +21533,7 @@ function toMatchingBracket(state, dispatch, extend) {
             return range;
         found = true;
         let head = matching.start.from == range.head ? matching.end.to : matching.end.from;
-        return EditorSelection.cursor(head);
+        return extend ? EditorSelection.range(range.anchor, head) : EditorSelection.cursor(head);
     });
     if (!found)
         return false;
@@ -20511,7 +21544,7 @@ function toMatchingBracket(state, dispatch, extend) {
 Move the selection to the bracket matching the one it is currently
 on, if any.
 */
-const cursorMatchingBracket = ({ state, dispatch }) => toMatchingBracket(state, dispatch);
+const cursorMatchingBracket = ({ state, dispatch }) => toMatchingBracket(state, dispatch, false);
 function extendSel(view, how) {
     let selection = updateSel(view.state.selection, range => {
         let head = how(range);
@@ -21601,6 +22634,8 @@ itself will be highlighted with `"cm-selectionMatch-main"`.
 */
 function highlightSelectionMatches(options) {
     let ext = [defaultTheme, matchHighlighter];
+    if (options)
+        ext.push(highlightConfig.of(options));
     return ext;
 }
 const matchDeco = /*@__PURE__*/Decoration.mark({ class: "cm-selectionMatch" });
@@ -22259,7 +23294,7 @@ function announceMatch(view, { from, to }) {
     }
     return EditorView.announce.of(`${view.state.phrase("current match")}. ${text} ${view.state.phrase("on line")} ${view.state.doc.lineAt(from).number}`);
 }
-const baseTheme$2 = /*@__PURE__*/EditorView.baseTheme({
+const baseTheme$3 = /*@__PURE__*/EditorView.baseTheme({
     ".cm-panel.cm-search": {
         padding: "2px 6px 4px",
         position: "relative",
@@ -22292,7 +23327,7 @@ const baseTheme$2 = /*@__PURE__*/EditorView.baseTheme({
 const searchExtensions = [
     searchState,
     /*@__PURE__*/Prec.lowest(searchHighlighter),
-    baseTheme$2
+    baseTheme$3
 ];
 
 /**
@@ -23289,7 +24324,7 @@ const completionState = /*@__PURE__*/StateField.define({
     create() { return CompletionState.start(); },
     update(value, tr) { return value.update(tr); },
     provide: f => [
-        showTooltip.from(f, val => val.tooltip),
+        showTooltip$1.from(f, val => val.tooltip),
         EditorView.contentAttributes.from(f, state => state.attrs)
     ]
 });
@@ -23546,7 +24581,7 @@ const commitCharacters = /*@__PURE__*/Prec.highest(/*@__PURE__*/EditorView.domEv
     }
 }));
 
-const baseTheme$1 = /*@__PURE__*/EditorView.baseTheme({
+const baseTheme$2 = /*@__PURE__*/EditorView.baseTheme({
     ".cm-tooltip.cm-tooltip-autocomplete": {
         "& > ul": {
             fontFamily: "monospace",
@@ -23848,7 +24883,7 @@ function snippet(template) {
             let active = new ActiveSnippet(ranges, 0);
             let effects = spec.effects = [setActive.of(active)];
             if (editor.state.field(snippetState, false) === undefined)
-                effects.push(StateEffect.appendConfig.of([snippetState, addSnippetKeymap, snippetPointerHandler, baseTheme$1]));
+                effects.push(StateEffect.appendConfig.of([snippetState, addSnippetKeymap, snippetPointerHandler, baseTheme$2]));
         }
         editor.dispatch(editor.state.update(spec));
     };
@@ -24181,7 +25216,7 @@ function autocompletion(config = {}) {
         completionConfig.of(config),
         completionPlugin,
         completionKeymapExt,
-        baseTheme$1
+        baseTheme$2
     ];
 }
 /**
@@ -24305,6 +25340,16 @@ function maybeEnableLint(state, effects) {
     return state.field(lintState, false) ? effects : effects.concat(StateEffect.appendConfig.of(lintExtensions));
 }
 /**
+Returns a transaction spec which updates the current set of
+diagnostics, and enables the lint extension if if wasn't already
+active.
+*/
+function setDiagnostics(state, diagnostics) {
+    return {
+        effects: maybeEnableLint(state, [setDiagnosticsEffect.of(diagnostics)])
+    };
+}
+/**
 The state effect that updates the set of active diagnostics. Can
 be useful when writing an extension that needs to track these.
 */
@@ -24421,6 +25466,65 @@ const lintKeymap = [
     { key: "Mod-Shift-m", run: openLintPanel, preventDefault: true },
     { key: "F8", run: nextDiagnostic }
 ];
+const lintPlugin = /*@__PURE__*/ViewPlugin.fromClass(class {
+    constructor(view) {
+        this.view = view;
+        this.timeout = -1;
+        this.set = true;
+        let { delay } = view.state.facet(lintConfig);
+        this.lintTime = Date.now() + delay;
+        this.run = this.run.bind(this);
+        this.timeout = setTimeout(this.run, delay);
+    }
+    run() {
+        clearTimeout(this.timeout);
+        let now = Date.now();
+        if (now < this.lintTime - 10) {
+            this.timeout = setTimeout(this.run, this.lintTime - now);
+        }
+        else {
+            this.set = false;
+            let { state } = this.view, { sources } = state.facet(lintConfig);
+            if (sources.length)
+                batchResults(sources.map(s => Promise.resolve(s(this.view))), annotations => {
+                    if (this.view.state.doc == state.doc)
+                        this.view.dispatch(setDiagnostics(this.view.state, annotations.reduce((a, b) => a.concat(b))));
+                }, error => { logException(this.view.state, error); });
+        }
+    }
+    update(update) {
+        let config = update.state.facet(lintConfig);
+        if (update.docChanged || config != update.startState.facet(lintConfig) ||
+            config.needsRefresh && config.needsRefresh(update)) {
+            this.lintTime = Date.now() + config.delay;
+            if (!this.set) {
+                this.set = true;
+                this.timeout = setTimeout(this.run, config.delay);
+            }
+        }
+    }
+    force() {
+        if (this.set) {
+            this.lintTime = Date.now();
+            this.run();
+        }
+    }
+    destroy() {
+        clearTimeout(this.timeout);
+    }
+});
+function batchResults(promises, sink, error) {
+    let collected = [], timeout = -1;
+    for (let p of promises)
+        p.then(value => {
+            collected.push(value);
+            clearTimeout(timeout);
+            if (collected.length == promises.length)
+                sink(collected);
+            else
+                timeout = setTimeout(() => sink(collected), 200);
+        }, error);
+}
 const lintConfig = /*@__PURE__*/Facet.define({
     combine(input) {
         return Object.assign({ sources: input.map(i => i.source).filter(x => x != null) }, combineConfig(input.map(i => i.config), {
@@ -24434,6 +25538,19 @@ const lintConfig = /*@__PURE__*/Facet.define({
         }));
     }
 });
+/**
+Given a diagnostic source, this function returns an extension that
+enables linting with that source. It will be called whenever the
+editor is idle (after its content changed). If `null` is given as
+source, this only configures the lint extension.
+*/
+function linter(source, config = {}) {
+    return [
+        lintConfig.of({ source, config }),
+        lintPlugin,
+        lintExtensions
+    ];
+}
 function assignKeys(actions) {
     let assigned = [];
     if (actions)
@@ -24674,7 +25791,7 @@ function svg(content, attrs = `viewBox="0 0 40 40"`) {
 function underline(color) {
     return svg(`<path d="m0 2.5 l2 -1.5 l1 0 l2 1.5 l1 0" stroke="${color}" fill="none" stroke-width=".7"/>`, `width="6" height="3"`);
 }
-const baseTheme = /*@__PURE__*/EditorView.baseTheme({
+const baseTheme$1 = /*@__PURE__*/EditorView.baseTheme({
     ".cm-diagnostic": {
         padding: "3px 6px 3px 8px",
         marginLeft: "-1px",
@@ -24894,7 +26011,7 @@ const lintGutterTooltip = /*@__PURE__*/StateField.define({
             tooltip = hideTooltip(tr, tooltip) ? null : Object.assign(Object.assign({}, tooltip), { pos: tr.changes.mapPos(tooltip.pos) });
         return tr.effects.reduce((t, e) => e.is(setLintGutterTooltip) ? e.value : t, tooltip);
     },
-    provide: field => showTooltip.from(field)
+    provide: field => showTooltip$1.from(field)
 });
 const lintGutterTheme = /*@__PURE__*/EditorView.baseTheme({
     ".cm-gutter-lint": {
@@ -24925,8 +26042,8 @@ const lintExtensions = [
             activeMark.range(selected.from, selected.to)
         ]);
     }),
-    /*@__PURE__*/hoverTooltip(lintTooltip, { hideOn: hideTooltip }),
-    baseTheme
+    /*@__PURE__*/hoverTooltip$1(lintTooltip, { hideOn: hideTooltip }),
+    baseTheme$1
 ];
 const lintGutterConfig = /*@__PURE__*/Facet.define({
     combine(configs) {
@@ -26125,7 +27242,7 @@ class FragmentCursor {
                 this.nextStart = start;
                 return null;
             }
-            if (next instanceof Tree) {
+            if (next instanceof Tree$1) {
                 if (start == pos) {
                     if (start < this.safeFrom)
                         return null;
@@ -26424,10 +27541,10 @@ class Parse {
                         console.log(base + this.stackID(stack) + ` (via reuse of ${parser.getName(cached.type.id)})`);
                     return true;
                 }
-                if (!(cached instanceof Tree) || cached.children.length == 0 || cached.positions[0] > 0)
+                if (!(cached instanceof Tree$1) || cached.children.length == 0 || cached.positions[0] > 0)
                     break;
                 let inner = cached.children[0];
-                if (inner instanceof Tree && cached.positions[0] == 0)
+                if (inner instanceof Tree$1 && cached.positions[0] == 0)
                     cached = inner;
                 else
                     break;
@@ -26526,7 +27643,7 @@ class Parse {
     // Convert the stack's buffer to a syntax tree.
     stackToTree(stack) {
         stack.close();
-        return Tree.build({ buffer: StackBufferCursor.create(stack),
+        return Tree$1.build({ buffer: StackBufferCursor.create(stack),
             nodeSet: this.parser.nodeSet,
             topID: this.topTerm,
             maxBufferLength: this.parser.bufferLength,
@@ -26644,7 +27761,7 @@ class LRParser extends Parser {
         if (spec.propSources)
             this.nodeSet = this.nodeSet.extend(...spec.propSources);
         this.strict = false;
-        this.bufferLength = DefaultBufferLength;
+        this.bufferLength = DefaultBufferLength$1;
         let tokenArray = decodeArray(spec.tokenData);
         this.context = spec.context;
         this.specializerSpecs = spec.specialized || [];
@@ -27054,7 +28171,7 @@ const jsHighlight = styleTags({
 const spec_identifier = {__proto__:null,export:20, as:25, from:33, default:36, async:41, function:42, const:52, extends:56, this:60, true:68, false:68, null:80, void:84, typeof:88, super:104, new:138, delete:150, yield:159, await:163, class:168, public:231, private:231, protected:231, readonly:233, instanceof:252, satisfies:255, in:256, import:290, keyof:347, unique:351, infer:357, asserts:393, is:395, abstract:415, implements:417, type:419, let:422, var:424, using:427, interface:433, enum:437, namespace:443, module:445, declare:449, global:453, for:472, of:481, while:484, with:488, do:492, if:496, else:498, switch:502, case:508, try:514, catch:518, finally:522, return:526, throw:530, break:534, continue:538, debugger:542};
 const spec_word = {__proto__:null,async:125, get:127, set:129, declare:191, public:193, private:193, protected:193, static:195, abstract:197, override:199, readonly:205, accessor:207, new:399};
 const spec_LessThan = {__proto__:null,"<":189};
-const parser = LRParser.deserialize({
+const parser$1 = LRParser.deserialize({
   version: 14,
   states: "$EOQ%TQlOOO%[QlOOO'_QpOOP(lO`OOO*zQ!0MxO'#CiO+RO#tO'#CjO+aO&jO'#CjO+oO#@ItO'#D_O.QQlO'#DeO.bQlO'#DpO%[QlO'#DxO0fQlO'#EQOOQ!0Lf'#EY'#EYO1PQ`O'#EVOOQO'#En'#EnOOQO'#Ij'#IjO1XQ`O'#GrO1dQ`O'#EmO1iQ`O'#EmO3hQ!0MxO'#JpO6[Q!0MxO'#JqO6uQ`O'#F[O6zQ,UO'#FsOOQ!0Lf'#Fe'#FeO7VO7dO'#FeO7eQMhO'#F{O9UQ`O'#FzOOQ!0Lf'#Jq'#JqOOQ!0Lb'#Jp'#JpO9ZQ`O'#GvOOQ['#K]'#K]O9fQ`O'#IWO9kQ!0LrO'#IXOOQ['#J^'#J^OOQ['#I]'#I]Q`QlOOQ`QlOOO9sQ!L^O'#DtO9zQlO'#D|O:RQlO'#EOO9aQ`O'#GrO:YQMhO'#CoO:hQ`O'#ElO:sQ`O'#EwO:xQMhO'#FdO;gQ`O'#GrOOQO'#K^'#K^O;lQ`O'#K^O;zQ`O'#GzO;zQ`O'#G{O;zQ`O'#G}O9aQ`O'#HQO<qQ`O'#HTO>YQ`O'#CeO>jQ`O'#HaO>rQ`O'#HgO>rQ`O'#HiO`QlO'#HkO>rQ`O'#HmO>rQ`O'#HpO>wQ`O'#HvO>|Q!0LsO'#H|O%[QlO'#IOO?XQ!0LsO'#IQO?dQ!0LsO'#ISO9kQ!0LrO'#IUO?oQ!0MxO'#CiO@qQpO'#DjQOQ`OOO%[QlO'#EOOAXQ`O'#ERO:YQMhO'#ElOAdQ`O'#ElOAoQ!bO'#FdOOQ['#Cg'#CgOOQ!0Lb'#Do'#DoOOQ!0Lb'#Jt'#JtO%[QlO'#JtOOQO'#Jw'#JwOOQO'#If'#IfOBoQpO'#EeOOQ!0Lb'#Ed'#EdOOQ!0Lb'#J{'#J{OCkQ!0MSO'#EeOCuQpO'#EUOOQO'#Jv'#JvODZQpO'#JwOEhQpO'#EUOCuQpO'#EePEuO&2DjO'#CbPOOO)CD{)CD{OOOO'#I^'#I^OFQO#tO,59UOOQ!0Lh,59U,59UOOOO'#I_'#I_OF`O&jO,59UOFnQ!L^O'#DaOOOO'#Ia'#IaOFuO#@ItO,59yOOQ!0Lf,59y,59yOGTQlO'#IbOGhQ`O'#JrOIgQ!fO'#JrO+}QlO'#JrOInQ`O,5:POJUQ`O'#EnOJcQ`O'#KROJnQ`O'#KQOJnQ`O'#KQOJvQ`O,5;[OJ{Q`O'#KPOOQ!0Ln,5:[,5:[OKSQlO,5:[OMQQ!0MxO,5:dOMqQ`O,5:lON[Q!0LrO'#KOONcQ`O'#J}O9ZQ`O'#J}ONwQ`O'#J}O! PQ`O,5;ZO! UQ`O'#J}O!#ZQ!fO'#JqOOQ!0Lh'#Ci'#CiO%[QlO'#EQO!#yQ!fO,5:qOOQS'#Jx'#JxOOQO-E<h-E<hO9aQ`O,5=^O!$aQ`O,5=^O!$fQlO,5;XO!&iQMhO'#EiO!(SQ`O,5;XO!(XQlO'#DwO!(cQpO,5;bO!(kQpO,5;bO%[QlO,5;bOOQ['#FS'#FSOOQ['#FU'#FUO%[QlO,5;cO%[QlO,5;cO%[QlO,5;cO%[QlO,5;cO%[QlO,5;cO%[QlO,5;cO%[QlO,5;cO%[QlO,5;cO%[QlO,5;cO%[QlO,5;cOOQ['#FY'#FYO!(yQlO,5;sOOQ!0Lf,5;x,5;xOOQ!0Lf,5;y,5;yOOQ!0Lf,5;{,5;{O%[QlO'#InO!*|Q!0LrO,5<hO%[QlO,5;cO!&iQMhO,5;cO!+kQMhO,5;cO!-]QMhO'#E[O%[QlO,5;vOOQ!0Lf,5;z,5;zO!-dQ,UO'#FiO!.aQ,UO'#KVO!-{Q,UO'#KVO!.hQ,UO'#KVOOQO'#KV'#KVO!.|Q,UO,5<ROOOW,5<_,5<_O!/_QlO'#FuOOOW'#Im'#ImO7VO7dO,5<PO!/fQ,UO'#FwOOQ!0Lf,5<P,5<PO!0VQ$IUO'#CwOOQ!0Lh'#C{'#C{O!0jO#@ItO'#DPO!1WQMjO,5<dO!1_Q`O,5<gO!2zQ(CWO'#GWO!3XQ`O'#GXO!3^Q`O'#GXO!4|Q(CWO'#G]O!6RQpO'#GaOOQO'#Gm'#GmO!+rQMhO'#GlOOQO'#Go'#GoO!+rQMhO'#GnO!6tQ$IUO'#JjOOQ!0Lh'#Jj'#JjO!7OQ`O'#JiO!7^Q`O'#JhO!7fQ`O'#CuOOQ!0Lh'#Cy'#CyO!7qQ`O'#C{OOQ!0Lh'#DT'#DTOOQ!0Lh'#DV'#DVO1SQ`O'#DXO!+rQMhO'#GOO!+rQMhO'#GQO!7vQ`O'#GSO!7{Q`O'#GTO!3^Q`O'#GZO!+rQMhO'#G`O;zQ`O'#JiO!8QQ`O'#EoO!8oQ`O,5<fOOQ!0Lb'#Cr'#CrO!8wQ`O'#EpO!9qQpO'#EqOOQ!0Lb'#KP'#KPO!9xQ!0LrO'#K_O9kQ!0LrO,5=bO`QlO,5>rOOQ['#Jf'#JfOOQ[,5>s,5>sOOQ[-E<Z-E<ZO!;wQ!0MxO,5:`O!9lQpO,5:^O!>bQ!0MxO,5:hO%[QlO,5:hO!@xQ!0MxO,5:jOOQO,5@x,5@xO!AiQMhO,5=^O!AwQ!0LrO'#JgO9UQ`O'#JgO!BYQ!0LrO,59ZO!BeQpO,59ZO!BmQMhO,59ZO:YQMhO,59ZO!BxQ`O,5;XO!CQQ`O'#H`O!CfQ`O'#KbO%[QlO,5;|O!9lQpO,5<OO!CnQ`O,5=yO!CsQ`O,5=yO!CxQ`O,5=yO9kQ!0LrO,5=yO;zQ`O,5=iOOQO'#Cw'#CwO!DWQpO,5=fO!D`QMhO,5=gO!DkQ`O,5=iO!DpQ!bO,5=lO!DxQ`O'#K^O>wQ`O'#HVO9aQ`O'#HXO!D}Q`O'#HXO:YQMhO'#HZO!ESQ`O'#HZOOQ[,5=o,5=oO!EXQ`O'#H[O!EjQ`O'#CoO!EoQ`O,59PO!EyQ`O,59PO!HOQlO,59POOQ[,59P,59PO!H`Q!0LrO,59PO%[QlO,59PO!JkQlO'#HcOOQ['#Hd'#HdOOQ['#He'#HeO`QlO,5={O!KRQ`O,5={O`QlO,5>RO`QlO,5>TO!KWQ`O,5>VO`QlO,5>XO!K]Q`O,5>[O!KbQlO,5>bOOQ[,5>h,5>hO%[QlO,5>hO9kQ!0LrO,5>jOOQ[,5>l,5>lO# lQ`O,5>lOOQ[,5>n,5>nO# lQ`O,5>nOOQ[,5>p,5>pO#!YQpO'#D]O%[QlO'#JtO#!{QpO'#JtO##VQpO'#DkO##hQpO'#DkO#%yQlO'#DkO#&QQ`O'#JsO#&YQ`O,5:UO#&_Q`O'#ErO#&mQ`O'#KSO#&uQ`O,5;]O#&zQpO'#DkO#'XQpO'#ETOOQ!0Lf,5:m,5:mO%[QlO,5:mO#'`Q`O,5:mO>wQ`O,5;WO!BeQpO,5;WO!BmQMhO,5;WO:YQMhO,5;WO#'hQ`O,5@`O#'mQ07dO,5:qOOQO-E<d-E<dO#(sQ!0MSO,5;POCuQpO,5:pO#(}QpO,5:pOCuQpO,5;PO!BYQ!0LrO,5:pOOQ!0Lb'#Eh'#EhOOQO,5;P,5;PO%[QlO,5;PO#)[Q!0LrO,5;PO#)gQ!0LrO,5;PO!BeQpO,5:pOOQO,5;V,5;VO#)uQ!0LrO,5;PPOOO'#I['#I[P#*ZO&2DjO,58|POOO,58|,58|OOOO-E<[-E<[OOQ!0Lh1G.p1G.pOOOO-E<]-E<]OOOO,59{,59{O#*fQ!bO,59{OOOO-E<_-E<_OOQ!0Lf1G/e1G/eO#*kQ!fO,5>|O+}QlO,5>|OOQO,5?S,5?SO#*uQlO'#IbOOQO-E<`-E<`O#+SQ`O,5@^O#+[Q!fO,5@^O#+cQ`O,5@lOOQ!0Lf1G/k1G/kO%[QlO,5@mO#+kQ`O'#IhOOQO-E<f-E<fO#+cQ`O,5@lOOQ!0Lb1G0v1G0vOOQ!0Ln1G/v1G/vOOQ!0Ln1G0W1G0WO%[QlO,5@jO#,PQ!0LrO,5@jO#,bQ!0LrO,5@jO#,iQ`O,5@iO9ZQ`O,5@iO#,qQ`O,5@iO#-PQ`O'#IkO#,iQ`O,5@iOOQ!0Lb1G0u1G0uO!(cQpO,5:sO!(nQpO,5:sOOQS,5:u,5:uO#-qQdO,5:uO#-yQMhO1G2xO9aQ`O1G2xOOQ!0Lf1G0s1G0sO#.XQ!0MxO1G0sO#/^Q!0MvO,5;TOOQ!0Lh'#GV'#GVO#/zQ!0MzO'#JjO!$fQlO1G0sO#2VQ!fO'#JuO%[QlO'#JuO#2aQ`O,5:cOOQ!0Lh'#D]'#D]OOQ!0Lf1G0|1G0|O%[QlO1G0|OOQ!0Lf1G1e1G1eO#2fQ`O1G0|O#4zQ!0MxO1G0}O#5RQ!0MxO1G0}O#7iQ!0MxO1G0}O#7pQ!0MxO1G0}O#:WQ!0MxO1G0}O#<nQ!0MxO1G0}O#<uQ!0MxO1G0}O#<|Q!0MxO1G0}O#?dQ!0MxO1G0}O#?kQ!0MxO1G0}O#AxQ?MtO'#CiO#CsQ?MtO1G1_O#CzQ?MtO'#JqO#D_Q!0MxO,5?YOOQ!0Lb-E<l-E<lO#FlQ!0MxO1G0}O#GiQ!0MzO1G0}OOQ!0Lf1G0}1G0}O#HlQMjO'#JzO#HvQ`O,5:vO#H{Q!0MxO1G1bO#IoQ,UO,5<VO#IwQ,UO,5<WO#JPQ,UO'#FnO#JhQ`O'#FmOOQO'#KW'#KWOOQO'#Il'#IlO#JmQ,UO1G1mOOQ!0Lf1G1m1G1mOOOW1G1x1G1xO#KOQ?MtO'#JpO#KYQ`O,5<aO!(yQlO,5<aOOOW-E<k-E<kOOQ!0Lf1G1k1G1kO#K_QpO'#KVOOQ!0Lf,5<c,5<cO#KgQpO,5<cO#KlQMhO'#DROOOO'#I`'#I`O#KsO#@ItO,59kOOQ!0Lh,59k,59kO%[QlO1G2OO!7{Q`O'#IpO#LOQ`O,5<yOOQ!0Lh,5<v,5<vO!+rQMhO'#IsO#LlQMjO,5=WO!+rQMhO'#IuO#M_QMjO,5=YO!&iQMhO,5=[OOQO1G2R1G2RO#MiQ!dO'#CrO#M|Q(CWO'#EpO$ RQpO'#GaO$ iQ!dO,5<rO$ pQ`O'#KYO9ZQ`O'#KYO$!OQ`O,5<tO!+rQMhO,5<sO$!TQ`O'#GYO$!fQ`O,5<sO$!kQ!dO'#GVO$!xQ!dO'#KZO$#SQ`O'#KZO!&iQMhO'#KZO$#XQ`O,5<wO$#^QlO'#JtO$#hQpO'#GbO##hQpO'#GbO$#yQ`O'#GfO!3^Q`O'#GjO$$OQ!0LrO'#IrO$$ZQpO,5<{OOQ!0Lp,5<{,5<{O$$bQpO'#GbO$$oQpO'#GcO$%QQpO'#GcO$%VQMjO,5=WO$%gQMjO,5=YOOQ!0Lh,5=],5=]O!+rQMhO,5@TO!+rQMhO,5@TO$%wQ`O'#IwO$&VQ`O,5@SO$&_Q`O,59aOOQ!0Lh,59g,59gO$'UQ$IYO,59sOOQ!0Lh'#Jn'#JnO$'wQMjO,5<jO$(jQMjO,5<lO@iQ`O,5<nOOQ!0Lh,5<o,5<oO$(tQ`O,5<uO$(yQMjO,5<zO$)ZQ`O,5@TO$)iQ`O'#J}O!$fQlO1G2QO$)nQ`O1G2QO9ZQ`O'#KQO9ZQ`O'#ErO%[QlO'#ErO9ZQ`O'#IyO$)sQ!0LrO,5@yOOQ[1G2|1G2|OOQ[1G4^1G4^OOQ!0Lf1G/z1G/zOOQ!0Lf1G/x1G/xO$+uQ!0MxO1G0SOOQ[1G2x1G2xO!&iQMhO1G2xO%[QlO1G2xO#-|Q`O1G2xO$-yQMhO'#EiOOQ!0Lb,5@R,5@RO$.WQ!0LrO,5@ROOQ[1G.u1G.uO!BYQ!0LrO1G.uO!BeQpO1G.uO!BmQMhO1G.uO$.iQ`O1G0sO$.nQ`O'#CiO$.yQ`O'#KcO$/RQ`O,5=zO$/WQ`O'#KcO$/]Q`O'#KcO$/kQ`O'#JPO$/yQ`O,5@|O$0RQ!fO1G1hOOQ!0Lf1G1j1G1jO9aQ`O1G3eO@iQ`O1G3eO$0YQ`O1G3eO$0_Q`O1G3eOOQ[1G3e1G3eO!DkQ`O1G3TO!&iQMhO1G3QO$0dQ`O1G3QOOQ[1G3R1G3RO!&iQMhO1G3RO$0iQ`O1G3RO$0qQpO'#HPOOQ[1G3T1G3TO!5|QpO'#I{O!DpQ!bO1G3WOOQ[1G3W1G3WOOQ[,5=q,5=qO$0yQMhO,5=sO9aQ`O,5=sO$#yQ`O,5=uO9UQ`O,5=uO!BeQpO,5=uO!BmQMhO,5=uO:YQMhO,5=uO$1XQ`O'#KaO$1dQ`O,5=vOOQ[1G.k1G.kO$1iQ!0LrO1G.kO@iQ`O1G.kO$1tQ`O1G.kO9kQ!0LrO1G.kO$3|Q!fO,5AOO$4ZQ`O,5AOO9ZQ`O,5AOO$4fQlO,5=}O$4mQ`O,5=}OOQ[1G3g1G3gO`QlO1G3gOOQ[1G3m1G3mOOQ[1G3o1G3oO>rQ`O1G3qO$4rQlO1G3sO$8vQlO'#HrOOQ[1G3v1G3vO$9TQ`O'#HxO>wQ`O'#HzOOQ[1G3|1G3|O$9]QlO1G3|O9kQ!0LrO1G4SOOQ[1G4U1G4UOOQ!0Lb'#G^'#G^O9kQ!0LrO1G4WO9kQ!0LrO1G4YO$=dQ`O,5@`O!(yQlO,5;^O9ZQ`O,5;^O>wQ`O,5:VO!(yQlO,5:VO!BeQpO,5:VO$=iQ?MtO,5:VOOQO,5;^,5;^O$=sQpO'#IcO$>ZQ`O,5@_OOQ!0Lf1G/p1G/pO$>cQpO'#IiO$>mQ`O,5@nOOQ!0Lb1G0w1G0wO##hQpO,5:VOOQO'#Ie'#IeO$>uQpO,5:oOOQ!0Ln,5:o,5:oO#'cQ`O1G0XOOQ!0Lf1G0X1G0XO%[QlO1G0XOOQ!0Lf1G0r1G0rO>wQ`O1G0rO!BeQpO1G0rO!BmQMhO1G0rOOQ!0Lb1G5z1G5zO!BYQ!0LrO1G0[OOQO1G0k1G0kO%[QlO1G0kO$>|Q!0LrO1G0kO$?XQ!0LrO1G0kO!BeQpO1G0[OCuQpO1G0[O$?gQ!0LrO1G0kOOQO1G0[1G0[O$?{Q!0MxO1G0kPOOO-E<Y-E<YPOOO1G.h1G.hOOOO1G/g1G/gO$@VQ!bO,5<hO$@_Q!fO1G4hOOQO1G4n1G4nO%[QlO,5>|O$@iQ`O1G5xO$@qQ`O1G6WO$@yQ!fO1G6XO9ZQ`O,5?SO$ATQ!0MxO1G6UO%[QlO1G6UO$AeQ!0LrO1G6UO$AvQ`O1G6TO$AvQ`O1G6TO9ZQ`O1G6TO$BOQ`O,5?VO9ZQ`O,5?VOOQO,5?V,5?VO$BdQ`O,5?VO$)iQ`O,5?VOOQO-E<i-E<iOOQS1G0_1G0_OOQS1G0a1G0aO#-tQ`O1G0aOOQ[7+(d7+(dO!&iQMhO7+(dO%[QlO7+(dO$BrQ`O7+(dO$B}QMhO7+(dO$C]Q!0MzO,5=WO$EhQ!0MzO,5=YO$GsQ!0MzO,5=WO$JUQ!0MzO,5=YO$LgQ!0MzO,59sO$NlQ!0MzO,5<jO%!wQ!0MzO,5<lO%%SQ!0MzO,5<zOOQ!0Lf7+&_7+&_O%'eQ!0MxO7+&_O%(XQlO'#IdO%(fQ`O,5@aO%(nQ!fO,5@aOOQ!0Lf1G/}1G/}O%(xQ`O7+&hOOQ!0Lf7+&h7+&hO%(}Q?MtO,5:dO%[QlO7+&yO%)XQ?MtO,5:`O%)fQ?MtO,5:hO%)pQ?MtO,5:jO%)zQMhO'#IgO%*UQ`O,5@fOOQ!0Lh1G0b1G0bOOQO1G1q1G1qOOQO1G1r1G1rO%*^Q!jO,5<YO!(yQlO,5<XOOQO-E<j-E<jOOQ!0Lf7+'X7+'XOOOW7+'d7+'dOOOW1G1{1G1{O%*iQ`O1G1{OOQ!0Lf1G1}1G1}OOOO,59m,59mO%*nQ!dO,59mOOOO-E<^-E<^OOQ!0Lh1G/V1G/VO%*uQ!0MxO7+'jOOQ!0Lh,5?[,5?[O%+iQMhO1G2eP%+pQ`O'#IpPOQ!0Lh-E<n-E<nO%,^QMjO,5?_OOQ!0Lh-E<q-E<qO%-PQMjO,5?aOOQ!0Lh-E<s-E<sO%-ZQ!dO1G2vO%-bQ!dO'#CrO%-xQMhO'#KQO$#^QlO'#JtOOQ!0Lh1G2^1G2^O%.PQ`O'#IoO%.eQ`O,5@tO%.eQ`O,5@tO%.mQ`O,5@tO%.xQ`O,5@tOOQO1G2`1G2`O%/WQMjO1G2_O!+rQMhO1G2_O%/hQ(CWO'#IqO%/uQ`O,5@uO!&iQMhO,5@uO%/}Q!dO,5@uOOQ!0Lh1G2c1G2cO%2_Q!fO'#CiO%2iQ`O,5=OOOQ!0Lb,5<|,5<|O%2qQpO,5<|OOQ!0Lb,5<},5<}OCfQ`O,5<|O%2|QpO,5<|OOQ!0Lb,5=Q,5=QO$)iQ`O,5=UOOQO,5?^,5?^OOQO-E<p-E<pOOQ!0Lp1G2g1G2gO##hQpO,5<|O$#^QlO,5=OO%3[Q`O,5<}O%3gQpO,5<}O!+rQMhO'#IsO%4aQMjO1G2rO!+rQMhO'#IuO%5SQMjO1G2tO%5^QMjO1G5oO%5hQMjO1G5oOOQO,5?c,5?cOOQO-E<u-E<uOOQO1G.{1G.{O!9lQpO,59uO%[QlO,59uOOQ!0Lh,5<i,5<iO%5uQ`O1G2YO!+rQMhO1G2aO!+rQMhO1G5oO!+rQMhO1G5oO%5zQ!0MxO7+'lOOQ!0Lf7+'l7+'lO!$fQlO7+'lO%6nQ`O,5;^OOQ!0Lb,5?e,5?eOOQ!0Lb-E<w-E<wO%6sQ!dO'#K[O#'cQ`O7+(dO4UQ!fO7+(dO$BuQ`O7+(dO%6}Q!0MvO'#CiO%7nQ!0LrO,5=RO%8PQ!0MvO,5=RO%8dQ`O,5=ROOQ!0Lb1G5m1G5mOOQ[7+$a7+$aO!BYQ!0LrO7+$aO!BeQpO7+$aO!$fQlO7+&_O%8lQ`O'#JOO%9TQ`O,5@}OOQO1G3f1G3fO9aQ`O,5@}O%9TQ`O,5@}O%9]Q`O,5@}OOQO,5?k,5?kOOQO-E<}-E<}OOQ!0Lf7+'S7+'SO%9bQ`O7+)PO9kQ!0LrO7+)PO9aQ`O7+)PO@iQ`O7+)POOQ[7+(o7+(oO%9gQ!0MvO7+(lO!&iQMhO7+(lO!DfQ`O7+(mOOQ[7+(m7+(mO!&iQMhO7+(mO%9qQ`O'#K`O%9|Q`O,5=kOOQO,5?g,5?gOOQO-E<y-E<yOOQ[7+(r7+(rO%;`QpO'#HYOOQ[1G3_1G3_O!&iQMhO1G3_O%[QlO1G3_O%;gQ`O1G3_O%;rQMhO1G3_O9kQ!0LrO1G3aO$#yQ`O1G3aO9UQ`O1G3aO!BeQpO1G3aO!BmQMhO1G3aO%<QQ`O'#I}O%<fQ`O,5@{O%<nQpO,5@{OOQ!0Lb1G3b1G3bOOQ[7+$V7+$VO@iQ`O7+$VO9kQ!0LrO7+$VO%<yQ`O7+$VO%[QlO1G6jO%[QlO1G6kO%=OQ!0LrO1G6jO%=YQlO1G3iO%=aQ`O1G3iO%=fQlO1G3iOOQ[7+)R7+)RO9kQ!0LrO7+)]O`QlO7+)_OOQ['#Kf'#KfOOQ['#JQ'#JQO%=mQlO,5>^OOQ[,5>^,5>^O%[QlO'#HsO%=zQ`O'#HuOOQ[,5>d,5>dO9ZQ`O,5>dOOQ[,5>f,5>fOOQ[7+)h7+)hOOQ[7+)n7+)nOOQ[7+)r7+)rOOQ[7+)t7+)tO%>PQpO1G5zO%>kQ?MtO1G0xO%>uQ`O1G0xOOQO1G/q1G/qO%?QQ?MtO1G/qO>wQ`O1G/qO!(yQlO'#DkOOQO,5>},5>}OOQO-E<a-E<aOOQO,5?T,5?TOOQO-E<g-E<gO!BeQpO1G/qOOQO-E<c-E<cOOQ!0Ln1G0Z1G0ZOOQ!0Lf7+%s7+%sO#'cQ`O7+%sOOQ!0Lf7+&^7+&^O>wQ`O7+&^O!BeQpO7+&^OOQO7+%v7+%vO$?{Q!0MxO7+&VOOQO7+&V7+&VO%[QlO7+&VO%?[Q!0LrO7+&VO!BYQ!0LrO7+%vO!BeQpO7+%vO%?gQ!0LrO7+&VO%?uQ!0MxO7++pO%[QlO7++pO%@VQ`O7++oO%@VQ`O7++oOOQO1G4q1G4qO9ZQ`O1G4qO%@_Q`O1G4qOOQS7+%{7+%{O#'cQ`O<<LOO4UQ!fO<<LOO%@mQ`O<<LOOOQ[<<LO<<LOO!&iQMhO<<LOO%[QlO<<LOO%@uQ`O<<LOO%AQQ!0MzO,5?_O%C]Q!0MzO,5?aO%EhQ!0MzO1G2_O%GyQ!0MzO1G2rO%JUQ!0MzO1G2tO%LaQ!fO,5?OO%[QlO,5?OOOQO-E<b-E<bO%LkQ`O1G5{OOQ!0Lf<<JS<<JSO%LsQ?MtO1G0sO%NzQ?MtO1G0}O& RQ?MtO1G0}O&#SQ?MtO1G0}O&#ZQ?MtO1G0}O&%[Q?MtO1G0}O&']Q?MtO1G0}O&'dQ?MtO1G0}O&'kQ?MtO1G0}O&)lQ?MtO1G0}O&)sQ?MtO1G0}O&)zQ!0MxO<<JeO&+rQ?MtO1G0}O&,oQ?MvO1G0}O&-rQ?MvO'#JjO&/xQ?MtO1G1bO&0VQ?MtO1G0SO&0aQMjO,5?ROOQO-E<e-E<eO!(yQlO'#FpOOQO'#KX'#KXOOQO1G1t1G1tO&0kQ`O1G1sO&0pQ?MtO,5?YOOOW7+'g7+'gOOOO1G/X1G/XO&0zQ!dO1G4vOOQ!0Lh7+(P7+(PP!&iQMhO,5?[O!+rQMhO7+(bO&1RQ`O,5?ZO9ZQ`O,5?ZOOQO-E<m-E<mO&1aQ`O1G6`O&1aQ`O1G6`O&1iQ`O1G6`O&1tQMjO7+'yO&2UQ!dO,5?]O&2`Q`O,5?]O!&iQMhO,5?]OOQO-E<o-E<oO&2eQ!dO1G6aO&2oQ`O1G6aO&2wQ`O1G2jO!&iQMhO1G2jOOQ!0Lb1G2h1G2hOOQ!0Lb1G2i1G2iO%2qQpO1G2hO!BeQpO1G2hOCfQ`O1G2hOOQ!0Lb1G2p1G2pO&2|QpO1G2hO&3[Q`O1G2jO$)iQ`O1G2iOCfQ`O1G2iO$#^QlO1G2jO&3dQ`O1G2iO&4WQMjO,5?_OOQ!0Lh-E<r-E<rO&4yQMjO,5?aOOQ!0Lh-E<t-E<tO!+rQMhO7++ZOOQ!0Lh1G/a1G/aO&5TQ`O1G/aOOQ!0Lh7+'t7+'tO&5YQMjO7+'{O&5jQMjO7++ZO&5tQMjO7++ZO&6RQ!0MxO<<KWOOQ!0Lf<<KW<<KWO&6uQ`O1G0xO!&iQMhO'#IxO&6zQ`O,5@vO&8|Q!fO<<LOO!&iQMhO1G2mO&9TQ!0LrO1G2mOOQ[<<G{<<G{O!BYQ!0LrO<<G{O&9fQ!0MxO<<IyOOQ!0Lf<<Iy<<IyOOQO,5?j,5?jO&:YQ`O,5?jO&:_Q`O,5?jOOQO-E<|-E<|O&:mQ`O1G6iO&:mQ`O1G6iO9aQ`O1G6iO@iQ`O<<LkOOQ[<<Lk<<LkO&:uQ`O<<LkO9kQ!0LrO<<LkOOQ[<<LW<<LWO%9gQ!0MvO<<LWOOQ[<<LX<<LXO!DfQ`O<<LXO&:zQpO'#IzO&;VQ`O,5@zO!(yQlO,5@zOOQ[1G3V1G3VOOQO'#I|'#I|O9kQ!0LrO'#I|O&;_QpO,5=tOOQ[,5=t,5=tO&;fQpO'#EeO&;mQpO'#GdO&;rQ`O7+(yO&;wQ`O7+(yOOQ[7+(y7+(yO!&iQMhO7+(yO%[QlO7+(yO&<PQ`O7+(yOOQ[7+({7+({O9kQ!0LrO7+({O$#yQ`O7+({O9UQ`O7+({O!BeQpO7+({O&<[Q`O,5?iOOQO-E<{-E<{OOQO'#H]'#H]O&<gQ`O1G6gO9kQ!0LrO<<GqOOQ[<<Gq<<GqO@iQ`O<<GqO&<oQ`O7+,UO&<tQ`O7+,VO%[QlO7+,UO%[QlO7+,VOOQ[7+)T7+)TO&<yQ`O7+)TO&=OQlO7+)TO&=VQ`O7+)TOOQ[<<Lw<<LwOOQ[<<Ly<<LyOOQ[-E=O-E=OOOQ[1G3x1G3xO&=[Q`O,5>_OOQ[,5>a,5>aO&=aQ`O1G4OO9ZQ`O7+&dO!(yQlO7+&dOOQO7+%]7+%]O&=fQ?MtO1G6XO>wQ`O7+%]OOQ!0Lf<<I_<<I_OOQ!0Lf<<Ix<<IxO>wQ`O<<IxOOQO<<Iq<<IqO$?{Q!0MxO<<IqO%[QlO<<IqOOQO<<Ib<<IbO!BYQ!0LrO<<IbO&=pQ!0LrO<<IqO&={Q!0MxO<= [O&>]Q`O<= ZOOQO7+*]7+*]O9ZQ`O7+*]OOQ[ANAjANAjO&>eQ!fOANAjO!&iQMhOANAjO#'cQ`OANAjO4UQ!fOANAjO&>lQ`OANAjO%[QlOANAjO&>tQ!0MzO7+'yO&AVQ!0MzO,5?_O&CbQ!0MzO,5?aO&EmQ!0MzO7+'{O&HOQ!fO1G4jO&HYQ?MtO7+&_O&J^Q?MvO,5=WO&LeQ?MvO,5=YO&LuQ?MvO,5=WO&MVQ?MvO,5=YO&MgQ?MvO,59sO' mQ?MvO,5<jO'#pQ?MvO,5<lO'&UQ?MvO,5<zO''zQ?MtO7+'jO'(XQ?MtO7+'lO'(fQ`O,5<[OOQO7+'_7+'_OOQ!0Lh7+*b7+*bO'(kQMjO<<K|OOQO1G4u1G4uO'(rQ`O1G4uO'(}Q`O1G4uO')]Q`O7++zO')]Q`O7++zO!&iQMhO1G4wO')eQ!dO1G4wO')oQ`O7++{O')wQ`O7+(UO'*SQ!dO7+(UOOQ!0Lb7+(S7+(SOOQ!0Lb7+(T7+(TO!BeQpO7+(SOCfQ`O7+(SO'*^Q`O7+(UO!&iQMhO7+(UO$)iQ`O7+(TO'*cQ`O7+(UOCfQ`O7+(TO'*kQMjO<<NuOOQ!0Lh7+${7+${O!+rQMhO<<NuO'*uQ!dO,5?dOOQO-E<v-E<vO'+PQ!0MvO7+(XO!&iQMhO7+(XOOQ[AN=gAN=gO9aQ`O1G5UOOQO1G5U1G5UO'+aQ`O1G5UO'+fQ`O7+,TO'+fQ`O7+,TO9kQ!0LrOANBVO@iQ`OANBVOOQ[ANBVANBVOOQ[ANArANArOOQ[ANAsANAsO'+nQ`O,5?fOOQO-E<x-E<xO'+yQ?MtO1G6fOOQO,5?h,5?hOOQO-E<z-E<zOOQ[1G3`1G3`O',TQ`O,5=OOOQ[<<Le<<LeO!&iQMhO<<LeO&;rQ`O<<LeO',YQ`O<<LeO%[QlO<<LeOOQ[<<Lg<<LgO9kQ!0LrO<<LgO$#yQ`O<<LgO9UQ`O<<LgO',bQpO1G5TO',mQ`O7+,ROOQ[AN=]AN=]O9kQ!0LrOAN=]OOQ[<= p<= pOOQ[<= q<= qO',uQ`O<= pO',zQ`O<= qOOQ[<<Lo<<LoO'-PQ`O<<LoO'-UQlO<<LoOOQ[1G3y1G3yO>wQ`O7+)jO'-]Q`O<<JOO'-hQ?MtO<<JOOOQO<<Hw<<HwOOQ!0LfAN?dAN?dOOQOAN?]AN?]O$?{Q!0MxOAN?]OOQOAN>|AN>|O%[QlOAN?]OOQO<<Mw<<MwOOQ[G27UG27UO!&iQMhOG27UO#'cQ`OG27UO'-rQ!fOG27UO4UQ!fOG27UO'-yQ`OG27UO'.RQ?MtO<<JeO'.`Q?MvO1G2_O'0UQ?MvO,5?_O'2XQ?MvO,5?aO'4[Q?MvO1G2rO'6_Q?MvO1G2tO'8bQ?MtO<<KWO'8oQ?MtO<<IyOOQO1G1v1G1vO!+rQMhOANAhOOQO7+*a7+*aO'8|Q`O7+*aO'9XQ`O<= fO'9aQ!dO7+*cOOQ!0Lb<<Kp<<KpO$)iQ`O<<KpOCfQ`O<<KpO'9kQ`O<<KpO!&iQMhO<<KpOOQ!0Lb<<Kn<<KnO!BeQpO<<KnO'9vQ!dO<<KpOOQ!0Lb<<Ko<<KoO':QQ`O<<KpO!&iQMhO<<KpO$)iQ`O<<KoO':VQMjOANDaO':aQ!0MvO<<KsOOQO7+*p7+*pO9aQ`O7+*pO':qQ`O<= oOOQ[G27qG27qO9kQ!0LrOG27qO!(yQlO1G5QO':yQ`O7+,QO';RQ`O1G2jO&;rQ`OANBPOOQ[ANBPANBPO!&iQMhOANBPO';WQ`OANBPOOQ[ANBRANBRO9kQ!0LrOANBRO$#yQ`OANBROOQO'#H^'#H^OOQO7+*o7+*oOOQ[G22wG22wOOQ[ANE[ANE[OOQ[ANE]ANE]OOQ[ANBZANBZO';`Q`OANBZOOQ[<<MU<<MUO!(yQlOAN?jOOQOG24wG24wO$?{Q!0MxOG24wO#'cQ`OLD,pOOQ[LD,pLD,pO!&iQMhOLD,pO';eQ!fOLD,pO';lQ?MvO7+'yO'=bQ?MvO,5?_O'?eQ?MvO,5?aO'AhQ?MvO7+'{O'C^QMjOG27SOOQO<<M{<<M{OOQ!0LbANA[ANA[O$)iQ`OANA[OCfQ`OANA[O'CnQ!dOANA[OOQ!0LbANAYANAYO'CuQ`OANA[O!&iQMhOANA[O'DQQ!dOANA[OOQ!0LbANAZANAZOOQO<<N[<<N[OOQ[LD-]LD-]O'D[Q?MtO7+*lOOQO'#Ge'#GeOOQ[G27kG27kO&;rQ`OG27kO!&iQMhOG27kOOQ[G27mG27mO9kQ!0LrOG27mOOQ[G27uG27uO'DfQ?MtOG25UOOQOLD*cLD*cOOQ[!$(![!$(![O#'cQ`O!$(![O!&iQMhO!$(![O'DpQ!0MzOG27SOOQ!0LbG26vG26vO$)iQ`OG26vO'GRQ`OG26vOCfQ`OG26vO'G^Q!dOG26vO!&iQMhOG26vOOQ[LD-VLD-VO&;rQ`OLD-VOOQ[LD-XLD-XOOQ[!)9Ev!)9EvO#'cQ`O!)9EvOOQ!0LbLD,bLD,bO$)iQ`OLD,bOCfQ`OLD,bO'GeQ`OLD,bO'GpQ!dOLD,bOOQ[!$(!q!$(!qOOQ[!.K;b!.K;bO'GwQ?MvOG27SOOQ!0Lb!$( |!$( |O$)iQ`O!$( |OCfQ`O!$( |O'ImQ`O!$( |OOQ!0Lb!)9Eh!)9EhO$)iQ`O!)9EhOCfQ`O!)9EhOOQ!0Lb!.K;S!.K;SO$)iQ`O!.K;SOOQ!0Lb!4/0n!4/0nO!(yQlO'#DxO1PQ`O'#EVO'IxQ!fO'#JpO'JPQ!L^O'#DtO'JWQlO'#D|O'J_Q!fO'#CiO'LuQ!fO'#CiO!(yQlO'#EOO'MVQlO,5;XO!(yQlO,5;cO!(yQlO,5;cO!(yQlO,5;cO!(yQlO,5;cO!(yQlO,5;cO!(yQlO,5;cO!(yQlO,5;cO!(yQlO,5;cO!(yQlO,5;cO!(yQlO,5;cO!(yQlO'#InO( YQ`O,5<hO!(yQlO,5;cO( bQMhO,5;cO(!{QMhO,5;cO!(yQlO,5;vO!&iQMhO'#GlO( bQMhO'#GlO!&iQMhO'#GnO( bQMhO'#GnO1SQ`O'#DXO1SQ`O'#DXO!&iQMhO'#GOO( bQMhO'#GOO!&iQMhO'#GQO( bQMhO'#GQO!&iQMhO'#G`O( bQMhO'#G`O!(yQlO,5:hO(#SQpO'#D]O(#^QpO'#JtO!(yQlO,5@mO'MVQlO1G0sO(#hQ?MtO'#CiO!(yQlO1G2OO!&iQMhO'#IsO( bQMhO'#IsO!&iQMhO'#IuO( bQMhO'#IuO(#rQ!dO'#CrO!&iQMhO,5<sO( bQMhO,5<sO'MVQlO1G2QO!(yQlO7+&yO!&iQMhO1G2_O( bQMhO1G2_O!&iQMhO'#IsO( bQMhO'#IsO!&iQMhO'#IuO( bQMhO'#IuO!&iQMhO1G2aO( bQMhO1G2aO'MVQlO7+'lO'MVQlO7+&_O!&iQMhOANAhO( bQMhOANAhO($VQ`O'#EmO($[Q`O'#EmO($dQ`O'#F[O($iQ`O'#EwO($nQ`O'#KRO($yQ`O'#KPO(%UQ`O,5;XO(%ZQMjO,5<dO(%bQ`O'#GXO(%gQ`O'#GXO(%lQ`O,5<fO(%tQ`O,5;XO(%|Q?MtO1G1_O(&TQ`O,5<sO(&YQ`O,5<sO(&_Q`O,5<uO(&dQ`O,5<uO(&iQ`O1G2QO(&nQ`O1G0sO(&sQMjO<<K|O(&zQMjO<<K|O7eQMhO'#F{O9UQ`O'#FzOAdQ`O'#ElO!(yQlO,5;sO!3^Q`O'#GXO!3^Q`O'#GXO!3^Q`O'#GZO!3^Q`O'#GZO!+rQMhO7+(bO!+rQMhO7+(bO%-ZQ!dO1G2vO%-ZQ!dO1G2vO!&iQMhO,5=[O!&iQMhO,5=[",
   stateData: "((P~O'zOS'{OSTOS'|RQ~OPYOQYOSfOY!VOaqOdzOeyOj!POnkOpYOqkOrkOxkOzYO|YO!QWO!UkO!VkO!]XO!guO!jZO!mYO!nYO!oYO!qvO!swO!vxO!z]O$V|O$miO%g}O%i!QO%k!OO%l!OO%m!OO%p!RO%r!SO%u!TO%v!TO%x!UO&U!WO&[!XO&^!YO&`!ZO&b![O&e!]O&k!^O&q!_O&s!`O&u!aO&w!bO&y!cO(RSO(TTO(WUO(_VO(m[O~OWtO~P`OPYOQYOSfOd!jOe!iOnkOpYOqkOrkOxkOzYO|YO!QWO!UkO!VkO!]!eO!guO!jZO!mYO!nYO!oYO!qvO!s!gO!v!hO$V!kO$miO(R!dO(TTO(WUO(_VO(m[O~Oa!wOq!nO!Q!oO!`!yO!a!vO!b!vO!z;wO#R!pO#S!pO#T!xO#U!pO#V!pO#Y!zO#Z!zO(S!lO(TTO(WUO(c!mO(m!sO~O'|!{O~OP]XR]X[]Xa]Xp]X!O]X!Q]X!Z]X!j]X!n]X#P]X#Q]X#^]X#ifX#l]X#m]X#n]X#o]X#p]X#q]X#r]X#s]X#t]X#u]X#w]X#y]X#z]X$P]X'x]X(_]X(p]X(w]X(x]X~O!e%QX~P(qO_!}O(T#PO(U!}O(V#PO~O_#QO(V#PO(W#PO(X#QO~Ov#SO!S#TO(`#TO(a#VO~OPYOQYOSfOd!jOe!iOnkOpYOqkOrkOxkOzYO|YO!QWO!UkO!VkO!]!eO!guO!jZO!mYO!nYO!oYO!qvO!s!gO!v!hO$V!kO$miO(R;{O(TTO(WUO(_VO(m[O~O!Y#ZO!Z#WO!W(fP!W(tP~P+}O![#cO~P`OPYOQYOSfOd!jOe!iOpYOqkOrkOxkOzYO|YO!QWO!UkO!VkO!]!eO!guO!jZO!mYO!nYO!oYO!qvO!s!gO!v!hO$V!kO$miO(TTO(WUO(_VO(m[O~On#mO!Y#iO!z]O#g#lO#h#iO(R;|O!i(qP~P.iO!j#oO(R#nO~O!v#sO!z]O%g#tO~O#i#uO~O!e#vO#i#uO~OP$[OR#zO[$cOp$aO!O#yO!Q#{O!Z$_O!j#xO!n$[O#P$RO#l$OO#m$PO#n$PO#o$PO#p$QO#q$RO#r$RO#s$bO#t$RO#u$SO#w$UO#y$WO#z$XO(_VO(p$YO(w#|O(x#}O~Oa(dX'x(dX'u(dX!i(dX!W(dX!](dX%h(dX!e(dX~P1qO#Q$dO#^$eO$P$eOP(eXR(eX[(eXp(eX!O(eX!Q(eX!Z(eX!j(eX!n(eX#P(eX#l(eX#m(eX#n(eX#o(eX#p(eX#q(eX#r(eX#s(eX#t(eX#u(eX#w(eX#y(eX#z(eX(_(eX(p(eX(w(eX(x(eX!](eX%h(eX~Oa(eX'x(eX'u(eX!W(eX!i(eXt(eX!e(eX~P4UO#^$eO~O$[$hO$^$gO$e$mO~OSfO!]$nO$h$oO$j$qO~Oh%VOj%cOn%WOp%XOq$tOr$tOx%YOz%ZO|%[O!Q${O!]$|O!g%aO!j$xO#h%bO$V%_O$s%]O$u%^O$x%`O(R$sO(TTO(WUO(_$uO(w$}O(x%POg([P~O!j%dO~O!Q%gO!]%hO(R%fO~O!e%lO~Oa%mO'x%mO~O!O%qO~P%[O(S!lO~P%[O%m%uO~P%[Oh%VO!j%dO(R%fO(S!lO~Oe%|O!j%dO(R%fO~O#t$RO~O!O&RO!]&OO!j&QO%i&UO(R%fO(S!lO(TTO(WUO`)UP~O!v#sO~O%r&WO!Q)QX!])QX(R)QX~O(R&XO~Oj!PO!s&^O%i!QO%k!OO%l!OO%m!OO%p!RO%r!SO%u!TO%v!TO~Od&cOe&bO!v&`O%g&aO%z&_O~P<POd&fOeyOj!PO!]&eO!s&^O!vxO!z]O%g}O%k!OO%l!OO%m!OO%p!RO%r!SO%u!TO%v!TO%x!UO~Ob&iO#^&lO%i&gO(S!lO~P=UO!j&mO!s&qO~O!j#oO~O!]XO~Oa%mO'v&yO'x%mO~Oa%mO'v&|O'x%mO~Oa%mO'v'OO'x%mO~O'u]X!W]Xt]X!i]X&Y]X!]]X%h]X!e]X~P(qO!`']O!a'UO!b'UO(S!lO(TTO(WUO~Oq'SO!Q'RO!Y'VO(c'QO![(gP![(vP~P@]Ol'`O!]'^O(R%fO~Oe'eO!j%dO(R%fO~O!O&RO!j&QO~Oq!nO!Q!oO!z;wO#R!pO#S!pO#U!pO#V!pO(S!lO(TTO(WUO(c!mO(m!sO~O!`'kO!a'jO!b'jO#T!pO#Y'lO#Z'lO~PAwOa%mOh%VO!e#vO!j%dO'x%mO(p'nO~O!n'rO#^'pO~PCVOq!nO!Q!oO(TTO(WUO(c!mO(m!sO~O!]XOq(kX!Q(kX!`(kX!a(kX!b(kX!z(kX#R(kX#S(kX#T(kX#U(kX#V(kX#Y(kX#Z(kX(S(kX(T(kX(W(kX(c(kX(m(kX~O!a'jO!b'jO(S!lO~PCuO'}'vO(O'vO(P'xO~O_!}O(T'zO(U!}O(V'zO~O_#QO(V'zO(W'zO(X#QO~Ot'|O~P%[Ov#SO!S#TO(`#TO(a(PO~O!Y(RO!W'UX!W'[X!Z'UX!Z'[X~P+}O!Z(TO!W(fX~OP$[OR#zO[$cOp$aO!O#yO!Q#{O!Z(TO!j#xO!n$[O#P$RO#l$OO#m$PO#n$PO#o$PO#p$QO#q$RO#r$RO#s$bO#t$RO#u$SO#w$UO#y$WO#z$XO(_VO(p$YO(w#|O(x#}O~O!W(fX~PGpO!W(YO~O!W(sX!Z(sX!e(sX!i(sX(p(sX~O#^(sX#i#bX![(sX~PIsO#^(ZO!W(uX!Z(uX~O!Z([O!W(tX~O!W(_O~O#^$eO~PIsO![(`O~P`OR#zO!O#yO!Q#{O!j#xO(_VOP!la[!lap!la!Z!la!n!la#P!la#l!la#m!la#n!la#o!la#p!la#q!la#r!la#s!la#t!la#u!la#w!la#y!la#z!la(p!la(w!la(x!la~Oa!la'x!la'u!la!W!la!i!lat!la!]!la%h!la!e!la~PKZO!i(aO~O!e#vO#^(bO(p'nO!Z(rXa(rX'x(rX~O!i(rX~PMvO!Q%gO!]%hO!z]O#g(gO#h(fO(R%fO~O!Z(hO!i(qX~O!i(jO~O!Q%gO!]%hO#h(fO(R%fO~OP(eXR(eX[(eXp(eX!O(eX!Q(eX!Z(eX!j(eX!n(eX#P(eX#l(eX#m(eX#n(eX#o(eX#p(eX#q(eX#r(eX#s(eX#t(eX#u(eX#w(eX#y(eX#z(eX(_(eX(p(eX(w(eX(x(eX~O!e#vO!i(eX~P! dOR(lO!O(kO!j#xO#Q$dO!z!ya!Q!ya~O!v!ya%g!ya!]!ya#g!ya#h!ya(R!ya~P!#eO!v(pO~OPYOQYOSfOd!jOe!iOnkOpYOqkOrkOxkOzYO|YO!QWO!UkO!VkO!]XO!guO!jZO!mYO!nYO!oYO!qvO!s!gO!v!hO$V!kO$miO(R!dO(TTO(WUO(_VO(m[O~Oh%VOn%WOp%XOq$tOr$tOx%YOz%ZO|<eO!Q${O!]$|O!g=vO!j$xO#h<kO$V%_O$s<gO$u<iO$x%`O(R(tO(TTO(WUO(_$uO(w$}O(x%PO~O#i(vO~O!Y(xO!i(iP~P%[O(c(zO(m[O~O!Q(|O!j#xO(c(zO(m[O~OP;vOQ;vOSfOd=rOe!iOnkOp;vOqkOrkOxkOz;vO|;vO!QWO!UkO!VkO!]!eO!g;yO!jZO!m;vO!n;vO!o;vO!q;zO!s;}O!v!hO$V!kO$m=pO(R)ZO(TTO(WUO(_VO(m[O~O!Z$_Oa$pa'x$pa'u$pa!i$pa!W$pa!]$pa%h$pa!e$pa~Oj)bO~P!&iOh%VOn%WOp%XOq$tOr$tOx%YOz%ZO|%[O!Q${O!]$|O!g%aO!j$xO#h%bO$V%_O$s%]O$u%^O$x%`O(R(tO(TTO(WUO(_$uO(w$}O(x%PO~Og(nP~P!+rO!O)gO!e)fO!]$]X$Y$]X$[$]X$^$]X$e$]X~O!e)fO!](yX$Y(yX$[(yX$^(yX$e(yX~O!O)gO~P!-{O!O)gO!](yX$Y(yX$[(yX$^(yX$e(yX~O!])iO$Y)mO$[)hO$^)hO$e)nO~O!Y)qO~P!(yO$[$hO$^$gO$e)uO~Ol$yX!O$yX#Q$yX'w$yX(w$yX(x$yX~OgkXg$yXlkX!ZkX#^kX~P!/qOv)wO(`)xO(a)zO~Ol*TO!O)|O'w)}O(w$}O(x%PO~Og){O~P!0uOg*UO~Oh%VOn%WOp%XOq$tOr$tOx%YOz%ZO|<eO!Q*WO!]*XO!g=vO!j$xO#h<kO$V%_O$s<gO$u<iO$x%`O(TTO(WUO(_$uO(w$}O(x%PO~O!Y*[O(R*VO!i(|P~P!1dO#i*^O~O!j*_O~Oh%VOn%WOp%XOq$tOr$tOx%YOz%ZO|<eO!Q${O!]$|O!g=vO!j$xO#h<kO$V%_O$s<gO$u<iO$x%`O(R*aO(TTO(WUO(_$uO(w$}O(x%PO~O!Y*dO!W(}P~P!3cOp*pOq!nO!Q*fO!`*nO!a*hO!b*hO!j*_O#Y*oO%_*jO(S!lO(TTO(WUO(c!mO~O![*mO~P!5WO#Q$dOl(^X!O(^X'w(^X(w(^X(x(^X!Z(^X#^(^X~Og(^X#}(^X~P!6YOl*uO#^*tOg(]X!Z(]X~O!Z*vOg([X~Oj%cO(R&XOg([P~Oq*yO~O!j+OO~O(R(tO~On+TO!Q%gO!Y#iO!]%hO!z]O#g#lO#h#iO(R%fO!i(qP~O!e#vO#i+UO~O!Q%gO!Y+WO!Z([O!]%hO(R%fO!W(tP~Oq'YO!Q+YO!Y+XO(TTO(WUO(c(zO~O![(vP~P!9]O!Z+ZOa)RX'x)RX~OP$[OR#zO[$cOp$aO!O#yO!Q#{O!j#xO!n$[O#P$RO#l$OO#m$PO#n$PO#o$PO#p$QO#q$RO#r$RO#s$bO#t$RO#u$SO#w$UO#y$WO#z$XO(_VO(p$YO(w#|O(x#}O~Oa!ha!Z!ha'x!ha'u!ha!W!ha!i!hat!ha!]!ha%h!ha!e!ha~P!:TOR#zO!O#yO!Q#{O!j#xO(_VOP!pa[!pap!pa!Z!pa!n!pa#P!pa#l!pa#m!pa#n!pa#o!pa#p!pa#q!pa#r!pa#s!pa#t!pa#u!pa#w!pa#y!pa#z!pa(p!pa(w!pa(x!pa~Oa!pa'x!pa'u!pa!W!pa!i!pat!pa!]!pa%h!pa!e!pa~P!<kOR#zO!O#yO!Q#{O!j#xO(_VOP!ra[!rap!ra!Z!ra!n!ra#P!ra#l!ra#m!ra#n!ra#o!ra#p!ra#q!ra#r!ra#s!ra#t!ra#u!ra#w!ra#y!ra#z!ra(p!ra(w!ra(x!ra~Oa!ra'x!ra'u!ra!W!ra!i!rat!ra!]!ra%h!ra!e!ra~P!?ROh%VOl+dO!]'^O%h+cO~O!e+fOa(ZX!](ZX'x(ZX!Z(ZX~Oa%mO!]XO'x%mO~Oh%VO!j%dO~Oh%VO!j%dO(R%fO~O!e#vO#i(vO~Ob+qO%i+rO(R+nO(TTO(WUO![)VP~O!Z+sO`)UX~O[+wO~O`+xO~O!]&OO(R%fO(S!lO`)UP~Oh%VO#^+}O~Oh%VOl,QO!]$|O~O!],SO~O!O,UO!]XO~O%m%uO~O!v,ZO~Oe,`O~Ob,aO(R#nO(TTO(WUO![)TP~Oe%|O~O%i!QO(R&XO~P=UO[,fO`,eO~OPYOQYOSfOdzOeyOnkOpYOqkOrkOxkOzYO|YO!QWO!UkO!VkO!guO!jZO!mYO!nYO!oYO!qvO!vxO!z]O$miO%g}O(TTO(WUO(_VO(m[O~O!]!eO!s!gO$V!kO(R!dO~P!FRO`,eOa%mO'x%mO~OPYOQYOSfOd!jOe!iOnkOpYOqkOrkOxkOzYO|YO!QWO!UkO!VkO!]!eO!guO!jZO!mYO!nYO!oYO!qvO!v!hO$V!kO$miO(R!dO(TTO(WUO(_VO(m[O~Oa,kOj!OO!swO%k!OO%l!OO%m!OO~P!HkO!j&mO~O&[,qO~O!],sO~O&m,uO&o,vOP&jaQ&jaS&jaY&jaa&jad&jae&jaj&jan&jap&jaq&jar&jax&jaz&ja|&ja!Q&ja!U&ja!V&ja!]&ja!g&ja!j&ja!m&ja!n&ja!o&ja!q&ja!s&ja!v&ja!z&ja$V&ja$m&ja%g&ja%i&ja%k&ja%l&ja%m&ja%p&ja%r&ja%u&ja%v&ja%x&ja&U&ja&[&ja&^&ja&`&ja&b&ja&e&ja&k&ja&q&ja&s&ja&u&ja&w&ja&y&ja'u&ja(R&ja(T&ja(W&ja(_&ja(m&ja![&ja&c&jab&ja&h&ja~O(R,{O~Oh!cX!Z!PX![!PX!e!PX!e!cX!j!cX#^!PX~O!Z!cX![!cX~P# qO!e-QO#^-POh(hX!Z#fX![#fX!e(hX!j(hX~O!Z(hX![(hX~P#!dOh%VO!e-SO!j%dO!Z!_X![!_X~Oq!nO!Q!oO(TTO(WUO(c!mO~OP;vOQ;vOSfOd=rOe!iOnkOp;vOqkOrkOxkOz;vO|;vO!QWO!UkO!VkO!]!eO!g;yO!jZO!m;vO!n;vO!o;vO!q;zO!s;}O!v!hO$V!kO$m=pO(TTO(WUO(_VO(m[O~O(R<rO~P##yO!Z-WO![(gX~O![-YO~O!e-QO#^-PO!Z#fX![#fX~O!Z-ZO![(vX~O![-]O~O!a-^O!b-^O(S!lO~P##hO![-aO~P'_Ol-dO!]'^O~O!W-iO~Oq!ya!`!ya!a!ya!b!ya#R!ya#S!ya#T!ya#U!ya#V!ya#Y!ya#Z!ya(S!ya(T!ya(W!ya(c!ya(m!ya~P!#eO!n-nO#^-lO~PCVO!a-pO!b-pO(S!lO~PCuOa%mO#^-lO'x%mO~Oa%mO!e#vO#^-lO'x%mO~Oa%mO!e#vO!n-nO#^-lO'x%mO(p'nO~O'}'vO(O'vO(P-uO~Ot-vO~O!W'Ua!Z'Ua~P!:TO!Y-zO!W'UX!Z'UX~P%[O!Z(TO!W(fa~O!W(fa~PGpO!Z([O!W(ta~O!Q%gO!Y.OO!]%hO(R%fO!W'[X!Z'[X~O#^.QO!Z(ra!i(raa(ra'x(ra~O!e#vO~P#,PO!Z(hO!i(qa~O!Q%gO!]%hO#h.UO(R%fO~On.ZO!Q%gO!Y.WO!]%hO!z]O#g.YO#h.WO(R%fO!Z'_X!i'_X~OR._O!j#xO~Oh%VOl.bO!]'^O%h.aO~Oa#ai!Z#ai'x#ai'u#ai!W#ai!i#ait#ai!]#ai%h#ai!e#ai~P!:TOl=|O!O)|O'w)}O(w$}O(x%PO~O#i#]aa#]a#^#]a'x#]a!Z#]a!i#]a!]#]a!W#]a~P#.{O#i(^XP(^XR(^X[(^Xa(^Xp(^X!Q(^X!j(^X!n(^X#P(^X#l(^X#m(^X#n(^X#o(^X#p(^X#q(^X#r(^X#s(^X#t(^X#u(^X#w(^X#y(^X#z(^X'x(^X(_(^X(p(^X!i(^X!W(^X'u(^Xt(^X!](^X%h(^X!e(^X~P!6YO!Z.oO!i(iX~P!:TO!i.rO~O!W.tO~OP$[OR#zO!O#yO!Q#{O!j#xO!n$[O(_VO[#kia#kip#ki!Z#ki#P#ki#m#ki#n#ki#o#ki#p#ki#q#ki#r#ki#s#ki#t#ki#u#ki#w#ki#y#ki#z#ki'x#ki(p#ki(w#ki(x#ki'u#ki!W#ki!i#kit#ki!]#ki%h#ki!e#ki~O#l#ki~P#2kO#l$OO~P#2kOP$[OR#zOp$aO!O#yO!Q#{O!j#xO!n$[O#l$OO#m$PO#n$PO#o$PO(_VO[#kia#ki!Z#ki#P#ki#q#ki#r#ki#s#ki#t#ki#u#ki#w#ki#y#ki#z#ki'x#ki(p#ki(w#ki(x#ki'u#ki!W#ki!i#kit#ki!]#ki%h#ki!e#ki~O#p#ki~P#5YO#p$QO~P#5YOP$[OR#zO[$cOp$aO!O#yO!Q#{O!j#xO!n$[O#P$RO#l$OO#m$PO#n$PO#o$PO#p$QO#q$RO#r$RO#s$bO#t$RO(_VOa#ki!Z#ki#w#ki#y#ki#z#ki'x#ki(p#ki(w#ki(x#ki'u#ki!W#ki!i#kit#ki!]#ki%h#ki!e#ki~O#u#ki~P#7wOP$[OR#zO[$cOp$aO!O#yO!Q#{O!j#xO!n$[O#P$RO#l$OO#m$PO#n$PO#o$PO#p$QO#q$RO#r$RO#s$bO#t$RO#u$SO(_VO(x#}Oa#ki!Z#ki#y#ki#z#ki'x#ki(p#ki(w#ki'u#ki!W#ki!i#kit#ki!]#ki%h#ki!e#ki~O#w$UO~P#:_O#w#ki~P#:_O#u$SO~P#7wOP$[OR#zO[$cOp$aO!O#yO!Q#{O!j#xO!n$[O#P$RO#l$OO#m$PO#n$PO#o$PO#p$QO#q$RO#r$RO#s$bO#t$RO#u$SO#w$UO(_VO(w#|O(x#}Oa#ki!Z#ki#z#ki'x#ki(p#ki'u#ki!W#ki!i#kit#ki!]#ki%h#ki!e#ki~O#y#ki~P#=TO#y$WO~P#=TOP]XR]X[]Xp]X!O]X!Q]X!j]X!n]X#P]X#Q]X#^]X#ifX#l]X#m]X#n]X#o]X#p]X#q]X#r]X#s]X#t]X#u]X#w]X#y]X#z]X$P]X(_]X(p]X(w]X(x]X!Z]X![]X~O#}]X~P#?rOP$[OR#zO[<_Op<]O!O#yO!Q#{O!j#xO!n$[O#P<SO#l<PO#m<QO#n<QO#o<QO#p<RO#q<SO#r<SO#s<^O#t<SO#u<TO#w<VO#y<XO#z<YO(_VO(p$YO(w#|O(x#}O~O#}.vO~P#BPO#Q$dO#^<`O$P<`O#}(eX![(eX~P! dOa'ba!Z'ba'x'ba'u'ba!i'ba!W'bat'ba!]'ba%h'ba!e'ba~P!:TO[#kia#kip#ki!Z#ki#P#ki#p#ki#q#ki#r#ki#s#ki#t#ki#u#ki#w#ki#y#ki#z#ki'x#ki(p#ki'u#ki!W#ki!i#kit#ki!]#ki%h#ki!e#ki~OP$[OR#zO!O#yO!Q#{O!j#xO!n$[O#l$OO#m$PO#n$PO#o$PO(_VO(w#ki(x#ki~P#EROl=|O!O)|O'w)}O(w$}O(x%POP#kiR#ki!Q#ki!j#ki!n#ki#l#ki#m#ki#n#ki#o#ki(_#ki~P#ERO!Z.zOg(nX~P!0uOg.|O~Oa$Oi!Z$Oi'x$Oi'u$Oi!W$Oi!i$Oit$Oi!]$Oi%h$Oi!e$Oi~P!:TO$[.}O$^.}O~O$[/OO$^/OO~O!e)fO#^/PO!]$bX$Y$bX$[$bX$^$bX$e$bX~O!Y/QO~O!])iO$Y/SO$[)hO$^)hO$e/TO~O!Z<ZO![(dX~P#BPO![/UO~O!e)fO$e(yX~O$e/WO~Ot/XO~P!&iOv)wO(`)xO(a/[O~O!Q/_O~O(w$}Ol%`a!O%`a'w%`a(x%`a!Z%`a#^%`a~Og%`a#}%`a~P#LTO(x%POl%ba!O%ba'w%ba(w%ba!Z%ba#^%ba~Og%ba#}%ba~P#LvO!ZfX!efX!ifX!i$yX(pfX~P!/qO!Y/hO!Z([O(R/gO!W(tP!W(}P~P!1dOp*pO!`*nO!a*hO!b*hO!j*_O#Y*oO%_*jO(S!lO(TTO(WUO~Oq<oO!Q/iO!Y+XO![*mO(c<nO![(vP~P#NaO!i/jO~P#.{O!Z/kO!e#vO(p'nO!i(|X~O!i/pO~O!Q%gO!Y*[O!]%hO(R%fO!i(|P~O#i/rO~O!W$yX!Z$yX!e%QX~P!/qO!Z/sO!W(}X~P#.{O!e/uO~O!W/wO~OnkO(R/xO~P.iOh%VOp/}O!e#vO!j%dO(p'nO~O!e+fO~Oa%mO!Z0RO'x%mO~O![0TO~P!5WO!a0UO!b0UO(S!lO~P##hOq!nO!Q0VO(TTO(WUO(c!mO~O#Y0XO~Og%`a!Z%`a#^%`a#}%`a~P!0uOg%ba!Z%ba#^%ba#}%ba~P!0uOj%cO(R&XOg'kX!Z'kX~O!Z*vOg([a~Og0bO~OR0cO!O0cO!Q0dO#Q$dOl{a'w{a(w{a(x{a!Z{a#^{a~Og{a#}{a~P$&dO!O)|O'w)}Ol$ra(w$ra(x$ra!Z$ra#^$ra~Og$ra#}$ra~P$'`O!O)|O'w)}Ol$ta(w$ta(x$ta!Z$ta#^$ta~Og$ta#}$ta~P$(RO#i0gO~Og%Sa!Z%Sa#^%Sa#}%Sa~P!0uOl0iO#^0hOg(]a!Z(]a~O!e#vO~O#i0lO~O!Z+ZOa)Ra'x)Ra~OR#zO!O#yO!Q#{O!j#xO(_VOP!pi[!pip!pi!Z!pi!n!pi#P!pi#l!pi#m!pi#n!pi#o!pi#p!pi#q!pi#r!pi#s!pi#t!pi#u!pi#w!pi#y!pi#z!pi(p!pi(w!pi(x!pi~Oa!pi'x!pi'u!pi!W!pi!i!pit!pi!]!pi%h!pi!e!pi~P$*OOh%VOp%XOq$tOr$tOx%YOz%ZO|<eO!Q${O!]$|O!g=vO!j$xO#h<kO$V%_O$s<gO$u<iO$x%`O(TTO(WUO(_$uO(w$}O(x%PO~On0vO%[0wO(R0tO~P$,fO!e+fOa(Za!](Za'x(Za!Z(Za~O#i0|O~O[]X!ZfX![fX~O!Z0}O![)VX~O![1PO~O[1QO~Ob1SO(R+nO(TTO(WUO~O!]&OO(R%fO`'sX!Z'sX~O!Z+sO`)Ua~O!i1VO~P!:TO[1YO~O`1ZO~O#^1^O~Ol1aO!]$|O~O(c(zO![)SP~Oh%VOl1jO!]1gO%h1iO~O[1tO!Z1rO![)TX~O![1uO~O`1wOa%mO'x%mO~O(R#nO(TTO(WUO~O#Q$dO#^$eO$P$eOP(eXR(eX[(eXp(eX!O(eX!Q(eX!Z(eX!j(eX!n(eX#P(eX#l(eX#m(eX#n(eX#o(eX#p(eX#q(eX#r(eX#s(eX#u(eX#w(eX#y(eX#z(eX(_(eX(p(eX(w(eX(x(eX~O#t1zO&Y1{Oa(eX~P$2PO#^$eO#t1zO&Y1{O~Oa1}O~P%[Oa2PO~O&c2SOP&aiQ&aiS&aiY&aia&aid&aie&aij&ain&aip&aiq&air&aix&aiz&ai|&ai!Q&ai!U&ai!V&ai!]&ai!g&ai!j&ai!m&ai!n&ai!o&ai!q&ai!s&ai!v&ai!z&ai$V&ai$m&ai%g&ai%i&ai%k&ai%l&ai%m&ai%p&ai%r&ai%u&ai%v&ai%x&ai&U&ai&[&ai&^&ai&`&ai&b&ai&e&ai&k&ai&q&ai&s&ai&u&ai&w&ai&y&ai'u&ai(R&ai(T&ai(W&ai(_&ai(m&ai![&aib&ai&h&ai~Ob2YO![2WO&h2XO~P`O!]XO!j2[O~O&o,vOP&jiQ&jiS&jiY&jia&jid&jie&jij&jin&jip&jiq&jir&jix&jiz&ji|&ji!Q&ji!U&ji!V&ji!]&ji!g&ji!j&ji!m&ji!n&ji!o&ji!q&ji!s&ji!v&ji!z&ji$V&ji$m&ji%g&ji%i&ji%k&ji%l&ji%m&ji%p&ji%r&ji%u&ji%v&ji%x&ji&U&ji&[&ji&^&ji&`&ji&b&ji&e&ji&k&ji&q&ji&s&ji&u&ji&w&ji&y&ji'u&ji(R&ji(T&ji(W&ji(_&ji(m&ji![&ji&c&jib&ji&h&ji~O!W2bO~O!Z!_a![!_a~P#BPOq!nO!Q!oO!Y2hO(c!mO!Z'VX!['VX~P@]O!Z-WO![(ga~O!Z']X![']X~P!9]O!Z-ZO![(va~O![2oO~P'_Oa%mO#^2xO'x%mO~Oa%mO!e#vO#^2xO'x%mO~Oa%mO!e#vO!n2|O#^2xO'x%mO(p'nO~Oa%mO'x%mO~P!:TO!Z$_Ot$pa~O!W'Ui!Z'Ui~P!:TO!Z(TO!W(fi~O!Z([O!W(ti~O!W(ui!Z(ui~P!:TO!Z(ri!i(ria(ri'x(ri~P!:TO#^3OO!Z(ri!i(ria(ri'x(ri~O!Z(hO!i(qi~O!Q%gO!]%hO!z]O#g3TO#h3SO(R%fO~O!Q%gO!]%hO#h3SO(R%fO~Ol3[O!]'^O%h3ZO~Oh%VOl3[O!]'^O%h3ZO~O#i%`aP%`aR%`a[%`aa%`ap%`a!Q%`a!j%`a!n%`a#P%`a#l%`a#m%`a#n%`a#o%`a#p%`a#q%`a#r%`a#s%`a#t%`a#u%`a#w%`a#y%`a#z%`a'x%`a(_%`a(p%`a!i%`a!W%`a'u%`at%`a!]%`a%h%`a!e%`a~P#LTO#i%baP%baR%ba[%baa%bap%ba!Q%ba!j%ba!n%ba#P%ba#l%ba#m%ba#n%ba#o%ba#p%ba#q%ba#r%ba#s%ba#t%ba#u%ba#w%ba#y%ba#z%ba'x%ba(_%ba(p%ba!i%ba!W%ba'u%bat%ba!]%ba%h%ba!e%ba~P#LvO#i%`aP%`aR%`a[%`aa%`ap%`a!Q%`a!Z%`a!j%`a!n%`a#P%`a#l%`a#m%`a#n%`a#o%`a#p%`a#q%`a#r%`a#s%`a#t%`a#u%`a#w%`a#y%`a#z%`a'x%`a(_%`a(p%`a!i%`a!W%`a'u%`a#^%`at%`a!]%`a%h%`a!e%`a~P#.{O#i%baP%baR%ba[%baa%bap%ba!Q%ba!Z%ba!j%ba!n%ba#P%ba#l%ba#m%ba#n%ba#o%ba#p%ba#q%ba#r%ba#s%ba#t%ba#u%ba#w%ba#y%ba#z%ba'x%ba(_%ba(p%ba!i%ba!W%ba'u%ba#^%bat%ba!]%ba%h%ba!e%ba~P#.{O#i{aP{a[{aa{ap{a!j{a!n{a#P{a#l{a#m{a#n{a#o{a#p{a#q{a#r{a#s{a#t{a#u{a#w{a#y{a#z{a'x{a(_{a(p{a!i{a!W{a'u{at{a!]{a%h{a!e{a~P$&dO#i$raP$raR$ra[$raa$rap$ra!Q$ra!j$ra!n$ra#P$ra#l$ra#m$ra#n$ra#o$ra#p$ra#q$ra#r$ra#s$ra#t$ra#u$ra#w$ra#y$ra#z$ra'x$ra(_$ra(p$ra!i$ra!W$ra'u$rat$ra!]$ra%h$ra!e$ra~P$'`O#i$taP$taR$ta[$taa$tap$ta!Q$ta!j$ta!n$ta#P$ta#l$ta#m$ta#n$ta#o$ta#p$ta#q$ta#r$ta#s$ta#t$ta#u$ta#w$ta#y$ta#z$ta'x$ta(_$ta(p$ta!i$ta!W$ta'u$tat$ta!]$ta%h$ta!e$ta~P$(RO#i%SaP%SaR%Sa[%Saa%Sap%Sa!Q%Sa!Z%Sa!j%Sa!n%Sa#P%Sa#l%Sa#m%Sa#n%Sa#o%Sa#p%Sa#q%Sa#r%Sa#s%Sa#t%Sa#u%Sa#w%Sa#y%Sa#z%Sa'x%Sa(_%Sa(p%Sa!i%Sa!W%Sa'u%Sa#^%Sat%Sa!]%Sa%h%Sa!e%Sa~P#.{Oa#aq!Z#aq'x#aq'u#aq!W#aq!i#aqt#aq!]#aq%h#aq!e#aq~P!:TO!Y3dO!Z'WX!i'WX~P%[O!Z.oO!i(ia~O!Z.oO!i(ia~P!:TO!W3gO~O#}!la![!la~PKZO#}!ha!Z!ha![!ha~P#BPO#}!pa![!pa~P!<kO#}!ra![!ra~P!?ROg'ZX!Z'ZX~P!+rO!Z.zOg(na~OSfO!]3{O$c3|O~O![4QO~Ot4RO~P#.{Oa$lq!Z$lq'x$lq'u$lq!W$lq!i$lqt$lq!]$lq%h$lq!e$lq~P!:TO!W4TO~P!&iO!Q4UO~O!O)|O'w)}O(x%POl'ga(w'ga!Z'ga#^'ga~Og'ga#}'ga~P%+uO!O)|O'w)}Ol'ia(w'ia(x'ia!Z'ia#^'ia~Og'ia#}'ia~P%,hO(p$YO~P#.{O!WfX!W$yX!ZfX!Z$yX!e%QX#^fX~P!/qO(R<xO~P!1dO!Q%gO!Y4XO!]%hO(R%fO!Z'cX!i'cX~O!Z/kO!i(|a~O!Z/kO!e#vO!i(|a~O!Z/kO!e#vO(p'nO!i(|a~Og${i!Z${i#^${i#}${i~P!0uO!Y4aO!W'eX!Z'eX~P!3cO!Z/sO!W(}a~O!Z/sO!W(}a~P#.{OP]XR]X[]Xp]X!O]X!Q]X!W]X!Z]X!j]X!n]X#P]X#Q]X#^]X#ifX#l]X#m]X#n]X#o]X#p]X#q]X#r]X#s]X#t]X#u]X#w]X#y]X#z]X$P]X(_]X(p]X(w]X(x]X~O!e%XX#t%XX~P%0XO!e#vO#t4fO~Oh%VO!e#vO!j%dO~Oh%VOp4kO!j%dO(p'nO~Op4pO!e#vO(p'nO~Oq!nO!Q4qO(TTO(WUO(c!mO~O(w$}Ol%`i!O%`i'w%`i(x%`i!Z%`i#^%`i~Og%`i#}%`i~P%3xO(x%POl%bi!O%bi'w%bi(w%bi!Z%bi#^%bi~Og%bi#}%bi~P%4kOg(]i!Z(]i~P!0uO#^4wOg(]i!Z(]i~P!0uO!i4zO~Oa$nq!Z$nq'x$nq'u$nq!W$nq!i$nqt$nq!]$nq%h$nq!e$nq~P!:TO!W5QO~O!Z5RO!])OX~P#.{Oa]Xa$yX!]]X!]$yX%]]X'x]X'x$yX!Z]X!Z$yX~P!/qO%]5UOa%Za!]%Za'x%Za!Z%Za~OlmX!OmX'wmX(wmX(xmX~P%7nOn5VO(R#nO~Ob5]O%i5^O(R+nO(TTO(WUO!Z'rX!['rX~O!Z0}O![)Va~O[5bO~O`5cO~Oa%mO'x%mO~P#.{O!Z5kO#^5mO![)SX~O![5nO~Op5tOq!nO!Q*fO!`!yO!a!vO!b!vO!z;wO#R!pO#S!pO#T!pO#U!pO#V!pO#Y5sO#Z!zO(S!lO(TTO(WUO(c!mO(m!sO~O![5rO~P%:ROl5yO!]1gO%h5xO~Oh%VOl5yO!]1gO%h5xO~Ob6QO(R#nO(TTO(WUO!Z'qX!['qX~O!Z1rO![)Ta~O(TTO(WUO(c6SO~O`6WO~O#t6ZO&Y6[O~PMvO!i6]O~P%[Oa6_O~Oa6_O~P%[Ob2YO![6dO&h2XO~P`O!e6fO~O!e6hOh(hi!Z(hi![(hi!e(hi!j(hip(hi(p(hi~O!Z#fi![#fi~P#BPO#^6iO!Z#fi![#fi~O!Z!_i![!_i~P#BPOa%mO#^6rO'x%mO~Oa%mO!e#vO#^6rO'x%mO~O!Z(rq!i(rqa(rq'x(rq~P!:TO!Z(hO!i(qq~O!Q%gO!]%hO#h6yO(R%fO~O!]'^O%h6|O~Ol7QO!]'^O%h6|O~O#i'gaP'gaR'ga['gaa'gap'ga!Q'ga!j'ga!n'ga#P'ga#l'ga#m'ga#n'ga#o'ga#p'ga#q'ga#r'ga#s'ga#t'ga#u'ga#w'ga#y'ga#z'ga'x'ga(_'ga(p'ga!i'ga!W'ga'u'gat'ga!]'ga%h'ga!e'ga~P%+uO#i'iaP'iaR'ia['iaa'iap'ia!Q'ia!j'ia!n'ia#P'ia#l'ia#m'ia#n'ia#o'ia#p'ia#q'ia#r'ia#s'ia#t'ia#u'ia#w'ia#y'ia#z'ia'x'ia(_'ia(p'ia!i'ia!W'ia'u'iat'ia!]'ia%h'ia!e'ia~P%,hO#i${iP${iR${i[${ia${ip${i!Q${i!Z${i!j${i!n${i#P${i#l${i#m${i#n${i#o${i#p${i#q${i#r${i#s${i#t${i#u${i#w${i#y${i#z${i'x${i(_${i(p${i!i${i!W${i'u${i#^${it${i!]${i%h${i!e${i~P#.{O#i%`iP%`iR%`i[%`ia%`ip%`i!Q%`i!j%`i!n%`i#P%`i#l%`i#m%`i#n%`i#o%`i#p%`i#q%`i#r%`i#s%`i#t%`i#u%`i#w%`i#y%`i#z%`i'x%`i(_%`i(p%`i!i%`i!W%`i'u%`it%`i!]%`i%h%`i!e%`i~P%3xO#i%biP%biR%bi[%bia%bip%bi!Q%bi!j%bi!n%bi#P%bi#l%bi#m%bi#n%bi#o%bi#p%bi#q%bi#r%bi#s%bi#t%bi#u%bi#w%bi#y%bi#z%bi'x%bi(_%bi(p%bi!i%bi!W%bi'u%bit%bi!]%bi%h%bi!e%bi~P%4kO!Z'Wa!i'Wa~P!:TO!Z.oO!i(ii~O#}#ai!Z#ai![#ai~P#BPOP$[OR#zO!O#yO!Q#{O!j#xO!n$[O(_VO[#kip#ki#P#ki#m#ki#n#ki#o#ki#p#ki#q#ki#r#ki#s#ki#t#ki#u#ki#w#ki#y#ki#z#ki#}#ki(p#ki(w#ki(x#ki!Z#ki![#ki~O#l#ki~P%MQO#l<PO~P%MQOP$[OR#zOp<]O!O#yO!Q#{O!j#xO!n$[O#l<PO#m<QO#n<QO#o<QO(_VO[#ki#P#ki#q#ki#r#ki#s#ki#t#ki#u#ki#w#ki#y#ki#z#ki#}#ki(p#ki(w#ki(x#ki!Z#ki![#ki~O#p#ki~P& YO#p<RO~P& YOP$[OR#zO[<_Op<]O!O#yO!Q#{O!j#xO!n$[O#P<SO#l<PO#m<QO#n<QO#o<QO#p<RO#q<SO#r<SO#s<^O#t<SO(_VO#w#ki#y#ki#z#ki#}#ki(p#ki(w#ki(x#ki!Z#ki![#ki~O#u#ki~P&#bOP$[OR#zO[<_Op<]O!O#yO!Q#{O!j#xO!n$[O#P<SO#l<PO#m<QO#n<QO#o<QO#p<RO#q<SO#r<SO#s<^O#t<SO#u<TO(_VO(x#}O#y#ki#z#ki#}#ki(p#ki(w#ki!Z#ki![#ki~O#w<VO~P&%cO#w#ki~P&%cO#u<TO~P&#bOP$[OR#zO[<_Op<]O!O#yO!Q#{O!j#xO!n$[O#P<SO#l<PO#m<QO#n<QO#o<QO#p<RO#q<SO#r<SO#s<^O#t<SO#u<TO#w<VO(_VO(w#|O(x#}O#z#ki#}#ki(p#ki!Z#ki![#ki~O#y#ki~P&'rO#y<XO~P&'rOa#{y!Z#{y'x#{y'u#{y!W#{y!i#{yt#{y!]#{y%h#{y!e#{y~P!:TO[#kip#ki#P#ki#p#ki#q#ki#r#ki#s#ki#t#ki#u#ki#w#ki#y#ki#z#ki#}#ki(p#ki!Z#ki![#ki~OP$[OR#zO!O#yO!Q#{O!j#xO!n$[O#l<PO#m<QO#n<QO#o<QO(_VO(w#ki(x#ki~P&*nOl=}O!O)|O'w)}O(w$}O(x%POP#kiR#ki!Q#ki!j#ki!n#ki#l#ki#m#ki#n#ki#o#ki(_#ki~P&*nO#Q$dOP(^XR(^X[(^Xl(^Xp(^X!O(^X!Q(^X!j(^X!n(^X#P(^X#l(^X#m(^X#n(^X#o(^X#p(^X#q(^X#r(^X#s(^X#t(^X#u(^X#w(^X#y(^X#z(^X#}(^X'w(^X(_(^X(p(^X(w(^X(x(^X!Z(^X![(^X~O#}$Oi!Z$Oi![$Oi~P#BPO#}!pi![!pi~P$*OOg'Za!Z'Za~P!0uO![7dO~O!Z'ba!['ba~P#BPO!W7eO~P#.{O!e#vO(p'nO!Z'ca!i'ca~O!Z/kO!i(|i~O!Z/kO!e#vO!i(|i~Og${q!Z${q#^${q#}${q~P!0uO!W'ea!Z'ea~P#.{O!e7lO~O!Z/sO!W(}i~P#.{O!Z/sO!W(}i~O!W7oO~Oh%VOp7tO!j%dO(p'nO~O!e#vO#t7vO~Op7yO!e#vO(p'nO~O!O)|O'w)}O(x%POl'ha(w'ha!Z'ha#^'ha~Og'ha#}'ha~P&3oO!O)|O'w)}Ol'ja(w'ja(x'ja!Z'ja#^'ja~Og'ja#}'ja~P&4bO!W7{O~Og$}q!Z$}q#^$}q#}$}q~P!0uOg(]q!Z(]q~P!0uO#^7|Og(]q!Z(]q~P!0uOa$ny!Z$ny'x$ny'u$ny!W$ny!i$nyt$ny!]$ny%h$ny!e$ny~P!:TO!e6hO~O!Z5RO!])Oa~O!]'^OP$SaR$Sa[$Sap$Sa!O$Sa!Q$Sa!Z$Sa!j$Sa!n$Sa#P$Sa#l$Sa#m$Sa#n$Sa#o$Sa#p$Sa#q$Sa#r$Sa#s$Sa#t$Sa#u$Sa#w$Sa#y$Sa#z$Sa(_$Sa(p$Sa(w$Sa(x$Sa~O%h6|O~P&7SO%]8QOa%Zi!]%Zi'x%Zi!Z%Zi~Oa#ay!Z#ay'x#ay'u#ay!W#ay!i#ayt#ay!]#ay%h#ay!e#ay~P!:TO[8SO~Ob8UO(R+nO(TTO(WUO~O!Z0}O![)Vi~O`8YO~O(c(zO!Z'nX!['nX~O!Z5kO![)Sa~O![8cO~P%:RO(m!sO~P$$oO#Y8dO~O!]1gO~O!]1gO%h8fO~Ol8iO!]1gO%h8fO~O[8nO!Z'qa!['qa~O!Z1rO![)Ti~O!i8rO~O!i8sO~O!i8vO~O!i8vO~P%[Oa8xO~O!e8yO~O!i8zO~O!Z(ui![(ui~P#BPOa%mO#^9SO'x%mO~O!Z(ry!i(rya(ry'x(ry~P!:TO!Z(hO!i(qy~O%h9VO~P&7SO!]'^O%h9VO~O#i${qP${qR${q[${qa${qp${q!Q${q!Z${q!j${q!n${q#P${q#l${q#m${q#n${q#o${q#p${q#q${q#r${q#s${q#t${q#u${q#w${q#y${q#z${q'x${q(_${q(p${q!i${q!W${q'u${q#^${qt${q!]${q%h${q!e${q~P#.{O#i'haP'haR'ha['haa'hap'ha!Q'ha!j'ha!n'ha#P'ha#l'ha#m'ha#n'ha#o'ha#p'ha#q'ha#r'ha#s'ha#t'ha#u'ha#w'ha#y'ha#z'ha'x'ha(_'ha(p'ha!i'ha!W'ha'u'hat'ha!]'ha%h'ha!e'ha~P&3oO#i'jaP'jaR'ja['jaa'jap'ja!Q'ja!j'ja!n'ja#P'ja#l'ja#m'ja#n'ja#o'ja#p'ja#q'ja#r'ja#s'ja#t'ja#u'ja#w'ja#y'ja#z'ja'x'ja(_'ja(p'ja!i'ja!W'ja'u'jat'ja!]'ja%h'ja!e'ja~P&4bO#i$}qP$}qR$}q[$}qa$}qp$}q!Q$}q!Z$}q!j$}q!n$}q#P$}q#l$}q#m$}q#n$}q#o$}q#p$}q#q$}q#r$}q#s$}q#t$}q#u$}q#w$}q#y$}q#z$}q'x$}q(_$}q(p$}q!i$}q!W$}q'u$}q#^$}qt$}q!]$}q%h$}q!e$}q~P#.{O!Z'Wi!i'Wi~P!:TO#}#aq!Z#aq![#aq~P#BPO(w$}OP%`aR%`a[%`ap%`a!Q%`a!j%`a!n%`a#P%`a#l%`a#m%`a#n%`a#o%`a#p%`a#q%`a#r%`a#s%`a#t%`a#u%`a#w%`a#y%`a#z%`a#}%`a(_%`a(p%`a!Z%`a![%`a~Ol%`a!O%`a'w%`a(x%`a~P&HgO(x%POP%baR%ba[%bap%ba!Q%ba!j%ba!n%ba#P%ba#l%ba#m%ba#n%ba#o%ba#p%ba#q%ba#r%ba#s%ba#t%ba#u%ba#w%ba#y%ba#z%ba#}%ba(_%ba(p%ba!Z%ba![%ba~Ol%ba!O%ba'w%ba(w%ba~P&JnOl=}O!O)|O'w)}O(x%PO~P&HgOl=}O!O)|O'w)}O(w$}O~P&JnOR0cO!O0cO!Q0dO#Q$dOP{a[{al{ap{a!j{a!n{a#P{a#l{a#m{a#n{a#o{a#p{a#q{a#r{a#s{a#t{a#u{a#w{a#y{a#z{a#}{a'w{a(_{a(p{a(w{a(x{a!Z{a![{a~O!O)|O'w)}OP$raR$ra[$ral$rap$ra!Q$ra!j$ra!n$ra#P$ra#l$ra#m$ra#n$ra#o$ra#p$ra#q$ra#r$ra#s$ra#t$ra#u$ra#w$ra#y$ra#z$ra#}$ra(_$ra(p$ra(w$ra(x$ra!Z$ra![$ra~O!O)|O'w)}OP$taR$ta[$tal$tap$ta!Q$ta!j$ta!n$ta#P$ta#l$ta#m$ta#n$ta#o$ta#p$ta#q$ta#r$ta#s$ta#t$ta#u$ta#w$ta#y$ta#z$ta#}$ta(_$ta(p$ta(w$ta(x$ta!Z$ta![$ta~Ol=}O!O)|O'w)}O(w$}O(x%PO~OP%SaR%Sa[%Sap%Sa!Q%Sa!j%Sa!n%Sa#P%Sa#l%Sa#m%Sa#n%Sa#o%Sa#p%Sa#q%Sa#r%Sa#s%Sa#t%Sa#u%Sa#w%Sa#y%Sa#z%Sa#}%Sa(_%Sa(p%Sa!Z%Sa![%Sa~P'%sO#}$lq!Z$lq![$lq~P#BPO#}$nq!Z$nq![$nq~P#BPO![9dO~O#}9eO~P!0uO!e#vO!Z'ci!i'ci~O!e#vO(p'nO!Z'ci!i'ci~O!Z/kO!i(|q~O!W'ei!Z'ei~P#.{O!Z/sO!W(}q~Op9lO!e#vO(p'nO~O[9nO!W9mO~P#.{O!W9mO~O!e#vO#t9tO~Og(]y!Z(]y~P!0uO!Z'la!]'la~P#.{Oa%Zq!]%Zq'x%Zq!Z%Zq~P#.{O[9yO~O!Z0}O![)Vq~O#^9}O!Z'na!['na~O!Z5kO![)Si~P#BPO!Q:PO~O!]1gO%h:SO~O(TTO(WUO(c:XO~O!Z1rO![)Tq~O!i:[O~O!i:]O~O!i:^O~O!i:^O~P%[O#^:aO!Z#fy![#fy~O!Z#fy![#fy~P#BPO%h:fO~P&7SO!]'^O%h:fO~O#}#{y!Z#{y![#{y~P#BPOP${iR${i[${ip${i!Q${i!j${i!n${i#P${i#l${i#m${i#n${i#o${i#p${i#q${i#r${i#s${i#t${i#u${i#w${i#y${i#z${i#}${i(_${i(p${i!Z${i![${i~P'%sO!O)|O'w)}O(x%POP'gaR'ga['gal'gap'ga!Q'ga!j'ga!n'ga#P'ga#l'ga#m'ga#n'ga#o'ga#p'ga#q'ga#r'ga#s'ga#t'ga#u'ga#w'ga#y'ga#z'ga#}'ga(_'ga(p'ga(w'ga!Z'ga!['ga~O!O)|O'w)}OP'iaR'ia['ial'iap'ia!Q'ia!j'ia!n'ia#P'ia#l'ia#m'ia#n'ia#o'ia#p'ia#q'ia#r'ia#s'ia#t'ia#u'ia#w'ia#y'ia#z'ia#}'ia(_'ia(p'ia(w'ia(x'ia!Z'ia!['ia~O(w$}OP%`iR%`i[%`il%`ip%`i!O%`i!Q%`i!j%`i!n%`i#P%`i#l%`i#m%`i#n%`i#o%`i#p%`i#q%`i#r%`i#s%`i#t%`i#u%`i#w%`i#y%`i#z%`i#}%`i'w%`i(_%`i(p%`i(x%`i!Z%`i![%`i~O(x%POP%biR%bi[%bil%bip%bi!O%bi!Q%bi!j%bi!n%bi#P%bi#l%bi#m%bi#n%bi#o%bi#p%bi#q%bi#r%bi#s%bi#t%bi#u%bi#w%bi#y%bi#z%bi#}%bi'w%bi(_%bi(p%bi(w%bi!Z%bi![%bi~O#}$ny!Z$ny![$ny~P#BPO#}#ay!Z#ay![#ay~P#BPO!e#vO!Z'cq!i'cq~O!Z/kO!i(|y~O!W'eq!Z'eq~P#.{Op:pO!e#vO(p'nO~O[:tO!W:sO~P#.{O!W:sO~Og(]!R!Z(]!R~P!0uOa%Zy!]%Zy'x%Zy!Z%Zy~P#.{O!Z0}O![)Vy~O!Z5kO![)Sq~O(R:zO~O!]1gO%h:}O~O!i;QO~O%h;VO~P&7SOP${qR${q[${qp${q!Q${q!j${q!n${q#P${q#l${q#m${q#n${q#o${q#p${q#q${q#r${q#s${q#t${q#u${q#w${q#y${q#z${q#}${q(_${q(p${q!Z${q![${q~P'%sO!O)|O'w)}O(x%POP'haR'ha['hal'hap'ha!Q'ha!j'ha!n'ha#P'ha#l'ha#m'ha#n'ha#o'ha#p'ha#q'ha#r'ha#s'ha#t'ha#u'ha#w'ha#y'ha#z'ha#}'ha(_'ha(p'ha(w'ha!Z'ha!['ha~O!O)|O'w)}OP'jaR'ja['jal'jap'ja!Q'ja!j'ja!n'ja#P'ja#l'ja#m'ja#n'ja#o'ja#p'ja#q'ja#r'ja#s'ja#t'ja#u'ja#w'ja#y'ja#z'ja#}'ja(_'ja(p'ja(w'ja(x'ja!Z'ja!['ja~OP$}qR$}q[$}qp$}q!Q$}q!j$}q!n$}q#P$}q#l$}q#m$}q#n$}q#o$}q#p$}q#q$}q#r$}q#s$}q#t$}q#u$}q#w$}q#y$}q#z$}q#}$}q(_$}q(p$}q!Z$}q![$}q~P'%sOg%d!Z!Z%d!Z#^%d!Z#}%d!Z~P!0uO!W;ZO~P#.{Op;[O!e#vO(p'nO~O[;^O!W;ZO~P#.{O!Z'nq!['nq~P#BPO!Z#f!Z![#f!Z~P#BPO#i%d!ZP%d!ZR%d!Z[%d!Za%d!Zp%d!Z!Q%d!Z!Z%d!Z!j%d!Z!n%d!Z#P%d!Z#l%d!Z#m%d!Z#n%d!Z#o%d!Z#p%d!Z#q%d!Z#r%d!Z#s%d!Z#t%d!Z#u%d!Z#w%d!Z#y%d!Z#z%d!Z'x%d!Z(_%d!Z(p%d!Z!i%d!Z!W%d!Z'u%d!Z#^%d!Zt%d!Z!]%d!Z%h%d!Z!e%d!Z~P#.{Op;fO!e#vO(p'nO~O!W;gO~P#.{Op;nO!e#vO(p'nO~O!W;oO~P#.{OP%d!ZR%d!Z[%d!Zp%d!Z!Q%d!Z!j%d!Z!n%d!Z#P%d!Z#l%d!Z#m%d!Z#n%d!Z#o%d!Z#p%d!Z#q%d!Z#r%d!Z#s%d!Z#t%d!Z#u%d!Z#w%d!Z#y%d!Z#z%d!Z#}%d!Z(_%d!Z(p%d!Z!Z%d!Z![%d!Z~P'%sOp;rO!e#vO(p'nO~Ot(dX~P1qO!O%qO~P!(yO(S!lO~P!(yO!WfX!ZfX#^fX~P%0XOP]XR]X[]Xp]X!O]X!Q]X!Z]X!ZfX!j]X!n]X#P]X#Q]X#^]X#^fX#ifX#l]X#m]X#n]X#o]X#p]X#q]X#r]X#s]X#t]X#u]X#w]X#y]X#z]X$P]X(_]X(p]X(w]X(x]X~O!efX!i]X!ifX(pfX~P'JlOP;vOQ;vOSfOd=rOe!iOnkOp;vOqkOrkOxkOz;vO|;vO!QWO!UkO!VkO!]XO!g;yO!jZO!m;vO!n;vO!o;vO!q;zO!s;}O!v!hO$V!kO$m=pO(R)ZO(TTO(WUO(_VO(m[O~O!Z<ZO![$pa~Oh%VOn%WOp%XOq$tOr$tOx%YOz%ZO|<fO!Q${O!]$|O!g=wO!j$xO#h<lO$V%_O$s<hO$u<jO$x%`O(R(tO(TTO(WUO(_$uO(w$}O(x%PO~Oj)bO~P( bOp!cX(p!cX~P# qOp(hX(p(hX~P#!dO![]X![fX~P'JlO!WfX!W$yX!ZfX!Z$yX#^fX~P!/qO#i<OO~O!e#vO#i<OO~O#^<`O~O#t<SO~O#^<pO!Z(uX![(uX~O#^<`O!Z(sX![(sX~O#i<qO~Og<sO~P!0uO#i<yO~O#i<zO~O!e#vO#i<{O~O!e#vO#i<qO~O#}<|O~P#BPO#i<}O~O#i=OO~O#i=TO~O#i=UO~O#i=VO~O#i=WO~O#}=XO~P!0uO#}=YO~P!0uO#Q#R#S#U#V#Y#g#h#s$m$s$u$x%[%]%g%h%i%p%r%u%v%x%z~'|T#m!V'z(S#nq#l#op!O'{$['{(R$^(c~",
@@ -27258,7 +28375,7 @@ highlighting and indentation information.
 */
 const javascriptLanguage = /*@__PURE__*/LRLanguage.define({
     name: "javascript",
-    parser: /*@__PURE__*/parser.configure({
+    parser: /*@__PURE__*/parser$1.configure({
         props: [
             /*@__PURE__*/indentNodeProp.add({
                 IfStatement: /*@__PURE__*/continuedIndent({ except: /^\s*({|else\b)/ }),
@@ -27511,4 +28628,618 @@ the highlight style).
 */
 const oneDark = [oneDarkTheme, /*@__PURE__*/syntaxHighlighting(oneDarkHighlightStyle)];
 
-export { EditorState, EditorView, autocompletion, basicSetup, javascript, language, lineNumbers, lintGutter, oneDark };
+const jsonHighlighting = styleTags({
+  String: tags.string,
+  Number: tags.number,
+  "True False": tags.bool,
+  PropertyName: tags.propertyName,
+  Null: tags.null,
+  ",": tags.separator,
+  "[ ]": tags.squareBracket,
+  "{ }": tags.brace
+});
+
+// This file was generated by lezer-generator. You probably shouldn't edit it.
+const parser = LRParser.deserialize({
+  version: 14,
+  states: "$bOVQPOOOOQO'#Cb'#CbOnQPO'#CeOvQPO'#CjOOQO'#Cp'#CpQOQPOOOOQO'#Cg'#CgO}QPO'#CfO!SQPO'#CrOOQO,59P,59PO![QPO,59PO!aQPO'#CuOOQO,59U,59UO!iQPO,59UOVQPO,59QOqQPO'#CkO!nQPO,59^OOQO1G.k1G.kOVQPO'#ClO!vQPO,59aOOQO1G.p1G.pOOQO1G.l1G.lOOQO,59V,59VOOQO-E6i-E6iOOQO,59W,59WOOQO-E6j-E6j",
+  stateData: "#O~OcOS~OQSORSOSSOTSOWQO]ROePO~OVXOeUO~O[[O~PVOg^O~Oh_OVfX~OVaO~OhbO[iX~O[dO~Oh_OVfa~OhbO[ia~O",
+  goto: "!kjPPPPPPkPPkqwPPk{!RPPP!XP!ePP!hXSOR^bQWQRf_TVQ_Q`WRg`QcZRicQTOQZRQe^RhbRYQR]R",
+  nodeNames: "⚠ JsonText True False Null Number String } { Object Property PropertyName ] [ Array",
+  maxTerm: 25,
+  nodeProps: [
+    ["isolate", -2,6,11,""],
+    ["openedBy", 7,"{",12,"["],
+    ["closedBy", 8,"}",13,"]"]
+  ],
+  propSources: [jsonHighlighting],
+  skippedNodes: [0],
+  repeatNodeCount: 2,
+  tokenData: "(|~RaXY!WYZ!W]^!Wpq!Wrs!]|}$u}!O$z!Q!R%T!R![&c![!]&t!}#O&y#P#Q'O#Y#Z'T#b#c'r#h#i(Z#o#p(r#q#r(w~!]Oc~~!`Wpq!]qr!]rs!xs#O!]#O#P!}#P;'S!];'S;=`$o<%lO!]~!}Oe~~#QXrs!]!P!Q!]#O#P!]#U#V!]#Y#Z!]#b#c!]#f#g!]#h#i!]#i#j#m~#pR!Q![#y!c!i#y#T#Z#y~#|R!Q![$V!c!i$V#T#Z$V~$YR!Q![$c!c!i$c#T#Z$c~$fR!Q![!]!c!i!]#T#Z!]~$rP;=`<%l!]~$zOh~~$}Q!Q!R%T!R![&c~%YRT~!O!P%c!g!h%w#X#Y%w~%fP!Q![%i~%nRT~!Q![%i!g!h%w#X#Y%w~%zR{|&T}!O&T!Q![&Z~&WP!Q![&Z~&`PT~!Q![&Z~&hST~!O!P%c!Q![&c!g!h%w#X#Y%w~&yOg~~'OO]~~'TO[~~'WP#T#U'Z~'^P#`#a'a~'dP#g#h'g~'jP#X#Y'm~'rOR~~'uP#i#j'x~'{P#`#a(O~(RP#`#a(U~(ZOS~~(^P#f#g(a~(dP#i#j(g~(jP#X#Y(m~(rOQ~~(wOW~~(|OV~",
+  tokenizers: [0],
+  topRules: {"JsonText":[0,1]},
+  tokenPrec: 0
+});
+
+/**
+Calls
+[`JSON.parse`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse)
+on the document and, if that throws an error, reports it as a
+single diagnostic.
+*/
+const jsonParseLinter = () => (view) => {
+    try {
+        JSON.parse(view.state.doc.toString());
+    }
+    catch (e) {
+        if (!(e instanceof SyntaxError))
+            throw e;
+        const pos = getErrorPosition(e, view.state.doc);
+        return [{
+                from: pos,
+                message: e.message,
+                severity: 'error',
+                to: pos
+            }];
+    }
+    return [];
+};
+function getErrorPosition(error, doc) {
+    let m;
+    if (m = error.message.match(/at position (\d+)/))
+        return Math.min(+m[1], doc.length);
+    if (m = error.message.match(/at line (\d+) column (\d+)/))
+        return Math.min(doc.line(+m[1]).from + (+m[2]) - 1, doc.length);
+    return 0;
+}
+
+/**
+A language provider that provides JSON parsing.
+*/
+const jsonLanguage = /*@__PURE__*/LRLanguage.define({
+    name: "json",
+    parser: /*@__PURE__*/parser.configure({
+        props: [
+            /*@__PURE__*/indentNodeProp.add({
+                Object: /*@__PURE__*/continuedIndent({ except: /^\s*\}/ }),
+                Array: /*@__PURE__*/continuedIndent({ except: /^\s*\]/ })
+            }),
+            /*@__PURE__*/foldNodeProp.add({
+                "Object Array": foldInside
+            })
+        ]
+    }),
+    languageData: {
+        closeBrackets: { brackets: ["[", "{", '"'] },
+        indentOnInput: /^\s*[\}\]]$/
+    }
+});
+/**
+JSON language support.
+*/
+function json() {
+    return new LanguageSupport(jsonLanguage);
+}
+
+const ios = typeof navigator != "undefined" &&
+    !/*@__PURE__*//Edge\/(\d+)/.exec(navigator.userAgent) && /*@__PURE__*//Apple Computer/.test(navigator.vendor) &&
+    (/*@__PURE__*//Mobile\/\w+/.test(navigator.userAgent) || navigator.maxTouchPoints > 2);
+const Outside = "-10000px";
+class TooltipViewManager {
+    constructor(view, facet, createTooltipView) {
+        this.facet = facet;
+        this.createTooltipView = createTooltipView;
+        this.input = view.state.facet(facet);
+        this.tooltips = this.input.filter(t => t);
+        this.tooltipViews = this.tooltips.map(createTooltipView);
+    }
+    update(update) {
+        let input = update.state.facet(this.facet);
+        let tooltips = input.filter(x => x);
+        if (input === this.input) {
+            for (let t of this.tooltipViews)
+                if (t.update)
+                    t.update(update);
+            return false;
+        }
+        let tooltipViews = [];
+        for (let i = 0; i < tooltips.length; i++) {
+            let tip = tooltips[i], known = -1;
+            if (!tip)
+                continue;
+            for (let i = 0; i < this.tooltips.length; i++) {
+                let other = this.tooltips[i];
+                if (other && other.create == tip.create)
+                    known = i;
+            }
+            if (known < 0) {
+                tooltipViews[i] = this.createTooltipView(tip);
+            }
+            else {
+                let tooltipView = tooltipViews[i] = this.tooltipViews[known];
+                if (tooltipView.update)
+                    tooltipView.update(update);
+            }
+        }
+        for (let t of this.tooltipViews)
+            if (tooltipViews.indexOf(t) < 0)
+                t.dom.remove();
+        this.input = input;
+        this.tooltips = tooltips;
+        this.tooltipViews = tooltipViews;
+        return true;
+    }
+}
+function windowSpace() {
+    return { top: 0, left: 0, bottom: innerHeight, right: innerWidth };
+}
+const tooltipConfig = /*@__PURE__*/Facet.define({
+    combine: values => {
+        var _a, _b, _c;
+        return ({
+            position: ios ? "absolute" : ((_a = values.find(conf => conf.position)) === null || _a === void 0 ? void 0 : _a.position) || "fixed",
+            parent: ((_b = values.find(conf => conf.parent)) === null || _b === void 0 ? void 0 : _b.parent) || null,
+            tooltipSpace: ((_c = values.find(conf => conf.tooltipSpace)) === null || _c === void 0 ? void 0 : _c.tooltipSpace) || windowSpace,
+        });
+    }
+});
+const tooltipPlugin = /*@__PURE__*/ViewPlugin.fromClass(class {
+    constructor(view) {
+        var _a;
+        this.view = view;
+        this.inView = true;
+        this.lastTransaction = 0;
+        this.measureTimeout = -1;
+        let config = view.state.facet(tooltipConfig);
+        this.position = config.position;
+        this.parent = config.parent;
+        this.classes = view.themeClasses;
+        this.createContainer();
+        this.measureReq = { read: this.readMeasure.bind(this), write: this.writeMeasure.bind(this), key: this };
+        this.manager = new TooltipViewManager(view, showTooltip, t => this.createTooltip(t));
+        this.intersectionObserver = typeof IntersectionObserver == "function" ? new IntersectionObserver(entries => {
+            if (Date.now() > this.lastTransaction - 50 &&
+                entries.length > 0 && entries[entries.length - 1].intersectionRatio < 1)
+                this.measureSoon();
+        }, { threshold: [1] }) : null;
+        this.observeIntersection();
+        (_a = view.dom.ownerDocument.defaultView) === null || _a === void 0 ? void 0 : _a.addEventListener("resize", this.measureSoon = this.measureSoon.bind(this));
+        this.maybeMeasure();
+    }
+    createContainer() {
+        if (this.parent) {
+            this.container = document.createElement("div");
+            this.container.style.position = "relative";
+            this.container.className = this.view.themeClasses;
+            this.parent.appendChild(this.container);
+        }
+        else {
+            this.container = this.view.dom;
+        }
+    }
+    observeIntersection() {
+        if (this.intersectionObserver) {
+            this.intersectionObserver.disconnect();
+            for (let tooltip of this.manager.tooltipViews)
+                this.intersectionObserver.observe(tooltip.dom);
+        }
+    }
+    measureSoon() {
+        if (this.measureTimeout < 0)
+            this.measureTimeout = setTimeout(() => {
+                this.measureTimeout = -1;
+                this.maybeMeasure();
+            }, 50);
+    }
+    update(update) {
+        if (update.transactions.length)
+            this.lastTransaction = Date.now();
+        let updated = this.manager.update(update);
+        if (updated)
+            this.observeIntersection();
+        let shouldMeasure = updated || update.geometryChanged;
+        let newConfig = update.state.facet(tooltipConfig);
+        if (newConfig.position != this.position) {
+            this.position = newConfig.position;
+            for (let t of this.manager.tooltipViews)
+                t.dom.style.position = this.position;
+            shouldMeasure = true;
+        }
+        if (newConfig.parent != this.parent) {
+            if (this.parent)
+                this.container.remove();
+            this.parent = newConfig.parent;
+            this.createContainer();
+            for (let t of this.manager.tooltipViews)
+                this.container.appendChild(t.dom);
+            shouldMeasure = true;
+        }
+        else if (this.parent && this.view.themeClasses != this.classes) {
+            this.classes = this.container.className = this.view.themeClasses;
+        }
+        if (shouldMeasure)
+            this.maybeMeasure();
+    }
+    createTooltip(tooltip) {
+        let tooltipView = tooltip.create(this.view);
+        tooltipView.dom.classList.add("cm-tooltip");
+        if (tooltip.arrow && !tooltipView.dom.querySelector(".cm-tooltip > .cm-tooltip-arrow")) {
+            let arrow = document.createElement("div");
+            arrow.className = "cm-tooltip-arrow";
+            tooltipView.dom.appendChild(arrow);
+        }
+        tooltipView.dom.style.position = this.position;
+        tooltipView.dom.style.top = Outside;
+        this.container.appendChild(tooltipView.dom);
+        if (tooltipView.mount)
+            tooltipView.mount(this.view);
+        return tooltipView;
+    }
+    destroy() {
+        var _a, _b;
+        (_a = this.view.dom.ownerDocument.defaultView) === null || _a === void 0 ? void 0 : _a.removeEventListener("resize", this.measureSoon);
+        for (let { dom } of this.manager.tooltipViews)
+            dom.remove();
+        (_b = this.intersectionObserver) === null || _b === void 0 ? void 0 : _b.disconnect();
+        clearTimeout(this.measureTimeout);
+    }
+    readMeasure() {
+        let editor = this.view.dom.getBoundingClientRect();
+        return {
+            editor,
+            parent: this.parent ? this.container.getBoundingClientRect() : editor,
+            pos: this.manager.tooltips.map((t, i) => {
+                let tv = this.manager.tooltipViews[i];
+                return tv.getCoords ? tv.getCoords(t.pos) : this.view.coordsAtPos(t.pos);
+            }),
+            size: this.manager.tooltipViews.map(({ dom }) => dom.getBoundingClientRect()),
+            space: this.view.state.facet(tooltipConfig).tooltipSpace(this.view),
+        };
+    }
+    writeMeasure(measured) {
+        let { editor, space } = measured;
+        let others = [];
+        for (let i = 0; i < this.manager.tooltips.length; i++) {
+            let tooltip = this.manager.tooltips[i], tView = this.manager.tooltipViews[i], { dom } = tView;
+            let pos = measured.pos[i], size = measured.size[i];
+            // Hide tooltips that are outside of the editor.
+            if (!pos || pos.bottom <= Math.max(editor.top, space.top) ||
+                pos.top >= Math.min(editor.bottom, space.bottom) ||
+                pos.right < Math.max(editor.left, space.left) - .1 ||
+                pos.left > Math.min(editor.right, space.right) + .1) {
+                dom.style.top = Outside;
+                continue;
+            }
+            let arrow = tooltip.arrow ? tView.dom.querySelector(".cm-tooltip-arrow") : null;
+            let arrowHeight = arrow ? 7 /* Size */ : 0;
+            let width = size.right - size.left, height = size.bottom - size.top;
+            let offset = tView.offset || noOffset, ltr = this.view.textDirection == Direction.LTR;
+            let left = size.width > space.right - space.left ? (ltr ? space.left : space.right - size.width)
+                : ltr ? Math.min(pos.left - (arrow ? 14 /* Offset */ : 0) + offset.x, space.right - width)
+                    : Math.max(space.left, pos.left - width + (arrow ? 14 /* Offset */ : 0) - offset.x);
+            let above = !!tooltip.above;
+            if (!tooltip.strictSide && (above
+                ? pos.top - (size.bottom - size.top) - offset.y < space.top
+                : pos.bottom + (size.bottom - size.top) + offset.y > space.bottom) &&
+                above == (space.bottom - pos.bottom > pos.top - space.top))
+                above = !above;
+            let top = above ? pos.top - height - arrowHeight - offset.y : pos.bottom + arrowHeight + offset.y;
+            let right = left + width;
+            if (tView.overlap !== true)
+                for (let r of others)
+                    if (r.left < right && r.right > left && r.top < top + height && r.bottom > top)
+                        top = above ? r.top - height - 2 - arrowHeight : r.bottom + arrowHeight + 2;
+            if (this.position == "absolute") {
+                dom.style.top = (top - measured.parent.top) + "px";
+                dom.style.left = (left - measured.parent.left) + "px";
+            }
+            else {
+                dom.style.top = top + "px";
+                dom.style.left = left + "px";
+            }
+            if (arrow)
+                arrow.style.left = `${pos.left + (ltr ? offset.x : -offset.x) - (left + 14 /* Offset */ - 7 /* Size */)}px`;
+            if (tView.overlap !== true)
+                others.push({ left, top, right, bottom: top + height });
+            dom.classList.toggle("cm-tooltip-above", above);
+            dom.classList.toggle("cm-tooltip-below", !above);
+            if (tView.positioned)
+                tView.positioned();
+        }
+    }
+    maybeMeasure() {
+        if (this.manager.tooltips.length) {
+            if (this.view.inView)
+                this.view.requestMeasure(this.measureReq);
+            if (this.inView != this.view.inView) {
+                this.inView = this.view.inView;
+                if (!this.inView)
+                    for (let tv of this.manager.tooltipViews)
+                        tv.dom.style.top = Outside;
+            }
+        }
+    }
+}, {
+    eventHandlers: {
+        scroll() { this.maybeMeasure(); }
+    }
+});
+const baseTheme = /*@__PURE__*/EditorView.baseTheme({
+    ".cm-tooltip": {
+        zIndex: 100
+    },
+    "&light .cm-tooltip": {
+        border: "1px solid #bbb",
+        backgroundColor: "#f5f5f5"
+    },
+    "&light .cm-tooltip-section:not(:first-child)": {
+        borderTop: "1px solid #bbb",
+    },
+    "&dark .cm-tooltip": {
+        backgroundColor: "#333338",
+        color: "white"
+    },
+    ".cm-tooltip-arrow": {
+        height: `${7 /* Size */}px`,
+        width: `${7 /* Size */ * 2}px`,
+        position: "absolute",
+        zIndex: -1,
+        overflow: "hidden",
+        "&:before, &:after": {
+            content: "''",
+            position: "absolute",
+            width: 0,
+            height: 0,
+            borderLeft: `${7 /* Size */}px solid transparent`,
+            borderRight: `${7 /* Size */}px solid transparent`,
+        },
+        ".cm-tooltip-above &": {
+            bottom: `-${7 /* Size */}px`,
+            "&:before": {
+                borderTop: `${7 /* Size */}px solid #bbb`,
+            },
+            "&:after": {
+                borderTop: `${7 /* Size */}px solid #f5f5f5`,
+                bottom: "1px"
+            }
+        },
+        ".cm-tooltip-below &": {
+            top: `-${7 /* Size */}px`,
+            "&:before": {
+                borderBottom: `${7 /* Size */}px solid #bbb`,
+            },
+            "&:after": {
+                borderBottom: `${7 /* Size */}px solid #f5f5f5`,
+                top: "1px"
+            }
+        },
+    },
+    "&dark .cm-tooltip .cm-tooltip-arrow": {
+        "&:before": {
+            borderTopColor: "#333338",
+            borderBottomColor: "#333338"
+        },
+        "&:after": {
+            borderTopColor: "transparent",
+            borderBottomColor: "transparent"
+        }
+    }
+});
+const noOffset = { x: 0, y: 0 };
+/**
+Behavior by which an extension can provide a tooltip to be shown.
+*/
+const showTooltip = /*@__PURE__*/Facet.define({
+    enables: [tooltipPlugin, baseTheme]
+});
+const showHoverTooltip = /*@__PURE__*/Facet.define();
+class HoverTooltipHost {
+    constructor(view) {
+        this.view = view;
+        this.mounted = false;
+        this.dom = document.createElement("div");
+        this.dom.classList.add("cm-tooltip-hover");
+        this.manager = new TooltipViewManager(view, showHoverTooltip, t => this.createHostedView(t));
+    }
+    // Needs to be static so that host tooltip instances always match
+    static create(view) {
+        return new HoverTooltipHost(view);
+    }
+    createHostedView(tooltip) {
+        let hostedView = tooltip.create(this.view);
+        hostedView.dom.classList.add("cm-tooltip-section");
+        this.dom.appendChild(hostedView.dom);
+        if (this.mounted && hostedView.mount)
+            hostedView.mount(this.view);
+        return hostedView;
+    }
+    mount(view) {
+        for (let hostedView of this.manager.tooltipViews) {
+            if (hostedView.mount)
+                hostedView.mount(view);
+        }
+        this.mounted = true;
+    }
+    positioned() {
+        for (let hostedView of this.manager.tooltipViews) {
+            if (hostedView.positioned)
+                hostedView.positioned();
+        }
+    }
+    update(update) {
+        this.manager.update(update);
+    }
+}
+const showHoverTooltipHost = /*@__PURE__*/showTooltip.compute([showHoverTooltip], state => {
+    let tooltips = state.facet(showHoverTooltip).filter(t => t);
+    if (tooltips.length === 0)
+        return null;
+    return {
+        pos: Math.min(...tooltips.map(t => t.pos)),
+        end: Math.max(...tooltips.filter(t => t.end != null).map(t => t.end)),
+        create: HoverTooltipHost.create,
+        above: tooltips[0].above,
+        arrow: tooltips.some(t => t.arrow),
+    };
+});
+class HoverPlugin {
+    constructor(view, source, field, setHover, hoverTime) {
+        this.view = view;
+        this.source = source;
+        this.field = field;
+        this.setHover = setHover;
+        this.hoverTime = hoverTime;
+        this.hoverTimeout = -1;
+        this.restartTimeout = -1;
+        this.pending = null;
+        this.lastMove = { x: 0, y: 0, target: view.dom, time: 0 };
+        this.checkHover = this.checkHover.bind(this);
+        view.dom.addEventListener("mouseleave", this.mouseleave = this.mouseleave.bind(this));
+        view.dom.addEventListener("mousemove", this.mousemove = this.mousemove.bind(this));
+    }
+    update() {
+        if (this.pending) {
+            this.pending = null;
+            clearTimeout(this.restartTimeout);
+            this.restartTimeout = setTimeout(() => this.startHover(), 20);
+        }
+    }
+    get active() {
+        return this.view.state.field(this.field);
+    }
+    checkHover() {
+        this.hoverTimeout = -1;
+        if (this.active)
+            return;
+        let hovered = Date.now() - this.lastMove.time;
+        if (hovered < this.hoverTime)
+            this.hoverTimeout = setTimeout(this.checkHover, this.hoverTime - hovered);
+        else
+            this.startHover();
+    }
+    startHover() {
+        var _a;
+        clearTimeout(this.restartTimeout);
+        let { lastMove } = this;
+        let pos = this.view.contentDOM.contains(lastMove.target) ? this.view.posAtCoords(lastMove) : null;
+        if (pos == null)
+            return;
+        let posCoords = this.view.coordsAtPos(pos);
+        if (posCoords == null || lastMove.y < posCoords.top || lastMove.y > posCoords.bottom ||
+            lastMove.x < posCoords.left - this.view.defaultCharacterWidth ||
+            lastMove.x > posCoords.right + this.view.defaultCharacterWidth)
+            return;
+        let bidi = this.view.bidiSpans(this.view.state.doc.lineAt(pos)).find(s => s.from <= pos && s.to >= pos);
+        let rtl = bidi && bidi.dir == Direction.RTL ? -1 : 1;
+        let open = this.source(this.view, pos, (lastMove.x < posCoords.left ? -rtl : rtl));
+        if ((_a = open) === null || _a === void 0 ? void 0 : _a.then) {
+            let pending = this.pending = { pos };
+            open.then(result => {
+                if (this.pending == pending) {
+                    this.pending = null;
+                    if (result)
+                        this.view.dispatch({ effects: this.setHover.of(result) });
+                }
+            }, e => logException(this.view.state, e, "hover tooltip"));
+        }
+        else if (open) {
+            this.view.dispatch({ effects: this.setHover.of(open) });
+        }
+    }
+    mousemove(event) {
+        var _a;
+        this.lastMove = { x: event.clientX, y: event.clientY, target: event.target, time: Date.now() };
+        if (this.hoverTimeout < 0)
+            this.hoverTimeout = setTimeout(this.checkHover, this.hoverTime);
+        let tooltip = this.active;
+        if (tooltip && !isInTooltip(this.lastMove.target) || this.pending) {
+            let { pos } = tooltip || this.pending, end = (_a = tooltip === null || tooltip === void 0 ? void 0 : tooltip.end) !== null && _a !== void 0 ? _a : pos;
+            if ((pos == end ? this.view.posAtCoords(this.lastMove) != pos
+                : !isOverRange(this.view, pos, end, event.clientX, event.clientY, 6 /* MaxDist */))) {
+                this.view.dispatch({ effects: this.setHover.of(null) });
+                this.pending = null;
+            }
+        }
+    }
+    mouseleave() {
+        clearTimeout(this.hoverTimeout);
+        this.hoverTimeout = -1;
+        if (this.active)
+            this.view.dispatch({ effects: this.setHover.of(null) });
+    }
+    destroy() {
+        clearTimeout(this.hoverTimeout);
+        this.view.dom.removeEventListener("mouseleave", this.mouseleave);
+        this.view.dom.removeEventListener("mousemove", this.mousemove);
+    }
+}
+function isInTooltip(elt) {
+    for (let cur = elt; cur; cur = cur.parentNode)
+        if (cur.nodeType == 1 && cur.classList.contains("cm-tooltip"))
+            return true;
+    return false;
+}
+function isOverRange(view, from, to, x, y, margin) {
+    let range = document.createRange();
+    let fromDOM = view.domAtPos(from), toDOM = view.domAtPos(to);
+    range.setEnd(toDOM.node, toDOM.offset);
+    range.setStart(fromDOM.node, fromDOM.offset);
+    let rects = range.getClientRects();
+    range.detach();
+    for (let i = 0; i < rects.length; i++) {
+        let rect = rects[i];
+        let dist = Math.max(rect.top - y, y - rect.bottom, rect.left - x, x - rect.right);
+        if (dist <= margin)
+            return true;
+    }
+    return false;
+}
+/**
+Enable a hover tooltip, which shows up when the pointer hovers
+over ranges of text. The callback is called when the mouse hovers
+over the document text. It should, if there is a tooltip
+associated with position `pos` return the tooltip description
+(either directly or in a promise). The `side` argument indicates
+on which side of the position the pointer is—it will be -1 if the
+pointer is before the position, 1 if after the position.
+
+Note that all hover tooltips are hosted within a single tooltip
+container element. This allows multiple tooltips over the same
+range to be "merged" together without overlapping.
+*/
+function hoverTooltip(source, options = {}) {
+    let setHover = StateEffect.define();
+    let hoverState = StateField.define({
+        create() { return null; },
+        update(value, tr) {
+            if (value && (options.hideOnChange && (tr.docChanged || tr.selection)))
+                return null;
+            for (let effect of tr.effects) {
+                if (effect.is(setHover))
+                    return effect.value;
+                if (effect.is(closeHoverTooltipEffect))
+                    return null;
+            }
+            if (value && tr.docChanged) {
+                let newPos = tr.changes.mapPos(value.pos, -1, MapMode.TrackDel);
+                if (newPos == null)
+                    return null;
+                let copy = Object.assign(Object.create(null), value);
+                copy.pos = newPos;
+                if (value.end != null)
+                    copy.end = tr.changes.mapPos(value.end);
+                return copy;
+            }
+            return value;
+        },
+        provide: f => showHoverTooltip.from(f)
+    });
+    return [
+        hoverState,
+        ViewPlugin.define(view => new HoverPlugin(view, source, hoverState, setHover, options.hoverTime || 300 /* Time */)),
+        showHoverTooltipHost
+    ];
+}
+const closeHoverTooltipEffect = /*@__PURE__*/StateEffect.define();
+
+export { Decoration, EditorState, EditorView, StateEffect, StateField, ViewPlugin, autocompletion, basicSetup, hoverTooltip, javascript, json, jsonParseLinter, language, lineNumbers, lintGutter, linter, oneDark, tooltips };

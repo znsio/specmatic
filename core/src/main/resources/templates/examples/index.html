@@ -380,7 +380,27 @@
             border: 1px solid #ccc;
             height: 500px !important;
         }
-       .cm-lint-marker-error {
+  .custom-tooltip {
+  position: absolute;
+  background-color: white;
+  color: black;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  pointer-events: none;
+  margin-bottom: 5px;
+  border: 1px solid #ddd;
+  max-width: 300px;
+  word-break: break-word;
+}
+
+        .CodeMirror-lint-mark-error {
+            background-color: rgba(255, 0, 0, 0.2); /* Light red background for errors */
+        }
+
+       .cm-lint-error {
             background-color: red;
             color: white;
             font-size: 12px;
@@ -410,6 +430,7 @@
     [data-validation-error-message] {
       position: relative;
       display: inline-block;
+      cursor: pointer;
     }
 
     .CodeMirror pre.CodeMirror-line[role="presentation"] {
@@ -1240,33 +1261,30 @@
 <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.js"></script>-->
 <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/json-lint.js"></script>-->
 <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/autorefresh.min.js"></script>-->
-<script src="codemirror-bundle.js"></script>
-<script>
-      window.onload = function () {
-        const examplePreDiv = document.createElement("div");
-        examplePreDiv.style.height = "400px";
-        examplePreDiv.style.width = "600px";
-        examplePreDiv.style.border = "1px solid #ccc";
+<script type="module">
+import { Decoration,EditorState, EditorView, StateEffect, StateField,autocompletion, basicSetup, hoverTooltip,javascript, json,jsonParseLinter, language, lineNumbers, lintGutter, linter,oneDark,tooltips } from './codemirror-bundle.esm.js'
+    window.EditorState = EditorState
+    window.EditorView = EditorView
+    window.basicSetup = basicSetup
+    window.javascript = javascript()
+    window.autocompletion = autocompletion()
+    window.oneDark = oneDark
+    window.language = language
+    window.lineNumbers = lineNumbers()
+    window.lintGutter = lintGutter()
+    window.json = json()
+    window.linter = linter(jsonParseLinter())
+    window.Decoration = Decoration
+    window.StateField = StateField
+    window.StateEffect = StateEffect
+    window.tooltips = tooltips
+    window.hoverTooltip = hoverTooltip
 
-        // Create the editor
-        const editor = new window.EditorView({
-          state: window.EditorState.create({
-            doc: '{"hello":"hello"}',
-            extensions: [
-              window.basicSetup,
-              window.javascript()
-            ],
-          }),
-          parent: examplePreDiv,
-        });
-
-        // Append the div to the body
-        document.body.appendChild(examplePreDiv);
-      };
 </script>
 <script>var escapedChars={b:"\b",f:"\f",n:"\n",r:"\r",t:"	",'"':'"',"/":"/","\\":"\\"},A_CODE="a".charCodeAt();const jsonMapParser=function(e,n,r){var a={},t=0,o=0,c=0,i=r&&r.bigint&&"undefined"!=typeof BigInt;return{data:function n(r,a){f(),E(r,"value");var t,o,$,g,S=l();switch(S){case"t":s("rue"),g=!0;break;case"f":s("alse"),g=!1;break;case"n":s("ull"),g=null;break;case'"':g=u();break;case"[":g=function e(r){f();var a=[],t=0;if("]"==l())return a;for(v();;){var o=r+"/"+t;a.push(n(o)),f();var c=l();if("]"==c)break;","!=c&&k(),f(),t++}return a}(r);break;case"{":g=function e(r){f();var a={};if("}"==l())return a;for(v();;){var t=d();'"'!=l()&&k();var o=u(),c=r+"/"+escapeJsonPointer(o);b(c,"key",t),E(c,"keyEnd"),f(),":"!=l()&&k(),f(),a[o]=n(c),f();var i=l();if("}"==i)break;","!=i&&k(),f()}return a}(r);break;default:v(),"-0123456789".indexOf(S)>=0?g=(t="",o=!0,"-"==e[c]&&(t+=l()),t+="0"==e[c]?l():p(),"."==e[c]&&(t+=l()+p(),o=!1),("e"==e[c]||"E"==e[c])&&(t+=l(),("+"==e[c]||"-"==e[c])&&(t+=l()),t+=p(),o=!1),$=+t,i&&o&&($>Number.MAX_SAFE_INTEGER||$<Number.MIN_SAFE_INTEGER)?BigInt(t):$):h()}return E(r,"valueEnd"),f(),a&&c<e.length&&h(),g}("",!0),pointers:a};function f(){loop:for(;c<e.length;){switch(e[c]){case" ":o++;break;case"	":o+=4;break;case"\r":o=0;break;case"\n":o=0,t++;break;default:break loop}c++}}function u(){for(var e,n="";'"'!=(e=l());)"\\"==e?(e=l())in escapedChars?n+=escapedChars[e]:"u"==e?n+=$():k():n+=e;return n}function s(e){for(var n=0;n<e.length;n++)l()!==e[n]&&k()}function l(){g();var n=e[c];return c++,o++,n}function v(){c--,o--}function $(){for(var e=4,n=0;e--;){n<<=4;var r=l().toLowerCase();r>="a"&&r<="f"?n+=r.charCodeAt()-A_CODE+10:r>="0"&&r<="9"?n+=+r:k()}return String.fromCharCode(n)}function p(){for(var n="";e[c]>="0"&&e[c]<="9";)n+=l();if(n.length)return n;g(),h()}function E(e,n){b(e,n,d())}function b(e,n,r){a[e]=a[e]||{},a[e][n]=r}function d(){return{line:t,column:o,pos:c}}function h(){throw SyntaxError("Unexpected token "+e[c]+" in JSON at position "+c)}function k(){v(),h()}function g(){if(c>=e.length)throw SyntaxError("Unexpected end of JSON input")}},jsonMapStringify=function(e,n,r){if(validType(e)){var a,t,o=0,c="object"==typeof r?r.space:r;switch(typeof c){case"number":var i=c>10?10:c<0?0:Math.floor(c);c=i&&k(i," "),a=i,t=i;break;case"string":c=c.slice(0,10),a=0,t=0;for(var f=0;f<c.length;f++){var u=c[f];switch(u){case" ":t++;break;case"	":t+=4;break;case"\r":t=0;break;case"\n":t=0,o++;break;default:throw Error("whitespace characters not allowed in JSON")}a++}break;default:c=void 0}var s="",l={},v=0,$=0,p=0,E=r&&r.es6&&"function"==typeof Map;return function e(n,r,a){switch(h(a,"value"),typeof n){case"number":case"bigint":case"boolean":b(""+n);break;case"string":b(quoted(n));break;case"object":null===n?b("null"):"function"==typeof n.toJSON?b(quoted(n.toJSON())):Array.isArray(n)?t():E?n.constructor.BYTES_PER_ELEMENT?t():n instanceof Map?i():n instanceof Set?i(!0):o():o()}function t(){if(n.length){b("[");for(var t=r+1,o=0;o<n.length;o++){o&&b(","),d(t);var c=validType(n[o])?n[o]:null;e(c,t,a+"/"+o)}d(r),b("]")}else b("[]")}function o(){var t=Object.keys(n);if(t.length){b("{");for(var o=r+1,i=0;i<t.length;i++){var f=t[i],u=n[f];if(validType(u)){i&&b(",");var s=a+"/"+escapeJsonPointer(f);d(o),h(s,"key"),b(quoted(f)),h(s,"keyEnd"),b(":"),c&&b(" "),e(u,o,s)}}d(r),b("}")}else b("{}")}function i(t){if(n.size){b("{");for(var o=r+1,i=!0,f=n.entries(),u=f.next();!u.done;){var s=u.value,l=s[0],v=!!t||s[1];if(validType(v)){i||b(","),i=!1;var $=a+"/"+escapeJsonPointer(l);d(o),h($,"key"),b(quoted(l)),h($,"keyEnd"),b(":"),c&&b(" "),e(v,o,$)}u=f.next()}d(r),b("}")}else b("{}")}h(a,"valueEnd")}(e,0,""),{json:s,pointers:l}}function b(e){$+=e.length,p+=e.length,s+=e}function d(e){if(c){for(s+="\n"+k(e,c),v++,$=0;e--;)o?(v+=o,$=t):$+=t,p+=a;p+=1}}function h(e,n){l[e]=l[e]||{},l[e][n]={line:v,column:$,pos:p}}function k(e,n){return Array(e+1).join(n)}};var VALID_TYPES=["number","bigint","boolean","string","object"];function validType(e){return VALID_TYPES.indexOf(typeof e)>=0}var ESC_QUOTE=/"|\\/g,ESC_B=/[\b]/g,ESC_F=/\f/g,ESC_N=/\n/g,ESC_R=/\r/g,ESC_T=/\t/g;function quoted(e){return'"'+(e=e.replace(ESC_QUOTE,"\\$&").replace(ESC_F,"\\f").replace(ESC_B,"\\b").replace(ESC_N,"\\n").replace(ESC_R,"\\r").replace(ESC_T,"\\t"))+'"'}var ESC_0=/~/g,ESC_1=/\//g;function escapeJsonPointer(e){return e.replace(ESC_0,"~0").replace(ESC_1,"~1")}</script>
 </body>
 <script>
+
     const mainElement = document.querySelector("main");
     const table = document.querySelector("table");
     const backBtn = document.querySelector("button#back");
@@ -1277,7 +1295,8 @@
     const bulkGenerateBtn = document.querySelector("button#bulk-generate");
     const bulkTestBtn = document.querySelector("button#bulk-test");
     const chevronDownIcon = document.querySelector("svg.chevron");
-
+    let setDecorationsEffect;
+    let decorationsField;
     let savedEditorResponse = null;
     let scrollYPosition = 0;
     let selectedTableRow = null;
@@ -1774,6 +1793,7 @@
         return docFragment;
     }
 
+
     function createExampleSummary(example) {
         const exampleDiv = document.createElement("div");
         const exampleName = document.createElement("p");
@@ -1849,43 +1869,82 @@
         detailsFragment.appendChild(detailsDropdown);
         detailsFragment.appendChild(detailsPre);
 
-    console.log(window.EditorView);
-    console.log(window.EditorState);
-    console.log(window.basicSetup);
-    console.log(window.javascript);
-    console.log(window.autocompletion);
-    console.log(window.lintGutter);
-    console.log(window.lineNumbers);
-    console.log(window.oneDark);
+ setDecorationsEffect = window.StateEffect.define();
+   decorationsField = window.StateField.define({
+    create() {
+        return window.Decoration.none;
+    },
+    update(decorations, transaction) {
+        for (let effect of transaction.effects) {
+            if (effect.is(setDecorationsEffect)) {
+                return effect.value;
+            }
+        }
+        return decorations;
+    },
+    provide: field => window.EditorView.decorations.from(field)
+});
+ const lineDecorationHoverTooltip = hoverTooltip((view, pos, side) => {
+  const decoSet = view.state.field(decorationsField);
 
+  // Loop through each decoration in the set
+  for (let deco of decoSet) {
+    // Check if the position is within the range of the decoration
+    if (deco.from <= pos && pos <= deco.to) {
+      const message = deco.spec.attributes["data-validation-error-message"];
+      if (message) {
+        return {
+          pos,
+          above: true,
+          create(view) {
+            const dom = document.createElement("div");
+            dom.className = "custom-tooltip";
+            dom.textContent = message;
+            return { dom };
+          }
+        };
+      }
+    }
+  }
 
+  return null;
+});
     const editor = new window.EditorView({
     state: window.EditorState.create({
-      doc: '{"hello":"hello"}',
+      doc: example.exampleJson,
       extensions: [
         window.basicSetup,
-        window.javascript(),
-        window.autocompletion(),
-        window.lintGutter(),
-        window.lineNumbers(),
-        window.oneDark
-      ],
-    }),
-    parent: examplePrevDiv
+        window.autocompletion,
+        window.json,
+        window.linter,
+        window.lintGutter,
+        window.lineNumbers,
+        window.oneDark,
+        decorationsField,
+        lineDecorationHoverTooltip,
+        window.EditorView.updateListener.of((update) => {
+        if (update.docChanged) {
+          isSaved = false;
+          const editorElement = editor.dom;
+          updateBorderColorExampleBlock(editorElement, examplePreDiv);
+          savedEditorResponse = update.state.doc.toString();
+        }
+      })
+    ],
+  }),
+    parent: examplePreDiv
   });
+
+
         if (example.errorList) {
             if (Array.isArray(example.errorList) && example.errorList.every(item => typeof item === 'object')) {
+                if(example.errorList.length >0)
                 highlightErrorLines(editor, example.errorList, example.exampleJson);
             } else {
                 createAlert("Example Validation Failed", example.errorMessage, true);
             }
         }
 
-        editor.on("change", (instance, changes) => {
-            isSaved = false;
-            updateBorderColorExampleBlock(editor, examplePreDiv);
-            savedEditorResponse = editor.getValue();
-        });
 
         if (example.test) {
             const testPara = document.createElement("p");
@@ -1942,46 +2001,50 @@
     }
 
 
-    function updateBorderColorExampleBlock(editor, examplePreDiv) {
-        try {
-            JSON.parse(editor.getValue());
-            editor.getWrapperElement().style.borderWidth = "2px";
-            editor.getWrapperElement().style.borderStyle = "solid";
-            editor.getWrapperElement().style.borderColor = "green";
+   function updateBorderColorExampleBlock(editorElement, examplePreDiv) {
+    try {
+        JSON.parse(editorElement.state.doc.toString());
+        editorElement.style.borderWidth = "2px";
+        editorElement.style.borderStyle = "solid";
+        editorElement.style.borderColor = "green";
+    } catch (e) {
+        editorElement.style.borderWidth = "2px";
+        editorElement.style.borderStyle = "solid";
+        editorElement.style.borderColor = "red";
+    }
+}
 
-        } catch (e) {
-            editor.getWrapperElement().style.borderWidth = "2px";
-            editor.getWrapperElement().style.borderStyle = "solid";
-            editor.getWrapperElement().style.borderColor = "red";
 
+   function highlightErrorLines(editor, metadata, exampleJson) {
+    const { data, pointers } = jsonMapParser(exampleJson);
+    let decorations = [];
+
+    metadata.forEach(meta => {
+        var location = findObjectByPath(pointers, meta.jsonPath);
+        if (location == null) {
+            meta.jsonPath = meta.jsonPath.substring(0, meta.jsonPath.lastIndexOf('/'));
+            location = findObjectByPath(pointers, meta.jsonPath);
         }
-    }
+        const lineNumber = location.key ? location.key.line : (location.value ? location.value.line : null);
 
-    function highlightErrorLines(editor, metadata, exampleJson) {
-        const { data, pointers } = jsonMapParser(exampleJson);
-        metadata.forEach(meta => {
-            var location = findObjectByPath(pointers, meta.jsonPath);
-            if (location == null) {
-                meta.jsonPath = meta.jsonPath.substring(0, meta.jsonPath.lastIndexOf('/'));
-                location = findObjectByPath(pointers, meta.jsonPath);
-            }
-            const lineNumber = location.key ? location.key.line : (location.value ? location.value.line : null);
-            const lineLength = editor.getLine(lineNumber).length;
-            editor.markText(
-                { line: lineNumber, ch: 0 },
-                { line: lineNumber, ch: lineLength },
-                {
-                    className: "CodeMirror-lint-mark-error",
-                    attributes: {
-                        "data-validation-error-message": meta.description
-                    },
+        if (lineNumber !== null) {
+            const lineLength = editor.state.doc.line(lineNumber + 1)
+            decorations.push(
+            window.Decoration.line({
+                class: "CodeMirror-lint-mark-error",
+                attributes: { "data-validation-error-message": meta.description
                 }
+            }).range(lineLength.from)
             );
+        }
+    });
+   const decorationSet = window.Decoration.set(decorations);
+    const transaction = editor.state.update({
+        effects: setDecorationsEffect.of(decorationSet)
+    });
 
-            editor.setGutterMarker(lineNumber, "CodeMirror-lint-markers", createErrorMarker(meta.description));
-        });
-    }
-
+    editor.dispatch(transaction);
+}
     function findObjectByPath(pointers, patch) {
         for (const path in pointers) {
             if (path === patch) {
@@ -1990,6 +2053,7 @@
         }
         return null;
     }
+
 
     function createErrorMarker() {
         const marker = document.createElement("div");
@@ -2038,6 +2102,7 @@
 
         testDetails[key][exampleData] = data;
     }
+
 
     function getExampleTestData(tableRow) {
         const key = tableRow.getAttribute("data-key");

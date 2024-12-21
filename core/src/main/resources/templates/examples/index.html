@@ -1921,7 +1921,36 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
         window.lineNumbers,
         window.oneDark,
         decorationsField,
-        lineDecorationHoverTooltip,
+        window.EditorView.lineWrapping,
+        window.hoverTooltip((view, pos) => {
+        const line = view.state.doc.lineAt(pos);
+        if (line.text.includes("id")) {
+         console.log("Hi");
+          return {
+            pos: pos,
+            above: true, // Position the tooltip above the line
+            create: () => {
+
+                const tooltip = document.createElement("div");
+                tooltip.textContent = "This is an error message!";
+                tooltip.style.className = "custom-tooltip";
+                tooltip.style.backgroundColor = "white";
+                 tooltip.style.color = "black";
+                tooltip.style.borderRadius = "3px";
+                tooltip.style.fontSize = "40px";
+                tooltip.style.pointerEvents = "none"; // Ensure it doesn't block interaction
+
+                tooltip.style.width = "500px"; // Ensure the tooltip has a minimum width
+            tooltip.style.height = "auto"; // Adjust height based on content
+            tooltip.style.position = "absolute"; // Position it correctly within the editor
+
+         return { dom: tooltip };
+         }
+        };
+        }
+         console.log("Hello");
+        return null;
+      }),
         window.EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           isSaved = false;

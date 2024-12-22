@@ -1913,6 +1913,8 @@
    function highlightErrorLines(editor, metadata, exampleJson) {
     const { data, pointers } = jsonMapParser(exampleJson);
     let decorations = [];
+    const existingMarkers = new Map();
+    const errorLines = [];
 
     metadata.forEach(meta => {
         var location = findObjectByPath(pointers, meta.jsonPath);
@@ -1924,6 +1926,12 @@
 
         if (lineNumber !== null) {
             const lineLength = editor.state.doc.line(lineNumber + 1)
+            if (!existingMarkers.has(lineNumber)) {
+            existingMarkers.set(lineNumber, []);
+            errorLines.push(lineNumber);
+            }
+            existingMarkers.get(lineNumber).push(meta.description);
+            const combinedDescriptions = existingMarkers.get(lineNumber).join('\n\n');
             const className = meta.isPartial
                 ? "cm-lint-mark-warning CodeMirror-lint-mark-warning"
                 : "cm-lint-mark-error CodeMirror-lint-mark-error";
@@ -1931,15 +1939,20 @@
             decorations.push(
             window.Decoration.line({
                 class: className,
-                attributes: { "data-validation-error-message": meta.description
+                attributes: { "data-validation-error-message": combinedDescriptions
                 }
             }).range(lineLength.from)
             );
-            errorMetadata.push({
-                line: lineNumber+1,
-                message: meta.description,
-                isPartial: meta.isPartial
-            });
+             const existingError = errorMetadata.find(err => err.line === lineNumber + 1);
+           if (existingError) {
+                existingError.message = combinedDescriptions;
+            } else {
+                errorMetadata.push({
+                    line: lineNumber + 1,
+                    message: combinedDescriptions,
+                    isPartial: meta.isPartial
+                });
+            }
         }
     });
    const decorationSet = window.Decoration.set(decorations);

@@ -175,14 +175,14 @@ class ExamplesInteractiveServer(
                         val contractFile = getContractFile()
                         val validationResultResponse = try {
                             val result = validateExample(contractFile, File(request.exampleFile))
-                            if(result.isSuccess())
-                                ValidateExampleResponse(request.exampleFile)
-                            else {
-                                ValidateExampleResponse(
-                                    absPath = request.exampleFile, errorMessage = result.reportString(),
-                                    errorList = ExampleValidationErrorMessage(result.reportString()).jsonPathToErrorDescriptionMapping(),
-                                    isPartialFailure = result.isPartialFailure()
+                            if(result is Result.Failure)
+                                ValidateExampleResponseMap(
+                                    request.exampleFile,
+                                    ExampleValidationErrorMessage(result.toMatchFailureDetailList()).jsonPathToErrorDescriptionMapping(),
+                                    result.isPartialFailure()
                                 )
+                            else {
+                                ValidateExampleResponse(request.exampleFile)
                             }
                         } catch (e: FileNotFoundException) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
@@ -193,9 +193,10 @@ class ExamplesInteractiveServer(
                         }
                         call.respond(HttpStatusCode.OK, validationResultResponse)
                     } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("errorMessage" to exceptionCauseMessage(e)))
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
+
 
                 get("/_specmatic/examples/content") {
                     val fileName = call.request.queryParameters["fileName"]
@@ -298,15 +299,14 @@ class ExamplesInteractiveServer(
         )
     }
 
-    private fun List<TableRow>.transform(): Map<String, Map<String, Map<String, Any?>>> {
+    private fun List<TableRow>.transform(): Map<String, Map<String, List<Map<String, Any>>>> {
         return this.groupBy { it.uniqueKey }.mapValues { (_, keyGroup) ->
             keyGroup.associateBy(
                 { it.example ?: "null" },
                 {
-                    mapOf(
-                        "errorList" to ExampleValidationErrorMessage(it.exampleMismatchReason ?: "null").jsonPathToErrorDescriptionMapping(),
-                        "errorMessage" to it.exampleMismatchReason
-                    )
+                    ExampleValidationErrorMessage(
+                        failureDetails = it.failureDetails
+                    ).jsonPathToErrorDescriptionMapping()
                 }
             )
         }

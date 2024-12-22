@@ -1224,6 +1224,7 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
     let setDecorationsEffect;
     let decorationsField;
     let savedEditorResponse = null;
+    let originalEditorText = null;
     let scrollYPosition = 0;
     let selectedTableRow = null;
     let blockGenValidate = false;
@@ -1669,6 +1670,7 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
                 isPartialFailure: tableRow.getAttribute("data-valid") === "partial",
                 test: getExampleTestData(tableRow)
             }]);
+             originalEditorText = example;
         }
 
         bulkTestBtn.classList.toggle("bulk-disabled", tableRow.getAttribute("data-valid") !== "success")
@@ -1891,11 +1893,13 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
                 const errorMessage = await response.text();
                 createAlert("Failed to save example.", `Failed to save example to ${examplePath}: ${errorMessage}`, true);
                 console.error("Error saving example:", response.status);
+                savedEditorResponse = originalEditorText;
                 return false;
             }
         } catch (e) {
             console.error("Error during save request:", e);
             createAlert("Failed to save example.", `An error occurred while saving example to ${examplePath}: ${e.message}`, true);
+            savedEditorResponse = originalEditorText;
             return false;
         }
     }

@@ -198,8 +198,9 @@ sealed class Result {
                     breadCrumb.isNotEmpty() -> reason.copy(breadCrumbs = listOf(breadCrumb).plus(reason.breadCrumbs))
                     else -> reason
                 }
-            }
+            }.copy(isPartial = isPartial)
         }
+
 
         fun toMatchFailureDetailList(): List<MatchFailureDetails> {
             return causes.flatMap {
@@ -212,7 +213,7 @@ sealed class Result {
                     when {
                         breadCrumb.isNotEmpty() -> withReason.copy(breadCrumbs = listOf(breadCrumb).plus(withReason.breadCrumbs))
                         else -> withReason
-                    }
+                    }.copy(isPartial = isPartial)
                 }
             }
         }
@@ -341,7 +342,7 @@ enum class FailureReason(val fluffLevel: Int, val objectMatchOccurred: Boolean) 
     ScenarioMismatch(2, false)
 }
 
-data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null)
+data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null, val isPartial: Boolean = false)
 
 interface MismatchMessages {
     fun mismatchMessage(expected: String, actual: String): String

@@ -1843,10 +1843,7 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
 
        if (example.errorList && example.errorList.length >0) {
                 highlightErrorLines(editor, example.errorList, example.exampleJson);
-            } else {
-                createAlert("Example Validation Failed", example.errorMessage, true);
             }
-
 
 
         if (example.test) {

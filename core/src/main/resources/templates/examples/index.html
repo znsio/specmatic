@@ -1221,6 +1221,7 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
     const bulkGenerateBtn = document.querySelector("button#bulk-generate");
     const bulkTestBtn = document.querySelector("button#bulk-test");
     const chevronDownIcon = document.querySelector("svg.chevron");
+    const examplePreDiv = initializeEditor();
     let setDecorationsEffect;
     let decorationsField;
     let savedEditorResponse = null;
@@ -1231,6 +1232,21 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
     const dataValidationSuccessValues = ["success", "partial"]
     let isSaved = true;
     let errorMetadata = [];
+    setDecorationsEffect = window.StateEffect.define();
+    decorationsField = window.StateField.define({
+    create() {
+        return window.Decoration.none;
+    },
+    update(decorations, transaction) {
+        for (let effect of transaction.effects) {
+            if (effect.is(setDecorationsEffect)) {
+                return effect.value;
+            }
+        }
+        return decorations;
+    },
+    provide: field => window.EditorView.decorations.from(field)
+    });
 
     examplesOl.addEventListener("click", (event) => {
         const target = event.target;
@@ -1788,62 +1804,10 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
             detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
         }
 
-        const examplePreDiv = document.createElement("div");
         const detailsFragment = document.createDocumentFragment();
-
-        examplePreDiv.setAttribute("id", "example-pre");
-        examplePreDiv.classList.add("language-json");
         detailsFragment.appendChild(detailsDropdown);
         detailsFragment.appendChild(detailsPre);
 
- setDecorationsEffect = window.StateEffect.define();
-   decorationsField = window.StateField.define({
-    create() {
-        return window.Decoration.none;
-    },
-    update(decorations, transaction) {
-        for (let effect of transaction.effects) {
-            if (effect.is(setDecorationsEffect)) {
-                return effect.value;
-            }
-        }
-        return decorations;
-    },
-    provide: field => window.EditorView.decorations.from(field)
-});
-
-    const editor = new window.EditorView({
-    state: window.EditorState.create({
-      doc: example.exampleJson,
-      extensions: [
-        window.basicSetup,
-        window.autocompletion,
-        window.json,
-        window.linter,
-        window.lintGutter,
-        window.lineNumbers,
-        window.oneDark,
-        decorationsField,
-        window.EditorView.updateListener.of((update) => {
-        if (update.docChanged) {
-          isSaved = false;
-          const editorElement = editor.dom;
-          updateBorderColorExampleBlock(editorElement, examplePreDiv);
-           if (example.errorList && example.errorList.length >0) {
-                highlightErrorLines(editor, example.errorList, example.exampleJson);
-                }
-          savedEditorResponse = update.state.doc.toString();
-        }
-      })
-    ],
-  }),
-    parent: examplePreDiv
-  });
-
-
-       if (example.errorList && example.errorList.length >0) {
-                highlightErrorLines(editor, example.errorList, example.exampleJson);
-            }
 
 
         if (example.test) {
@@ -1866,6 +1830,54 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
 
         return fragment;
     }
+function initializeEditor() {
+const examplePreDiv = document.createElement("div");
+    examplePreDiv.setAttribute("id", "example-pre");
+    examplePreDiv.classList.add("language-json");
+    return new window.EditorView({
+        state: window.EditorState.create({
+            doc: "",
+            extensions: [
+                window.basicSetup,
+                window.autocompletion,
+                window.json,
+                window.linter,
+                window.lintGutter,
+                window.lineNumbers,
+                window.oneDark,
+                decorationsField,
+                window.EditorView.updateListener.of((update) => {
+                    if (update.docChanged) {
+                        isSaved = false;
+                        const editorElement = editor.dom;
+                        updateBorderColorExampleBlock(editorElement, examplePreDiv);
+                        if (example.errorList && example.errorList.length > 0) {
+                            highlightErrorLines(editor, example.errorList, example.exampleJson);
+                        }
+                        savedEditorResponse = update.state.doc.toString();
+                    }
+                }),
+            ],
+        }),
+        parent: examplePreDiv,
+    });
+    return examplePreDiv;
+}
+function updateEditorContent(editor, newContent, errorList) {
+    const transaction = editor.state.update({
+        changes: {
+            from: 0,
+            to: editor.state.doc.length,
+            insert: newContent,
+        },
+    });
+    editor.dispatch(transaction);
+
+    if (errorList && errorList.length > 0) {
+        highlightErrorLines(editor, errorList, newContent);
+    }
+}
+
 
     async function saveExample(examplePath) {
         const editedText = savedEditorResponse;

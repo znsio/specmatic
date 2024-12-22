@@ -370,55 +370,18 @@
           display: none;
         }
 
-
-
-  .custom-tooltip {
-  position: absolute;
-  background-color: white;
-  color: black;
-  padding: 5px 10px;
-  border-radius: 4px;
-  font-size: 14px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
-  pointer-events: none;
-  margin-bottom: 5px;
-  border: 1px solid #ddd;
-  max-width: 300px;
-  word-break: break-word;
-}
-
         .CodeMirror-lint-mark-error {
             background-color: rgba(255, 0, 0, 0.2);
             overflow : hidden;
         }
 
-       .cm-lint-error {
-            background-color: red;
-            color: white;
-            font-size: 12px;
-            width: 20px;
-            height: 20px;
-            line-height: 20px;
-            text-align: center;
-            border-radius: 50%;
-            margin-left: -10px;
-            display: inline-block;
-            cursor: default;
-        }
-        .cm-lint-message {
-            color: red;
-            background-color: rgba(255, 0, 0, 0.2);
-            padding: 5px;
-            font-size: 12px;
-            border-radius: 3px;
-            margin-left: 30px; /* Move it a bit to the right of the gutter marker */
-            position: absolute;
-        }
          .CodeMirror-gutter-wrapper {
             position: relative;
         }
-
+    .cm-content {
+    font-size: 16px;
+    line-height: 1.5;
+}
     }
     </style>
     <style>
@@ -1224,7 +1187,7 @@
 <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/json-lint.js"></script>-->
 <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/autorefresh.min.js"></script>-->
 <script type="module">
-import { Decoration,EditorState, EditorView, StateEffect, StateField,autocompletion, basicSetup, hoverTooltip,javascript, json,jsonParseLinter, language, lineNumbers, lintGutter, linter,oneDark,tooltips } from './codemirror-bundle.esm.js'
+import { Decoration,EditorState, EditorView, StateEffect, StateField,autocompletion, basicSetup, hoverTooltip,javascript, json,jsonParseLinter, language, lineNumbers, lintGutter, linter,oneDark } from './codemirror-bundle.esm.js'
     window.EditorState = EditorState
     window.EditorView = EditorView
     window.basicSetup = basicSetup
@@ -1239,7 +1202,6 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
     window.Decoration = Decoration
     window.StateField = StateField
     window.StateEffect = StateEffect
-    window.tooltips = tooltips
     window.hoverTooltip = hoverTooltip
 
 </script>
@@ -1969,7 +1931,7 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
             const lineLength = editor.state.doc.line(lineNumber + 1)
             decorations.push(
             window.Decoration.line({
-                class: "CodeMirror-lint-mark-error",
+                class: "cm-lint-mark-error CodeMirror-lint-mark-error",
                 attributes: { "data-validation-error-message": meta.description
                 }
             }).range(lineLength.from)
@@ -2016,16 +1978,16 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
                     const tooltip = document.createElement("div");
                     tooltip.textContent = error.message;
                     tooltip.innerHTML = error.message.replace(/\n/g, "<br>");
-                    tooltip.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+                    tooltip.className = "cm-tooltip cm-tooltip-lint";
                     tooltip.style.color = "white";
-                    tooltip.style.padding = "5px";
+                    tooltip.style.padding = "15px";
                     tooltip.style.borderRadius = "3px";
                     tooltip.style.fontSize = "20px";
                     tooltip.style.pointerEvents = "none";
                     tooltip.style.display = "block";
-                    tooltip.style.width = "700px";
                      tooltip.style.zIndex = "1000";
                       tooltip.style.position = "fixed";
+                      tooltip.style.borderLeft = "4px solid red";
                        tooltip.style.top = `${lineCoords.top + window.scrollY - tooltip.offsetHeight - 120}px`; // Position above the line
                     tooltip.style.left = `${lineCoords.left + 20}px`;
                     return { dom: tooltip};

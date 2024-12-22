@@ -374,14 +374,17 @@
             background-color: rgba(255, 0, 0, 0.2);
             overflow : hidden;
         }
-
+          .CodeMirror-lint-mark-warning {
+            background-color:  rgba(255, 255, 0, 0.2);
+            overflow : hidden;
+        }
          .CodeMirror-gutter-wrapper {
             position: relative;
         }
     .cm-content {
     font-size: 16px;
     line-height: 1.5;
-}
+    }
     }
     </style>
     <style>
@@ -1929,9 +1932,13 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
 
         if (lineNumber !== null) {
             const lineLength = editor.state.doc.line(lineNumber + 1)
+            const className = meta.isPartial
+                ? "cm-lint-mark-warning CodeMirror-lint-mark-warning"
+                : "cm-lint-mark-error CodeMirror-lint-mark-error";
+
             decorations.push(
             window.Decoration.line({
-                class: "cm-lint-mark-error CodeMirror-lint-mark-error",
+                class: className,
                 attributes: { "data-validation-error-message": meta.description
                 }
             }).range(lineLength.from)
@@ -1939,6 +1946,7 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
             errorMetadata.push({
                 line: lineNumber+1,
                 message: meta.description,
+                isPartial: meta.isPartial
             });
         }
     });
@@ -1987,7 +1995,8 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
                     tooltip.style.display = "block";
                      tooltip.style.zIndex = "1000";
                       tooltip.style.position = "fixed";
-                      tooltip.style.borderLeft = "4px solid red";
+                      tooltip.style.borderLeft = error.isPartial ? "4px solid yellow"
+                        : "4px solid red";
                        tooltip.style.top = `${lineCoords.top + window.scrollY - tooltip.offsetHeight - 120}px`; // Position above the line
                     tooltip.style.left = `${lineCoords.left + 20}px`;
                     return { dom: tooltip};

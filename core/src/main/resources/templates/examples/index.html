@@ -1221,18 +1221,10 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
     const bulkGenerateBtn = document.querySelector("button#bulk-generate");
     const bulkTestBtn = document.querySelector("button#bulk-test");
     const chevronDownIcon = document.querySelector("svg.chevron");
-    const examplePreDiv = initializeEditor();
-    let setDecorationsEffect;
-    let decorationsField;
-    let savedEditorResponse = null;
-    let scrollYPosition = 0;
-    let selectedTableRow = null;
-    let blockGenValidate = false;
-    const defaultAttrs = { "data-generate": "not-generated", "data-valid": "not-validated", "data-test": "not-tested", "data-main": "false" }
-    const dataValidationSuccessValues = ["success", "partial"]
-    let isSaved = true;
-    let errorMetadata = [];
-    setDecorationsEffect = window.StateEffect.define();
+    let editor;
+     let examplePreDiv;
+    document.addEventListener("DOMContentLoaded", () => {
+     setDecorationsEffect = window.StateEffect.define();
     decorationsField = window.StateField.define({
     create() {
         return window.Decoration.none;
@@ -1247,6 +1239,19 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
     },
     provide: field => window.EditorView.decorations.from(field)
     });
+
+    examplePreDiv = initializeEditor();
+    });
+    let setDecorationsEffect;
+    let decorationsField;
+    let savedEditorResponse = null;
+    let scrollYPosition = 0;
+    let selectedTableRow = null;
+    let blockGenValidate = false;
+    const defaultAttrs = { "data-generate": "not-generated", "data-valid": "not-validated", "data-test": "not-tested", "data-main": "false" }
+    const dataValidationSuccessValues = ["success", "partial"]
+    let isSaved = true;
+    let errorMetadata = [];
 
     examplesOl.addEventListener("click", (event) => {
         const target = event.target;
@@ -1808,8 +1813,8 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
         detailsFragment.appendChild(detailsDropdown);
         detailsFragment.appendChild(detailsPre);
 
-
-
+        updateEditorContent(editor, example.exampleJson, example.errorList);
+         attachUpdateListener(editor, example,examplePreDiv);
         if (example.test) {
             const testPara = document.createElement("p");
             testPara.textContent = "Test Log: ";
@@ -1830,11 +1835,11 @@ import { Decoration,EditorState, EditorView, StateEffect, StateField,autocomplet
 
         return fragment;
     }
-function initializeEditor() {
+function initializeEditor(example) {
 const examplePreDiv = document.createElement("div");
     examplePreDiv.setAttribute("id", "example-pre");
     examplePreDiv.classList.add("language-json");
-    return new window.EditorView({
+    editor =  new window.EditorView({
         state: window.EditorState.create({
             doc: "",
             extensions: [
@@ -1845,18 +1850,7 @@ const examplePreDiv = document.createElement("div");
                 window.lintGutter,
                 window.lineNumbers,
                 window.oneDark,
-                decorationsField,
-                window.EditorView.updateListener.of((update) => {
-                    if (update.docChanged) {
-                        isSaved = false;
-                        const editorElement = editor.dom;
-                        updateBorderColorExampleBlock(editorElement, examplePreDiv);
-                        if (example.errorList && example.errorList.length > 0) {
-                            highlightErrorLines(editor, example.errorList, example.exampleJson);
-                        }
-                        savedEditorResponse = update.state.doc.toString();
-                    }
-                }),
+                decorationsField
             ],
         }),
         parent: examplePreDiv,
@@ -1982,6 +1976,29 @@ function updateEditorContent(editor, newContent, errorList) {
         }
         return null;
     }
+
+    function createUpdateListener(editor, example, examplePreDiv) {
+    return window.EditorView.updateListener.of((update) => {
+        if (update.docChanged) {
+            isSaved = false;
+            const editorElement = editor.dom;
+            updateBorderColorExampleBlock(editorElement, examplePreDiv);
+            if (example && example.errorList && example.errorList.length > 0) {
+                highlightErrorLines(editor, example.errorList, example.exampleJson);
+            }
+            savedEditorResponse = update.state.doc.toString();
+        }
+    });
+}
+function attachUpdateListener(editor, example, examplePreDiv) {
+    const updateListener = createUpdateListener(editor, example, examplePreDiv);
+    const transaction = editor.state.update({
+        effects: window.StateEffect.appendConfig.of([updateListener]),
+    });
+    editor.dispatch(transaction);
+}
+
+
    const createErrorTooltipExtension = (errorMetadata) => {
     return window.hoverTooltip((view, pos) => {
         const line = view.state.doc.lineAt(pos);

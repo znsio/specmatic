@@ -1915,6 +1915,7 @@
     let decorations = [];
     const existingMarkers = new Map();
     const errorLines = [];
+    errorMetadata= [];
 
     metadata.forEach(meta => {
         var location = findObjectByPath(pointers, meta.jsonPath);
@@ -1955,6 +1956,7 @@
             }
         }
     });
+    decorations.sort((a, b) => a.from - b.from);
    const decorationSet = window.Decoration.set(decorations);
     const transaction = editor.state.update({
         effects: setDecorationsEffect.of(decorationSet)

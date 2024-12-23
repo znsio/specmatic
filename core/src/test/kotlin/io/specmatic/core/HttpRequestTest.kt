@@ -39,16 +39,6 @@ internal class HttpRequestTest {
         assertThat(value.jsonObject.getValue("Data")).isEqualTo(StringValue("10"))
     }
 
-    @Test
-    fun `when serialised to json, the request should contain only single query parameter`() {
-        val queryParams = QueryParameters(
-            mapOf("key1" to "value1", "key2" to "value2")
-        )
-        val json = HttpRequest("POST", "/").copy(queryParams = queryParams).toJSON()
-        val value = json.jsonObject.getValue("query") as JSONObjectValue
-        assertThat(value.jsonObject.getValue("key1")).isEqualTo(StringValue("value1"))
-        assertThat(value.jsonObject.getValue("key2")).isEqualTo(StringValue("value2"))
-    }
 
     @Test
     fun `when serialised to json, the request should contain multiple query parameters`() {

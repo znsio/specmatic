@@ -21,7 +21,6 @@ data class ScenarioMetadataFilter(
         fun <T> filterUsing(
             items: Sequence<T>,
             scenarioMetadataFilter: ScenarioMetadataFilter,
-            scenarioMetadataExclusionFilter: ScenarioMetadataFilter,
             toScenarioMetadata: (T) -> ScenarioMetadata
         ): Sequence<T> {
             val returnItems = items.filter {

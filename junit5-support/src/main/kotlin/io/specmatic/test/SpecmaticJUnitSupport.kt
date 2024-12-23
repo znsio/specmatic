@@ -304,7 +304,7 @@ open class SpecmaticJUnitSupport {
                 filterNotName
             ) { it.testDescription() }
 
-            filterUsing(filteredTestsBasedOnName, scenarioMetadataFilter, scenarioMetadataExclusionFilter) {
+            filterUsing(filteredTestsBasedOnName, scenarioMetadataFilter) {
                 it.toScenarioMetadata()
             }
         } catch(e: ContractException) {
@@ -504,8 +504,7 @@ open class SpecmaticJUnitSupport {
         ) { it.testDescription() }
         val filteredScenarios = filterUsing(
             filteredScenariosBasedOnName,
-            scenarioMetadataFilter,
-            scenarioMetadataExclusionFilter
+            scenarioMetadataFilter
         ) { it.toScenarioMetadata() }
         val tests: Sequence<ContractTest> = feature
             .copy(scenarios = filteredScenarios.toList())

@@ -1,65 +1,21 @@
 package io.specmatic.core.filters
 
+import java.util.regex.Pattern
+
 data class ScenarioMetadataFilter(
-    val methods: Set<String> = emptySet(),
-    val paths: Set<String> = emptySet(),
-    val statusCodes: Set<String> = emptySet(),
-    val headers: Set<String> = emptySet(),
-    val queryParams: Set<String> = emptySet(),
-    val exampleNames: Set<String> = emptySet()
+    // Groups are created for || based condition, as they have lower precedence than AND.
+    val filterGroups: List<FilterGroup> = emptyList()
 ) {
-    fun isSatisfiedByAll(metadata: ScenarioMetadata): Boolean {
-        return methods.contains(metadata.method, false) &&
-                paths.contains(metadata.path, false) &&
-                isStatusCodeFilterSatisfied(metadata.statusCode, false) &&
-                exampleNames.contains(metadata.exampleName, false) &&
-                (headers.isEmpty() || metadata.header.any { headers.contains(it, false) }) &&
-                (queryParams.isEmpty() || metadata.query.any { queryParams.contains(it, false) })
-    }
-
-    fun isSatisfiedByAtLeastOne(metadata: ScenarioMetadata): Boolean {
-        return methods.contains(metadata.method, true) ||
-                paths.contains(metadata.path, true) ||
-                isStatusCodeFilterSatisfied(metadata.statusCode, true) ||
-                exampleNames.contains(metadata.exampleName, true) ||
-                (headers.isNotEmpty() && metadata.header.any { headers.contains(it, true) }) ||
-                (queryParams.isNotEmpty() && metadata.query.any { queryParams.contains(it, true) })
-    }
-
-    private fun Set<String>.contains(element: String, strict: Boolean): Boolean {
-        if(strict) return (this.isNotEmpty() && element in this)
-        return (this.isEmpty() || element in this)
-    }
-
-    private fun isStatusCodeFilterSatisfied(statusCode: Int, strict: Boolean): Boolean {
-        val hasMatchingStatusCode = statusCodes.any { statusCodePattern ->
-            when {
-                statusCodePattern.length == 3 && statusCodePattern.endsWith("xx") ->
-                    statusCode.toString().startsWith(statusCodePattern.first())
-                else ->
-                    statusCode.toString() == statusCodePattern
-            }
-        }
-        return if (strict) statusCodes.isNotEmpty() && hasMatchingStatusCode
-        else statusCodes.isEmpty() || hasMatchingStatusCode
+    fun isSatisfiedBy(metadata: ScenarioMetadata): Boolean {
+        if (filterGroups.isEmpty()) return true
+        return filterGroups.any { it.isSatisfiedBy(metadata) }
     }
 
     companion object {
-        private const val FILTER_SEPARATOR = ";"
-
         fun from(filter: String): ScenarioMetadataFilter {
-            if(filter.split(FILTER_SEPARATOR).isEmpty()) {
-                return ScenarioMetadataFilter()
-            }
-            val filters = filter.split(FILTER_SEPARATOR)
-            return ScenarioMetadataFilter(
-                methods = filters.getFiltersWithTag(ScenarioFilterTags.METHOD),
-                paths = filters.getFiltersWithTag(ScenarioFilterTags.PATH),
-                statusCodes = filters.getFiltersWithTag(ScenarioFilterTags.STATUS_CODE),
-                headers = filters.getFiltersWithTag(ScenarioFilterTags.HEADER),
-                queryParams = filters.getFiltersWithTag(ScenarioFilterTags.QUERY),
-                exampleNames = filters.getFiltersWithTag(ScenarioFilterTags.EXAMPLE_NAME)
-            )
+            if (filter.isEmpty()) return ScenarioMetadataFilter()
+            val parsedFilters = FilterParser.parse(filter)
+            return ScenarioMetadataFilter(filterGroups = parsedFilters)
         }
 
         fun <T> filterUsing(
@@ -68,25 +24,191 @@ data class ScenarioMetadataFilter(
             scenarioMetadataExclusionFilter: ScenarioMetadataFilter,
             toScenarioMetadata: (T) -> ScenarioMetadata
         ): Sequence<T> {
-            return items.filter {
-                scenarioMetadataFilter.isSatisfiedByAll(toScenarioMetadata(it))
-            }.filterNot {
-                scenarioMetadataExclusionFilter.isSatisfiedByAtLeastOne(toScenarioMetadata(it))
+            val returnItems = items.filter {
+                scenarioMetadataFilter.isSatisfiedBy(toScenarioMetadata(it))
+            }
+            return returnItems
+        }
+    }
+}
+
+// FilterGroup: Represents a group of filters combined || i.e. OR.
+data class FilterGroup(val filters: List<FilterExpression>, val isAndOperation: Boolean = true) {
+    fun isSatisfiedBy(metadata: ScenarioMetadata): Boolean {
+        val matches = filters.map { it.matches(metadata) }
+        return if (isAndOperation) matches.all { it } else matches.any { it }
+    }
+}
+
+sealed class FilterExpression {
+    abstract fun matches(metadata: ScenarioMetadata): Boolean
+
+    data class Equals(val key: String, val filterVal: String) : FilterExpression() {
+        override fun matches(metadata: ScenarioMetadata): Boolean {
+                val scenarioValue = getValue(metadata, key) ?: return false
+
+            return filterVal.split(",")
+                .asSequence()
+                .mapNotNull { it.trim().takeIf { it.isNotBlank() } }
+                .any { filterItem ->
+                    scenarioValue.any { scenario ->
+                        filterItem == scenario
+                    }
+                }
+        }
+    }
+
+    data class NotEquals(val key: String, val filterVal: String) : FilterExpression() {
+        override fun matches(metadata: ScenarioMetadata): Boolean {
+            val scenarioVal = getValue(metadata, key) ?: return false
+
+            return filterVal.split(",")
+                .asSequence()
+                .mapNotNull { it.trim().takeIf { it.isNotBlank() } }
+                .all { filterItem ->
+                    scenarioVal.none { scenario ->
+                        filterItem.uppercase() == scenario.uppercase()
+                    }
+                }
+        }
+    }
+
+    data class Regex(val key: String, val pattern: Pattern) : FilterExpression() {
+        override fun matches(metadata: ScenarioMetadata): Boolean {
+            val value = getValue(metadata, key) ?: return false
+
+            return value.any { item -> pattern.matcher(item).matches() }
+        }
+    }
+
+    data class NotRegex(val key: String, val pattern: Pattern) : FilterExpression() {
+        override fun matches(metadata: ScenarioMetadata): Boolean {
+            val value = getValue(metadata, key) ?: return false
+
+            return value
+                .asSequence()
+                .none { item ->
+                    pattern.matcher(item).matches()
+                }
+        }
+    }
+
+    data class Range(val key: String, val start: Int, val end: Int) : FilterExpression() {
+        override fun matches(metadata: ScenarioMetadata): Boolean {
+            val values = getValue(metadata, key) ?: return false
+            val parsedValues = values.mapNotNull { it.toIntOrNull() }
+            if (parsedValues.isEmpty()) return false
+
+            return parsedValues
+                .asSequence()
+                .any { value ->
+                    value in start..end
+                }
+        }
+    }
+
+    data class NotRange(val key: String, val start: Int, val end: Int) : FilterExpression() {
+        override fun matches(metadata: ScenarioMetadata): Boolean {
+            val values = getValue(metadata, key) ?: return false
+            val parsedValues = values.mapNotNull { it.toIntOrNull() }
+            if (parsedValues.isEmpty()) return false
+
+            return parsedValues
+                .asSequence()
+                .none { value ->
+                    value in start..end
+                }
+        }
+    }
+
+    companion object {
+        private fun getValue(metadata: ScenarioMetadata, key: String): List<String>? {
+            return when (ScenarioFilterTags.from(key)) {
+                ScenarioFilterTags.METHOD -> listOf( metadata.method )
+                ScenarioFilterTags.PATH -> listOf( metadata.path )
+                ScenarioFilterTags.STATUS_CODE -> listOf( metadata.statusCode.toString() )
+                ScenarioFilterTags.HEADER -> metadata.header.toList()
+                ScenarioFilterTags.QUERY -> metadata.query.toList()
+                ScenarioFilterTags.EXAMPLE_NAME  -> listOf( metadata.exampleName )
+                else -> null
             }
         }
+    }
+}
 
-        private fun List<String>.getFiltersWithTag(tag: ScenarioFilterTags): Set<String> {
-            return this.asSequence().map {
-                it.trim().split("=")
-            }.filter { it.size == 2 }.filter {
-                val key = it[0]
-                key == tag.key
-            }.flatMap {
-                val values = it[1]
-                values.trim().split(",").map { value ->
-                    value.trim()
+
+object FilterParser {
+
+    fun parse(filter: String): List<FilterGroup> {
+        if (filter.isBlank()) return emptyList()
+
+        // Normalize operators
+        val normalizedFilter = normalizeFilter(filter)
+
+        // Check if the filter contains "||". If not, treat the entire filter as a single && group.
+        if (!normalizedFilter.contains("||")) {
+            val andFilters = normalizedFilter.split("&&").mapNotNull { it.trim().takeIf { it.isNotBlank() } }
+            val filterExpressions = andFilters.map { parseCondition(it) }
+            return listOf(FilterGroup(filters = filterExpressions, isAndOperation = true))
+        }
+
+        // Handle filters with "||" groups
+        return normalizedFilter.split("||")
+            .mapNotNull { it.trim().takeIf { it.isNotBlank() } }
+            .map { orGroup ->
+                val andFilters = orGroup.split("&&").mapNotNull { it.trim().takeIf { it.isNotBlank() } }
+                val filterExpressions = andFilters.map { parseCondition(it) }
+                FilterGroup(filters = filterExpressions, isAndOperation = andFilters.size > 1)
+            }
+    }
+
+    /**
+     * Support AND, &&, OR, ||, for conditions
+     * And =, == for comparisons
+     */
+    private fun normalizeFilter(filter: String): String {
+        return filter.replace(Regex("\\bAND\\b|\\bOR\\b|=="), { matchResult ->
+            when (matchResult.value) {
+                "AND" -> "&&"
+                "OR" -> "||"
+                "==" -> "="
+                else -> matchResult.value
+            }
+        })
+    }
+
+    private fun parseCondition(condition: String): FilterExpression {
+        val operatorIndex = condition.indexOf("!=").takeIf { it != -1 }
+            ?: condition.indexOf("=").takeIf { it != -1 }
+            ?: throw IllegalArgumentException("Invalid condition format: $condition. No valid operator found.")
+
+        val operator = if (condition.substring(operatorIndex, operatorIndex + 2) == "!=") "!=" else "="
+        val key = condition.substring(0, operatorIndex).trim()
+        val value = condition.substring(operatorIndex + operator.length).trim()
+
+        return when (operator) {
+            "=", "!=" -> {
+                when {
+                    value.contains("*") || value.contains("?") -> {
+                        val pattern = Pattern.compile(value.replace("*", ".*").replace("?", "."))
+                        if (operator == "=")
+                            FilterExpression.Regex(key, pattern)
+                        else
+                            FilterExpression.NotRegex(key, pattern)
+                    }
+                    key == "STATUS" && value.contains("xx") -> {
+                        val rangeStart = value[0].digitToInt() * 100
+                        val rangeEnd = rangeStart + 99
+                        if (operator == "=")
+                            FilterExpression.Range(key, rangeStart, rangeEnd)
+                        else
+                            FilterExpression.NotRange(key, rangeStart, rangeEnd)
+                    }
+                    operator == "=" -> FilterExpression.Equals(key, value)
+                    else -> FilterExpression.NotEquals(key, value)
                 }
-            }.toSet()
+            }
+            else -> throw IllegalArgumentException("Unsupported operator: $operator")
         }
     }
 }

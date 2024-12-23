@@ -1670,7 +1670,7 @@ data class Feature(
 
         val files = testsDirectory.walk().filterNot { it.isDirectory }.filter {
             it.extension == "json"
-        }.toList()
+        }.toList().sortedBy { it.name }
 
         if (files.isEmpty()) return emptyMap()
 

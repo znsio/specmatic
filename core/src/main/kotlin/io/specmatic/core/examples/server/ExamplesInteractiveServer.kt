@@ -4,6 +4,7 @@ import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
+import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
@@ -106,6 +107,9 @@ class ExamplesInteractiveServer(
             configureHealthCheckModule()
 
             routing {
+                static("/_specmatic") {
+                    resources("static")
+                }
                 get("/_specmatic/examples") {
                     val contractFile = getContractFileOrBadRequest(call) ?: return@get
                     try {

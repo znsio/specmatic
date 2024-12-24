@@ -26,12 +26,11 @@ class StubLoaderEngine {
         }
 
         val specmaticConfig = loadSpecmaticConfigOrDefault(specmaticConfigPath ?: getConfigFilePath())
+        val allDataDirs = dataDirs.plus(specmaticConfig.examples).distinctBy { File(it).canonicalPath }
 
-        return when {
-            dataDirs.isNotEmpty() -> {
-                loadContractStubsFromFiles(contractPathDataList, dataDirs, specmaticConfig, strictMode)
-            }
-            else -> loadContractStubsFromImplicitPaths(contractPathDataList, specmaticConfig)
-        }
+        val explicitStubs = loadContractStubsFromFiles(contractPathDataList, allDataDirs, specmaticConfig, strictMode)
+        val implicitStubs = loadContractStubsFromImplicitPaths(contractPathDataList, specmaticConfig)
+
+        return explicitStubs.plus(implicitStubs)
     }
 }

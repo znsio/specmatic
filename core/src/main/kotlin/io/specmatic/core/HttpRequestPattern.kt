@@ -372,19 +372,14 @@ data class HttpRequestPattern(
                 when (pattern) {
                     is QueryParameterArrayPattern -> {
                         val queryParameterValuePatterns = values.map { value ->
-                            encompassedType(value, key, pattern.pattern.first(), resolver)
+                            encompassedType(value, key, pattern, resolver)
                         }
                         key to QueryParameterArrayPattern(queryParameterValuePatterns, key)
                     }
 
                     is QueryParameterScalarPattern -> {
                         key to QueryParameterScalarPattern(
-                            encompassedType(
-                                values.single(),
-                                key,
-                                pattern.pattern,
-                                resolver
-                            )
+                            encompassedType(values.single(), key, pattern, resolver)
                         )
                     }
 

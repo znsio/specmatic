@@ -123,7 +123,7 @@ data class QueryParameterArrayPattern(override val pattern: List<Pattern>, val p
         typeStack: TypeStack
     ): Result {
         if(otherPattern !is QueryParameterArrayPattern)
-            return Failure(thisResolver.mismatchMessages.mismatchMessage(this.typeName, otherPattern.typeName))
+            return this.pattern.first().encompasses(otherPattern, thisResolver, otherResolver, typeStack)
 
         return this.pattern.first().encompasses(otherPattern.pattern.first(), thisResolver, otherResolver, typeStack)
     }
@@ -139,6 +139,8 @@ data class QueryParameterArrayPattern(override val pattern: List<Pattern>, val p
         get() = "(queryParameterArray/${pattern.first().typeName})"
 
     override fun parseToType(valueString: String, resolver: Resolver): Pattern {
-        return pattern.first().parse(valueString, resolver).exactMatchElseType()
+        return runCatching {
+            pattern.first().parse(valueString, resolver).exactMatchElseType()
+        }.getOrElse { ExactValuePattern(StringValue(valueString)) }
     }
 }

@@ -46,7 +46,7 @@ data class QueryParameterScalarPattern(override val pattern: Pattern): Pattern b
         typeStack: TypeStack
     ): Result {
         if(otherPattern !is QueryParameterScalarPattern)
-            return Result.Failure(thisResolver.mismatchMessages.mismatchMessage(this.typeName, otherPattern.typeName))
+            return this.pattern.encompasses(otherPattern, thisResolver, otherResolver, typeStack)
 
         return this.pattern.encompasses(otherPattern.pattern, thisResolver, otherResolver, typeStack)
     }
@@ -62,7 +62,9 @@ data class QueryParameterScalarPattern(override val pattern: Pattern): Pattern b
         get() = "(queryParameterScalar/${pattern.typeName})"
 
     override fun parseToType(valueString: String, resolver: Resolver): Pattern {
-        return pattern.parse(valueString, resolver).exactMatchElseType()
+        return runCatching {
+            pattern.parse(valueString, resolver).exactMatchElseType()
+        }.getOrElse { ExactValuePattern(StringValue(valueString)) }
     }
 
     override fun equals(other: Any?): Boolean {

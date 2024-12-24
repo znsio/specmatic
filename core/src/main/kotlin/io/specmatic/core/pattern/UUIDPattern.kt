@@ -39,10 +39,6 @@ object UUIDPattern : Pattern, ScalarType {
             StringValue(value)
         }
 
-    override fun parseToType(valueString: String, resolver: Resolver): Pattern {
-        return StringValue(valueString).exactMatchElseType()
-    }
-
     override fun encompasses(
         otherPattern: Pattern,
         thisResolver: Resolver,

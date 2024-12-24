@@ -712,6 +712,30 @@ internal class HttpRequestPatternTest {
         assertThat(testDescriptions.count { it.matches(Regex("^.*HEADER.*enum.*$")) }).isEqualTo(4)
     }
 
+    @Test
+    fun `should generate a stub request pattern from an http request in which the query params are invalid`() {
+        val requestType = HttpRequestPattern(
+            method = "GET",
+            httpPathPattern = HttpPathPattern(pathToPattern("/"), "/"),
+            httpQueryParamPattern = HttpQueryParamPattern(mapOf("id" to QueryParameterScalarPattern(UUIDPattern)))
+        )
+        val newRequestType = requestType.generate(HttpRequest(method = "GET", path = "/", queryParametersMap = mapOf("id" to "123")), Resolver())
+
+        assertThat(newRequestType.httpQueryParamPattern.queryPatterns.keys).containsExactly("id")
+    }
+
+    @Test
+    fun `should generate a stub request pattern from an http request in which the query params are invalid and type is array`() {
+        val requestType = HttpRequestPattern(
+            method = "GET",
+            httpPathPattern = HttpPathPattern(pathToPattern("/"), "/"),
+            httpQueryParamPattern = HttpQueryParamPattern(mapOf("date" to QueryParameterArrayPattern(parameterName = "date", pattern = listOf(DatePattern))))
+        )
+        val newRequestType = requestType.generate(HttpRequest(method = "GET", path = "/", queryParametersMap = mapOf("date" to "123")), Resolver())
+
+        assertThat(newRequestType.httpQueryParamPattern.queryPatterns.keys).containsExactly("date")
+    }
+
     @Nested
     inner class GenerateV2Tests {
         @Test

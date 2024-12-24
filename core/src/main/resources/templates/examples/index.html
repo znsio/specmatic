@@ -1179,9 +1179,26 @@
     const exampleDetails = /*[[${exampleDetails}]]*/ {};
     const testDetails = {};
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsonlint/1.6.0/jsonlint.min.js"></script>
 <script type="module">
-    import { Decoration,EditorState, EditorView, StateEffect, StateField,autocompletion, basicSetup, hoverTooltip,javascript, json,jsonParseLinter, language, lineNumbers, lintGutter, linter,oneDark } from './codemirror-bundle.esm.js'
+    const bundlePath = `${getHostPort()}/_specmatic/codemirror-bundle.esm.js`;
+    const {
+    Decoration,
+    EditorState,
+    EditorView,
+    StateEffect,
+    StateField,
+    autocompletion,
+    basicSetup,
+    hoverTooltip,
+    javascript,
+    json,
+    jsonParseLinter,
+    language,
+    lineNumbers,
+    lintGutter,
+    linter,
+    oneDark
+    } = await import(bundlePath);
         window.EditorState = EditorState
         window.EditorView = EditorView
         window.basicSetup = basicSetup

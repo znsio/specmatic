@@ -936,7 +936,7 @@ class OpenApiSpecification(
             } ?: mapOf(NO_SECURITY_SCHEMA_IN_SPECIFICATION to NoSecurityScheme())
 
         val securitySchemesForRequestPattern: Map<String, OpenAPISecurityScheme> =
-            (parsedOpenApi.security.orEmpty() + operation.security.orEmpty())
+            (operation.security ?: parsedOpenApi.security.orEmpty())
                 .flatMap { it.keys }
                 .toSet().associateWith {
                     val securityScheme = securitySchemes[it]

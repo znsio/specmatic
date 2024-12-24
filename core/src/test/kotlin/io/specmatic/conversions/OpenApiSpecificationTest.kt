@@ -9618,6 +9618,76 @@ paths:
         }
     }
 
+    @Test
+    fun `operations should inherit global security schemas when operation level security schemas are not defined`() {
+        val specContent = """
+        openapi: '3.0.3'
+        info:
+          title: Security API
+          version: '1.0'
+        paths:
+          /security:
+            get:
+              responses:
+                '200':
+                  description: OK
+          /no-security:
+            get:
+              security: []
+              responses:
+                '200':
+                  description: OK
+        components:
+          securitySchemes:
+            bearerAuth:
+              type: http
+              scheme: bearer
+        security:
+          - bearerAuth: []
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(specContent, "").toFeature()
+        val secureScenario = feature.scenarios.first { it.path == "/security" }
+
+        val securitySchemas = secureScenario.httpRequestPattern.securitySchemes
+        assertThat(securitySchemas).hasSize(1)
+        assertThat(securitySchemas.first()).isInstanceOf(BearerSecurityScheme::class.java)
+    }
+
+    @Test
+    fun `operation level security schemas should override global level security schemas`() {
+        val specContent = """
+        openapi: '3.0.3'
+        info:
+          title: Security API
+          version: '1.0'
+        paths:
+          /security:
+            get:
+              responses:
+                '200':
+                  description: OK
+          /no-security:
+            get:
+              security: []
+              responses:
+                '200':
+                  description: OK
+        components:
+          securitySchemes:
+            bearerAuth:
+              type: http
+              scheme: bearer
+        security:
+          - bearerAuth: []
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(specContent, "").toFeature()
+        val unSecureScenario = feature.scenarios.first { it.path == "/no-security" }
+
+        val securitySchemas = unSecureScenario.httpRequestPattern.securitySchemes
+        assertThat(securitySchemas).hasSize(1)
+        assertThat(securitySchemas.first()).isInstanceOf(NoSecurityScheme::class.java)
+    }
+
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {
         try {
             function()

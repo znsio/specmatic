@@ -62,3 +62,21 @@ jobs:
       with:
         name: Gradle application build Log on ${{ matrix.os }}
         path: application/build/reports/
+
+    - name: Download release asset from example-inline-editor-module
+      uses: ncipollo/release-action@v1
+      with:
+        repository: znsio/example-inline-editor-module
+        asset_name: example-inline-editor-module-artifact.zip  # Adjust the name of the artifact
+        token: ${{ secrets.GITHUB_TOKEN }}
+        path: ./downloaded-artifact
+
+    - name: Unzip downloaded artifact
+      run: |
+        unzip ./downloaded-artifact/example-inline-editor-module-artifact.zip -d ./downloaded-artifact/  
+
+    - name: Upload unzipped artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: example-inline-editor-module-unzipped
+        path: ./downloaded-artifact/

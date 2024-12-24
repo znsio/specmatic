@@ -9,7 +9,8 @@ RUN apk update && \
 
 # Copy the Specmatic JAR file into the container
 COPY ./application/build/libs/specmatic.jar /usr/src/app/specmatic.jar
-
+COPY ./TMF621-Trouble_Ticket-v5.0.0.oas.yaml /usr/src/app/TMF621-Trouble_Ticket-v5.0.0.oas.yaml
 # Set the entrypoint to run the Specmatic JAR
 ENTRYPOINT ["java", "-jar", "/usr/src/app/specmatic.jar"]
+CMD ["examples", "interactive", "--contract-file=TMF621-Trouble_Ticket-v5.0.0.oas.yaml"]
 

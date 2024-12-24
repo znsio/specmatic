@@ -15,68 +15,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-
-    - name: Build with Gradle
+    - name: Fetch artifact from another repository
       run: |
-        ./gradlew clean
-        git clean -fd
-        ./gradlew build
-
-    - name: Fail if slf4j is found in the log
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        set +e
-        java -jar application/build/libs/specmatic.jar --version 2>&1 | grep -i slf4j
-        
-        if [ $? -eq 0 ]
-        then
-          exit 1
-        fi
-
-    - name: Upload core Gradle Log
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: Gradle core build Log on ${{ matrix.os }}
-        path: core/build/reports/
-
-    - name: Upload junit5-support Gradle Log
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: Gradle junit5-support build Log on ${{ matrix.os }}
-        path: junit5-support/build/reports/
-
-    - name: Upload application Gradle Log
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: Gradle application build Log on ${{ matrix.os }}
-        path: application/build/reports/
-
-    - name: Download release asset from example-inline-editor-module
-      uses: ncipollo/release-action@v1
-      with:
-        repository: znsio/example-inline-editor-module
-        asset_name: example-inline-editor-module-artifact.zip  # Adjust the name of the artifact
-        token: ${{ secrets.GITHUB_TOKEN }}
-        path: ./downloaded-artifact
-
-    - name: Unzip downloaded artifact
-      run: |
-        unzip ./downloaded-artifact/example-inline-editor-module-artifact.zip -d ./downloaded-artifact/  
-
-    - name: Upload unzipped artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: example-inline-editor-module-unzipped
-        path: ./downloaded-artifact/
+        curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+         -H "Accept: application/vnd.github.v3+json" \
+         https://api.github.com/repos/znsio/example-inline-editor-module/actions/artifacts \
+         | jq '.artifacts[0].archive_download_url' \
+         | xargs curl -L -o artifact.zip
+        unzip artifact.zip -d ./downloaded-artifact/

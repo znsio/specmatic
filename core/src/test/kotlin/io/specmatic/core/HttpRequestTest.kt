@@ -1,5 +1,6 @@
 package io.specmatic.core
 
+import com.fasterxml.jackson.annotation.JsonValue
 import io.specmatic.core.HttpRequest.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -42,7 +43,7 @@ internal class HttpRequestTest {
 
     @Test
     fun `when serialised to json, the request should contain multiple query parameters`() {
-        val queryParams = QueryParameters(listOf("key1" to "value1", "key1" to "value2", "key1" to "value3"))
+        val queryParams = QueryParameters(listOf("key1" to "value1", "key1" to "value2", "key1" to "value3", "key2" to "value1"))
         val json = HttpRequest("POST", "/").copy(queryParams = queryParams).toJSON()
         val value = json.jsonObject.getValue("query") as JSONObjectValue
         assertThat(value.jsonObject.getValue("key1")).isEqualTo(
@@ -53,6 +54,8 @@ internal class HttpRequestTest {
                     StringValue("value3")
                 )
             )
+        )
+        assertThat(value.jsonObject.getValue("key2")).isEqualTo(StringValue("value1")
         )
     }
 

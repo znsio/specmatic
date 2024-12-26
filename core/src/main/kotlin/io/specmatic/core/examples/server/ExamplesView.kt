@@ -2,10 +2,7 @@ package io.specmatic.core.examples.server
 
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.conversions.convertPathParameterStyle
-import io.specmatic.core.Feature
-import io.specmatic.core.Resolver
-import io.specmatic.core.Result
-import io.specmatic.core.Scenario
+import io.specmatic.core.*
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesFromDir
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExistingExampleFiles
 import io.specmatic.core.pattern.*
@@ -31,6 +28,11 @@ class ExamplesView {
                     contentType = scenario.httpRequestPattern.headersPattern.contentType,
                     exampleFile = example?.first,
                     exampleMismatchReason = example?.second?.reportString()?.takeIf { it.isNotBlank() },
+                    failureDetails = if (example?.second is Result.Failure) {
+                        (example.second as Result.Failure).toMatchFailureDetailList()
+                    } else {
+                        emptyList()
+                    },
                     isPartialFailure = example?.second?.isPartialFailure() ?: false,
                     isDiscriminatorBased = isScenarioMultiGen(scenario, scenario.resolver)
                 )
@@ -108,6 +110,7 @@ class ExamplesView {
                                     example = it.exampleFile?.absolutePath,
                                     exampleName = it.exampleFile?.nameWithoutExtension,
                                     exampleMismatchReason = it.exampleMismatchReason?.takeIf { reason -> reason.isNotBlank() },
+                                    failureDetails = it.failureDetails,
                                     isPartialFailure = it.isPartialFailure,
                                     isDiscriminatorBased = it.isDiscriminatorBased
                                 ).also { showPath = false; showMethod = false; showStatus = false }
@@ -163,6 +166,7 @@ class ExamplesView {
                         example = exampleFile?.canonicalPath,
                         exampleName = exampleFile?.nameWithoutExtension,
                         exampleMismatchReason = result?.reportString()?.takeIf { it.isNotBlank() },
+                        failureDetails = if (result is Result.Failure) result.toMatchFailureDetailList() else emptyList(),
                         isPartialFailure = result?.isPartialFailure() ?: false,
                         isDiscriminatorBased = false, isSchemaBased = true,
                         pathColSpan = if (isDiscriminator) 3 else 5,
@@ -189,7 +193,7 @@ data class TableRow(
     val example: String? = null,
     val exampleName: String? = null,
     val exampleMismatchReason: String? = null,
-    val failureDetails: String? = null,
+    val failureDetails : List<MatchFailureDetails> = emptyList(),
     val isPartialFailure: Boolean = false,
     val isGenerated: Boolean = exampleName != null,
     val isValid: Boolean = isGenerated && exampleMismatchReason == null,
@@ -224,7 +228,7 @@ data class Endpoint(
     val contentType: String? = null,
     val exampleFile: File? = null,
     val exampleMismatchReason: String? = null,
-    val failureDetails: String? = null,
+    val failureDetails : List<MatchFailureDetails> = emptyList(),
     val isPartialFailure: Boolean = false,
     val isDiscriminatorBased: Boolean
 )

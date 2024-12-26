@@ -12,15 +12,21 @@ private const val BREAD_CRUMB_HEADERS = "HEADERS"
 private const val HTTP_HEADERS = "headers"
 const val BREADCRUMB_QUERY_PARAMS = "QUERY-PARAMS"
 private const val HTTP_QUERY_PARAMS = "query"
+private const val IS_PARTIAL = "isPartial"
 
-data class ExampleValidationErrorMessage(val fullErrorMessageString: String) {
-    fun jsonPathToErrorDescriptionMapping(): List<Map<String, String>> {
+data class ExampleValidationErrorMessage(val fullErrorMessageString: String, val partialErrorList: List<Boolean>) {
+    fun jsonPathToErrorDescriptionMapping(): List<Map<String, Any>> {
         val jsonPaths = jsonPathsForAllErrors(fullErrorMessageString)
         val descriptions = extractDescriptions(fullErrorMessageString)
-        val map: List<Map<String, String>> = jsonPaths.zip(descriptions) { jsonPath, description ->
-            mapOf(JSON_PATH to jsonPath, DESCRIPTION to description)
-        }
-        return map
+        val maxSize = listOf(jsonPaths.size, descriptions.size, partialErrorList.size).minOrNull() ?: 0
+        return jsonPaths.take(maxSize).zip(descriptions.take(maxSize))
+            .zip(partialErrorList.take(maxSize)) { (jsonPath, description), isPartial ->
+                mapOf(
+                    JSON_PATH to jsonPath,
+                    DESCRIPTION to description,
+                    IS_PARTIAL to isPartial
+                )
+            }
     }
 
     private fun jsonPathsForAllErrors(errorMessage: String): List<String> {

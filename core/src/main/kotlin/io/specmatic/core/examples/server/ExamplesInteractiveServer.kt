@@ -175,14 +175,16 @@ class ExamplesInteractiveServer(
                         val contractFile = getContractFile()
                         val validationResultResponse = try {
                             val result = validateExample(contractFile, File(request.exampleFile))
-                            if(result.isSuccess())
-                                ValidateExampleResponse(request.exampleFile)
-                            else {
+                            if(result is Result.Failure) {
+                                val partialList = result.toMatchFailureDetailList().map { res -> res.isPartial }
                                 ValidateExampleResponse(
                                     absPath = request.exampleFile, errorMessage = result.reportString(),
-                                    errorList = ExampleValidationErrorMessage(result.reportString()).jsonPathToErrorDescriptionMapping(),
+                                    errorList = ExampleValidationErrorMessage(result.reportString(),partialList).jsonPathToErrorDescriptionMapping(),
                                     isPartialFailure = result.isPartialFailure()
                                 )
+                            }
+                            else {
+                                ValidateExampleResponse(request.exampleFile)
                             }
                         } catch (e: FileNotFoundException) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
@@ -303,8 +305,9 @@ class ExamplesInteractiveServer(
             keyGroup.associateBy(
                 { it.example ?: "null" },
                 {
+                    val partialList = it.failureDetails.map { failure -> failure.isPartial }
                     mapOf(
-                        "errorList" to ExampleValidationErrorMessage(it.exampleMismatchReason ?: "null").jsonPathToErrorDescriptionMapping(),
+                        "errorList" to ExampleValidationErrorMessage(it.exampleMismatchReason ?: "null",partialList).jsonPathToErrorDescriptionMapping(),
                         "errorMessage" to it.exampleMismatchReason
                     )
                 }

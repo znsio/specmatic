@@ -198,7 +198,7 @@ sealed class Result {
                     breadCrumb.isNotEmpty() -> reason.copy(breadCrumbs = listOf(breadCrumb).plus(reason.breadCrumbs))
                     else -> reason
                 }
-            }
+            }.copy(isPartial = isPartial)
         }
 
         fun toMatchFailureDetailList(): List<MatchFailureDetails> {
@@ -207,12 +207,12 @@ sealed class Result {
                     val withReason = when {
                         message.isNotEmpty() -> matchFailureDetails.copy(errorMessages = listOf(message).plus(matchFailureDetails.errorMessages))
                         else -> matchFailureDetails
-                    }
+                    }.copy(isPartial = isPartial)
 
                     when {
                         breadCrumb.isNotEmpty() -> withReason.copy(breadCrumbs = listOf(breadCrumb).plus(withReason.breadCrumbs))
                         else -> withReason
-                    }
+                    }.copy(isPartial = isPartial)
                 }
             }
         }

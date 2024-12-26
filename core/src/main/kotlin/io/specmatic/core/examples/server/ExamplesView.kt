@@ -189,6 +189,7 @@ data class TableRow(
     val example: String? = null,
     val exampleName: String? = null,
     val exampleMismatchReason: String? = null,
+    val failureDetails: String? = null,
     val isPartialFailure: Boolean = false,
     val isGenerated: Boolean = exampleName != null,
     val isValid: Boolean = isGenerated && exampleMismatchReason == null,
@@ -223,6 +224,7 @@ data class Endpoint(
     val contentType: String? = null,
     val exampleFile: File? = null,
     val exampleMismatchReason: String? = null,
+    val failureDetails: String? = null,
     val isPartialFailure: Boolean = false,
     val isDiscriminatorBased: Boolean
 )

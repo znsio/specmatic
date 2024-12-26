@@ -271,6 +271,34 @@ class ExampleProcessorTest {
             assertThat(factStore.keys).doesNotContain("ENTITY.name")
             assertThat(factStore.getValue("ENTITY")).isEqualTo(response.body)
         }
+
+        @Test
+        fun `should store the first value of response body array`() {
+            val request = HttpRequest(method = "GET")
+            val response = HttpResponse(
+                body = JSONArrayValue(
+                    listOf(
+                        JSONObjectValue(mapOf("price" to NumberValue(2000))),
+                        JSONObjectValue(mapOf("price" to NumberValue(1000)))
+                    )
+                )
+            )
+            val row = Row(
+                responseExampleForAssertion = HttpResponse(
+                    body = JSONArrayValue(listOf(
+                        JSONObjectValue(mapOf("\$store" to StringValue("replace")))
+                    ))
+                )
+            )
+            ExampleProcessor.store(row, request, response)
+
+            val responseBody = response.body as JSONArrayValue
+            val factStore = ExampleProcessor.getFactStore()
+            println(factStore.getValue("ENTITY"))
+            assertThat(factStore).isNotEmpty
+            assertThat(factStore.getValue("ENTITY")).isEqualTo(responseBody.list.first())
+            assertThat(factStore.getValue("ENTITY.price")).isEqualTo(NumberValue(2000))
+        }
     }
 
     @Test

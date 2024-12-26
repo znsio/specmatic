@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -40,9 +41,8 @@
         </tr>
         </thead>
         <tbody th:attr="data-test-mode=${isTestMode}">
-        <tr
-                th:each="row, iter : ${tableRows}"
-                th:attr="data-raw-path=${row.rawPath}, data-key=${row.uniqueKey}, data-schema-based=${row.isSchemaBased},
+        <tr th:each="row, iter : ${tableRows}"
+            th:attr="data-raw-path=${row.rawPath}, data-key=${row.uniqueKey}, data-schema-based=${row.isSchemaBased},
                         data-example=${row.example}, data-main=${row.isMainRow}, data-disc=${row.isDiscriminatorBased},
                         data-generate=${row.isGenerated ? 'success' : 'not-generated'}, data-test='not-tested',
                         data-valid=${row.isGenerated ? (row.isValid ? 'success' : row.isPartialFailure ? 'partial' : 'failed') : 'not-validated'}">
@@ -50,16 +50,19 @@
                 <input type="checkbox" name="path-row" class="path-row">
             </td>
             <td></td>
-            <td th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=${row.pathColSpan}">
+            <td th:class="${row.showPath ? '' : 'hidden'}"
+                th:attr="rowspan=${row.pathSpan}, colspan=${row.pathColSpan}">
                 <span>[[${row.path}]]</span>
             </td>
-            <td th:class="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodSpan}, colspan=${row.methodColSpan}">
+            <td th:class="${row.showMethod ? '' : 'hidden'}"
+                th:attr="rowspan=${row.methodSpan}, colspan=${row.methodColSpan}">
                 <p>[[${row.method}]]</p>
             </td>
-            <td class="response-cell" th:classappend="${row.showStatus ? '' : 'hidden'}" th:attr="rowspan=${row.statusSpan}">
+            <td class="response-cell" th:classappend="${row.showStatus ? '' : 'hidden'}"
+                th:attr="rowspan=${row.statusSpan}">
                 <p>[[${row.responseStatus}]]</p>
                 <span>[[${row.contentType}]]</span>
-                <br th:if="${row.contentType != null}"/>
+                <br th:if="${row.contentType != null}" />
                 <button class="multigen hidden" aria-label="Generate More"></button>
             </td>
             <td>
@@ -87,13 +90,14 @@
 </main>
 
 <div id="alert-container"></div>
-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="chevron">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+     class="chevron">
     <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 5.25 7.5 7.5 7.5-7.5m-15 6 7.5 7.5 7.5-7.5" />
 </svg>
 
 <script th:inline="javascript">
     const exampleDetails = /*[[${exampleDetails}]]*/ {};
-     let hostPort = /*[[${hostPort}]]*/ '';
+    let hostPort = /*[[${hostPort}]]*/ '';
     hostPort = hostPort.replace(/\/$/, '');
     const testDetails = {};
 </script>
@@ -101,41 +105,42 @@
 <script type="module">
     const bundlePath = `${hostPort}/_specmatic/codemirror-bundle.esm.js`;
     const {
-    Decoration,
-    EditorState,
-    EditorView,
-    StateEffect,
-    StateField,
-    autocompletion,
-    basicSetup,
-    hoverTooltip,
-    javascript,
-    json,
-    jsonParseLinter,
-    language,
-    lineNumbers,
-    lintGutter,
-    linter,
-    oneDark
+        Decoration,
+        EditorState,
+        EditorView,
+        StateEffect,
+        StateField,
+        autocompletion,
+        basicSetup,
+        hoverTooltip,
+        javascript,
+        json,
+        jsonParseLinter,
+        language,
+        lineNumbers,
+        lintGutter,
+        linter,
+        oneDark
     } = await import(bundlePath);
-        window.EditorState = EditorState
-        window.EditorView = EditorView
-        window.basicSetup = basicSetup
-        window.javascript = javascript()
-        window.autocompletion = autocompletion()
-        window.oneDark = oneDark
-        window.language = language
-        window.lineNumbers = lineNumbers()
-        window.lintGutter = lintGutter()
-        window.json = json()
-        window.linter = linter(jsonParseLinter())
-        window.Decoration = Decoration
-        window.StateField = StateField
-        window.StateEffect = StateEffect
-        window.hoverTooltip = hoverTooltip
+    window.EditorState = EditorState
+    window.EditorView = EditorView
+    window.basicSetup = basicSetup
+    window.javascript = javascript()
+    window.autocompletion = autocompletion()
+    window.oneDark = oneDark
+    window.language = language
+    window.lineNumbers = lineNumbers()
+    window.lintGutter = lintGutter()
+    window.json = json()
+    window.linter = linter(jsonParseLinter())
+    window.Decoration = Decoration
+    window.StateField = StateField
+    window.StateEffect = StateEffect
+    window.hoverTooltip = hoverTooltip
 
 </script>
 <script src="json-source-map.js"></script>
 </body>
 <script src="example-server.js"></script>
+
 </html>

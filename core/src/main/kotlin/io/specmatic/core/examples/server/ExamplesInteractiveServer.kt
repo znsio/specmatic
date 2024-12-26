@@ -177,6 +177,7 @@ class ExamplesInteractiveServer(
                             val result = validateExample(contractFile, File(request.exampleFile))
                             if(result is Result.Failure) {
                                 val partialList = result.toMatchFailureDetailList().map { res -> res.isPartial }
+                                val partialFailureList = validatePartialFailures(contractFile,File(request.exampleFile))
                                 ValidateExampleResponse(
                                     absPath = request.exampleFile, errorMessage = result.reportString(),
                                     errorList = ExampleValidationErrorMessage(result.reportString(),partialList).jsonPathToErrorDescriptionMapping(),
@@ -619,6 +620,20 @@ class ExamplesInteractiveServer(
 
         private fun validateExample(feature: Feature, example: ExampleFromFile): Result {
             return feature.matchResultFlagBased(example.request, example.response, InteractiveExamplesMismatchMessages).toResultIfAny()
+        }
+
+        private fun validatePartialFailures(contractFile: File, exampleFile: File): Any {
+            val feature = parseContractFileToFeature(contractFile)
+            val exampleFromFile = ExampleFromFile.fromFile(exampleFile).realise(
+                hasValue = { example, _ -> validatePartialFailures(feature, example) },
+                orFailure = { it.failure },
+                orException = { it.toHasFailure().failure }
+            )
+            return exampleFromFile
+        }
+
+        private fun validatePartialFailures(feature: Feature, exampleFromFile: ExampleFromFile): List<Result> {
+            return feature.matchResultFlagBased(exampleFromFile.request, exampleFromFile.response, InteractiveExamplesMismatchMessages).toResultPartialFailures()
         }
 
         private fun validateExample(feature: Feature, schemaExample: SchemaExample): Result {

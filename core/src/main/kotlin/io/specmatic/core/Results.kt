@@ -23,6 +23,11 @@ data class Results(val results: List<Result> = emptyList()) {
         return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { it.toReport().toText() }, isPartial = results.all { it.isPartialFailure() })
     }
 
+    fun toResultPartialFailures(): List<Result> {
+        return results.filter { it.isPartialFailure() }
+    }
+
+
     val failureCount
         get(): Int = results.count { it is Result.Failure }
 

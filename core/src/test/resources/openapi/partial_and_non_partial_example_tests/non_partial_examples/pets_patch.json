@@ -1,0 +1,25 @@
+{
+  "http-request": {
+    "path": "/pets/1",
+    "method": "PATCH",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "name": "Tom",
+      "tag": "cat"
+    }
+  },
+  "http-response": {
+    "status": 200,
+    "body": {
+      "id": "(number)",
+      "name": "(string)",
+      "tag": "(string)"
+    },
+    "status-text": "Created",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

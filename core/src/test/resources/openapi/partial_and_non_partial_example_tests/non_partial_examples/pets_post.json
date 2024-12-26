@@ -1,0 +1,23 @@
+{
+  "http-request": {
+    "path": "/pets",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "name": "Tom"
+    }
+  },
+  "http-response": {
+    "status": 201,
+    "body": {
+      "id": "(number)",
+      "name": "(string)"
+    },
+    "status-text": "Created",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

@@ -9,6 +9,7 @@ import io.specmatic.core.log.*
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
+import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.Value
@@ -531,6 +532,177 @@ class LoadTestsFromExternalisedFiles {
             val result = results.results.first {it.scenario!!.path == "/employeesAllOfResponse"}
             println(result.reportString())
             assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
+    @Nested
+    inner class NonPartial {
+        @BeforeEach
+        fun setup() { System.setProperty(EXAMPLE_DIRECTORIES, "src/test/resources/openapi/partial_and_non_partial_example_tests/non_partial_examples") }
+
+        @AfterEach
+        fun tearDown() { System.clearProperty(EXAMPLE_DIRECTORIES) }
+
+        @Test
+        fun `should complain when extra fields are received on object response`() {
+            val feature = OpenApiSpecification.fromFile(
+                "src/test/resources/openapi/partial_and_non_partial_example_tests/simple_pets.yaml"
+            ).toFeature().loadExternalisedExamples()
+            val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
+
+            val results = filteredFeature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+                    return HttpResponse(status = 201, body = parsedJSONObject("""
+                        {
+                            "id": 1,
+                            "name": "Tom",
+                            "tag": "cat"
+                        }
+                        """.trimIndent())
+                    )
+                }
+            }).results
+
+            println(results.joinToString("\n\n") { it.reportString() })
+            assertThat(results).withFailMessage("Expected 1 Failure, got ${results.size} Success")
+                .hasOnlyElementsOfTypes(Result.Failure::class.java).hasSize(1)
+            val failure = results.first() as Result.Failure
+            assertThat(failure.reportString()).containsIgnoringWhitespaces("""
+            >> RESPONSE.BODY.tag
+            Key named tag in the response was not in the specification
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should complain when extra fields are received on array response`() {
+            val feature = OpenApiSpecification.fromFile(
+                "src/test/resources/openapi/partial_and_non_partial_example_tests/simple_pets.yaml"
+            ).toFeature().loadExternalisedExamples()
+            val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "GET" })
+
+            val results = filteredFeature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+                    return HttpResponse(
+                        status = 200, body = JSONArrayValue(List(2) {
+                                parsedJSONObject("""
+                                {
+                                    "id": 1,
+                                    "name": "Tom",
+                                    "tag": "cat"
+                                }
+                                """.trimIndent())
+                            }
+                        )
+                    )
+                }
+
+            }).results
+
+            println(results.joinToString("\n\n") { it.reportString() })
+            assertThat(results).withFailMessage("Expected 1 Failure, got ${results.size} Success")
+                .hasOnlyElementsOfTypes(Result.Failure::class.java).hasSize(1)
+            val failure = results.first() as Result.Failure
+            assertThat(failure.reportString()).containsIgnoringWhitespaces("""
+            >> RESPONSE[0].BODY.tag
+            >> RESPONSE[1].BODY.tag
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should complain when mentioned fields in the example are not present in the response`() {
+            val feature = OpenApiSpecification.fromFile(
+                "src/test/resources/openapi/partial_and_non_partial_example_tests/simple_pets.yaml"
+            ).toFeature().loadExternalisedExamples()
+            val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "PATCH" })
+
+            val results = filteredFeature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+                    return HttpResponse(
+                        status = 200, body = parsedJSONObject("""
+                        {
+                            "id": 1,
+                            "name": "Tom"
+                        }
+                        """.trimIndent())
+                    )
+                }
+            }).results
+
+            println(results.joinToString("\n\n") { it.reportString() })
+            assertThat(results).withFailMessage("Expected 1 Failure, got ${results.size} Success")
+                .hasOnlyElementsOfTypes(Result.Failure::class.java).hasSize(1)
+            val failure = results.first() as Result.Failure
+            assertThat(failure.reportString()).containsIgnoringWhitespaces("""
+            >> RESPONSE.BODY.tag
+            """.trimIndent())
+        }
+    }
+
+    @Nested
+    inner class Partial {
+        @BeforeEach
+        fun setup() { System.setProperty(EXAMPLE_DIRECTORIES, "src/test/resources/openapi/partial_and_non_partial_example_tests/partial_examples") }
+
+        @AfterEach
+        fun tearDown() { System.clearProperty(EXAMPLE_DIRECTORIES) }
+
+        @Test
+        fun `should fill in the blanks in partial POST request`() {
+            val feature = OpenApiSpecification.fromFile(
+                "src/test/resources/openapi/partial_and_non_partial_example_tests/simple_pets.yaml"
+            ).toFeature().loadExternalisedExamples()
+            val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "POST" })
+
+            val results = filteredFeature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+                    return HttpResponse(
+                        status = 201, body = parsedJSONObject("""
+                        {
+                            "id": 1,
+                            "name": "Tom",
+                            "tag": "cat"
+                        }
+                        """.trimIndent())
+                    )
+                }
+            }).results
+
+            println(results.joinToString("\n\n") { it.reportString() })
+            assertThat(results).withFailMessage("Expected 1 Success, got ${results.size} Failures")
+                .hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(1)
+        }
+
+        @Test
+        fun `should not complain on additional spec valid fields in response`() {
+            val feature = OpenApiSpecification.fromFile(
+                "src/test/resources/openapi/partial_and_non_partial_example_tests/simple_pets.yaml"
+            ).toFeature().loadExternalisedExamples()
+            val filteredFeature = feature.copy(scenarios = feature.scenarios.filter { it.method == "GET" })
+
+            val results = filteredFeature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+                    return HttpResponse(
+                        status = 200, body = JSONArrayValue(List(2) {
+                            parsedJSONObject("""
+                            {
+                                "id": 1,
+                                "name": "Tom",
+                                "tag": "cat"
+                            }
+                            """.trimIndent())
+                        })
+                    )
+                }
+            }).results
+
+            println(results.joinToString("\n\n") { it.reportString() })
+            assertThat(results).withFailMessage("Expected 1 Success, got ${results.size} Failures")
+                .hasOnlyElementsOfTypes(Result.Success::class.java).hasSize(1)
         }
     }
 }

@@ -344,7 +344,7 @@ class ExampleProcessorTest {
     }
 
     @Test
-    fun `should throw if response body is not json value when store`() {
+    fun `should throw if response body is not json value and asked to store`() {
         val request = HttpRequest(body = NoBodyValue)
         val response = HttpResponse(body = NoBodyValue)
         val row = Row(
@@ -356,12 +356,12 @@ class ExampleProcessorTest {
         println(exception.report())
         assertThat(exception.report()).containsIgnoringWhitespaces("""
         >> test  
-        Could not REPLACE store http response body as "ENTITY" for "test"
+       Could not save http response body as "ENTITY" for example "test"
         """.trimIndent())
     }
 
     @Test
-    fun `should throw if response body array is empty when store`() {
+    fun `should throw if response body array is empty and asked to store`() {
         val request = HttpRequest(body = NoBodyValue)
         val response = HttpResponse(body = JSONArrayValue(emptyList()))
         val row = Row(
@@ -373,7 +373,7 @@ class ExampleProcessorTest {
         println(exception.report())
         assertThat(exception.report()).containsIgnoringWhitespaces("""
         >> test  
-        Could not MERGE store http response body as "ENTITY" for "test"
+        Could not merge http response body with "ENTITY" for example "test"
         """.trimIndent())
     }
 }

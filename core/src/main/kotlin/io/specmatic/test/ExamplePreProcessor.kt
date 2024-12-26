@@ -156,6 +156,15 @@ object ExampleProcessor {
         return JSONArrayValue(value.list.map { resolve(it, ifNotExists) })
     }
 
+    private fun toStoreErrorMessage(exampleRow: Row, type: StoreType): String {
+        val (storeType, storeGrammar) = when (type) {
+            StoreType.REPLACE -> "save" to "as"
+            StoreType.MERGE -> "merge" to "with"
+        }
+
+        return "Could not $storeType http response body $storeGrammar \"ENTITY\" for example ${exampleRow.name.quote()}"
+    }
+
     /* STORE HELPERS */
     fun store(exampleRow: Row, httpRequest: HttpRequest, httpResponse: HttpResponse) {
         if (httpRequest.method == "POST") {
@@ -166,7 +175,7 @@ object ExampleProcessor {
         val bodyToCheck = exampleRow.responseExampleForAssertion?.body
         bodyToCheck?.ifContainsStoreToken { type ->
             val valueToStore = httpResponse.body.getJsonObjectIfExists() ?:
-                throw ContractException(breadCrumb = exampleRow.name, errorMessage = "Could not ${type.name} store http response body as \"ENTITY\" for ${exampleRow.name.quote()}")
+                throw ContractException(breadCrumb = exampleRow.name, errorMessage = toStoreErrorMessage(exampleRow, type))
 
             runningEntity = when (type) {
                 StoreType.REPLACE -> valueToStore.toFactStore(prefix = "ENTITY")

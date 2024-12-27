@@ -2,6 +2,7 @@ package io.specmatic.test.asserts
 
 import io.specmatic.core.Result
 import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.ScalarValue
 import io.specmatic.core.value.Value
 
 interface Assert {
@@ -22,15 +23,23 @@ interface Assert {
 
     val prefix: String
     val key: String
+
+    companion object {
+        fun parse(prefix: String, key: String, value: Value): Assert? {
+            return when (key) {
+                "\$if" -> AssertConditional.parse(prefix, key, value)
+                else -> if (value is ScalarValue) { parseScalarValue(prefix, key, value) } else null
+            }
+        }
+
+        private fun parseScalarValue(prefix: String, key: String, value: Value): Assert? {
+            return AssertComparison.parse(prefix, key, value) ?: AssertArray.parse(prefix, key, value) ?: AssertPattern.parse(prefix, key, value)
+        }
+    }
 }
 
 fun parsedAssert(prefix: String, key: String, value: Value): Assert? {
-    return when (key) {
-        "\$if" -> AssertConditional.parse(prefix, key, value)
-        else -> {
-            return AssertComparison.parse(prefix, key, value) ?: AssertArray.parse(prefix, key, value) ?: AssertExistence.parse(prefix, key, value)
-        }
-    }
+    return Assert.parse(prefix, key, value)
 }
 
 fun <T> Value.suffixIfMoreThanOne(block: (suffix: String, suffixValue: Value) -> T): List<T> {

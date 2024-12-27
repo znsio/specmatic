@@ -107,7 +107,7 @@ class ExamplesInteractiveServer(
             configureHealthCheckModule()
 
             routing {
-                static("/_specmatic") {
+                static("/_specmatic/examples") {
                     resources("static")
                 }
                 get("/_specmatic/examples") {

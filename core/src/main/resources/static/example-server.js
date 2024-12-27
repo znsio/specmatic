@@ -601,6 +601,13 @@
     provide: field => window.EditorView.decorations.from(field)
 });
 
+    const editorFacet = window.EditorView.theme({
+      "&": {
+        fontSize: "16px",
+        lineHeight: "1.5",
+      },
+    });
+
     const editor = new window.EditorView({
     state: window.EditorState.create({
       doc: example.exampleJson,
@@ -613,6 +620,7 @@
         window.lineNumbers,
         window.oneDark,
         decorationsField,
+        editorFacet,
         window.EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           isSaved = false;

@@ -407,7 +407,36 @@
         }
 
     }
+    [data-validation-error-message] {
+      position: relative;
+      display: inline-block;
+    }
 
+    .CodeMirror pre.CodeMirror-line[role="presentation"] {
+        position: initial;
+    }
+
+    [data-validation-error-message]:hover::before {
+      content: attr(data-validation-error-message);
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: white;
+      color: black;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 20px;
+      white-space: pre-wrap;
+      z-index: 1000;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      pointer-events: none;
+      margin-bottom: 5px;
+      border: 1px solid #ddd;
+      min-width: max-content;
+      width: auto;
+      max-width: 400px;
+      word-break: normal;
+    }
     </style>
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
@@ -449,6 +478,10 @@
 
         body {
             font-family: var(--roboto);
+
+            & > .chevron {
+                display: none;
+            }
         }
 
         main {
@@ -457,6 +490,12 @@
             overflow: hidden;
             flex: 1;
             background-color: rgba(var(--alice-blue));
+        }
+
+        .chevron {
+            width: 1.5rem;
+            height: 1.5rem;
+            animation: bounce 2s infinite;
         }
 
         /* HEADER STYLES */
@@ -517,7 +556,7 @@
                     --_content: "Validate Selected";
 
                     &[data-panel="details"] {
-                        --_content: "Validate Examples";
+                        --_content: "Save & Validate";
                     }
                 }
 
@@ -843,23 +882,23 @@
             }
         }
         button#save-example {
-        position: relative;
-        margin-top: 10px;
-        left: 50%;
-        transform: translate(-50%, 10%);
-        --_padding: 0.5rem 3rem;
-        --_radius: 0.25rem;
+            position: relative;
+            margin-top: 10px;
+            left: 50%;
+            transform: translate(-50%, 10%);
+            --_padding: 0.5rem 3rem;
+            --_radius: 0.25rem;
 
-        color: white;
-        padding: var(--_padding);
-        background-color: rgba(var(--blue));
-        border-radius: var(--_radius);
+            color: white;
+            padding: var(--_padding);
+            background-color: rgba(var(--blue));
+            border-radius: var(--_radius);
 
-        &:hover,
-        &:focus {
-        background-color: rgba(var(--blue-dark));
+            &:hover, &:focus {
+                background-color: rgba(var(--blue-dark));
+            }
         }
-    }
+
         #path-details {
             display: flex;
             align-items: center;
@@ -928,17 +967,43 @@
             }
         }
 
-        div.dropdown {
-            & > div:nth-child(2) > p {
-                margin: 1rem 0 0.5rem 0;
-            }
+        div.details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
 
             & pre {
                 white-space: pre-wrap;
-                padding: 0.75rem;
                 font-family: var(--mono);
                 background-color: rgba(var(--slate));
                 border-radius: 0.25rem;
+                padding: 0.75rem;
+                display: none;
+            }
+        }
+
+        div.details > div.dropdown {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem;
+            font-family: var(--mono);
+            background-color: rgba(var(--slate));
+            cursor: pointer;
+        }
+
+        div.details.expanded {
+            & > div.dropdown {
+                margin-bottom: 1rem;
+
+                & .chevron {
+                    animation: none;
+                    transform: rotate(180deg);
+                }
+            }
+
+            & pre {
+                display: block;
             }
         }
 
@@ -1055,6 +1120,20 @@
                 transform: rotate(360deg);
             }
         }
+
+        @keyframes bounce {
+
+            0%, 100% {
+                transform: translateY(-25%);
+                animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+            }
+
+            50% {
+                transform: translateY(0);
+                animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+            }
+        }
+
         /* UTILITIES */
 
         .hidden {
@@ -1142,6 +1221,9 @@
 </main>
 
 <div id="alert-container"></div>
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="chevron">
+    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 5.25 7.5 7.5 7.5-7.5m-15 6 7.5 7.5 7.5-7.5" />
+</svg>
 
 <script th:inline="javascript">
     const exampleDetails = /*[[${exampleDetails}]]*/ {};
@@ -1160,7 +1242,6 @@
 <script>var escapedChars={b:"\b",f:"\f",n:"\n",r:"\r",t:"	",'"':'"',"/":"/","\\":"\\"},A_CODE="a".charCodeAt();const jsonMapParser=function(e,n,r){var a={},t=0,o=0,c=0,i=r&&r.bigint&&"undefined"!=typeof BigInt;return{data:function n(r,a){f(),E(r,"value");var t,o,$,g,S=l();switch(S){case"t":s("rue"),g=!0;break;case"f":s("alse"),g=!1;break;case"n":s("ull"),g=null;break;case'"':g=u();break;case"[":g=function e(r){f();var a=[],t=0;if("]"==l())return a;for(v();;){var o=r+"/"+t;a.push(n(o)),f();var c=l();if("]"==c)break;","!=c&&k(),f(),t++}return a}(r);break;case"{":g=function e(r){f();var a={};if("}"==l())return a;for(v();;){var t=d();'"'!=l()&&k();var o=u(),c=r+"/"+escapeJsonPointer(o);b(c,"key",t),E(c,"keyEnd"),f(),":"!=l()&&k(),f(),a[o]=n(c),f();var i=l();if("}"==i)break;","!=i&&k(),f()}return a}(r);break;default:v(),"-0123456789".indexOf(S)>=0?g=(t="",o=!0,"-"==e[c]&&(t+=l()),t+="0"==e[c]?l():p(),"."==e[c]&&(t+=l()+p(),o=!1),("e"==e[c]||"E"==e[c])&&(t+=l(),("+"==e[c]||"-"==e[c])&&(t+=l()),t+=p(),o=!1),$=+t,i&&o&&($>Number.MAX_SAFE_INTEGER||$<Number.MIN_SAFE_INTEGER)?BigInt(t):$):h()}return E(r,"valueEnd"),f(),a&&c<e.length&&h(),g}("",!0),pointers:a};function f(){loop:for(;c<e.length;){switch(e[c]){case" ":o++;break;case"	":o+=4;break;case"\r":o=0;break;case"\n":o=0,t++;break;default:break loop}c++}}function u(){for(var e,n="";'"'!=(e=l());)"\\"==e?(e=l())in escapedChars?n+=escapedChars[e]:"u"==e?n+=$():k():n+=e;return n}function s(e){for(var n=0;n<e.length;n++)l()!==e[n]&&k()}function l(){g();var n=e[c];return c++,o++,n}function v(){c--,o--}function $(){for(var e=4,n=0;e--;){n<<=4;var r=l().toLowerCase();r>="a"&&r<="f"?n+=r.charCodeAt()-A_CODE+10:r>="0"&&r<="9"?n+=+r:k()}return String.fromCharCode(n)}function p(){for(var n="";e[c]>="0"&&e[c]<="9";)n+=l();if(n.length)return n;g(),h()}function E(e,n){b(e,n,d())}function b(e,n,r){a[e]=a[e]||{},a[e][n]=r}function d(){return{line:t,column:o,pos:c}}function h(){throw SyntaxError("Unexpected token "+e[c]+" in JSON at position "+c)}function k(){v(),h()}function g(){if(c>=e.length)throw SyntaxError("Unexpected end of JSON input")}},jsonMapStringify=function(e,n,r){if(validType(e)){var a,t,o=0,c="object"==typeof r?r.space:r;switch(typeof c){case"number":var i=c>10?10:c<0?0:Math.floor(c);c=i&&k(i," "),a=i,t=i;break;case"string":c=c.slice(0,10),a=0,t=0;for(var f=0;f<c.length;f++){var u=c[f];switch(u){case" ":t++;break;case"	":t+=4;break;case"\r":t=0;break;case"\n":t=0,o++;break;default:throw Error("whitespace characters not allowed in JSON")}a++}break;default:c=void 0}var s="",l={},v=0,$=0,p=0,E=r&&r.es6&&"function"==typeof Map;return function e(n,r,a){switch(h(a,"value"),typeof n){case"number":case"bigint":case"boolean":b(""+n);break;case"string":b(quoted(n));break;case"object":null===n?b("null"):"function"==typeof n.toJSON?b(quoted(n.toJSON())):Array.isArray(n)?t():E?n.constructor.BYTES_PER_ELEMENT?t():n instanceof Map?i():n instanceof Set?i(!0):o():o()}function t(){if(n.length){b("[");for(var t=r+1,o=0;o<n.length;o++){o&&b(","),d(t);var c=validType(n[o])?n[o]:null;e(c,t,a+"/"+o)}d(r),b("]")}else b("[]")}function o(){var t=Object.keys(n);if(t.length){b("{");for(var o=r+1,i=0;i<t.length;i++){var f=t[i],u=n[f];if(validType(u)){i&&b(",");var s=a+"/"+escapeJsonPointer(f);d(o),h(s,"key"),b(quoted(f)),h(s,"keyEnd"),b(":"),c&&b(" "),e(u,o,s)}}d(r),b("}")}else b("{}")}function i(t){if(n.size){b("{");for(var o=r+1,i=!0,f=n.entries(),u=f.next();!u.done;){var s=u.value,l=s[0],v=!!t||s[1];if(validType(v)){i||b(","),i=!1;var $=a+"/"+escapeJsonPointer(l);d(o),h($,"key"),b(quoted(l)),h($,"keyEnd"),b(":"),c&&b(" "),e(v,o,$)}u=f.next()}d(r),b("}")}else b("{}")}h(a,"valueEnd")}(e,0,""),{json:s,pointers:l}}function b(e){$+=e.length,p+=e.length,s+=e}function d(e){if(c){for(s+="\n"+k(e,c),v++,$=0;e--;)o?(v+=o,$=t):$+=t,p+=a;p+=1}}function h(e,n){l[e]=l[e]||{},l[e][n]={line:v,column:$,pos:p}}function k(e,n){return Array(e+1).join(n)}};var VALID_TYPES=["number","bigint","boolean","string","object"];function validType(e){return VALID_TYPES.indexOf(typeof e)>=0}var ESC_QUOTE=/"|\\/g,ESC_B=/[\b]/g,ESC_F=/\f/g,ESC_N=/\n/g,ESC_R=/\r/g,ESC_T=/\t/g;function quoted(e){return'"'+(e=e.replace(ESC_QUOTE,"\\$&").replace(ESC_F,"\\f").replace(ESC_B,"\\b").replace(ESC_N,"\\n").replace(ESC_R,"\\r").replace(ESC_T,"\\t"))+'"'}var ESC_0=/~/g,ESC_1=/\//g;function escapeJsonPointer(e){return e.replace(ESC_0,"~0").replace(ESC_1,"~1")}</script>
 </body>
 <script>
-
     const mainElement = document.querySelector("main");
     const table = document.querySelector("table");
     const backBtn = document.querySelector("button#back");
@@ -1170,6 +1251,8 @@
     const bulkValidateBtn = document.querySelector("button#bulk-validate");
     const bulkGenerateBtn = document.querySelector("button#bulk-generate");
     const bulkTestBtn = document.querySelector("button#bulk-test");
+    const chevronDownIcon = document.querySelector("svg.chevron");
+
     let savedEditorResponse = null;
     let scrollYPosition = 0;
     let selectedTableRow = null;
@@ -1177,6 +1260,14 @@
     const defaultAttrs = { "data-generate": "not-generated", "data-valid": "not-validated", "data-test": "not-tested", "data-main": "false" }
     const dataValidationSuccessValues = ["success", "partial"]
     let isSaved = true;
+
+    examplesOl.addEventListener("click", (event) => {
+        const target = event.target;
+        if (target.matches(".dropdown, .dropdown *")) {
+            target.closest("div.details")?.classList.toggle("expanded");
+            event.stopPropagation();
+        }
+    })
 
     backBtn.addEventListener("click", () => {
         if (!isSaved) {
@@ -1473,20 +1564,20 @@
             }
         }
 
-        const { exampleAbsPath, error, isPartialFailure } = await validateExample(exampleData);
+        const { exampleAbsPath, errorMessage, errorList, isPartialFailure } = await validateExample(exampleData);
 
-        if (error && !exampleAbsPath) {
+        if (errorMessage && !exampleAbsPath) {
             if (!bulkMode) createAlert("Validation Failed", `Error: ${error ?? "Unknown Error"}`, true);
             tableRow.setAttribute("data-valid", "failed");
             return false;
         }
 
-        tableRow.setAttribute("data-valid", error ? isPartialFailure ? "partial" : "failed" : "success");
-        storeExampleValidationData(tableRow, error);
+        tableRow.setAttribute("data-valid", errorMessage ? isPartialFailure ? "partial" : "failed" : "success");
+        storeExampleValidationData(tableRow, { errorMessage, errorList });
         storeExampleTestData(tableRow, null);
         tableRow.setAttribute("data-test", defaultAttrs["data-test"]);
 
-        if (error && !isPartialFailure) {
+        if (errorMessage && !isPartialFailure) {
             if (!bulkMode) createAlert("Invalid Example", `Example name: ${parseFileName(exampleAbsPath)}`, true);
             return false;
         }
@@ -1597,10 +1688,12 @@
 
         if (exampleAbsPath) {
             const { example, error } = await getExampleContent(exampleAbsPath);
+            const { errorList, errorMessage } = getExampleValidationData(tableRow) || { errorList: null, errorMessage: null };
             docFragment = createExampleRows([{
                 absPath: exampleAbsPath,
                 exampleJson: example,
-                error: getExampleValidationData(tableRow) || error,
+                errorList: errorList,
+                errorMessage: error || errorMessage,
                 hasBeenValidated: tableRow.getAttribute("data-valid") !== defaultAttrs["data-valid"],
                 isPartialFailure: tableRow.getAttribute("data-valid") === "partial",
                 test: getExampleTestData(tableRow)
@@ -1663,23 +1756,11 @@
         const testBadge = document.createElement("span");
 
         exampleDiv.classList.add("example");
-        exampleBadge.classList.add(
-        "pill",
-        example.hasBeenValidated
-        ? (example.error && example.error.length > 0
-            ? (example.isPartialFailure ? "yellow" : "red")
-            : "green")
-        : "blue"
-    );
-
+        exampleBadge.classList.add("pill", example.hasBeenValidated ? (example.errorMessage ? (example.isPartialFailure ? "yellow" : "red"): "green") : "blue");
         exampleName.textContent = example.absPath;
 
         if (example.hasBeenValidated) {
-           exampleBadge.textContent = (example.error && example.error.length > 0)
-            ? "Invalid":
-             (example.isPartialFailure ? "Invalid" : "Valid");
-
-
+           exampleBadge.textContent = example.errorMessage ? example.isPartialFailure ? "Valid" : "Invalid" : "Valid";
             exampleBadge.textContent += " Example";
         } else {
             exampleBadge.textContent = "Example";
@@ -1702,18 +1783,32 @@
     }
 
     function createExampleDropDown(example) {
-        const dropDownDiv = document.createElement("div");
-        dropDownDiv.classList.add("dropdown");
+        const detailsDiv = document.createElement("div");
+        detailsDiv.classList.add("details");
 
-        const examplePara = document.createElement("p");
+        const detailsDropdown = document.createElement("div");
+        detailsDropdown.classList.add("dropdown");
         const detailsPara = document.createElement("p");
-        const detailsPre = document.createElement("pre");
+        detailsDropdown.appendChild(detailsPara);
+        detailsDropdown.appendChild(chevronDownIcon.cloneNode(true));
 
+        const detailsPre = document.createElement("pre");
+        const examplePara = document.createElement("p");
         examplePara.textContent = "Example: ";
-        detailsPara.textContent = "Details: ";
+
+        if (example.errorMessage) {
+            const issueCount = example.errorList.length;
+            const issueOrIssues = issueCount === 1 ? "issue" : "issues";
+            detailsPara.textContent = `Example has ${issueCount || ""} ${issueOrIssues}`;
+            if (issueCount > 0) {
+                detailsPara.style.color = "red";
+            }
+        } else {
+            detailsPara.textContent = example.hasBeenValidated ? "Example has no errors" : "Example has not yet been validated";
+        }
 
         if (example.hasBeenValidated) {
-            detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
+            detailsPre.textContent = example.errorMessage ? example.errorMessage : `${parseFileName(example.absPath)} IS VALID`;
             if (example.test) {
                 detailsPre.textContent = `${detailsPre.textContent}\n${example.test.details}`;
             }
@@ -1722,13 +1817,12 @@
         }
 
         const examplePreDiv = document.createElement("div");
+        const detailsFragment = document.createDocumentFragment();
+
         examplePreDiv.setAttribute("id", "example-pre");
         examplePreDiv.classList.add("language-json");
-        //const detailsPreDiv = document.createElement("div");
-
-
-        //detailsPreDiv.appendChild(detailsPara);
-        //detailsPreDiv.appendChild(detailsPre);
+        detailsFragment.appendChild(detailsDropdown);
+        detailsFragment.appendChild(detailsPre);
 
         const editor = CodeMirror(examplePreDiv, {
             value: example.exampleJson,
@@ -1743,11 +1837,13 @@
             gutters: ["CodeMirror-lint-markers"]
         });
 
-
-        if (example.error) {
-            highlightErrorLines(editor, example.error, example.exampleJson);
+        if (example.errorList) {
+            if (Array.isArray(example.errorList) && example.errorList.every(item => typeof item === 'object')) {
+                highlightErrorLines(editor, example.errorList, example.exampleJson);
+            } else {
+                createAlert("Example Validation Failed", example.errorMessage, true);
+            }
         }
-
 
         editor.on("change", (instance, changes) => {
             isSaved = false;
@@ -1760,15 +1856,20 @@
             testPara.textContent = "Test Log: ";
             const testPre = document.createElement("pre");
             testPre.textContent = example.test.testLog;
-            detailsPreDiv.appendChild(testPara);
-            detailsPreDiv.appendChild(testPre);
+            detailsFragment.appendChild(testPara);
+            detailsFragment.appendChild(testPre);
         }
 
-        //dropDownDiv.appendChild(detailsPreDiv);
-        dropDownDiv.appendChild(examplePara);
-        dropDownDiv.appendChild(examplePreDiv);
+        detailsDiv.appendChild(detailsFragment);
+        detailsDiv.appendChild(examplePara);
 
-        return dropDownDiv;
+        const fragment = document.createDocumentFragment();
+        if (example.errorMessage) {
+            fragment.appendChild(detailsDiv);
+        }
+        fragment.appendChild(examplePreDiv);
+
+        return fragment;
     }
 
     async function saveExample(examplePath) {
@@ -1836,7 +1937,7 @@
                 {
                     className: "CodeMirror-lint-mark-error",
                     attributes: {
-                        title: meta.description,
+                        "data-validation-error-message": meta.description
                     },
                 }
             );
@@ -1945,12 +2046,12 @@
             const data = await resp.json();
 
             if (!resp.ok) {
-                throw new Error(data.error);
+                throw new Error(data.errorMessage);
             }
 
-            return { exampleAbsPath: data.absPath, error: data.error, isPartialFailure: data.isPartialFailure };
+            return { exampleAbsPath: data.absPath, errorList: data.errorList, errorMessage: data.errorMessage, isPartialFailure: data.isPartialFailure };
         } catch (error) {
-            return { error: error.message, exampleAbsPath: null, isPartialFailure: false };
+            return { errorMessage: error.message, exampleAbsPath: null, isPartialFailure: false, errorList: null };
         }
     }
 
@@ -2056,7 +2157,7 @@
         const title = "Unsaved Changes";
         const closeText = "No";
         const discardText = "Yes";
-        const bodyText = "Your changes are not saved & validated. Go Back Anyway?";
+        const bodyText = "Your changes are not saved & validated. To save your changes click on the Save & Validate button. Discard changes?";
 
         // Create modal container dynamically
         const modalContainer = document.createElement("div");

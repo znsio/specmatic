@@ -1,5 +1,10 @@
 package io.specmatic.conversions
 
+import integration_tests.testCount
+import io.ktor.util.reflect.*
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.unmockkAll
 import io.specmatic.core.*
 import io.specmatic.core.log.CompositePrinter
 import io.specmatic.core.log.LogMessage
@@ -11,15 +16,9 @@ import io.specmatic.core.value.*
 import io.specmatic.mock.NoMatchingScenario
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.*
-import io.specmatic.stub.createStubFromContracts
+import io.specmatic.test.ScenarioAsTest
 import io.specmatic.test.TestExecutor
 import io.specmatic.trimmedLinesString
-import integration_tests.testCount
-import io.ktor.util.reflect.*
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.unmockkAll
-import io.specmatic.test.ScenarioAsTest
 import io.swagger.v3.core.util.Yaml
 import io.swagger.v3.oas.models.OpenAPI
 import org.assertj.core.api.Assertions.*
@@ -9444,7 +9443,7 @@ paths:
                 - id
                 - description
         """.trimIndent()
-        val feature = OpenApiSpecification.fromYAML(specContent, "",).toFeature()
+        val feature = OpenApiSpecification.fromYAML(specContent, "").toFeature()
 
         assertThat(feature.scenarios).allSatisfy { scenario ->
             val responsePattern = resolvedHop(scenario.httpResponsePattern.body, scenario.resolver)
@@ -9762,6 +9761,66 @@ paths:
                 )
             )
         }
+    }
+
+    @Test
+    fun `operations should inherit global security schemas when operation level security schemas are not defined`() {
+        val specContent = """
+        openapi: '3.0.3'
+        info:
+          title: Security API
+          version: '1.0'
+        paths:
+          /security:
+            get:
+              responses:
+                '200':
+                  description: OK
+        components:
+          securitySchemes:
+            bearerAuth:
+              type: http
+              scheme: bearer
+        security:
+          - bearerAuth: []
+        """.trimIndent()
+        val feature = OpenApiSpecification.fromYAML(specContent, "").toFeature()
+        val secureScenario = feature.scenarios.first { it.path == "/security" }
+
+        assertThat(secureScenario.httpRequestPattern.securitySchemes)
+            .hasOnlyElementsOfType(BearerSecurityScheme::class.java)
+            .hasSize(1)
+    }
+
+    @Test
+    fun `operation level security schemas should override global level security schemas`() {
+        val specContent = """
+        openapi: '3.0.3'
+        info:
+          title: Security API
+          version: '1.0'
+        paths:
+          /no-security:
+            get:
+              security: []
+              responses:
+                '200':
+                  description: OK
+        components:
+          securitySchemes:
+            bearerAuth:
+              type: http
+              scheme: bearer
+        security:
+          - bearerAuth: []
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(specContent, "").toFeature()
+        val unSecureScenario = feature.scenarios.first { it.path == "/no-security" }
+
+        assertThat(unSecureScenario.httpRequestPattern.securitySchemes)
+            .hasOnlyElementsOfType(NoSecurityScheme::class.java)
+            .hasSize(1)
     }
 
     private fun ignoreButLogException(function: () -> OpenApiSpecification) {

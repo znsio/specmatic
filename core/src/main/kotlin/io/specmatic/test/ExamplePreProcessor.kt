@@ -47,11 +47,13 @@ object ExampleProcessor {
         runningEntity = emptyMap()
     }
 
-    private fun defaultIfNotExits(lookupKey: String, type: SubstitutionType = SubstitutionType.SIMPLE): Value {
+    @Suppress("MemberVisibilityCanBePrivate") // Being used by other projects
+    fun defaultIfNotExits(lookupKey: String, type: SubstitutionType = SubstitutionType.SIMPLE): Value {
         throw ContractException(breadCrumb = lookupKey, errorMessage = "Could not resolve ${lookupKey.quote()}, key does not exist in fact store")
     }
 
-    private fun ifNotExitsToLookupPattern(lookupKey: String, type: SubstitutionType = SubstitutionType.SIMPLE): Value {
+    @Suppress("MemberVisibilityCanBePrivate") // Being used by other projects
+    fun ifNotExitsToLookupPattern(lookupKey: String, type: SubstitutionType = SubstitutionType.SIMPLE): Value {
         return when (type) {
             SubstitutionType.SIMPLE -> StringValue("$($lookupKey)")
             SubstitutionType.DELAYED_RANDOM -> StringValue("$delayedRandomSubstitutionKey($lookupKey)")
@@ -121,21 +123,21 @@ object ExampleProcessor {
         return value.mapValues { (_, value) -> resolve(value, ifNotExists) }
     }
 
-    private fun resolve(value: String, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value): String {
-        return value.ifSubstitutionToken { token, type ->
-            if (type == SubstitutionType.DELAYED_RANDOM && ifNotExists == ::ifNotExitsToLookupPattern ) {
-                return@ifSubstitutionToken ifNotExitsToLookupPattern(token, type).toStringLiteral()
-            } else getValue(token, type)?.toStringLiteral() ?: ifNotExists(token, type).toStringLiteral()
-        } ?: value
-    }
-
-    private fun resolve(value: Value, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value): Value {
+    fun resolve(value: Value, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value): Value {
         return when (value) {
             is StringValue -> resolve(value, ifNotExists)
             is JSONObjectValue -> resolve(value, ifNotExists)
             is JSONArrayValue -> resolve(value, ifNotExists)
             else -> value
         }
+    }
+
+    private fun resolve(value: String, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value): String {
+        return value.ifSubstitutionToken { token, type ->
+            if (type == SubstitutionType.DELAYED_RANDOM && ifNotExists == ::ifNotExitsToLookupPattern ) {
+                return@ifSubstitutionToken ifNotExitsToLookupPattern(token, type).toStringLiteral()
+            } else getValue(token, type)?.toStringLiteral() ?: ifNotExists(token, type).toStringLiteral()
+        } ?: value
     }
 
     private fun resolve(value: StringValue, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value): Value {
@@ -154,6 +156,15 @@ object ExampleProcessor {
         return JSONArrayValue(value.list.map { resolve(it, ifNotExists) })
     }
 
+    private fun toStoreErrorMessage(exampleRow: Row, type: StoreType): String {
+        val (storeType, storeGrammar) = when (type) {
+            StoreType.REPLACE -> "save" to "as"
+            StoreType.MERGE -> "merge" to "with"
+        }
+
+        return "Could not $storeType http response body $storeGrammar ENTITY for example ${exampleRow.name.quote()}"
+    }
+
     /* STORE HELPERS */
     fun store(exampleRow: Row, httpRequest: HttpRequest, httpResponse: HttpResponse) {
         if (httpRequest.method == "POST") {
@@ -163,17 +174,31 @@ object ExampleProcessor {
 
         val bodyToCheck = exampleRow.responseExampleForAssertion?.body
         bodyToCheck?.ifContainsStoreToken { type ->
+            val valueToStore = httpResponse.body.getJsonObjectIfExists() ?:
+                throw ContractException(breadCrumb = exampleRow.name, errorMessage = toStoreErrorMessage(exampleRow, type))
+
             runningEntity = when (type) {
-                StoreType.REPLACE -> httpResponse.body.toFactStore(prefix = "ENTITY")
-                StoreType.MERGE -> runningEntity.plus(httpResponse.body.toFactStore(prefix = "ENTITY"))
+                StoreType.REPLACE -> valueToStore.toFactStore(prefix = "ENTITY")
+                StoreType.MERGE -> runningEntity.plus(valueToStore.toFactStore(prefix = "ENTITY"))
             }
         }
     }
 
-    private fun Value.ifContainsStoreToken(block: (storeType: StoreType) -> Unit) {
-        if (this !is JSONObjectValue) return
+    private fun Value.getJsonObjectIfExists(): JSONObjectValue? {
+        return when (this) {
+            is JSONObjectValue -> this
+            is JSONArrayValue -> this.list.firstOrNull()?.getJsonObjectIfExists()
+            else -> null
+        }
+    }
 
-        this.findFirstChildByPath("\$store")?.let {
+    fun store(exampleValue: Value) {
+        runningEntity = exampleValue.toFactStore(prefix = "ENTITY")
+    }
+
+    private fun Value.ifContainsStoreToken(block: (storeType: StoreType) -> Unit) {
+        val responseBody = this.getJsonObjectIfExists() ?: return
+        responseBody.findFirstChildByPath("\$store")?.let {
             when (it.toStringLiteral().toLowerCasePreservingASCIIRules()){
                 "merge" -> block(StoreType.MERGE)
                 else -> block(StoreType.REPLACE)
@@ -182,7 +207,8 @@ object ExampleProcessor {
     }
 
     /* PARSER HELPERS */
-    private fun Value.toFactStore(prefix: String = ""): Map<String, Value> {
+    @Suppress("MemberVisibilityCanBePrivate") // Being used by other projects
+    fun Value.toFactStore(prefix: String = ""): Map<String, Value> {
         return this.traverse(
             prefix = prefix,
             onScalar = { scalar, key -> mapOf(key to scalar) },

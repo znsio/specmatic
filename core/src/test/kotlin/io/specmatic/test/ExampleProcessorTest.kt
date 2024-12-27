@@ -2,6 +2,7 @@ package io.specmatic.test
 
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.NoBodyValue
 import io.specmatic.core.QueryParameters
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Row
@@ -270,6 +271,34 @@ class ExampleProcessorTest {
             assertThat(factStore.keys).doesNotContain("ENTITY.name")
             assertThat(factStore.getValue("ENTITY")).isEqualTo(response.body)
         }
+
+        @Test
+        fun `should store the first value of response body array`() {
+            val request = HttpRequest(method = "GET")
+            val response = HttpResponse(
+                body = JSONArrayValue(
+                    listOf(
+                        JSONObjectValue(mapOf("price" to NumberValue(2000))),
+                        JSONObjectValue(mapOf("price" to NumberValue(1000)))
+                    )
+                )
+            )
+            val row = Row(
+                responseExampleForAssertion = HttpResponse(
+                    body = JSONArrayValue(listOf(
+                        JSONObjectValue(mapOf("\$store" to StringValue("replace")))
+                    ))
+                )
+            )
+            ExampleProcessor.store(row, request, response)
+
+            val responseBody = response.body as JSONArrayValue
+            val factStore = ExampleProcessor.getFactStore()
+            println(factStore.getValue("ENTITY"))
+            assertThat(factStore).isNotEmpty
+            assertThat(factStore.getValue("ENTITY")).isEqualTo(responseBody.list.first())
+            assertThat(factStore.getValue("ENTITY.price")).isEqualTo(NumberValue(2000))
+        }
     }
 
     @Test
@@ -311,6 +340,40 @@ class ExampleProcessorTest {
         assertThat(exception.report()).containsIgnoringWhitespaces("""
         >> CONFIG.post.Person  
         Could not resolve "CONFIG.post.Person", key does not exist in fact store
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should throw if response body is not json value and asked to store`() {
+        val request = HttpRequest(body = NoBodyValue)
+        val response = HttpResponse(body = NoBodyValue)
+        val row = Row(
+            name = "test",
+            responseExampleForAssertion = HttpResponse(body = JSONObjectValue(mapOf("\$store" to StringValue("replace"))))
+        )
+
+        val exception = assertThrows<ContractException> { ExampleProcessor.store(row, request, response) }
+        println(exception.report())
+        assertThat(exception.report()).containsIgnoringWhitespaces("""
+        >> test  
+       Could not save http response body as ENTITY for example "test"
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should throw if response body array is empty and asked to store`() {
+        val request = HttpRequest(body = NoBodyValue)
+        val response = HttpResponse(body = JSONArrayValue(emptyList()))
+        val row = Row(
+            name = "test",
+            responseExampleForAssertion = HttpResponse(body = JSONObjectValue(mapOf("\$store" to StringValue("merge"))))
+        )
+
+        val exception = assertThrows<ContractException> { ExampleProcessor.store(row, request, response) }
+        println(exception.report())
+        assertThat(exception.report()).containsIgnoringWhitespaces("""
+        >> test  
+        Could not merge http response body with ENTITY for example "test"
         """.trimIndent())
     }
 }

@@ -206,7 +206,13 @@ class OpenApiSpecification(
             }
         }
 
-        private fun resolveExternalReferences(): ParseOptions = ParseOptions().also { it.isResolve = true }
+        private fun resolveExternalReferences(): ParseOptions {
+            return ParseOptions().also {
+                it.isResolve = true
+                it.isResolveRequestBody = true
+                it.isResolveResponses = true
+            }
+        }
 
         fun String.applyOverlay(overlayContent: String): String {
             if(overlayContent.isBlank())
@@ -930,7 +936,7 @@ class OpenApiSpecification(
             } ?: mapOf(NO_SECURITY_SCHEMA_IN_SPECIFICATION to NoSecurityScheme())
 
         val securitySchemesForRequestPattern: Map<String, OpenAPISecurityScheme> =
-            (parsedOpenApi.security.orEmpty() + operation.security.orEmpty())
+            (operation.security ?: parsedOpenApi.security.orEmpty())
                 .flatMap { it.keys }
                 .toSet().associateWith {
                     val securityScheme = securitySchemes[it]

@@ -356,7 +356,7 @@ class ExampleProcessorTest {
         println(exception.report())
         assertThat(exception.report()).containsIgnoringWhitespaces("""
         >> test  
-       Could not save http response body as "ENTITY" for example "test"
+       Could not save http response body as ENTITY for example "test"
         """.trimIndent())
     }
 
@@ -373,7 +373,7 @@ class ExampleProcessorTest {
         println(exception.report())
         assertThat(exception.report()).containsIgnoringWhitespaces("""
         >> test  
-        Could not merge http response body with "ENTITY" for example "test"
+        Could not merge http response body with ENTITY for example "test"
         """.trimIndent())
     }
 }

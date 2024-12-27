@@ -162,7 +162,7 @@ object ExampleProcessor {
             StoreType.MERGE -> "merge" to "with"
         }
 
-        return "Could not $storeType http response body $storeGrammar \"ENTITY\" for example ${exampleRow.name.quote()}"
+        return "Could not $storeType http response body $storeGrammar ENTITY for example ${exampleRow.name.quote()}"
     }
 
     /* STORE HELPERS */

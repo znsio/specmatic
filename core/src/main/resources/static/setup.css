@@ -399,13 +399,8 @@ video {
   display: none;
 }
 
-.line-decoration-mark-error {
+.specmatic-editor-line-error {
   background-color: rgba(255, 0, 0, 0.2);
-  overflow: hidden;
-}
-
-.line-decoration-mark-warning {
-  background-color: rgba(255, 255, 0, 0.2);
   overflow: hidden;
 }
 }

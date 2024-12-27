@@ -737,9 +737,7 @@ function highlightErrorLines(editor, metadata, exampleJson) {
       }
       existingMarkers.get(lineNumber).push(meta.description);
       const combinedDescriptions = existingMarkers.get(lineNumber).join('\n\n');
-      const className = meta.isPartial
-        ? "cm-lint-mark-warning line-decoration-mark-warning"
-        : "cm-lint-mark-error line-decoration-mark-error";
+      const className = "specmatic-editor-line-error";
 
       decorations.push(
         window.Decoration.line({
@@ -966,7 +964,7 @@ function parseFileName(absPath) {
 
 function getHostPort() {
   const hostPort = table.getAttribute("data-hostPort");
-  return hostPort ? hostPort.replace(/\/$/, '') : hostPort;
+  return hostPort;
 }
 
 function enableValidateBtn(tableRow) {

@@ -32,7 +32,7 @@ class AssertPatternTest {
     }
 
     @Test
-    fun `should not parse values to ExactValue Pattern`() {
+    fun `should not parse literal values to ExactValue Pattern`() {
         val assert = AssertPattern.parse("REQUEST.BODY", "name", StringValue("john"))
         assertThat(assert).isNull()
     }
@@ -76,6 +76,23 @@ class AssertPatternTest {
         assertThat(result.reportString()).containsIgnoringWhitespaces("""
         >> REQUEST.BODY.name
         Expected string, actual was 100 (number)
+        """.trimIndent())
+    }
+
+    @Test
+    fun ` should return failure when value does not exist`() {
+        val assert = AssertPattern(prefix = "REQUEST.BODY", key = "name", pattern = parsedPattern("(string)"))
+
+        val bodyValue = JSONObjectValue(mapOf())
+        val currentStore = bodyValue.toFactStore("REQUEST.BODY")
+
+        val result = assert.assert(currentStore, currentStore)
+        println(result.reportString())
+
+        assertThat(result).isInstanceOf(Result.Failure::class.java)
+        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        >> REQUEST.BODY.name
+        Could not resolve "REQUEST.BODY.name" in current fact store
         """.trimIndent())
     }
 

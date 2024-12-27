@@ -15,7 +15,7 @@ class AssertPattern(override val prefix: String, override val key: String, val p
         val dynamicList = dynamicAsserts(prefixValue)
         val results = dynamicList.map { newAssert ->
             val finalKey = "${newAssert.prefix}.${newAssert.key}"
-            val actualValue = currentFactStore[finalKey]
+            val actualValue = currentFactStore[finalKey] ?: return@map Result.Failure(breadCrumb = finalKey, message = "Could not resolve ${finalKey.quote()} in current fact store")
             pattern.matches(actualValue, resolver).breadCrumb(finalKey)
         }
 

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Examples</title>
-    <link rel="stylesheet" th:href="@{${hostPort} + '/_specmatic/examples/setup.css'}">
-    <link rel="stylesheet" th:href="@{${hostPort} + '/_specmatic/examples/layout.css'}">
+    <link rel="stylesheet" th:href="@{|${hostPort}/_specmatic/examples/setup.css|}">
+    <link rel="stylesheet" th:href="@{|${hostPort}/_specmatic/examples/layout.css|}">
 </head>
 
 <body>
@@ -135,9 +135,10 @@
         window.hoverTooltip = hoverTooltip
 
 </script>
-<script th:src="@{${hostPort} + '/_specmatic/examples/json-source-map.js'}"></script>
+<script th:src="@{|${hostPort}/_specmatic/examples/json-source-map.js|}"></script>
 </body>
-<script th:src="@{${hostPort} + '/_specmatic/examples/example-server.js'}"></script>
+<script th:src="@{|${hostPort}/_specmatic/examples/example-server.js|}"></script>
+
 
 
 </html>

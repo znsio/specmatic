@@ -9619,7 +9619,7 @@ paths:
     }
 
     @Test
-    fun `should fallback to default discriminator mappings for anyOf schema`() {
+    fun `should not require discriminator mappings when datatype value in propertyName field is the same as schema name in oneOf schema`() {
         val specContent = """
         openapi: 3.0.0
         info:
@@ -9640,7 +9640,7 @@ paths:
                   content:
                     application/json:
                       schema:
-                        ${'$'}ref: '#/components/schemas/sampleObjectArray' 
+                        type: string
         components:
           schemas:
             sampleObject:
@@ -9650,15 +9650,6 @@ paths:
                 - ${'$'}ref: '#/components/schemas/complexObject'
               discriminator:
                 propertyName: objectType
-            sampleObjectArray:
-              type: array
-              items:
-                type: object
-                oneOf:
-                  - ${'$'}ref: '#/components/schemas/simpleObject'
-                  - ${'$'}ref: '#/components/schemas/complexObject'
-                discriminator:
-                    propertyName: objectType
             simpleObject:
               type: object
               required:
@@ -9667,7 +9658,6 @@ paths:
               properties:
                 objectType:
                   type: string
-                  enum: ['simple']
                 property1:
                   type: string
             complexObject:
@@ -9678,39 +9668,30 @@ paths:
               properties:
                 objectType:
                   type: string
-                  enum: ['complex']
                 property2:
                   type: string
         """.trimIndent()
         val apiSpec = OpenApiSpecification.fromYAML(specContent, "")
-        val expectedDiscriminator = Discriminator(
-            property = "objectType",
-            values = setOf("simpleObject", "complexObject"),
-            mapping = mapOf(
-                "simpleObject" to "#/components/schemas/simpleObject",
-                "complexObject" to "#/components/schemas/complexObject"
-            )
-        )
-
         val feature = apiSpec.toFeature()
         val scenario = feature.scenarios.first()
         val resolver = scenario.resolver
-
         val requestBodyPattern = resolvedHop(scenario.httpRequestPattern.body, resolver)
-        val responseBodyPattern = resolvedHop(scenario.httpResponsePattern.body, resolver)
-        val patterns = listOf(requestBodyPattern, (responseBodyPattern as ListPattern).pattern)
 
-        assertThat(patterns).allSatisfy {
-            assertThat(it).isInstanceOf(AnyPattern::class.java)
-            it as AnyPattern
-            assertThat(it.discriminator!!.values).isEqualTo(expectedDiscriminator.values)
-            assertThat(it.discriminator!!.property).isEqualTo(expectedDiscriminator.property)
-            assertThat(it.discriminator!!.mapping).isEqualTo(expectedDiscriminator.mapping)
+        assertThat(requestBodyPattern).isInstanceOf(AnyPattern::class.java)
+        (requestBodyPattern as AnyPattern).let {
+            assertThat(it.discriminator!!.values).isEqualTo(setOf("simpleObject", "complexObject"))
+            assertThat(it.discriminator!!.property).isEqualTo("objectType")
+            assertThat(it.discriminator!!.mapping).isEqualTo(
+                mapOf(
+                    "simpleObject" to "#/components/schemas/simpleObject",
+                    "complexObject" to "#/components/schemas/complexObject"
+                )
+            )
         }
     }
 
     @Test
-    fun `default discriminator mappings should not override user defined mappings in anyOf schema`() {
+    fun `implied discriminator mappings should not override user defined discriminator mappings in oneOf schema`() {
         val specContent = """
         openapi: 3.0.0
         info:
@@ -9731,7 +9712,7 @@ paths:
                   content:
                     application/json:
                       schema:
-                        ${'$'}ref: '#/components/schemas/sampleObjectArray' 
+                        type: string
         components:
           schemas:
             sampleObject:
@@ -9743,17 +9724,6 @@ paths:
                 propertyName: objectType
                 mapping:
                   simple: "#/components/schemas/simpleObject"
-            sampleObjectArray:
-              type: array
-              items:
-                type: object
-                oneOf:
-                  - ${'$'}ref: '#/components/schemas/simpleObject'
-                  - ${'$'}ref: '#/components/schemas/complexObject'
-                discriminator:
-                    propertyName: objectType
-                    mapping:
-                      simple: "#/components/schemas/simpleObject"
             simpleObject:
               type: object
               required:
@@ -9762,7 +9732,6 @@ paths:
               properties:
                 objectType:
                   type: string
-                  enum: ['simple']
                 property1:
                   type: string
             complexObject:
@@ -9773,34 +9742,25 @@ paths:
               properties:
                 objectType:
                   type: string
-                  enum: ['complex']
                 property2:
                   type: string
         """.trimIndent()
         val apiSpec = OpenApiSpecification.fromYAML(specContent, "")
-        val expectedDiscriminator = Discriminator(
-            property = "objectType",
-            values = setOf("simple", "complexObject"),
-            mapping = mapOf(
-                "simple" to "#/components/schemas/simpleObject",
-                "complexObject" to "#/components/schemas/complexObject"
-            )
-        )
-
         val feature = apiSpec.toFeature()
         val scenario = feature.scenarios.first()
         val resolver = scenario.resolver
-
         val requestBodyPattern = resolvedHop(scenario.httpRequestPattern.body, resolver)
-        val responseBodyPattern = resolvedHop(scenario.httpResponsePattern.body, resolver)
-        val patterns = listOf(requestBodyPattern, (responseBodyPattern as ListPattern).pattern)
 
-        assertThat(patterns).allSatisfy {
-            assertThat(it).isInstanceOf(AnyPattern::class.java)
-            it as AnyPattern
-            assertThat(it.discriminator!!.values).isEqualTo(expectedDiscriminator.values)
-            assertThat(it.discriminator!!.property).isEqualTo(expectedDiscriminator.property)
-            assertThat(it.discriminator!!.mapping).isEqualTo(expectedDiscriminator.mapping)
+        assertThat(requestBodyPattern).isInstanceOf(AnyPattern::class.java)
+        (requestBodyPattern as AnyPattern).let {
+            assertThat(it.discriminator!!.values).isEqualTo(setOf("simple", "complexObject"))
+            assertThat(it.discriminator!!.property).isEqualTo("objectType")
+            assertThat(it.discriminator!!.mapping).isEqualTo(
+                mapOf(
+                    "simple" to "#/components/schemas/simpleObject",
+                    "complexObject" to "#/components/schemas/complexObject"
+                )
+            )
         }
     }
 

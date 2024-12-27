@@ -1177,9 +1177,11 @@ class OpenApiSpecification(
     ) = if (mediaType.encoding.isNullOrEmpty()) false
     else mediaType.encoding[formFieldName]?.contentType == "application/json"
 
-    private fun List<Schema<Any>>.defaultMappings(): Map<String, String> {
+    private fun List<Schema<Any>>.impliedDiscriminatorMappings(): Map<String, String> {
         return this.filter { it.`$ref` != null }.associate {
-            it.`$ref`.split("/").last() to it.`$ref`
+            val dataTypeName = it.`$ref`.split("/").last()
+            val targetSchema = it.`$ref`
+            dataTypeName to targetSchema
         }
     }
 
@@ -1412,13 +1414,13 @@ class OpenApiSpecification(
                     val nullable =
                         if (schema.oneOf.any { nullableEmptyObject(it) }) listOf(NullPattern) else emptyList()
 
-                    val defaultMappings = schema.oneOf.defaultMappings()
-                    val finalMappings = schema.discriminator?.mapping.orEmpty().plus(defaultMappings).distinctByValue()
+                    val impliedDiscriminatorMappings = schema.oneOf.impliedDiscriminatorMappings()
+                    val finalDiscriminatorMappings = schema.discriminator?.mapping.orEmpty().plus(impliedDiscriminatorMappings).distinctByValue()
 
                     AnyPattern(
                         candidatePatterns.plus(nullable),
                         typeAlias = "(${patternName})",
-                        discriminator = Discriminator.create(schema.discriminator?.propertyName, finalMappings.keys.toSet(), finalMappings)
+                        discriminator = Discriminator.create(schema.discriminator?.propertyName, finalDiscriminatorMappings.keys.toSet(), finalDiscriminatorMappings)
                     )
                 } else if (schema.anyOf != null) {
                     throw UnsupportedOperationException("Specmatic does not support anyOf")

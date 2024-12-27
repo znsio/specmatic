@@ -364,11 +364,11 @@
           display: none;
         }
 
-        .CodeMirror-lint-mark-error {
+        .line-decoration-mark-error {
             background-color: rgba(255, 0, 0, 0.2);
             overflow : hidden;
         }
-          .CodeMirror-lint-mark-warning {
+          .line-decoration-mark-warning {
             background-color:  rgba(255, 255, 0, 0.2);
             overflow : hidden;
         }

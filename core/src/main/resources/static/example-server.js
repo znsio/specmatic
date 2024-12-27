@@ -738,8 +738,8 @@
             existingMarkers.get(lineNumber).push(meta.description);
             const combinedDescriptions = existingMarkers.get(lineNumber).join('\n\n');
             const className = meta.isPartial
-                ? "cm-lint-mark-warning CodeMirror-lint-mark-warning"
-                : "cm-lint-mark-error CodeMirror-lint-mark-error";
+                ? "cm-lint-mark-warning line-decoration-mark-warning"
+                : "cm-lint-mark-error line-decoration-mark-error";
 
             decorations.push(
             window.Decoration.line({
@@ -821,7 +821,7 @@
 
     function createErrorMarker() {
         const marker = document.createElement("div");
-        marker.className = "CodeMirror-lint-mark-error";
+        marker.className = "line-decoration-mark-error";
         return marker;
     }
 

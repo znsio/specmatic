@@ -33,7 +33,10 @@ interface Assert {
         }
 
         private fun parseScalarValue(prefix: String, key: String, value: Value): Assert? {
-            return AssertComparison.parse(prefix, key, value) ?: AssertArray.parse(prefix, key, value) ?: AssertPattern.parse(prefix, key, value)
+            return AssertComparison.parse(prefix, key, value)
+                    ?: AssertArray.parse(prefix, key, value)
+                    ?: AssertPattern.parse(prefix, key, value)
+                    ?: AssertExistence.parse(prefix, key, value)
         }
     }
 }

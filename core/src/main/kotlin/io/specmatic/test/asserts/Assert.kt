@@ -28,7 +28,7 @@ fun parsedAssert(prefix: String, key: String, value: Value): Assert? {
     return when (key) {
         "\$if" -> AssertConditional.parse(prefix, key, value)
         else -> {
-            return AssertComparison.parse(prefix, key, value) ?: AssertArray.parse(prefix, key, value)
+            return AssertComparison.parse(prefix, key, value) ?: AssertArray.parse(prefix, key, value) ?: AssertExistence.parse(prefix, key, value)
         }
     }
 }

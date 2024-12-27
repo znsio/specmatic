@@ -290,7 +290,7 @@ class ExamplesInteractiveServer(
                 "tableRows" to tableRows,
                 "contractFile" to contractFile.name,
                 "contractFilePath" to contractFile.absolutePath,
-                "hostPort" to hostPort,
+                "hostPort" to hostPort.trimEnd('/'),
                 "hasExamples" to tableRows.any {it.example != null},
                 "exampleDetails" to tableRows.transform(),
                 "isTestMode" to (testBaseUrl != null)

@@ -15,15 +15,8 @@ val SUBSTITUTE_PATTERN = Regex("^\\$(\\w+)?\\((.*)\\)$")
 
 enum class SubstitutionType { SIMPLE, DELAYED_RANDOM }
 
-enum class StoreType {
-    REPLACE, MERGE;
-
-    fun storeTypeAndGrammar(): Pair<String, String> {
-        return when (this) {
-            REPLACE -> "save" to "as"
-            MERGE -> "merge" to "with"
-        }
-    }
+enum class StoreType(val type: String, val grammar: String) {
+    REPLACE("save", "as"), MERGE("merge", "with");
 }
 
 object ExampleProcessor {
@@ -166,8 +159,7 @@ object ExampleProcessor {
     }
 
     private fun toStoreErrorMessage(exampleRow: Row, type: StoreType): String {
-        val (storeType, storeGrammar) = type.storeTypeAndGrammar()
-        return "Could not $storeType http response body $storeGrammar ENTITY for example ${exampleRow.name.quote()}"
+        return "Could not ${type.type} http response body ${type.grammar} ENTITY for example ${exampleRow.name.quote()}"
     }
 
     /* STORE HELPERS */
@@ -199,9 +191,8 @@ object ExampleProcessor {
 
     fun store(actualValue: Value, exampleValue: Value) {
         exampleValue.ifContainsStoreToken { type ->
-            val (storeType, storeGrammar) = type.storeTypeAndGrammar()
             val actualJsonObjectValue = actualValue.getJsonObjectIfExists()
-                ?: throw ContractException(errorMessage = "Could not $storeType value $storeGrammar ENTITY")
+                ?: throw ContractException(errorMessage = "Could not ${type.type} value ${type.grammar} ENTITY")
             runningEntity = when (type) {
                 StoreType.REPLACE -> actualJsonObjectValue.toFactStore(prefix = "ENTITY")
                 StoreType.MERGE -> runningEntity.plus(actualJsonObjectValue.toFactStore(prefix = "ENTITY"))

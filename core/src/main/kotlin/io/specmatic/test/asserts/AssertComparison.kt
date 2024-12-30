@@ -2,6 +2,7 @@ package io.specmatic.test.asserts
 
 import io.ktor.http.*
 import io.specmatic.core.Result
+import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
 val ASSERT_PATTERN = Regex("^\\$(\\w+)\\((.*)\\)$")
@@ -42,7 +43,9 @@ class AssertComparison(override val prefix: String, override val key: String, va
 
     companion object {
         fun parse(prefix: String, key: String, value: Value): AssertComparison? {
-            val match = ASSERT_PATTERN.find(value.toStringLiteral()) ?: return null
+            if (value !is StringValue) return null
+
+            val match = ASSERT_PATTERN.find(value.nativeValue) ?: return null
             val keyPrefix = prefix.removeSuffix(".${key}")
 
             return when (match.groupValues[1]) {

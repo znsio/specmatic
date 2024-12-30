@@ -12,6 +12,7 @@ private const val BREAD_CRUMB_HEADERS = "HEADERS"
 private const val HTTP_HEADERS = "headers"
 const val BREADCRUMB_QUERY_PARAMS = "QUERY-PARAMS"
 private const val HTTP_QUERY_PARAMS = "query"
+private val BREADCRUMB_WHEN_PATTERN = Regex("\\s\\([\\w\\s]+\\)")
 
 data class ExampleValidationErrorMessage(val fullErrorMessageString: String) {
     fun jsonPathToErrorDescriptionMapping(): List<Map<String, String>> {
@@ -25,9 +26,7 @@ data class ExampleValidationErrorMessage(val fullErrorMessageString: String) {
 
     private fun jsonPathsForAllErrors(errorMessage: String): List<String> {
         val breadcrumbs = errorMessage.lines().map { it.trim() }.filter { it.startsWith(BREADCRUMB_PREFIX_WITH_TRAILING_SPACE) }.map {
-            it.removePrefix(
-                BREADCRUMB_PREFIX_WITH_TRAILING_SPACE
-            )
+            it.removePrefix(BREADCRUMB_PREFIX_WITH_TRAILING_SPACE).replace(BREADCRUMB_WHEN_PATTERN, "").trim()
         }
         return breadcrumbs.map { breadcrumb ->
             breadcrumb

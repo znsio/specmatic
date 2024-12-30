@@ -936,7 +936,7 @@ class OpenApiSpecification(
             } ?: mapOf(NO_SECURITY_SCHEMA_IN_SPECIFICATION to NoSecurityScheme())
 
         val securitySchemesForRequestPattern: Map<String, OpenAPISecurityScheme> =
-            (parsedOpenApi.security.orEmpty() + operation.security.orEmpty())
+            (operation.security ?: parsedOpenApi.security.orEmpty())
                 .flatMap { it.keys }
                 .toSet().associateWith {
                     val securityScheme = securitySchemes[it]
@@ -1183,6 +1183,18 @@ class OpenApiSpecification(
     ) = if (mediaType.encoding.isNullOrEmpty()) false
     else mediaType.encoding[formFieldName]?.contentType == "application/json"
 
+    private fun List<Schema<Any>>.impliedDiscriminatorMappings(): Map<String, String> {
+        return this.filter { it.`$ref` != null }.associate {
+            val dataTypeName = it.`$ref`.split("/").last()
+            val targetSchema = it.`$ref`
+            dataTypeName to targetSchema
+        }
+    }
+
+    private fun Map<String, String>.distinctByValue(): Map<String, String> {
+        return this.entries.distinctBy { it.value }.associate { it.key to it.value }
+    }
+
     private fun toSpecmaticPattern(mediaType: MediaType, section: String, jsonInFormData: Boolean = false): Pattern =
         toSpecmaticPattern(mediaType.schema ?: throw ContractException("${section.capitalizeFirstChar()} body definition is missing"), emptyList(), jsonInFormData = jsonInFormData)
 
@@ -1408,10 +1420,13 @@ class OpenApiSpecification(
                     val nullable =
                         if (schema.oneOf.any { nullableEmptyObject(it) }) listOf(NullPattern) else emptyList()
 
+                    val impliedDiscriminatorMappings = schema.oneOf.impliedDiscriminatorMappings()
+                    val finalDiscriminatorMappings = schema.discriminator?.mapping.orEmpty().plus(impliedDiscriminatorMappings).distinctByValue()
+
                     AnyPattern(
                         candidatePatterns.plus(nullable),
                         typeAlias = "(${patternName})",
-                        discriminator = Discriminator.create(schema.discriminator?.propertyName, schema.discriminator?.mapping?.keys?.toSet().orEmpty(), schema.discriminator?.mapping.orEmpty())
+                        discriminator = Discriminator.create(schema.discriminator?.propertyName, finalDiscriminatorMappings.keys.toSet(), finalDiscriminatorMappings)
                     )
                 } else if (schema.anyOf != null) {
                     throw UnsupportedOperationException("Specmatic does not support anyOf")

@@ -15,7 +15,9 @@ val SUBSTITUTE_PATTERN = Regex("^\\$(\\w+)?\\((.*)\\)$")
 
 enum class SubstitutionType { SIMPLE, DELAYED_RANDOM }
 
-enum class StoreType { REPLACE, MERGE }
+enum class StoreType(val type: String, val grammar: String) {
+    REPLACE("save", "as"), MERGE("merge", "with");
+}
 
 object ExampleProcessor {
     private var runningEntity: Map<String, Value> = mapOf()
@@ -47,10 +49,12 @@ object ExampleProcessor {
         runningEntity = emptyMap()
     }
 
+    @Suppress("MemberVisibilityCanBePrivate") // Being used by other projects
     fun defaultIfNotExits(lookupKey: String, type: SubstitutionType = SubstitutionType.SIMPLE): Value {
         throw ContractException(breadCrumb = lookupKey, errorMessage = "Could not resolve ${lookupKey.quote()}, key does not exist in fact store")
     }
 
+    @Suppress("MemberVisibilityCanBePrivate") // Being used by other projects
     fun ifNotExitsToLookupPattern(lookupKey: String, type: SubstitutionType = SubstitutionType.SIMPLE): Value {
         return when (type) {
             SubstitutionType.SIMPLE -> StringValue("$($lookupKey)")
@@ -154,6 +158,10 @@ object ExampleProcessor {
         return JSONArrayValue(value.list.map { resolve(it, ifNotExists) })
     }
 
+    private fun toStoreErrorMessage(exampleRow: Row, type: StoreType): String {
+        return "Could not ${type.type} http response body ${type.grammar} ENTITY for example ${exampleRow.name.quote()}"
+    }
+
     /* STORE HELPERS */
     fun store(exampleRow: Row, httpRequest: HttpRequest, httpResponse: HttpResponse) {
         if (httpRequest.method == "POST") {
@@ -163,21 +171,38 @@ object ExampleProcessor {
 
         val bodyToCheck = exampleRow.responseExampleForAssertion?.body
         bodyToCheck?.ifContainsStoreToken { type ->
+            val valueToStore = httpResponse.body.getJsonObjectIfExists() ?:
+                throw ContractException(breadCrumb = exampleRow.name, errorMessage = toStoreErrorMessage(exampleRow, type))
+
             runningEntity = when (type) {
-                StoreType.REPLACE -> httpResponse.body.toFactStore(prefix = "ENTITY")
-                StoreType.MERGE -> runningEntity.plus(httpResponse.body.toFactStore(prefix = "ENTITY"))
+                StoreType.REPLACE -> valueToStore.toFactStore(prefix = "ENTITY")
+                StoreType.MERGE -> runningEntity.plus(valueToStore.toFactStore(prefix = "ENTITY"))
             }
         }
     }
 
-    fun store(exampleValue: Value) {
-        runningEntity = exampleValue.toFactStore(prefix = "ENTITY")
+    private fun Value.getJsonObjectIfExists(): JSONObjectValue? {
+        return when (this) {
+            is JSONObjectValue -> this
+            is JSONArrayValue -> this.list.firstOrNull()?.getJsonObjectIfExists()
+            else -> null
+        }
+    }
+
+    fun store(actualValue: Value, exampleValue: Value) {
+        exampleValue.ifContainsStoreToken { type ->
+            val actualJsonObjectValue = actualValue.getJsonObjectIfExists()
+                ?: throw ContractException(errorMessage = "Could not ${type.type} value ${type.grammar} ENTITY")
+            runningEntity = when (type) {
+                StoreType.REPLACE -> actualJsonObjectValue.toFactStore(prefix = "ENTITY")
+                StoreType.MERGE -> runningEntity.plus(actualJsonObjectValue.toFactStore(prefix = "ENTITY"))
+            }
+        }
     }
 
     private fun Value.ifContainsStoreToken(block: (storeType: StoreType) -> Unit) {
-        if (this !is JSONObjectValue) return
-
-        this.findFirstChildByPath("\$store")?.let {
+        val responseBody = this.getJsonObjectIfExists() ?: return
+        responseBody.findFirstChildByPath("\$store")?.let {
             when (it.toStringLiteral().toLowerCasePreservingASCIIRules()){
                 "merge" -> block(StoreType.MERGE)
                 else -> block(StoreType.REPLACE)
@@ -186,6 +211,7 @@ object ExampleProcessor {
     }
 
     /* PARSER HELPERS */
+    @Suppress("MemberVisibilityCanBePrivate") // Being used by other projects
     fun Value.toFactStore(prefix: String = ""): Map<String, Value> {
         return this.traverse(
             prefix = prefix,

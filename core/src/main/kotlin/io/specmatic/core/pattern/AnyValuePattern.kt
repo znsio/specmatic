@@ -7,7 +7,7 @@ import io.specmatic.core.value.Value
 
 object AnyValuePattern : Pattern {
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
-        throw ContractException("This pattern should not be used except in a test to match any value")
+        return Result.Success()
     }
 
     override fun generate(resolver: Resolver): Value {

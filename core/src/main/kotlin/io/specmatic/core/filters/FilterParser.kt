@@ -13,14 +13,15 @@ object FilterParser {
 
         val tokens = tokenize(normalizedFilter)
 
-        val groups = parseTokens(tokens)
+        val filterGroups = parseTokens(tokens)
 
-        return groups;
+        return filterGroups;
     }
 
     private fun isValidFilter(filter: String): Boolean {
         val validKeys = setOf("METHOD", "PATH", "STATUS", "EXAMPLE-NAME", "HEADERS", "QUERY-PARAMS")
-        val regex = Regex("\\s*(\\w+)\\s*(=|!=)\\s*([\\w/\\*\\{\\}, ]+)")
+//        val regex = Regex("\\s*(\\w+)\\s*(=|!=)\\s*([\\w/\\*\\{\\}, ]+)")
+        val regex = Regex("\\s*(\\w+)\\s*(=|!=)\\s*([\\w/*{}, ]+)")
         val logicalOperators = setOf("&&", "||", "!")
 
         var balance = 0
@@ -59,15 +60,31 @@ object FilterParser {
         })
     }
 
+//    private fun tokenize(filter: String): List<String> {
+//        val regex = Regex("""(?:[A-Za-z]+!=\d+)|(?:[A-Za-z]+=\S+)|\(|\)|!|&&|\|\||[^\s()!&|]+""")
+//        return regex.findAll(filter.trim())
+//            .map { it.value }
+//            .flatMap {
+//                // Split parentheses if they are next to other tokens
+//                it.split(Regex("(?<=\\))|(?=\\))")).filter { it.isNotEmpty() }
+//            }
+//            .toList()
+//    }
+
     private fun tokenize(filter: String): List<String> {
-        val regex = Regex("\\(|\\)|!|&&|\\|\\||[^\\s()!&|]+")
-        return regex.findAll(filter).map { it.value }.toList()
+        val regex = Regex(
+            """(?:[A-Za-z]+!=[^\s()!&|]+)|(?:[A-Za-z]+=[^\s()!&|]+)|\(|\)|!|&&|\|\||[^\s()!&|]+"""
+        )
+        return regex.findAll(filter.trim())
+            .map { it.value }
+            .toList()
     }
 
+
     private fun parseTokens(tokens: List<String>): List<FilterGroup> {
-        val stack = mutableListOf<Any>() // Temporary stack for tokens and intermediate groups
-        val result = mutableListOf<FilterGroup>() // Final list of FilterGroups
-        var currentGroup = mutableListOf<Any>() // Tracks tokens for the current FilterGroup
+        val stack = mutableListOf<Any>()
+        val result = mutableListOf<FilterGroup>()
+        var currentGroup = mutableListOf<Any>()
 
         tokens.forEach { token ->
             when (token) {
@@ -81,19 +98,6 @@ object FilterParser {
                     stack.add(token)
                 }
                 ")" -> {
-//                    // Process tokens within the parentheses
-//                    val groupTokens = mutableListOf<Any>()
-//                    while (stack.isNotEmpty() && stack.last() != "(") {
-//                        groupTokens.add(0, stack.removeAt(stack.size - 1))
-//                    }
-//                    if (stack.isEmpty() || stack.removeAt(stack.size - 1) != "(") {
-//                       // shouldn't happen as we validated already, but just in case
-//                        // return empty
-//                    }
-
-//                    if (groupTokens.isEmpty()) {
-//                        throw IllegalArgumentException("Empty group inside parentheses is not allowed")
-//                    }
                     if (stack.isNotEmpty() && stack.last() == "(") {
                         stack.removeAt(stack.lastIndex)
                     }

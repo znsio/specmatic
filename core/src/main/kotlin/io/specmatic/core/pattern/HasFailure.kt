@@ -40,7 +40,7 @@ data class HasFailure<T>(val failure: Result.Failure, val message: String = "") 
         return Result.Failure(message, failure)
     }
 
-    override fun addDetails(message: String, breadCrumb: String): ReturnValue<T> {
+    override fun addDetails(message: String, breadCrumb: String): HasFailure<T> {
         return HasFailure(Result.Failure(message, this.toFailure(), breadCrumb))
     }
 

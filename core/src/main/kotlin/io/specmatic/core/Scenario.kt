@@ -416,24 +416,31 @@ data class Scenario(
             attempt {
                 val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withResponseExampleValue(row, resolver)
 
+                val prefix = if (isNegative) flagsBased.negativePrefix else flagsBased.positivePrefix
                 val resolvedRow = ExampleProcessor.resolve(row, ExampleProcessor::defaultIfNotExits)
                 val (newRequestPatterns: Sequence<ReturnValue<HttpRequestPattern>>, generativePrefix: String) = when (isNegative) {
-                    false -> Pair(httpRequestPattern.newBasedOn(resolvedRow, resolver, httpResponsePattern.status), flagsBased.positivePrefix)
-                    else -> Pair(httpRequestPattern.negativeBasedOn(resolvedRow, resolver.copy(isNegative = true)), flagsBased.negativePrefix)
+                    false -> Pair(httpRequestPattern.newBasedOn(resolvedRow, resolver, httpResponsePattern.status), prefix)
+                    else -> Pair(httpRequestPattern.negativeBasedOn(resolvedRow, resolver.copy(isNegative = true)), prefix)
                 }
 
                 newRequestPatterns.map { newHttpRequestPattern ->
-                    newHttpRequestPattern.ifValue {
-                        this.copy(
-                            httpRequestPattern = it,
-                            httpResponsePattern = newResponsePattern,
-                            expectedFacts = newExpectedServerState,
-                            ignoreFailure = ignoreFailure,
-                            exampleName = row.name,
-                            exampleRow = row,
-                            generativePrefix = generativePrefix,
-                        )
-                    }
+                    newHttpRequestPattern.realise(
+                        hasValue = { it, _ ->
+                            HasValue(
+                                this.copy(
+                                    httpRequestPattern = it,
+                                    httpResponsePattern = newResponsePattern,
+                                    expectedFacts = newExpectedServerState,
+                                    ignoreFailure = ignoreFailure,
+                                    exampleName = row.name,
+                                    exampleRow = row,
+                                    generativePrefix = generativePrefix,
+                                )
+                            )
+                        },
+                        orException = { e -> e.addDetails(message = row.name, breadCrumb = prefix).cast() },
+                        orFailure = { f -> f.addDetails(message = row.name, breadCrumb = prefix).cast() }
+                    )
                 }
             }
         }

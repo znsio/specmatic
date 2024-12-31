@@ -640,7 +640,7 @@ For example, to filter by HTTP methods:
             val suffix = if (pattern is ListPattern) "[*]" else ""
 
             val result = pattern.matches(this, resolver.validateAll())
-            return if (result.isSuccess() && (pattern is ScalarType || pattern.isDiscriminator())) {
+            return if (result.isSuccess() && pattern is ScalarType) {
                 mapOf("$prefix$typeAlias$suffix" to this)
             } else emptyMap()
         }

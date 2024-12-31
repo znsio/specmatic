@@ -435,7 +435,7 @@ data class Scenario(
                                     exampleName = row.name,
                                     exampleRow = row,
                                     generativePrefix = generativePrefix,
-                                )
+                                ), (newHttpRequestPattern as HasValue<HttpRequestPattern>).valueDetails
                             )
                         },
                         orException = { e -> e.addDetails(message = row.name, breadCrumb = prefix).cast() },

@@ -705,8 +705,8 @@ For example:
         private fun JSONArrayValue.traverse(pattern: ListPattern, resolver: Resolver, prefix: String): Map<String, Value> {
             val resolvedPattern = resolvedHop(pattern.pattern, resolver)
             return pattern.ifNewSchema {
-                this.list.first().toDictionary(resolvedPattern, resolver, suffix = "[*]")
-            } ?: this.list.first().traverse(resolvedPattern, resolver, "$prefix[*]")
+                this.list.fold(emptyMap()) { acc, value -> acc.plus(value.toDictionary(resolvedPattern, resolver)) }
+            } ?: this.list.fold(emptyMap()) { acc, value -> acc.plus(value.traverse(resolvedPattern, resolver, "$prefix[*]")) }
         }
 
         private fun <T> Pattern.ifNewSchema(block: () -> T): T? {

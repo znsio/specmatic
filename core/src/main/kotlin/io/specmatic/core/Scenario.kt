@@ -11,6 +11,7 @@ import io.specmatic.core.utilities.nullOrExceptionString
 import io.specmatic.core.value.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.RequestContext
+import io.specmatic.test.ExampleProcessor
 
 object ContractAndStubMismatchMessages : MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
@@ -415,9 +416,10 @@ data class Scenario(
             attempt {
                 val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withResponseExampleValue(row, resolver)
 
+                val resolvedRow = ExampleProcessor.resolve(row, ExampleProcessor::defaultIfNotExits)
                 val (newRequestPatterns: Sequence<ReturnValue<HttpRequestPattern>>, generativePrefix: String) = when (isNegative) {
-                    false -> Pair(httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status), flagsBased.positivePrefix)
-                    else -> Pair(httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true)), flagsBased.negativePrefix)
+                    false -> Pair(httpRequestPattern.newBasedOn(resolvedRow, resolver, httpResponsePattern.status), flagsBased.positivePrefix)
+                    else -> Pair(httpRequestPattern.negativeBasedOn(resolvedRow, resolver.copy(isNegative = true)), flagsBased.negativePrefix)
                 }
 
                 newRequestPatterns.map { newHttpRequestPattern ->

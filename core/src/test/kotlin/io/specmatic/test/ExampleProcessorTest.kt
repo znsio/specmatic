@@ -98,7 +98,7 @@ class ExampleProcessorTest {
                 )
             )
 
-            val resolvedExampleRow = ExampleProcessor.resolveLookupIfPresent(exampleRow)
+            val resolvedExampleRow = ExampleProcessor.resolve(exampleRow)
             println(resolvedExampleRow.requestExample)
 
             assertThat(resolvedExampleRow.requestExample?.headers).isEqualTo(mapOf("Bearer" to "token"))

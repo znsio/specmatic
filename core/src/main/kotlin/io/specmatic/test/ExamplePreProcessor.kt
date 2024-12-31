@@ -85,11 +85,11 @@ object ExampleProcessor {
     }
 
     /* RESOLVER HELPERS */
-    fun resolveLookupIfPresent(row: Row): Row {
+    fun resolve(row: Row, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value = ::ifNotExitsToLookupPattern): Row {
         return row.copy(
-            requestExample = row.requestExample?.let { resolve(it, ::ifNotExitsToLookupPattern) },
-            responseExample = row.responseExample?.let { resolve(it, ::ifNotExitsToLookupPattern) },
-            values = row.values.map { resolve(parsedValue(it), ::ifNotExitsToLookupPattern).toStringLiteral() }
+            requestExample = row.requestExample?.let { resolve(it, ifNotExists) },
+            responseExample = row.responseExample?.let { resolve(it, ifNotExists) },
+            values = row.values.map { resolve(parsedValue(it), ifNotExists).toStringLiteral() }
         )
     }
 

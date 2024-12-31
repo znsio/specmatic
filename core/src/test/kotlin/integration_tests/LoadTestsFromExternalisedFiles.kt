@@ -8,12 +8,10 @@ import io.specmatic.core.*
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.ADDITIONAL_EXAMPLE_PARAMS_FILE
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.NumberValue
-import io.specmatic.core.value.Value
-import io.specmatic.core.value.mergeWith
+import io.specmatic.core.value.*
 import io.specmatic.test.ExampleProcessor
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.*
@@ -597,6 +595,46 @@ class LoadTestsFromExternalisedFiles {
             }).results
 
             assertThat(results).isNotEmpty.hasOnlyElementsOfType(Result.Success::class.java)
+        }
+
+        @Test
+        fun `should retain example information when resolution leads to invalid values`() {
+            Flags.using(ADDITIONAL_EXAMPLE_PARAMS_FILE to "src/test/resources/openapi/config_and_entity_tests/invalid_config.json") {
+                ExampleProcessor.cleanStores()
+                val feature = OpenApiSpecification.fromFile(
+                    "src/test/resources/openapi/config_and_entity_tests/spec.yaml"
+                ).toFeature().loadExternalisedExamples()
+
+                var requestsCount = 0
+                val results = feature.executeTests(object: TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        requestsCount += 1
+                        return HttpResponse(
+                            status = 201,
+                            body = parsedJSONObject("""{"id": 1}""").mergeWith(request.body)
+                        )
+                    }
+                }).results.filterIsInstance<Result.Failure>()
+                println(results.first().reportString())
+
+                assertThat(requestsCount).isEqualTo(1)
+                assertThat(results).hasSize(1)
+                assertThat(results.first().reportString()).containsIgnoringWhitespaces("""
+                >> REQUEST.BODY
+                >> name
+                Contract expected string but found value 10 (number)
+                >> tag[0]
+                Contract expected string but found value 10 (number)
+                >> details
+                Contract expected JSON object but found value 10 (number)
+                >> adopted
+                Contract expected boolean but found value "false"
+                >> age
+                Contract expected number but found value "20"
+                >> birthdate
+                Date types can only be represented using strings
+                """.trimIndent())
+            }
         }
     }
 }

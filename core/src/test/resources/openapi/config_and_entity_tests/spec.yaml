@@ -73,7 +73,8 @@ components:
         age:
           type: integer
         birthdate:
-          type: date
+          type: string
+          format: date
     Details:
       type: object
       properties:

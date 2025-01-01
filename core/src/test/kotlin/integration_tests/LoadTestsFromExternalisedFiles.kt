@@ -639,5 +639,37 @@ class LoadTestsFromExternalisedFiles {
                 """.trimIndent())
             }
         }
+
+        @Test
+        fun `should retain example information when rand resolve fails to find a substitution`() {
+            Flags.using(ADDITIONAL_EXAMPLE_PARAMS_FILE to "src/test/resources/openapi/config_and_entity_tests/incomplete_config.json") {
+                ExampleProcessor.cleanStores()
+                val feature = OpenApiSpecification.fromFile(
+                    "src/test/resources/openapi/config_and_entity_tests/spec.yaml"
+                ).toFeature().loadExternalisedExamples()
+
+                var requestsCount = 0
+                val results = feature.executeTests(object: TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        requestsCount += 1
+                        return HttpResponse(
+                            status = 201,
+                            body = parsedJSONObject("""{"id": 1}""").mergeWith(request.body)
+                        )
+                    }
+                }).results
+                val failure = results.filterIsInstance<Result.Failure>().first()
+                println(failure.scenario?.testDescription())
+                println(failure.reportString())
+
+                assertThat(requestsCount).isEqualTo(1)
+                assertThat(results).hasSize(2)
+                assertThat(failure.scenario?.testDescription()).containsIgnoringWhitespaces("Scenario: PATCH /pets/(id:number) -> 200 | EX:patch")
+                assertThat(failure.reportString()).containsIgnoringWhitespaces("""
+                >> CONFIG.patch.Pet.name
+                Couldn't pick a random value from "CONFIG.patch.Pet.name" that was not equal to "Tom"
+                """.trimIndent())
+            }
+        }
     }
 }

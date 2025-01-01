@@ -25,6 +25,7 @@ class ScenarioTestGenerationException(
     }
 
     private val httpRequest: HttpRequest = scenario.exampleRow?.requestExample ?: HttpRequest(path = scenario.path, method = scenario.method)
+    private val errorMessage: String = if (scenario.exampleRow != null && e is ContractException) "" else message
 
     override fun toScenarioMetadata() = scenario.toScenarioMetadata()
 
@@ -65,8 +66,8 @@ class ScenarioTestGenerationException(
 
     fun error(): Pair<Result, HttpResponse?> {
         val result: Result = when(e) {
-            is ContractException -> Result.Failure(message, e.failure(), breadCrumb = breadCrumb ?: "").updateScenario(scenario)
-            else -> Result.Failure(message + " - " + exceptionCauseMessage(e), breadCrumb = breadCrumb ?: "").updateScenario(scenario)
+            is ContractException -> Result.Failure(errorMessage, e.failure(), breadCrumb = breadCrumb ?: "").updateScenario(scenario)
+            else -> Result.Failure(errorMessage + " - " + exceptionCauseMessage(e), breadCrumb = breadCrumb ?: "").updateScenario(scenario)
         }
 
         return Pair(result, null)

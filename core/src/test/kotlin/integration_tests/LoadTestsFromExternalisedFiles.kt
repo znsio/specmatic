@@ -8,10 +8,11 @@ import io.specmatic.core.*
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.parsedJSONArray
 import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.Flags.Companion.ADDITIONAL_EXAMPLE_PARAMS_FILE
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.NumberValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
+import io.specmatic.test.ExampleProcessor
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
@@ -531,6 +532,112 @@ class LoadTestsFromExternalisedFiles {
             val result = results.results.first {it.scenario!!.path == "/employeesAllOfResponse"}
             println(result.reportString())
             assertThat(result).isInstanceOf(Result.Success::class.java)
+        }
+    }
+
+    @Nested
+    inner class ExampleResolution {
+        @BeforeEach
+        fun setup() {
+            System.setProperty(ADDITIONAL_EXAMPLE_PARAMS_FILE, "src/test/resources/openapi/config_and_entity_tests/config.json")
+            ExampleProcessor.cleanStores()
+        }
+
+        @AfterEach
+        fun tearDown() {
+            System.clearProperty(ADDITIONAL_EXAMPLE_PARAMS_FILE)
+            ExampleProcessor.cleanStores()
+        }
+
+        @Test
+        fun `should be able load example with substitutions for scalar and non scalar values`() {
+            val feature = OpenApiSpecification.fromFile(
+                "src/test/resources/openapi/config_and_entity_tests/spec.yaml"
+            ).toFeature().loadExternalisedExamples()
+
+            assertDoesNotThrow { feature.validateExamplesOrException() }
+        }
+
+        @Test
+        fun `should not resolve $rand lookups on initial example load`() {
+            val feature = OpenApiSpecification.fromFile(
+                "src/test/resources/openapi/config_and_entity_tests/spec.yaml"
+            ).toFeature().loadExternalisedExamples()
+
+            val patchScenario = feature.scenarios.first { it.method == "PATCH" }
+            val requestExample = patchScenario.examples.first().rows.first().requestExample
+            val requestBody = requestExample!!.body as JSONObjectValue
+
+            println(requestBody.toStringLiteral())
+            assertThat(requestBody.jsonObject.entries).allSatisfy {
+                assertThat(it.value.toStringLiteral()).isEqualTo("\$rand(CONFIG.patch.Pet.${it.key})")
+            }
+        }
+
+        @Test
+        fun `should resolve all lookups before making the request`() {
+            val feature = OpenApiSpecification.fromFile(
+                "src/test/resources/openapi/config_and_entity_tests/spec.yaml"
+            ).toFeature().loadExternalisedExamples()
+
+            val results = feature.executeTests(object: TestExecutor {
+                override fun execute(request: HttpRequest): HttpResponse {
+                    println(request.toLogString())
+                    assertThat((request.body as JSONObjectValue).jsonObject.entries).allSatisfy {
+                        assertThat(ExampleProcessor.isSubstitutionToken(it.value)).isFalse()
+                    }
+
+                    return HttpResponse(
+                        status = if (request.method == "PATCH") 200 else 201,
+                        body = parsedJSONObject("""{"id": 1}""").mergeWith(request.body)
+                    )
+                }
+            }).results
+
+            assertThat(results).isNotEmpty.hasOnlyElementsOfType(Result.Success::class.java)
+        }
+
+        @Test
+        fun `should retain example information when resolution leads to invalid values`() {
+            Flags.using(ADDITIONAL_EXAMPLE_PARAMS_FILE to "src/test/resources/openapi/config_and_entity_tests/invalid_config.json") {
+                ExampleProcessor.cleanStores()
+                val feature = OpenApiSpecification.fromFile(
+                    "src/test/resources/openapi/config_and_entity_tests/spec.yaml"
+                ).toFeature().loadExternalisedExamples()
+
+                var requestsCount = 0
+                val results = feature.executeTests(object: TestExecutor {
+                    override fun execute(request: HttpRequest): HttpResponse {
+                        requestsCount += 1
+                        return HttpResponse(
+                            status = 201,
+                            body = parsedJSONObject("""{"id": 1}""").mergeWith(request.body)
+                        )
+                    }
+                }).results
+                val failure = results.filterIsInstance<Result.Failure>().first()
+                println(failure.scenario?.testDescription())
+                println(failure.reportString())
+
+                assertThat(requestsCount).isEqualTo(1)
+                assertThat(results).hasSize(2)
+                assertThat(failure.scenario?.testDescription()).containsIgnoringWhitespaces("Scenario: PATCH /pets/(id:number) -> 200 | EX:patch")
+                assertThat(failure.reportString()).containsIgnoringWhitespaces("""
+                >> REQUEST.BODY
+                >> name
+                Contract expected string but found value 10 (number)
+                >> tag[0]
+                Contract expected string but found value 10 (number)
+                >> details
+                Contract expected JSON object but found value 10 (number)
+                >> adopted
+                Contract expected boolean but found value "false"
+                >> age
+                Contract expected number but found value "20"
+                >> birthdate
+                Date types can only be represented using strings
+                """.trimIndent())
+            }
         }
     }
 }

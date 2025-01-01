@@ -88,16 +88,9 @@ data class ScenarioAsTest(
         }
 
         try {
-            val updatedRequest = ExampleProcessor.resolve(request)
-
-            val substitutionResult = originalScenario.httpRequestPattern.matches(updatedRequest, flagsBased.update(originalScenario.resolver))
-            if (substitutionResult is Result.Failure && !testScenario.isA4xxScenario() && !testScenario.isNegative) {
-                return Pair(substitutionResult.updateScenario(testScenario), null)
-            }
-
             testExecutor.setServerState(testScenario.serverState)
-            testExecutor.preExecuteScenario(testScenario, updatedRequest)
-            val response = testExecutor.execute(updatedRequest)
+            testExecutor.preExecuteScenario(testScenario, request)
+            val response = testExecutor.execute(request)
 
             //TODO: Review - Do we need workflow anymore
             workflow.extractDataFrom(response, originalScenario)
@@ -107,15 +100,15 @@ data class ScenarioAsTest(
                 return Pair(validatorResult.withBindings(testScenario.bindings, response), response)
             }
 
-            val testResult = testResult(updatedRequest, response, testScenario, flagsBased)
+            val testResult = testResult(request, response, testScenario, flagsBased)
             if (testResult is Result.Failure) {
                 return Pair(testResult.withBindings(testScenario.bindings, response), response)
             }
 
-            val postValidateResult = validators.asSequence().map { it.postValidate(testScenario, updatedRequest, response) }.filterNotNull().firstOrNull()
+            val postValidateResult = validators.asSequence().map { it.postValidate(testScenario, request, response) }.filterNotNull().firstOrNull()
             val result = postValidateResult ?: testResult
 
-            testScenario.exampleRow?.let { ExampleProcessor.store(it, updatedRequest, response) }
+            testScenario.exampleRow?.let { ExampleProcessor.store(it, request, response) }
             return Pair(result.withBindings(testScenario.bindings, response), response)
         } catch (exception: Throwable) {
             return Pair(

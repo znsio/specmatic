@@ -20,7 +20,6 @@ object FilterParser {
 
     private fun isValidFilter(filter: String): Boolean {
         val validKeys = setOf("METHOD", "PATH", "STATUS", "EXAMPLE-NAME", "HEADERS", "QUERY-PARAMS")
-//        val regex = Regex("\\s*(\\w+)\\s*(=|!=)\\s*([\\w/\\*\\{\\}, ]+)")
         val regex = Regex("\\s*(\\w+)\\s*(=|!=)\\s*([\\w/*{}, ]+)")
         val logicalOperators = setOf("&&", "||", "!")
 
@@ -59,17 +58,6 @@ object FilterParser {
             }
         })
     }
-
-//    private fun tokenize(filter: String): List<String> {
-//        val regex = Regex("""(?:[A-Za-z]+!=\d+)|(?:[A-Za-z]+=\S+)|\(|\)|!|&&|\|\||[^\s()!&|]+""")
-//        return regex.findAll(filter.trim())
-//            .map { it.value }
-//            .flatMap {
-//                // Split parentheses if they are next to other tokens
-//                it.split(Regex("(?<=\\))|(?=\\))")).filter { it.isNotEmpty() }
-//            }
-//            .toList()
-//    }
 
     private fun tokenize(filter: String): List<String> {
         val regex = Regex(
@@ -111,7 +99,6 @@ object FilterParser {
                         false
                     }
                     filterGroup.isNegated = isNegated
-//                    stack.add(subgroup)
                     result.add(filterGroup)
                     currentGroup = mutableListOf<Any>()
                 }
@@ -135,16 +122,6 @@ object FilterParser {
             result.add(buildFilterGroup(currentGroup))
         }
 
-        // Process any remaining subgroups or tokens in the stack
-//        while (stack.isNotEmpty()) {
-//            val item = stack.removeAt(stack.size - 1)
-//            if (item is FilterGroup) {
-//                result.add(item)
-//            } else {
-//                throw IllegalArgumentException("Invalid structure in tokens")
-//            }
-//        }
-
         return result
     }
 
@@ -155,13 +132,8 @@ object FilterParser {
 
         tokens.forEach { token ->
             when (token) {
-//                "&&" -> isAndOperation = true
-//                "||" -> {
-//                    throw IllegalArgumentException("Unexpected OR in a single group")
-//                }
                 is FilterExpression -> filters.add(token)
                 is FilterGroup -> subGroups.add(token)
-//                else -> throw IllegalArgumentException("Invalid token in group: $token")
             }
         }
 

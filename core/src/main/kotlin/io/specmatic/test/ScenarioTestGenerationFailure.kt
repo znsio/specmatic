@@ -16,8 +16,7 @@ class ScenarioTestGenerationFailure(
     init {
         val exampleRow = scenario.examples.flatMap { it.rows }.firstOrNull { it.name == failure.message }
         if (exampleRow != null) {
-            val generativePrefix = failure.breadCrumb
-            scenario = scenario.copy(exampleRow = exampleRow, exampleName = failure.message, generativePrefix = generativePrefix)
+            scenario = scenario.copy(exampleRow = exampleRow, exampleName = failure.message)
         }
     }
 

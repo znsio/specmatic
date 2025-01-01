@@ -614,12 +614,15 @@ class LoadTestsFromExternalisedFiles {
                             body = parsedJSONObject("""{"id": 1}""").mergeWith(request.body)
                         )
                     }
-                }).results.filterIsInstance<Result.Failure>()
-                println(results.first().reportString())
+                }).results
+                val failure = results.filterIsInstance<Result.Failure>().first()
+                println(failure.scenario?.testDescription())
+                println(failure.reportString())
 
                 assertThat(requestsCount).isEqualTo(1)
-                assertThat(results).hasSize(1)
-                assertThat(results.first().reportString()).containsIgnoringWhitespaces("""
+                assertThat(results).hasSize(2)
+                assertThat(failure.scenario?.testDescription()).containsIgnoringWhitespaces("Scenario: PATCH /pets/(id:number) -> 200 | EX:patch")
+                assertThat(failure.reportString()).containsIgnoringWhitespaces("""
                 >> REQUEST.BODY
                 >> name
                 Contract expected string but found value 10 (number)

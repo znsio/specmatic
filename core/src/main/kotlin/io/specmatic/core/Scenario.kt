@@ -416,11 +416,10 @@ data class Scenario(
             attempt {
                 val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withResponseExampleValue(row, resolver)
 
-                val prefix = if (isNegative) flagsBased.negativePrefix else flagsBased.positivePrefix
                 val resolvedRow = ExampleProcessor.resolve(row, ExampleProcessor::defaultIfNotExits)
                 val (newRequestPatterns: Sequence<ReturnValue<HttpRequestPattern>>, generativePrefix: String) = when (isNegative) {
-                    false -> Pair(httpRequestPattern.newBasedOn(resolvedRow, resolver, httpResponsePattern.status), prefix)
-                    else -> Pair(httpRequestPattern.negativeBasedOn(resolvedRow, resolver.copy(isNegative = true)), prefix)
+                    false -> Pair(httpRequestPattern.newBasedOn(resolvedRow, resolver, httpResponsePattern.status), flagsBased.positivePrefix)
+                    else -> Pair(httpRequestPattern.negativeBasedOn(resolvedRow, resolver.copy(isNegative = true)), flagsBased.negativePrefix)
                 }
 
                 newRequestPatterns.map { newHttpRequestPattern ->
@@ -438,8 +437,8 @@ data class Scenario(
                                 ), (newHttpRequestPattern as HasValue<HttpRequestPattern>).valueDetails
                             )
                         },
-                        orException = { e -> e.addDetails(message = row.name, breadCrumb = prefix).cast() },
-                        orFailure = { f -> f.addDetails(message = row.name, breadCrumb = prefix).cast() }
+                        orException = { e -> e.addDetails(message = row.name, breadCrumb = "").cast() },
+                        orFailure = { f -> f.addDetails(message = row.name, breadCrumb = "").cast() }
                     )
                 }
             }

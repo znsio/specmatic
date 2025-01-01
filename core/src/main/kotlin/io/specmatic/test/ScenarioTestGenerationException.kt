@@ -20,8 +20,7 @@ class ScenarioTestGenerationException(
     init {
         val exampleRow = scenario.examples.flatMap { it.rows }.firstOrNull { it.name == message }
         if (exampleRow != null) {
-            val generativePrefix = breadCrumb.orEmpty()
-            scenario = scenario.copy(exampleRow = exampleRow, exampleName = message, generativePrefix = generativePrefix)
+            scenario = scenario.copy(exampleRow = exampleRow, exampleName = message)
         }
     }
 

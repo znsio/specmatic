@@ -59,14 +59,33 @@ object FilterParser {
         })
     }
 
+//    private fun tokenize(filter: String): List<String> {
+////        val regex = Regex(
+////            """(?:[A-Za-z]+!=[^\s()!&|]+)|(?:[A-Za-z]+=[^\s()!&|]+)|\(|\)|!|&&|\|\||[^\s()!&|]+"""
+////        )
+//        val regex = Regex(
+//            """(?:[A-Za-z]+!=\S+)|(?:[A-Za-z]+=\S+)|\(|\)|!|&&|\|\||[^\s()!&|]+"""
+//        )
+//        return regex.findAll(filter.trim())
+//            .map { it.value }
+//            .toList()
+//    }
+
     private fun tokenize(filter: String): List<String> {
-        val regex = Regex(
-            """(?:[A-Za-z]+!=[^\s()!&|]+)|(?:[A-Za-z]+=[^\s()!&|]+)|\(|\)|!|&&|\|\||[^\s()!&|]+"""
-        )
+        val regex = Regex("""
+        [A-Za-z]+(?:=|!=)[^()\s&|]+(?:\([^()]*\))?|  
+        \(|
+        \)|
+        !(?=\()|
+        &&|
+        \|\|
+        """.trimIndent().replace(Regex("#.*\\n"), "").replace("\\s+".toRegex(), ""))
+
         return regex.findAll(filter.trim())
             .map { it.value }
             .toList()
     }
+
 
 
     private fun parseTokens(tokens: List<String>): List<FilterGroup> {

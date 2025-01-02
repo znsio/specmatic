@@ -300,3 +300,16 @@ video {
     background-color: rgba(255, 0, 0, 0.2);
     overflow: hidden;
 }
+.specmatic-editor-tooltip {
+    color: white;
+    padding: 15px;
+    background-color: black;
+    border-radius: 3px;
+    font-size: 20px;
+    pointer-events: none;
+    display: block;
+    z-index: 1000;
+    position: fixed;
+    border-left: 4px solid red;
+}
+

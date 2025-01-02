@@ -806,17 +806,7 @@ const createErrorTooltipExtension = (errorMetadata) => {
                     const tooltip = document.createElement("div");
                     tooltip.textContent = error.message;
                     tooltip.innerHTML = error.message.replace(/\n/g, "<br>");
-                    tooltip.className = "cm-tooltip cm-tooltip-lint";
-                    tooltip.style.color = "white";
-                    tooltip.style.padding = "15px";
-                    tooltip.style.borderRadius = "3px";
-                    tooltip.style.fontSize = "20px";
-                    tooltip.style.pointerEvents = "none";
-                    tooltip.style.display = "block";
-                    tooltip.style.zIndex = "1000";
-                    tooltip.style.position = "fixed";
-                    tooltip.style.borderLeft = error.isPartial ? "4px solid yellow"
-                        : "4px solid red";
+                    tooltip.className = "specmatic-editor-tooltip";
                     tooltip.style.top = `${lineCoords.top + window.scrollY - tooltip.offsetHeight - 120}px`; // Position above the line
                     tooltip.style.left = `${lineCoords.left + 20}px`;
                     return {dom: tooltip};

@@ -1,7 +1,6 @@
 import io.specmatic.core.filters.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import java.util.regex.Pattern
 
 class ScenarioMetadataFilterTests {
 
@@ -157,6 +156,23 @@ class ScenarioMetadataFilterTests {
         assertFalse(filter.isSatisfiedBy(metadata2))
         assertFalse(filter.isSatisfiedBy(metadata3))
         assertFalse(filter.isSatisfiedBy(metadata4))
+    }
+
+    @Test
+    fun `exclude scenarios with combined METHOD and PATH conditions`() {
+        val filter = ScenarioMetadataFilter.from("!(PATH=/users && METHOD=POST) && !(PATH=/products && METHOD=POST)")
+        val metadata1 = createScenarioMetadata(method = "GET", path = "/products")
+        val metadata2 = createScenarioMetadata(method = "POST", path = "/products")
+        val metadata3 = createScenarioMetadata(method = "GET", path = "/users")
+        val metadata4 = createScenarioMetadata(method = "POST", path = "/users")
+        val metadata5 = createScenarioMetadata(method = "POST", path = "/orders")
+
+
+        assertFalse(filter.isSatisfiedBy(metadata1))
+        assertTrue(filter.isSatisfiedBy(metadata2))
+        assertFalse(filter.isSatisfiedBy(metadata3))
+        assertTrue(filter.isSatisfiedBy(metadata4))
+        assertTrue(filter.isSatisfiedBy(metadata5))
     }
 
 }

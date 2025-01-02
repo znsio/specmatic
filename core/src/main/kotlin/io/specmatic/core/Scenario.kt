@@ -440,7 +440,7 @@ data class Scenario(
                                 ), (newHttpRequestPattern as HasValue<HttpRequestPattern>).valueDetails
                             )
                         },
-                        orException = { e -> e.addDetails(message = row.name, breadCrumb = "").cast() },
+                        orException = { e -> e.copy(message = row.name).cast() },
                         orFailure = { f -> f.addDetails(message = row.name, breadCrumb = "").cast() }
                     )
                 }

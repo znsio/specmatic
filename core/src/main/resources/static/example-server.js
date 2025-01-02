@@ -818,11 +818,6 @@ const createErrorTooltipExtension = (errorMetadata) => {
   });
 };
 
-function createErrorMarker() {
-  const marker = document.createElement("div");
-  marker.className = "line-decoration-mark-error";
-  return marker;
-}
 
 
 function parseFileName(path) {

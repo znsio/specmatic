@@ -6,6 +6,7 @@ import io.specmatic.core.NoBodyValue
 import io.specmatic.core.QueryParameters
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Row
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.ADDITIONAL_EXAMPLE_PARAMS_FILE
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
@@ -13,8 +14,7 @@ import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.test.asserts.AssertComparisonTest.Companion.toFactStore
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -65,25 +65,21 @@ class ExampleProcessorTest {
                 )
             )
         )
-
-        @JvmStatic
-        @BeforeAll
-        fun setup(@TempDir tempDir: File) {
-            val configFile = File(tempDir, "config.json")
-            configFile.writeText(payloadConfig.toStringLiteral())
-            System.setProperty(ADDITIONAL_EXAMPLE_PARAMS_FILE, configFile.canonicalPath)
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun cleanup() {
-            System.clearProperty(ADDITIONAL_EXAMPLE_PARAMS_FILE)
-            ExampleProcessor.cleanStores()
-        }
     }
 
     @BeforeEach
-    fun cleanStores() { ExampleProcessor.cleanStores() }
+    fun setupConfig(@TempDir tempDir: File) {
+        val configFile = File(tempDir, "config.json")
+        configFile.writeText(payloadConfig.toStringLiteral())
+        System.setProperty(ADDITIONAL_EXAMPLE_PARAMS_FILE, configFile.canonicalPath)
+        ExampleProcessor.cleanStores()
+    }
+
+    @AfterEach
+    fun cleanStores() {
+        System.clearProperty(ADDITIONAL_EXAMPLE_PARAMS_FILE)
+        ExampleProcessor.cleanStores()
+    }
 
     @Nested
     inner class DelayedRandomSubstitution {
@@ -375,5 +371,29 @@ class ExampleProcessorTest {
         >> test  
         Could not merge http response body with ENTITY for example "test"
         """.trimIndent())
+    }
+
+    @Test
+    fun `should throw an exception when defined config is not found`() {
+        Flags.using(ADDITIONAL_EXAMPLE_PARAMS_FILE to "/does/not/exist") {
+            val exception = assertThrows<ContractException> { ExampleProcessor.cleanStores() }
+            assertThat(exception.report()).containsIgnoringWhitespaces("""
+            >> /does/not/exist 
+            Could not find the CONFIG at path ${File("/does/not/exist").canonicalPath}
+            """.trimIndent())
+        }
+    }
+
+    @Test
+    fun `should throw an exception when defined config is not valid`(@TempDir tempDir: File) {
+        val configFile = File(tempDir, "config.json")
+        configFile.writeText("10")
+        Flags.using(ADDITIONAL_EXAMPLE_PARAMS_FILE to configFile.canonicalPath) {
+            val exception = assertThrows<ContractException> { ExampleProcessor.cleanStores() }
+            assertThat(exception.report()).containsIgnoringWhitespaces("""
+            >> ${configFile.canonicalPath}  
+            Could not parse the CONFIG at path ${configFile.canonicalPath}: Expected json object, actual was 10
+            """.trimIndent())
+        }
     }
 }

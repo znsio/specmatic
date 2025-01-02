@@ -3,7 +3,6 @@ package io.specmatic.test
 import io.ktor.http.*
 import io.ktor.util.*
 import io.specmatic.core.*
-import io.specmatic.core.log.consoleLog
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
@@ -30,13 +29,11 @@ object ExampleProcessor {
 
         val configFile = File(configFilePath)
         if (!configFile.exists()) {
-            consoleLog("Could not find the CONFIG at path ${configFile.canonicalPath}")
-            return JSONObjectValue(emptyMap())
+            throw ContractException(breadCrumb = configFilePath, errorMessage = "Could not find the CONFIG at path ${configFile.canonicalPath}")
         }
 
         return runCatching { parsedJSONObject(configFile.readText()) }.getOrElse { e ->
-            consoleLog("Error loading CONFIG $configFilePath: ${exceptionCauseMessage(e)}")
-            JSONObjectValue(emptyMap())
+            throw ContractException(breadCrumb = configFilePath, errorMessage = "Could not parse the CONFIG at path ${configFile.canonicalPath}: ${exceptionCauseMessage(e)}")
         }.also {
             it.findFirstChildByPath("url")?.let {
                 url -> System.setProperty("testBaseURL", url.toStringLiteral())

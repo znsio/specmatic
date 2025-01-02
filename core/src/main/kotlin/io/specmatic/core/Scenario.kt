@@ -416,7 +416,10 @@ data class Scenario(
             attempt {
                 val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withResponseExampleValue(row, resolver)
 
-                val resolvedRow = ExampleProcessor.resolve(row, ExampleProcessor::defaultIfNotExits)
+                val resolvedRow = try { ExampleProcessor.resolve(row, ExampleProcessor::defaultIfNotExits) } catch (e: Throwable) {
+                    return@attempt sequenceOf(HasException<Scenario>(e, message = row.name, breadCrumb = ""))
+                }
+
                 val (newRequestPatterns: Sequence<ReturnValue<HttpRequestPattern>>, generativePrefix: String) = when (isNegative) {
                     false -> Pair(httpRequestPattern.newBasedOn(resolvedRow, resolver, httpResponsePattern.status), flagsBased.positivePrefix)
                     else -> Pair(httpRequestPattern.negativeBasedOn(resolvedRow, resolver.copy(isNegative = true)), flagsBased.negativePrefix)
@@ -437,7 +440,7 @@ data class Scenario(
                                 ), (newHttpRequestPattern as HasValue<HttpRequestPattern>).valueDetails
                             )
                         },
-                        orException = { e -> e.addDetails(message = row.name, breadCrumb = "").cast() },
+                        orException = { e -> e.copy(message = row.name).cast() },
                         orFailure = { f -> f.addDetails(message = row.name, breadCrumb = "").cast() }
                     )
                 }

@@ -57,12 +57,13 @@ class StubCache {
     fun findAllResponsesFor(
         path: String,
         attributeSelectionKeys: Set<String>,
-        filter: Map<String, String> = emptyMap()
+        filter: Map<String, String> = emptyMap(),
+        ifKeyNotExist: (String) -> Boolean = { true }
     ): JSONArrayValue = lock.withLock {
         val responseBodies = cachedResponses.filter {
             it.path == path
         }.map{ it.responseBody }.filter {
-            it.jsonObject.satisfiesFilter(filter)
+            it.jsonObject.satisfiesFilter(filter, ifKeyNotExist)
         }.map {
             it.removeKeysNotPresentIn(attributeSelectionKeys)
         }
@@ -76,11 +77,11 @@ class StubCache {
         }
     }
 
-    private fun Map<String, Value>.satisfiesFilter(filter: Map<String, String>): Boolean {
+    private fun Map<String, Value>.satisfiesFilter(filter: Map<String, String>, ifKeyNotExist: (String) -> Boolean): Boolean {
         if(filter.isEmpty()) return true
 
         return filter.all { (filterKey, filterValue) ->
-            if(this.containsKey(filterKey).not()) return@all true
+            if(this.containsKey(filterKey).not()) return@all ifKeyNotExist(filterKey)
 
             val actualValue = this.getValue(filterKey)
             actualValue.toStringLiteral() == filterValue

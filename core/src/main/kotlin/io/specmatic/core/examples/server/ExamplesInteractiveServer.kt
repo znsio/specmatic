@@ -107,9 +107,7 @@ class ExamplesInteractiveServer(
             configureHealthCheckModule()
 
             routing {
-                static("/_specmatic/examples") {
-                    resources("static")
-                }
+                staticResources("/_specmatic/examples", "static")
                 get("/_specmatic/examples") {
                     val contractFile = getContractFileOrBadRequest(call) ?: return@get
                     try {

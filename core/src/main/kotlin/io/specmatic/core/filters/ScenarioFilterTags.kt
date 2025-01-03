@@ -12,5 +12,11 @@ enum class ScenarioFilterTags(val key: String) {
     STATUS_CODE(STATUS_BREAD_CRUMB),
     HEADER(HEADERS_BREADCRUMB),
     QUERY(QUERY_PARAMS_BREADCRUMB),
-    EXAMPLE_NAME("EXAMPLE-NAME")
+    EXAMPLE_NAME("EXAMPLE-NAME");
+
+    companion object {
+        fun from(key: String): ScenarioFilterTags {
+            return entries.find { it.key == key } ?: throw IllegalArgumentException("Unknown filter tag: $key")
+        }
+    }
 }

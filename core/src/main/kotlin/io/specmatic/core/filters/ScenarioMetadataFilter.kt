@@ -1,92 +1,90 @@
 package io.specmatic.core.filters
 
 data class ScenarioMetadataFilter(
-    val methods: Set<String> = emptySet(),
-    val paths: Set<String> = emptySet(),
-    val statusCodes: Set<String> = emptySet(),
-    val headers: Set<String> = emptySet(),
-    val queryParams: Set<String> = emptySet(),
-    val exampleNames: Set<String> = emptySet()
+    // Groups are created for || based condition, as they have lower precedence than AND.
+    val filterGroups: List<FilterGroup> = emptyList()
 ) {
-    fun isSatisfiedByAll(metadata: ScenarioMetadata): Boolean {
-        return methods.contains(metadata.method, false) &&
-                paths.contains(metadata.path, false) &&
-                isStatusCodeFilterSatisfied(metadata.statusCode, false) &&
-                exampleNames.contains(metadata.exampleName, false) &&
-                (headers.isEmpty() || metadata.header.any { headers.contains(it, false) }) &&
-                (queryParams.isEmpty() || metadata.query.any { queryParams.contains(it, false) })
-    }
+    fun isSatisfiedBy(metadata: ScenarioMetadata): Boolean {
+        if (filterGroups.isEmpty()) return true
 
-    fun isSatisfiedByAtLeastOne(metadata: ScenarioMetadata): Boolean {
-        return methods.contains(metadata.method, true) ||
-                paths.contains(metadata.path, true) ||
-                isStatusCodeFilterSatisfied(metadata.statusCode, true) ||
-                exampleNames.contains(metadata.exampleName, true) ||
-                (headers.isNotEmpty() && metadata.header.any { headers.contains(it, true) }) ||
-                (queryParams.isNotEmpty() && metadata.query.any { queryParams.contains(it, true) })
-    }
+        val groupResults = mutableListOf<Boolean>() // Collect results of OR-separated groups
+        var tempAndResult: Boolean? = null // Accumulate AND results
 
-    private fun Set<String>.contains(element: String, strict: Boolean): Boolean {
-        if(strict) return (this.isNotEmpty() && element in this)
-        return (this.isEmpty() || element in this)
-    }
+        for ((index, group) in filterGroups.withIndex()) {
+            val currentResult = group.isSatisfiedBy(metadata)
 
-    private fun isStatusCodeFilterSatisfied(statusCode: Int, strict: Boolean): Boolean {
-        val hasMatchingStatusCode = statusCodes.any { statusCodePattern ->
-            when {
-                statusCodePattern.length == 3 && statusCodePattern.endsWith("xx") ->
-                    statusCode.toString().startsWith(statusCodePattern.first())
-                else ->
-                    statusCode.toString() == statusCodePattern
+            if (index == 0) {
+                // First group initializes the evaluation
+                tempAndResult = currentResult
+            } else if (group.isAndOperation) {
+                // Combine with the current AND result
+                tempAndResult = tempAndResult?.and(currentResult) ?: currentResult
+            } else {
+                // On encountering OR, finalize the current AND result
+                if (tempAndResult != null) {
+                    groupResults.add(tempAndResult)
+                    tempAndResult = null
+                }
+
+                // Start a new OR group with the current result
+                groupResults.add(currentResult)
             }
         }
-        return if (strict) statusCodes.isNotEmpty() && hasMatchingStatusCode
-        else statusCodes.isEmpty() || hasMatchingStatusCode
+
+        // Add any remaining AND result to groupResults
+        if (tempAndResult != null) {
+            groupResults.add(tempAndResult)
+        }
+
+        // Combine all OR results
+        return groupResults.any { it }
     }
 
-    companion object {
-        private const val FILTER_SEPARATOR = ";"
 
-        fun from(filter: String): ScenarioMetadataFilter {
-            if(filter.split(FILTER_SEPARATOR).isEmpty()) {
-                return ScenarioMetadataFilter()
-            }
-            val filters = filter.split(FILTER_SEPARATOR)
-            return ScenarioMetadataFilter(
-                methods = filters.getFiltersWithTag(ScenarioFilterTags.METHOD),
-                paths = filters.getFiltersWithTag(ScenarioFilterTags.PATH),
-                statusCodes = filters.getFiltersWithTag(ScenarioFilterTags.STATUS_CODE),
-                headers = filters.getFiltersWithTag(ScenarioFilterTags.HEADER),
-                queryParams = filters.getFiltersWithTag(ScenarioFilterTags.QUERY),
-                exampleNames = filters.getFiltersWithTag(ScenarioFilterTags.EXAMPLE_NAME)
-            )
+    companion object {
+        fun from(filterExpression: String): ScenarioMetadataFilter {
+            if (filterExpression.isEmpty()) return ScenarioMetadataFilter()
+            val parsedFilters = FilterSyntax(filterExpression).parse()
+            return ScenarioMetadataFilter(filterGroups = parsedFilters)
         }
 
         fun <T> filterUsing(
             items: Sequence<T>,
             scenarioMetadataFilter: ScenarioMetadataFilter,
-            scenarioMetadataExclusionFilter: ScenarioMetadataFilter,
             toScenarioMetadata: (T) -> ScenarioMetadata
         ): Sequence<T> {
-            return items.filter {
-                scenarioMetadataFilter.isSatisfiedByAll(toScenarioMetadata(it))
-            }.filterNot {
-                scenarioMetadataExclusionFilter.isSatisfiedByAtLeastOne(toScenarioMetadata(it))
+            val returnItems = items.filter {
+                scenarioMetadataFilter.isSatisfiedBy(toScenarioMetadata(it))
             }
-        }
-
-        private fun List<String>.getFiltersWithTag(tag: ScenarioFilterTags): Set<String> {
-            return this.asSequence().map {
-                it.trim().split("=")
-            }.filter { it.size == 2 }.filter {
-                val key = it[0]
-                key == tag.key
-            }.flatMap {
-                val values = it[1]
-                values.trim().split(",").map { value ->
-                    value.trim()
-                }
-            }.toSet()
+            return returnItems
         }
     }
 }
+
+// FilterGroup: Represents a group of filters combined either AND (&&) or OR (||), and supports negation.
+data class FilterGroup(
+    val filters: List<FilterExpression> = emptyList(),
+    val subGroups: List<FilterGroup> = emptyList(),
+    val isAndOperation: Boolean = false,
+    var isNegated: Boolean = false
+) {
+    fun isSatisfiedBy(metadata: ScenarioMetadata): Boolean {
+        // Evaluate the filters in the group
+        val filterMatches = filters.map { it.matches(metadata) }
+
+        // Evaluate the subgroups recursively
+        val subGroupMatches = subGroups.map { it.isSatisfiedBy(metadata) }
+
+        // Combine filters and subgroups based on the logical operation
+        val allMatches = filterMatches + subGroupMatches
+        val groupResult = allMatches.all { it }
+
+        // Apply negation if the group is negated
+        return if (isNegated) !groupResult else groupResult
+    }
+}
+
+
+
+
+

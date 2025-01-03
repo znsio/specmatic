@@ -657,7 +657,7 @@ class StatefulHttpStub(
 
         val results = queryParametersValue.entries.mapNotNull { (key, value) ->
             val pattern = this.getKeyPattern(key, resolver) ?: return@mapNotNull null
-            pattern.matches(value.getMatchingValue(pattern), adjustedResolver)
+            pattern.matches(value.getMatchingValue(pattern), adjustedResolver).breadCrumb(key)
         }
 
         return Result.fromResults(results).breadCrumb("QUERY-PARAMS").breadCrumb("REQUEST")

@@ -14,21 +14,11 @@ import io.specmatic.conversions.OpenApiSpecification.Companion.applyOverlay
 import io.specmatic.core.*
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger
-import io.specmatic.core.pattern.ContractException
-import io.specmatic.core.pattern.IgnoreUnexpectedKeys
-import io.specmatic.core.pattern.JSONObjectPattern
-import io.specmatic.core.pattern.Pattern
-import io.specmatic.core.pattern.PossibleJsonObjectPatternContainer
-import io.specmatic.core.pattern.StringPattern
-import io.specmatic.core.pattern.resolvedHop
-import io.specmatic.core.pattern.withoutOptionality
+import io.specmatic.core.pattern.*
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.isHealthCheckRequest
 import io.specmatic.core.utilities.exceptionCauseMessage
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.ContractAndRequestsMismatch
 import io.specmatic.stub.ContractStub
@@ -320,6 +310,17 @@ class StatefulHttpStub(
         }
 
         if(method == "GET" && pathSegments.size == 1) {
+            val result = scenario.httpResponsePattern.body.validateAttributeFilters(httpRequest, scenario.resolver)
+
+            if (result is Result.Failure) {
+                return generate4xxResponseWithMessage(
+                    responses.responseWithStatusCodeStartingWith("400")?.successResponse?.responseBodyPattern,
+                    scenario,
+                    message = result.reportString(),
+                    statusCode = 400
+                )
+            }
+
             val keysToFilterOut = scenario.httpRequestPattern.httpQueryParamPattern.queryKeyNames.map {
                 withoutOptionality(it)
             }.plus(scenario.attributeSelectionPattern.queryParamKey)
@@ -643,6 +644,39 @@ class StatefulHttpStub(
             } else null
         }
 
-        return Result.fromResults(results).breadCrumb("REQUEST.BODY")
+        return Result.fromResults(results).breadCrumb("BODY").breadCrumb("REQUEST")
+    }
+
+    private fun Pattern.validateAttributeFilters(httpRequest: HttpRequest, resolver: Resolver): Result {
+        if (this !is PossibleJsonObjectPatternContainer) return Result.Success()
+
+        val queryParametersValue = httpRequest.queryParams.asValueMap()
+        val adjustedResolver = features.first().flagsBased.update(resolver).let {
+            it.copy(findKeyErrorCheck = it.findKeyErrorCheck.copy(patternKeyCheck = noPatternKeyCheck))
+        }
+
+        val results = queryParametersValue.entries.mapNotNull { (key, value) ->
+            val pattern = this.getKeyPattern(key, resolver) ?: return@mapNotNull null
+            pattern.matches(value.getMatchingValue(pattern), adjustedResolver)
+        }
+
+        return Result.fromResults(results).breadCrumb("QUERY-PARAMS").breadCrumb("REQUEST")
+    }
+
+    private fun Pattern.getKeyPattern(key: String, resolver: Resolver): Pattern? {
+        return when(this) {
+            is DeferredPattern -> resolvedHop(this, resolver).getKeyPattern(key, resolver)
+            is ListPattern -> this.pattern.getKeyPattern(key, resolver)
+            is AnyPattern -> this.getUpdatedPattern(resolver).firstNotNullOfOrNull { it.getKeyPattern(key, resolver) }
+            is JSONObjectPattern -> this.pattern[key] ?: this.pattern["$key?"]
+            else -> null
+        }
+    }
+
+    private fun Value.getMatchingValue(pattern: Pattern): Value {
+        return when(pattern) {
+            is NumberPattern, is BooleanPattern -> this
+            else -> StringValue(this.toStringLiteral())
+        }
     }
 }

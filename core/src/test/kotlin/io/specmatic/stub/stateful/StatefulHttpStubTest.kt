@@ -628,6 +628,42 @@ class StatefulHttpStubAttributeFilteringTest {
         assertThat(responseBody.list.size).isEqualTo(1)
         assertThat((responseBody.list.first() as JSONObjectValue).findFirstChildByPath("name")!!.toStringLiteral()).isEqualTo("iPhone 16")
     }
+
+    @Test
+    fun `filtering with invalid value should result in a 400 response, string in-place of number`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products",
+                queryParams = QueryParameters(mapOf("price" to "abcd")),
+            )
+        )
+
+        val responseBody = response.body as StringValue
+        println(response.toLogString())
+
+        assertThat(response.status).isEqualTo(400)
+        assertThat(responseBody.toStringLiteral())
+            .contains(">> REQUEST.QUERY-PARAMS.price")
+            .contains("Expected number, actual was \"abcd\"")
+    }
+
+    @Test
+    fun `filtering with number in-place of string should not result in a 400 response, the number should be casted`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products",
+                queryParams = QueryParameters(mapOf("name" to "100")),
+            )
+        )
+
+        val responseBody = response.body as JSONArrayValue
+        println(response.toLogString())
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(responseBody.list.size).isEqualTo(0)
+    }
 }
 
 class StatefulHttpStubSeedDataFromExamplesTest {

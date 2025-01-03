@@ -699,6 +699,7 @@ class StatefulHttpStubAttributeFilteringTest {
 
         assertThat(response.status).isEqualTo(200)
         assertThat(responseBody.list.size).isEqualTo(1)
+        assertThat((responseBody.list.first() as JSONObjectValue).getStringValue("units")).isEqualTo("20")
     }
 
     @Test
@@ -715,6 +716,10 @@ class StatefulHttpStubAttributeFilteringTest {
         println(response.toLogString())
 
         assertThat(response.status).isEqualTo(400)
+        assertThat(responseBody.toStringLiteral())
+            .contains(">> REQUEST.QUERY-PARAMS").contains(">> units")
+            .contains("Expected number <= 10, actual was 99999999 (number)")
+            .contains("Expected number <= 100, actual was 99999999 (number)")
     }
 }
 

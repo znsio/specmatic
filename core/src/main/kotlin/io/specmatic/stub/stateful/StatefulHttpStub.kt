@@ -320,11 +320,17 @@ class StatefulHttpStub(
         }
 
         if(method == "GET" && pathSegments.size == 1) {
+            val keysToFilterOut = scenario.httpRequestPattern.httpQueryParamPattern.queryKeyNames.map {
+                withoutOptionality(it)
+            }.plus(scenario.attributeSelectionPattern.queryParamKey)
+
             val responseBody = stubCache.findAllResponsesFor(
                 resourcePath,
                 attributeSelectionKeys,
-                httpRequest.getAttributeFilters(scenario)
+                httpRequest.queryParams.asMap(),
+                ifKeyNotExist = { key -> key in keysToFilterOut }
             )
+
             return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
         }
 
@@ -638,9 +644,5 @@ class StatefulHttpStub(
         }
 
         return Result.fromResults(results).breadCrumb("REQUEST.BODY")
-    }
-
-    private fun HttpRequest.getAttributeFilters(scenario: Scenario): Map<String, String> {
-        return this.queryParams.asMap().filterKeys { it != scenario.attributeSelectionPattern.queryParamKey }
     }
 }

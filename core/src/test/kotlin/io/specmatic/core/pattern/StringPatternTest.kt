@@ -10,6 +10,7 @@ import io.specmatic.core.value.StringValue
 import io.specmatic.shouldNotMatch
 import org.apache.commons.lang3.RandomStringUtils
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -286,5 +287,10 @@ internal class StringPatternTest {
         val fiveToElevenOccurrencesOfAlphabetA = "^a{5,11}\$"
         assertThrows<Exception> { StringPattern(minLength = 5, maxLength = 10, regex = fiveToElevenOccurrencesOfAlphabetA) }
             .also { assertThat(it.message).isEqualTo("Invalid String Constraints - regex cannot generate / match string greater than maxLength") }
+    }
+
+    @Test
+    fun `should throw an exception with the regex parse failure from the regex library` () {
+        assertThatThrownBy { StringPattern(regex = "yes|no|") }.hasMessageContaining("unexpected end-of-string")
     }
 }

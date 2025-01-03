@@ -2,9 +2,9 @@ package io.specmatic.core.filters
 
 import java.util.regex.Pattern
 
-object FilterParser {
+data class FilterSyntax(val filter: String) {
 
-    fun parse(filter: String): List<FilterGroup> {
+    fun parse(): List<FilterGroup> {
         if (filter.isBlank()) return emptyList()
 
         val normalizedFilter = normalizeFilter(filter)
@@ -40,13 +40,9 @@ object FilterParser {
             }
         }
 
-        return balance == 0 // Ensure no unmatched parentheses
+        return balance == 0
     }
 
-    /**
-     * Support AND, &&; OR, ||; NOT, ! for conditions
-     * And =, == for comparisons
-     */
     private fun normalizeFilter(filter: String): String {
         return filter.replace(Regex("\\bAND\\b|\\bOR\\b|\\bNOT\\b|=="), { matchResult ->
             when (matchResult.value) {
@@ -122,7 +118,6 @@ object FilterParser {
             }
         }
 
-        // Process any remaining tokens in `currentGroup`
         if (currentGroup.isNotEmpty()) {
             result.add(buildFilterGroup(currentGroup))
         }

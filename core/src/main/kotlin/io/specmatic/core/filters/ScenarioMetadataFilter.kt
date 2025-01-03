@@ -1,7 +1,5 @@
 package io.specmatic.core.filters
 
-import java.util.regex.Pattern
-
 data class ScenarioMetadataFilter(
     // Groups are created for || based condition, as they have lower precedence than AND.
     val filterGroups: List<FilterGroup> = emptyList()
@@ -44,9 +42,9 @@ data class ScenarioMetadataFilter(
 
 
     companion object {
-        fun from(filter: String): ScenarioMetadataFilter {
-            if (filter.isEmpty()) return ScenarioMetadataFilter()
-            val parsedFilters = FilterParser.parse(filter)
+        fun from(filterExpression: String): ScenarioMetadataFilter {
+            if (filterExpression.isEmpty()) return ScenarioMetadataFilter()
+            val parsedFilters = FilterSyntax(filterExpression).parse()
             return ScenarioMetadataFilter(filterGroups = parsedFilters)
         }
 

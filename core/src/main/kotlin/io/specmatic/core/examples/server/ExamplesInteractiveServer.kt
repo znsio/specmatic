@@ -331,9 +331,9 @@ class ExamplesInteractiveServer(
                 } else true
             }
 
-            val scenarioInclusionFilter = ScenarioMetadataFilter.from(filter)
+            val scenarioFilter = ScenarioMetadataFilter.from(filter)
 
-            val filteredScenarios = filterUsing(scenariosFilteredByOlderSyntax.asSequence(), scenarioInclusionFilter) {
+            val filteredScenarios = filterUsing(scenariosFilteredByOlderSyntax.asSequence(), scenarioFilter) {
                 it.toScenarioMetadata()
             }.toList()
 

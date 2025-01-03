@@ -86,7 +86,7 @@ class ExamplesInteractiveServer(
     }
 
     private fun getServerHostPort(request: ExamplePageRequest? = null) : String {
-        return request?.hostPort ?: "http://localhost:$serverPort"
+        return (request?.hostPort ?: "http://localhost:$serverPort").trimEnd('/')
     }
 
     private val environment = applicationEngineEnvironment {
@@ -288,7 +288,7 @@ class ExamplesInteractiveServer(
                 "tableRows" to tableRows,
                 "contractFile" to contractFile.name,
                 "contractFilePath" to contractFile.absolutePath,
-                "hostPort" to hostPort.trimEnd('/'),
+                "hostPort" to hostPort,
                 "hasExamples" to tableRows.any {it.example != null},
                 "exampleDetails" to tableRows.transform(),
                 "isTestMode" to (testBaseUrl != null)

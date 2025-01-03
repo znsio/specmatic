@@ -2,9 +2,11 @@ package io.specmatic.test
 
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
+import io.specmatic.core.NoBodyValue
 import io.specmatic.core.QueryParameters
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Row
+import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.ADDITIONAL_EXAMPLE_PARAMS_FILE
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.JSONObjectValue
@@ -12,8 +14,7 @@ import io.specmatic.core.value.NumberValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.test.asserts.AssertComparisonTest.Companion.toFactStore
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -64,25 +65,21 @@ class ExampleProcessorTest {
                 )
             )
         )
-
-        @JvmStatic
-        @BeforeAll
-        fun setup(@TempDir tempDir: File) {
-            val configFile = File(tempDir, "config.json")
-            configFile.writeText(payloadConfig.toStringLiteral())
-            System.setProperty(ADDITIONAL_EXAMPLE_PARAMS_FILE, configFile.canonicalPath)
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun cleanup() {
-            System.clearProperty(ADDITIONAL_EXAMPLE_PARAMS_FILE)
-            ExampleProcessor.cleanStores()
-        }
     }
 
     @BeforeEach
-    fun cleanStores() { ExampleProcessor.cleanStores() }
+    fun setupConfig(@TempDir tempDir: File) {
+        val configFile = File(tempDir, "config.json")
+        configFile.writeText(payloadConfig.toStringLiteral())
+        System.setProperty(ADDITIONAL_EXAMPLE_PARAMS_FILE, configFile.canonicalPath)
+        ExampleProcessor.cleanStores()
+    }
+
+    @AfterEach
+    fun cleanStores() {
+        System.clearProperty(ADDITIONAL_EXAMPLE_PARAMS_FILE)
+        ExampleProcessor.cleanStores()
+    }
 
     @Nested
     inner class DelayedRandomSubstitution {
@@ -97,7 +94,7 @@ class ExampleProcessorTest {
                 )
             )
 
-            val resolvedExampleRow = ExampleProcessor.resolveLookupIfPresent(exampleRow)
+            val resolvedExampleRow = ExampleProcessor.resolve(exampleRow)
             println(resolvedExampleRow.requestExample)
 
             assertThat(resolvedExampleRow.requestExample?.headers).isEqualTo(mapOf("Bearer" to "token"))
@@ -270,6 +267,34 @@ class ExampleProcessorTest {
             assertThat(factStore.keys).doesNotContain("ENTITY.name")
             assertThat(factStore.getValue("ENTITY")).isEqualTo(response.body)
         }
+
+        @Test
+        fun `should store the first value of response body array`() {
+            val request = HttpRequest(method = "GET")
+            val response = HttpResponse(
+                body = JSONArrayValue(
+                    listOf(
+                        JSONObjectValue(mapOf("price" to NumberValue(2000))),
+                        JSONObjectValue(mapOf("price" to NumberValue(1000)))
+                    )
+                )
+            )
+            val row = Row(
+                responseExampleForAssertion = HttpResponse(
+                    body = JSONArrayValue(listOf(
+                        JSONObjectValue(mapOf("\$store" to StringValue("replace")))
+                    ))
+                )
+            )
+            ExampleProcessor.store(row, request, response)
+
+            val responseBody = response.body as JSONArrayValue
+            val factStore = ExampleProcessor.getFactStore()
+            println(factStore.getValue("ENTITY"))
+            assertThat(factStore).isNotEmpty
+            assertThat(factStore.getValue("ENTITY")).isEqualTo(responseBody.list.first())
+            assertThat(factStore.getValue("ENTITY.price")).isEqualTo(NumberValue(2000))
+        }
     }
 
     @Test
@@ -312,5 +337,63 @@ class ExampleProcessorTest {
         >> CONFIG.post.Person  
         Could not resolve "CONFIG.post.Person", key does not exist in fact store
         """.trimIndent())
+    }
+
+    @Test
+    fun `should throw if response body is not json value and asked to store`() {
+        val request = HttpRequest(body = NoBodyValue)
+        val response = HttpResponse(body = NoBodyValue)
+        val row = Row(
+            name = "test",
+            responseExampleForAssertion = HttpResponse(body = JSONObjectValue(mapOf("\$store" to StringValue("replace"))))
+        )
+
+        val exception = assertThrows<ContractException> { ExampleProcessor.store(row, request, response) }
+        println(exception.report())
+        assertThat(exception.report()).containsIgnoringWhitespaces("""
+        >> test  
+       Could not save http response body as ENTITY for example "test"
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should throw if response body array is empty and asked to store`() {
+        val request = HttpRequest(body = NoBodyValue)
+        val response = HttpResponse(body = JSONArrayValue(emptyList()))
+        val row = Row(
+            name = "test",
+            responseExampleForAssertion = HttpResponse(body = JSONObjectValue(mapOf("\$store" to StringValue("merge"))))
+        )
+
+        val exception = assertThrows<ContractException> { ExampleProcessor.store(row, request, response) }
+        println(exception.report())
+        assertThat(exception.report()).containsIgnoringWhitespaces("""
+        >> test  
+        Could not merge http response body with ENTITY for example "test"
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should throw an exception when defined config is not found`() {
+        Flags.using(ADDITIONAL_EXAMPLE_PARAMS_FILE to "/does/not/exist") {
+            val exception = assertThrows<ContractException> { ExampleProcessor.cleanStores() }
+            assertThat(exception.report()).containsIgnoringWhitespaces("""
+            >> /does/not/exist 
+            Could not find the CONFIG at path ${File("/does/not/exist").canonicalPath}
+            """.trimIndent())
+        }
+    }
+
+    @Test
+    fun `should throw an exception when defined config is not valid`(@TempDir tempDir: File) {
+        val configFile = File(tempDir, "config.json")
+        configFile.writeText("10")
+        Flags.using(ADDITIONAL_EXAMPLE_PARAMS_FILE to configFile.canonicalPath) {
+            val exception = assertThrows<ContractException> { ExampleProcessor.cleanStores() }
+            assertThat(exception.report()).containsIgnoringWhitespaces("""
+            >> ${configFile.canonicalPath}  
+            Could not parse the CONFIG at path ${configFile.canonicalPath}: Expected json object, actual was 10
+            """.trimIndent())
+        }
     }
 }

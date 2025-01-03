@@ -798,6 +798,8 @@ const createErrorTooltipExtension = (errorMetadata) => {
         const line = view.state.doc.lineAt(pos);
         const error = errorMetadata.find(err => err.line === line.number);
         const lineCoords = view.coordsAtPos(pos);
+        const numberOfPixelsAboveDefaultOffset = 120;
+        const numberOfPixelsLeftOfDefaultToolTipOrigin = 20;
         if (error) {
             return {
                 pos,
@@ -807,17 +809,15 @@ const createErrorTooltipExtension = (errorMetadata) => {
                     tooltip.textContent = error.message;
                     tooltip.innerHTML = error.message.replace(/\n/g, "<br>");
                     tooltip.className = "specmatic-editor-tooltip";
-                    tooltip.style.top = `${lineCoords.top + window.scrollY - tooltip.offsetHeight - 120}px`; // Position above the line
-                    tooltip.style.left = `${lineCoords.left + 20}px`;
+                    tooltip.style.top = `${lineCoords.top + window.scrollY - tooltip.offsetHeight - numberOfPixelsAboveDefaultOffset}px`;
+                    tooltip.style.left = `${lineCoords.left + numberOfPixelsLeftOfDefaultToolTipOrigin}px`;
                     return {dom: tooltip};
                 },
             };
         }
-
         return null;
     });
 };
-
 
 function parseFileName(path) {
     return path.split('/').pop();
@@ -860,7 +860,6 @@ function storeExampleTestData(tableRow, data) {
 
     testDetails[key][exampleData] = data;
 }
-
 
 function getExampleTestData(tableRow) {
     const key = tableRow.getAttribute("data-key");
@@ -1120,6 +1119,5 @@ function createModal({onSave, onDiscard}) {
 
     return modalContainer;
 }
-
 
 (() => cleanUpSelections())();

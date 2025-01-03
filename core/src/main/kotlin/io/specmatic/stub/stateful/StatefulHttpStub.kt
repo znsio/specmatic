@@ -323,7 +323,7 @@ class StatefulHttpStub(
             val responseBody = stubCache.findAllResponsesFor(
                 resourcePath,
                 attributeSelectionKeys,
-                httpRequest.queryParams.asMap()
+                httpRequest.getAttributeFilters(scenario)
             )
             return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
         }
@@ -631,12 +631,16 @@ class StatefulHttpStub(
     private fun JSONObjectValue.validateNonPatchableKeys(httpRequest: HttpRequest, keysToLookFor: Set<String>): Result {
         if (httpRequest.body !is JSONObjectValue) return Result.Success()
 
-        val results = keysToLookFor.filter { it in this.jsonObject.keys }.mapNotNull { key ->
+        val results = keysToLookFor.filter { it in this.jsonObject.keys && it in httpRequest.body.jsonObject.keys }.mapNotNull { key ->
             if (this.jsonObject.getValue(key).toStringLiteral() != httpRequest.body.jsonObject.getValue(key).toStringLiteral()) {
                 Result.Failure(breadCrumb = key, message = "Key ${key.quote()} is not patchable")
             } else null
         }
 
         return Result.fromResults(results).breadCrumb("REQUEST.BODY")
+    }
+
+    private fun HttpRequest.getAttributeFilters(scenario: Scenario): Map<String, String> {
+        return this.queryParams.asMap().filterKeys { it != scenario.attributeSelectionPattern.queryParamKey }
     }
 }

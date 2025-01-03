@@ -80,7 +80,7 @@ class StubCache {
         if(filter.isEmpty()) return true
 
         return filter.all { (filterKey, filterValue) ->
-            if(this.containsKey(filterKey).not()) return@all true
+            if(this.containsKey(filterKey).not()) return@all false
 
             val actualValue = this.getValue(filterKey)
             actualValue.toStringLiteral() == filterValue

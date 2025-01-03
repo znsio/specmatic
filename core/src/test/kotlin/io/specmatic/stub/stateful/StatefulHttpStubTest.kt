@@ -4,7 +4,9 @@ import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.ContractPathData
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.value.*
+import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.ContractStub
 import io.specmatic.stub.loadContractStubsFromImplicitPaths
 import org.assertj.core.api.Assertions.assertThat
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
+import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 
@@ -497,6 +500,133 @@ class StatefulHttpStubWithAttributeSelectionTest {
 
     private fun JSONObjectValue.getStringValue(key: String): String? {
         return this.jsonObject[key]?.toStringLiteral()
+    }
+}
+
+@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
+class StatefulHttpStubAttributeFilteringTest {
+    companion object {
+        private lateinit var httpStub: ContractStub
+        private val API_DIR = File("src/test/resources/openapi/spec_with_strictly_restful_apis")
+        private val API_SPEC = API_DIR.resolve("spec_with_strictly_restful_apis.yaml")
+        private val POST_EXAMPLE = API_DIR.resolve("spec_with_strictly_restful_apis_examples/post_iphone_product_with_id_300.json")
+
+        private fun getExtendedPostExample(): ScenarioStub {
+            val example = ScenarioStub.readFromFile(POST_EXAMPLE)
+            val updatedResponse = example.response.updateBody(
+                JSONObjectValue((example.response.body as JSONObjectValue).jsonObject.plus(mapOf("extraKey" to StringValue("extraValue"))))
+            )
+            return example.copy(response = updatedResponse)
+        }
+
+        @JvmStatic
+        @BeforeAll
+        fun setup() {
+            System.setProperty(EXTENSIBLE_SCHEMA, "true")
+            val extendedPostExample = getExtendedPostExample()
+            val feature = OpenApiSpecification.fromFile(API_SPEC.canonicalPath).toFeature()
+            val scenariosWithAttrSelection = feature.scenarios.map {
+                it.copy(attributeSelectionPattern = AttributeSelectionPattern(queryParamKey = "columns"))
+            }
+            httpStub = StatefulHttpStub(
+                features = listOf(feature.copy(scenarios = scenariosWithAttrSelection)),
+                scenarioStubs = listOf(extendedPostExample)
+            )
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun tearDown() {
+            httpStub.close()
+            System.clearProperty(EXTENSIBLE_SCHEMA)
+        }
+    }
+
+    @Test
+    fun `should get the list of products`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products"
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = response.body as JSONArrayValue
+        assertThat(responseBody.list.size).isEqualTo(1)
+    }
+
+    @Test
+    fun `should be able to filter based on attributes`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products",
+                queryParams = QueryParameters(mapOf("name" to "iPhone 16")),
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = response.body as JSONArrayValue
+        assertThat(responseBody.list.size).isEqualTo(1)
+        assertThat((responseBody.list.first() as JSONObjectValue).findFirstChildByPath("name")!!.toStringLiteral()).isEqualTo("iPhone 16")
+    }
+
+    @Test
+    fun `should be able to filter based on extra attributes not in the spec`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products",
+                queryParams = QueryParameters(mapOf("extraKey" to "extraValue")),
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = response.body as JSONArrayValue
+        assertThat(responseBody.list.size).isEqualTo(1)
+        assertThat((responseBody.list.first() as JSONObjectValue).findFirstChildByPath("extraKey")!!.toStringLiteral()).isEqualTo("extraValue")
+    }
+
+    @Test
+    fun `should return an empty array if no products match the filter`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products",
+                queryParams = QueryParameters(mapOf("name" to "Xiaomi")),
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = response.body as JSONArrayValue
+        assertThat(responseBody.list.size).isEqualTo(0)
+    }
+
+    @Test
+    fun `attribute selection query param should not be filtered on`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/products",
+                queryParams = QueryParameters(mapOf("columns" to "name")),
+            )
+        )
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(response.body).isInstanceOf(JSONArrayValue::class.java)
+
+        val responseBody = response.body as JSONArrayValue
+        assertThat(responseBody.list.size).isEqualTo(1)
+        assertThat((responseBody.list.first() as JSONObjectValue).findFirstChildByPath("name")!!.toStringLiteral()).isEqualTo("iPhone 16")
     }
 }
 

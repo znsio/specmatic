@@ -6,6 +6,7 @@ import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.True
 import io.specmatic.core.value.Value
+import io.specmatic.test.ExampleProcessor
 
 val actualMatch: (resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value) -> Result = { resolver: Resolver, factKey: String?, pattern: Pattern, sampleValue: Value ->
     resolver.actualPatternMatch(factKey, pattern, sampleValue)
@@ -90,8 +91,9 @@ data class Resolver(
     }
 
     fun actualPatternMatch(factKey: String?, pattern: Pattern, sampleValue: Value): Result {
-        val patternFromSampleValue = patternFromTokenBased(sampleValue)
+        if (mockMode && ExampleProcessor.isSubstitutionToken(sampleValue)) return Result.Success()
 
+        val patternFromSampleValue = patternFromTokenBased(sampleValue)
         if (mockMode
             && patternFromSampleValue != null
             && (patternFromSampleValue is AnyValuePattern ||

@@ -3,6 +3,7 @@ package io.specmatic.test.asserts
 import io.ktor.http.*
 import io.specmatic.core.Result
 import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
 
 enum class ArrayAssertType { ARRAY_HAS }
@@ -34,7 +35,9 @@ class AssertArray(override val prefix: String, override val key: String, val loo
 
     companion object {
         fun parse(prefix: String, key: String, value: Value): AssertArray? {
-            val match = ASSERT_PATTERN.find(value.toStringLiteral()) ?: return null
+            if (value !is StringValue) return null
+
+            val match = ASSERT_PATTERN.find(value.nativeValue) ?: return null
             val keyPrefix = prefix.removeSuffix(".${key}")
 
             return when (match.groupValues[1]) {

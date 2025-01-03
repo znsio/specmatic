@@ -52,7 +52,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
             requestExample = scenarioStub.getRequestWithAdditionalParamsIfAny(specmaticConfig.additionalExampleParamsFilePath),
             responseExample = response.takeUnless { this.isPartial() },
             isPartial = scenarioStub.partial != null
-        ).let { ExampleProcessor.resolveLookupIfPresent(it) }
+        ).let { ExampleProcessor.resolve(it, ExampleProcessor::ifNotExitsToLookupPattern) }
     }
 
     constructor(file: File) : this(json = attempt("Error reading example file ${file.canonicalPath}") { parsedJSONObject(file.readText()) }, file = file)

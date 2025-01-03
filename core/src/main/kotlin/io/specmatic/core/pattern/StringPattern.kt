@@ -2,6 +2,7 @@ package io.specmatic.core.pattern
 
 import com.mifmif.common.regex.Generex
 import dk.brics.automaton.RegExp
+import io.ktor.http.*
 import io.specmatic.core.Resolver
 import io.specmatic.core.Result
 import io.specmatic.core.mismatchResult
@@ -23,12 +24,19 @@ data class StringPattern (
         if (minLength != null && maxLength != null && minLength > maxLength) {
             throw IllegalArgumentException("maxLength cannot be less than minLength")
         }
+
         regex?.let {
-            val regexWithoutCaretAndDollar = it.removePrefix("^").removeSuffix("$")
+            val regexWithoutCaretAndDollar = validateRegex(it).removePrefix("^").removeSuffix("$")
             regexMinLengthValidation(regexWithoutCaretAndDollar)
             regexMaxLengthValidation(regexWithoutCaretAndDollar)
         }
 
+    }
+
+    private fun validateRegex(regex: String): String {
+        return runCatching { RegExp(regex); regex }.getOrElse {
+            e -> throw IllegalArgumentException("Failed to parse regex ${regex.quote()}\nReason: ${e.message}")
+        }
     }
 
     private fun regexMinLengthValidation(it: String) {

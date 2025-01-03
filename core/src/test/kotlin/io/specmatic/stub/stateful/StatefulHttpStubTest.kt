@@ -510,6 +510,7 @@ class StatefulHttpStubAttributeFilteringTest {
         private val API_DIR = File("src/test/resources/openapi/spec_with_strictly_restful_apis")
         private val API_SPEC = API_DIR.resolve("spec_with_strictly_restful_apis.yaml")
         private val POST_EXAMPLE = API_DIR.resolve("spec_with_strictly_restful_apis_examples/post_iphone_product_with_id_300.json")
+        private val ORDERS_GET_EXAMPLE = API_DIR.resolve("spec_with_strictly_restful_apis_examples/get_all_orders.json")
 
         private fun getExtendedPostExample(): ScenarioStub {
             val example = ScenarioStub.readFromFile(POST_EXAMPLE)
@@ -524,13 +525,15 @@ class StatefulHttpStubAttributeFilteringTest {
         fun setup() {
             System.setProperty(EXTENSIBLE_SCHEMA, "true")
             val extendedPostExample = getExtendedPostExample()
+            val ordersGetExample = ScenarioStub.readFromFile(ORDERS_GET_EXAMPLE)
+
             val feature = OpenApiSpecification.fromFile(API_SPEC.canonicalPath).toFeature()
             val scenariosWithAttrSelection = feature.scenarios.map {
                 it.copy(attributeSelectionPattern = AttributeSelectionPattern(queryParamKey = "columns"))
             }
             httpStub = StatefulHttpStub(
                 features = listOf(feature.copy(scenarios = scenariosWithAttrSelection)),
-                scenarioStubs = listOf(extendedPostExample)
+                scenarioStubs = listOf(extendedPostExample, ordersGetExample)
             )
         }
 
@@ -663,6 +666,55 @@ class StatefulHttpStubAttributeFilteringTest {
 
         assertThat(response.status).isEqualTo(200)
         assertThat(responseBody.list.size).isEqualTo(0)
+    }
+
+    @Test
+    fun `should get the list of orders`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/orders"
+            )
+        )
+
+        val responseBody = response.body as JSONArrayValue
+        println(response.toLogString())
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(responseBody.list.size).isEqualTo(2)
+    }
+
+    @Test
+    fun `should not result in an error when value matches at-least one pattern key in an any pattern schema`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/orders",
+                queryParams = QueryParameters(mapOf("units" to "20")),
+            )
+        )
+
+        val responseBody = response.body as JSONArrayValue
+        println(response.toLogString())
+
+        assertThat(response.status).isEqualTo(200)
+        assertThat(responseBody.list.size).isEqualTo(1)
+    }
+
+    @Test
+    fun `should result in an error when the value doesn't mach any of the pattern keys in an any pattern schema`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "GET",
+                path = "/orders",
+                queryParams = QueryParameters(mapOf("units" to "99999999")),
+            )
+        )
+
+        val responseBody = response.body as StringValue
+        println(response.toLogString())
+
+        assertThat(response.status).isEqualTo(400)
     }
 }
 

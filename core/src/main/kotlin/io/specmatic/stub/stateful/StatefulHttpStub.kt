@@ -656,20 +656,20 @@ class StatefulHttpStub(
         }
 
         val results = queryParametersValue.entries.mapNotNull { (key, value) ->
-            val pattern = this.getKeyPattern(key, resolver) ?: return@mapNotNull null
-            pattern.matches(value.getMatchingValue(pattern), adjustedResolver).breadCrumb(key)
+            val patterns = this.getKeyPattern(key, resolver).takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            patterns.map { it.matches(value.getMatchingValue(it), adjustedResolver) }.let { Results(it).toResultIfAny() }
         }
 
         return Result.fromResults(results).breadCrumb("QUERY-PARAMS").breadCrumb("REQUEST")
     }
 
-    private fun Pattern.getKeyPattern(key: String, resolver: Resolver): Pattern? {
+    private fun Pattern.getKeyPattern(key: String, resolver: Resolver): List<Pattern> {
         return when(this) {
             is DeferredPattern -> resolvedHop(this, resolver).getKeyPattern(key, resolver)
             is ListPattern -> this.pattern.getKeyPattern(key, resolver)
-            is AnyPattern -> this.getUpdatedPattern(resolver).firstNotNullOfOrNull { it.getKeyPattern(key, resolver) }
-            is JSONObjectPattern -> this.pattern[key] ?: this.pattern["$key?"]
-            else -> null
+            is AnyPattern -> this.getUpdatedPattern(resolver).flatMap { it.getKeyPattern(key, resolver) }
+            is JSONObjectPattern -> listOfNotNull(this.pattern[key] ?: this.pattern["$key?"])
+            else -> emptyList()
         }
     }
 

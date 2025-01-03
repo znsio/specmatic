@@ -1,0 +1,25 @@
+{
+    "http-request": {
+        "path": "/orders",
+        "method": "GET"
+    },
+    "http-response": {
+        "status": 200,
+        "body": [
+            {
+                "id": 100,
+                "type": "small",
+                "units": 5
+            },
+            {
+                "id": 200,
+                "type": "large",
+                "units": 20
+            }
+        ],
+        "status-text": "OK",
+        "headers": {
+            "Content-Type": "application/json"
+        }
+    }
+}

@@ -6,6 +6,8 @@ import io.ktor.server.engine.*
 import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.*
+import io.ktor.server.plugins.cors.CORS
+import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -63,13 +65,20 @@ class StatefulHttpStub(
     private val specmaticConfigPath: String? = null,
     private val scenarioStubs: List<ScenarioStub> = emptyList(),
     private val timeoutMillis: Long = 2000,
-): ContractStub {
+) : ContractStub {
 
-    private val environment = applicationEngineEnvironment {
-        module {
+
+    private val server = embeddedServer(Netty, applicationEnvironment(), configure = {
+        this.callGroupSize = 20
+        connector {
+            this.host = host
+            this.port = port
+        }
+    },
+        module = {
             install(DoubleReceive)
 
-            install(CORS) {
+            install(io.ktor.server.plugins.cors.routing.CORS) {
                 allowMethod(HttpMethod.Options)
                 allowMethod(HttpMethod.Get)
                 allowMethod(HttpMethod.Post)
@@ -103,7 +112,7 @@ class StatefulHttpStub(
                     val rawHttpRequest = ktorHttpRequestToHttpRequest(call)
                     httpLogMessage.addRequest(rawHttpRequest)
 
-                    if(rawHttpRequest.isHealthCheckRequest()) return@intercept
+                    if (rawHttpRequest.isHealthCheckRequest()) return@intercept
 
                     val httpStubResponse: HttpStubResponse = cachedHttpResponse(rawHttpRequest).response
 
@@ -134,21 +143,11 @@ class StatefulHttpStub(
             }
 
             configureHealthCheckModule()
-
-            connector {
-                this.host = host
-                this.port = port
-            }
         }
-
-    }
-
-    private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {
-        this.callGroupSize = 20
-    })
+    )
 
     init {
-        if(features.isEmpty()) {
+        if (features.isEmpty()) {
             throw IllegalArgumentException("The stateful stub requires at least one API specification to function.")
         }
         server.start()
@@ -240,7 +239,7 @@ class StatefulHttpStub(
         }.firstOrNull {
             responseDetailMatchingPredicate(it.key, it.value)
         }?.value
-        if(non202Response != null) return non202Response
+        if (non202Response != null) return non202Response
 
         return this.entries.firstOrNull {
             responseDetailMatchingPredicate(it.key, it.value)
@@ -259,7 +258,7 @@ class StatefulHttpStub(
         val method = scenario?.method
         val pathSegments = httpRequest.pathSegments()
 
-        if(isUnsupportedResponseBodyForCaching(generatedResponse, method, pathSegments)) return null
+        if (isUnsupportedResponseBodyForCaching(generatedResponse, method, pathSegments)) return null
 
         val (resourcePath, resourceId) = resourcePathAndIdFrom(httpRequest)
         val resourceIdKey = resourceIdKeyFrom(scenario?.httpRequestPattern)
@@ -273,7 +272,7 @@ class StatefulHttpStub(
             statusCode = 404
         )
         val cachedResponseWithId = stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)?.responseBody
-        if(pathSegments.size > 1 && cachedResponseWithId == null) return notFoundResponse
+        if (pathSegments.size > 1 && cachedResponseWithId == null) return notFoundResponse
 
         if (method == "POST") {
             val responseBody = generatePostResponse(generatedResponse, httpRequest, scenario.resolver) ?: return null
@@ -295,7 +294,7 @@ class StatefulHttpStub(
             return generatedResponse.withUpdated(finalResponseBody, attributeSelectionKeys)
         }
 
-        if(method == "PATCH" && pathSegments.size > 1) {
+        if (method == "PATCH" && pathSegments.size > 1) {
             val responseBody =
                 generatePatchResponse(
                     httpRequest,
@@ -309,7 +308,7 @@ class StatefulHttpStub(
             return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
         }
 
-        if(method == "GET" && pathSegments.size == 1) {
+        if (method == "GET" && pathSegments.size == 1) {
             val responseBody = stubCache.findAllResponsesFor(
                 resourcePath,
                 attributeSelectionKeys,
@@ -318,12 +317,12 @@ class StatefulHttpStub(
             return generatedResponse.withUpdated(responseBody, attributeSelectionKeys)
         }
 
-        if(method == "GET" && pathSegments.size > 1) {
-            if(cachedResponseWithId == null) return notFoundResponse
+        if (method == "GET" && pathSegments.size > 1) {
+            if (cachedResponseWithId == null) return notFoundResponse
             return generatedResponse.withUpdated(cachedResponseWithId, attributeSelectionKeys)
         }
 
-        if(method == "DELETE" && pathSegments.size > 1) {
+        if (method == "DELETE" && pathSegments.size > 1) {
             stubCache.deleteResponse(resourcePath, resourceIdKey, resourceId)
             return generatedResponse
         }
@@ -338,7 +337,7 @@ class StatefulHttpStub(
         message: String,
         statusCode: Int
     ): HttpResponse {
-        if(statusCode.toString().startsWith("4").not()) {
+        if (statusCode.toString().startsWith("4").not()) {
             throw IllegalArgumentException("The statusCode should be of 4xx type")
         }
         val warningMessage = "WARNING: The response is in string format since no schema found in the specification for $statusCode response"
@@ -475,13 +474,13 @@ class StatefulHttpStub(
         nonPatchableKeys: Set<String> = emptySet()
     ): Map<String, Value> {
         return responseBody.jsonObject.mapValues { (key, value) ->
-            if(key in nonPatchableKeys) return@mapValues value
+            if (key in nonPatchableKeys) return@mapValues value
 
             val patchValueFromRequest = requestBody.jsonObject.entries.firstOrNull {
                 it.key == key
             }?.value ?: return@mapValues value
 
-            if(patchValueFromRequest::class.java == value::class.java) return@mapValues patchValueFromRequest
+            if (patchValueFromRequest::class.java == value::class.java) return@mapValues patchValueFromRequest
             value
         }
     }
@@ -538,7 +537,7 @@ class StatefulHttpStub(
         val resolvedPattern = resolver.withCyclePrevention(responseBodyPattern) {
             resolvedHop(responseBodyPattern, it)
         }
-        if(resolvedPattern !is PossibleJsonObjectPatternContainer) {
+        if (resolvedPattern !is PossibleJsonObjectPatternContainer) {
             return null
         }
 
@@ -550,12 +549,12 @@ class StatefulHttpStub(
     }
 
     private fun HttpResponse.withUpdated(body: Value, attributeSelectionKeys: Set<String>): HttpResponse {
-        if(body !is JSONObjectValue) return this.copy(body = body)
+        if (body !is JSONObjectValue) return this.copy(body = body)
         return this.copy(body = body.removeKeysNotPresentIn(attributeSelectionKeys))
     }
 
     private fun loadSpecmaticConfig(): SpecmaticConfig {
-        return if(specmaticConfigPath != null && File(specmaticConfigPath).exists())
+        return if (specmaticConfigPath != null && File(specmaticConfigPath).exists())
             loadSpecmaticConfig(specmaticConfigPath)
         else
             SpecmaticConfig()

@@ -6,11 +6,11 @@ import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.cors.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
+import io.ktor.utils.io.jvm.javaio.*
 import io.specmatic.core.APPLICATION_NAME
 import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.ContractAndStubMismatchMessages
@@ -67,12 +67,12 @@ import io.specmatic.stub.report.StubUsageReport
 import io.specmatic.stub.report.StubUsageReportJson
 import io.specmatic.test.HttpClient
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.channels.broadcast
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
@@ -129,7 +129,8 @@ class HttpStub(
                     mismatchMessages
                 )
 
-                val matchedScenario = tier1Match.scenario ?: throw ContractException("Expected scenario after stub matched for:${System.lineSeparator()}${stub.toJSON()}")
+                val matchedScenario = tier1Match.scenario
+                    ?: throw ContractException("Expected scenario after stub matched for:${System.lineSeparator()}${stub.toJSON()}")
 
                 val stubWithSubstitutionsResolved = stub.resolveDataSubstitutions().map { scenarioStub ->
                     feature.matchingStub(scenarioStub, ContractAndStubMismatchMessages)
@@ -149,7 +150,7 @@ class HttpStub(
     }
 
     private val specmaticConfig: SpecmaticConfig =
-        if(specmaticConfigPath != null && File(specmaticConfigPath).exists())
+        if (specmaticConfigPath != null && File(specmaticConfigPath).exists())
             loadSpecmaticConfig(specmaticConfigPath)
         else
             SpecmaticConfig()
@@ -188,10 +189,12 @@ class HttpStub(
                                 logger.log(e)
                                 null
                             }
+
                             is NoMatchingScenario -> {
                                 logger.log(e, "[Example $exampleName]")
                                 null
                             }
+
                             else -> {
                                 logger.log(e, "[Example $exampleName]")
                                 throw e
@@ -231,7 +234,7 @@ class HttpStub(
 
     private val sseBuffer: SSEBuffer = SSEBuffer()
 
-    private val broadcastChannels: Vector<BroadcastChannel<SseEvent>> = Vector(50, 10)
+    private val broadcastChannels: Vector<MutableSharedFlow<SseEvent>> = Vector(50, 10)
 
     private val requestInterceptors: MutableList<RequestInterceptor> = mutableListOf()
 
@@ -243,138 +246,6 @@ class HttpStub(
 
     fun registerResponseInterceptor(responseInterceptor: ResponseInterceptor) {
         responseInterceptors.add(responseInterceptor)
-    }
-
-    private val environment = applicationEngineEnvironment {
-        module {
-            install(DoubleReceive)
-
-            install(CORS) {
-                allowMethod(HttpMethod.Options)
-                allowMethod(HttpMethod.Get)
-                allowMethod(HttpMethod.Post)
-                allowMethod(HttpMethod.Put)
-                allowMethod(HttpMethod.Delete)
-                allowMethod(HttpMethod.Patch)
-
-                allowHeaders {
-                    true
-                }
-
-                allowCredentials = true
-                allowNonSimpleContentTypes = true
-
-                anyHost()
-            }
-
-            intercept(ApplicationCallPipeline.Call) {
-                val httpLogMessage = HttpLogMessage()
-
-                try {
-                    val rawHttpRequest = ktorHttpRequestToHttpRequest(call)
-                    httpLogMessage.addRequest(rawHttpRequest)
-
-                    if(rawHttpRequest.isHealthCheckRequest()) return@intercept
-
-                    val httpRequest = requestInterceptors.fold(rawHttpRequest) { request, requestInterceptor ->
-                        requestInterceptor.interceptRequest(request) ?: request
-                    }
-
-                    val responseFromRequestHandler = requestHandlers.map {
-                        it.handleRequest(httpRequest)
-                    }.filterNotNull().firstOrNull()
-
-                    val httpStubResponse: HttpStubResponse = when {
-                        isFetchLogRequest(httpRequest) -> handleFetchLogRequest()
-                        isFetchLoadLogRequest(httpRequest) -> handleFetchLoadLogRequest()
-                        isFetchContractsRequest(httpRequest) -> handleFetchContractsRequest()
-                        responseFromRequestHandler != null -> responseFromRequestHandler
-                        isExpectationCreation(httpRequest) -> handleExpectationCreationRequest(httpRequest)
-                        isSseExpectationCreation(httpRequest) -> handleSseExpectationCreationRequest(httpRequest)
-                        isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
-                        isFlushTransientStubsRequest(httpRequest) -> handleFlushTransientStubsRequest(httpRequest)
-                        else -> serveStubResponse(httpRequest)
-                    }
-
-                    val httpResponse = responseInterceptors.fold(httpStubResponse.response) { response, responseInterceptor ->
-                        responseInterceptor.interceptResponse(httpRequest, response) ?: response
-                    }
-
-                    if (httpRequest.path!!.startsWith("""/features/default""")) {
-                        logger.log("Incoming subscription on URL path ${httpRequest.path} ")
-                        val channel: Channel<SseEvent> = Channel(10, BufferOverflow.DROP_OLDEST)
-                        val broadcastChannel: BroadcastChannel<SseEvent> = channel.broadcast()
-                        broadcastChannels.add(broadcastChannel)
-
-                        val events: ReceiveChannel<SseEvent> = broadcastChannel.openSubscription()
-
-                        try {
-                            call.respondSse(events, sseBuffer, httpRequest)
-
-                            broadcastChannels.remove(broadcastChannel)
-
-                            close(
-                                events,
-                                channel,
-                                "Events handle was already closed after handling all events",
-                                "Channel was already handled after handling all events"
-                            )
-                        } catch (e: Throwable) {
-                            logger.log(e, "Exception in the SSE module")
-
-                            broadcastChannels.remove(broadcastChannel)
-
-                            close(
-                                events,
-                                channel,
-                                "Events handle threw an exception on closing",
-                                "Channel through an exception on closing"
-                            )
-                        }
-                    } else {
-                        val updatedHttpStubResponse = httpStubResponse.copy(response = httpResponse)
-                        respondToKtorHttpResponse(call, updatedHttpStubResponse.response, updatedHttpStubResponse.delayInMilliSeconds, specmaticConfig)
-                        httpLogMessage.addResponse(updatedHttpStubResponse)
-                    }
-                } catch (e: ContractException) {
-                    val response = badRequest(e.report())
-                    httpLogMessage.addResponse(response)
-                    respondToKtorHttpResponse(call, response)
-                } catch (e: CouldNotParseRequest) {
-                    httpLogMessage.addRequest(defensivelyExtractedRequestForLogging(call))
-
-                    val response = badRequest("Could not parse request")
-                    httpLogMessage.addResponse(response)
-
-                    respondToKtorHttpResponse(call, response)
-                } catch (e: Throwable) {
-                    val response = internalServerError(exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString())
-                    httpLogMessage.addResponse(response)
-
-                    respondToKtorHttpResponse(call, response)
-                }
-
-                log(httpLogMessage)
-            }
-
-            configureHealthCheckModule()
-        }
-
-        when (keyData) {
-            null -> connector {
-                this.host = host
-                this.port = port
-            }
-
-            else -> sslConnector(
-                keyStore = keyData.keyStore,
-                keyAlias = keyData.keyAlias,
-                privateKeyPassword = { keyData.keyPassword.toCharArray() },
-                keyStorePassword = { keyData.keyPassword.toCharArray() }) {
-                this.host = host
-                this.port = port
-            }
-        }
     }
 
     fun serveStubResponse(httpRequest: HttpRequest): HttpStubResponse {
@@ -456,9 +327,145 @@ class HttpStub(
         return request
     }
 
-    private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {
+    private val server = embeddedServer(Netty, applicationEnvironment(), configure = {
         this.callGroupSize = 20
-    })
+        if (keyData != null) {
+            sslConnector(
+                keyStore = keyData.keyStore,
+                keyAlias = keyData.keyAlias,
+                keyStorePassword = { keyData.keyStorePassword.toCharArray() },
+                privateKeyPassword = { keyData.keyPassword.toCharArray() }
+            ) {
+                this.host = host
+                this.port = port
+            }
+        } else {
+            connector {
+                this.host = host
+                this.port = port
+            }
+        }
+    },
+        module = {
+            install(DoubleReceive)
+            install(io.ktor.server.plugins.cors.routing.CORS) {
+                allowMethod(HttpMethod.Options)
+                allowMethod(HttpMethod.Post)
+                allowMethod(HttpMethod.Get)
+                allowHeader(HttpHeaders.AccessControlAllowOrigin)
+                allowHeader(HttpHeaders.ContentType)
+                allowHeaders {
+                    true
+                }
+
+                allowCredentials = true
+                allowNonSimpleContentTypes = true
+                anyHost()
+            }
+            intercept(ApplicationCallPipeline.Call) {
+                val httpLogMessage = HttpLogMessage()
+
+                try {
+                    val rawHttpRequest = ktorHttpRequestToHttpRequest(call)
+                    httpLogMessage.addRequest(rawHttpRequest)
+
+                    if (rawHttpRequest.isHealthCheckRequest()) return@intercept
+
+                    val httpRequest = requestInterceptors.fold(rawHttpRequest) { request, requestInterceptor ->
+                        requestInterceptor.interceptRequest(request) ?: request
+                    }
+
+                    val responseFromRequestHandler = requestHandlers.map {
+                        it.handleRequest(httpRequest)
+                    }.filterNotNull().firstOrNull()
+
+                    val httpStubResponse: HttpStubResponse = when {
+                        isFetchLogRequest(httpRequest) -> handleFetchLogRequest()
+                        isFetchLoadLogRequest(httpRequest) -> handleFetchLoadLogRequest()
+                        isFetchContractsRequest(httpRequest) -> handleFetchContractsRequest()
+                        responseFromRequestHandler != null -> responseFromRequestHandler
+                        isExpectationCreation(httpRequest) -> handleExpectationCreationRequest(httpRequest)
+                        isSseExpectationCreation(httpRequest) -> handleSseExpectationCreationRequest(httpRequest)
+                        isStateSetupRequest(httpRequest) -> handleStateSetupRequest(httpRequest)
+                        isFlushTransientStubsRequest(httpRequest) -> handleFlushTransientStubsRequest(httpRequest)
+                        else -> serveStubResponse(httpRequest)
+                    }
+
+                    val httpResponse =
+                        responseInterceptors.fold(httpStubResponse.response) { response, responseInterceptor ->
+                            responseInterceptor.interceptResponse(httpRequest, response) ?: response
+                        }
+
+                    if (httpRequest.path!!.startsWith("""/features/default""")) {
+                        logger.log("Incoming subscription on URL path ${httpRequest.path} ")
+                        val channel: Channel<SseEvent> = Channel(10, BufferOverflow.DROP_OLDEST)
+                        val broadcastChannel: MutableSharedFlow<SseEvent> = MutableSharedFlow(replay = 0)
+                        broadcastChannels.add(broadcastChannel)
+
+                        val eventsChannel = Channel<SseEvent>()
+                        launch {
+                            broadcastChannel.collect { event ->
+                                eventsChannel.send(event)  // Send to the events channel
+                            }
+                        }
+
+
+                        try {
+                            call.respondSse(eventsChannel, sseBuffer, httpRequest)
+
+                            broadcastChannels.remove(broadcastChannel)
+
+                            close(
+                                eventsChannel,
+                                channel,
+                                "Events handle was already closed after handling all events",
+                                "Channel was already handled after handling all events"
+                            )
+                        } catch (e: Throwable) {
+                            logger.log(e, "Exception in the SSE module")
+
+                            broadcastChannels.remove(broadcastChannel)
+
+                            close(
+                                eventsChannel,
+                                channel,
+                                "Events handle threw an exception on closing",
+                                "Channel through an exception on closing"
+                            )
+                        }
+                    } else {
+                        val updatedHttpStubResponse = httpStubResponse.copy(response = httpResponse)
+                        respondToKtorHttpResponse(
+                            call,
+                            updatedHttpStubResponse.response,
+                            updatedHttpStubResponse.delayInMilliSeconds,
+                            specmaticConfig
+                        )
+                        httpLogMessage.addResponse(updatedHttpStubResponse)
+                    }
+                } catch (e: ContractException) {
+                    val response = badRequest(e.report())
+                    httpLogMessage.addResponse(response)
+                    respondToKtorHttpResponse(call, response)
+                } catch (e: CouldNotParseRequest) {
+                    httpLogMessage.addRequest(defensivelyExtractedRequestForLogging(call))
+
+                    val response = badRequest("Could not parse request")
+                    httpLogMessage.addResponse(response)
+
+                    respondToKtorHttpResponse(call, response)
+                } catch (e: Throwable) {
+                    val response = internalServerError(exceptionCauseMessage(e) + "\n\n" + e.stackTraceToString())
+                    httpLogMessage.addResponse(response)
+
+                    respondToKtorHttpResponse(call, response)
+                }
+
+                log(httpLogMessage)
+            }
+            configureHealthCheckModule()
+        }
+    )
 
     private fun handleFetchLoadLogRequest(): HttpStubResponse =
         HttpStubResponse(HttpResponse.ok(StringValue(LogTail.getSnapshot())))
@@ -515,7 +522,7 @@ class HttpStub(
                 logger.debug("Broadcasting event: $sseEvent")
 
                 for (channel in broadcastChannels) {
-                    channel.send(sseEvent)
+                    channel.emit(sseEvent)  // Emit to MutableSharedFlow
                 }
             } else {
                 logger.debug("Adding event to buffer: $sseEvent")
@@ -551,7 +558,8 @@ class HttpStub(
     fun setExpectation(stub: ScenarioStub): List<HttpStubData> {
         val results = features.asSequence().map { feature -> setExpectation(stub, feature) }
 
-        val result: Pair<Pair<Result.Success, List<HttpStubData>>?, NoMatchingScenario?>? = results.find { it.first != null }
+        val result: Pair<Pair<Result.Success, List<HttpStubData>>?, NoMatchingScenario?>? =
+            results.find { it.first != null }
         val firstResult: Pair<Result.Success, List<HttpStubData>>? = result?.first
 
         when (firstResult) {
@@ -687,7 +695,7 @@ internal suspend fun ktorHttpRequestToHttpRequest(call: ApplicationCall): HttpRe
 
 private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<String, String>, List<MultiPartFormDataValue>> {
     return when {
-        call.request.httpMethod == HttpMethod.Get -> if(call.request.headers.contains("Content-Type")) {
+        call.request.httpMethod == HttpMethod.Get -> if (call.request.headers.contains("Content-Type")) {
             Triple(parsedValue(receiveText(call)), emptyMap(), emptyList())
         } else {
             Triple(NoBodyValue, emptyMap(), emptyList())
@@ -702,45 +710,47 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
         call.request.isMultipart() -> {
             val multiPartData = call.receiveMultipart()
             val boundary = call.request.contentType().parameter("boundary") ?: "boundary"
-
-            val parts = multiPartData.readAllParts().map {
-                when (it) {
+            val parts = mutableListOf<MultiPartFormDataValue>()
+            multiPartData.forEachPart { part ->
+                when (part) {
                     is PartData.FileItem -> {
-                        val content = it.provider().asStream().use { inputStream ->
-                            MultiPartContent(inputStream.readBytes())
-                        }
-                        MultiPartFileValue(
-                            it.name ?: "",
-                            it.originalFileName ?: "",
-                            it.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" },
-                            null,
-                            content,
-                            boundary
+                        val inputStream = part.provider().toInputStream()
+                        val content = MultiPartContent(inputStream.readBytes())
+                        inputStream.close()
+                        parts.add(
+                            MultiPartFileValue(
+                                part.name ?: "",
+                                part.originalFileName ?: "",
+                                part.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" },
+                                null,
+                                content,
+                                boundary
+                            )
                         )
                     }
 
                     is PartData.FormItem -> {
-                        MultiPartContentValue(
-                            it.name ?: "",
-                            StringValue(it.value),
+                        println("Form field: ${part.name} = ${part.value}")
+                        parts.add(MultiPartContentValue(
+                            part.name ?: "",
+                            StringValue(part.value),
                             boundary,
-                            specifiedContentType = it.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" }
-                        )
+                            specifiedContentType = part.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" }
+                        ))
                     }
 
                     is PartData.BinaryItem -> {
-                        val content = it.provider().asStream().use { input ->
+                        val content = part.provider().asStream().use { input ->
                             val output = ByteArrayOutputStream()
                             input.copyTo(output)
                             output.toString()
                         }
-
-                        MultiPartContentValue(
-                            it.name ?: "",
+                        parts.add(MultiPartContentValue(
+                            part.name ?: "",
                             StringValue(content),
                             boundary,
-                            specifiedContentType = it.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" }
-                        )
+                            specifiedContentType = part.contentType?.let { contentType -> "${contentType.contentType}/${contentType.contentSubtype}" }
+                        ))
                     }
 
                     else -> {
@@ -753,7 +763,7 @@ private suspend fun bodyFromCall(call: ApplicationCall): Triple<Value, Map<Strin
         }
 
         else -> {
-            if(call.request.headers.contains("Content-Type"))
+            if (call.request.headers.contains("Content-Type"))
                 Triple(parsedValue(receiveText(call)), emptyMap(), emptyList())
             else
                 Triple(NoBodyValue, emptyMap(), emptyList())
@@ -821,7 +831,7 @@ fun getHttpResponse(
 ): StubbedResponseResult {
     try {
         val (matchResults, matchingStubResponse) = stubbedResponse(threadSafeStubs, threadSafeStubQueue, httpRequest)
-        if(matchingStubResponse != null) {
+        if (matchingStubResponse != null) {
             val (httpStubResponse, httpStubData) = matchingStubResponse
             return FoundStubbedResponse(
                 httpStubResponse.resolveSubstitutions(
@@ -841,7 +851,7 @@ fun getHttpResponse(
                 )
             )
         }
-        if(strictMode) return NotStubbed(HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults)))
+        if (strictMode) return NotStubbed(HttpStubResponse(strictModeHttp400Response(httpRequest, matchResults)))
 
         return fakeHttpResponse(features, httpRequest, specmaticConfig)
     } finally {
@@ -940,7 +950,7 @@ fun fakeHttpResponse(
 ): StubbedResponseResult {
 
     if (features.isEmpty())
-       return NotStubbed(HttpStubResponse(HttpResponse(400, "No valid API specifications loaded")))
+        return NotStubbed(HttpStubResponse(HttpResponse(400, "No valid API specifications loaded")))
 
     val responses: List<ResponseDetails> = responseDetailsFrom(features, httpRequest)
 
@@ -954,13 +964,14 @@ fun fakeHttpResponse(
 
             val firstScenarioWith400Response = failureResults.flatMap { it.results }.filter {
                 it is Result.Failure
-                    && it.failureReason == null
-                    && it.scenario?.let { it.status == 400 || it.status == 422 } == true
+                        && it.failureReason == null
+                        && it.scenario?.let { it.status == 400 || it.status == 422 } == true
             }.map { it.scenario!! }.firstOrNull()
 
-            if(firstScenarioWith400Response != null && specmaticConfig.stub.generative == true) {
+            if (firstScenarioWith400Response != null && specmaticConfig.stub.generative == true) {
                 val httpResponse = (firstScenarioWith400Response as Scenario).generateHttpResponse(emptyMap())
-                val updatedResponse: HttpResponse = dumpIntoFirstAvailableStringField(httpResponse, combinedFailureResult.report())
+                val updatedResponse: HttpResponse =
+                    dumpIntoFirstAvailableStringField(httpResponse, combinedFailureResult.report())
 
                 FoundStubbedResponse(
                     HttpStubResponse(
@@ -1007,7 +1018,7 @@ fun generateHttpResponseFrom(fakeResponse: ResponseDetails, httpRequest: HttpReq
 fun dumpIntoFirstAvailableStringField(httpResponse: HttpResponse, stringValue: String): HttpResponse {
     val responseBody = httpResponse.body
 
-    if(responseBody !is JSONObjectValue)
+    if (responseBody !is JSONObjectValue)
         return httpResponse
 
     val newBody = dumpIntoFirstAvailableStringField(responseBody, stringValue)
@@ -1022,7 +1033,7 @@ fun dumpIntoFirstAvailableStringField(jsonObjectValue: JSONObjectValue, stringVa
         jsonObjectValue.jsonObject[key] is StringValue
     }
 
-    if(key != null)
+    if (key != null)
         return jsonObjectValue.copy(
             jsonObject = jsonObjectValue.jsonObject.plus(
                 key to StringValue(stringValue)
@@ -1051,7 +1062,7 @@ fun dumpIntoFirstAvailableStringField(jsonObjectValue: JSONObjectValue, stringVa
 fun dumpIntoFirstAvailableStringField(jsonArrayValue: JSONArrayValue, stringValue: String): JSONArrayValue {
     val indexOfFirstStringValue = jsonArrayValue.list.indexOfFirst { it is StringValue }
 
-    if(indexOfFirstStringValue >= 0) {
+    if (indexOfFirstStringValue >= 0) {
         val mutableList = jsonArrayValue.list.toMutableList()
         mutableList.add(indexOfFirstStringValue, StringValue(stringValue))
 
@@ -1089,7 +1100,13 @@ private fun strictModeHttp400Response(
     return HttpResponse(
         400,
         headers = mapOf(SPECMATIC_RESULT_HEADER to "failure"),
-        body = StringValue("STRICT MODE ON${System.lineSeparator()}${System.lineSeparator()}${results.strictModeReport(httpRequest)}")
+        body = StringValue(
+            "STRICT MODE ON${System.lineSeparator()}${System.lineSeparator()}${
+                results.strictModeReport(
+                    httpRequest
+                )
+            }"
+        )
     )
 }
 
@@ -1130,7 +1147,7 @@ fun contractInfoToHttpExpectations(contractInfo: List<Pair<Feature, List<Scenari
         }.flatMap { (stubData, example) ->
             val examplesWithDataSubstitutionsResolved = try {
                 example.resolveDataSubstitutions()
-            } catch(e: Throwable) {
+            } catch (e: Throwable) {
                 println()
                 logger.log("    Error resolving template data for example ${example.filePath}")
                 logger.log("    " + exceptionCauseMessage(e))

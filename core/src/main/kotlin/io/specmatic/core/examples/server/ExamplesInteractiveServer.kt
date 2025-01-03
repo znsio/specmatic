@@ -75,21 +75,31 @@ class ExamplesInteractiveServer(
     private var contractFileFromRequest: File? = null
 
     init {
-        if(externalDictionaryFile != null) System.setProperty(SPECMATIC_STUB_DICTIONARY, externalDictionaryFile.path)
+        if (externalDictionaryFile != null) System.setProperty(SPECMATIC_STUB_DICTIONARY, externalDictionaryFile.path)
     }
 
     private fun getContractFile(): File {
-        if(inputContractFile != null && inputContractFile.exists()) return inputContractFile
-        if(contractFileFromRequest != null && contractFileFromRequest!!.exists()) return contractFileFromRequest!!
+        if (inputContractFile != null && inputContractFile.exists()) return inputContractFile
+        if (contractFileFromRequest != null && contractFileFromRequest!!.exists()) return contractFileFromRequest!!
         throw ContractException("Invalid contract file provided to the examples interactive server")
     }
 
-    private fun getServerHostPort(request: ExamplePageRequest? = null) : String {
+    private fun getServerHostPort(request: ExamplePageRequest? = null): String {
         return request?.hostPort ?: "http://localhost:$serverPort"
     }
 
-    private val environment = applicationEngineEnvironment {
-        module {
+
+    private val server: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> =
+        embeddedServer(Netty, configure = {
+            this.callGroupSize = 5
+            this.connectionGroupSize = 20
+            this.workerGroupSize = 20
+            connector {
+                this.host = host
+                this.port = port
+            }
+        }, module =
+        {
             install(CORS) {
                 allowMethod(HttpMethod.Options)
                 allowMethod(HttpMethod.Post)
@@ -102,7 +112,6 @@ class ExamplesInteractiveServer(
             install(ContentNegotiation) {
                 jackson {}
             }
-
             configureHealthCheckModule()
 
             routing {
@@ -120,7 +129,7 @@ class ExamplesInteractiveServer(
                     contractFileFromRequest = File(request.contractFile)
                     val contractFile = getContractFileOrBadRequest(call) ?: return@post
                     try {
-                        respondWithExamplePageHtmlContent(contractFile,getServerHostPort(request), call)
+                        respondWithExamplePageHtmlContent(contractFile, getServerHostPort(request), call)
                     } catch (e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, exceptionCauseMessage(e))
                     }
@@ -160,7 +169,7 @@ class ExamplesInteractiveServer(
                         }
 
                         call.respond(HttpStatusCode.OK, GenerateExampleResponse.from(generatedExamples))
-                    } catch(e: Exception) {
+                    } catch (e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
@@ -185,7 +194,10 @@ class ExamplesInteractiveServer(
                         } catch (e: ContractException) {
                             ValidateExampleResponse(request.exampleFile, exceptionCauseMessage(e))
                         } catch (e: Exception) {
-                            ValidateExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
+                            ValidateExampleResponse(
+                                request.exampleFile,
+                                e.message ?: "An unexpected error occurred"
+                            )
                         }
                         call.respond(HttpStatusCode.OK, validationResultResponse)
                     } catch(e: Exception) {
@@ -195,14 +207,18 @@ class ExamplesInteractiveServer(
 
                 get("/_specmatic/examples/content") {
                     val fileName = call.request.queryParameters["fileName"]
-                    if(fileName == null) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request. Missing required query param named 'fileName'"))
+                    if (fileName == null) {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            mapOf("error" to "Invalid request. Missing required query param named 'fileName'")
+                        )
                         return@get
                     }
                     val file = File(fileName)
-                    if(file.exists().not() || file.extension != "json") {
-                        val message = if(file.extension == "json") "The provided example file ${file.name} does not exist"
-                        else "The provided example file ${file.name} is not a valid example file"
+                    if (file.exists().not() || file.extension != "json") {
+                        val message =
+                            if (file.extension == "json") "The provided example file ${file.name} does not exist"
+                            else "The provided example file ${file.name} is not a valid example file"
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to message))
                         return@get
                     }
@@ -212,9 +228,12 @@ class ExamplesInteractiveServer(
                     )
                 }
 
-                post ("/_specmatic/examples/test") {
+                post("/_specmatic/examples/test") {
                     if (testBaseUrl.isNullOrEmpty()) {
-                        return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid request, No Test Base URL provided via command-line"))
+                        return@post call.respond(
+                            HttpStatusCode.BadRequest,
+                            mapOf("error" to "Invalid request, No Test Base URL provided via command-line")
+                        )
                     }
 
                     val request = call.receive<ExampleTestRequest>()
@@ -225,25 +244,16 @@ class ExamplesInteractiveServer(
 
                         val (result, testLog) = testExample(contractTest, testBaseUrl)
 
-                        call.respond(HttpStatusCode.OK, ExampleTestResponse(result, testLog, exampleFile = File(request.exampleFile)))
+                        call.respond(
+                            HttpStatusCode.OK,
+                            ExampleTestResponse(result, testLog, exampleFile = File(request.exampleFile))
+                        )
                     } catch (e: Throwable) {
                         call.respond(HttpStatusCode.InternalServerError, mapOf("error" to exceptionCauseMessage(e)))
                     }
                 }
             }
-        }
-        connector {
-            this.host = serverHost
-            this.port = serverPort
-        }
-    }
-
-    private val server: ApplicationEngine = embeddedServer(Netty, environment, configure = {
-        this.requestQueueLimit = 1000
-        this.callGroupSize = 5
-        this.connectionGroupSize = 20
-        this.workerGroupSize = 20
-    })
+        })
 
     init {
         server.start()
@@ -256,7 +266,7 @@ class ExamplesInteractiveServer(
     private suspend fun getContractFileOrBadRequest(call: ApplicationCall): File? {
         return try {
             getContractFile()
-        } catch(e: ContractException) {
+        } catch (e: ContractException) {
             call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
             return null
         }
@@ -287,7 +297,7 @@ class ExamplesInteractiveServer(
                 "contractFile" to contractFile.name,
                 "contractFilePath" to contractFile.absolutePath,
                 "hostPort" to hostPort,
-                "hasExamples" to tableRows.any {it.example != null},
+                "hasExamples" to tableRows.any { it.example != null },
                 "exampleDetails" to tableRows.transform(),
                 "isTestMode" to (testBaseUrl != null)
             )
@@ -308,25 +318,30 @@ class ExamplesInteractiveServer(
         }
     }
 
-    class ScenarioFilter(filterName: String = "", filterNotName: String = "", filterClauses: List<String> = emptyList(), private val filterNotClauses: List<String> = emptyList()) {
+    class ScenarioFilter(
+        filterName: String = "",
+        filterNotName: String = "",
+        filterClauses: List<String> = emptyList(),
+        private val filterNotClauses: List<String> = emptyList()
+    ) {
         private val filter = filterClauses.joinToString(";")
         private val filterNot = filterNotClauses.joinToString(";")
 
-        private val filterNameTokens = if(filterName.isNotBlank()) {
+        private val filterNameTokens = if (filterName.isNotBlank()) {
             filterName.trim().split(",").map { it.trim() }
         } else emptyList()
 
-        private val filterNotNameTokens = if(filterNotName.isNotBlank()) {
+        private val filterNotNameTokens = if (filterNotName.isNotBlank()) {
             filterNotName.trim().split(",").map { it.trim() }
         } else emptyList()
 
         fun filter(feature: Feature): Feature {
             val scenariosFilteredByOlderSyntax = feature.scenarios.filter { scenario ->
-                if(filterNameTokens.isNotEmpty()) {
+                if (filterNameTokens.isNotEmpty()) {
                     filterNameTokens.any { name -> scenario.testDescription().contains(name) }
                 } else true
             }.filter { scenario ->
-                if(filterNotNameTokens.isNotEmpty()) {
+                if (filterNotNameTokens.isNotEmpty()) {
                     filterNotNameTokens.none { name -> scenario.testDescription().contains(name) }
                 } else true
             }
@@ -334,7 +349,11 @@ class ExamplesInteractiveServer(
             val scenarioInclusionFilter = ScenarioMetadataFilter.from(filter)
             val scenarioExclusionFilter = ScenarioMetadataFilter.from(filterNot)
 
-            val filteredScenarios = filterUsing(scenariosFilteredByOlderSyntax.asSequence(), scenarioInclusionFilter, scenarioExclusionFilter) {
+            val filteredScenarios = filterUsing(
+                scenariosFilteredByOlderSyntax.asSequence(),
+                scenarioInclusionFilter,
+                scenarioExclusionFilter
+            ) {
                 it.toScenarioMetadata()
             }.toList()
 
@@ -359,7 +378,8 @@ class ExamplesInteractiveServer(
 
         fun testExample(test: ContractTest, testBaseUrl: String): Pair<Result, String> {
             val testResult = test.runTest(testBaseUrl, timeoutInMilliseconds = DEFAULT_TIMEOUT_IN_MILLISECONDS)
-            val testLog = TestInteractionsLog.testHttpLogMessages.lastOrNull { it.scenario == testResult.first.scenario }
+            val testLog =
+                TestInteractionsLog.testHttpLogMessages.lastOrNull { it.scenario == testResult.first.scenario }
 
             return testResult.first to (testLog?.combineLog() ?: "No Test Logs Found")
         }
@@ -463,7 +483,7 @@ class ExamplesInteractiveServer(
                 it.method == method && it.status == responseStatusCode && it.path == path
                         && (contentType == null || it.httpRequestPattern.headersPattern.contentType == contentType)
             }
-            if(scenario == null) return emptyList()
+            if (scenario == null) return emptyList()
 
             val examplesDir = getExamplesDirPath(contractFile)
             val examples = examplesDir.getExamplesFromDir()
@@ -477,7 +497,7 @@ class ExamplesInteractiveServer(
 
         fun generateForSchemaBased(contractFile: File, mainPattern: String, subPattern: String): List<ExamplePathInfo> {
             val examplesDir = getExamplesDirPath(contractFile)
-            if(examplesDir.exists().not()) examplesDir.mkdirs()
+            if (examplesDir.exists().not()) examplesDir.mkdirs()
 
             val feature = parseContractFileToFeature(contractFile)
             val value = feature.generateSchemaFlagBased(mainPattern, subPattern)
@@ -500,7 +520,7 @@ class ExamplesInteractiveServer(
             existingExamples: List<ExampleFromFile>
         ): List<ExamplePathInfo> {
             val examplesDir = getExamplesDirPath(contractFile)
-            if(!examplesDir.exists()) examplesDir.mkdirs()
+            if (!examplesDir.exists()) examplesDir.mkdirs()
 
             val discriminatorBasedRequestResponses = feature
                 .generateDiscriminatorBasedRequestResponseList(
@@ -512,30 +532,33 @@ class ExamplesInteractiveServer(
             val responseDiscriminator = discriminatorBasedRequestResponses.first().responseDiscriminator
 
             val existingDiscriminators = existingExamples.map {
-                it.requestBody?.getDiscriminatorValue(requestDiscriminator).orEmpty() to it.responseBody?.getDiscriminatorValue(responseDiscriminator).orEmpty()
+                it.requestBody?.getDiscriminatorValue(requestDiscriminator)
+                    .orEmpty() to it.responseBody?.getDiscriminatorValue(responseDiscriminator).orEmpty()
             }.toSet()
 
-            return discriminatorBasedRequestResponses.filterNot { it.matches(existingDiscriminators) }.map { (request, response, requestDiscriminator, responseDiscriminator) ->
-                val requestWithoutAttrSelection = request.removeAttrSelection(scenario.attributeSelectionPattern)
+            return discriminatorBasedRequestResponses.filterNot { it.matches(existingDiscriminators) }
+                .map { (request, response, requestDiscriminator, responseDiscriminator) ->
+                    val requestWithoutAttrSelection = request.removeAttrSelection(scenario.attributeSelectionPattern)
 
-                val scenarioStub = ScenarioStub(requestWithoutAttrSelection, response)
-                val jsonWithDiscriminator = DiscriminatorExampleInjector(
-                    stubJSON = scenarioStub.toJSON(),
-                    requestDiscriminator = requestDiscriminator,
-                    responseDiscriminator = responseDiscriminator
-                ).getExampleWithDiscriminator()
+                    val scenarioStub = ScenarioStub(requestWithoutAttrSelection, response)
+                    val jsonWithDiscriminator = DiscriminatorExampleInjector(
+                        stubJSON = scenarioStub.toJSON(),
+                        requestDiscriminator = requestDiscriminator,
+                        responseDiscriminator = responseDiscriminator
+                    ).getExampleWithDiscriminator()
 
-                val uniqueNameForApiOperation = getExampleFileNameBasedOn(
-                    requestDiscriminator,
-                    responseDiscriminator,
-                    scenarioStub
-                )
+                    val uniqueNameForApiOperation = getExampleFileNameBasedOn(
+                        requestDiscriminator,
+                        responseDiscriminator,
+                        scenarioStub
+                    )
 
-                val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
-                println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
-                file.writeText(jsonWithDiscriminator.toStringLiteral())
-                ExamplePathInfo(file.absolutePath, true)
-            }
+                    val file =
+                        examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
+                    println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
+                    file.writeText(jsonWithDiscriminator.toStringLiteral())
+                    ExamplePathInfo(file.absolutePath, true)
+                }
         }
 
         private fun HttpRequest.removeAttrSelection(attributeSelectionPattern: AttributeSelectionPattern): HttpRequest {
@@ -550,6 +573,7 @@ class ExamplesInteractiveServer(
                     val targetValue = this.getEventValue() ?: this
                     targetValue.findFirstChildByPath(discriminator.discriminatorProperty)?.toStringLiteral()
                 }
+
                 is JSONArrayValue -> this.list.first().getDiscriminatorValue(discriminator)
                 else -> null
             }
@@ -716,7 +740,12 @@ class ExamplesInteractiveServer(
         private fun Value.insertFieldsInValue(fieldsToBeInserted: Map<String, Value>): Value {
             return when (this) {
                 is JSONObjectValue -> JSONObjectValue(fieldsToBeInserted.plus(this.jsonObject))
-                is JSONArrayValue -> JSONArrayValue(this.list.map {value ->  value.insertFieldsInValue(fieldsToBeInserted) })
+                is JSONArrayValue -> JSONArrayValue(this.list.map { value ->
+                    value.insertFieldsInValue(
+                        fieldsToBeInserted
+                    )
+                })
+
                 else -> this
             }
         }
@@ -726,7 +755,10 @@ class ExamplesInteractiveServer(
         }
 
         fun transformExistingExamples(contractFile: File, overlayFile: File?, examplesDir: File) {
-            val feature = parseContractFileToFeature(contractPath = contractFile.absolutePath, overlayContent = overlayFile?.readText().orEmpty())
+            val feature = parseContractFileToFeature(
+                contractPath = contractFile.absolutePath,
+                overlayContent = overlayFile?.readText().orEmpty()
+            )
             val examples = examplesDir.getExamplesFromDir()
 
             examples.forEach { example ->
@@ -737,8 +769,9 @@ class ExamplesInteractiveServer(
                     return@forEach
                 }
 
-                val scenario = feature.matchResultFlagBased(example.request, example.response, InteractiveExamplesMismatchMessages)
-                    .toResultIfAny().takeIf { it.isSuccess() }?.scenario as? Scenario
+                val scenario =
+                    feature.matchResultFlagBased(example.request, example.response, InteractiveExamplesMismatchMessages)
+                        .toResultIfAny().takeIf { it.isSuccess() }?.scenario as? Scenario
 
                 if (scenario == null) {
                     consoleDebug("Skipping ${example.file.name}, no matching scenario found")
@@ -746,17 +779,23 @@ class ExamplesInteractiveServer(
                 }
 
                 val flagBasedResolver = feature.flagsBased.update(scenario.resolver)
-                val requestWithoutOptionality = scenario.httpRequestPattern.withoutOptionality(example.request, flagBasedResolver)
-                val responseWithoutOptionality = scenario.httpResponsePattern.withoutOptionality(example.response, flagBasedResolver)
+                val requestWithoutOptionality =
+                    scenario.httpRequestPattern.withoutOptionality(example.request, flagBasedResolver)
+                val responseWithoutOptionality =
+                    scenario.httpResponsePattern.withoutOptionality(example.response, flagBasedResolver)
 
-                val updatedExample = example.replaceWithDescriptions(requestWithoutOptionality, responseWithoutOptionality)
+                val updatedExample =
+                    example.replaceWithDescriptions(requestWithoutOptionality, responseWithoutOptionality)
                 consoleDebug("Writing transformed example to ${example.file.canonicalFile.relativeTo(contractFile).path}")
                 example.file.writeText(updatedExample.toStringLiteral())
                 consoleDebug("Successfully written transformed example")
             }
         }
 
-        private fun ExampleFromFile.replaceWithDescriptions(request: HttpRequest, response: HttpResponse): JSONObjectValue {
+        private fun ExampleFromFile.replaceWithDescriptions(
+            request: HttpRequest,
+            response: HttpResponse
+        ): JSONObjectValue {
             return this.json.jsonObject.mapValues { (key, value) ->
                 when (key) {
                     MOCK_HTTP_REQUEST -> request.toJSON().insertFieldsInValue(value.getDescriptionMap())
@@ -780,7 +819,7 @@ class ExamplesInteractiveServer(
             }
             try {
                 inlineStubs.forEach { writeToExampleFile(it, contractFile) }
-            } catch(e: Exception) {
+            } catch (e: Exception) {
                 consoleLog(e)
             }
             return getExamplesDirPath(contractFile)
@@ -788,12 +827,13 @@ class ExamplesInteractiveServer(
 
         private fun writeToExampleFile(scenarioStub: ScenarioStub, contractFile: File): File {
             val examplesDir = getExamplesDirPath(contractFile)
-            if(examplesDir.exists().not()) examplesDir.mkdirs()
+            if (examplesDir.exists().not()) examplesDir.mkdirs()
             val stubJSON = scenarioStub.toJSON()
             val uniqueNameForApiOperation =
                 uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
 
-            val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
+            val file =
+                examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
             println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
             file.writeText(stubJSON.toStringLiteral())
             return file

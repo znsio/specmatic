@@ -4,6 +4,7 @@ import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
+import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
@@ -85,7 +86,7 @@ class ExamplesInteractiveServer(
     }
 
     private fun getServerHostPort(request: ExamplePageRequest? = null) : String {
-        return request?.hostPort ?: "http://localhost:$serverPort"
+        return (request?.hostPort ?: "http://localhost:$serverPort").trimEnd('/')
     }
 
     private val environment = applicationEngineEnvironment {
@@ -106,6 +107,7 @@ class ExamplesInteractiveServer(
             configureHealthCheckModule()
 
             routing {
+                staticResources("/_specmatic/examples/assets", "static")
                 get("/_specmatic/examples") {
                     val contractFile = getContractFileOrBadRequest(call) ?: return@get
                     try {

@@ -296,7 +296,7 @@ class StatefulHttpStub(
                 val unprocessableEntity = responses.responseWithStatusCodeStartingWith("422")
                 val (errorStatusCode, errorResponseBodyPattern) = if (unprocessableEntity?.successResponse != null) {
                     Pair(422, unprocessableEntity.successResponse.responseBodyPattern)
-                } else Pair(400, responses.responseWithStatusCodeStartingWith("400")?.successResponse?.responseBodyPattern)
+                } else Pair(409, responses.responseWithStatusCodeStartingWith("409")?.successResponse?.responseBodyPattern)
 
                 return generate4xxResponseWithMessage(
                     errorResponseBodyPattern,

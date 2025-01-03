@@ -11,14 +11,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.conversions.OpenApiSpecification.Companion.applyOverlay
-import io.specmatic.core.Feature
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpRequestPattern
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.Resolver
-import io.specmatic.core.Scenario
-import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.*
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
@@ -181,7 +174,7 @@ class StatefulHttpStub(
             fakeResponse,
             httpRequest,
             specmaticConfig.stub.includeMandatoryAndRequestedKeysInResponse,
-            responses.responseWithStatusCodeStartingWith("404")?.successResponse?.responseBodyPattern
+            responses
         ) ?: generateHttpResponseFrom(fakeResponse, httpRequest)
 
         return FoundStubbedResponse(
@@ -251,7 +244,7 @@ class StatefulHttpStub(
         fakeResponse: ResponseDetails,
         httpRequest: HttpRequest,
         includeMandatoryAndRequestedKeysInResponse: Boolean?,
-        notFoundResponseBodyPattern: Pattern?
+        responses: Map<Int, ResponseDetails> = emptyMap()
     ): HttpResponse? {
         val scenario = fakeResponse.successResponse?.scenario
 
@@ -267,7 +260,7 @@ class StatefulHttpStub(
             scenario?.getFieldsToBeMadeMandatoryBasedOnAttributeSelection(httpRequest.queryParams).orEmpty()
 
         val notFoundResponse = generate4xxResponseWithMessage(
-            notFoundResponseBodyPattern,
+            responses.responseWithStatusCodeStartingWith("404")?.successResponse?.responseBodyPattern,
             scenario,
             message = "Resource with resourceId '$resourceId' not found",
             statusCode = 404
@@ -296,6 +289,23 @@ class StatefulHttpStub(
         }
 
         if(method == "PATCH" && pathSegments.size > 1) {
+            val existingEntity = stubCache.findResponseFor(resourcePath, resourceIdKey, resourceId)?.responseBody
+            val result = existingEntity?.validateNonPatchableKeys(httpRequest, specmaticConfig.virtualService.nonPatchableKeys)
+
+            if (result is Result.Failure) {
+                val unprocessableEntity = responses.responseWithStatusCodeStartingWith("422")
+                val (errorStatusCode, errorResponseBodyPattern) = if (unprocessableEntity?.successResponse != null) {
+                    Pair(422, unprocessableEntity.successResponse.responseBodyPattern)
+                } else Pair(400, responses.responseWithStatusCodeStartingWith("400")?.successResponse?.responseBodyPattern)
+
+                return generate4xxResponseWithMessage(
+                    errorResponseBodyPattern,
+                    scenario,
+                    result.reportString(),
+                    errorStatusCode
+                )
+            }
+
             val responseBody =
                 generatePatchResponse(
                     httpRequest,
@@ -616,5 +626,17 @@ class StatefulHttpStub(
                 statusCode to ResponseDetails(feature, responseResultPair.first, responseResultPair.second)
             }.toMap()
         }.flatMap { map -> map.entries.map { it.toPair() } }.toMap()
+    }
+
+    private fun JSONObjectValue.validateNonPatchableKeys(httpRequest: HttpRequest, keysToLookFor: Set<String>): Result {
+        if (httpRequest.body !is JSONObjectValue) return Result.Success()
+
+        val results = keysToLookFor.filter { it in this.jsonObject.keys }.mapNotNull { key ->
+            if (this.jsonObject.getValue(key).toStringLiteral() != httpRequest.body.jsonObject.getValue(key).toStringLiteral()) {
+                Result.Failure(breadCrumb = key, message = "Key ${key.quote()} is not patchable")
+            } else null
+        }
+
+        return Result.fromResults(results).breadCrumb("REQUEST.BODY")
     }
 }

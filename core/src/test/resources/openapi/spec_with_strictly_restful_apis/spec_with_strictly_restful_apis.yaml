@@ -120,6 +120,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Product'
+        '422':
+          description: Product update failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntityError'
         '404':
           description: Product not found
 
@@ -215,6 +221,14 @@ components:
           type: string
 
     BadRequestError:
+      type: object
+      properties:
+        error:
+          type: string
+        reason:
+          type: string
+
+    UnprocessableEntityError:
       type: object
       properties:
         error:

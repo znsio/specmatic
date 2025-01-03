@@ -143,7 +143,7 @@ class StatefulHttpStubTest {
 
     @Test
     @Order(4)
-    fun `should update an existing product with patch except for the non-patchable 'description' key`() {
+    fun `should update an existing product with patch and ignore non-patchable keys if value remains the same`() {
         val response = httpStub.client.execute(
             HttpRequest(
                 method = "PATCH",
@@ -151,9 +151,9 @@ class StatefulHttpStubTest {
                 body = parsedJSONObject(
                     """
                     {
-                      "name": "Product B",
-                      "price": 100,
-                      "description": "random description"
+                      "name": "Product A",
+                      "description": "A detailed description of Product A.",
+                      "price": 100
                     }
                     """.trimIndent()
                 )
@@ -164,14 +164,40 @@ class StatefulHttpStubTest {
         val responseBody = response.body as JSONObjectValue
 
         assertThat(responseBody.getStringValue("id")).isEqualTo(resourceId)
-        assertThat(responseBody.getStringValue("name")).isEqualTo("Product B")
-        assertThat(responseBody.getStringValue("price")).isEqualTo("100")
+        assertThat(responseBody.getStringValue("name")).isEqualTo("Product A")
         assertThat(responseBody.getStringValue("description")).isEqualTo("A detailed description of Product A.")
+        assertThat(responseBody.getStringValue("price")).isEqualTo("100")
         assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
     }
 
     @Test
     @Order(5)
+    fun `should get a 422 response when trying to patch a non-patchable key with a new value`() {
+        val response = httpStub.client.execute(
+            HttpRequest(
+                method = "PATCH",
+                path = "/products/$resourceId",
+                body = parsedJSONObject(
+                    """
+                    {
+                      "name": "Product B",
+                      "description": "A detailed description of Product B."
+                    }
+                    """.trimIndent()
+                )
+            )
+        )
+
+        println(response.toLogString())
+        assertThat(response.status).isEqualTo(422)
+        assertThat(response.body.toStringLiteral())
+            .contains("error")
+            .contains(">> REQUEST.BODY.description")
+            .contains("""Key \"description\" is not patchable""")
+    }
+
+    @Test
+    @Order(6)
     fun `should get the updated product`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -184,14 +210,14 @@ class StatefulHttpStubTest {
         val responseBody = response.body as JSONObjectValue
 
         assertThat(responseBody.getStringValue("id")).isEqualTo(resourceId)
-        assertThat(responseBody.getStringValue("name")).isEqualTo("Product B")
+        assertThat(responseBody.getStringValue("name")).isEqualTo("Product A")
         assertThat(responseBody.getStringValue("price")).isEqualTo("100")
         assertThat(responseBody.getStringValue("description")).isEqualTo("A detailed description of Product A.")
         assertThat(responseBody.getStringValue("inStock")).isEqualTo("true")
     }
 
     @Test
-    @Order(6)
+    @Order(7)
     fun `should delete a product`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -213,7 +239,7 @@ class StatefulHttpStubTest {
     }
 
     @Test
-    @Order(7)
+    @Order(8)
     fun `should post a product even though the request contains unknown keys`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -244,7 +270,7 @@ class StatefulHttpStubTest {
     }
 
     @Test
-    @Order(8)
+    @Order(9)
     fun `should get a 400 response in a structured manner for an invalid post request`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -270,7 +296,7 @@ class StatefulHttpStubTest {
         assertThat(error).contains("Contract expected boolean but request contained \"true\"")
     }
 
-    @Order(9)
+    @Order(10)
     @Test
     fun `should get a 400 response as a string for an invalid get request where 400 schema is not defined for the same in the spec`() {
         val response = httpStub.client.execute(
@@ -288,7 +314,7 @@ class StatefulHttpStubTest {
     }
 
     @Test
-    @Order(10)
+    @Order(11)
     fun `should get a 404 response in a structured manner for a get request where the entry with requested id is not present in the cache`() {
         val response = httpStub.client.execute(
             HttpRequest(
@@ -304,7 +330,7 @@ class StatefulHttpStubTest {
     }
 
     @Test
-    @Order(11)
+    @Order(12)
     fun `should get a 404 response as a string for a delete request with missing id where 404 schema is not defined for the same in the spec`() {
         val response = httpStub.client.execute(
             HttpRequest(

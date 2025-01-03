@@ -1,10 +1,9 @@
 package integration_tests
 
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.HttpRequest
-import io.specmatic.core.HttpResponse
-import io.specmatic.core.Result
+import io.specmatic.core.*
 import io.specmatic.core.SPECMATIC_TYPE_HEADER
+import io.specmatic.core.jsonObject
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.mock.ScenarioStub
@@ -407,4 +406,432 @@ components:
         assertThat(result).withFailMessage(result.reportString()).isInstanceOf(Result.Success::class.java)
 
     }
+
+    @Test
+    fun `tests generated with discriminator should have only the discriminator values against the discriminator property`() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Pet Store API
+  version: 1.0.0
+paths:
+  /pets:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              ${"$"}ref: '#/components/schemas/Pet'
+      responses:
+        '200':
+          description: This is a 200 response.
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Pet'
+
+components:
+  schemas:
+    Pet:
+      oneOf:
+        - ${"$"}ref: '#/components/schemas/Dog'
+        - ${"$"}ref: '#/components/schemas/Cat'
+      discriminator:
+        propertyName: petType
+        mapping:
+          dog: '#/components/schemas/Dog'
+          cat: '#/components/schemas/Cat'
+      
+    Pet_base:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+        petType:
+          type: string
+      required:
+        - name
+        - age
+        - petType
+
+    Dog:
+      allOf:
+        - ${"$"}ref: '#/components/schemas/Pet_base'
+        - type: object
+          properties:
+            barkVolume:
+              type: integer
+          required:
+            - barkVolume
+
+    Cat:
+      allOf:
+        - ${"$"}ref: '#/components/schemas/Pet_base'
+        - type: object
+          properties:
+            whiskerLength:
+              type: integer
+          required:
+            - whiskerLength
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val petTypesSeen = mutableSetOf<String>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonRequest = request.body as? JSONObjectValue ?: fail("Expected request to be a json object")
+
+                assertThat(jsonRequest.jsonObject).containsKey("petType")
+
+                petTypesSeen.add(jsonRequest.jsonObject["petType"]?.toStringLiteral() ?: "")
+
+                return HttpResponse.ok(parsedJSONObject("""{"name": "Spot", "age": 2, "petType": "dog", "barkVolume": 10}"""))
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        assertThat(petTypesSeen).containsOnly("dog", "cat")
+        assertThat(results.testCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `tests for api with discriminator having one example should result in one test`() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Pet Store API
+  version: 1.0.0
+paths:
+  /pets:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              ${"$"}ref: '#/components/schemas/Pet'
+            examples:
+              dog:
+                value:
+                  name: Spot
+                  age: 2
+                  petType: dog
+                  barkVolume: 10
+      responses:
+        '200':
+          description: This is a 200 response.
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Pet'
+              examples:
+                dog:
+                  value:
+                    name: Spot
+                    age: 2
+                    petType: dog
+                    barkVolume: 10
+components:
+  schemas:
+    Pet:
+      oneOf:
+        - ${"$"}ref: '#/components/schemas/Dog'
+        - ${"$"}ref: '#/components/schemas/Cat'
+      discriminator:
+        propertyName: petType
+        mapping:
+          dog: '#/components/schemas/Dog'
+          cat: '#/components/schemas/Cat'
+      
+    Pet_base:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+        petType:
+          type: string
+      required:
+        - name
+        - age
+        - petType
+
+    Dog:
+      allOf:
+        - ${"$"}ref: '#/components/schemas/Pet_base'
+        - type: object
+          properties:
+            barkVolume:
+              type: integer
+          required:
+            - barkVolume
+
+    Cat:
+      allOf:
+        - ${"$"}ref: '#/components/schemas/Pet_base'
+        - type: object
+          properties:
+            whiskerLength:
+              type: integer
+          required:
+            - whiskerLength
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val petTypesSeen = mutableSetOf<String>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                println(request.toLogString())
+                val jsonRequest = request.body as? JSONObjectValue ?: fail("Expected request to be a json object")
+
+                assertThat(jsonRequest.jsonObject).containsKey("petType")
+
+                petTypesSeen.add(jsonRequest.jsonObject["petType"]?.toStringLiteral() ?: "")
+                if(jsonRequest.jsonObject["petType"]?.toStringLiteral() == "dog") {
+                    assertThat(jsonRequest.findFirstChildByPath("barkVolume")?.toStringLiteral()).isEqualTo("10")
+                }
+
+                return HttpResponse.ok(parsedJSONObject("""{"name": "Spot", "age": 2, "petType": "dog", "barkVolume": 10}"""))
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+        assertThat(petTypesSeen).containsOnly("dog")
+        assertThat(results.testCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `tests with discriminator should fail if the discriminator value is wrong`() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Pet Store API
+  version: 1.0.0
+paths:
+  /pets:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              ${"$"}ref: '#/components/schemas/Pet'
+            examples:
+              dog:
+                value:
+                  name: Spot
+                  age: 2
+                  petType: turtle
+                  barkVolume: 10
+              cat:
+                value:
+                  name: Whiskers
+                  age: 3
+                  petType: cat
+                  whiskerLength: 5
+      responses:
+        '200':
+          description: This is a 200 response.
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Pet'
+              examples:
+                dog:
+                  value:
+                    name: Spot
+                    age: 2
+                    petType: dog
+                    barkVolume: 10
+                cat:
+                  value:
+                    name: Whiskers
+                    age: 3
+                    petType: cat
+                    whiskerLength: 5
+
+components:
+  schemas:
+    Pet:
+      oneOf:
+        - ${"$"}ref: '#/components/schemas/Dog'
+        - ${"$"}ref: '#/components/schemas/Cat'
+      discriminator:
+        propertyName: petType
+        mapping:
+          dog: '#/components/schemas/Dog'
+          cat: '#/components/schemas/Cat'
+      
+    Pet_base:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+        petType:
+          type: string
+      required:
+        - name
+        - age
+        - petType
+
+    Dog:
+      allOf:
+        - ${"$"}ref: '#/components/schemas/Pet_base'
+        - type: object
+          properties:
+            barkVolume:
+              type: integer
+          required:
+            - barkVolume
+
+    Cat:
+      allOf:
+        - ${"$"}ref: '#/components/schemas/Pet_base'
+        - type: object
+          properties:
+            whiskerLength:
+              type: integer
+          required:
+            - whiskerLength
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonRequest = request.body as? JSONObjectValue ?: fail("Expected request to be a json object")
+
+                assertThat(jsonRequest.jsonObject).containsKey("petType")
+                assertThat(jsonRequest.jsonObject["petType"]?.toStringLiteral()).isIn("dog", "cat")
+
+                return HttpResponse.ok(parsedJSONObject("""{"name": "Spot", "age": 2, "petType": "dog", "barkVolume": 10}"""))
+            }
+        })
+
+        assertThat(results.success()).withFailMessage(results.report()).isFalse()
+    }
+
+    @Test
+    fun `positive generative tests with discriminator should contain only the discriminator value in the discriminator property`() {
+        val spec = """
+openapi: 3.0.0
+info:
+  title: Pet Store API
+  version: 1.0.0
+paths:
+  /pets:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              ${"$"}ref: '#/components/schemas/Pet'
+            examples:
+              dog:
+                value:
+                  name: Spot
+                  age: 2
+                  petType: dog
+                  barkVolume: 10
+      responses:
+        '200':
+          description: This is a 200 response.
+          content:
+            application/json:
+              schema:
+                ${"$"}ref: '#/components/schemas/Pet'
+              examples:
+                dog:
+                  value:
+                    name: Spot
+                    age: 2
+                    petType: dog
+                    barkVolume: 10
+components:
+  schemas:
+    Pet:
+      oneOf:
+        - ${"$"}ref: '#/components/schemas/Dog'
+        - ${"$"}ref: '#/components/schemas/Cat'
+      discriminator:
+        propertyName: petType
+        mapping:
+          dog: '#/components/schemas/Dog'
+          cat: '#/components/schemas/Cat'
+      
+    Pet_base:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+        petType:
+          type: string
+      required:
+        - name
+        - age
+        - petType
+
+    Dog:
+      allOf:
+        - ${"$"}ref: '#/components/schemas/Pet_base'
+        - type: object
+          properties:
+            barkVolume:
+              type: integer
+          required:
+            - barkVolume
+
+    Cat:
+      allOf:
+        - ${"$"}ref: '#/components/schemas/Pet_base'
+        - type: object
+          properties:
+            whiskerLength:
+              type: integer
+          required:
+            - whiskerLength
+        """.trimIndent()
+
+        val feature = OpenApiSpecification.fromYAML(spec, "").toFeature().enableGenerativeTesting(onlyPositive = true)
+
+        val petTypesSeen = mutableSetOf<String>()
+
+        val results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                val jsonRequest = request.body as? JSONObjectValue ?: fail("Expected request to be a json object")
+
+                assertThat(jsonRequest.jsonObject).containsKey("petType")
+
+                if(jsonRequest.jsonObject["petType"]?.toStringLiteral() == "dog") {
+                    assertThat(jsonRequest.findFirstChildByPath("barkVolume")?.toStringLiteral()).isEqualTo("10")
+                }
+
+                return HttpResponse.ok(parsedJSONObject("""{"name": "Spot", "age": 2, "petType": "dog", "barkVolume": 10}"""))
+            }
+
+            override fun preExecuteScenario(scenario: Scenario, request: HttpRequest) {
+                val jsonRequest = request.body as? JSONObjectValue ?: fail("Expected request to be a json object")
+
+                println(jsonRequest.toStringLiteral())
+
+                if (scenario.isNegative == false) {
+                    jsonRequest.findFirstChildByPath("petType")?.toStringLiteral()?.let { petTypesSeen.add(it) }
+                }
+            }
+        })
+
+        assertThat(petTypesSeen).containsAll(listOf("dog", "cat"))
+        assertThat(results.testCount).isEqualTo(2)
+        assertThat(results.success()).withFailMessage(results.report()).isTrue()
+    }
+
 }

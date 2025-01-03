@@ -11,6 +11,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
+import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
@@ -24,6 +25,7 @@ import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.readEnvVarOrProperty
+import io.specmatic.core.value.Value
 import java.io.File
 
 const val APPLICATION_NAME = "Specmatic"
@@ -127,8 +129,15 @@ data class SpecmaticConfig(
     @field:JsonAlias("attribute_selection_pattern")
     val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
     @field:JsonAlias("all_patterns_mandatory")
-    val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY)
+    val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY),
+    @field:JsonAlias("default_pattern_values")
+    val defaultPatternValues: Map<String, Any> = emptyMap()
 ) {
+    @JsonIgnore
+    fun attributeSelectionQueryParamKey(): String {
+        return attributeSelectionPattern.queryParamKey
+    }
+
     @JsonIgnore
     fun isExtensibleSchemaEnabled(): Boolean {
         return (test?.allowExtensibleSchema == true)
@@ -144,6 +153,10 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun isResponseValueValidationEnabled(): Boolean {
         return (test?.validateResponseValues == true)
+    }
+    @JsonIgnore
+    fun parsedDefaultPatternValues(): Map<String, Value> {
+        return parsedJSONObject(ObjectMapper().writeValueAsString(defaultPatternValues)).jsonObject
     }
 }
 

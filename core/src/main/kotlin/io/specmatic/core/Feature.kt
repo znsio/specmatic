@@ -36,7 +36,7 @@ fun parseContractFileToFeature(
     sourceRepositoryBranch: String? = null,
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    specmaticConfig: SpecmaticConfig = loadSpecmaticConfigOrDefault(getConfigFilePath()),
     overlayContent: String = ""
 ): Feature {
     return parseContractFileToFeature(
@@ -65,7 +65,7 @@ fun parseContractFileToFeature(
     sourceRepositoryBranch: String? = null,
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
-    specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
+    specmaticConfig: SpecmaticConfig = loadSpecmaticConfigOrDefault(getConfigFilePath()),
     overlayContent: String = ""
 ): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
@@ -374,16 +374,35 @@ data class Feature(
         } != null
     }
 
-    fun matchResultSchemaFlagBased(patternName: String, value: Value): Result {
-        val updatedResolver = flagsBased.update(scenarios.last().resolver)
-        val pattern = DeferredPattern("($patternName)")
-        return pattern.matches(value, updatedResolver)
+    fun matchResultSchemaFlagBased(primaryPatternName: String?, secondaryPatternName: String, value: Value, mismatchMessages: MismatchMessages): Result {
+        val updatedResolver = flagsBased.update(scenarios.last().resolver).copy(mismatchMessages = mismatchMessages)
+        return try {
+            val pattern = primaryPatternName ?: secondaryPatternName
+            val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(pattern))
+            resolvedPattern.matches(value, updatedResolver)
+        } catch (e: Throwable) {
+            Result.Failure(e.message ?: "Couldn't match pattern $primaryPatternName, please check if this exists")
+        }
     }
 
-    fun generateSchemaFlagBased(patternName: String): Value {
+    fun getAllDiscriminatorValues(patternName: String): Set<String> {
         val updatedResolver = flagsBased.update(scenarios.last().resolver)
-        val pattern = DeferredPattern("($patternName)")
-        return pattern.generate(updatedResolver)
+        return try {
+            val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(patternName)) as? AnyPattern
+            resolvedPattern?.discriminator?.values.orEmpty()
+        } catch (e: Throwable) {
+            emptySet()
+        }
+    }
+
+    fun generateSchemaFlagBased(primaryPatternName: String?, secondaryPatternName: String): Value {
+        val updatedResolver = flagsBased.update(scenarios.last().resolver)
+        val pattern = primaryPatternName ?: secondaryPatternName
+
+        return when (val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(pattern))) {
+            is AnyPattern -> resolvedPattern.generateValue(updatedResolver, secondaryPatternName)
+            else -> resolvedPattern.generate(updatedResolver)
+        }
     }
 
     fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {
@@ -455,7 +474,15 @@ data class Feature(
             scenario.newBasedOnAttributeSelectionFields(request.queryParams)
         }.map { scenario ->
             try {
-                when (val matchResult = scenario.matchesMock(request, response, mismatchMessages)) {
+                val keyCheck = if(flagsBased.unexpectedKeyCheck != null)
+                    DefaultKeyCheck.copy(unexpectedKeyCheck = flagsBased.unexpectedKeyCheck)
+                else DefaultKeyCheck
+                when (val matchResult = scenario.matchesMock(
+                    request,
+                    response,
+                    mismatchMessages,
+                    keyCheck
+                )) {
                     is Result.Success -> Pair(
                         scenario.resolverAndResponseForExpectation(response).let { (resolver, resolvedResponse) ->
                             val newRequestType = scenario.httpRequestPattern.generate(request, resolver)
@@ -514,7 +541,7 @@ data class Feature(
         val scenarioStub = ScenarioStub.readFromFile(File(filePath))
 
         val originalScenario = scenarios.firstOrNull { scenario ->
-            scenario.matches(scenarioStub.request, scenarioStub.response) is Result.Success
+            scenario.matches(scenarioStub.request, scenarioStub.response, DefaultMismatchMessages, flagsBased) is Result.Success
         } ?: return HasFailure(Result.Failure("Could not find an API matching example $filePath"))
 
         val concreteTestScenario = Scenario(
@@ -1641,25 +1668,35 @@ data class Feature(
         if (!testsDirectory.exists())
             return emptyMap()
 
-        val files = testsDirectory.listFiles()
+        val files = testsDirectory.walk().filterNot { it.isDirectory }.filter {
+            it.extension == "json"
+        }.toList().sortedBy { it.name }
 
-        if (files.isNullOrEmpty())
-            return emptyMap()
+        if (files.isEmpty()) return emptyMap()
 
-        val examlesInSubdirectories: Map<OpenApiSpecification.OperationIdentifier, List<Row>> =
+        val examplesInSubdirectories: Map<OpenApiSpecification.OperationIdentifier, List<Row>> =
             files.filter {
                 it.isDirectory
             }.fold(emptyMap()) { acc, item ->
                 acc + loadExternalisedJSONExamples(item)
             }
 
-        return examlesInSubdirectories + files.filterNot { it.isDirectory }.map { ExampleFromFile(it) }.mapNotNull { exampleFromFile ->
+        logger.log("Loading externalised examples in ${testsDirectory.path}: ")
+        return examplesInSubdirectories + files.asSequence().filterNot {
+            it.isDirectory
+        }.map {
+            val exampleFromFile = ExampleFromFile(it)
+            if(exampleFromFile.isInvalid()) {
+                throw ContractException("Error loading example from file '${it.name}' as it is in invalid format. Please fix the example format to load this example.")
+            }
+            exampleFromFile
+        }.mapNotNull { exampleFromFile ->
             try {
                 with(exampleFromFile) {
                     OpenApiSpecification.OperationIdentifier(
-                        requestMethod,
-                        requestPath,
-                        responseStatus,
+                        requestMethod.orEmpty(),
+                        requestPath.orEmpty(),
+                        responseStatus ?: 0,
                         exampleFromFile.headers.filter { it.key.lowercase() == "content-type" }.values.firstOrNull(),
                         exampleFromFile.responseHeaders?.let { it.jsonObject.filter { it.key.lowercase() == "content-type" }.values.firstOrNull()?.toStringLiteral() }
                     ) to exampleFromFile.toRow(specmaticConfig)

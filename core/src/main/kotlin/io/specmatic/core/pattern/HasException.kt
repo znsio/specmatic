@@ -49,7 +49,7 @@ data class HasException<T>(val t: Throwable, val message: String = "", val bread
         return cast()
     }
 
-    override fun addDetails(message: String, breadCrumb: String): ReturnValue<T> {
+    override fun addDetails(message: String, breadCrumb: String): HasException<T> {
         val newE = toException(message, breadCrumb, toException())
 
         return HasException(newE)

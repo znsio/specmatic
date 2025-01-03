@@ -1082,13 +1082,13 @@ internal class JSONObjectPatternTest {
 
             assertThat(result).isInstanceOf(Result.Failure::class.java)
             assertThat(result.reportString()).containsIgnoringWhitespaces("""
-        >> topLevelOptionalKey
-        Expected key named "topLevelOptionalKey" was missing
-        >> subMandatoryObject.subOptionalKey
-        Expected key named "subOptionalKey" was missing
-        >> subOptionalObject.subOptionalKey
-        Expected key named "subOptionalKey" was missing
-        """.trimIndent())
+            >> topLevelOptionalKey
+            Expected optional key named "topLevelOptionalKey" was missing
+            >> subMandatoryObject.subOptionalKey
+            Expected optional key named "subOptionalKey" was missing
+            >> subOptionalObject.subOptionalKey
+            Expected key named "subOptionalKey" was missing
+            """.trimIndent())
         }
 
         @Test

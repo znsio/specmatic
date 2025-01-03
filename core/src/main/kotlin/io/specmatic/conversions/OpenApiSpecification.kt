@@ -108,6 +108,18 @@ class OpenApiSpecification(
             return OpenAPIV3Parser().read(openApiFilePath, null, resolveExternalReferences()) != null
         }
 
+        fun getImplicitOverlayContent(openApiFilePath: String): String {
+            return File(openApiFilePath).let { openApiFile ->
+                if(!openApiFile.isFile)
+                    return@let ""
+
+                val overlayFile = openApiFile.canonicalFile.parentFile.resolve(openApiFile.nameWithoutExtension + "_overlay.yaml")
+                if(overlayFile.isFile) return@let overlayFile.readText()
+
+                return@let ""
+            }
+        }
+
         fun fromYAML(
             yamlContent: String,
             openApiFilePath: String,
@@ -120,16 +132,7 @@ class OpenApiSpecification(
             specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
             overlayContent: String = ""
         ): OpenApiSpecification {
-            val implicitOverlayFile = File(openApiFilePath).let { openApiFile ->
-                if(!openApiFile.isFile)
-                    return@let ""
-
-                val overlayFile = openApiFile.canonicalFile.parentFile.resolve(openApiFile.nameWithoutExtension + "_overlay.yaml")
-                if(overlayFile.isFile)
-                    return@let overlayFile.readText()
-
-                return@let ""
-            }
+            val implicitOverlayFile = getImplicitOverlayContent(openApiFilePath)
 
             val parseResult: SwaggerParseResult =
                 OpenAPIV3Parser().readContents(
@@ -203,9 +206,15 @@ class OpenApiSpecification(
             }
         }
 
-        private fun resolveExternalReferences(): ParseOptions = ParseOptions().also { it.isResolve = true }
+        private fun resolveExternalReferences(): ParseOptions {
+            return ParseOptions().also {
+                it.isResolve = true
+                it.isResolveRequestBody = true
+                it.isResolveResponses = true
+            }
+        }
 
-        private fun String.applyOverlay(overlayContent: String): String {
+        fun String.applyOverlay(overlayContent: String): String {
             if(overlayContent.isBlank())
                 return this
 
@@ -226,7 +235,7 @@ class OpenApiSpecification(
         val unreferencedSchemaPatterns = parseUnreferencedSchemas()
         val updatedScenarios = scenarioInfos.map {
             Scenario(it).copy(
-                dictionary = dictionary,
+                dictionary = dictionary.plus(specmaticConfig.parsedDefaultPatternValues()),
                 attributeSelectionPattern = specmaticConfig.attributeSelectionPattern,
                 patterns = it.patterns + unreferencedSchemaPatterns
             )
@@ -245,7 +254,7 @@ class OpenApiSpecification(
 
     private fun parseUnreferencedSchemas(): Map<String, Pattern> {
         return openApiSchemas().filterNot { withPatternDelimiters(it.key) in patterns }.map {
-            withPatternDelimiters(it.key) to toSpecmaticPattern(it.value, emptyList())
+            withPatternDelimiters(it.key) to toSpecmaticPattern(it.value, emptyList(), it.key)
         }.toMap()
     }
 
@@ -728,7 +737,7 @@ class OpenApiSpecification(
                         } else valueString
                     },
                 name = exampleName,
-                responseExampleForValidation = if(resolvedResponseExample != null && responseExample.isNotEmpty()) resolvedResponseExample else null,
+                exactResponseExample = if(resolvedResponseExample != null && responseExample.isNotEmpty()) resolvedResponseExample else null,
                 requestExample = requestExampleAsHttpRequests[exampleName]?.first(),
                 responseExample = responseExample
             )
@@ -927,7 +936,7 @@ class OpenApiSpecification(
             } ?: mapOf(NO_SECURITY_SCHEMA_IN_SPECIFICATION to NoSecurityScheme())
 
         val securitySchemesForRequestPattern: Map<String, OpenAPISecurityScheme> =
-            (parsedOpenApi.security.orEmpty() + operation.security.orEmpty())
+            (operation.security ?: parsedOpenApi.security.orEmpty())
                 .flatMap { it.keys }
                 .toSet().associateWith {
                     val securityScheme = securitySchemes[it]
@@ -1174,6 +1183,18 @@ class OpenApiSpecification(
     ) = if (mediaType.encoding.isNullOrEmpty()) false
     else mediaType.encoding[formFieldName]?.contentType == "application/json"
 
+    private fun List<Schema<Any>>.impliedDiscriminatorMappings(): Map<String, String> {
+        return this.filter { it.`$ref` != null }.associate {
+            val dataTypeName = it.`$ref`.split("/").last()
+            val targetSchema = it.`$ref`
+            dataTypeName to targetSchema
+        }
+    }
+
+    private fun Map<String, String>.distinctByValue(): Map<String, String> {
+        return this.entries.distinctBy { it.value }.associate { it.key to it.value }
+    }
+
     private fun toSpecmaticPattern(mediaType: MediaType, section: String, jsonInFormData: Boolean = false): Pattern =
         toSpecmaticPattern(mediaType.schema ?: throw ContractException("${section.capitalizeFirstChar()} body definition is missing"), emptyList(), jsonInFormData = jsonInFormData)
 
@@ -1399,10 +1420,13 @@ class OpenApiSpecification(
                     val nullable =
                         if (schema.oneOf.any { nullableEmptyObject(it) }) listOf(NullPattern) else emptyList()
 
+                    val impliedDiscriminatorMappings = schema.oneOf.impliedDiscriminatorMappings()
+                    val finalDiscriminatorMappings = schema.discriminator?.mapping.orEmpty().plus(impliedDiscriminatorMappings).distinctByValue()
+
                     AnyPattern(
                         candidatePatterns.plus(nullable),
                         typeAlias = "(${patternName})",
-                        discriminator = Discriminator.create(schema.discriminator?.propertyName, schema.discriminator?.mapping?.keys?.toSet().orEmpty(), schema.discriminator?.mapping.orEmpty())
+                        discriminator = Discriminator.create(schema.discriminator?.propertyName, finalDiscriminatorMappings.keys.toSet(), finalDiscriminatorMappings)
                     )
                 } else if (schema.anyOf != null) {
                     throw UnsupportedOperationException("Specmatic does not support anyOf")

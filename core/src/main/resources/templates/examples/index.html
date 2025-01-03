@@ -369,6 +369,74 @@
         [hidden] {
           display: none;
         }
+
+          #error-log {
+            color: red;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .CodeMirror {
+            border: 1px solid #ccc;
+            height: 500px !important;
+        }
+       .cm-lint-marker-error {
+            background-color: red;
+            color: white;
+            font-size: 12px;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            text-align: center;
+            border-radius: 50%;
+            margin-left: -10px;
+            display: inline-block;
+            cursor: default;
+        }
+        .cm-lint-message {
+            color: red;
+            background-color: rgba(255, 0, 0, 0.2);
+            padding: 5px;
+            font-size: 12px;
+            border-radius: 3px;
+            margin-left: 30px; /* Move it a bit to the right of the gutter marker */
+            position: absolute;
+        }
+         .CodeMirror-gutter-wrapper {
+            position: relative;
+        }
+
+    }
+    [data-validation-error-message] {
+      position: relative;
+      display: inline-block;
+    }
+
+    .CodeMirror pre.CodeMirror-line[role="presentation"] {
+        position: initial;
+    }
+
+    [data-validation-error-message]:hover::before {
+      content: attr(data-validation-error-message);
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: white;
+      color: black;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 20px;
+      white-space: pre-wrap;
+      z-index: 1000;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      pointer-events: none;
+      margin-bottom: 5px;
+      border: 1px solid #ddd;
+      min-width: max-content;
+      width: auto;
+      max-width: 400px;
+      word-break: normal;
+    }
     </style>
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
@@ -382,6 +450,7 @@
             --white: 255, 255, 255;
             --black: 0, 0, 0;
             --slate: 241, 245, 249;
+            --yellow: 255, 207, 51;
             --blue: 52, 115, 217;
             --green: 34, 197, 94;
             --red: 239, 68, 68;
@@ -409,6 +478,10 @@
 
         body {
             font-family: var(--roboto);
+
+            & > .chevron {
+                display: none;
+            }
         }
 
         main {
@@ -417,6 +490,12 @@
             overflow: hidden;
             flex: 1;
             background-color: rgba(var(--alice-blue));
+        }
+
+        .chevron {
+            width: 1.5rem;
+            height: 1.5rem;
+            animation: bounce 2s infinite;
         }
 
         /* HEADER STYLES */
@@ -477,7 +556,7 @@
                     --_content: "Validate Selected";
 
                     &[data-panel="details"] {
-                        --_content: "Validate Examples";
+                        --_content: "Save & Validate";
                     }
                 }
 
@@ -495,13 +574,14 @@
                     color: white;
                 }
 
+                /* Temporarily Remove Selected Count */
+                &#bulk-generate[data-selected][data-panel="table"]::before {
+                    content: var(--_after_content);
+                    color: white;
+                }
+
                 &#bulk-generate {
                     --_content: "Generate Selected";
-
-                    /* Temporarily Remove Selected Count */
-                    &::before {
-                        content: '';
-                    }
 
                     &::after {
                         content: var(--_content, "Generate Selected");
@@ -638,6 +718,11 @@
                     line-height: 1.5rem;
                     text-decoration: underline;
                 }
+            }
+
+            &[data-valid="partial"] button.validate {
+                --_background-color: var(--yellow);
+                --_text-color: var(--smoky-black);
             }
 
             &[data-valid="failed"] button.validate, &[data-generate="failed"] button.generate, &[data-test="failed"] button.test {
@@ -796,6 +881,23 @@
                 background-color: rgba(var(--blue-dark));
             }
         }
+        button#save-example {
+            position: relative;
+            margin-top: 10px;
+            left: 50%;
+            transform: translate(-50%, 10%);
+            --_padding: 0.5rem 3rem;
+            --_radius: 0.25rem;
+
+            color: white;
+            padding: var(--_padding);
+            background-color: rgba(var(--blue));
+            border-radius: var(--_radius);
+
+            &:hover, &:focus {
+                background-color: rgba(var(--blue-dark));
+            }
+        }
 
         #path-details {
             display: flex;
@@ -865,17 +967,43 @@
             }
         }
 
-        div.dropdown {
-            & > div:nth-child(2) > p {
-                margin: 1rem 0 0.5rem 0;
-            }
+        div.details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
 
             & pre {
                 white-space: pre-wrap;
-                padding: 0.75rem;
                 font-family: var(--mono);
                 background-color: rgba(var(--slate));
                 border-radius: 0.25rem;
+                padding: 0.75rem;
+                display: none;
+            }
+        }
+
+        div.details > div.dropdown {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem;
+            font-family: var(--mono);
+            background-color: rgba(var(--slate));
+            cursor: pointer;
+        }
+
+        div.details.expanded {
+            & > div.dropdown {
+                margin-bottom: 1rem;
+
+                & .chevron {
+                    animation: none;
+                    transform: rotate(180deg);
+                }
+            }
+
+            & pre {
+                display: block;
             }
         }
 
@@ -903,6 +1031,10 @@
             color: black;
         }
 
+        .pill.yellow {
+            --_background-color: rgb(var(--yellow));
+            color: black;
+        }
 
         /* ALERT STYLES */
 
@@ -988,6 +1120,20 @@
                 transform: rotate(360deg);
             }
         }
+
+        @keyframes bounce {
+
+            0%, 100% {
+                transform: translateY(-25%);
+                animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+            }
+
+            50% {
+                transform: translateY(0);
+                animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+            }
+        }
+
         /* UTILITIES */
 
         .hidden {
@@ -1033,15 +1179,15 @@
                 th:attr="data-raw-path=${row.rawPath}, data-key=${row.uniqueKey}, data-schema-based=${row.isSchemaBased},
                         data-example=${row.example}, data-main=${row.isMainRow}, data-disc=${row.isDiscriminatorBased},
                         data-generate=${row.isGenerated ? 'success' : 'not-generated'}, data-test='not-tested',
-                        data-valid=${row.isGenerated ? (row.isValid ? 'success' : 'failed') : 'not-validated'}">
+                        data-valid=${row.isGenerated ? (row.isValid ? 'success' : row.isPartialFailure ? 'partial' : 'failed') : 'not-validated'}">
                 <td>
                     <input type="checkbox" name="path-row" class="path-row">
                 </td>
                 <td></td>
-                <td th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=${row.isSchemaBased ? 5: 3}">
+                <td th:class="${row.showPath ? '' : 'hidden'}" th:attr="rowspan=${row.pathSpan}, colspan=${row.pathColSpan}">
                     <span>[[${row.path}]]</span>
                 </td>
-                <td th:class="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodSpan}">
+                <td th:class="${row.showMethod ? '' : 'hidden'}" th:attr="rowspan=${row.methodSpan}, colspan=${row.methodColSpan}">
                     <p>[[${row.method}]]</p>
                 </td>
                 <td class="response-cell" th:classappend="${row.showStatus ? '' : 'hidden'}" th:attr="rowspan=${row.statusSpan}">
@@ -1075,12 +1221,25 @@
 </main>
 
 <div id="alert-container"></div>
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="chevron">
+    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 5.25 7.5 7.5 7.5-7.5m-15 6 7.5 7.5 7.5-7.5" />
+</svg>
 
 <script th:inline="javascript">
     const exampleDetails = /*[[${exampleDetails}]]*/ {};
     const testDetails = {};
 </script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsonlint/1.6.0/jsonlint.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/lint.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.59.4/addon/lint/lint.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/lint.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/json-lint.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/autorefresh.min.js"></script>
+<script>var escapedChars={b:"\b",f:"\f",n:"\n",r:"\r",t:"	",'"':'"',"/":"/","\\":"\\"},A_CODE="a".charCodeAt();const jsonMapParser=function(e,n,r){var a={},t=0,o=0,c=0,i=r&&r.bigint&&"undefined"!=typeof BigInt;return{data:function n(r,a){f(),E(r,"value");var t,o,$,g,S=l();switch(S){case"t":s("rue"),g=!0;break;case"f":s("alse"),g=!1;break;case"n":s("ull"),g=null;break;case'"':g=u();break;case"[":g=function e(r){f();var a=[],t=0;if("]"==l())return a;for(v();;){var o=r+"/"+t;a.push(n(o)),f();var c=l();if("]"==c)break;","!=c&&k(),f(),t++}return a}(r);break;case"{":g=function e(r){f();var a={};if("}"==l())return a;for(v();;){var t=d();'"'!=l()&&k();var o=u(),c=r+"/"+escapeJsonPointer(o);b(c,"key",t),E(c,"keyEnd"),f(),":"!=l()&&k(),f(),a[o]=n(c),f();var i=l();if("}"==i)break;","!=i&&k(),f()}return a}(r);break;default:v(),"-0123456789".indexOf(S)>=0?g=(t="",o=!0,"-"==e[c]&&(t+=l()),t+="0"==e[c]?l():p(),"."==e[c]&&(t+=l()+p(),o=!1),("e"==e[c]||"E"==e[c])&&(t+=l(),("+"==e[c]||"-"==e[c])&&(t+=l()),t+=p(),o=!1),$=+t,i&&o&&($>Number.MAX_SAFE_INTEGER||$<Number.MIN_SAFE_INTEGER)?BigInt(t):$):h()}return E(r,"valueEnd"),f(),a&&c<e.length&&h(),g}("",!0),pointers:a};function f(){loop:for(;c<e.length;){switch(e[c]){case" ":o++;break;case"	":o+=4;break;case"\r":o=0;break;case"\n":o=0,t++;break;default:break loop}c++}}function u(){for(var e,n="";'"'!=(e=l());)"\\"==e?(e=l())in escapedChars?n+=escapedChars[e]:"u"==e?n+=$():k():n+=e;return n}function s(e){for(var n=0;n<e.length;n++)l()!==e[n]&&k()}function l(){g();var n=e[c];return c++,o++,n}function v(){c--,o--}function $(){for(var e=4,n=0;e--;){n<<=4;var r=l().toLowerCase();r>="a"&&r<="f"?n+=r.charCodeAt()-A_CODE+10:r>="0"&&r<="9"?n+=+r:k()}return String.fromCharCode(n)}function p(){for(var n="";e[c]>="0"&&e[c]<="9";)n+=l();if(n.length)return n;g(),h()}function E(e,n){b(e,n,d())}function b(e,n,r){a[e]=a[e]||{},a[e][n]=r}function d(){return{line:t,column:o,pos:c}}function h(){throw SyntaxError("Unexpected token "+e[c]+" in JSON at position "+c)}function k(){v(),h()}function g(){if(c>=e.length)throw SyntaxError("Unexpected end of JSON input")}},jsonMapStringify=function(e,n,r){if(validType(e)){var a,t,o=0,c="object"==typeof r?r.space:r;switch(typeof c){case"number":var i=c>10?10:c<0?0:Math.floor(c);c=i&&k(i," "),a=i,t=i;break;case"string":c=c.slice(0,10),a=0,t=0;for(var f=0;f<c.length;f++){var u=c[f];switch(u){case" ":t++;break;case"	":t+=4;break;case"\r":t=0;break;case"\n":t=0,o++;break;default:throw Error("whitespace characters not allowed in JSON")}a++}break;default:c=void 0}var s="",l={},v=0,$=0,p=0,E=r&&r.es6&&"function"==typeof Map;return function e(n,r,a){switch(h(a,"value"),typeof n){case"number":case"bigint":case"boolean":b(""+n);break;case"string":b(quoted(n));break;case"object":null===n?b("null"):"function"==typeof n.toJSON?b(quoted(n.toJSON())):Array.isArray(n)?t():E?n.constructor.BYTES_PER_ELEMENT?t():n instanceof Map?i():n instanceof Set?i(!0):o():o()}function t(){if(n.length){b("[");for(var t=r+1,o=0;o<n.length;o++){o&&b(","),d(t);var c=validType(n[o])?n[o]:null;e(c,t,a+"/"+o)}d(r),b("]")}else b("[]")}function o(){var t=Object.keys(n);if(t.length){b("{");for(var o=r+1,i=0;i<t.length;i++){var f=t[i],u=n[f];if(validType(u)){i&&b(",");var s=a+"/"+escapeJsonPointer(f);d(o),h(s,"key"),b(quoted(f)),h(s,"keyEnd"),b(":"),c&&b(" "),e(u,o,s)}}d(r),b("}")}else b("{}")}function i(t){if(n.size){b("{");for(var o=r+1,i=!0,f=n.entries(),u=f.next();!u.done;){var s=u.value,l=s[0],v=!!t||s[1];if(validType(v)){i||b(","),i=!1;var $=a+"/"+escapeJsonPointer(l);d(o),h($,"key"),b(quoted(l)),h($,"keyEnd"),b(":"),c&&b(" "),e(v,o,$)}u=f.next()}d(r),b("}")}else b("{}")}h(a,"valueEnd")}(e,0,""),{json:s,pointers:l}}function b(e){$+=e.length,p+=e.length,s+=e}function d(e){if(c){for(s+="\n"+k(e,c),v++,$=0;e--;)o?(v+=o,$=t):$+=t,p+=a;p+=1}}function h(e,n){l[e]=l[e]||{},l[e][n]={line:v,column:$,pos:p}}function k(e,n){return Array(e+1).join(n)}};var VALID_TYPES=["number","bigint","boolean","string","object"];function validType(e){return VALID_TYPES.indexOf(typeof e)>=0}var ESC_QUOTE=/"|\\/g,ESC_B=/[\b]/g,ESC_F=/\f/g,ESC_N=/\n/g,ESC_R=/\r/g,ESC_T=/\t/g;function quoted(e){return'"'+(e=e.replace(ESC_QUOTE,"\\$&").replace(ESC_F,"\\f").replace(ESC_B,"\\b").replace(ESC_N,"\\n").replace(ESC_R,"\\r").replace(ESC_T,"\\t"))+'"'}var ESC_0=/~/g,ESC_1=/\//g;function escapeJsonPointer(e){return e.replace(ESC_0,"~0").replace(ESC_1,"~1")}</script>
 </body>
 <script>
     const mainElement = document.querySelector("main");
@@ -1092,13 +1251,43 @@
     const bulkValidateBtn = document.querySelector("button#bulk-validate");
     const bulkGenerateBtn = document.querySelector("button#bulk-generate");
     const bulkTestBtn = document.querySelector("button#bulk-test");
+    const chevronDownIcon = document.querySelector("svg.chevron");
 
+    let savedEditorResponse = null;
     let scrollYPosition = 0;
     let selectedTableRow = null;
     let blockGenValidate = false;
-    const defaultAttrs = {"data-generate": "not-generated", "data-valid": "not-validated", "data-test": "not-tested", "data-main": "false"}
+    const defaultAttrs = { "data-generate": "not-generated", "data-valid": "not-validated", "data-test": "not-tested", "data-main": "false" }
+    const dataValidationSuccessValues = ["success", "partial"]
+    let isSaved = true;
+
+    examplesOl.addEventListener("click", (event) => {
+        const target = event.target;
+        if (target.matches(".dropdown, .dropdown *")) {
+            target.closest("div.details")?.classList.toggle("expanded");
+            event.stopPropagation();
+        }
+    })
 
     backBtn.addEventListener("click", () => {
+        if (!isSaved) {
+            const modalContainer = createModal({
+                onDiscard: () => {
+                    examplesOl.replaceChildren();
+                    mainElement.setAttribute("data-panel", "table");
+                    bulkValidateBtn.setAttribute("data-panel", "table");
+                    bulkGenerateBtn.setAttribute("data-panel", "table");
+                    bulkTestBtn.setAttribute("data-panel", "table");
+                    window.scrollTo(0, scrollYPosition);
+                    console.log("Changes discarded!");
+                    isSaved = true;
+                },
+
+            });
+            document.body.appendChild(modalContainer);
+            return;
+        }
+
         examplesOl.replaceChildren();
         mainElement.setAttribute("data-panel", "table");
         bulkValidateBtn.setAttribute("data-panel", "table");
@@ -1135,10 +1324,10 @@
 
                 case "INPUT": {
                     if (target.matches("th > label > input")) {
-                        const {validatedCount, generatedCount, discAndMainCount, totalCount} = getRowsCount();
+                        const { validatedCount, generatedCount, discAndMainCount, totalCount } = getRowsCount();
                         toggleAllSelects(target.checked);
 
-                        if (table.hasAttribute("data-generated") ) {
+                        if (table.hasAttribute("data-generated")) {
                             bulkValidateBtn.setAttribute("data-selected", target.checked ? generatedCount : 0);
                             bulkTestBtn.setAttribute("data-selected", target.checked ? validatedCount : 0);
                         }
@@ -1166,7 +1355,7 @@
         const testPreSelectCount = getPreSelectCount(bulkTestBtn, "data-selected");
 
         const hasBeenGenerated = nearestTableRow.getAttribute("data-generate") === "success";
-        const hasBeenValidated = nearestTableRow.getAttribute("data-valid") === "success";
+        const hasBeenValidated = dataValidationSuccessValues.includes(nearestTableRow.getAttribute("data-valid"));
         const isDiscriminatorRow = nearestTableRow.getAttribute("data-disc") === "true";
         const isMainRow = nearestTableRow.getAttribute("data-main") === "true";
 
@@ -1197,7 +1386,7 @@
 
             case "details": {
                 await validateRowExamples(selectedTableRow);
-                const originalYScroll = scrollYPosition
+                const originalYScroll = scrollYPosition;
                 await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
                 scrollYPosition = originalYScroll;
                 break;
@@ -1220,7 +1409,7 @@
 
         for (const row of rowsWithNoExamplesOrDiscriminator) {
             const rowValues = extractRowValues(row);
-            const {success, created, existed, count} = await generateRowExamples(row, rowValues, true);
+            const { success, created, existed, count } = await generateRowExamples(row, rowValues, true);
 
             if (!success) failedCount += count;
             createdCount += created;
@@ -1278,7 +1467,7 @@
 
     async function testAllSelected() {
         const selectedRows = Array.from(table.querySelectorAll("td > input[type=checkbox]:checked")).map((checkbox) => checkbox.closest("tr"));
-        const rowsWithValidations = selectedRows.filter(row => row.getAttribute("data-valid") === "success");
+        const rowsWithValidations = selectedRows.filter(row => dataValidationSuccessValues.includes(row.getAttribute("data-valid")));
 
         for (const row of rowsWithValidations) {
             row.setAttribute("data-test", "processing");
@@ -1309,7 +1498,7 @@
         const tableRows = table.querySelectorAll("tbody > tr");
         return Array.from(tableRows).reduce((acc, row) => {
             const isRowGenerated = row.getAttribute("data-generate") === "success";
-            const isRowValidated = row.getAttribute("data-valid") === "success";
+            const isRowValidated = dataValidationSuccessValues.includes(row.getAttribute("data-valid"));
             const isRowDiscAndMain = row.getAttribute("data-main") === "true" && row.getAttribute("data-disc") === "true";
 
             acc.validatedCount += isRowValidated ? 1 : 0;
@@ -1318,7 +1507,7 @@
             acc.totalCount += 1;
             return acc;
 
-        }, {validatedCount: 0, generatedCount: 0, discAndMainCount: 0, totalCount: 0});
+        }, { validatedCount: 0, generatedCount: 0, discAndMainCount: 0, totalCount: 0 });
     }
 
     function toggleAllSelects(isSelected = true) {
@@ -1337,11 +1526,11 @@
 
         if (error) {
             if (!bulkMode) createAlert("Example Generation Failed", error, true);
-            tableRow.setAttribute("data-generate", originalState === defaultAttrs["data-generate"] ? "failed": originalState);
-            return {success: false, created: 0, existed: 0, count: 0};
+            tableRow.setAttribute("data-generate", originalState === defaultAttrs["data-generate"] ? "failed" : originalState);
+            return { success: false, created: 0, existed: 0, count: 0 };
         }
 
-        const {createdCount, existedCount, totalCount} = getExamplesCount(examples);
+        const { createdCount, existedCount, totalCount } = getExamplesCount(examples);
         const newExamples = getOnlyNewExamples(tableRow, examples);
         const thisRowIsGenerated = tableRow.getAttribute("data-generate") === "success";
         const newRows = newExamples.map((ex, idx) => updateRowWithExample(tableRow, thisRowIsGenerated || idx > 0, ex));
@@ -1361,26 +1550,34 @@
             createAlert(alertTitle, alertMessage, false)
         };
 
-        return {success: true, created: createdCount, existed: existedCount, count: totalCount};
+        return { success: true, created: createdCount, existed: existedCount, count: totalCount };
     }
 
     async function validateRowExamples(tableRow, bulkMode = false) {
         tableRow.setAttribute("data-valid", "processing");
         const exampleData = getExampleData(tableRow);
-        const { exampleAbsPath, error } = await validateExample(exampleData);
 
-        if (error && !exampleAbsPath) {
+        if (!isSaved) {
+            const exampleSaved = await saveExample(exampleData);
+            if (!exampleSaved) {
+                return false;
+            }
+        }
+
+        const { exampleAbsPath, errorMessage, errorList, isPartialFailure } = await validateExample(exampleData);
+
+        if (errorMessage && !exampleAbsPath) {
             if (!bulkMode) createAlert("Validation Failed", `Error: ${error ?? "Unknown Error"}`, true);
             tableRow.setAttribute("data-valid", "failed");
             return false;
         }
 
-        tableRow.setAttribute("data-valid", error ? "failed": "success");
-        storeExampleValidationData(tableRow, error);
+        tableRow.setAttribute("data-valid", errorMessage ? isPartialFailure ? "partial" : "failed" : "success");
+        storeExampleValidationData(tableRow, { errorMessage, errorList });
         storeExampleTestData(tableRow, null);
         tableRow.setAttribute("data-test", defaultAttrs["data-test"]);
 
-        if (error) {
+        if (errorMessage && !isPartialFailure) {
             if (!bulkMode) createAlert("Invalid Example", `Example name: ${parseFileName(exampleAbsPath)}`, true);
             return false;
         }
@@ -1399,7 +1596,7 @@
         }
 
         const exampleData = getExampleData(tableRow);
-        const {data, error} = await testExample({
+        const { data, error } = await testExample({
             exampleFile: exampleData
         });
 
@@ -1409,7 +1606,7 @@
             return false;
         }
 
-        tableRow.setAttribute("data-test", (error || data?.result !== "Success") ? "failed": "success");
+        tableRow.setAttribute("data-test", (error || data?.result !== "Success") ? "failed" : "success");
         storeExampleTestData(tableRow, data);
 
         if (error || data?.result !== "Success") {
@@ -1490,12 +1687,15 @@
         let docFragment = [];
 
         if (exampleAbsPath) {
-            const {example, error} = await getExampleContent(exampleAbsPath);
+            const { example, error } = await getExampleContent(exampleAbsPath);
+            const { errorList, errorMessage } = getExampleValidationData(tableRow) || { errorList: null, errorMessage: null };
             docFragment = createExampleRows([{
                 absPath: exampleAbsPath,
                 exampleJson: example,
-                error: getExampleValidationData(tableRow) || error,
+                errorList: errorList,
+                errorMessage: error || errorMessage,
                 hasBeenValidated: tableRow.getAttribute("data-valid") !== defaultAttrs["data-valid"],
+                isPartialFailure: tableRow.getAttribute("data-valid") === "partial",
                 test: getExampleTestData(tableRow)
             }]);
         }
@@ -1526,6 +1726,12 @@
     function createPathSummary(rowValues) {
         const docFragment = document.createDocumentFragment();
 
+        if (rowValues.isSchemaBased) {
+            rowValues = { "schema": rowValues["path"], ...rowValues };
+            delete rowValues["path"];
+            delete rowValues["isSchemaBased"];
+        }
+
         for (const [key, value] of Object.entries(rowValues)) {
             if (!value) continue;
 
@@ -1550,11 +1756,12 @@
         const testBadge = document.createElement("span");
 
         exampleDiv.classList.add("example");
-        exampleBadge.classList.add("pill", example.hasBeenValidated ? example.error ? "red" : "green" : "blue");
+        exampleBadge.classList.add("pill", example.hasBeenValidated ? (example.errorMessage ? (example.isPartialFailure ? "yellow" : "red"): "green") : "blue");
         exampleName.textContent = example.absPath;
 
         if (example.hasBeenValidated) {
-            exampleBadge.textContent = `${example.error ? "Invalid" : "Valid"} Example`;
+           exampleBadge.textContent = example.errorMessage ? example.isPartialFailure ? "Valid" : "Invalid" : "Valid";
+            exampleBadge.textContent += " Example";
         } else {
             exampleBadge.textContent = "Example";
         }
@@ -1564,6 +1771,7 @@
         expandDiv.appendChild(exampleBadge);
 
         if (example.test) {
+            console.log(example.test);
             testBadge.classList.add("pill", example.test.result === "Success" ? "green" : "red");
             testBadge.textContent = `Test ${example.test.result}`;
             expandDiv.appendChild(testBadge);
@@ -1575,53 +1783,188 @@
     }
 
     function createExampleDropDown(example) {
-        const dropDownDiv = document.createElement("div");
-        dropDownDiv.classList.add("dropdown");
+        const detailsDiv = document.createElement("div");
+        detailsDiv.classList.add("details");
 
-        const examplePara = document.createElement("p");
+        const detailsDropdown = document.createElement("div");
+        detailsDropdown.classList.add("dropdown");
         const detailsPara = document.createElement("p");
+        detailsDropdown.appendChild(detailsPara);
+        detailsDropdown.appendChild(chevronDownIcon.cloneNode(true));
 
-        examplePara.textContent = "Example: ";
-        detailsPara.textContent = "Details: ";
-
-        const examplePre = document.createElement("pre");
         const detailsPre = document.createElement("pre");
+        const examplePara = document.createElement("p");
+        examplePara.textContent = "Example: ";
+
+        if (example.errorMessage) {
+            const issueCount = example.errorList.length;
+            const issueOrIssues = issueCount === 1 ? "issue" : "issues";
+            detailsPara.textContent = `Example has ${issueCount || ""} ${issueOrIssues}`;
+            if (issueCount > 0) {
+                detailsPara.style.color = "red";
+            }
+        } else {
+            detailsPara.textContent = example.hasBeenValidated ? "Example has no errors" : "Example has not yet been validated";
+        }
 
         if (example.hasBeenValidated) {
-            detailsPre.textContent = example.error ? example.error : `${parseFileName(example.absPath)} IS VALID`;
+            detailsPre.textContent = example.errorMessage ? example.errorMessage : `${parseFileName(example.absPath)} IS VALID`;
             if (example.test) {
                 detailsPre.textContent = `${detailsPre.textContent}\n${example.test.details}`;
             }
         } else {
             detailsPre.textContent = `${parseFileName(example.absPath)} HAS NOT YET BEEN VALIDATED`;
         }
-        examplePre.textContent = example.exampleJson;
 
         const examplePreDiv = document.createElement("div");
-        const detailsPreDiv = document.createElement("div");
+        const detailsFragment = document.createDocumentFragment();
 
-        detailsPreDiv.appendChild(detailsPara);
-        detailsPreDiv.appendChild(detailsPre);
+        examplePreDiv.setAttribute("id", "example-pre");
+        examplePreDiv.classList.add("language-json");
+        detailsFragment.appendChild(detailsDropdown);
+        detailsFragment.appendChild(detailsPre);
+
+        const editor = CodeMirror(examplePreDiv, {
+            value: example.exampleJson,
+            autoRefresh: true,
+            mode: "application/json",
+            theme: "dracula",
+            lineNumbers: true,
+            autoCloseBrackets: true,
+            matchBrackets: true,
+            styleActiveLine: true,
+            lint: true,
+            gutters: ["CodeMirror-lint-markers"]
+        });
+
+        if (example.errorList) {
+            if (Array.isArray(example.errorList) && example.errorList.every(item => typeof item === 'object')) {
+                highlightErrorLines(editor, example.errorList, example.exampleJson);
+            } else {
+                createAlert("Example Validation Failed", example.errorMessage, true);
+            }
+        }
+
+        editor.on("change", (instance, changes) => {
+            isSaved = false;
+            updateBorderColorExampleBlock(editor, examplePreDiv);
+            savedEditorResponse = editor.getValue();
+        });
 
         if (example.test) {
             const testPara = document.createElement("p");
             testPara.textContent = "Test Log: ";
-            examplePreDiv.appendChild(testPara);
-
             const testPre = document.createElement("pre");
             testPre.textContent = example.test.testLog;
-            examplePreDiv.appendChild(testPre);
+            detailsFragment.appendChild(testPara);
+            detailsFragment.appendChild(testPre);
         }
 
-        examplePreDiv.appendChild(examplePara);
-        examplePreDiv.appendChild(examplePre);
+        detailsDiv.appendChild(detailsFragment);
+        detailsDiv.appendChild(examplePara);
 
-        dropDownDiv.appendChild(detailsPreDiv);
-        dropDownDiv.appendChild(examplePreDiv);
+        const fragment = document.createDocumentFragment();
+        if (example.errorMessage) {
+            fragment.appendChild(detailsDiv);
+        }
+        fragment.appendChild(examplePreDiv);
 
-        return dropDownDiv;
+        return fragment;
     }
 
+    async function saveExample(examplePath) {
+        const editedText = savedEditorResponse;
+        try {
+            const parsedContent = JSON.parse(editedText);
+
+            const response = await fetch(`${getHostPort()}/_specmatic/examples/update`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    exampleFile: examplePath,
+                    exampleContent: editedText,
+                }),
+            });
+
+            if (response.ok) {
+                createAlert("Saved", "Example saved to file", false);
+                isSaved = true;
+                return true;
+            } else {
+                const errorMessage = await response.text();
+                createAlert("Failed to save example.", `Failed to save example to ${examplePath}: ${errorMessage}`, true);
+                console.error("Error saving example:", response.status);
+                return false;
+            }
+        } catch (e) {
+            console.error("Error during save request:", e);
+            createAlert("Failed to save example.", `An error occurred while saving example to ${examplePath}: ${e.message}`, true);
+            return false;
+        }
+    }
+
+
+    function updateBorderColorExampleBlock(editor, examplePreDiv) {
+        try {
+            JSON.parse(editor.getValue());
+            editor.getWrapperElement().style.borderWidth = "2px";
+            editor.getWrapperElement().style.borderStyle = "solid";
+            editor.getWrapperElement().style.borderColor = "green";
+
+        } catch (e) {
+            editor.getWrapperElement().style.borderWidth = "2px";
+            editor.getWrapperElement().style.borderStyle = "solid";
+            editor.getWrapperElement().style.borderColor = "red";
+
+        }
+    }
+
+    function highlightErrorLines(editor, metadata, exampleJson) {
+        const { data, pointers } = jsonMapParser(exampleJson);
+        metadata.forEach(meta => {
+            var location = findObjectByPath(pointers, meta.jsonPath);
+            if (location == null) {
+                meta.jsonPath = meta.jsonPath.substring(0, meta.jsonPath.lastIndexOf('/'));
+                location = findObjectByPath(pointers, meta.jsonPath);
+            }
+            const lineNumber = location.key ? location.key.line : (location.value ? location.value.line : null);
+            const lineLength = editor.getLine(lineNumber).length;
+            editor.markText(
+                { line: lineNumber, ch: 0 },
+                { line: lineNumber, ch: lineLength },
+                {
+                    className: "CodeMirror-lint-mark-error",
+                    attributes: {
+                        "data-validation-error-message": meta.description
+                    },
+                }
+            );
+
+            editor.setGutterMarker(lineNumber, "CodeMirror-lint-markers", createErrorMarker(meta.description));
+        });
+    }
+
+    function findObjectByPath(pointers, patch) {
+        for (const path in pointers) {
+            if (path === patch) {
+                return pointers[path];
+            }
+        }
+        return null;
+    }
+
+    function createErrorMarker() {
+        const marker = document.createElement("div");
+        marker.className = "CodeMirror-lint-mark-error";
+        return marker;
+    }
+
+
+    function parseFileName(path) {
+        return path.split('/').pop();
+    }
     function storeExampleData(tableRow, example) {
         const key = tableRow.getAttribute("data-key");
         tableRow.setAttribute("data-example", example.exampleFilePath);
@@ -1674,7 +2017,7 @@
         try {
             const resp = await fetch(`${getHostPort()}/_specmatic/examples/generate`, {
                 method: "POST",
-                body: JSON.stringify({...pathInfo, bulkMode }),
+                body: JSON.stringify({ ...pathInfo, bulkMode }),
                 headers: {
                     "Content-Type": "application/json",
                 }
@@ -1703,12 +2046,12 @@
             const data = await resp.json();
 
             if (!resp.ok) {
-                throw new Error(data.error);
+                throw new Error(data.errorMessage);
             }
 
-            return { exampleAbsPath: data.absPath, error: data.error };
+            return { exampleAbsPath: data.absPath, errorList: data.errorList, errorMessage: data.errorMessage, isPartialFailure: data.isPartialFailure };
         } catch (error) {
-            return { error: error.message, exampleAbsPath: null };
+            return { errorMessage: error.message, exampleAbsPath: null, isPartialFailure: false, errorList: null };
         }
     }
 
@@ -1722,9 +2065,9 @@
                 throw new Error(data.error);
             }
 
-            return {example: data.content, error: null};
+            return { example: data.content, error: null };
         } catch (e) {
-            return {example: null, error: e.message}
+            return { example: null, error: e.message }
         }
     }
 
@@ -1743,9 +2086,9 @@
                 throw new Error(data.error);
             }
 
-            return {data, error: data.error}
+            return { data, error: data.error }
         } catch (error) {
-            return {data: null, error: error.message}
+            return { data: null, error: error.message }
         }
     }
 
@@ -1809,6 +2152,109 @@
         bulkTestBtn.setAttribute("data-selected", "0");
         blockGenValidate = false;
     }
+    function createModal({ onSave, onDiscard }) {
+        // Data for modal
+        const title = "Unsaved Changes";
+        const closeText = "No";
+        const discardText = "Yes";
+        const bodyText = "Your changes are not saved & validated. To save your changes click on the Save & Validate button. Discard changes?";
+
+        // Create modal container dynamically
+        const modalContainer = document.createElement("div");
+        modalContainer.classList.add("go-back-modal");
+        modalContainer.style.position = "fixed";
+        modalContainer.style.top = "0";
+        modalContainer.style.left = "0";
+        modalContainer.style.width = "100%";
+        modalContainer.style.height = "100%";
+        modalContainer.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+        modalContainer.style.display = "flex";
+        modalContainer.style.alignItems = "center";
+        modalContainer.style.justifyContent = "center";
+        modalContainer.style.zIndex = "9999";
+
+        // Create modal content box
+        const modalContent = document.createElement("div");
+        modalContent.style.backgroundColor = "#fff";
+        modalContent.style.borderRadius = "8px";
+        modalContent.style.padding = "20px";
+        modalContent.style.width = "400px";
+        modalContent.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.2)";
+        modalContent.style.textAlign = "center";
+
+        // Create modal header
+        const modalHeader = document.createElement("div");
+        const modalTitle = document.createElement("h5");
+        modalTitle.textContent = title;
+        modalHeader.style.fontSize = "18px";
+        modalHeader.style.fontWeight = "bold";
+        modalHeader.style.marginBottom = "15px";
+        modalHeader.appendChild(modalTitle);
+
+        // Create modal body
+        const modalBody = document.createElement("div");
+        modalBody.textContent = bodyText;
+        modalBody.style.marginBottom = "15px";
+
+        // Create modal footer
+        const modalFooter = document.createElement("div");
+
+        const closeButton = document.createElement("button");
+        closeButton.textContent = closeText;
+        closeButton.style.backgroundColor = "#007bff";
+        closeButton.style.color = "#fff";
+        closeButton.style.border = "none";
+        closeButton.style.padding = "8px 16px";
+        closeButton.style.borderRadius = "4px";
+        closeButton.style.cursor = "pointer";
+        closeButton.style.marginRight = "10px";
+
+        const discardButton = document.createElement("button");
+        discardButton.textContent = discardText;
+        discardButton.style.backgroundColor = "#007bff";
+        discardButton.style.color = "#fff";
+        discardButton.style.border = "none";
+        discardButton.style.padding = "8px 16px";
+        discardButton.style.borderRadius = "4px";
+        discardButton.style.cursor = "pointer";
+
+        // Add buttons to footer
+        modalFooter.appendChild(closeButton);
+        modalFooter.appendChild(discardButton);
+
+        // Append everything to the modal content
+        modalContent.appendChild(modalHeader);
+        modalContent.appendChild(modalBody);
+        modalContent.appendChild(modalFooter);
+
+        // Append modal content to modal container
+        modalContainer.appendChild(modalContent);
+
+
+        // Button event listeners
+        closeButton.addEventListener("click", () => {
+            closeModal();
+        });
+
+        discardButton.addEventListener("click", () => {
+            onDiscard();
+            closeModal();
+        });
+
+
+        modalContainer.addEventListener("click", (event) => {
+            if (event.target === modalContainer) {
+                closeModal();
+            }
+        });
+
+
+        function closeModal() {
+            modalContainer.remove();
+        }
+        return modalContainer;
+    }
+
 
     (() => cleanUpSelections())();
 </script>

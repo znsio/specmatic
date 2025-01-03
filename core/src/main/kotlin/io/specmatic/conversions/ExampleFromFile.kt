@@ -2,7 +2,6 @@ package io.specmatic.conversions
 
 import io.specmatic.core.*
 import io.specmatic.core.examples.server.SchemaExample
-import io.specmatic.core.examples.server.SchemaExample.Companion.SCHEMA_BASED
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.URIUtils.parseQuery
@@ -15,6 +14,15 @@ import java.io.File
 import java.net.URI
 
 class ExampleFromFile(val json: JSONObjectValue, val file: File) {
+    companion object {
+        fun fromFile(file: File): ReturnValue<ExampleFromFile> {
+            if (SchemaExample.matchesFilePattern(file)) {
+                return HasFailure("Skipping file ${file.canonicalPath}, because it contains schema-based example")
+            }
+            return HasValue(ExampleFromFile(file))
+        }
+    }
+
     fun toRow(specmaticConfig: SpecmaticConfig = SpecmaticConfig()): Row {
         logger.log("Loading test file ${this.expectationFilePath}")
 
@@ -39,19 +47,15 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
             values,
             name = testName,
             fileSource = this.file.canonicalPath,
-            responseExampleForValidation = responseExample,
+            exactResponseExample = responseExample.takeUnless { this.isPartial() },
+            responseExampleForAssertion = response,
             requestExample = scenarioStub.getRequestWithAdditionalParamsIfAny(specmaticConfig.additionalExampleParamsFilePath),
             responseExample = response.takeUnless { this.isPartial() },
             isPartial = scenarioStub.partial != null
-        ).let { ExampleProcessor.resolveLookupIfPresent(it) }
+        ).let { ExampleProcessor.resolve(it, ExampleProcessor::ifNotExitsToLookupPattern) }
     }
 
-    constructor(file: File) : this(
-        json = if (SchemaExample.matchesFilePattern(file)) {
-            throw ContractException(breadCrumb = SCHEMA_BASED, errorMessage = "Skipping file ${file.canonicalPath}, because it contains schema-based example")
-        } else attempt("Error reading example file ${file.canonicalPath}") {parsedJSONObject(file.readText()) },
-        file = file
-    )
+    constructor(file: File) : this(json = attempt("Error reading example file ${file.canonicalPath}") { parsedJSONObject(file.readText()) }, file = file)
 
     private fun JSONObjectValue.findByPath(path: String): Value? {
         return  findFirstChildByPath("partial.$path") ?: findFirstChildByPath(path)
@@ -62,13 +66,17 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         return json.findByPath("partial") != null
     }
 
+    fun isInvalid(): Boolean {
+        return (requestMethod == null || requestPath == null || responseStatus == null)
+    }
+
     val expectationFilePath: String = file.canonicalPath
 
     val response: HttpResponse
         get() {
             if(responseBody == null && responseHeaders == null)
                 return HttpResponse(
-                    responseStatus,
+                    responseStatus ?: 0,
                     body = NoBodyValue,
                     headers = emptyMap()
                 )
@@ -76,7 +84,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
             val body = responseBody ?: EmptyString
             val headers = responseHeaders ?: JSONObjectValue()
 
-            return HttpResponse(responseStatus, headers.jsonObject.mapValues { it.value.toStringLiteral() }, body)
+            return HttpResponse(responseStatus ?: 0, headers.jsonObject.mapValues { it.value.toStringLiteral() }, body)
         }
 
     val request: HttpRequest
@@ -98,25 +106,25 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
         val headers = json.findByPath("http-response.headers") ?: return@attempt null
 
         if(headers !is JSONObjectValue)
-            throw ContractException("http-response.headers should be a JSON object, but instead it was ${headers.toStringLiteral()}")
+            return@attempt null
 
         headers
     }
 
-    val responseStatus: Int = attempt("Error reading status in file ${file.canonicalPath}") {
+    val responseStatus: Int? = attempt("Error reading status in file ${file.canonicalPath}") {
         json.findByPath("http-response.status")?.toStringLiteral()?.toInt()
-    } ?: throw ContractException("Response status code was not found.")
+    }
 
-    val requestMethod: String = attempt("Error reading method in file ${file.canonicalPath}") {
+    val requestMethod: String? = attempt("Error reading method in file ${file.canonicalPath}") {
         json.findByPath("http-request.method")?.toStringLiteral()
-    } ?: throw ContractException("Request method was not found.")
+    }
 
     private val rawPath: String? =
         json.findByPath("http-request.path")?.toStringLiteral()
 
-    val requestPath: String = attempt("Error reading path in file ${file.canonicalPath}") {
+    val requestPath: String? = attempt("Error reading path in file ${file.canonicalPath}") {
         rawPath?.let { pathOnly(it) }
-    } ?: throw ContractException("Request path was not found.")
+    }
 
     private fun pathOnly(requestPath: String): String {
         return URI(requestPath).path ?: ""
@@ -129,7 +137,7 @@ class ExampleFromFile(val json: JSONObjectValue, val file: File) {
     val queryParams: Map<String, String>
         get() {
             val path = attempt("Error reading path in file ${file.canonicalPath}") {
-                rawPath ?: throw ContractException("Request path was not found.")
+                rawPath ?: ""
             }
 
             val uri = URI.create(path)

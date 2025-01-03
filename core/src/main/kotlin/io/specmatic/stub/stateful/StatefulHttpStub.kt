@@ -11,6 +11,8 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.specmatic.conversions.OpenApiSpecification
+import io.specmatic.conversions.OpenApiSpecification.Companion.applyOverlay
 import io.specmatic.core.Feature
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpRequestPattern
@@ -52,6 +54,7 @@ import io.specmatic.stub.generateHttpResponseFrom
 import io.specmatic.stub.internalServerError
 import io.specmatic.stub.ktorHttpRequestToHttpRequest
 import io.specmatic.stub.respondToKtorHttpResponse
+import io.specmatic.stub.stateful.StubCache.Companion.idValueFor
 import io.specmatic.test.HttpClient
 import java.io.File
 
@@ -95,7 +98,10 @@ class StatefulHttpStub(
                 staticResources("/", "swagger-ui")
 
                 get("/openapi.yaml") {
-                    call.respondFile(File(features.first().path))
+                    val openApiFilePath = features.first().path
+                    val overlayContent = OpenApiSpecification.getImplicitOverlayContent(openApiFilePath)
+                    val openApiSpec = File(openApiFilePath).readText().applyOverlay(overlayContent)
+                    call.respond(openApiSpec)
                 }
             }
 
@@ -158,7 +164,7 @@ class StatefulHttpStub(
     }
 
     private val specmaticConfig = loadSpecmaticConfig()
-    private val stubCache = stubCacheWithExampleData()
+    private val stubCache = stubCacheWithExampleSeedData()
 
     private fun cachedHttpResponse(
         httpRequest: HttpRequest,
@@ -279,7 +285,12 @@ class StatefulHttpStub(
                 )
             } else responseBody
 
-            stubCache.addResponse(resourcePath, finalResponseBody)
+            stubCache.addResponse(
+                path = resourcePath,
+                responseBody = finalResponseBody,
+                idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
+                idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, finalResponseBody)
+            )
             return generatedResponse.withUpdated(finalResponseBody, attributeSelectionKeys)
         }
 
@@ -329,22 +340,44 @@ class StatefulHttpStub(
         if (statusCode.toString().startsWith("4").not()) {
             throw IllegalArgumentException("The statusCode should be of 4xx type")
         }
+        val warningMessage = "WARNING: The response is in string format since no schema found in the specification for $statusCode response"
 
-        if (responseBodyPattern == null || responseBodyPattern !is JSONObjectPattern) {
-            return HttpResponse(statusCode, message)
+        val resolver = scenario?.resolver
+        if (
+            responseBodyPattern == null ||
+            responseBodyPattern !is PossibleJsonObjectPatternContainer ||
+            resolver == null
+        ) {
+            return HttpResponse(statusCode, "$message${System.lineSeparator()}$warningMessage")
         }
-        val messageKey =
-            responseBodyPattern.pattern.entries.firstOrNull { it.value is StringPattern }?.key
-        if (messageKey == null || scenario?.resolver == null) {
-            return HttpResponse(statusCode, message)
+        val responseBodyJsonObjectPattern =
+            (responseBodyPattern as PossibleJsonObjectPatternContainer).jsonObjectPattern(resolver)
+
+        val messageKey = messageKeyFor4xxResponseMessage(responseBodyJsonObjectPattern)
+        if (messageKey == null || responseBodyJsonObjectPattern == null) {
+            return HttpResponse(statusCode, "$message${System.lineSeparator()}$warningMessage")
         }
 
-        val jsonObjectWithNotFoundMessage = responseBodyPattern.generate(
-            scenario.resolver
+        val jsonObjectWithNotFoundMessage = responseBodyJsonObjectPattern.generate(
+            resolver
         ).jsonObject.plus(
             mapOf(withoutOptionality(messageKey) to StringValue(message))
         )
         return HttpResponse(statusCode, JSONObjectValue(jsonObject = jsonObjectWithNotFoundMessage))
+    }
+
+    private fun messageKeyFor4xxResponseMessage(
+        responseBodyJsonObjectPattern: JSONObjectPattern?
+    ): String? {
+        val messageKeyWithStringType = responseBodyJsonObjectPattern?.pattern?.entries?.firstOrNull {
+            it.value is StringPattern && withoutOptionality(it.key) in setOf("message", "msg")
+        }?.key
+
+        if (messageKeyWithStringType != null) return messageKeyWithStringType
+
+        return responseBodyJsonObjectPattern?.pattern?.entries?.firstOrNull {
+            it.value is StringPattern
+        }?.key
     }
 
     private fun resourcePathAndIdFrom(httpRequest: HttpRequest): Pair<String, String> {
@@ -480,7 +513,7 @@ class StatefulHttpStub(
         responseBodyMap: Map<String, Value>,
         resolver: Resolver,
     ): Map<String, Value> {
-        val idKey = "id"
+        val idKey = DEFAULT_CACHE_RESPONSE_ID_KEY
         val maxAttempts = 100_000
 
         val initialIdValue = responseBodyMap[idKey] ?: return responseBodyMap
@@ -527,7 +560,7 @@ class StatefulHttpStub(
             SpecmaticConfig()
     }
 
-    private fun stubCacheWithExampleData(): StubCache {
+    private fun stubCacheWithExampleSeedData(): StubCache {
         val stubCache = StubCache()
 
         scenarioStubs.forEach {
@@ -543,16 +576,30 @@ class StatefulHttpStub(
             val (resourcePath, _) = resourcePathAndIdFrom(httpRequest)
             val responseBody = it.response.body
             if (httpRequest.method == "GET" && httpRequest.pathSegments().size == 1) {
+                if (httpRequest.queryParams.asMap().containsKey(specmaticConfig.attributeSelectionQueryParamKey())) {
+                    return@forEach
+                }
+
                 val responseBodies = (it.response.body as JSONArrayValue).list.filterIsInstance<JSONObjectValue>()
                 responseBodies.forEach { body ->
-                    stubCache.addResponse(resourcePath, body)
+                    stubCache.addResponse(
+                        path = resourcePath,
+                        responseBody = body,
+                        idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
+                        idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, body)
+                    )
                 }
-            } else {
-                if (responseBody !is JSONObjectValue) return@forEach
-                if (httpRequest.method == "POST" && httpRequest.body !is JSONObjectValue) return@forEach
-
-                stubCache.addResponse(resourcePath, responseBody)
+                return@forEach
             }
+
+            if (responseBody !is JSONObjectValue) return@forEach
+            if(httpRequest.method == "POST" && httpRequest.body !is JSONObjectValue) return@forEach
+            stubCache.addResponse(
+                path = resourcePath,
+                responseBody = responseBody,
+                idKey = DEFAULT_CACHE_RESPONSE_ID_KEY,
+                idValue = idValueFor(DEFAULT_CACHE_RESPONSE_ID_KEY, responseBody)
+            )
         }
 
         return stubCache

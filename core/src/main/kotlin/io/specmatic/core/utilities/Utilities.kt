@@ -11,6 +11,7 @@ import org.w3c.dom.Node
 import org.xml.sax.InputSource
 import io.specmatic.core.log.consoleLog
 import io.specmatic.core.*
+import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.azure.AzureAuthCredentials
 import io.specmatic.core.git.GitCommand
@@ -375,4 +376,10 @@ fun uniqueNameForApiOperation(httpRequest: HttpRequest, baseURL: String, respons
         .orEmpty()
     if (formattedPath.isEmpty()) return "${method}_${responseStatus}"
     return "${formattedPath}_${method}_${responseStatus}$contentType"
+}
+
+fun consolePrintableURL(host: String, port: Int, keyStoreData: KeyData? = null): String {
+    val protocol = keyStoreData?.let { "https" } ?: "http"
+    val displayableHost = if (host == DEFAULT_HTTP_STUB_HOST) "localhost" else host
+    return "$protocol://$displayableHost:$port"
 }

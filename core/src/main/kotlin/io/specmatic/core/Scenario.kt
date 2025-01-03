@@ -11,6 +11,7 @@ import io.specmatic.core.utilities.nullOrExceptionString
 import io.specmatic.core.value.*
 import io.specmatic.mock.ScenarioStub
 import io.specmatic.stub.RequestContext
+import io.specmatic.test.ExampleProcessor
 
 object ContractAndStubMismatchMessages : MismatchMessages {
     override fun mismatchMessage(expected: String, actual: String): String {
@@ -297,10 +298,14 @@ data class Scenario(
         }
     }
 
-    fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
-        val resolver = updatedResolver(mismatchMessages, unexpectedKeyCheck).copy(context = RequestContext(httpRequest))
+    fun matchesResponse(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages = DefaultMismatchMessages, unexpectedKeyCheck: UnexpectedKeyCheck? = null): Result {
+        val updatedUnexpectedKeyCheck = if (isRequestAttributeSelected(httpRequest)) {
+            ValidateUnexpectedKeys
+        } else unexpectedKeyCheck
 
-        return matches(httpResponse, mismatchMessages, unexpectedKeyCheck, resolver)
+        val resolver = updatedResolver(mismatchMessages, updatedUnexpectedKeyCheck).copy(context = RequestContext(httpRequest))
+
+        return matches(httpResponse, mismatchMessages, updatedUnexpectedKeyCheck, resolver)
     }
 
     fun matches(httpRequest: HttpRequest, httpResponse: HttpResponse, mismatchMessages: MismatchMessages, flagsBased: FlagsBased): Result {
@@ -411,23 +416,33 @@ data class Scenario(
             attempt {
                 val newResponsePattern: HttpResponsePattern = this.httpResponsePattern.withResponseExampleValue(row, resolver)
 
+                val resolvedRow = try { ExampleProcessor.resolve(row, ExampleProcessor::defaultIfNotExits) } catch (e: Throwable) {
+                    return@attempt sequenceOf(HasException<Scenario>(e, message = row.name, breadCrumb = ""))
+                }
+
                 val (newRequestPatterns: Sequence<ReturnValue<HttpRequestPattern>>, generativePrefix: String) = when (isNegative) {
-                    false -> Pair(httpRequestPattern.newBasedOn(row, resolver, httpResponsePattern.status), flagsBased.positivePrefix)
-                    else -> Pair(httpRequestPattern.negativeBasedOn(row, resolver.copy(isNegative = true)), flagsBased.negativePrefix)
+                    false -> Pair(httpRequestPattern.newBasedOn(resolvedRow, resolver, httpResponsePattern.status), flagsBased.positivePrefix)
+                    else -> Pair(httpRequestPattern.negativeBasedOn(resolvedRow, resolver.copy(isNegative = true)), flagsBased.negativePrefix)
                 }
 
                 newRequestPatterns.map { newHttpRequestPattern ->
-                    newHttpRequestPattern.ifValue {
-                        this.copy(
-                            httpRequestPattern = it,
-                            httpResponsePattern = newResponsePattern,
-                            expectedFacts = newExpectedServerState,
-                            ignoreFailure = ignoreFailure,
-                            exampleName = row.name,
-                            exampleRow = row,
-                            generativePrefix = generativePrefix,
-                        )
-                    }
+                    newHttpRequestPattern.realise(
+                        hasValue = { it, _ ->
+                            HasValue(
+                                this.copy(
+                                    httpRequestPattern = it,
+                                    httpResponsePattern = newResponsePattern,
+                                    expectedFacts = newExpectedServerState,
+                                    ignoreFailure = ignoreFailure,
+                                    exampleName = row.name,
+                                    exampleRow = row,
+                                    generativePrefix = generativePrefix,
+                                ), (newHttpRequestPattern as HasValue<HttpRequestPattern>).valueDetails
+                            )
+                        },
+                        orException = { e -> e.copy(message = row.name).cast() },
+                        orFailure = { f -> f.addDetails(message = row.name, breadCrumb = "").cast() }
+                    )
                 }
             }
         }
@@ -615,7 +630,8 @@ data class Scenario(
     fun matchesMock(
         request: HttpRequest,
         response: HttpResponse,
-        mismatchMessages: MismatchMessages = DefaultMismatchMessages
+        mismatchMessages: MismatchMessages = DefaultMismatchMessages,
+        keyCheck: KeyCheck = DefaultKeyCheck
     ): Result {
         scenarioBreadCrumb(this) {
             val updatedMismatchMessages =
@@ -627,7 +643,7 @@ data class Scenario(
                 IgnoreFacts(),
                 true,
                 patterns,
-                findKeyErrorCheck = DefaultKeyCheck.disableOverrideUnexpectedKeycheck(),
+                findKeyErrorCheck = keyCheck.disableOverrideUnexpectedKeycheck(),
                 mismatchMessages = updatedMismatchMessages
             )
 

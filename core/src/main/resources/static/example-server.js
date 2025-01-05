@@ -635,7 +635,7 @@ function createExampleDropDown(example) {
                         const editorElement = editor.dom;
                         updateBorderColorExampleBlock(editorElement, examplePreDiv);
                         if (example.errorList && example.errorList.length > 0) {
-                            highlightErrorLines(editor, example.errorList, example.exampleJson);
+                            highlightErrorLines(editor, example.errorList, update.state.doc.toString());
                         }
                         savedEditorResponse = update.state.doc.toString();
                     }

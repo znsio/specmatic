@@ -631,14 +631,13 @@ function createExampleDropDown(example) {
                 editorFacet,
                 window.EditorView.updateListener.of((update) => {
                   if (!update.docChanged) return;
-                  const docContent = editor.state.doc.toString();
+                  const docContent = update.state.doc.toString();
 
                   isSaved = false;
                   const editorElement = editor.dom;
                   updateBorderColorExampleBlock(editorElement, examplePreDiv);
-                  if (example.errorList && example.errorList.length > 0) {
-                      highlightErrorLines(editor, example.errorList, docContent);
-                  }
+                  if (!example.errorList.length > 0) return;
+                  highlightErrorLines(editor, example.errorList, docContent);
                   savedEditorResponse = docContent;
                 })
             ],
@@ -749,7 +748,8 @@ function highlightErrorLines(editor, metadata, exampleJson) {
             const className = "specmatic-editor-line-error";
             const tokenStart = lineLength.from;
             const tokenEnd = lineLength.to;
-           if (decorations.some(decoration => decoration.from === tokenStart && decoration.to === tokenEnd)) return;
+            const existingDecoration = decorations.filter(decoration => decoration.from === tokenStart && decoration.to === tokenEnd);
+           if (existingDecoration.length !== 0) return;
 
            decorations.push(
                window.Decoration.mark({

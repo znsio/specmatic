@@ -82,7 +82,7 @@ class Discriminator(
         if (actualDiscriminatorValue.toStringLiteral() !in values) {
             val message = "Expected the value of discriminator property to be $discriminatorCsvClause but it was ${
                 actualDiscriminatorValue.toStringLiteral()
-                    .takeUnless { it.isEmpty() } ?: "' '"
+                    .takeUnless { it.isEmpty() } ?: "\"\""
             }"
 
             return Result.Failure(

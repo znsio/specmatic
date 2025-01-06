@@ -314,8 +314,5 @@ video {
     border-left: 4px solid red;
 }
 
-.cm-tooltip {
-    z-index: 9999 !important;
-}
 
 

@@ -746,15 +746,19 @@ function highlightErrorLines(editor, metadata, exampleJson) {
             existingMarkers.get(lineNumber).push(meta.description);
             const combinedDescriptions = existingMarkers.get(lineNumber).join('\n\n');
             const className = "specmatic-editor-line-error";
+            const tokenStart = lineLength.from;
+            const tokenEnd = lineLength.to;
+            if (!decorations.some(decoration => decoration.from === tokenStart && decoration.to === tokenEnd)) {
+                           decorations.push(
+                               window.Decoration.mark({
+                                   class: className,
+                                   attributes: {
+                                       "data-validation-error-message": combinedDescriptions
+                                   }
+                               }).range(tokenStart, tokenEnd)
+                           );
+                       }
 
-            decorations.push(
-                window.Decoration.line({
-                    class: className,
-                    attributes: {
-                        "data-validation-error-message": combinedDescriptions
-                    }
-                }).range(lineLength.from)
-            );
             const existingError = errorMetadata.find(err => err.line === lineNumber + 1);
             if (existingError) {
                 existingError.message = combinedDescriptions;
@@ -768,6 +772,7 @@ function highlightErrorLines(editor, metadata, exampleJson) {
         }
     });
     decorations.sort((a, b) => a.from - b.from);
+
     const decorationSet = window.Decoration.set(decorations);
     const transaction = editor.state.update({
         effects: setDecorationsEffect.of(decorationSet)

@@ -297,7 +297,7 @@ video {
 }
 
 .specmatic-editor-line-error {
-    background-color: rgba(255, 0, 0, 0.2) !important;
+   background-color: rgba(255, 0, 0,0.2);
     overflow: hidden;
 }
 
@@ -313,4 +313,5 @@ video {
     position: fixed;
     border-left: 4px solid red;
 }
+
 

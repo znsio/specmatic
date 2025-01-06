@@ -723,11 +723,11 @@ function updateBorderColorExampleBlock(editorElement, examplePreDiv) {
 
 
 function highlightErrorLines(editor, metadata, exampleJson) {
-    const {data, pointers} = jsonMapParser(exampleJson);
-    let decorations = [];
+    const { data, pointers } = jsonMapParser(exampleJson);
+    let diagnostics = [];
     const existingMarkers = new Map();
     const errorLines = [];
-    errorMetadata = [];
+    let errorMetadata = [];
 
     metadata.forEach(meta => {
         var location = findObjectByPath(pointers, meta.jsonPath);
@@ -738,26 +738,25 @@ function highlightErrorLines(editor, metadata, exampleJson) {
         const lineNumber = location.key ? location.key.line : (location.value ? location.value.line : null);
 
         if (lineNumber !== null) {
-            const lineLength = editor.state.doc.line(lineNumber + 1)
+            const lineLength = editor.state.doc.line(lineNumber + 1);
+
             if (!existingMarkers.has(lineNumber)) {
                 existingMarkers.set(lineNumber, []);
                 errorLines.push(lineNumber);
             }
+
             existingMarkers.get(lineNumber).push(meta.description);
             const combinedDescriptions = existingMarkers.get(lineNumber).join('\n\n');
-            const className = "specmatic-editor-line-error";
+
             const tokenStart = lineLength.from;
             const tokenEnd = lineLength.to;
-            if (!decorations.some(decoration => decoration.from === tokenStart && decoration.to === tokenEnd)) {
-                           decorations.push(
-                               window.Decoration.mark({
-                                   class: className,
-                                   attributes: {
-                                       "data-validation-error-message": combinedDescriptions
-                                   }
-                               }).range(tokenStart, tokenEnd)
-                           );
-                       }
+
+            diagnostics.push({
+                from: tokenStart,
+                to: tokenEnd,
+                severity: "error", // or "error" based on the severity you want
+                message: combinedDescriptions,
+            });
 
             const existingError = errorMetadata.find(err => err.line === lineNumber + 1);
             if (existingError) {
@@ -771,23 +770,23 @@ function highlightErrorLines(editor, metadata, exampleJson) {
             }
         }
     });
-    decorations.sort((a, b) => a.from - b.from);
 
-    const decorationSet = window.Decoration.set(decorations);
-    const transaction = editor.state.update({
-        effects: setDecorationsEffect.of(decorationSet)
-    });
+     const diagnosticSet = (view) => {
+           return diagnostics.map((diagnostic) => ({
+               from: diagnostic.from,
+               to: diagnostic.to,
+               severity: diagnostic.severity,
+               message: diagnostic.message,
+           }));
+       };
+
+       const transaction = editor.state.update({
+           effects: window.StateEffect.appendConfig.of([window.lint(diagnosticSet)]),
+       });
 
     editor.dispatch(transaction);
-    const errorTooltipExtension = createErrorTooltipExtension(errorMetadata);
-    editor.dispatch({
-        effects: setDecorationsEffect.of(decorationSet),
-    });
-    editor.dispatch({
-        effects: window.StateEffect.appendConfig.of([errorTooltipExtension]),
-    });
-
 }
+
 
 function findObjectByPath(pointers, patch) {
     for (const path in pointers) {

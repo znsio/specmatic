@@ -754,7 +754,7 @@ function highlightErrorLines(editor, metadata, exampleJson) {
             diagnostics.push({
                 from: tokenStart,
                 to: tokenEnd,
-                severity: "error", // or "error" based on the severity you want
+                severity: "error",
                 message: combinedDescriptions,
             });
 

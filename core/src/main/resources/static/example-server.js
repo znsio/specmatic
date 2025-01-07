@@ -634,11 +634,11 @@ function createExampleDropDown(example) {
                   const docContent = update.state.doc.toString();
 
                   isSaved = false;
+                  savedEditorResponse = docContent;
                   const editorElement = editor.dom;
                   updateBorderColorExampleBlock(editorElement, examplePreDiv);
                   if (!example.errorList.length > 0) return;
                   highlightErrorLines(editor, example.errorList, docContent);
-                  savedEditorResponse = docContent;
                 })
             ],
         }),

@@ -637,8 +637,14 @@ function createExampleDropDown(example) {
                   savedEditorResponse = docContent;
                   const editorElement = editor.dom;
                   updateBorderColorExampleBlock(editorElement, examplePreDiv);
+                  try {
+                      const parsedContent = JSON.parse(docContent);
+                  } catch {
+                      return;
+                  }
+
                   if (!example.errorList.length > 0) return;
-                  highlightErrorLines(editor, example.errorList, docContent);
+                    highlightErrorLines(editor, example.errorList, docContent);
                 })
             ],
         }),

@@ -190,7 +190,7 @@ sealed class Result {
         fun toMatchFailureDetails(): MatchFailureDetails {
             return (cause?.toMatchFailureDetails() ?: MatchFailureDetails()).let { reason ->
                 when {
-                    message.isNotEmpty() -> reason.copy(errorMessages = listOf(message).plus(reason.errorMessages)).copy(isPartial = isPartial)
+                    message.isNotEmpty() -> reason.copy(errorMessages = listOf(message).plus(reason.errorMessages), isPartial = isPartial)
                     else -> reason
                 }
             }.let { reason ->
@@ -205,7 +205,7 @@ sealed class Result {
             return causes.flatMap {
                 (it.cause?.toMatchFailureDetailList() ?: listOf(MatchFailureDetails())).map { matchFailureDetails ->
                     val withReason = when {
-                        message.isNotEmpty() -> matchFailureDetails.copy(errorMessages = listOf(message).plus(matchFailureDetails.errorMessages)).copy(isPartial = isPartial)
+                        message.isNotEmpty() -> matchFailureDetails.copy(errorMessages = listOf(message).plus(matchFailureDetails.errorMessages), isPartial = isPartial)
                         else -> matchFailureDetails
                     }
 

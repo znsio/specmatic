@@ -2,8 +2,6 @@ package io.specmatic.core.examples.server
 
 import io.specmatic.core.MatchFailureDetails
 
-private const val JSON_PATH = "jsonPath"
-private const val DESCRIPTION = "description"
 private const val BREADCRUMB_RESPONSE = "RESPONSE"
 private const val BREADCRUMB_REQUEST = "REQUEST"
 private const val BREADCRUMB_BODY = "BODY"
@@ -16,23 +14,23 @@ private const val HTTP_HEADERS = "headers"
 private const val HTTP_BODY = "body"
 const val BREADCRUMB_QUERY_PARAMS = "QUERY-PARAMS"
 private const val HTTP_QUERY_PARAMS = "query"
-private const val IS_PARTIAL = "isPartial"
 
-data class ExampleValidationErrorMessage(val matchFailureDetailsList: List<MatchFailureDetails>) {
-    fun jsonPathToErrorDescriptionMapping():  List<Map<String, Any>> {
+data class ExampleValidationDetails(val matchFailureDetailsList: List<MatchFailureDetails>) {
+    fun jsonPathToErrorDescriptionMapping(): List<ExampleValidationResult> {
         val jsonPaths = jsonPathsForAllErrors(matchFailureDetailsList)
         val descriptions = extractDescriptions(matchFailureDetailsList)
-        val partialErrorList = extractPartialErrors(matchFailureDetailsList)
-        val maxSize = listOf(jsonPaths.size, descriptions.size, partialErrorList.size).minOrNull() ?: 0
+        val severities = extractSeverities(matchFailureDetailsList)
+        val maxSize = listOf(jsonPaths.size, descriptions.size, severities.size).minOrNull() ?: 0
         return jsonPaths.take(maxSize).zip(descriptions.take(maxSize))
-            .zip(partialErrorList.take(maxSize)) { (jsonPath, description), isPartial ->
-                mapOf(
-                    JSON_PATH to jsonPath,
-                    DESCRIPTION to description,
-                    IS_PARTIAL to isPartial
+            .zip(severities.take(maxSize)) { (jsonPath, description), severity ->
+                ExampleValidationResult(
+                    jsonPath = jsonPath,
+                    description = description,
+                    severity = severity
                 )
             }
     }
+
     private fun jsonPathsForAllErrors(matchingFailureDetails: List<MatchFailureDetails>): List<String> {
         return matchingFailureDetails.flatMap { matchingFailureDetail ->
             val combinedBreadcrumbs = matchingFailureDetail.breadCrumbs
@@ -43,15 +41,16 @@ data class ExampleValidationErrorMessage(val matchFailureDetailsList: List<Match
             listOf(combinedBreadcrumbs)
         }
     }
+
     private fun processBreadcrumb(breadcrumb: String): String {
         return breadcrumb
-        .replace(BREADCRUMB_RESPONSE, HTTP_RESPONSE)
-        .replace(BREADCRUMB_REQUEST, HTTP_REQUEST)
-        .replace(BREADCRUMB_BODY, HTTP_BODY)
-        .replace(BREAD_CRUMB_HEADERS, HTTP_HEADERS)
-        .replace(BREADCRUMB_QUERY_PARAMS, HTTP_QUERY_PARAMS)
-        .replace(BREADCRUMB_DELIMITER, JSONPATH_DELIMITER)
-        .replace(Regex("\\[(\\d+)]")) { matchResult -> "/${matchResult.groupValues[1]}" }.trimStart('/')
+            .replace(BREADCRUMB_RESPONSE, HTTP_RESPONSE)
+            .replace(BREADCRUMB_REQUEST, HTTP_REQUEST)
+            .replace(BREADCRUMB_BODY, HTTP_BODY)
+            .replace(BREAD_CRUMB_HEADERS, HTTP_HEADERS)
+            .replace(BREADCRUMB_QUERY_PARAMS, HTTP_QUERY_PARAMS)
+            .replace(BREADCRUMB_DELIMITER, JSONPATH_DELIMITER)
+            .replace(Regex("\\[(\\d+)]")) { matchResult -> "/${matchResult.groupValues[1]}" }.trimStart('/')
     }
 
     private fun extractDescriptions(matchingFailureDetails: List<MatchFailureDetails>): List<String> {
@@ -69,7 +68,14 @@ data class ExampleValidationErrorMessage(val matchFailureDetailsList: List<Match
             }
         }
     }
-    private fun extractPartialErrors(matchingFailureDetails: List<MatchFailureDetails>): List<Boolean> {
-        return matchingFailureDetails.map { it.isPartial }
+
+    fun extractSeverities(matchFailureDetailsList: List<MatchFailureDetails>): List<Severity> {
+        return matchFailureDetailsList.map { matchFailureDetails ->
+            if (matchFailureDetails.isPartial) {
+                Severity.WARNING
+            } else {
+                Severity.ERROR
+            }
+        }
     }
 }

@@ -173,14 +173,13 @@ class ExamplesInteractiveServer(
                         val contractFile = getContractFile()
                         val validationResultResponse = try {
                             val result = validateExample(contractFile, File(request.exampleFile))
-                            if(result is Result.Failure) {
+                            if (result is Result.Failure) {
                                 ValidateExampleResponse(
                                     absPath = request.exampleFile, errorMessage = result.reportString(),
-                                    errorList = ExampleValidationErrorMessage(result.toMatchFailureDetailList()).jsonPathToErrorDescriptionMapping(),
+                                    errorList = ExampleValidationDetails(result.toMatchFailureDetailList()).jsonPathToErrorDescriptionMapping(),
                                     isPartialFailure = result.isPartialFailure()
                                 )
-                            }
-                            else {
+                            } else {
                                 ValidateExampleResponse(request.exampleFile)
                             }
                         } catch (e: FileNotFoundException) {
@@ -191,8 +190,11 @@ class ExamplesInteractiveServer(
                             ValidateExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
                         }
                         call.respond(HttpStatusCode.OK, validationResultResponse)
-                    } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("errorMessage" to exceptionCauseMessage(e)))
+                    } catch (e: Exception) {
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("errorMessage" to exceptionCauseMessage(e))
+                        )
                     }
                 }
 
@@ -303,7 +305,7 @@ class ExamplesInteractiveServer(
                 { it.example ?: "null" },
                 {
                     mapOf(
-                        "errorList" to ExampleValidationErrorMessage(it.failureDetails).jsonPathToErrorDescriptionMapping(),
+                        "errorList" to ExampleValidationDetails(it.failureDetails).jsonPathToErrorDescriptionMapping(),
                         "errorMessage" to it.exampleMismatchReason
                     )
                 }

@@ -174,10 +174,9 @@ class ExamplesInteractiveServer(
                         val validationResultResponse = try {
                             val result = validateExample(contractFile, File(request.exampleFile))
                             if(result is Result.Failure) {
-                                val partialList = result.toMatchFailureDetailList().map { res -> res.isPartial }
                                 ValidateExampleResponse(
                                     absPath = request.exampleFile, errorMessage = result.reportString(),
-                                    errorList = ExampleValidationErrorMessage(result.reportString(),partialList).jsonPathToErrorDescriptionMapping(),
+                                    errorList = ExampleValidationErrorMessage(result.toMatchFailureDetailList()).jsonPathToErrorDescriptionMapping(),
                                     isPartialFailure = result.isPartialFailure()
                                 )
                             }
@@ -303,9 +302,8 @@ class ExamplesInteractiveServer(
             keyGroup.associateBy(
                 { it.example ?: "null" },
                 {
-                    val partialList = it.failureDetails.map { failure -> failure.isPartial }
                     mapOf(
-                        "errorList" to ExampleValidationErrorMessage(it.exampleMismatchReason ?: "null",partialList).jsonPathToErrorDescriptionMapping(),
+                        "errorList" to ExampleValidationErrorMessage(it.failureDetails).jsonPathToErrorDescriptionMapping(),
                         "errorMessage" to it.exampleMismatchReason
                     )
                 }

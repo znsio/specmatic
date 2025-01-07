@@ -173,14 +173,16 @@ class ExamplesInteractiveServer(
                         val contractFile = getContractFile()
                         val validationResultResponse = try {
                             val result = validateExample(contractFile, File(request.exampleFile))
-                            if(result.isSuccess())
-                                ValidateExampleResponse(request.exampleFile)
-                            else {
+                            if(result is Result.Failure) {
+                                val partialList = result.toMatchFailureDetailList().map { res -> res.isPartial }
                                 ValidateExampleResponse(
                                     absPath = request.exampleFile, errorMessage = result.reportString(),
-                                    errorList = ExampleValidationErrorMessage(result.reportString()).jsonPathToErrorDescriptionMapping(),
+                                    errorList = ExampleValidationErrorMessage(result.reportString(),partialList).jsonPathToErrorDescriptionMapping(),
                                     isPartialFailure = result.isPartialFailure()
                                 )
+                            }
+                            else {
+                                ValidateExampleResponse(request.exampleFile)
                             }
                         } catch (e: FileNotFoundException) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
@@ -790,12 +792,13 @@ class ExamplesInteractiveServer(
 
         private fun writeToExampleFile(scenarioStub: ScenarioStub, contractFile: File): File {
             val examplesDir = getExamplesDirPath(contractFile)
-            if(examplesDir.exists().not()) examplesDir.mkdirs()
+            if (examplesDir.exists().not()) examplesDir.mkdirs()
             val stubJSON = scenarioStub.toJSON()
             val uniqueNameForApiOperation =
                 uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
 
-            val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
+            val file =
+                examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
             println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
             file.writeText(stubJSON.toStringLiteral())
             return file

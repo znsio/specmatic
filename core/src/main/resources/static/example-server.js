@@ -617,33 +617,39 @@ function createExampleDropDown(example) {
     });
 
     const editor = new window.EditorView({
-        state: window.EditorState.create({
-            doc: example.exampleJson,
-            extensions: [
-                window.basicSetup,
-                window.autocompletion,
-                window.json,
-                window.linter,
-                window.lintGutter,
-                window.lineNumbers,
-                window.oneDark,
-                decorationsField,
-                editorFacet,
-                window.EditorView.updateListener.of((update) => {
-                  if (!update.docChanged) return;
-                  const docContent = update.state.doc.toString();
+            state: window.EditorState.create({
+                doc: example.exampleJson,
+                extensions: [
+                    window.basicSetup,
+                    window.autocompletion,
+                    window.json,
+                    window.linter,
+                    window.lintGutter,
+                    window.lineNumbers,
+                    window.oneDark,
+                    decorationsField,
+                    editorFacet,
+                    window.EditorView.updateListener.of((update) => {
+                      if (!update.docChanged) return;
+                      const docContent = update.state.doc.toString();
 
-                  isSaved = false;
-                  const editorElement = editor.dom;
-                  updateBorderColorExampleBlock(editorElement, examplePreDiv);
-                  savedEditorResponse = docContent;
-                  if (!example.errorList?.length > 0) return;
-                  highlightErrorLines(editor, example.errorList, docContent);
-                })
-            ],
-        }),
-        parent: examplePreDiv
-    });
+                      isSaved = false;
+                      savedEditorResponse = docContent;
+                      const editorElement = editor.dom;
+                      updateBorderColorExampleBlock(editorElement, examplePreDiv);
+                      try {
+                          const parsedContent = JSON.parse(docContent);
+                      } catch {
+                          return;
+                      }
+
+                      if (!example.errorList.length > 0) return;
+                        highlightErrorLines(editor, example.errorList, docContent);
+                    })
+                ],
+            }),
+            parent: examplePreDiv
+        });
 
 
     if (example.errorList && example.errorList.length > 0) {

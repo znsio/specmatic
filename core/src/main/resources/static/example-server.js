@@ -631,14 +631,23 @@ function createExampleDropDown(example) {
                 editorFacet,
                 window.EditorView.updateListener.of((update) => {
                   if (!update.docChanged) return;
-                  const docContent = update.state.doc.toString();
 
+                  const docContent = update.state.doc.toString();
                   isSaved = false;
-                  const editorElement = editor.dom;
-                  updateBorderColorExampleBlock(editorElement, examplePreDiv);
-                  if (!example.errorList.length > 0) return;
-                  highlightErrorLines(editor, example.errorList, docContent);
                   savedEditorResponse = docContent;
+                  const editorElement = editor.dom;
+
+                  updateBorderColorExampleBlock(editorElement, examplePreDiv);
+
+                  try {
+                      JSON.parse(docContent);
+                  } catch {
+                      return;
+                  }
+
+                  if (!example.errorList.length > 0) return;
+
+                  highlightErrorLines(editor, example.errorList, docContent);
                 })
             ],
         }),
@@ -748,17 +757,6 @@ function highlightErrorLines(editor, metadata, exampleJson) {
             const className = "specmatic-editor-line-error";
             const tokenStart = lineLength.from;
             const tokenEnd = lineLength.to;
-            const existingDecoration = decorations.filter(decoration => decoration.from === tokenStart && decoration.to === tokenEnd);
-            if (existingDecoration.length !== 0) return;
-
-            decorations.push(
-                window.Decoration.mark({
-                    class: className,
-                    attributes: {
-                        "data-validation-error-message": combinedDescriptions
-                    }
-                }).range(tokenStart, tokenEnd)
-            );
 
             const existingError = errorMetadata.find(err => err.line === lineNumber + 1);
             if (existingError) {
@@ -770,6 +768,16 @@ function highlightErrorLines(editor, metadata, exampleJson) {
                     isPartial: meta.isPartial
                 });
             }
+
+            const existingDecoration = decorations.filter(decoration => decoration.from === tokenStart && decoration.to === tokenEnd);
+            if (existingDecoration.length !== 0) return
+                decorations.push(window.Decoration.mark({
+                    class: className,
+                    attributes: {
+                       "data-validation-error-message": combinedDescriptions
+                    }
+                }).range(tokenStart, tokenEnd)
+            );
         }
     });
     decorations.sort((a, b) => a.from - b.from);

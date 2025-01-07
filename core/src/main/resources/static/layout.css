@@ -150,8 +150,7 @@ header {
             }
 
             &[data-panel="details"] {
-                --_background-color: var(--gray);
-                pointer-events: none;
+                display: none;
             }
         }
 
@@ -159,7 +158,7 @@ header {
             --_content: "Test Selected";
 
             &[data-panel="details"] {
-                --_content: "Test Examples";
+                --_content: "Test Example";
             }
         }
 

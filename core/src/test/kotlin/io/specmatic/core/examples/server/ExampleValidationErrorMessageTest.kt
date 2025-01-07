@@ -1,5 +1,6 @@
 package io.specmatic.core.examples.server
 
+import io.specmatic.core.MatchFailureDetails
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -7,14 +8,64 @@ class ExampleValidationErrorMessageTest {
 
     @Test
     fun `should map single response JSON path to description`() {
-        val errorMessage = ">> RESPONSE.body.person.name\n Name is invalid"
-        val example = ExampleValidationErrorMessage(errorMessage)
-
+        val matchFailureDetails = listOf(
+            MatchFailureDetails(
+                breadCrumbs = listOf("RESPONSE", "body", "person", "name"),
+                errorMessages = listOf("Name is invalid"),
+                isPartial = false
+            )
+        )
+        val example = ExampleValidationErrorMessage(matchFailureDetails)
         val result = example.jsonPathToErrorDescriptionMapping()
         val expected = listOf(
             mapOf(
                 "jsonPath" to "/http-response/body/person/name",
-                "description" to ">> RESPONSE.body.person.name\n Name is invalid"
+                "description" to ">> http-response.body.person.name\n\nName is invalid",
+                "isPartial" to false
+            )
+        )
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `should handle leading and trailing white space`() {
+        val matchFailureDetails = listOf(
+            MatchFailureDetails(
+                breadCrumbs = listOf("RESPONSE", "body", "person", "name"),
+                errorMessages = listOf(" Name is invalid "),
+                isPartial = false
+            )
+        )
+        val example = ExampleValidationErrorMessage(matchFailureDetails)
+        val result = example.jsonPathToErrorDescriptionMapping()
+        val expected = listOf(
+            mapOf(
+                "jsonPath" to "/http-response/body/person/name",
+                "description" to ">> http-response.body.person.name\n\n Name is invalid ",
+                "isPartial" to false
+            )
+        )
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `should handle empty error description`() {
+        val matchFailureDetails = listOf(
+            MatchFailureDetails(
+                breadCrumbs = listOf("RESPONSE", "body", "person", "name"),
+                errorMessages = listOf(""),
+                isPartial = false
+            )
+        )
+        val example = ExampleValidationErrorMessage(matchFailureDetails)
+        val result = example.jsonPathToErrorDescriptionMapping()
+        val expected = listOf(
+            mapOf(
+                "jsonPath" to "/http-response/body/person/name",
+                "description" to ">> http-response.body.person.name\n\n",
+                "isPartial" to false
             )
         )
 
@@ -23,19 +74,30 @@ class ExampleValidationErrorMessageTest {
 
     @Test
     fun `should handle multiple errors with array indices`() {
-        val errorMessage =
-            ">> RESPONSE.body.items[0].name\n Name is missing\n >> RESPONSE.body.items[1].price\n Price is invalid"
-        val example = ExampleValidationErrorMessage(errorMessage)
-
+        val matchFailureDetails = listOf(
+            MatchFailureDetails(
+                breadCrumbs = listOf("RESPONSE", "body", "items", "[0]", "name"),
+                errorMessages = listOf("Name is missing"),
+                isPartial = true
+            ),
+            MatchFailureDetails(
+                breadCrumbs = listOf("RESPONSE", "body", "items", "[1]", "price"),
+                errorMessages = listOf("Price is invalid"),
+                isPartial = false
+            )
+        )
+        val example = ExampleValidationErrorMessage(matchFailureDetails)
         val result = example.jsonPathToErrorDescriptionMapping()
         val expected = listOf(
             mapOf(
                 "jsonPath" to "/http-response/body/items/0/name",
-                "description" to ">> RESPONSE.body.items[0].name\n Name is missing"
+                "description" to ">> http-response.body.items.[0].name\n\nName is missing",
+                "isPartial" to true
             ),
             mapOf(
                 "jsonPath" to "/http-response/body/items/1/price",
-                "description" to ">> RESPONSE.body.items[1].price\n Price is invalid"
+                "description" to ">> http-response.body.items.[1].price\n\nPrice is invalid",
+                "isPartial" to false
             )
         )
 
@@ -44,14 +106,20 @@ class ExampleValidationErrorMessageTest {
 
     @Test
     fun `should map single request JSON path to description`() {
-        val errorMessage = ">> REQUEST.body.user.age\n Age must be an integer"
-        val example = ExampleValidationErrorMessage(errorMessage)
-
+        val matchFailureDetails = listOf(
+            MatchFailureDetails(
+                breadCrumbs = listOf("REQUEST", "body", "user", "age"),
+                errorMessages = listOf("Age must be an integer"),
+                isPartial = false
+            )
+        )
+        val example = ExampleValidationErrorMessage(matchFailureDetails)
         val result = example.jsonPathToErrorDescriptionMapping()
         val expected = listOf(
             mapOf(
                 "jsonPath" to "/http-request/body/user/age",
-                "description" to ">> REQUEST.body.user.age\n Age must be an integer"
+                "description" to ">> http-request.body.user.age\n\nAge must be an integer",
+                "isPartial" to false
             )
         )
 
@@ -59,15 +127,21 @@ class ExampleValidationErrorMessageTest {
     }
 
     @Test
-    fun `should handle errors with nested objects`() {
-        val errorMessage = ">> RESPONSE.body.order.details.shipping.address\n Address is missing"
-        val example = ExampleValidationErrorMessage(errorMessage)
-
+    fun `should handle nested object errors`() {
+        val matchFailureDetails = listOf(
+            MatchFailureDetails(
+                breadCrumbs = listOf("RESPONSE", "body", "order", "details", "shipping", "address"),
+                errorMessages = listOf("Address is missing"),
+                isPartial = true
+            )
+        )
+        val example = ExampleValidationErrorMessage(matchFailureDetails)
         val result = example.jsonPathToErrorDescriptionMapping()
         val expected = listOf(
             mapOf(
                 "jsonPath" to "/http-response/body/order/details/shipping/address",
-                "description" to ">> RESPONSE.body.order.details.shipping.address\n Address is missing"
+                "description" to ">> http-response.body.order.details.shipping.address\n\nAddress is missing",
+                "isPartial" to true
             )
         )
 
@@ -75,72 +149,21 @@ class ExampleValidationErrorMessageTest {
     }
 
     @Test
-    fun `should handle empty error message`() {
-        val errorMessage = ""
-        val example = ExampleValidationErrorMessage(errorMessage)
-        val result = example.jsonPathToErrorDescriptionMapping()
-
-        val expected = emptyList<Map<String, String>>()
-
-        assertEquals(expected, result)
-    }
-
-
-    @Test
-    fun `should replace array indices correctly`() {
-        val errorMessage = ">> RESPONSE.body.items[10].name\n Name is missing"
-        val example = ExampleValidationErrorMessage(errorMessage)
-
-        val result = example.jsonPathToErrorDescriptionMapping()
-
-        val expected = listOf(
-            mapOf(
-                "jsonPath" to "/http-response/body/items/10/name",
-                "description" to ">> RESPONSE.body.items[10].name\n Name is missing"
+    fun `should handle query parameter errors`() {
+        val matchFailureDetails = listOf(
+            MatchFailureDetails(
+                breadCrumbs = listOf("RESPONSE", "QUERY-PARAMS", "id"),
+                errorMessages = listOf("ID is invalid"),
+                isPartial = false
             )
         )
-
-        assertEquals(expected, result)
-    }
-
-    @Test
-    fun `should handle leading and trailing whitespace in error message`() {
-        val errorMessage = "   >> RESPONSE.body.user.name\n Name is invalid   "
-        val example = ExampleValidationErrorMessage(errorMessage)
-
+        val example = ExampleValidationErrorMessage(matchFailureDetails)
         val result = example.jsonPathToErrorDescriptionMapping()
-
-        val expected = listOf(
-            mapOf(
-                "jsonPath" to "/http-response/body/user/name",
-                "description" to ">> RESPONSE.body.user.name\n Name is invalid"
-            )
-        )
-
-        assertEquals(expected, result)
-    }
-
-    @Test
-    fun `should handle invalid breadcrumb format`() {
-        val errorMessage = ">>REQUEST.body.any\n Invalid Path"
-        val example = ExampleValidationErrorMessage(errorMessage)
-
-        val result = example.jsonPathToErrorDescriptionMapping()
-        val expected = emptyList<Map<String, String>>()
-
-        assertEquals(expected, result)
-    }
-    @Test
-    fun `should map query parameter error to description`() {
-        val errorMessage = ">> RESPONSE.QUERY-PARAMS.id\n ID is invalid"
-        val example = ExampleValidationErrorMessage(errorMessage)
-
-        val result = example.jsonPathToErrorDescriptionMapping()
-
         val expected = listOf(
             mapOf(
                 "jsonPath" to "/http-response/query/id",
-                "description" to ">> RESPONSE.QUERY-PARAMS.id\n ID is invalid"
+                "description" to ">> http-response.query.id\n\nID is invalid",
+                "isPartial" to false
             )
         )
 
@@ -148,20 +171,33 @@ class ExampleValidationErrorMessageTest {
     }
 
     @Test
-    fun `should map header error to description`() {
-        val errorMessage = ">> RESPONSE.HEADERS.Content-Type\n Content-Type is missing"
-        val example = ExampleValidationErrorMessage(errorMessage)
-
+    fun `should handle header errors`() {
+        val matchFailureDetails = listOf(
+            MatchFailureDetails(
+                breadCrumbs = listOf("RESPONSE", "HEADERS", "Content-Type"),
+                errorMessages = listOf("Content-Type is missing"),
+                isPartial = true
+            )
+        )
+        val example = ExampleValidationErrorMessage(matchFailureDetails)
         val result = example.jsonPathToErrorDescriptionMapping()
-
         val expected = listOf(
             mapOf(
                 "jsonPath" to "/http-response/headers/Content-Type",
-                "description" to ">> RESPONSE.HEADERS.Content-Type\n Content-Type is missing"
+                "description" to ">> http-response.headers.Content-Type\n\nContent-Type is missing",
+                "isPartial" to true
             )
         )
 
         assertEquals(expected, result)
     }
 
+    @Test
+    fun `should handle empty match failure details`() {
+        val example = ExampleValidationErrorMessage(emptyList())
+        val result = example.jsonPathToErrorDescriptionMapping()
+        val expected = emptyList<Map<String, Any>>()
+
+        assertEquals(expected, result)
+    }
 }

@@ -303,8 +303,9 @@ class ExamplesInteractiveServer(
             keyGroup.associateBy(
                 { it.example ?: "null" },
                 {
+                    val partialList = it.failureDetails.map { failure -> failure.isPartial }
                     mapOf(
-                        "errorList" to ExampleValidationErrorMessage(it.exampleMismatchReason ?: "null").jsonPathToErrorDescriptionMapping(),
+                        "errorList" to ExampleValidationErrorMessage(it.exampleMismatchReason ?: "null",partialList).jsonPathToErrorDescriptionMapping(),
                         "errorMessage" to it.exampleMismatchReason
                     )
                 }

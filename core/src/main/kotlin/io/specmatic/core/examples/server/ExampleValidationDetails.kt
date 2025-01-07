@@ -69,7 +69,7 @@ data class ExampleValidationDetails(val matchFailureDetailsList: List<MatchFailu
         }
     }
 
-    fun extractSeverities(matchFailureDetailsList: List<MatchFailureDetails>): List<Severity> {
+    private fun extractSeverities(matchFailureDetailsList: List<MatchFailureDetails>): List<Severity> {
         return matchFailureDetailsList.map { matchFailureDetails ->
             if (matchFailureDetails.isPartial) {
                 Severity.WARNING

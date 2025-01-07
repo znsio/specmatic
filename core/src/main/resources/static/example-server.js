@@ -754,7 +754,7 @@ function highlightErrorLines(editor, metadata, exampleJson) {
             }
             existingMarkers.get(lineNumber).push(meta.description);
             const combinedDescriptions = existingMarkers.get(lineNumber).join('\n\n');
-            const className = meta.severity ==="WARNING" ? "specmatic-editor-line-warning": "specmatic-editor-line-error";
+            const className = meta.severity === "WARNING" ? "specmatic-editor-line-warning": "specmatic-editor-line-error";
             const tokenStart = lineLength.from;
             const tokenEnd = lineLength.to;
 
@@ -823,7 +823,7 @@ const createErrorTooltipExtension = (errorMetadata) => {
                     tooltip.textContent = error.message;
                     tooltip.innerHTML = error.message.replace(/\n/g, "<br>");
                     tooltip.className = "specmatic-editor-tooltip";
-                    tooltip.style.borderLeft = error.severity ==="WARNING" ? "4px solid yellow" : "4px solid red";
+                    tooltip.style.borderLeft = error.severity === "WARNING" ? "4px solid yellow" : "4px solid red";
                     tooltip.style.top = `${lineCoords.top + window.scrollY - tooltip.offsetHeight - numberOfPixelsAboveDefaultOffset}px`;
                     tooltip.style.left = `${lineCoords.left + numberOfPixelsLeftOfDefaultToolTipOrigin}px`;
                     return {dom: tooltip};

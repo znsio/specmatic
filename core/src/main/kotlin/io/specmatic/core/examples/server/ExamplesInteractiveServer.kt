@@ -616,7 +616,7 @@ class ExamplesInteractiveServer(
         }
 
         private fun validateExample(feature: Feature, example: ExampleFromFile): Result {
-            return feature.matchResultFlagBased(example.request, example.response, InteractiveExamplesMismatchMessages).toResultIfAny()
+            return feature.matchResultFlagBased(example.request, example.response, InteractiveExamplesMismatchMessages).toResultIfAnyWithCauses()
         }
 
         private fun validateExample(feature: Feature, schemaExample: SchemaExample): Result {
@@ -804,6 +804,20 @@ class ExamplesInteractiveServer(
             file.writeText(stubJSON.toStringLiteral())
             return file
         }
+        private fun validatePartialFailures(contractFile: File, exampleFile: File): Any {
+            val feature = parseContractFileToFeature(contractFile)
+            val exampleFromFile = ExampleFromFile.fromFile(exampleFile).realise(
+                hasValue = { example, _ -> validatePartialFailures(feature, example) },
+                orFailure = { it.failure },
+                orException = { it.toHasFailure().failure }
+            )
+            return exampleFromFile
+        }
+
+        private fun validatePartialFailures(feature: Feature, exampleFromFile: ExampleFromFile): List<Result> {
+            return feature.matchResultFlagBased(exampleFromFile.request, exampleFromFile.response, InteractiveExamplesMismatchMessages).toResultPartialFailures()
+        }
+
     }
 }
 

@@ -190,14 +190,14 @@ sealed class Result {
         fun toMatchFailureDetails(): MatchFailureDetails {
             return (cause?.toMatchFailureDetails() ?: MatchFailureDetails()).let { reason ->
                 when {
-                    message.isNotEmpty() -> reason.copy(errorMessages = listOf(message).plus(reason.errorMessages)).copy(isPartial = isPartial)
+                    message.isNotEmpty() -> reason.copy(errorMessages = listOf(message).plus(reason.errorMessages))
                     else -> reason
                 }
             }.let { reason ->
                 when {
                     breadCrumb.isNotEmpty() -> reason.copy(breadCrumbs = listOf(breadCrumb).plus(reason.breadCrumbs))
                     else -> reason
-                }
+                }.copy(isPartial = isPartial)
             }
         }
 
@@ -205,14 +205,14 @@ sealed class Result {
             return causes.flatMap {
                 (it.cause?.toMatchFailureDetailList() ?: listOf(MatchFailureDetails())).map { matchFailureDetails ->
                     val withReason = when {
-                        message.isNotEmpty() -> matchFailureDetails.copy(errorMessages = listOf(message).plus(matchFailureDetails.errorMessages)).copy(isPartial = isPartial)
+                        message.isNotEmpty() -> matchFailureDetails.copy(errorMessages = listOf(message).plus(matchFailureDetails.errorMessages))
                         else -> matchFailureDetails
                     }
 
                     when {
                         breadCrumb.isNotEmpty() -> withReason.copy(breadCrumbs = listOf(breadCrumb).plus(withReason.breadCrumbs))
                         else -> withReason
-                    }
+                    }.copy(isPartial = isPartial)
                 }
             }
         }

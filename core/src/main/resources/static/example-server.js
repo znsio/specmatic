@@ -748,18 +748,6 @@ function highlightErrorLines(editor, metadata, exampleJson) {
             const className = "specmatic-editor-line-error";
             const tokenStart = lineLength.from;
             const tokenEnd = lineLength.to;
-            const existingDecoration = decorations.filter(decoration => decoration.from === tokenStart && decoration.to === tokenEnd);
-           if (existingDecoration.length !== 0) return;
-
-           decorations.push(
-               window.Decoration.mark({
-                   class: className,
-                   attributes: {
-                       "data-validation-error-message": combinedDescriptions
-                   }
-               }).range(tokenStart, tokenEnd)
-           );
-
             const existingError = errorMetadata.find(err => err.line === lineNumber + 1);
             if (existingError) {
                 existingError.message = combinedDescriptions;
@@ -770,6 +758,16 @@ function highlightErrorLines(editor, metadata, exampleJson) {
                     isPartial: meta.isPartial
                 });
             }
+            const existingDecoration = decorations.filter(decoration => decoration.from === tokenStart && decoration.to === tokenEnd);
+            if (existingDecoration.length !== 0) return
+              decorations.push(
+                window.Decoration.mark({
+                 class: className,
+                 attributes: {
+                  "data-validation-error-message": combinedDescriptions
+                  }
+              }).range(tokenStart, tokenEnd)
+            );
         }
     });
     decorations.sort((a, b) => a.from - b.from);

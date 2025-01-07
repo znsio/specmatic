@@ -168,11 +168,83 @@ class ScenarioMetadataFilterTests {
         val metadata5 = createScenarioMetadata(method = "POST", path = "/orders")
 
 
-        assertFalse(filter.isSatisfiedBy(metadata1))
-        assertTrue(filter.isSatisfiedBy(metadata2))
-        assertFalse(filter.isSatisfiedBy(metadata3))
-        assertTrue(filter.isSatisfiedBy(metadata4))
+        assertTrue(filter.isSatisfiedBy(metadata1))
+        assertFalse(filter.isSatisfiedBy(metadata2))
+        assertTrue(filter.isSatisfiedBy(metadata3))
+        assertFalse(filter.isSatisfiedBy(metadata4))
         assertTrue(filter.isSatisfiedBy(metadata5))
+    }
+
+    @Test
+    fun `exclude scenarios with combined METHOD and PATH conditions, in addition also a status condition`() {
+        val filter = ScenarioMetadataFilter.from("!(PATH=/users && METHOD=POST) && !(PATH=/products && METHOD=POST) && STATUS!=202,400,500")
+
+        val getProducts200 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 200)
+        val getProducts202 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 202)
+
+        val postProducts200 = createScenarioMetadata(method = "POST", path = "/products", statusCode = 200)
+        val postProducts202 = createScenarioMetadata(method = "POST", path = "/products", statusCode = 202)
+
+        val getUsers200 = createScenarioMetadata(method = "GET", path = "/users", statusCode = 200)
+        val getUsers202 = createScenarioMetadata(method = "GET", path = "/users", statusCode = 202)
+
+        val postUsers401 = createScenarioMetadata(method = "POST", path = "/users", statusCode = 401)
+        val postUsers400 = createScenarioMetadata(method = "POST", path = "/users", statusCode = 400)
+
+        val postOrders401 = createScenarioMetadata(method = "POST", path = "/orders", statusCode = 401)
+        val postOrders500 = createScenarioMetadata(method = "POST", path = "/orders", statusCode = 500)
+
+
+        assertTrue(filter.isSatisfiedBy(getProducts200))
+        assertFalse(filter.isSatisfiedBy(getProducts202))
+
+        assertFalse(filter.isSatisfiedBy(postProducts200))
+        assertFalse(filter.isSatisfiedBy(postProducts202))
+
+        assertTrue(filter.isSatisfiedBy(getUsers200))
+        assertFalse(filter.isSatisfiedBy(getUsers202))
+
+        assertFalse(filter.isSatisfiedBy(postUsers401))
+        assertFalse(filter.isSatisfiedBy(postUsers400))
+
+        assertTrue(filter.isSatisfiedBy(postOrders401))
+        assertFalse(filter.isSatisfiedBy(postOrders500))
+    }
+
+    @Test
+    fun `exclude scenarios with combined METHOD and PATH conditions, in addition also a status condition as first condition`() {
+        val filter = ScenarioMetadataFilter.from("STATUS!=202,400,500 && !(PATH=/users && METHOD=POST) && !(PATH=/products && METHOD=POST)")
+
+        val getProducts200 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 200)
+        val getProducts202 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 202)
+
+        val postProducts200 = createScenarioMetadata(method = "POST", path = "/products", statusCode = 200)
+        val postProducts202 = createScenarioMetadata(method = "POST", path = "/products", statusCode = 202)
+
+        val getUsers200 = createScenarioMetadata(method = "GET", path = "/users", statusCode = 200)
+        val getUsers202 = createScenarioMetadata(method = "GET", path = "/users", statusCode = 202)
+
+        val postUsers401 = createScenarioMetadata(method = "POST", path = "/users", statusCode = 401)
+        val postUsers400 = createScenarioMetadata(method = "POST", path = "/users", statusCode = 400)
+
+        val postOrders401 = createScenarioMetadata(method = "POST", path = "/orders", statusCode = 401)
+        val postOrders500 = createScenarioMetadata(method = "POST", path = "/orders", statusCode = 500)
+
+
+        assertTrue(filter.isSatisfiedBy(getProducts200))
+        assertFalse(filter.isSatisfiedBy(getProducts202))
+
+        assertFalse(filter.isSatisfiedBy(postProducts200))
+        assertFalse(filter.isSatisfiedBy(postProducts202))
+
+        assertTrue(filter.isSatisfiedBy(getUsers200))
+        assertFalse(filter.isSatisfiedBy(getUsers202))
+
+        assertFalse(filter.isSatisfiedBy(postUsers401))
+        assertFalse(filter.isSatisfiedBy(postUsers400))
+
+        assertTrue(filter.isSatisfiedBy(postOrders401))
+        assertFalse(filter.isSatisfiedBy(postOrders500))
     }
 
 }

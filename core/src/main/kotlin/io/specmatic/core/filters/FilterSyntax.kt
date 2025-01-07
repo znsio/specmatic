@@ -5,20 +5,18 @@ import java.util.regex.Pattern
 data class FilterSyntax(val filter: String) {
 
     fun parse(): List<FilterGroup> {
-        if (filter.isBlank()) return emptyList()
+        if (!isValidFilter()) return emptyList()
 
-        val normalizedFilter = normalizeFilter(filter)
-
-        if(!isValidFilter(normalizedFilter)) return emptyList()
-
-        val tokens = tokenize(normalizedFilter)
+        val tokens = tokenize()
 
         val filterGroups = parseTokens(tokens)
 
         return filterGroups;
     }
 
-    private fun isValidFilter(filter: String): Boolean {
+    private fun isValidFilter(): Boolean {
+        filter.takeIf { it.isBlank() }?.let { return false }
+
         val validKeys = setOf("METHOD", "PATH", "STATUS", "EXAMPLE-NAME", "HEADERS", "QUERY-PARAMS")
         val regex = Regex("\\s*(\\w+)\\s*(=|!=)\\s*([\\w/*{}, ]+)")
         val logicalOperators = setOf("&&", "||", "!")
@@ -43,19 +41,7 @@ data class FilterSyntax(val filter: String) {
         return balance == 0
     }
 
-    private fun normalizeFilter(filter: String): String {
-        return filter.replace(Regex("\\bAND\\b|\\bOR\\b|\\bNOT\\b|=="), { matchResult ->
-            when (matchResult.value) {
-                "AND" -> "&&"
-                "OR" -> "||"
-                "NOT" -> "!"
-                "==" -> "="
-                else -> matchResult.value
-            }
-        })
-    }
-
-    private fun tokenize(filter: String): List<String> {
+    private fun tokenize(): List<String> {
         val regex = Regex("""
         [A-Za-z]+(?:=|!=)[^()\s&|]+(?:\([^()]*\))?|  
         \(|
@@ -91,6 +77,10 @@ data class FilterSyntax(val filter: String) {
                         stack.removeAt(stack.lastIndex)
                     }
 
+                    if(stack.isNotEmpty() && stack.first() == "&&") {
+                        currentGroup.add(0, stack.removeFirst())
+                    }
+
                     val filterGroup = buildFilterGroup(currentGroup)
 
                     val isNegated = if (stack.isNotEmpty() && stack.last() == "!") {
@@ -103,7 +93,9 @@ data class FilterSyntax(val filter: String) {
                     result.add(filterGroup)
                     currentGroup = mutableListOf<Any>()
                 }
-                "&&"-> currentGroup.add(token)
+                "&&"-> {
+                    stack.add(token)
+                }
                 "||"-> {
                     if(currentGroup.isNotEmpty()) {
 
@@ -113,8 +105,13 @@ data class FilterSyntax(val filter: String) {
                         currentGroup = mutableListOf<Any>()
                     }
                 }
-                "!" -> stack.add(token) // Add negation operator
-                else -> currentGroup.add(parseCondition(token))
+                "!" -> stack.add(token)
+                else -> {
+                    if(stack.isNotEmpty() && stack.last() == "&&") {
+                        currentGroup.add(stack.removeLast())
+                    }
+                    currentGroup.add(parseCondition(token))
+                }
             }
         }
 
@@ -128,7 +125,7 @@ data class FilterSyntax(val filter: String) {
     private fun buildFilterGroup(tokens: List<Any>): FilterGroup {
         val filters = mutableListOf<FilterExpression>()
         val subGroups = mutableListOf<FilterGroup>()
-        var isAndOperation = tokens.first() == "&&"
+        val isAndOperation = tokens.first() == "&&"
 
         tokens.forEach { token ->
             when (token) {

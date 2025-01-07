@@ -617,39 +617,42 @@ function createExampleDropDown(example) {
     });
 
     const editor = new window.EditorView({
-            state: window.EditorState.create({
-                doc: example.exampleJson,
-                extensions: [
-                    window.basicSetup,
-                    window.autocompletion,
-                    window.json,
-                    window.linter,
-                    window.lintGutter,
-                    window.lineNumbers,
-                    window.oneDark,
-                    decorationsField,
-                    editorFacet,
-                    window.EditorView.updateListener.of((update) => {
-                      if (!update.docChanged) return;
-                      const docContent = update.state.doc.toString();
+        state: window.EditorState.create({
+            doc: example.exampleJson,
+            extensions: [
+                window.basicSetup,
+                window.autocompletion,
+                window.json,
+                window.linter,
+                window.lintGutter,
+                window.lineNumbers,
+                window.oneDark,
+                decorationsField,
+                editorFacet,
+                window.EditorView.updateListener.of((update) => {
+                  if (!update.docChanged) return;
 
-                      isSaved = false;
-                      savedEditorResponse = docContent;
-                      const editorElement = editor.dom;
-                      updateBorderColorExampleBlock(editorElement, examplePreDiv);
-                      try {
-                          const parsedContent = JSON.parse(docContent);
-                      } catch {
-                          return;
-                      }
+                  const docContent = update.state.doc.toString();
+                  isSaved = false;
+                  savedEditorResponse = docContent;
+                  const editorElement = editor.dom;
 
-                      if (!example.errorList.length > 0) return;
-                        highlightErrorLines(editor, example.errorList, docContent);
-                    })
-                ],
-            }),
-            parent: examplePreDiv
-        });
+                  updateBorderColorExampleBlock(editorElement, examplePreDiv);
+
+                  try {
+                      JSON.parse(docContent);
+                  } catch {
+                      return;
+                  }
+
+                  if (!example.errorList.length > 0) return;
+
+                  highlightErrorLines(editor, example.errorList, docContent);
+                })
+            ],
+        }),
+        parent: examplePreDiv
+    });
 
 
     if (example.errorList && example.errorList.length > 0) {
@@ -765,17 +768,16 @@ function highlightErrorLines(editor, metadata, exampleJson) {
                     isPartial: meta.isPartial
                 });
             }
-             const existingDecoration = decorations.filter(decoration => decoration.from === tokenStart && decoration.to === tokenEnd);
-             if (existingDecoration.length !== 0) return;
-               decorations.push(
-                  window.Decoration.mark({
-                    class: className,
-                     attributes: {
-                    "data-validation-error-message": combinedDescriptions
-                  }
-                }).range(tokenStart, tokenEnd)
-               );
 
+            const existingDecoration = decorations.filter(decoration => decoration.from === tokenStart && decoration.to === tokenEnd);
+            if (existingDecoration.length !== 0) return
+                decorations.push(window.Decoration.mark({
+                    class: className,
+                    attributes: {
+                       "data-validation-error-message": combinedDescriptions
+                    }
+                }).range(tokenStart, tokenEnd)
+            );
         }
     });
     decorations.sort((a, b) => a.from - b.from);

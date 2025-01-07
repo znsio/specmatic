@@ -23,6 +23,10 @@ data class Results(val results: List<Result> = emptyList()) {
         return results.find { it is Result.Success } ?: Result.Failure(results.joinToString("\n\n") { it.toReport().toText() }, isPartial = results.all { it.isPartialFailure() })
     }
 
+    fun toResultIfAnyWithCauses(): Result {
+        return results.find { it is Result.Success } ?: Result.fromResults(results)
+    }
+
     val failureCount
         get(): Int = results.count { it is Result.Failure }
 
@@ -111,6 +115,9 @@ data class Results(val results: List<Result> = emptyList()) {
             partialFailureCount > 0 -> "$successCount example(s) are valid. $failureCount example(s) are invalid. $partialFailureCount example(s) have warnings."
             else -> "$successCount example(s) are valid. $failureCount example(s) are invalid."
         }
+    }
+    fun toResultPartialFailures(): List<Result> {
+        return results.filter { it.isPartialFailure() }
     }
 }
 

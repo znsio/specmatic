@@ -300,6 +300,10 @@ video {
     background-color: rgba(255, 0, 0, 0.2);
     overflow: hidden;
 }
+.specmatic-editor-line-warning {
+    background-color: rgba(255, 191, 0, 0.2);
+    overflow: hidden;
+}
 
 .specmatic-editor-tooltip {
     color: white;

@@ -190,7 +190,7 @@ sealed class Result {
         fun toMatchFailureDetails(): MatchFailureDetails {
             return (cause?.toMatchFailureDetails() ?: MatchFailureDetails()).let { reason ->
                 when {
-                    message.isNotEmpty() -> reason.copy(errorMessages = listOf(message).plus(reason.errorMessages))
+                    message.isNotEmpty() -> reason.copy(errorMessages = listOf(message).plus(reason.errorMessages), isPartial = isPartial)
                     else -> reason
                 }
             }.let { reason ->
@@ -205,7 +205,7 @@ sealed class Result {
             return causes.flatMap {
                 (it.cause?.toMatchFailureDetailList() ?: listOf(MatchFailureDetails())).map { matchFailureDetails ->
                     val withReason = when {
-                        message.isNotEmpty() -> matchFailureDetails.copy(errorMessages = listOf(message).plus(matchFailureDetails.errorMessages))
+                        message.isNotEmpty() -> matchFailureDetails.copy(errorMessages = listOf(message).plus(matchFailureDetails.errorMessages), isPartial = isPartial)
                         else -> matchFailureDetails
                     }
 
@@ -341,7 +341,7 @@ enum class FailureReason(val fluffLevel: Int, val objectMatchOccurred: Boolean) 
     ScenarioMismatch(2, false)
 }
 
-data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null)
+data class MatchFailureDetails(val breadCrumbs: List<String> = emptyList(), val errorMessages: List<String> = emptyList(), val path: String? = null, val isPartial: Boolean = false)
 
 interface MismatchMessages {
     fun mismatchMessage(expected: String, actual: String): String

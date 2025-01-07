@@ -173,14 +173,14 @@ class ExamplesInteractiveServer(
                         val contractFile = getContractFile()
                         val validationResultResponse = try {
                             val result = validateExample(contractFile, File(request.exampleFile))
-                            if(result.isSuccess())
-                                ValidateExampleResponse(request.exampleFile)
-                            else {
+                            if (result is Result.Failure) {
                                 ValidateExampleResponse(
                                     absPath = request.exampleFile, errorMessage = result.reportString(),
-                                    errorList = ExampleValidationErrorMessage(result.reportString()).jsonPathToErrorDescriptionMapping(),
+                                    errorList = ExampleValidationDetails(result.toMatchFailureDetailList()).jsonPathToErrorDescriptionMapping(),
                                     isPartialFailure = result.isPartialFailure()
                                 )
+                            } else {
+                                ValidateExampleResponse(request.exampleFile)
                             }
                         } catch (e: FileNotFoundException) {
                             ValidateExampleResponse(request.exampleFile, e.message ?: "File not found")
@@ -190,8 +190,11 @@ class ExamplesInteractiveServer(
                             ValidateExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
                         }
                         call.respond(HttpStatusCode.OK, validationResultResponse)
-                    } catch(e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("errorMessage" to exceptionCauseMessage(e)))
+                    } catch (e: Exception) {
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("errorMessage" to exceptionCauseMessage(e))
+                        )
                     }
                 }
 
@@ -302,7 +305,7 @@ class ExamplesInteractiveServer(
                 { it.example ?: "null" },
                 {
                     mapOf(
-                        "errorList" to ExampleValidationErrorMessage(it.exampleMismatchReason ?: "null").jsonPathToErrorDescriptionMapping(),
+                        "errorList" to ExampleValidationDetails(it.failureDetails).jsonPathToErrorDescriptionMapping(),
                         "errorMessage" to it.exampleMismatchReason
                     )
                 }
@@ -613,7 +616,7 @@ class ExamplesInteractiveServer(
         }
 
         private fun validateExample(feature: Feature, example: ExampleFromFile): Result {
-            return feature.matchResultFlagBased(example.request, example.response, InteractiveExamplesMismatchMessages).toResultIfAny()
+            return feature.matchResultFlagBased(example.request, example.response, InteractiveExamplesMismatchMessages).toResultIfAnyWithCauses()
         }
 
         private fun validateExample(feature: Feature, schemaExample: SchemaExample): Result {
@@ -790,16 +793,31 @@ class ExamplesInteractiveServer(
 
         private fun writeToExampleFile(scenarioStub: ScenarioStub, contractFile: File): File {
             val examplesDir = getExamplesDirPath(contractFile)
-            if(examplesDir.exists().not()) examplesDir.mkdirs()
+            if (examplesDir.exists().not()) examplesDir.mkdirs()
             val stubJSON = scenarioStub.toJSON()
             val uniqueNameForApiOperation =
                 uniqueNameForApiOperation(scenarioStub.request, "", scenarioStub.response.status)
 
-            val file = examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
+            val file =
+                examplesDir.resolve("${uniqueNameForApiOperation}_${exampleFileNamePostFixCounter.incrementAndGet()}.json")
             println("Writing to file: ${file.relativeTo(contractFile.canonicalFile.parentFile).path}")
             file.writeText(stubJSON.toStringLiteral())
             return file
         }
+        private fun validatePartialFailures(contractFile: File, exampleFile: File): Any {
+            val feature = parseContractFileToFeature(contractFile)
+            val exampleFromFile = ExampleFromFile.fromFile(exampleFile).realise(
+                hasValue = { example, _ -> validatePartialFailures(feature, example) },
+                orFailure = { it.failure },
+                orException = { it.toHasFailure().failure }
+            )
+            return exampleFromFile
+        }
+
+        private fun validatePartialFailures(feature: Feature, exampleFromFile: ExampleFromFile): List<Result> {
+            return feature.matchResultFlagBased(exampleFromFile.request, exampleFromFile.response, InteractiveExamplesMismatchMessages).toResultPartialFailures()
+        }
+
     }
 }
 

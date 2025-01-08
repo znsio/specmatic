@@ -1,6 +1,11 @@
 package io.specmatic.core.filters
 
 import java.util.regex.Pattern
+import io.specmatic.core.filters.FilterSymbols.LogicalOperator
+import io.specmatic.core.filters.FilterSymbols.Parenthesis
+import io.specmatic.core.filters.FilterSymbols.ComparisonOperator
+import io.specmatic.core.filters.FilterSymbols.SpecialSymbol
+import org.jetbrains.annotations.VisibleForTesting
 
 data class FilterSyntax(val filter: String) {
 
@@ -11,26 +16,27 @@ data class FilterSyntax(val filter: String) {
 
         val filterGroups = parseTokens(tokens)
 
-        return filterGroups;
+        return filterGroups
     }
 
-    private fun isValidFilter(): Boolean {
-        filter.takeIf { it.isBlank() }?.let { return false }
+    @VisibleForTesting
+    internal fun isValidFilter(): Boolean {
 
-        val validKeys = setOf("METHOD", "PATH", "STATUS", "EXAMPLE-NAME", "HEADERS", "QUERY-PARAMS")
+        filter.takeIf { it.isBlank() }?.let { return@let false }
+
+        val validKeys = ScenarioFilterTags.entries.map{it.key}.toSet()
         val regex = Regex("\\s*(\\w+)\\s*(=|!=)\\s*([\\w/*{}, ]+)")
-        val logicalOperators = setOf("&&", "||", "!")
 
         var balance = 0
 
         filter.split(" ").forEach { token ->
             when {
-                token == "(" -> balance++
-                token == ")" -> {
+                token == Parenthesis.OPEN.symbol -> balance++
+                token == Parenthesis.CLOSE.symbol -> {
                     balance--
-                    if (balance < 0) return false // More closing brackets than opening
+                    if (balance < 0) return false
                 }
-                logicalOperators.contains(token) -> Unit
+                LogicalOperator.contains(token) -> Unit
                 regex.matches(token) -> {
                     val key = regex.find(token)?.groupValues?.get(1) ?: return false
                     if (key !in validKeys) return false
@@ -63,27 +69,26 @@ data class FilterSyntax(val filter: String) {
 
         tokens.forEach { token ->
             when (token) {
-                "(" -> {
-
+                Parenthesis.OPEN.symbol -> {
                     if(currentGroup.any{it is FilterExpression}) {
                         result.add(buildFilterGroup(currentGroup))
-                        currentGroup = mutableListOf<Any>()
+                        currentGroup = mutableListOf()
                     }
 
                     stack.add(token)
                 }
-                ")" -> {
-                    if (stack.isNotEmpty() && stack.last() == "(") {
+                Parenthesis.CLOSE.symbol -> {
+                    if (stack.isNotEmpty() && stack.last() == Parenthesis.OPEN.symbol) {
                         stack.removeAt(stack.lastIndex)
                     }
 
-                    if(stack.isNotEmpty() && stack.first() == "&&") {
+                    if(stack.isNotEmpty() && stack.first() == LogicalOperator.AND.symbol) {
                         currentGroup.add(0, stack.removeFirst())
                     }
 
                     val filterGroup = buildFilterGroup(currentGroup)
 
-                    val isNegated = if (stack.isNotEmpty() && stack.last() == "!") {
+                    val isNegated = if (stack.isNotEmpty() && stack.last() == LogicalOperator.NOT.symbol) {
                         stack.removeAt(stack.size - 1)
                         true
                     } else {
@@ -91,23 +96,23 @@ data class FilterSyntax(val filter: String) {
                     }
                     filterGroup.isNegated = isNegated
                     result.add(filterGroup)
-                    currentGroup = mutableListOf<Any>()
+                    currentGroup = mutableListOf()
                 }
-                "&&"-> {
+                LogicalOperator.AND.symbol-> {
                     stack.add(token)
                 }
-                "||"-> {
+                LogicalOperator.OR.symbol-> {
                     if(currentGroup.isNotEmpty()) {
 
                         val filterGroup = buildFilterGroup(currentGroup)
 
                         result.add(filterGroup)
-                        currentGroup = mutableListOf<Any>()
+                        currentGroup = mutableListOf()
                     }
                 }
-                "!" -> stack.add(token)
+                LogicalOperator.NOT.symbol -> stack.add(token)
                 else -> {
-                    if(stack.isNotEmpty() && stack.last() == "&&") {
+                    if(stack.isNotEmpty() && stack.last() == LogicalOperator.AND.symbol) {
                         currentGroup.add(stack.removeLast())
                     }
                     currentGroup.add(parseCondition(token))
@@ -125,7 +130,7 @@ data class FilterSyntax(val filter: String) {
     private fun buildFilterGroup(tokens: List<Any>): FilterGroup {
         val filters = mutableListOf<FilterExpression>()
         val subGroups = mutableListOf<FilterGroup>()
-        val isAndOperation = tokens.first() == "&&"
+        val isAndOperation = tokens.first() == LogicalOperator.AND.symbol
 
         tokens.forEach { token ->
             when (token) {
@@ -138,33 +143,33 @@ data class FilterSyntax(val filter: String) {
     }
 
     private fun parseCondition(condition: String): FilterExpression {
-        val operatorIndex = condition.indexOf("!=").takeIf { it != -1 }
-            ?: condition.indexOf("=").takeIf { it != -1 }
+        val operatorIndex = condition.indexOf(ComparisonOperator.NOT_EQUAL.symbol).takeIf { it != -1 }
+            ?: condition.indexOf(ComparisonOperator.EQUAL.symbol).takeIf { it != -1 }
             ?: throw IllegalArgumentException("Invalid condition format: $condition. No valid operator found.")
 
-        val operator = if (condition.substring(operatorIndex, operatorIndex + 2) == "!=") "!=" else "="
+        val operator = if (condition.substring(operatorIndex, operatorIndex + 2) == ComparisonOperator.NOT_EQUAL.symbol) ComparisonOperator.NOT_EQUAL.symbol else ComparisonOperator.EQUAL.symbol
         val key = condition.substring(0, operatorIndex).trim()
         val value = condition.substring(operatorIndex + operator.length).trim()
 
         return when (operator) {
-            "=", "!=" -> {
+            ComparisonOperator.EQUAL.symbol, ComparisonOperator.NOT_EQUAL.symbol -> {
                 when {
-                    value.contains("*") || value.contains("?") -> {
+                    value.contains(SpecialSymbol.WILDCARD.symbol)  -> {
                         val pattern = Pattern.compile(value.replace("*", ".*").replace("?", "."))
-                        if (operator == "=")
+                        if (operator == ComparisonOperator.EQUAL.symbol)
                             FilterExpression.Regex(key, pattern)
                         else
                             FilterExpression.NotRegex(key, pattern)
                     }
-                    key == "STATUS" && value.contains("xx") -> {
+                    key == ScenarioFilterTags.STATUS_CODE.key && value.contains(SpecialSymbol.RANGE.symbol) -> {
                         val rangeStart = value[0].digitToInt() * 100
                         val rangeEnd = rangeStart + 99
-                        if (operator == "=")
+                        if (operator == ComparisonOperator.EQUAL.symbol)
                             FilterExpression.Range(key, rangeStart, rangeEnd)
                         else
                             FilterExpression.NotRange(key, rangeStart, rangeEnd)
                     }
-                    operator == "=" -> FilterExpression.Equals(key, value)
+                    operator == ComparisonOperator.EQUAL.symbol -> FilterExpression.Equals(key, value)
                     else -> FilterExpression.NotEquals(key, value)
                 }
             }

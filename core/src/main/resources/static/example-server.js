@@ -615,7 +615,6 @@ function createExampleDropDown(example) {
             lineHeight: "1.5",
         },
     });
-
     const editor = new window.EditorView({
         state: window.EditorState.create({
             doc: example.exampleJson,
@@ -646,7 +645,6 @@ function createExampleDropDown(example) {
                   }
 
                   if (!example.errorList.length > 0) return;
-
                   highlightErrorLines(editor, example.errorList, docContent);
                 })
             ],
@@ -731,7 +729,7 @@ function updateBorderColorExampleBlock(editorElement, examplePreDiv) {
 }
 
 
-function highlightErrorLines(editor, metadata, exampleJson) {
+function highlightErrorLines(editor, metadata, exampleJson,userEditedErrorList) {
     const {data, pointers} = jsonMapParser(exampleJson);
     let decorations = [];
     const existingMarkers = new Map();
@@ -741,8 +739,8 @@ function highlightErrorLines(editor, metadata, exampleJson) {
     metadata.forEach(meta => {
         var location = findObjectByPath(pointers, meta.jsonPath);
         if (location == null) {
-            meta.jsonPath = meta.jsonPath.substring(0, meta.jsonPath.lastIndexOf('/'));
-            location = findObjectByPath(pointers, meta.jsonPath);
+            const parentPath = meta.jsonPath.substring(0, meta.jsonPath.lastIndexOf('/'));
+            location = findObjectByPath(pointers, parentPath);
         }
         const lineNumber = location.key ? location.key.line : (location.value ? location.value.line : null);
 
@@ -789,9 +787,6 @@ function highlightErrorLines(editor, metadata, exampleJson) {
 
     editor.dispatch(transaction);
     const errorTooltipExtension = createErrorTooltipExtension(errorMetadata);
-    editor.dispatch({
-        effects: setDecorationsEffect.of(decorationSet),
-    });
     editor.dispatch({
         effects: window.StateEffect.appendConfig.of([errorTooltipExtension]),
     });

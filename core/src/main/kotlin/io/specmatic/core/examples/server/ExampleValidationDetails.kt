@@ -35,6 +35,7 @@ data class ExampleValidationDetails(val matchFailureDetailsList: List<MatchFailu
         return matchingFailureDetails.flatMap { matchingFailureDetail ->
             val combinedBreadcrumbs = matchingFailureDetail.breadCrumbs
                 .takeIf { it.isNotEmpty() }
+                ?.filterNot { it.startsWith("(") && it.endsWith(")") }
                 ?.joinToString(JSONPATH_DELIMITER) { breadcrumb -> processBreadcrumb(breadcrumb) }
                 ?.let { "/$it" }
                 ?: ""

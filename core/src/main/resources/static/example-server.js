@@ -640,6 +640,14 @@ function createExampleDropDown(example) {
                   updateBorderColorExampleBlock(editorElement, examplePreDiv);
 
                   try {
+                  const emptyDecorationSet = window.Decoration.none;
+
+                      const transaction = editor.state.update({
+                          effects: setDecorationsEffect.of(emptyDecorationSet),
+                      });
+
+                      editor.dispatch(transaction);
+
                       JSON.parse(docContent);
                   } catch {
                       return;

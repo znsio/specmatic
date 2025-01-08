@@ -213,7 +213,7 @@ class ScenarioMetadataFilterTests {
 
     @Test
     fun `exclude scenarios with combined METHOD and PATH conditions, in addition also a status condition as first condition`() {
-        val filter = ScenarioMetadataFilter.from("STATUS!=202,400,500 && !(PATH=/users && METHOD=POST) && !(PATH=/products && METHOD=POST)")
+        val filter = ScenarioMetadataFilter.from("STATUS!=202,400 && !(PATH=/users && METHOD=POST) && !(PATH=/products && METHOD=POST) && STATUS!=5xx")
 
         val getProducts200 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 200)
         val getProducts202 = createScenarioMetadata(method = "GET", path = "/products", statusCode = 202)
@@ -229,6 +229,7 @@ class ScenarioMetadataFilterTests {
 
         val postOrders401 = createScenarioMetadata(method = "POST", path = "/orders", statusCode = 401)
         val postOrders500 = createScenarioMetadata(method = "POST", path = "/orders", statusCode = 500)
+        val postOrders502 = createScenarioMetadata(method = "POST", path = "/orders", statusCode = 502)
 
 
         assertTrue(filter.isSatisfiedBy(getProducts200))
@@ -245,6 +246,8 @@ class ScenarioMetadataFilterTests {
 
         assertTrue(filter.isSatisfiedBy(postOrders401))
         assertFalse(filter.isSatisfiedBy(postOrders500))
+
+        assertFalse(filter.isSatisfiedBy(postOrders502))
     }
 
 }

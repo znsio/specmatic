@@ -76,10 +76,6 @@ open class SpecmaticJUnitSupport {
         private var specmaticConfig: SpecmaticConfig? = null
         val openApiCoverageReportInput = OpenApiCoverageReportInput(getConfigFileWithAbsolutePath())
         private val scenarioMetadataFilter = ScenarioMetadataFilter.from(readEnvVarOrProperty(FILTER, FILTER).orEmpty())
-        private val scenarioMetadataExclusionFilter = ScenarioMetadataFilter.from(
-            readEnvVarOrProperty(FILTER_NOT, FILTER_NOT).orEmpty()
-        )
-
 
         private val threads: Vector<String> = Vector<String>()
 

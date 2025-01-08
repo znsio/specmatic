@@ -33,7 +33,6 @@ data class ScenarioMetadataFilter(
         return groupResults.any { it }
     }
 
-
     companion object {
         fun from(filterExpression: String): ScenarioMetadataFilter {
             if (filterExpression.isEmpty()) return ScenarioMetadataFilter()
@@ -54,23 +53,7 @@ data class ScenarioMetadataFilter(
     }
 }
 
-data class FilterGroup(
-    val filters: List<FilterExpression> = emptyList(),
-    val subGroups: List<FilterGroup> = emptyList(),
-    val isAndOperation: Boolean = false,
-    var isNegated: Boolean = false
-) {
-    fun isSatisfiedBy(metadata: ScenarioMetadata): Boolean {
-        val filterMatches = filters.map { it.matches(metadata) }
 
-        val subGroupMatches = subGroups.map { it.isSatisfiedBy(metadata) }
-
-        val allMatches = filterMatches + subGroupMatches
-        val groupResult = allMatches.all { it }
-
-        return if (isNegated) !groupResult else groupResult
-    }
-}
 
 
 

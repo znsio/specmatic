@@ -9847,7 +9847,7 @@ paths:
               properties:
                 name:
                   type: string
-                type:
+                pet-type:
                   type: string
                   ${"$"}ref: '#/components/schemas/PetType'
             PetType:
@@ -9860,9 +9860,8 @@ paths:
 
         val petScenario = feature.scenarios.first { it.path == "/pet" }
         val petPattern = resolvedHop(petScenario.httpResponsePattern.body, petScenario.resolver) as JSONObjectPattern
-        val petTypePattern = resolvedHop(petPattern.pattern.getValue("type?"), petScenario.resolver) as EnumPattern
-        println("Pet Pattern: ${petPattern.pattern}\nPet Type Pattern: ${petTypePattern.pattern}")
-        
+        val petTypePattern = resolvedHop(petPattern.pattern.getValue("pet-type?"), petScenario.resolver) as EnumPattern
+
         assertThat(petPattern.pattern.values).hasSize(2).hasOnlyElementsOfTypes(StringPattern::class.java, DeferredPattern::class.java)
         assertThat(petTypePattern.pattern.pattern).hasSize(2).hasOnlyElementsOfTypes(ExactValuePattern::class.java)
         assertThat(petTypePattern.pattern.pattern.map { it.pattern }).containsExactlyInAnyOrder(

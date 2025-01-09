@@ -1276,6 +1276,18 @@ class OpenApiSpecification(
             preExistingResult
         else if (typeStack.filter { it == patternName }.size > 1) {
             DeferredPattern("($patternName)")
+        } else if (schema.`$ref` != null) {
+            val component: String = schema.`$ref`
+            val (componentName, referredSchema) = resolveReferenceToSchema(component)
+            val cyclicReference = typeStack.contains(componentName)
+            if (!cyclicReference) {
+                val componentPattern = toSpecmaticPattern(
+                    referredSchema,
+                    typeStack.plus(componentName), componentName
+                )
+                cacheComponentPattern(componentName, componentPattern)
+            }
+            DeferredPattern("(${componentName})")
         } else when (schema) {
             is StringSchema -> when (schema.enum) {
                 null -> StringPattern(
@@ -1444,20 +1456,6 @@ class OpenApiSpecification(
                     toFreeFormDictionaryWithStringKeysPattern()
                 } else if(schema.properties != null)
                     toJsonObjectPattern(schema, patternName, typeStack)
-                else if (schema.`$ref` != null) {
-                    val component: String = schema.`$ref`
-
-                    val (componentName, referredSchema) = resolveReferenceToSchema(component)
-                    val cyclicReference = typeStack.contains(componentName)
-                    if (!cyclicReference) {
-                        val componentPattern = toSpecmaticPattern(
-                            referredSchema,
-                            typeStack.plus(componentName), componentName
-                        )
-                        cacheComponentPattern(componentName, componentPattern)
-                    }
-                    DeferredPattern("(${componentName})")
-                }
                 else {
                     val schemaFragment = if(patternName.isNotBlank()) " in schema $patternName" else " in the schema"
 

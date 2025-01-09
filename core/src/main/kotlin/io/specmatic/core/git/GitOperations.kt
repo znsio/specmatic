@@ -5,7 +5,7 @@ package io.specmatic.core.git
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.core.azure.AzureAuthCredentials
 import io.specmatic.core.getConfigFilePath
-import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.config.loadSpecmaticConfig
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSON

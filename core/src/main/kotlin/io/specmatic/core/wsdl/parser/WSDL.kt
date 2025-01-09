@@ -1,6 +1,6 @@
 package io.specmatic.core.wsdl.parser
 
-import io.specmatic.core.SPECMATIC_GITHUB_ISSUES
+import io.specmatic.core.config.SPECMATIC_GITHUB_ISSUES
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.value.*

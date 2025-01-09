@@ -14,6 +14,8 @@ import io.specmatic.core.*
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.azure.AzureAuthCredentials
+import io.specmatic.core.config.*
+import io.specmatic.core.config.v1.SourceProvider
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger

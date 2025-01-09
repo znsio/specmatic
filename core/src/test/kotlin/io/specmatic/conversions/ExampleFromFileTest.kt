@@ -3,7 +3,7 @@ package io.specmatic.conversions
 import io.specmatic.core.HttpHeadersPattern
 import io.specmatic.core.NoBodyValue
 import io.specmatic.core.Resolver
-import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.config.SpecmaticConfig
 import io.specmatic.core.pattern.parsedJSONObject
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

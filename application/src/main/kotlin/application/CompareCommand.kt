@@ -1,6 +1,9 @@
 package application
 
 import io.specmatic.core.*
+import io.specmatic.core.config.invalidContractExtensionMessage
+import io.specmatic.core.config.isContractFile
+import io.specmatic.core.config.loadContract
 import io.specmatic.core.log.logger
 import io.specmatic.core.log.logException
 import io.specmatic.core.pattern.ContractException

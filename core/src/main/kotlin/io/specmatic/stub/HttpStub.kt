@@ -11,8 +11,8 @@ import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.util.*
-import io.specmatic.core.APPLICATION_NAME
-import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.config.APPLICATION_NAME
+import io.specmatic.core.config.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.ContractAndStubMismatchMessages
 import io.specmatic.core.Feature
 import io.specmatic.core.HttpRequest
@@ -31,10 +31,10 @@ import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.SPECMATIC_RESULT_HEADER
 import io.specmatic.core.Scenario
-import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.WorkingDirectory
+import io.specmatic.core.config.SpecmaticConfig
+import io.specmatic.core.config.v1.WorkingDirectory
 import io.specmatic.core.listOfExcludedHeaders
-import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.config.loadSpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.LogTail

@@ -3,6 +3,8 @@ package io.specmatic.test
 import io.ktor.http.*
 import io.ktor.util.*
 import io.specmatic.core.*
+import io.specmatic.core.config.SpecmaticConfig
+import io.specmatic.core.config.loadSpecmaticConfig
 import io.specmatic.core.pattern.*
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*

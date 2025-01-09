@@ -1,6 +1,8 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.*
+import io.specmatic.core.config.v1.WorkflowConfiguration
+import io.specmatic.core.config.v1.WorkflowIDOperation
 import io.specmatic.core.value.StringValue
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Test

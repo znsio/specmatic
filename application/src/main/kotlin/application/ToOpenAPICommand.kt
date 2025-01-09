@@ -2,7 +2,7 @@
 
 package application
 
-import io.specmatic.core.YAML
+import io.specmatic.core.config.YAML
 import io.specmatic.core.log.HeadingLog
 import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger

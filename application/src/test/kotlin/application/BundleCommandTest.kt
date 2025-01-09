@@ -1,14 +1,14 @@
 package application
 
 import com.ninjasquad.springmockk.MockkBean
-import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.config.APPLICATION_NAME_LOWER_CASE
 import io.mockk.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import picocli.CommandLine
-import io.specmatic.core.CONTRACT_EXTENSION
+import io.specmatic.core.config.CONTRACT_EXTENSION
 import io.specmatic.core.utilities.ContractPathData
 import java.io.File
 

@@ -1,5 +1,6 @@
 package io.specmatic.core
 
+import io.specmatic.core.config.APPLICATION_NAME
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.test.HttpClient
 import java.io.File

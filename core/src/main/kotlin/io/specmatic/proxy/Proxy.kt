@@ -6,8 +6,8 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
-import io.specmatic.core.EXAMPLES_DIR_SUFFIX
+import io.specmatic.core.config.DEFAULT_TIMEOUT_IN_MILLISECONDS
+import io.specmatic.core.config.EXAMPLES_DIR_SUFFIX
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.KeyData

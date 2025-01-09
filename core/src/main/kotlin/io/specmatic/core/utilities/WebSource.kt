@@ -1,6 +1,6 @@
 package io.specmatic.core.utilities
 
-import io.specmatic.core.CONTRACT_EXTENSIONS
+import io.specmatic.core.config.CONTRACT_EXTENSIONS
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException

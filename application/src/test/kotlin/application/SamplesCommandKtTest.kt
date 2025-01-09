@@ -4,7 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import io.specmatic.core.CONTRACT_EXTENSION
+import io.specmatic.core.config.CONTRACT_EXTENSION
 import io.specmatic.core.Contract
 import io.specmatic.core.log.*
 import io.specmatic.core.pattern.parsedJSON

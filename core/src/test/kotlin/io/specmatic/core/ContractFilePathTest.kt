@@ -1,6 +1,7 @@
 package io.specmatic.core
 
 import io.specmatic.Utils.readTextResource
+import io.specmatic.core.config.CONTRACT_EXTENSION
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.osAgnosticPath
 import io.specmatic.runningOnWindows

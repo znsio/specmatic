@@ -5,6 +5,8 @@ import io.specmatic.conversions.postmanCollectionToGherkin
 import io.specmatic.conversions.runTests
 import io.specmatic.conversions.toFragment
 import io.specmatic.core.*
+import io.specmatic.core.config.APPLICATION_NAME
+import io.specmatic.core.config.CONTRACT_EXTENSION
 import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger
 import io.specmatic.core.log.logException

@@ -1,6 +1,6 @@
 package io.specmatic.core.utilities
 
-import io.specmatic.core.DEFAULT_WORKING_DIRECTORY
+import io.specmatic.core.config.DEFAULT_WORKING_DIRECTORY
 import io.specmatic.osAgnosticPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

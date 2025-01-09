@@ -2,6 +2,7 @@ package io.specmatic.stub.stateful
 
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
+import io.specmatic.core.config.loadSpecmaticConfig
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.value.*

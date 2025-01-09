@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.test.HttpClient
 import io.mockk.verify
+import io.specmatic.core.config.CONTRACT_EXTENSION
 
 internal class ReferencesTest {
     private val absoluteContractPath = "/contract.spec"

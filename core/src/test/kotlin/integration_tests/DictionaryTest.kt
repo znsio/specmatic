@@ -3,7 +3,7 @@ package integration_tests
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
-import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
+import io.specmatic.core.config.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONArrayValue

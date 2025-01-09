@@ -3,6 +3,8 @@ package io.specmatic.test
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.conversions.convertPathParameterStyle
 import io.specmatic.core.*
+import io.specmatic.core.config.*
+import io.specmatic.core.config.v1.*
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.ignoreLog

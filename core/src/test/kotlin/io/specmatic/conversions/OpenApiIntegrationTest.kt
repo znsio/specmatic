@@ -2,6 +2,7 @@ package io.specmatic.conversions
 
 import com.google.common.net.HttpHeaders
 import io.specmatic.core.*
+import io.specmatic.core.config.v1.*
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.exceptionCauseMessage

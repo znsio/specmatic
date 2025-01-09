@@ -3,7 +3,7 @@ package application
 import io.specmatic.core.Configuration
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_HTTP_STUB_PORT
-import io.specmatic.core.DEFAULT_WORKING_DIRECTORY
+import io.specmatic.core.config.DEFAULT_WORKING_DIRECTORY
 import io.specmatic.core.Feature
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleLog

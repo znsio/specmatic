@@ -17,8 +17,8 @@ import io.specmatic.core.HttpRequestPattern
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.Resolver
 import io.specmatic.core.Scenario
-import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.config.SpecmaticConfig
+import io.specmatic.core.config.loadSpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException

@@ -1,7 +1,7 @@
 package application
 
 import com.ninjasquad.springmockk.MockkBean
-import io.specmatic.core.CONTRACT_EXTENSION
+import io.specmatic.core.config.CONTRACT_EXTENSION
 import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.git.GitCommand

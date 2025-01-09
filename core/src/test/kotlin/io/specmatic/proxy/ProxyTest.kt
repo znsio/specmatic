@@ -1,7 +1,7 @@
 package io.specmatic.proxy
 
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.YAML
+import io.specmatic.core.config.YAML
 import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.pattern.parsedJSON
 import io.specmatic.core.pattern.parsedJSONObject

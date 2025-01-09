@@ -3,6 +3,7 @@ package io.specmatic.core
 import io.ktor.http.*
 import io.specmatic.conversions.guessType
 import io.specmatic.core.GherkinSection.Then
+import io.specmatic.core.config.APPLICATION_NAME
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.Pattern
 import io.specmatic.core.pattern.isPatternToken

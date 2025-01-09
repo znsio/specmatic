@@ -2,7 +2,10 @@ package integration_tests
 
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
+import io.specmatic.core.config.SpecmaticConfig
 import io.specmatic.core.pattern.parsedJSONObject
+import io.specmatic.core.config.v1.WorkflowConfiguration
+import io.specmatic.core.config.v1.WorkflowIDOperation
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

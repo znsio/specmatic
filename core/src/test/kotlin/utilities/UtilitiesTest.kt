@@ -1,9 +1,9 @@
 package utilities
 
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.CONTRACT_EXTENSION
+import io.specmatic.core.config.CONTRACT_EXTENSION
 import io.specmatic.core.HttpRequest
-import io.specmatic.core.SourceProvider
+import io.specmatic.core.config.v1.SourceProvider
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.git.checkout

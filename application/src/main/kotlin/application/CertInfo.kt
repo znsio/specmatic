@@ -1,7 +1,7 @@
 package application
 
 import io.ktor.network.tls.certificates.*
-import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.config.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.KeyData
 import io.specmatic.core.utilities.exitWithMessage
 import java.io.File

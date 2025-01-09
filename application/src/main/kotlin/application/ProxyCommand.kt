@@ -1,10 +1,10 @@
 package application
 
 import picocli.CommandLine.*
-import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.config.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.Configuration.Companion.DEFAULT_PROXY_HOST
 import io.specmatic.core.Configuration.Companion.DEFAULT_PROXY_PORT
-import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
+import io.specmatic.core.config.DEFAULT_TIMEOUT_IN_MILLISECONDS
 import io.specmatic.core.log.*
 import io.specmatic.core.utilities.consolePrintableURL
 import io.specmatic.core.utilities.exceptionCauseMessage

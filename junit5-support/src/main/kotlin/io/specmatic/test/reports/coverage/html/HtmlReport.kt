@@ -2,9 +2,9 @@ package io.specmatic.test.reports.coverage.html
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
-import io.specmatic.core.ReportFormatter
-import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.SuccessCriteria
+import io.specmatic.core.config.v1.ReportFormatter
+import io.specmatic.core.config.SpecmaticConfig
+import io.specmatic.core.config.v1.SuccessCriteria
 import io.specmatic.core.TestResult
 import io.specmatic.test.reports.coverage.console.Remarks
 import io.specmatic.test.reports.coverage.html.HtmlTemplateConfiguration.Companion.configureTemplateEngine

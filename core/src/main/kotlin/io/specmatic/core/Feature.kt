@@ -15,6 +15,10 @@ import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
+import io.specmatic.core.config.*
+import io.specmatic.core.config.v1.ResiliencyTestSuite
+import io.specmatic.core.config.v1.SecurityConfiguration
+import io.specmatic.core.config.v1.WorkflowConfiguration
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.*

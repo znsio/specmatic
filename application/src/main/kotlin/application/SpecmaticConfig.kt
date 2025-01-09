@@ -1,7 +1,7 @@
 package application
 
 import io.specmatic.core.Configuration
-import io.specmatic.core.DEFAULT_WORKING_DIRECTORY
+import io.specmatic.core.config.DEFAULT_WORKING_DIRECTORY
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.contractFilePathsFrom
 import org.springframework.stereotype.Component

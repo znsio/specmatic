@@ -2,7 +2,7 @@ package application
 
 import io.specmatic.core.Feature
 import io.specmatic.core.getConfigFilePath
-import io.specmatic.core.loadSpecmaticConfigOrDefault
+import io.specmatic.core.config.loadSpecmaticConfigOrDefault
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.mock.ScenarioStub

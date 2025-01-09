@@ -1,6 +1,7 @@
 package io.specmatic.conversions
 
 import io.specmatic.core.*
+import io.specmatic.core.config.SpecmaticConfig
 import io.specmatic.core.examples.server.SchemaExample
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*

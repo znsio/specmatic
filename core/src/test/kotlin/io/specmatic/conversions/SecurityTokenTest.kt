@@ -1,8 +1,8 @@
 package io.specmatic.conversions
 
-import io.specmatic.core.APIKeySecuritySchemeConfiguration
-import io.specmatic.core.BearerSecuritySchemeConfiguration
-import io.specmatic.core.OAuth2SecuritySchemeConfiguration
+import io.specmatic.core.config.v1.APIKeySecuritySchemeConfiguration
+import io.specmatic.core.config.v1.BearerSecuritySchemeConfiguration
+import io.specmatic.core.config.v1.OAuth2SecuritySchemeConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

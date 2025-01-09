@@ -24,6 +24,7 @@ import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.util.*
 import io.ktor.utils.io.charsets.*
+import io.specmatic.core.config.APPLICATION_NAME_LOWER_CASE
 import kotlinx.coroutines.runBlocking
 import java.net.URL
 import java.util.*

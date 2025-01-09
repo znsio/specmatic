@@ -1,6 +1,6 @@
 package io.specmatic.core.utilities
 
-import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.config.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.Configuration
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.git.checkout

@@ -6,6 +6,10 @@ import io.cucumber.messages.types.Step
 import io.ktor.util.reflect.*
 import io.specmatic.core.*
 import io.specmatic.core.Result.Failure
+import io.specmatic.core.config.SPECMATIC_STUB_DICTIONARY
+import io.specmatic.core.config.v1.SecurityConfiguration
+import io.specmatic.core.config.v1.SecuritySchemeConfiguration
+import io.specmatic.core.config.SpecmaticConfig
 import io.specmatic.core.log.LogStrategy
 import io.specmatic.core.log.logger
 import io.specmatic.core.overlay.OverlayMerger

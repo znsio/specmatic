@@ -4,7 +4,7 @@ import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import io.specmatic.core.CONTRACT_EXTENSION
+import io.specmatic.core.config.CONTRACT_EXTENSION
 import io.specmatic.core.git.GitCommand
 
 internal class PartialCommitFetchTest {

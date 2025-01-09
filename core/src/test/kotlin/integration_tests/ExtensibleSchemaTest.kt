@@ -5,6 +5,8 @@ import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
+import io.specmatic.core.config.SpecmaticConfig
+import io.specmatic.core.config.v1.TestConfiguration
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.test.TestExecutor

@@ -5,6 +5,7 @@ import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.filters.ScenarioMetadata
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.*
+import io.specmatic.core.config.v1.AttributeSelectionPattern
 import io.specmatic.core.utilities.capitalizeFirstChar
 import io.specmatic.core.utilities.mapZip
 import io.specmatic.core.utilities.nullOrExceptionString

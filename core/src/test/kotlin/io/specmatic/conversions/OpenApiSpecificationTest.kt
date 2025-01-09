@@ -6,11 +6,15 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.specmatic.core.*
+import io.specmatic.core.config.SpecmaticConfig
 import io.specmatic.core.log.CompositePrinter
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.LogStrategy
 import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.NumberPattern.Companion.BIG_DECIMAL_INC
+import io.specmatic.core.config.v1.WorkflowConfiguration
+import io.specmatic.core.config.v1.WorkflowIDOperation
+import io.specmatic.core.config.loadSpecmaticConfig
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.*
 import io.specmatic.mock.NoMatchingScenario

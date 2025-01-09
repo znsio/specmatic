@@ -1,8 +1,8 @@
 package io.specmatic.core.utilities
 
 import io.specmatic.core.log.consoleLog
-import io.specmatic.core.CONTRACT_EXTENSIONS
-import io.specmatic.core.DATA_DIR_SUFFIX
+import io.specmatic.core.config.CONTRACT_EXTENSIONS
+import io.specmatic.core.config.DATA_DIR_SUFFIX
 import io.specmatic.core.log.StringLog
 import java.io.File
 import java.nio.file.FileSystems

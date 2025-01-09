@@ -1,12 +1,12 @@
 package application.backwardCompatibility
 
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.CONTRACT_EXTENSION
-import io.specmatic.core.CONTRACT_EXTENSIONS
+import io.specmatic.core.config.CONTRACT_EXTENSION
+import io.specmatic.core.config.CONTRACT_EXTENSIONS
 import io.specmatic.core.Feature
 import io.specmatic.core.IFeature
 import io.specmatic.core.Results
-import io.specmatic.core.WSDL
+import io.specmatic.core.config.WSDL
 import io.specmatic.core.log.logger
 import io.specmatic.core.testBackwardCompatibility
 import io.specmatic.stub.isOpenAPI

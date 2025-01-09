@@ -54,6 +54,11 @@ data class StringPattern (
 
     private fun regexMaxLengthValidation(regexWithoutCaretAndDollar: String) {
         maxLength?.let {
+            val finite = RegExp(regexWithoutCaretAndDollar).toAutomaton().isFinite
+            if (!finite) {
+                throw IllegalArgumentException("Invalid String Constraints - regex cannot generate infinite string when maxLength has been set")
+            }
+
             val generatedString = generateFromRegex(regexWithoutCaretAndDollar, it+1)
 
             if (generatedString.length > it) {

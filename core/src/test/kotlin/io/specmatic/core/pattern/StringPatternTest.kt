@@ -2,9 +2,9 @@ package io.specmatic.core.pattern
 
 import io.specmatic.GENERATION
 import io.specmatic.core.Resolver
+import io.specmatic.core.Result
 import io.specmatic.core.UseDefaultExample
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
-import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.shouldNotMatch
@@ -16,8 +16,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import java.lang.Exception
-import io.specmatic.core.Result as Result
 
 internal class StringPatternTest {
     @Test
@@ -287,6 +285,21 @@ internal class StringPatternTest {
         val fiveToElevenOccurrencesOfAlphabetA = "^a{5,11}\$"
         assertThrows<Exception> { StringPattern(minLength = 5, maxLength = 10, regex = fiveToElevenOccurrencesOfAlphabetA) }
             .also { assertThat(it.message).isEqualTo("Invalid String Constraints - regex cannot generate / match string greater than maxLength") }
+    }
+
+    @Test
+    fun `should not allow regex that is not finite when maxLength has been set`() {
+        val anyNumberOfWords = "^[\\w+\\-]+\$"
+
+        assertThrows<Exception> { StringPattern(minLength = 1, maxLength = 10, regex = anyNumberOfWords) }
+            .also { assertThat(it.message).isEqualTo("Invalid String Constraints - regex cannot generate infinite string when maxLength has been set") }
+    }
+
+    fun `should allow regex that can generate string of maximum length that matches maxLength`() {
+        val anyNumberOfWords = "^[\\w+\\-]{1,10}\$"
+        val maxLength = 10
+        val stringPattern = StringPattern(minLength = 1, maxLength = maxLength, regex = anyNumberOfWords)
+        assertThat(stringPattern.generate(Resolver()).toStringLiteral().length).isLessThanOrEqualTo(maxLength)
     }
 
     @Test

@@ -7,14 +7,16 @@ class ScenarioMetadataFilterTests {
     private fun createScenarioMetadata(
         method: String = "GET",
         path: String = "/default",
-        statusCode: Int = 200
+        statusCode: Int = 200,
+        header: Set<String> = emptySet(),
+        query: Set<String> = emptySet()
     ): ScenarioMetadata {
         return ScenarioMetadata(
             method = method,
             path = path,
             statusCode = statusCode,
-            header = emptySet(),
-            query = emptySet(),
+            header = header,
+            query = query,
             exampleName = "example"
         )
     }
@@ -32,6 +34,20 @@ class ScenarioMetadataFilterTests {
         assertTrue(filter.isSatisfiedBy(metadata2))
         assertFalse(filter.isSatisfiedBy(metadata3))
         assertFalse(filter.isSatisfiedBy(metadata4))
+    }
+
+    @Test
+    fun `filter by HEADER`() {
+        val filter = ScenarioMetadataFilter.from("HEADERS=Content-Type")
+        val metadata1 = createScenarioMetadata(header = setOf("Content-Type"))
+        assertTrue(filter.isSatisfiedBy(metadata1))
+    }
+
+    @Test
+    fun `filter by QUERY`() {
+        val filter = ScenarioMetadataFilter.from("QUERY=fields")
+        val metadata1 = createScenarioMetadata(query = setOf("fields"))
+        assertTrue(filter.isSatisfiedBy(metadata1))
     }
 
     @Test

@@ -51,6 +51,15 @@ class ScenarioMetadataFilterTests {
     }
 
     @Test
+    fun `filter by Relative Path`() {
+        val filter = ScenarioMetadataFilter.from("PATH=/products/*/1")
+        val metadata1 = createScenarioMetadata(path = "/products/car/1")
+        val metadata2 = createScenarioMetadata(path = "/products/bike/1")
+        assertTrue(filter.isSatisfiedBy(metadata1))
+        assertTrue(filter.isSatisfiedBy(metadata2))
+    }
+
+    @Test
     fun `filter by STATUS 200 or 400`() {
         val filter = ScenarioMetadataFilter.from("STATUS=200,400")
 

@@ -283,7 +283,7 @@ internal class StringPatternTest {
     @Test
     fun `should not allow construction of string with maxLength is greater that what is possible with regex`() {
         val fiveToElevenOccurrencesOfAlphabetA = "^a{5,11}\$"
-        assertThrows<Exception> { StringPattern(minLength = 5, maxLength = 10, regex = fiveToElevenOccurrencesOfAlphabetA) }
+        assertThrows<Exception> { StringPattern(minLength = 5, maxLength = 12, regex = fiveToElevenOccurrencesOfAlphabetA) }
             .also { assertThat(it.message).isEqualTo("Invalid String Constraints - regex cannot generate / match string greater than maxLength") }
     }
 
@@ -295,11 +295,23 @@ internal class StringPatternTest {
             .also { assertThat(it.message).isEqualTo("Invalid String Constraints - regex cannot generate infinite string when maxLength has been set") }
     }
 
+    @Test
     fun `should allow regex that can generate string of maximum length that matches maxLength`() {
         val anyNumberOfWords = "^[\\w+\\-]{1,10}\$"
         val maxLength = 10
         val stringPattern = StringPattern(minLength = 1, maxLength = maxLength, regex = anyNumberOfWords)
         assertThat(stringPattern.generate(Resolver()).toStringLiteral().length).isLessThanOrEqualTo(maxLength)
+    }
+
+    @Test
+    fun `should not allow regex to generate string longer than the regex maxLength`() {
+        val anyNumberOfWords = "^[\\w+\\-]{1,10}\$"
+        val maxLength = 11
+        assertThrows<IllegalArgumentException> {
+            StringPattern(minLength = 1, maxLength = maxLength, regex = anyNumberOfWords)
+        }.also {
+            assertThat(it.message).isEqualTo("Invalid String Constraints - regex cannot generate / match string greater than maxLength")
+        }
     }
 
     @Test

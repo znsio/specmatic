@@ -10,6 +10,10 @@ import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
+import org.cornutum.regexpgen.RandomGen
+import org.cornutum.regexpgen.RegExpGen
+import org.cornutum.regexpgen.js.Provider
+import org.cornutum.regexpgen.random.RandomBoundsGen
 import java.nio.charset.StandardCharsets
 import java.util.*
 
@@ -58,10 +62,12 @@ data class StringPattern (
             if (!finite) {
                 throw IllegalArgumentException("Invalid String Constraints - regex cannot generate infinite string when maxLength has been set")
             }
-
-            val generatedString = generateFromRegex(regexWithoutCaretAndDollar, it+1)
-
-            if (generatedString.length > it) {
+            try {
+                val generator: RegExpGen = Provider.forEcmaScript().matchingExact(regexWithoutCaretAndDollar)
+                val random: RandomGen = RandomBoundsGen()
+                generator.generate(random, maxLength, maxLength)
+            }
+            catch(e: Exception) {
                 throw IllegalArgumentException("Invalid String Constraints - regex cannot generate / match string greater than maxLength")
             }
         }

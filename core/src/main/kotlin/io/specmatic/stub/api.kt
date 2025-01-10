@@ -221,7 +221,7 @@ fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathDa
                     logger.log("Ignoring ${contractPath.path} as it is not an OpenAPI specification")
                     emptyList()
                 }
-                else try {
+                else {
                     val feature = parseContractFileToFeature(contractPath, CommandHook(HookName.stub_load_contract), contractSource.provider, contractSource.repository, contractSource.branch, contractSource.specificationPath, specmaticConfig = specmaticConfig)
 
                     val implicitDataDirs = implicitDirsForSpecifications(contractPath)
@@ -249,10 +249,6 @@ fun loadContractStubsFromImplicitPaths(contractPathDataList: List<ContractPathDa
                     }
 
                     loadContractStubs(listOf(Pair(contractPath.path, feature)), stubData)
-                } catch(e: Throwable) {
-                    logger.log("Could not load ${contractPath.canonicalPath}")
-                    logger.log(e)
-                    emptyList()
                 }
             }
             contractPath.isDirectory -> {

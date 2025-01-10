@@ -1,12 +1,20 @@
 package io.specmatic.core.config
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.Feature
 import io.specmatic.core.config.mapper.SpecmaticConfigMapper
+import io.specmatic.core.config.v1.SpecmaticConfigV1
+import io.specmatic.core.config.v2.ContractConfig
+import io.specmatic.core.config.v2.FileSystemConfig
+import io.specmatic.core.config.v2.GitConfig
+import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.log.logger
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
@@ -104,6 +112,77 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun parsedDefaultPatternValues(): Map<String, Value> {
         return parsedJSONObject(ObjectMapper().writeValueAsString(defaultPatternValues)).jsonObject
+    }
+
+    @JsonIgnore
+    fun transformTo(version: Int): String {
+        val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
+        return when (version) {
+            2 -> objectMapper.writeValueAsString(transformToV2())
+            else -> objectMapper.writeValueAsString(transformToV1())
+        }
+    }
+
+    private fun transformToV1(): SpecmaticConfigV1 {
+        return SpecmaticConfigV1(
+            version = 1,
+            sources = this.sources,
+            auth = this.auth,
+            pipeline = this.pipeline,
+            environments = this.environments,
+            hooks = this.hooks,
+            repository = this.repository,
+            report = this.report,
+            security = this.security,
+            test = this.test,
+            stub = this.stub,
+            virtualService = this.virtualService,
+            examples = this.examples,
+            workflow = this.workflow,
+            ignoreInlineExamples = this.ignoreInlineExamples,
+            additionalExampleParamsFilePath = this.additionalExampleParamsFilePath,
+            attributeSelectionPattern = this.attributeSelectionPattern,
+            allPatternsMandatory = this.allPatternsMandatory,
+            defaultPatternValues = this.defaultPatternValues
+        )
+    }
+
+    private fun transformToV2(): SpecmaticConfigV2 {
+        return SpecmaticConfigV2(
+            version = 2,
+            contracts = this.sources.map { source ->
+                ContractConfig(
+                    git = when (source.provider) {
+                        SourceProvider.git -> GitConfig(url = source.repository, branch = source.branch)
+                        else -> null
+                    },
+                    filesystem = when (source.provider) {
+                        SourceProvider.filesystem -> FileSystemConfig(directory = source.directory)
+                        else -> null
+                    },
+                    provides = source.test,
+                    consumes = source.stub
+                )
+            },
+            auth = this.auth,
+            pipeline = this.pipeline,
+            environments = this.environments,
+            hooks = this.hooks,
+            repository = this.repository,
+            report = this.report,
+            security = this.security,
+            test = this.test,
+            stub = this.stub,
+            virtualService = this.virtualService,
+            examples = this.examples,
+            workflow = this.workflow,
+            ignoreInlineExamples = this.ignoreInlineExamples,
+            additionalExampleParamsFilePath = this.additionalExampleParamsFilePath,
+            attributeSelectionPattern = this.attributeSelectionPattern,
+            allPatternsMandatory = this.allPatternsMandatory,
+            defaultPatternValues = this.defaultPatternValues
+        )
     }
 }
 

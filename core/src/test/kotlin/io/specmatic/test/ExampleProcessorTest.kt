@@ -20,7 +20,11 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
+import java.util.stream.Stream
 
 class ExampleProcessorTest {
     companion object {
@@ -63,6 +67,22 @@ class ExampleProcessorTest {
                         "Bearer" to StringValue("token")
                     )
                 )
+            )
+        )
+
+        @JvmStatic
+        fun resolveAnyTestCases(): Stream<Arguments> = Stream.of(
+            Arguments.of(
+                mapOf("name" to "\$(CONFIG.queryParams.name)"),
+                mapOf("name" to "productName")
+            ),
+            Arguments.of(
+                mapOf("string" to "random"),
+                mapOf("string" to "random")
+            ),
+            Arguments.of(
+                mapOf("number" to 10),
+                mapOf("number" to 10)
             )
         )
     }
@@ -311,7 +331,7 @@ class ExampleProcessorTest {
     }
 
     @Test
-    fun `should substitute values from fact store if exits`() {
+    fun `should substitute values from fact store if exists`() {
         val request = HttpRequest(
             queryParams = QueryParameters(
                 listOf("name" to "\$(CONFIG.queryParams.name)", "price" to "\$(CONFIG.queryParams.price)")
@@ -325,6 +345,20 @@ class ExampleProcessorTest {
         assertThat(resolvedRequest.body).isEqualTo(payloadConfig.findFirstChildByPath("post.Product"))
         assertThat(resolvedRequest.queryParams.paramPairs).isEqualTo(listOf("name" to "productName", "price" to "1000"))
         assertThat(resolvedRequest.headers).isEqualTo(mapOf("Bearer" to "token"))
+    }
+
+    @ParameterizedTest
+    @MethodSource("resolveAnyTestCases")
+    fun `resolveAny should substitute values from fact store into the map if the substitute values exist else keep the value as is`(
+        inputMap: Map<String, Any>,
+        expectedMap: Map<String, Any>
+    ) {
+        val resolvedMap = ExampleProcessor.resolveAny(
+            inputMap,
+            ExampleProcessor::ifNotExitsToLookupPattern
+        )
+
+        assertThat(resolvedMap).isEqualTo(expectedMap)
     }
 
     @Test

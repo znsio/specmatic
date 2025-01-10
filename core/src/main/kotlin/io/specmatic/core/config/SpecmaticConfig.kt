@@ -1,6 +1,8 @@
 package io.specmatic.core.config
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.Feature
@@ -16,6 +18,8 @@ import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.value.Value
 import java.io.File
+import java.io.IOException
+
 
 const val APPLICATION_NAME = "Specmatic"
 const val APPLICATION_NAME_LOWER_CASE = "specmatic"
@@ -125,6 +129,18 @@ fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
     } catch(e: LinkageError) {
         logger.log(e, "A dependency version conflict has been detected. If you are using Spring in a maven project, a common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.")
         throw e
+    } catch (e: JsonParseException) {
+        val msg = "Invalid configuration file format: " + e.message
+        logger.log(e, msg)
+        throw IllegalArgumentException(msg, e)
+    } catch (e: JsonMappingException) {
+        val msg = "Your configuration file does not match the expected structure: " + e.message
+        logger.log(e, msg)
+        throw IllegalArgumentException(msg, e)
+    } catch (e: IOException) {
+        val msg = "Error reading configuration file: " + e.message
+        logger.log(e, msg)
+        throw RuntimeException(msg, e)
     } catch (e: Throwable) {
         logger.log(e, "Your configuration file may have some missing configuration sections. Please ensure that the ${configFile.path} file adheres to the schema described at: https://specmatic.io/documentation/specmatic_json.html")
         throw Exception("Your configuration file may have some missing configuration sections. Please ensure that the ${configFile.path} file adheres to the schema described at: https://specmatic.io/documentation/specmatic_json.html", e)

@@ -1,6 +1,5 @@
-package io.specmatic.core.config.v1
+package io.specmatic.core.config
 
-import io.specmatic.core.config.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import io.specmatic.core.utilities.Flags.Companion.getLongValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue

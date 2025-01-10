@@ -1,4 +1,4 @@
-package io.specmatic.core.config.v1
+package io.specmatic.core.config
 
 import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_SCHEMA
 import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE

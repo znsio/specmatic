@@ -1,7 +1,7 @@
 package io.specmatic.test.reports.renderers
 
-import io.specmatic.core.config.v1.ReportFormatter
-import io.specmatic.core.config.v1.ReportFormatterType
+import io.specmatic.core.config.ReportFormatter
+import io.specmatic.core.config.ReportFormatterType
 import io.specmatic.core.config.SpecmaticConfig
 import io.specmatic.core.log.HttpLogMessage
 import io.specmatic.core.log.logger

@@ -1,12 +1,12 @@
 package io.specmatic.test.reports
 
-import io.specmatic.core.config.v1.ReportConfiguration
-import io.specmatic.core.config.v1.ReportFormatterType
+import io.specmatic.core.config.ReportConfiguration
+import io.specmatic.core.config.ReportFormatterType
 import io.specmatic.core.config.SpecmaticConfig
 import io.specmatic.core.log.logger
+import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 import io.specmatic.test.reports.coverage.json.OpenApiCoverageJsonReport
-import io.specmatic.test.reports.coverage.OpenApiCoverageReportInput
 import io.specmatic.test.reports.renderers.CoverageReportHtmlRenderer
 import io.specmatic.test.reports.renderers.CoverageReportTextRenderer
 import io.specmatic.test.reports.renderers.ReportRenderer

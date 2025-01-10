@@ -1,4 +1,4 @@
-package io.specmatic.core.config.v1
+package io.specmatic.core.config
 
 data class WorkflowIDOperation(
     val extract: String? = null,

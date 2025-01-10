@@ -1,8 +1,8 @@
-package io.specmatic.core.config.v1
+package io.specmatic.core.config
 
 data class APICoverageConfiguration(
-    val successCriteria: SuccessCriteria = SuccessCriteria(),
-    val excludedEndpoints: List<String> = emptyList()
+	val successCriteria: SuccessCriteria = SuccessCriteria(),
+	val excludedEndpoints: List<String> = emptyList()
 )
 
 data class SuccessCriteria(

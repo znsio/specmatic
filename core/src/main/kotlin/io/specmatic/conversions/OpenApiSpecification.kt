@@ -7,8 +7,8 @@ import io.ktor.util.reflect.*
 import io.specmatic.core.*
 import io.specmatic.core.Result.Failure
 import io.specmatic.core.config.SPECMATIC_STUB_DICTIONARY
-import io.specmatic.core.config.v1.SecurityConfiguration
-import io.specmatic.core.config.v1.SecuritySchemeConfiguration
+import io.specmatic.core.config.SecurityConfiguration
+import io.specmatic.core.config.SecuritySchemeConfiguration
 import io.specmatic.core.config.SpecmaticConfig
 import io.specmatic.core.log.LogStrategy
 import io.specmatic.core.log.logger
@@ -16,7 +16,6 @@ import io.specmatic.core.overlay.OverlayMerger
 import io.specmatic.core.overlay.OverlayParser
 import io.specmatic.core.pattern.*
 import io.specmatic.core.pattern.Discriminator
-import io.specmatic.core.pattern.withoutOptionality
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.IGNORE_INLINE_EXAMPLE_WARNINGS
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
@@ -35,11 +34,7 @@ import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.examples.Example
 import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.media.*
-import io.swagger.v3.oas.models.parameters.HeaderParameter
-import io.swagger.v3.oas.models.parameters.Parameter
-import io.swagger.v3.oas.models.parameters.PathParameter
-import io.swagger.v3.oas.models.parameters.QueryParameter
-import io.swagger.v3.oas.models.parameters.RequestBody
+import io.swagger.v3.oas.models.parameters.*
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.responses.ApiResponses
 import io.swagger.v3.oas.models.security.SecurityScheme

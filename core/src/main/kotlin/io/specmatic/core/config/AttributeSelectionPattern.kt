@@ -1,4 +1,4 @@
-package io.specmatic.core.config.v1
+package io.specmatic.core.config
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import io.specmatic.core.ATTRIBUTE_SELECTION_DEFAULT_FIELDS

@@ -139,6 +139,18 @@ object ExampleProcessor {
         } ?: value
     }
 
+    fun resolveAny(
+        value: Map<String, Any>,
+        ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value,
+    ): Map<String, Any> {
+        return value.mapValues { (_, value) -> resolve(value, ifNotExists) }
+    }
+
+    fun resolve(value: Any, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value): Any {
+        if(value is String) return resolve(value, ifNotExists)
+        return value
+    }
+
     private fun resolve(value: StringValue, ifNotExists: (lookupKey: String, type: SubstitutionType) -> Value): Value {
         return value.ifSubstitutionToken { token, type ->
             if (type == SubstitutionType.DELAYED_RANDOM && ifNotExists == ::ifNotExitsToLookupPattern) {

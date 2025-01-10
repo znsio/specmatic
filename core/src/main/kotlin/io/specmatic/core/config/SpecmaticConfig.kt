@@ -1,11 +1,10 @@
 package io.specmatic.core.config
 
-import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.Feature
-import io.specmatic.core.config.v1.*
+import io.specmatic.core.config.mapper.SpecmaticConfigMapper
 import io.specmatic.core.log.logger
 import io.specmatic.core.parseContractFileToFeature
 import io.specmatic.core.pattern.ContractException
@@ -57,7 +56,6 @@ fun String.loadContract(): Feature {
 }
 
 data class SpecmaticConfig(
-    @field:JsonAlias("contract_repositories")
     val sources: List<Source> = emptyList(),
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
@@ -68,17 +66,13 @@ data class SpecmaticConfig(
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
-    @field:JsonAlias("virtual_service")
     val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
     val workflow: WorkflowConfiguration? = null,
     val ignoreInlineExamples: Boolean = getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES),
     val additionalExampleParamsFilePath: String? = getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE),
-    @field:JsonAlias("attribute_selection_pattern")
     val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
-    @field:JsonAlias("all_patterns_mandatory")
     val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY),
-    @field:JsonAlias("default_pattern_values")
     val defaultPatternValues: Map<String, Any> = emptyMap(),
     val version: Int? = null
 ) {

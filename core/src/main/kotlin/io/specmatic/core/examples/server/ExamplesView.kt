@@ -123,7 +123,7 @@ class ExamplesView {
 
         // SCHEMA EXAMPLE METHODS
         private fun getWithMissingDiscriminators(feature: Feature, mainPattern: String, examples: List<Triple<String, File?, Result?>>): List<Triple<String, File?, Result?>> {
-            val discriminatorValues = feature.getAllDiscriminatorValues(mainPattern)
+            val discriminatorValues = feature.getAllDiscriminatorValuesIfExists(mainPattern)
             if (discriminatorValues.isEmpty()) return examples
 
             return discriminatorValues.map { value ->

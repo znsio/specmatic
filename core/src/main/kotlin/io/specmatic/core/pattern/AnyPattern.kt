@@ -332,8 +332,7 @@ data class AnyPattern(
 
         if (discriminatorValue !in discriminator.values) {
             return Failure(
-                breadCrumb = discriminator.property,
-                message = "Expected the value of discriminator property to be $discriminatorCsvClause but it was ${discriminatorValue.quote()}",
+                message = "Expected the value of discriminator to be $discriminatorCsvClause but it was ${discriminatorValue.quote()}",
                 failureReason = FailureReason.DiscriminatorMismatch
             )
         }
@@ -341,8 +340,8 @@ data class AnyPattern(
         return discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().realise(
             hasValue = { updatedPatterns, _ ->
                 val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue) ?: return@realise Failure(
-                    breadCrumb = discriminator.property,
-                    message = "Could not find pattern with discriminator value ${discriminatorValue.quote()}"
+                    message = "Could not find pattern with discriminator value ${discriminatorValue.quote()}",
+                    failureReason = FailureReason.DiscriminatorMismatch
                 )
                 chosenPattern.matches(sampleData, resolver)
             },

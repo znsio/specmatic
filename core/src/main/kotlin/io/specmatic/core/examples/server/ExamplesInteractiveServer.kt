@@ -31,8 +31,8 @@ import io.specmatic.core.discriminator.DiscriminatorExampleInjector
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.examples.server.ExamplesView.Companion.isScenarioMultiGen
 import io.specmatic.core.examples.server.ExamplesView.Companion.toTableRows
-import io.specmatic.core.examples.server.ExamplesView.Companion.withSchemaExamples
 import io.specmatic.core.examples.server.SchemaExample.Companion.toSchemaExampleFileName
+import io.specmatic.core.examples.server.SchemaExamplesView.Companion.schemaExamplesToTableRows
 import io.specmatic.core.filters.ScenarioMetadataFilter
 import io.specmatic.core.filters.ScenarioMetadataFilter.Companion.filterUsing
 import io.specmatic.core.log.consoleDebug
@@ -283,7 +283,12 @@ class ExamplesInteractiveServer(
         val examplesDir = getExamplesDirPath(contractFile)
         val endpoints = ExamplesView.getEndpoints(feature, examplesDir)
         val schemaExamplesPairs = examplesDir.getSchemaExamplesWithValidation(feature)
-        val tableRows = endpoints.toTableRows().withSchemaExamples(feature, schemaExamplesPairs)
+
+        val exampleTableRows = endpoints.toTableRows()
+        val schemaTableRows = schemaExamplesToTableRows(feature, schemaExamplesPairs)
+
+        // NOTE: Keep schemaTableRows before exampleTableRows
+        val tableRows = schemaTableRows.plus(exampleTableRows)
 
         return HtmlTemplateConfiguration.process(
             templateName = "examples/index.html",
@@ -392,7 +397,7 @@ class ExamplesInteractiveServer(
                 val examplesDir = getExamplesDirPath(contractFile).also { if (it.exists()) it.mkdirs() }
                 val allExistingExamples = examplesDir.getExamplesFromDir()
 
-                val schemaExamples = emptyList<TableRow>().withSchemaExamples(feature, examplesDir.getSchemaExamplesWithValidation(feature)).flatMap {
+                val schemaExamples = schemaExamplesToTableRows(feature, examplesDir.getSchemaExamplesWithValidation(feature)).flatMap {
                     if (it.example != null) {
                         listOf(ExamplePathInfo(path = it.example, created = false, status = ExampleGenerationStatus.EXISTED))
                     } else generateForSchemaBased(contractFile, it.rawPath, it.method)
@@ -624,7 +629,13 @@ class ExamplesInteractiveServer(
                 return Result.Success()
             }
 
-            return feature.matchResultSchemaFlagBased(schemaExample.discriminatorBasedOn, schemaExample.schemaBasedOn, schemaExample.value, InteractiveExamplesMismatchMessages)
+            return feature.matchResultSchemaFlagBased(
+                discriminatorPatternName = schemaExample.discriminatorBasedOn,
+                patternName = schemaExample.schemaBasedOn,
+                value = schemaExample.value,
+                mismatchMessages = InteractiveExamplesMismatchMessages,
+                breadCrumbIfDiscriminatorMismatch = schemaExample.file.name
+            )
         }
 
         private fun validateExample(feature: Feature, exampleFile: File): Result {
@@ -683,7 +694,13 @@ class ExamplesInteractiveServer(
         fun File.getSchemaExamplesWithValidation(feature: Feature): List<Pair<SchemaExample, Result?>> {
             return getSchemaExamples().map {
                 it to if(it.value !is NullValue) {
-                    feature.matchResultSchemaFlagBased(it.discriminatorBasedOn, it.schemaBasedOn, it.value, InteractiveExamplesMismatchMessages)
+                    feature.matchResultSchemaFlagBased(
+                        discriminatorPatternName = it.discriminatorBasedOn,
+                        patternName = it.schemaBasedOn,
+                        value = it.value,
+                        mismatchMessages = InteractiveExamplesMismatchMessages,
+                        breadCrumbIfDiscriminatorMismatch = it.file.name
+                    )
                 } else null
             }
         }

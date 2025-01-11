@@ -744,7 +744,7 @@ function highlightErrorLines(editor, metadata, exampleJson) {
             meta.jsonPath = meta.jsonPath.substring(0, meta.jsonPath.lastIndexOf('/'));
             location = findObjectByPath(pointers, meta.jsonPath);
         }
-        const lineNumber = location.key ? location.key.line : (location.value ? location.value.line : null);
+        const lineNumber = location?.key ? location.key.line : (location?.value ? location.value.line : 0);
 
         if (lineNumber !== null) {
             const lineLength = editor.state.doc.line(lineNumber + 1)

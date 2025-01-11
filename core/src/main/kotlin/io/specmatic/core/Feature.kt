@@ -375,7 +375,12 @@ data class Feature(
         } != null
     }
 
-    fun matchResultSchemaFlagBased(discriminatorPatternName: String?, patternName: String, value: Value, mismatchMessages: MismatchMessages): Result {
+    fun matchResultSchemaFlagBased(
+        discriminatorPatternName: String?,
+        patternName: String, value: Value,
+        mismatchMessages: MismatchMessages,
+        breadCrumbIfDiscriminatorMismatch: String? = null
+    ): Result {
         val updatedResolver = flagsBased.update(scenarios.last().resolver).copy(mismatchMessages = mismatchMessages)
 
         val pattern = runCatching {
@@ -385,10 +390,13 @@ data class Feature(
             else Result.Failure(e.message ?: "Invalid Pattern \"$discriminatorPatternName.$patternName\"")
         }
 
-        return when (pattern) {
-            is AnyPattern -> pattern.matchesValue(value, updatedResolver, patternName)
-            else -> pattern.matches(value, updatedResolver)
-        }
+        return if (pattern is AnyPattern && discriminatorPatternName != null) {
+            pattern.matchesValue(value, updatedResolver, patternName).let {
+                if (it is Result.Failure && it.failureReason == FailureReason.DiscriminatorMismatch) {
+                    it.breadCrumb(breadCrumbIfDiscriminatorMismatch ?: pattern.discriminator?.property.orEmpty())
+                } else it
+            }
+        } else pattern.matches(value, updatedResolver)
     }
 
     fun getAllDiscriminatorValuesIfExists(patternName: String): Set<String> {

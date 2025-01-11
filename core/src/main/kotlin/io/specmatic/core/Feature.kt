@@ -378,7 +378,14 @@ data class Feature(
     fun matchResultSchemaFlagBased(discriminatorPatternName: String?, patternName: String, value: Value, mismatchMessages: MismatchMessages): Result {
         val updatedResolver = flagsBased.update(scenarios.last().resolver).copy(mismatchMessages = mismatchMessages)
 
-        return when (val pattern = getSchemaPattern(discriminatorPatternName, patternName, updatedResolver)) {
+        val pattern = runCatching {
+            getSchemaPattern(discriminatorPatternName, patternName, updatedResolver)
+        }.getOrElse { e ->
+            return if (e is ContractException) e.failure()
+            else Result.Failure(e.message ?: "Invalid Pattern \"$discriminatorPatternName.$patternName\"")
+        }
+
+        return when (pattern) {
             is AnyPattern -> pattern.matchesValue(value, updatedResolver, patternName)
             else -> pattern.matches(value, updatedResolver)
         }

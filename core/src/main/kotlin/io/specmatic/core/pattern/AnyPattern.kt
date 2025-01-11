@@ -1,5 +1,6 @@
 package io.specmatic.core.pattern
 
+import io.ktor.http.*
 import io.specmatic.core.*
 import io.specmatic.core.Result.Failure
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
@@ -320,6 +321,34 @@ data class AnyPattern(
                 value = generateValue(resolver, discriminatorValue)
             )
         }
+    }
+
+    fun matchesValue(sampleData: Value?, resolver: Resolver, discriminatorValue: String): Result {
+        if (discriminator == null) return matches(sampleData, resolver)
+
+        val discriminatorCsvClause = if(discriminator.values.size == 1) {
+            discriminator.values.first()
+        } else "one of ${discriminator.values.joinToString(", ")}"
+
+        if (discriminatorValue !in discriminator.values) {
+            return Failure(
+                breadCrumb = discriminator.property,
+                message = "Expected the value of discriminator property to be $discriminatorCsvClause but it was ${discriminatorValue.quote()}",
+                failureReason = FailureReason.DiscriminatorMismatch
+            )
+        }
+
+        return discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().realise(
+            hasValue = { updatedPatterns, _ ->
+                val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue) ?: return@realise Failure(
+                    breadCrumb = discriminator.property,
+                    message = "Could not find pattern with discriminator value ${discriminatorValue.quote()}"
+                )
+                chosenPattern.matches(sampleData, resolver)
+            },
+            orFailure = { failure ->  failure.failure },
+            orException = { exception -> exception.toHasFailure().failure }
+        )
     }
 
     fun generateValue(resolver: Resolver, discriminatorValue: String = ""): Value {

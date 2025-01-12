@@ -390,12 +390,8 @@ data class Feature(
             else Result.Failure(e.message ?: "Invalid Pattern \"$discriminatorPatternName.$patternName\"")
         }
 
-        return if (pattern is AnyPattern && discriminatorPatternName != null) {
-            pattern.matchesValue(value, updatedResolver, patternName).let {
-                if (it is Result.Failure && it.failureReason == FailureReason.DiscriminatorMismatch) {
-                    it.breadCrumb(breadCrumbIfDiscriminatorMismatch ?: pattern.discriminator?.property.orEmpty())
-                } else it
-            }
+        return if (pattern is AnyPattern && !discriminatorPatternName.isNullOrEmpty()) {
+            pattern.matchesValue(value, updatedResolver, patternName, breadCrumbIfDiscriminatorMismatch)
         } else pattern.matches(value, updatedResolver)
     }
 
@@ -421,7 +417,7 @@ data class Feature(
     }
 
     private fun getSchemaPattern(discriminatorPatternName: String?, patternName: String, resolver: Resolver): Pattern {
-        if (discriminatorPatternName != null) {
+        if (!discriminatorPatternName.isNullOrEmpty()) {
             return when (val discriminatorPattern = resolver.getPattern(withPatternDelimiters(discriminatorPatternName))) {
                 is AnyPattern -> discriminatorPattern
                 else -> throw ContractException(

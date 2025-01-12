@@ -323,7 +323,7 @@ data class AnyPattern(
         }
     }
 
-    fun matchesValue(sampleData: Value?, resolver: Resolver, discriminatorValue: String): Result {
+    fun matchesValue(sampleData: Value?, resolver: Resolver, discriminatorValue: String, discMisMatchBreadCrumb: String? = null): Result {
         if (discriminator == null) return matches(sampleData, resolver)
 
         val discriminatorCsvClause = if(discriminator.values.size == 1) {
@@ -332,6 +332,7 @@ data class AnyPattern(
 
         if (discriminatorValue !in discriminator.values) {
             return Failure(
+                breadCrumb = discMisMatchBreadCrumb ?: discriminator.property,
                 message = "Expected the value of discriminator to be $discriminatorCsvClause but it was ${discriminatorValue.quote()}",
                 failureReason = FailureReason.DiscriminatorMismatch
             )
@@ -340,6 +341,7 @@ data class AnyPattern(
         return discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().realise(
             hasValue = { updatedPatterns, _ ->
                 val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue) ?: return@realise Failure(
+                    breadCrumb = discMisMatchBreadCrumb ?: discriminator.property,
                     message = "Could not find pattern with discriminator value ${discriminatorValue.quote()}",
                     failureReason = FailureReason.DiscriminatorMismatch
                 )

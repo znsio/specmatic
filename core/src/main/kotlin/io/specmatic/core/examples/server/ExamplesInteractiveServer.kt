@@ -485,13 +485,18 @@ class ExamplesInteractiveServer(
             )
         }
 
-        fun generateForSchemaBased(contractFile: File, mainPattern: String, subPattern: String): List<ExamplePathInfo> {
+        fun generateForSchemaBased(contractFile: File, path: String, method: String): List<ExamplePathInfo> {
             val examplesDir = getExamplesDirPath(contractFile)
             if(examplesDir.exists().not()) examplesDir.mkdirs()
 
             val feature = parseContractFileToFeature(contractFile)
-            val value = feature.generateSchemaFlagBased(mainPattern, subPattern)
-            val schemaFileName = toSchemaExampleFileName(mainPattern, subPattern)
+            val (discriminatorPatternName, patternName) = when {
+                method.isEmpty() -> null to path
+                else -> path to method
+            }
+
+            val value = feature.generateSchemaFlagBased(discriminatorPatternName, patternName)
+            val schemaFileName = toSchemaExampleFileName(discriminatorPatternName, patternName)
 
             val exampleFile = examplesDir.getSchemaExamples().firstOrNull {
                 it.file.nameWithoutExtension == schemaFileName

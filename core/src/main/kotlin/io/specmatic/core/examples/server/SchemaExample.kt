@@ -10,9 +10,9 @@ data class SchemaExample(val json: Value, val file: File) {
     companion object {
         val SCHEMA_IDENTIFIER_REGEX = Regex("^resource(?:\\.(\\w+))?\\.(\\w+)\\.example\\.json\$")
 
-        fun toSchemaExampleFileName(parentPattern: String, patternName: String): String {
-            if (patternName.isBlank()) return "resource.$parentPattern.example.json"
-            return "resource.$parentPattern.$patternName.example.json"
+        fun toSchemaExampleFileName(discriminatorPatternName: String? = null, patternName: String): String {
+            if (discriminatorPatternName.isNullOrEmpty()) return "resource.$patternName.example.json"
+            return "resource.$discriminatorPatternName.$patternName.example.json"
         }
 
         fun matchesFilePattern(file: File): Boolean {

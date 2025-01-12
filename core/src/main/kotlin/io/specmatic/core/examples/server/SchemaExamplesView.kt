@@ -49,28 +49,15 @@ class SchemaExamplesView {
         private fun List<SchemaExampleToResult>.withMissingDiscriminators(feature: Feature, pattern: String): List<SchemaExampleForView> {
             val existingDiscriminators = this.map { (example, _) -> example.schemaBasedOn }.toSet()
             val discriminatorValues = feature.getAllDiscriminatorValuesIfExists(pattern)
+            val existingSchemas = this.toSchemaView(pattern)
 
-            if (discriminatorValues.isEmpty()) {
-                return this.map { (example, result) ->
-                    SchemaExampleForView(
-                        groupPatternName = pattern,
-                        patternName = example.schemaBasedOn.takeIf { this.size > 1 },
-                        result = result,
-                        exampleFile = example.file
-                    )
-                }
-            }
+            if (discriminatorValues.isEmpty()) { return existingSchemas }
 
             val missingDiscriminators = discriminatorValues.minus(existingDiscriminators)
-            val existingSchemas = this.map { (example, result) ->
-                SchemaExampleForView(
-                    groupPatternName = pattern,
-                    patternName = example.schemaBasedOn.takeIf { example.schemaBasedOn in discriminatorValues },
-                    result = result,
-                    exampleFile = example.file
-                )
-            }
-            return existingSchemas.plus(missingDiscriminators.toMissingSchemas(pattern)).sortedBy { it.patternName }
+            return existingSchemas
+                .map { it.copy(patternName = it.patternName.takeIf { name -> name in discriminatorValues }) }
+                .plus(missingDiscriminators.toMissingSchemas(pattern))
+                .sortedBy { it.patternName }
         }
 
         private fun Set<String>.toMissingSchemas(pattern: String): List<SchemaExampleForView> {
@@ -80,6 +67,17 @@ class SchemaExamplesView {
                     patternName = it,
                     result = null,
                     exampleFile = null
+                )
+            }
+        }
+
+        private fun List<SchemaExampleToResult>.toSchemaView(pattern: String): List<SchemaExampleForView> {
+            return this.map { (example, result) ->
+                SchemaExampleForView(
+                    groupPatternName = pattern,
+                    patternName = example.schemaBasedOn.takeIf { this.size > 1 },
+                    result = result,
+                    exampleFile = example.file.takeIf { result != null }
                 )
             }
         }

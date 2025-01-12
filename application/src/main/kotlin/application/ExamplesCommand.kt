@@ -2,6 +2,7 @@ package application
 
 import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.*
+import io.specmatic.core.config.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.examples.server.ExamplesInteractiveServer
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.externaliseInlineExamples
 import io.specmatic.core.examples.server.ExamplesInteractiveServer.Companion.getExamplesDirPath

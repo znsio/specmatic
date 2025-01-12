@@ -3,6 +3,7 @@ package application
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.conversions.wsdlContentToFeature
 import io.specmatic.core.*
+import io.specmatic.core.config.*
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.NonZeroExitError
 import io.specmatic.core.git.SystemGit

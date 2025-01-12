@@ -6,6 +6,10 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.specmatic.core.*
+import io.specmatic.core.config.SpecmaticConfig
+import io.specmatic.core.config.WorkflowConfiguration
+import io.specmatic.core.config.WorkflowIDOperation
+import io.specmatic.core.config.loadSpecmaticConfig
 import io.specmatic.core.log.CompositePrinter
 import io.specmatic.core.log.LogMessage
 import io.specmatic.core.log.LogStrategy

@@ -2,7 +2,7 @@ package io.specmatic.stub
 
 import io.mockk.InternalPlatformDsl.toStr
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.config.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.HttpResponsePattern

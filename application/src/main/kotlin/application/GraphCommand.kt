@@ -3,7 +3,7 @@ package application
 import io.specmatic.core.azure.AzureAPI
 import io.specmatic.core.azure.PersonalAccessToken
 import io.specmatic.core.git.getPersonalAccessToken
-import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.config.loadSpecmaticConfig
 import io.specmatic.core.log.CompositePrinter
 import io.specmatic.core.log.Verbose
 import io.specmatic.core.log.logger

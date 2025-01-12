@@ -1,7 +1,11 @@
 package integration_tests
 
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.*
+import io.specmatic.core.HttpRequest
+import io.specmatic.core.HttpResponse
+import io.specmatic.core.config.SpecmaticConfig
+import io.specmatic.core.config.WorkflowConfiguration
+import io.specmatic.core.config.WorkflowIDOperation
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat

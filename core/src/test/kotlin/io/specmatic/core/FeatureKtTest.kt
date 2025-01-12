@@ -11,6 +11,7 @@ import io.specmatic.mock.mockFromJSON
 import io.specmatic.osAgnosticPath
 import io.mockk.every
 import io.mockk.mockk
+import io.specmatic.core.config.CONTRACT_EXTENSION
 import io.swagger.v3.core.util.Yaml
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals

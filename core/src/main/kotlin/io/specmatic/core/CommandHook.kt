@@ -1,5 +1,6 @@
 package io.specmatic.core
 
+import io.specmatic.core.config.loadSpecmaticConfig
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.ExternalCommand

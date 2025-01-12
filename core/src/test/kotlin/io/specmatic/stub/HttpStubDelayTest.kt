@@ -5,7 +5,7 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.specmatic.core.HttpResponse
-import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.config.SpecmaticConfig
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_STUB_DELAY
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll

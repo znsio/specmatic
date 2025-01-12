@@ -3,6 +3,7 @@ package io.specmatic.stub
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import io.specmatic.core.*
+import io.specmatic.core.config.CONTRACT_EXTENSION
 import io.specmatic.core.pattern.parsedValue
 import io.specmatic.core.value.*
 import io.specmatic.mock.NoMatchingScenario

@@ -4,7 +4,7 @@ import io.specmatic.conversions.ExampleFromFile
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.QueryParameters
-import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
+import io.specmatic.core.config.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.value.*

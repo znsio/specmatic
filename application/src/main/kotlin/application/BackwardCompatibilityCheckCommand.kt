@@ -3,10 +3,10 @@ package application
 import application.BackwardCompatibilityCheckCommand.CompatibilityResult.FAILED
 import application.BackwardCompatibilityCheckCommand.CompatibilityResult.PASSED
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.CONTRACT_EXTENSION
-import io.specmatic.core.CONTRACT_EXTENSIONS
+import io.specmatic.core.config.CONTRACT_EXTENSION
+import io.specmatic.core.config.CONTRACT_EXTENSIONS
 import io.specmatic.core.Feature
-import io.specmatic.core.WSDL
+import io.specmatic.core.config.WSDL
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.log.logger

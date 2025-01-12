@@ -10,7 +10,7 @@ import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
 import io.specmatic.core.Results
 import io.specmatic.core.Scenario
-import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.config.SpecmaticConfig
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.Flags.Companion.ONLY_POSITIVE
 import io.specmatic.core.utilities.Flags.Companion.SPECMATIC_GENERATIVE_TESTS

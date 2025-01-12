@@ -1,5 +1,9 @@
 package io.specmatic.core
 
+import io.specmatic.core.config.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.config.CONFIG_EXTENSIONS
+import io.specmatic.core.config.CONFIG_FILE_NAME_WITHOUT_EXT
+import io.specmatic.core.config.YAML
 import io.specmatic.core.utilities.Flags.Companion.CONFIG_FILE_PATH
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 import java.io.File

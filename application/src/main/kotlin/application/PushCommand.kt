@@ -3,6 +3,8 @@ package application
 import picocli.CommandLine
 import io.specmatic.core.*
 import io.specmatic.core.Configuration.Companion.configFilePath
+import io.specmatic.core.config.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.config.CONTRACT_EXTENSIONS
 import io.specmatic.core.git.NonZeroExitError
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.git.loadFromPath

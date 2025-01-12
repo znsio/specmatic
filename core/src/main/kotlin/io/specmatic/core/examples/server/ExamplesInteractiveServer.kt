@@ -12,10 +12,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.specmatic.conversions.ExampleFromFile
-import io.specmatic.core.AttributeSelectionPattern
-import io.specmatic.core.DEFAULT_TIMEOUT_IN_MILLISECONDS
 import io.specmatic.core.DiscriminatorBasedRequestResponse
-import io.specmatic.core.EXAMPLES_DIR_SUFFIX
 import io.specmatic.core.Feature
 import io.specmatic.core.HttpRequest
 import io.specmatic.core.HttpResponse
@@ -25,8 +22,11 @@ import io.specmatic.core.PATH_BREAD_CRUMB
 import io.specmatic.core.Result
 import io.specmatic.core.Results
 import io.specmatic.core.SPECMATIC_RESULT_HEADER
-import io.specmatic.core.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.Scenario
+import io.specmatic.core.config.AttributeSelectionPattern
+import io.specmatic.core.config.DEFAULT_TIMEOUT_IN_MILLISECONDS
+import io.specmatic.core.config.EXAMPLES_DIR_SUFFIX
+import io.specmatic.core.config.SPECMATIC_STUB_DICTIONARY
 import io.specmatic.core.discriminator.DiscriminatorExampleInjector
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.examples.server.ExamplesView.Companion.isScenarioMultiGen
@@ -43,12 +43,7 @@ import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.route.modules.HealthCheckModule.Companion.configureHealthCheckModule
 import io.specmatic.core.utilities.exceptionCauseMessage
 import io.specmatic.core.utilities.uniqueNameForApiOperation
-import io.specmatic.core.value.JSONArrayValue
-import io.specmatic.core.value.JSONObjectValue
-import io.specmatic.core.value.NullValue
-import io.specmatic.core.value.ScalarValue
-import io.specmatic.core.value.StringValue
-import io.specmatic.core.value.Value
+import io.specmatic.core.value.*
 import io.specmatic.mock.MOCK_HTTP_REQUEST
 import io.specmatic.mock.MOCK_HTTP_RESPONSE
 import io.specmatic.mock.ScenarioStub

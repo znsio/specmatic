@@ -1,6 +1,6 @@
 package io.specmatic.core.utilities
 
-import io.specmatic.core.DEFAULT_WORKING_DIRECTORY
+import io.specmatic.core.config.DEFAULT_WORKING_DIRECTORY
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*

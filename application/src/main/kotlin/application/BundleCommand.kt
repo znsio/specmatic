@@ -2,8 +2,8 @@
 
 package application
 
-import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
-import io.specmatic.core.YAML
+import io.specmatic.core.config.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.config.YAML
 import io.specmatic.core.log.logger
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.stub.customImplicitStubBase

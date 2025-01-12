@@ -1,7 +1,7 @@
 package application
 
 import io.specmatic.core.Feature
-import io.specmatic.core.WorkingDirectory
+import io.specmatic.core.config.WorkingDirectory
 import io.specmatic.core.log.NewLineLogMessage
 import io.specmatic.core.log.StringLog
 import io.specmatic.core.log.consoleLog

@@ -2,8 +2,8 @@ package application
 
 import com.ginsberg.junit.exit.ExpectSystemExitWithStatus
 import com.ninjasquad.springmockk.MockkBean
-import io.specmatic.core.CONTRACT_EXTENSION
-import io.specmatic.core.CONTRACT_EXTENSIONS
+import io.specmatic.core.config.CONTRACT_EXTENSION
+import io.specmatic.core.config.CONTRACT_EXTENSIONS
 import io.specmatic.core.parseGherkinStringToFeature
 import io.specmatic.core.utilities.ContractPathData
 import io.specmatic.core.utilities.StubServerWatcher

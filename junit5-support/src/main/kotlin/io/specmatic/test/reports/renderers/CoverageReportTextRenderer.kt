@@ -1,6 +1,6 @@
 package io.specmatic.test.reports.renderers
 
-import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.config.SpecmaticConfig
 import io.specmatic.test.reports.coverage.console.ConsoleReport
 import io.specmatic.test.reports.coverage.console.OpenAPICoverageConsoleReport
 import io.specmatic.test.reports.coverage.console.ReportColumn

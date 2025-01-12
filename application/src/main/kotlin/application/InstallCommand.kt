@@ -1,6 +1,6 @@
 package application
 
-import io.specmatic.core.APPLICATION_NAME_LOWER_CASE
+import io.specmatic.core.config.APPLICATION_NAME_LOWER_CASE
 import io.specmatic.core.getConfigFilePath
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.utilities.exitWithMessage

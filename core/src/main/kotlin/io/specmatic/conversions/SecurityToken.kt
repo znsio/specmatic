@@ -1,9 +1,9 @@
 package io.specmatic.conversions
 
-import io.specmatic.core.APIKeySecuritySchemeConfiguration
-import io.specmatic.core.BasicAuthSecuritySchemeConfiguration
-import io.specmatic.core.SecuritySchemeConfiguration
-import io.specmatic.core.SecuritySchemeWithOAuthToken
+import io.specmatic.core.config.APIKeySecuritySchemeConfiguration
+import io.specmatic.core.config.BasicAuthSecuritySchemeConfiguration
+import io.specmatic.core.config.SecuritySchemeConfiguration
+import io.specmatic.core.config.SecuritySchemeWithOAuthToken
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 
 @Deprecated("This will be deprecated shortly.Use the security scheme name as the environment variable.")

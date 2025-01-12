@@ -2,6 +2,7 @@ package io.specmatic.core
 
 import io.mockk.every
 import io.mockk.mockk
+import io.specmatic.core.config.AttributeSelectionPattern
 import io.specmatic.core.pattern.*
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.Nested

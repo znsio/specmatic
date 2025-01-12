@@ -1,9 +1,15 @@
 package utilities
 
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import io.mockk.*
 import io.specmatic.conversions.OpenApiSpecification
-import io.specmatic.core.CONTRACT_EXTENSION
 import io.specmatic.core.HttpRequest
-import io.specmatic.core.SourceProvider
+import io.specmatic.core.config.CONTRACT_EXTENSION
+import io.specmatic.core.config.SourceProvider
 import io.specmatic.core.git.GitCommand
 import io.specmatic.core.git.SystemGit
 import io.specmatic.core.git.checkout
@@ -15,12 +21,6 @@ import io.specmatic.core.value.JSONObjectValue
 import io.specmatic.core.value.toXMLNode
 import io.specmatic.osAgnosticPath
 import io.specmatic.stub.createStub
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
-import io.mockk.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach

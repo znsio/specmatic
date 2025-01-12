@@ -1,8 +1,14 @@
 package io.specmatic.core
 
-import io.specmatic.core.pattern.*
+import io.specmatic.core.config.WorkflowConfiguration
+import io.specmatic.core.config.WorkflowIDOperation
+import io.specmatic.core.pattern.JSONObjectPattern
+import io.specmatic.core.pattern.NumberPattern
+import io.specmatic.core.pattern.StringPattern
+import io.specmatic.core.pattern.parsedJSONObject
 import io.specmatic.core.value.StringValue
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 class WorkflowTest {

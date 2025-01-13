@@ -1,4 +1,4 @@
-package io.specmatic.core.config.mapper
+package io.specmatic.core.config.transform
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -8,10 +8,10 @@ import io.specmatic.core.config.v1.SpecmaticConfigV1
 import io.specmatic.core.config.v2.SpecmaticConfigV2
 import java.io.File
 
-class SpecmaticConfigMapper {
+object VersionTransform {
     private val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
 
-    fun read(configFile: File): SpecmaticConfig {
+    fun parseConfigFile(configFile: File): SpecmaticConfig {
         val configYaml = configFile.readText()
         return when (getVersion(configYaml)) {
             2 -> objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java).transform()

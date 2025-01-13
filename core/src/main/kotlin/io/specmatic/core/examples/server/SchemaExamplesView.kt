@@ -49,13 +49,15 @@ class SchemaExamplesView {
         private fun List<SchemaExampleToResult>.withMissingDiscriminators(feature: Feature, pattern: String): List<SchemaExampleForView> {
             val existingDiscriminators = this.map { (example, _) -> example.schemaBasedOn }.toSet()
             val discriminatorValues = feature.getAllDiscriminatorValuesIfExists(pattern)
-            val existingSchemas = this.toSchemaView(pattern)
 
-            if (discriminatorValues.isEmpty()) { return existingSchemas }
+            if (discriminatorValues.isEmpty()) {
+                return this.toSchemaView(pattern) {
+                    example -> example.schemaBasedOn.takeIf { this.size > 1 }
+                }
+            }
 
             val missingDiscriminators = discriminatorValues.minus(existingDiscriminators)
-            return existingSchemas
-                .map { it.copy(patternName = it.patternName.takeIf { name -> name in discriminatorValues }) }
+            return this.toSchemaView(pattern) { example -> example.schemaBasedOn.takeIf { it in discriminatorValues } }
                 .plus(missingDiscriminators.toMissingSchemas(pattern))
                 .sortedBy { it.patternName }
         }
@@ -71,11 +73,11 @@ class SchemaExamplesView {
             }
         }
 
-        private fun List<SchemaExampleToResult>.toSchemaView(pattern: String): List<SchemaExampleForView> {
+        private fun List<SchemaExampleToResult>.toSchemaView(pattern: String, patterName: (example: SchemaExample) -> String?): List<SchemaExampleForView> {
             return this.map { (example, result) ->
                 SchemaExampleForView(
                     groupPatternName = pattern,
-                    patternName = example.schemaBasedOn.takeIf { this.size > 1 },
+                    patternName = patterName(example),
                     result = result,
                     exampleFile = example.file.takeIf { result != null }
                 )

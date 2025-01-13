@@ -57,7 +57,8 @@ class SchemaExamplesView {
             }
 
             val missingDiscriminators = discriminatorValues.minus(existingDiscriminators)
-            return this.toSchemaView(pattern) { example -> example.schemaBasedOn.takeIf { it in discriminatorValues } }
+            return this.filterNot { (example, result) -> result == null && example.schemaBasedOn !in discriminatorValues }
+                .toSchemaView(pattern) { example -> example.schemaBasedOn.takeIf { it in discriminatorValues } }
                 .plus(missingDiscriminators.toMissingSchemas(pattern))
                 .sortedBy { it.patternName }
         }

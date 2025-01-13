@@ -1,5 +1,6 @@
 package io.specmatic.core.config
 
+import io.specmatic.core.SourceProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource

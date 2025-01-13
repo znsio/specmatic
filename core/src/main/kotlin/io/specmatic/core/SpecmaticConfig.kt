@@ -1,14 +1,16 @@
 package io.specmatic.core
 
-import com.fasterxml.jackson.annotation.JsonAlias
-import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonSubTypes
-import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.annotation.JsonTypeName
+import com.fasterxml.jackson.annotation.*
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.specmatic.core.Configuration.Companion.configFilePath
+import io.specmatic.core.config.SpecmaticConfigFactory
+import io.specmatic.core.config.v1.SpecmaticConfigV1
+import io.specmatic.core.config.v2.ContractConfig
+import io.specmatic.core.config.v2.FileSystemConfig
+import io.specmatic.core.config.v2.GitConfig
+import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
 import io.specmatic.core.pattern.parsedJSONObject
@@ -109,7 +111,6 @@ data class AttributeSelectionPattern(
 )
 
 data class SpecmaticConfig(
-    @field:JsonAlias("contract_repositories")
     val sources: List<Source> = emptyList(),
     val auth: Auth? = null,
     val pipeline: Pipeline? = null,
@@ -120,18 +121,15 @@ data class SpecmaticConfig(
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
-    @field:JsonAlias("virtual_service")
     val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
     val workflow: WorkflowConfiguration? = null,
     val ignoreInlineExamples: Boolean = getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES),
     val additionalExampleParamsFilePath: String? = getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE),
-    @field:JsonAlias("attribute_selection_pattern")
     val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
-    @field:JsonAlias("all_patterns_mandatory")
     val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY),
-    @field:JsonAlias("default_pattern_values")
-    val defaultPatternValues: Map<String, Any> = emptyMap()
+    val defaultPatternValues: Map<String, Any> = emptyMap(),
+    val version: Int? = null
 ) {
     @JsonIgnore
     fun attributeSelectionQueryParamKey(): String {
@@ -157,6 +155,77 @@ data class SpecmaticConfig(
     @JsonIgnore
     fun parsedDefaultPatternValues(): Map<String, Value> {
         return parsedJSONObject(ObjectMapper().writeValueAsString(defaultPatternValues)).jsonObject
+    }
+
+    @JsonIgnore
+    fun transformTo(version: Int): String {
+        val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
+        return when (version) {
+            2 -> objectMapper.writeValueAsString(transformToV2())
+            else -> objectMapper.writeValueAsString(transformToV1())
+        }
+    }
+
+    private fun transformToV1(): SpecmaticConfigV1 {
+        return SpecmaticConfigV1(
+            version = 1,
+            sources = this.sources,
+            auth = this.auth,
+            pipeline = this.pipeline,
+            environments = this.environments,
+            hooks = this.hooks,
+            repository = this.repository,
+            report = this.report,
+            security = this.security,
+            test = this.test,
+            stub = this.stub,
+            virtualService = this.virtualService,
+            examples = this.examples,
+            workflow = this.workflow,
+            ignoreInlineExamples = this.ignoreInlineExamples,
+            additionalExampleParamsFilePath = this.additionalExampleParamsFilePath,
+            attributeSelectionPattern = this.attributeSelectionPattern,
+            allPatternsMandatory = this.allPatternsMandatory,
+            defaultPatternValues = this.defaultPatternValues
+        )
+    }
+
+    private fun transformToV2(): SpecmaticConfigV2 {
+        return SpecmaticConfigV2(
+            version = 2,
+            contracts = this.sources.map { source ->
+                ContractConfig(
+                    git = when (source.provider) {
+                        SourceProvider.git -> GitConfig(url = source.repository, branch = source.branch)
+                        else -> null
+                    },
+                    filesystem = when (source.provider) {
+                        SourceProvider.filesystem -> FileSystemConfig(directory = source.directory)
+                        else -> null
+                    },
+                    provides = source.test,
+                    consumes = source.stub
+                )
+            },
+            auth = this.auth,
+            pipeline = this.pipeline,
+            environments = this.environments,
+            hooks = this.hooks,
+            repository = this.repository,
+            report = this.report,
+            security = this.security,
+            test = this.test,
+            stub = this.stub,
+            virtualService = this.virtualService,
+            examples = this.examples,
+            workflow = this.workflow,
+            ignoreInlineExamples = this.ignoreInlineExamples,
+            additionalExampleParamsFilePath = this.additionalExampleParamsFilePath,
+            attributeSelectionPattern = this.attributeSelectionPattern,
+            allPatternsMandatory = this.allPatternsMandatory,
+            defaultPatternValues = this.defaultPatternValues
+        )
     }
 }
 
@@ -346,7 +415,7 @@ fun loadSpecmaticConfig(configFileName: String? = null): SpecmaticConfig {
         throw ContractException("Could not find the Specmatic configuration at path ${configFile.canonicalPath}")
     }
     try {
-        return ObjectMapper(YAMLFactory()).readValue(configFile.readText(), SpecmaticConfig::class.java)
+        return SpecmaticConfigFactory().create(configFile)
     } catch(e: LinkageError) {
         logger.log(e, "A dependency version conflict has been detected. If you are using Spring in a maven project, a common resolution is to set the property <kotlin.version></kotlin.version> to your pom project.")
         throw e

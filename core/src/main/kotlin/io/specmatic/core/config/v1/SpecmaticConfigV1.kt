@@ -1,7 +1,7 @@
 package io.specmatic.core.config.v1
 
 import com.fasterxml.jackson.annotation.JsonAlias
-import io.specmatic.core.config.*
+import io.specmatic.core.*
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue

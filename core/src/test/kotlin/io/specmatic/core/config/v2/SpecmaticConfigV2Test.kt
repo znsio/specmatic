@@ -1,8 +1,8 @@
 package io.specmatic.core.config.v2
 
-import io.specmatic.core.config.SourceProvider
-import io.specmatic.core.config.SpecmaticConfig
-import io.specmatic.core.config.loadSpecmaticConfig
+import io.specmatic.core.SourceProvider
+import io.specmatic.core.SpecmaticConfig
+import io.specmatic.core.loadSpecmaticConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource

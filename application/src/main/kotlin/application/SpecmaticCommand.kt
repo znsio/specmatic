@@ -36,7 +36,6 @@ import java.util.concurrent.Callable
             ValidateViaLogs::class,
             CentralContractRepoReportCommand::class,
             MigrateConfigCommand::class
-
         ]
 )
 class SpecmaticCommand : Callable<Int> {

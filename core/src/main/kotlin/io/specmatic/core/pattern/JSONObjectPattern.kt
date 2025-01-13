@@ -308,7 +308,12 @@ data class JSONObjectPattern(
                 ResultWithDiscriminatorStatus(cleanedUpResult, isDiscrimintor)
             }
 
-        val results: List<Result.Failure> = resultsWithDiscriminator.map { it.result }.filterIsInstance<Result.Failure>()
+        val results: List<Result.Failure> = resultsWithDiscriminator
+            .map { it.result }
+            .filterIsInstance<Result.Failure>()
+            .distinctBy {
+                it.reportString()
+            }
 
         val failures: List<Result.Failure> = minCountErrors + maxCountErrors + keyErrors + results
 

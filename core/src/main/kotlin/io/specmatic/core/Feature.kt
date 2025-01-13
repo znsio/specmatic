@@ -15,6 +15,7 @@ import io.cucumber.messages.IdGenerator
 import io.cucumber.messages.IdGenerator.Incrementing
 import io.cucumber.messages.types.*
 import io.cucumber.messages.types.Examples
+import io.ktor.http.*
 import io.specmatic.core.discriminator.DiscriminatorBasedItem
 import io.specmatic.core.discriminator.DiscriminatorMetadata
 import io.specmatic.core.utilities.*
@@ -374,35 +375,59 @@ data class Feature(
         } != null
     }
 
-    fun matchResultSchemaFlagBased(primaryPatternName: String?, secondaryPatternName: String, value: Value, mismatchMessages: MismatchMessages): Result {
+    fun matchResultSchemaFlagBased(
+        discriminatorPatternName: String?,
+        patternName: String, value: Value,
+        mismatchMessages: MismatchMessages,
+        breadCrumbIfDiscriminatorMismatch: String? = null
+    ): Result {
         val updatedResolver = flagsBased.update(scenarios.last().resolver).copy(mismatchMessages = mismatchMessages)
-        return try {
-            val pattern = primaryPatternName ?: secondaryPatternName
-            val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(pattern))
-            resolvedPattern.matches(value, updatedResolver)
-        } catch (e: Throwable) {
-            Result.Failure(e.message ?: "Couldn't match pattern $primaryPatternName, please check if this exists")
+
+        val pattern = runCatching {
+            getSchemaPattern(discriminatorPatternName, patternName, updatedResolver)
+        }.getOrElse { e ->
+            return if (e is ContractException) e.failure()
+            else Result.Failure(e.message ?: "Invalid Pattern \"$discriminatorPatternName.$patternName\"")
+        }
+
+        return if (pattern is AnyPattern && !discriminatorPatternName.isNullOrEmpty()) {
+            pattern.matchesValue(value, updatedResolver, patternName, breadCrumbIfDiscriminatorMismatch)
+        } else pattern.matches(value, updatedResolver)
+    }
+
+    fun getAllDiscriminatorValuesIfExists(patternName: String): Set<String> {
+        val resolver = flagsBased.update(scenarios.last().resolver)
+        val pattern = runCatching {
+            getSchemaPattern(patternName, "", resolver)
+        }.getOrElse { return emptySet() }
+
+        return when (pattern) {
+            is AnyPattern -> pattern.discriminator?.values.orEmpty()
+            else -> emptySet()
         }
     }
 
-    fun getAllDiscriminatorValues(patternName: String): Set<String> {
+    fun generateSchemaFlagBased(discriminatorPatternName: String?, patternName: String): Value {
         val updatedResolver = flagsBased.update(scenarios.last().resolver)
-        return try {
-            val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(patternName)) as? AnyPattern
-            resolvedPattern?.discriminator?.values.orEmpty()
-        } catch (e: Throwable) {
-            emptySet()
-        }
+
+       return when (val pattern = getSchemaPattern(discriminatorPatternName, patternName, updatedResolver)) {
+           is AnyPattern -> pattern.generateValue(updatedResolver, patternName)
+           else -> pattern.generate(updatedResolver)
+       }
     }
 
-    fun generateSchemaFlagBased(primaryPatternName: String?, secondaryPatternName: String): Value {
-        val updatedResolver = flagsBased.update(scenarios.last().resolver)
-        val pattern = primaryPatternName ?: secondaryPatternName
-
-        return when (val resolvedPattern = updatedResolver.getPattern(withPatternDelimiters(pattern))) {
-            is AnyPattern -> resolvedPattern.generateValue(updatedResolver, secondaryPatternName)
-            else -> resolvedPattern.generate(updatedResolver)
+    private fun getSchemaPattern(discriminatorPatternName: String?, patternName: String, resolver: Resolver): Pattern {
+        if (!discriminatorPatternName.isNullOrEmpty()) {
+            return when (val discriminatorPattern = resolver.getPattern(withPatternDelimiters(discriminatorPatternName))) {
+                is AnyPattern -> discriminatorPattern
+                else -> throw ContractException(
+                    breadCrumb = discriminatorPatternName,
+                    errorMessage = "Pattern ${discriminatorPatternName.quote()} is not an Discriminator Pattern"
+                )
+            }
         }
+
+        return resolver.getPattern(withPatternDelimiters(patternName))
     }
 
     fun matchResultFlagBased(scenarioStub: ScenarioStub, mismatchMessages: MismatchMessages): Results {

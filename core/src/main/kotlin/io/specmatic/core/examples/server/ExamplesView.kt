@@ -120,61 +120,6 @@ class ExamplesView {
                 }
             }
         }
-
-        // SCHEMA EXAMPLE METHODS
-        private fun getWithMissingDiscriminators(feature: Feature, mainPattern: String, examples: List<Triple<String, File?, Result?>>): List<Triple<String, File?, Result?>> {
-            val discriminatorValues = feature.getAllDiscriminatorValues(mainPattern)
-            if (discriminatorValues.isEmpty()) return examples
-
-            return discriminatorValues.map { value ->
-                examples.find { it.first == value && it.second != null } ?: Triple(value, null, null)
-            }
-        }
-
-        private fun List<Pair<SchemaExample, Result?>>.groupByPattern(): Map<String, List<Pair<SchemaExample, Result?>>> {
-            return this.groupBy { it.first.discriminatorBasedOn.takeIf { disc -> !disc.isNullOrEmpty() } ?: it.first.schemaBasedOn }
-        }
-
-        private fun Map<String, List<Pair<SchemaExample, Result?>>>.withMissingDiscriminators(feature: Feature): Map<String, List<Triple<String, File?, Result?>>> {
-            return this.mapValues { (mainPattern, examples) ->
-                val existingExample = examples.map { example ->
-                    if (example.first.value is NullValue) {
-                        Triple(example.first.schemaBasedOn, null, null)
-                    } else Triple(example.first.schemaBasedOn, example.first.file, example.second)
-                }
-                getWithMissingDiscriminators(feature, mainPattern, existingExample)
-            }
-        }
-
-        fun List<TableRow>.withSchemaExamples(feature: Feature, schemaExample: List<Pair<SchemaExample, Result?>>): List<TableRow> {
-            val groupedSchemaExamples = schemaExample.groupByPattern()
-            return groupedSchemaExamples.withMissingDiscriminators(feature).flatMap { (mainPattern, examples) ->
-                val isDiscriminator = examples.size > 1
-                examples.mapIndexed { index, (patternName, exampleFile, result) ->
-                    TableRow(
-                        rawPath = mainPattern,
-                        path = mainPattern,
-                        method = patternName.takeIf { isDiscriminator } ?: "",
-                        responseStatus = "",
-                        contentType = "",
-                        pathSpan = examples.size,
-                        methodSpan = 1,
-                        statusSpan = 1,
-                        showPath = index == 0,
-                        showMethod = isDiscriminator,
-                        showStatus = false,
-                        example = exampleFile?.canonicalPath,
-                        exampleName = exampleFile?.nameWithoutExtension,
-                        exampleMismatchReason = result?.reportString()?.takeIf { it.isNotBlank() },
-                        isPartialFailure = result?.isPartialFailure() ?: false,
-                        isDiscriminatorBased = false, isSchemaBased = true,
-                        pathColSpan = if (isDiscriminator) 3 else 5,
-                        methodColSpan = if (isDiscriminator) 2 else 1,
-                        failureDetails = if (result is Result.Failure) result.toMatchFailureDetailList() else emptyList(),
-                    )
-                }
-            }.plus(this)
-        }
     }
 }
 

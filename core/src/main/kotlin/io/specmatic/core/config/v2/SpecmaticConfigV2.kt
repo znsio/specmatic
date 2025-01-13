@@ -35,6 +35,7 @@ data class SpecmaticConfigV2(
 ) {
     fun transform(): SpecmaticConfig {
         return SpecmaticConfig(
+            version = this.version,
             sources = this.contracts.map { contract -> contract.transform() },
             auth = this.auth,
             pipeline = this.pipeline,

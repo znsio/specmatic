@@ -24,6 +24,6 @@ fun File.toSpecmaticConfig(): SpecmaticConfig {
     }
 }
 
-private fun String.getVersion(): Int? {
+fun String.getVersion(): Int {
     return objectMapper.readTree(this).get(SPECMATIC_CONFIG_VERSION)?.asInt() ?: SPECMATIC_CONFIG_VERSION_1
 }

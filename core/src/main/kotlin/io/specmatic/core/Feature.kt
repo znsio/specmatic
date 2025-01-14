@@ -1780,8 +1780,8 @@ data class Feature(
             println()
             logger.log("The following externalized examples were not used:")
 
-            unusedExternalizedExamples.sorted().forEach { externalizedExamplePath: String ->
-                logger.log("  $externalizedExamplePath")
+            val errorMessages = unusedExternalizedExamples.sorted().map { externalizedExamplePath: String ->
+                if(strictMode.not()) logger.log("  $externalizedExamplePath")
 
                 try {
                     val example = ScenarioStub.parse(File(externalizedExamplePath).readText())
@@ -1789,10 +1789,17 @@ data class Feature(
                     val method = example.request.method
                     val path = example.request.path
                     val responseCode = example.response.status
-                    logger.log("    $method $path -> $responseCode does not match any operation in the specification")
+                    val errorMessage = "    $method $path -> $responseCode does not match any operation in the specification"
+                    if(strictMode.not()) logger.log(errorMessage)
+                    "The example $externalizedExamplePath is unused due to error: $errorMessage"
                 } catch(e: Throwable) {
-                    logger.log("    Could not parse the example: ${exceptionCauseMessage(e)}")
+                    val errorMessage = "    Could not parse the example: ${exceptionCauseMessage(e)}"
+                    if(strictMode.not()) logger.log(errorMessage)
+                    "The example $externalizedExamplePath is unused due to error: $errorMessage"
                 }
+            }
+            if(strictMode && errorMessages.isNotEmpty()) {
+                throw ContractException(errorMessages.joinToString(System.lineSeparator()))
             }
 
             logger.newLine()

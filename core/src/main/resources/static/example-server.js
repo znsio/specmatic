@@ -587,14 +587,22 @@ function createExampleDropDown(example) {
     examplePara.textContent = "Example: ";
 
     if (example.errorMessage) {
-        const issueCount = example.errorList.length;
-        const issueOrIssues = issueCount === 1 ? "issue" : "issues";
-        detailsPara.textContent = `Example has ${issueCount || ""} ${issueOrIssues}`;
-        if (issueCount > 0) {
+        const { errorCount, warningCount } = example.errorList.reduce((acc, error) => {
+            if (error.severity === "ERROR") acc.errorCount++;
+            if (error.severity === "WARNING") acc.warningCount++;
+            return acc;
+        }, { errorCount: 0, warningCount: 0 });
+
+        if (errorCount > 0) {
+            detailsPara.textContent = `Example has ${errorCount} Errors`;
             detailsPara.style.color = "red";
         }
+        if (warningCount > 0) {
+            detailsPara.textContent += errorCount > 0 ? ` and ${warningCount} Warnings` : `Example has ${warningCount} Warnings`;
+            detailsPara.style.color = errorCount > 0 ? "red" : "orange";
+        }
     } else {
-        detailsPara.textContent = example.hasBeenValidated ? "Example has no errors" : "Example has not yet been validated";
+        detailsPara.textContent = example.hasBeenValidated ? "Example has no issues" : "Example has not yet been validated";
     }
 
     if (example.hasBeenValidated) {

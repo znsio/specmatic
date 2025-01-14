@@ -70,7 +70,12 @@ data class ScenarioStub(
                 return request
             }
 
-            val additionalHeaders = (additionalExampleParams["headers"] ?: emptyMap<String, String>()) as? Map<String, String>
+            val additionalHeaders = (
+                    (additionalExampleParams["headers"] as? Map<String, Any?>)?.mapValues { (_, value) ->
+                        value?.toString() ?: ""
+                    }
+                        ?: emptyMap()
+                    ) as? Map<String, String>
 
             if(additionalHeaders == null) {
                 logger.log("WARNING: The content of \"headers\" in $additionalExampleParamsFilePath is not a valid JSON object")

@@ -34,6 +34,12 @@ data class ScenarioStub(
     val filePath: String? = null,
     val partial: ScenarioStub? = null
 ) {
+    fun requestMethod() = request.method ?: partial?.request?.method
+
+    fun requestPath() = request.path ?: partial?.request?.path
+
+    fun responseStatus() = response.status.takeIf { it != 0 } ?: partial?.response?.status
+
     fun toJSON(): JSONObjectValue {
         val mockInteraction = mutableMapOf<String, Value>()
 

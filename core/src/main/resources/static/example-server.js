@@ -44,6 +44,11 @@ const dataValidationSuccessValues = ["success", "partial"]
 let isSaved = true;
 let errorMetadata = [];
 
+const pluralizeWord = (word, count) => {
+    if (count <= 1) return `${count} ${word}`
+    return `${count} ${word}s`;
+}
+
 examplesOl.addEventListener("click", (event) => {
     const target = event.target;
     if (target.matches(".dropdown, .dropdown *")) {
@@ -596,11 +601,12 @@ function createExampleDropDown(example) {
         }, { errorCount: 0, warningCount: 0 });
 
         if (errorCount > 0) {
-            detailsPara.textContent = `Example has ${errorCount} Errors`;
+            detailsPara.textContent = `Example has ${pluralizeWord("Error", errorCount)}`;
             detailsPara.style.color = "red";
         }
         if (warningCount > 0) {
-            detailsPara.textContent += errorCount > 0 ? ` and ${warningCount} Warnings` : `Example has ${warningCount} Warnings`;
+            const warningPara = pluralizeWord("Warning", warningCount);
+            detailsPara.textContent += errorCount > 0 ? ` and ${warningPara}` : `Example has ${warningPara}`;
             detailsPara.style.color = errorCount > 0 ? "red" : "orange";
         }
     } else {

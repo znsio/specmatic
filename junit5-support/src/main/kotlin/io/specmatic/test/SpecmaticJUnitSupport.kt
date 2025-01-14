@@ -70,6 +70,7 @@ open class SpecmaticJUnitSupport {
         const val FILTER_NAME_ENVIRONMENT_VARIABLE = "FILTER_NAME"
         const val FILTER_NOT_NAME_ENVIRONMENT_VARIABLE = "FILTER_NOT_NAME"
         const val OVERLAY_FILE_PATH = "overlayFilePath"
+        const val STRICT_MODE = "strictMode"
         private const val ENDPOINTS_API = "endpointsAPI"
 
         val partialSuccesses: MutableList<Result.Success> = mutableListOf()
@@ -463,6 +464,7 @@ open class SpecmaticJUnitSupport {
             return Pair(emptySequence(), emptyList())
 
         val contractFile = File(path)
+        val strictMode = (System.getProperty(STRICT_MODE) ?: System.getenv(STRICT_MODE)) == "true"
         val feature =
             parseContractFileToFeature(
                 contractFile.path,
@@ -473,7 +475,8 @@ open class SpecmaticJUnitSupport {
                 specificationPath,
                 securityConfiguration,
                 specmaticConfig = specmaticConfig ?: SpecmaticConfig(),
-                overlayContent = overlayContent
+                overlayContent = overlayContent,
+                strictMode = strictMode
             ).copy(testVariables = config.variables, testBaseURLs = config.baseURLs).loadExternalisedExamples()
 
         feature.validateExamplesOrException()

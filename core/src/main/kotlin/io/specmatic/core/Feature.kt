@@ -38,7 +38,8 @@ fun parseContractFileToFeature(
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
     specmaticConfig: SpecmaticConfig = loadSpecmaticConfigOrDefault(getConfigFilePath()),
-    overlayContent: String = ""
+    overlayContent: String = "",
+    strictMode: Boolean = false
 ): Feature {
     return parseContractFileToFeature(
         File(contractPath),
@@ -49,7 +50,8 @@ fun parseContractFileToFeature(
         specificationPath,
         securityConfiguration,
         specmaticConfig,
-        overlayContent
+        overlayContent,
+        strictMode
     )
 }
 
@@ -67,7 +69,8 @@ fun parseContractFileToFeature(
     specificationPath: String? = null,
     securityConfiguration: SecurityConfiguration? = null,
     specmaticConfig: SpecmaticConfig = loadSpecmaticConfigOrDefault(getConfigFilePath()),
-    overlayContent: String = ""
+    overlayContent: String = "",
+    strictMode: Boolean = false
 ): Feature {
     logger.debug("Parsing contract file ${file.path}, absolute path ${file.absolutePath}")
     return when (file.extension) {
@@ -80,7 +83,8 @@ fun parseContractFileToFeature(
             specificationPath = specificationPath,
             securityConfiguration = securityConfiguration,
             specmaticConfig = specmaticConfig,
-            overlayContent = overlayContent
+            overlayContent = overlayContent,
+            strictMode = strictMode
         ).toFeature()
         WSDL -> wsdlContentToFeature(checkExists(file).readText(), file.canonicalPath)
         in CONTRACT_EXTENSIONS -> parseGherkinStringToFeature(checkExists(file).readText().trim(), file.canonicalPath)
@@ -120,7 +124,8 @@ data class Feature(
     val serviceType:String? = null,
     val stubsFromExamples: Map<String, List<Pair<HttpRequest, HttpResponse>>> = emptyMap(),
     val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig)
+    val flagsBased: FlagsBased = strategiesFromFlags(specmaticConfig),
+    val strictMode: Boolean = false
 ): IFeature {
     fun enableGenerativeTesting(onlyPositive: Boolean = false): Feature {
         val updatedSpecmaticConfig = specmaticConfig.copy(
@@ -1727,7 +1732,9 @@ data class Feature(
                     ) to exampleFromFile.toRow(specmaticConfig)
                 }
             } catch (e: Throwable) {
-                logger.log(e, "Error reading file ${exampleFromFile.expectationFilePath}")
+                val errorMessage = "Error reading file ${exampleFromFile.expectationFilePath}"
+                if(strictMode) throw ContractException(errorMessage)
+                logger.log(e, errorMessage)
                 null
             }
         }

@@ -8,6 +8,26 @@ const bulkValidateBtn = document.querySelector("button#bulk-validate");
 const bulkGenerateBtn = document.querySelector("button#bulk-generate");
 const bulkTestBtn = document.querySelector("button#bulk-test");
 const chevronDownIcon = document.querySelector("svg.chevron");
+
+const Severity = {
+    ERROR: 0,
+    WARNING: 1,
+    classNames: {
+        "ERROR": "specmatic-editor-line-error",
+        "WARNING": "specmatic-editor-line-warning",
+    },
+
+    getHighest(severityA, severityB) {
+        if (this[severityA] < this[severityB]) {
+            return severityA;
+        }
+        return severityB;
+    },
+    getClassName(severity) {
+        return this.classNames[severity] || this.classNames.ERROR;
+    }
+};
+
 let setDecorationsEffect;
 let decorationsField;
 let savedEditorResponse = null;
@@ -733,54 +753,52 @@ function updateBorderColorExampleBlock(editorElement, examplePreDiv) {
 
 function highlightErrorLines(editor, metadata, exampleJson) {
     const {data, pointers} = jsonMapParser(exampleJson);
-    let decorations = [];
     const existingMarkers = new Map();
     const errorLines = [];
     errorMetadata = [];
 
     metadata.forEach(meta => {
-        var location = findObjectByPath(pointers, meta.jsonPath);
+        let location = findObjectByPath(pointers, meta.jsonPath);
         if (location == null) {
             meta.jsonPath = meta.jsonPath.substring(0, meta.jsonPath.lastIndexOf('/'));
             location = findObjectByPath(pointers, meta.jsonPath);
         }
-        const lineNumber = location?.key ? location.key.line : (location?.value ? location.value.line : 0);
 
+        const lineNumber = location?.key ? location.key.line : (location?.value ? location.value.line : 0);
         if (lineNumber !== null) {
             const lineLength = editor.state.doc.line(lineNumber + 1)
             if (!existingMarkers.has(lineNumber)) {
                 existingMarkers.set(lineNumber, []);
                 errorLines.push(lineNumber);
             }
+
             existingMarkers.get(lineNumber).push(meta.description);
             const combinedDescriptions = existingMarkers.get(lineNumber).join('\n\n');
-            const className = meta.severity === "WARNING" ? "specmatic-editor-line-warning": "specmatic-editor-line-error";
-            const tokenStart = lineLength.from;
-            const tokenEnd = lineLength.to;
-
             const existingError = errorMetadata.find(err => err.line === lineNumber + 1);
+
             if (existingError) {
                 existingError.message = combinedDescriptions;
+                existingError.severity = Severity.getHighest(existingError.severity, meta.severity);
             } else {
                 errorMetadata.push({
                     line: lineNumber + 1,
+                    tokenStart: lineLength.from,
+                    tokenEnd: lineLength.to,
                     message: combinedDescriptions,
                     severity: meta.severity
                 });
             }
-
-            const existingDecoration = decorations.filter(decoration => decoration.from === tokenStart && decoration.to === tokenEnd);
-            if (existingDecoration.length !== 0) return
-                decorations.push(window.Decoration.mark({
-                    class: className,
-                    attributes: {
-                       "data-validation-error-message": combinedDescriptions
-                    }
-                }).range(tokenStart, tokenEnd)
-            );
         }
     });
-    decorations.sort((a, b) => a.from - b.from);
+
+    const decorations = errorMetadata.map((err) =>
+        window.Decoration.mark({
+            class: Severity.getClassName(err.severity),
+            attributes: {
+               "data-validation-error-message": err.message
+            }
+        }).range(err.tokenStart, err.tokenEnd)
+    ).sort((a, b) => a.from - b.from);
 
     const decorationSet = window.Decoration.set(decorations);
     const transaction = editor.state.update({

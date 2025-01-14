@@ -72,7 +72,8 @@ class OpenApiSpecification(
     private val specificationPath: String? = null,
     private val securityConfiguration: SecurityConfiguration? = null,
     private val specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-    private val dictionary: Map<String, Value> = loadDictionary(openApiFilePath, specmaticConfig.stub.dictionary)
+    private val dictionary: Map<String, Value> = loadDictionary(openApiFilePath, specmaticConfig.stub.dictionary),
+    private val strictMode: Boolean = false
 ) : IncludedSpecification, ApiSpecification {
     init {
         logger.log(openApiSpecificationInfo(openApiFilePath, parsedOpenApi))
@@ -130,7 +131,8 @@ class OpenApiSpecification(
             specificationPath: String? = null,
             securityConfiguration: SecurityConfiguration? = null,
             specmaticConfig: SpecmaticConfig = SpecmaticConfig(),
-            overlayContent: String = ""
+            overlayContent: String = "",
+            strictMode: Boolean = false
         ): OpenApiSpecification {
             val implicitOverlayFile = getImplicitOverlayContent(openApiFilePath)
 
@@ -164,6 +166,7 @@ class OpenApiSpecification(
                 specificationPath,
                 securityConfiguration,
                 specmaticConfig,
+                strictMode = strictMode
             )
         }
 
@@ -249,6 +252,7 @@ class OpenApiSpecification(
             serviceType = SERVICE_TYPE_HTTP,
             stubsFromExamples = stubsFromExamples,
             specmaticConfig = specmaticConfig,
+            strictMode = strictMode
         )
     }
 

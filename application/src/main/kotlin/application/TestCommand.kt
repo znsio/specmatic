@@ -25,6 +25,7 @@ import io.specmatic.test.SpecmaticJUnitSupport.Companion.HOST
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.INLINE_SUGGESTIONS
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.OVERLAY_FILE_PATH
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.PORT
+import io.specmatic.test.SpecmaticJUnitSupport.Companion.STRICT_MODE
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.SUGGESTIONS_PATH
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.TEST_BASE_URL
 import io.specmatic.test.SpecmaticJUnitSupport.Companion.VARIABLES_FILE_NAME
@@ -157,6 +158,13 @@ For example:
     @Option(names = ["--overlay-file"], description = ["Overlay file for the specification"], required = false)
     var overlayFilePath: String? = null
 
+    @Option(
+        names = ["--strict"],
+        description = ["If true, tests will only run if all the examples are valid"],
+        required = false
+    )
+    var strictMode: Boolean = false
+
     override fun call() = try {
         setParallelism()
 
@@ -194,6 +202,7 @@ For example:
         System.setProperty(FILTER, filter.joinToString(";"))
         System.setProperty(FILTER_NOT, filterNot.joinToString(";"))
         System.setProperty(OVERLAY_FILE_PATH, overlayFilePath.orEmpty())
+        System.setProperty(STRICT_MODE, strictMode.toString())
 
         if(exampleDirs.isNotEmpty()) {
             System.setProperty(EXAMPLE_DIRECTORIES, exampleDirs.joinToString(","))

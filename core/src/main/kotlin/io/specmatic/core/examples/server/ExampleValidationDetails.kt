@@ -17,9 +17,11 @@ private const val HTTP_QUERY_PARAMS = "query"
 
 data class ExampleValidationDetails(val matchFailureDetailsList: List<MatchFailureDetails>) {
     fun jsonPathToErrorDescriptionMapping(): List<ExampleValidationResult> {
-        val jsonPaths = jsonPathsForAllErrors(matchFailureDetailsList)
-        val descriptions = extractDescriptions(matchFailureDetailsList)
-        val severities = extractSeverities(matchFailureDetailsList)
+        val sortedMatchFailureDetailsList = matchFailureDetailsList.sortedBy { it.isPartial }
+
+        val jsonPaths = jsonPathsForAllErrors(sortedMatchFailureDetailsList)
+        val descriptions = extractDescriptions(sortedMatchFailureDetailsList)
+        val severities = extractSeverities(sortedMatchFailureDetailsList)
         val maxSize = listOf(jsonPaths.size, descriptions.size, severities.size).minOrNull() ?: 0
         return jsonPaths.take(maxSize).zip(descriptions.take(maxSize))
             .zip(severities.take(maxSize)) { (jsonPath, description), severity ->

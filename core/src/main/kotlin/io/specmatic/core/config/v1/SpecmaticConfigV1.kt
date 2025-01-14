@@ -7,6 +7,8 @@ import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 
+const val SPECMATIC_CONFIG_VERSION_1 = 1
+
 data class SpecmaticConfigV1 (
 	@field:JsonAlias("contract_repositories")
 	val sources: List<Source> = emptyList(),
@@ -53,7 +55,7 @@ data class SpecmaticConfigV1 (
 			attributeSelectionPattern = this.attributeSelectionPattern,
 			allPatternsMandatory = this.allPatternsMandatory,
 			defaultPatternValues = this.defaultPatternValues,
-			version = this.version
+			version = SPECMATIC_CONFIG_VERSION_1
 		)
 	}
 }

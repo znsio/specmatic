@@ -1,20 +1,36 @@
 package io.specmatic.core.config
 
 import io.specmatic.core.SourceProvider
+import io.specmatic.core.pattern.ContractException
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
 
 class VersionAwareConfigParserTest {
-    @CsvSource(
-        "./src/test/resources/specmaticConfigFiles/specmatic_alias.yaml"
-    )
-    @ParameterizedTest
-    fun `should create SpecmaticConfig given version 1 config file`(configFile: String) {
-        val specmaticConfig = File(configFile).toSpecmaticConfig()
+    @Test
+    fun `should default to version 1 when no version is provided`() {
+        val specmaticConfig =
+            File("./src/test/resources/specmaticConfigFiles/specmatic_without_version.yaml").toSpecmaticConfig()
+        assertThat(specmaticConfig.version).isEqualTo(1)
+    }
 
-        assertThat(specmaticConfig.version).isIn(null, 1)
+    @Test
+    fun `should throw error when unsupported version is provided`() {
+        val specmaticConfigWithInvalidVersion =
+            File("./src/test/resources/specmaticConfigFiles/specmatic_without_unsupported_version.yaml")
+        val exception = assertThrows<ContractException> { specmaticConfigWithInvalidVersion.toSpecmaticConfig() }
+        assertThat(exception.message).isEqualTo("Unsupported Specmatic config version: 0")
+    }
+
+    @Test
+    fun `should create SpecmaticConfig given version 1 config file`() {
+        val specmaticConfig =
+            File("./src/test/resources/specmaticConfigFiles/specmatic_config_v1.yaml").toSpecmaticConfig()
+
+        assertThat(specmaticConfig.version).isEqualTo(1)
 
         assertThat(specmaticConfig.sources.size).isEqualTo(1)
         assertThat(specmaticConfig.sources[0].provider).isEqualTo(SourceProvider.git)
@@ -23,12 +39,10 @@ class VersionAwareConfigParserTest {
         assertThat(specmaticConfig.sources[0].stub).containsOnly("com/petstore/payment.yaml")
     }
 
-    @CsvSource(
-        "./src/test/resources/specmaticConfigFiles/specmatic_config_v2.yaml"
-    )
-    @ParameterizedTest
-    fun `should create SpecmaticConfig given version 2 config file`(configFile: String) {
-        val specmaticConfig = File(configFile).toSpecmaticConfig()
+    @Test
+    fun `should create SpecmaticConfig given version 2 config file`() {
+        val specmaticConfig =
+            File("./src/test/resources/specmaticConfigFiles/specmatic_config_v2.yaml").toSpecmaticConfig()
 
         assertThat(specmaticConfig.version).isEqualTo(2)
 

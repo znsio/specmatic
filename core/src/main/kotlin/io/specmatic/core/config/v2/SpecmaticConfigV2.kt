@@ -7,6 +7,8 @@ import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 
+const val SPECMATIC_CONFIG_VERSION_2 = 2
+
 data class SpecmaticConfigV2(
     val version: Int,
     val contracts: List<ContractConfig> = emptyList(),
@@ -19,18 +21,14 @@ data class SpecmaticConfigV2(
     val security: SecurityConfiguration? = null,
     val test: TestConfiguration? = TestConfiguration(),
     val stub: StubConfiguration = StubConfiguration(),
-    @field:JsonAlias("virtual_service")
-    val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
+    @field:JsonAlias("virtual_service") val virtualService: VirtualServiceConfiguration = VirtualServiceConfiguration(),
     val examples: List<String> = getStringValue(EXAMPLE_DIRECTORIES)?.split(",") ?: emptyList(),
     val workflow: WorkflowConfiguration? = null,
     val ignoreInlineExamples: Boolean = getBooleanValue(Flags.IGNORE_INLINE_EXAMPLES),
     val additionalExampleParamsFilePath: String? = getStringValue(Flags.ADDITIONAL_EXAMPLE_PARAMS_FILE),
-    @field:JsonAlias("attribute_selection_pattern")
-    val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
-    @field:JsonAlias("all_patterns_mandatory")
-    val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY),
-    @field:JsonAlias("default_pattern_values")
-    val defaultPatternValues: Map<String, Any> = emptyMap()
+    @field:JsonAlias("attribute_selection_pattern") val attributeSelectionPattern: AttributeSelectionPattern = AttributeSelectionPattern(),
+    @field:JsonAlias("all_patterns_mandatory") val allPatternsMandatory: Boolean = getBooleanValue(Flags.ALL_PATTERNS_MANDATORY),
+    @field:JsonAlias("default_pattern_values") val defaultPatternValues: Map<String, Any> = emptyMap()
 ) {
     fun transform(): SpecmaticConfig {
         return SpecmaticConfig(

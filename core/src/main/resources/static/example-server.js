@@ -8,10 +8,29 @@ const bulkValidateBtn = document.querySelector("button#bulk-validate");
 const bulkGenerateBtn = document.querySelector("button#bulk-generate");
 const bulkTestBtn = document.querySelector("button#bulk-test");
 const chevronDownIcon = document.querySelector("svg.chevron");
+
+const Severity = {
+    ERROR: 0,
+    WARNING: 1,
+    classNames: {
+        "ERROR": "specmatic-editor-line-error",
+        "WARNING": "specmatic-editor-line-warning",
+    },
+
+    getHighest(severityA, severityB) {
+        if (this[severityA] < this[severityB]) {
+            return severityA;
+        }
+        return severityB;
+    },
+    getClassName(severity) {
+        return this.classNames[severity] || this.classNames.ERROR;
+    }
+};
+
 let setDecorationsEffect;
 let decorationsField;
 let savedEditorResponse = null;
-let originalEditorText = null;
 let scrollYPosition = 0;
 let selectedTableRow = null;
 let blockGenValidate = false;
@@ -24,6 +43,11 @@ const defaultAttrs = {
 const dataValidationSuccessValues = ["success", "partial"]
 let isSaved = true;
 let errorMetadata = [];
+
+const pluralizeWord = (word, count) => {
+    if (count <= 1) return `${count} ${word}`
+    return `${count} ${word}s`;
+}
 
 examplesOl.addEventListener("click", (event) => {
     const target = event.target;
@@ -149,6 +173,11 @@ bulkValidateBtn.addEventListener("click", async () => {
         }
 
         case "details": {
+            try { JSON.parse(savedEditorResponse) } catch (e) {
+                createAlert("Failed to Save Example (Invalid Syntax)", e.message, true);
+                break;
+            }
+
             await validateRowExamples(selectedTableRow);
             const originalYScroll = scrollYPosition;
             await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
@@ -465,7 +494,6 @@ async function goToDetails(tableRow, rowValues) {
             isPartialFailure: tableRow.getAttribute("data-valid") === "partial",
             test: getExampleTestData(tableRow)
         }]);
-        originalEditorText = example;
     }
 
     bulkTestBtn.classList.toggle("bulk-disabled", tableRow.getAttribute("data-valid") !== "success")
@@ -566,14 +594,23 @@ function createExampleDropDown(example) {
     examplePara.textContent = "Example: ";
 
     if (example.errorMessage) {
-        const issueCount = example.errorList.length;
-        const issueOrIssues = issueCount === 1 ? "issue" : "issues";
-        detailsPara.textContent = `Example has ${issueCount || ""} ${issueOrIssues}`;
-        if (issueCount > 0) {
+        const { errorCount, warningCount } = example.errorList.reduce((acc, error) => {
+            if (error.severity === "ERROR") acc.errorCount++;
+            if (error.severity === "WARNING") acc.warningCount++;
+            return acc;
+        }, { errorCount: 0, warningCount: 0 });
+
+        if (errorCount > 0) {
+            detailsPara.textContent = `Example has ${pluralizeWord("Error", errorCount)}`;
             detailsPara.style.color = "red";
         }
+        if (warningCount > 0) {
+            const warningPara = pluralizeWord("Warning", warningCount);
+            detailsPara.textContent += errorCount > 0 ? ` and ${warningPara}` : `Example has ${warningPara}`;
+            detailsPara.style.color = errorCount > 0 ? "red" : "orange";
+        }
     } else {
-        detailsPara.textContent = example.hasBeenValidated ? "Example has no errors" : "Example has not yet been validated";
+        detailsPara.textContent = example.hasBeenValidated ? "Example has no issues" : "Example has not yet been validated";
     }
 
     if (example.hasBeenValidated) {
@@ -685,7 +722,6 @@ async function saveExample(examplePath) {
     const editedText = savedEditorResponse;
     try {
         const parsedContent = JSON.parse(editedText);
-
         const response = await fetch(`${getHostPort()}/_specmatic/examples/update`, {
             method: "POST",
             headers: {
@@ -705,13 +741,11 @@ async function saveExample(examplePath) {
             const errorMessage = await response.text();
             createAlert("Failed to save example.", `Failed to save example to ${examplePath}: ${errorMessage}`, true);
             console.error("Error saving example:", response.status);
-            savedEditorResponse = originalEditorText;
             return false;
         }
     } catch (e) {
         console.error("Error during save request:", e);
         createAlert("Failed to save example.", `An error occurred while saving example to ${examplePath}: ${e.message}`, true);
-        savedEditorResponse = originalEditorText;
         return false;
     }
 }
@@ -733,54 +767,52 @@ function updateBorderColorExampleBlock(editorElement, examplePreDiv) {
 
 function highlightErrorLines(editor, metadata, exampleJson) {
     const {data, pointers} = jsonMapParser(exampleJson);
-    let decorations = [];
     const existingMarkers = new Map();
     const errorLines = [];
     errorMetadata = [];
 
     metadata.forEach(meta => {
-        var location = findObjectByPath(pointers, meta.jsonPath);
+        let location = findObjectByPath(pointers, meta.jsonPath);
         if (location == null) {
             meta.jsonPath = meta.jsonPath.substring(0, meta.jsonPath.lastIndexOf('/'));
             location = findObjectByPath(pointers, meta.jsonPath);
         }
-        const lineNumber = location?.key ? location.key.line : (location?.value ? location.value.line : 0);
 
+        const lineNumber = location?.key ? location.key.line : (location?.value ? location.value.line : 0);
         if (lineNumber !== null) {
             const lineLength = editor.state.doc.line(lineNumber + 1)
             if (!existingMarkers.has(lineNumber)) {
                 existingMarkers.set(lineNumber, []);
                 errorLines.push(lineNumber);
             }
+
             existingMarkers.get(lineNumber).push(meta.description);
             const combinedDescriptions = existingMarkers.get(lineNumber).join('\n\n');
-            const className = meta.severity === "WARNING" ? "specmatic-editor-line-warning": "specmatic-editor-line-error";
-            const tokenStart = lineLength.from;
-            const tokenEnd = lineLength.to;
-
             const existingError = errorMetadata.find(err => err.line === lineNumber + 1);
+
             if (existingError) {
                 existingError.message = combinedDescriptions;
+                existingError.severity = Severity.getHighest(existingError.severity, meta.severity);
             } else {
                 errorMetadata.push({
                     line: lineNumber + 1,
+                    tokenStart: lineLength.from,
+                    tokenEnd: lineLength.to,
                     message: combinedDescriptions,
                     severity: meta.severity
                 });
             }
-
-            const existingDecoration = decorations.filter(decoration => decoration.from === tokenStart && decoration.to === tokenEnd);
-            if (existingDecoration.length !== 0) return
-                decorations.push(window.Decoration.mark({
-                    class: className,
-                    attributes: {
-                       "data-validation-error-message": combinedDescriptions
-                    }
-                }).range(tokenStart, tokenEnd)
-            );
         }
     });
-    decorations.sort((a, b) => a.from - b.from);
+
+    const decorations = errorMetadata.map((err) =>
+        window.Decoration.mark({
+            class: Severity.getClassName(err.severity),
+            attributes: {
+               "data-validation-error-message": err.message
+            }
+        }).range(err.tokenStart, err.tokenEnd)
+    ).sort((a, b) => a.from - b.from);
 
     const decorationSet = window.Decoration.set(decorations);
     const transaction = editor.state.update({

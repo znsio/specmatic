@@ -31,7 +31,6 @@ const Severity = {
 let setDecorationsEffect;
 let decorationsField;
 let savedEditorResponse = null;
-let originalEditorText = null;
 let scrollYPosition = 0;
 let selectedTableRow = null;
 let blockGenValidate = false;
@@ -169,11 +168,14 @@ bulkValidateBtn.addEventListener("click", async () => {
         }
 
         case "details": {
-            await validateRowExamples(selectedTableRow);
+            const isExampleValid = await validateRowExamples(selectedTableRow);
+            if(isExampleValid)
+            {
             const originalYScroll = scrollYPosition;
             await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
             scrollYPosition = originalYScroll;
             break;
+            }
         }
     }
 
@@ -485,7 +487,6 @@ async function goToDetails(tableRow, rowValues) {
             isPartialFailure: tableRow.getAttribute("data-valid") === "partial",
             test: getExampleTestData(tableRow)
         }]);
-        originalEditorText = example;
     }
 
     bulkTestBtn.classList.toggle("bulk-disabled", tableRow.getAttribute("data-valid") !== "success")
@@ -705,7 +706,6 @@ async function saveExample(examplePath) {
     const editedText = savedEditorResponse;
     try {
         const parsedContent = JSON.parse(editedText);
-
         const response = await fetch(`${getHostPort()}/_specmatic/examples/update`, {
             method: "POST",
             headers: {
@@ -725,13 +725,11 @@ async function saveExample(examplePath) {
             const errorMessage = await response.text();
             createAlert("Failed to save example.", `Failed to save example to ${examplePath}: ${errorMessage}`, true);
             console.error("Error saving example:", response.status);
-            savedEditorResponse = originalEditorText;
             return false;
         }
     } catch (e) {
         console.error("Error during save request:", e);
         createAlert("Failed to save example.", `An error occurred while saving example to ${examplePath}: ${e.message}`, true);
-        savedEditorResponse = originalEditorText;
         return false;
     }
 }

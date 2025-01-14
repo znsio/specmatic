@@ -96,4 +96,22 @@ internal class FailureReportTest {
         """.trimIndent()
         assertThat(failureReport.errorMessage()).isEqualTo(expectedErrorMessage)
     }
+
+    @Test
+    fun `when converting to text error messages should be sorted by partiality`() {
+        val personAddressDetails = MatchFailureDetails(listOf("person", "address"), listOf("error"), isPartial = true)
+        val personIdDetails = MatchFailureDetails(listOf("person", "id"), listOf("error"))
+        val personNameDetails = MatchFailureDetails(listOf("person", "name"), listOf("error"), isPartial = true)
+        val report = FailureReport(null, null, null, listOf(personAddressDetails, personNameDetails, personIdDetails))
+
+        println(report.toText())
+        assertThat(report.toText()).containsIgnoringWhitespaces("""
+        >> person.id
+        error
+        >> person.address
+        error
+        >> person.name
+        error
+        """.trimIndent())
+    }
 }

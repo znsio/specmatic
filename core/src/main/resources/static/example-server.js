@@ -168,14 +168,16 @@ bulkValidateBtn.addEventListener("click", async () => {
         }
 
         case "details": {
-            const isExampleValid = await validateRowExamples(selectedTableRow);
-            if(isExampleValid)
-            {
+            try { JSON.parse(savedEditorResponse) } catch (e) {
+                createAlert("Failed to Save Example (Invalid Syntax)", e.message, true);
+                break;
+            }
+
+            await validateRowExamples(selectedTableRow);
             const originalYScroll = scrollYPosition;
             await goToDetails(selectedTableRow, extractRowValues(selectedTableRow));
             scrollYPosition = originalYScroll;
             break;
-            }
         }
     }
 

@@ -136,12 +136,12 @@ class AllPatternsMandatoryTest {
         val report = result.reportString()
         println(report)
         assertThat(report).containsIgnoringWhitespaces("""
+            >> RESPONSE.BODY[0].name
+            Expected key named "name" was missing
             >> REQUEST.BODY.type
             Expected optional key named "type" was missing
             >> REQUEST.BODY.inventory
             Expected optional key named "inventory" was missing
-            >> RESPONSE.BODY[0].name
-            Expected key named "name" was missing
             >> RESPONSE.BODY[0].type
             Expected optional key named "type" was missing
             >> RESPONSE.BODY[0].inventory
@@ -171,19 +171,20 @@ class AllPatternsMandatoryTest {
         val report = result.reportString()
         println(report)
         assertThat(report).containsIgnoringWhitespaces("""
+            >> RESPONSE.BODY[0].name
+            Expected string, actual was 123 (number)
+            >> RESPONSE.BODY[1].name
+            Expected string, actual was 123 (number)
+
             >> RESPONSE.BODY[0].type
             Expected optional key named "type" was missing
             >> RESPONSE.BODY[0].inventory
             Expected optional key named "inventory" was missing
-            >> RESPONSE.BODY[0].name
-            Expected string, actual was 123 (number)
-            
+                        
             >> RESPONSE.BODY[1].type
             Expected optional key named "type" was missing
             >> RESPONSE.BODY[1].inventory
             Expected optional key named "inventory" was missing
-            >> RESPONSE.BODY[1].name
-            Expected string, actual was 123 (number)
             """.trimIndent())
     }
 

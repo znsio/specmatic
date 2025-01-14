@@ -90,14 +90,14 @@ class ExampleValidationDetailsTest {
         val result = example.jsonPathToErrorDescriptionMapping()
         val expected = listOf(
             ExampleValidationResult(
-                jsonPath = "/http-response/body/items/0/name",
-                description =  ">> http-response.body.items.[0].name\n\nName is missing",
-                severity =  Severity.WARNING
-            ),
-            ExampleValidationResult(
                 jsonPath = "/http-response/body/items/1/price",
                 description =  ">> http-response.body.items.[1].price\n\nPrice is invalid",
                 severity =  Severity.ERROR
+            ),
+            ExampleValidationResult(
+                jsonPath = "/http-response/body/items/0/name",
+                description =  ">> http-response.body.items.[0].name\n\nName is missing",
+                severity =  Severity.WARNING
             )
         )
 

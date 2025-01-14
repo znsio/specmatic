@@ -1786,9 +1786,9 @@ data class Feature(
                 try {
                     val example = ScenarioStub.parse(File(externalizedExamplePath).readText())
 
-                    val method = example.request.method
-                    val path = example.request.path
-                    val responseCode = example.response.status
+                    val method = example.requestMethod()
+                    val path = example.requestPath()
+                    val responseCode = example.responseStatus()
                     val errorMessage = "    $method $path -> $responseCode does not match any operation in the specification"
                     if(strictMode.not()) logger.log(errorMessage)
                     "The example $externalizedExamplePath is unused due to error: $errorMessage"

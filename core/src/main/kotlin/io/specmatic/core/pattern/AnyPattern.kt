@@ -123,13 +123,15 @@ data class AnyPattern(
     }
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
+        val updatedResolver = resolver.addPatternAsSeen(this)
+
         if(discriminator != null) {
-            return discriminator.matches(sampleData, pattern, key, resolver)
+            return discriminator.matches(sampleData, pattern, key, updatedResolver)
         }
 
         val matchResults: List<AnyPatternMatch> =
             pattern.map {
-                AnyPatternMatch(it, resolver.matchesPattern(key, it, sampleData ?: EmptyString))
+                AnyPatternMatch(it, updatedResolver.matchesPattern(key, it, sampleData ?: EmptyString))
             }
 
         val matchResult = matchResults.find { it.result is Result.Success }
@@ -149,7 +151,7 @@ data class AnyPattern(
             return Failure.fromFailures(objectTypeMatchedButHadSomeOtherMismatch).removeReasonsFromCauses()
         }
 
-        val resolvedPatterns = pattern.map { resolvedHop(it, resolver) }
+        val resolvedPatterns = pattern.map { resolvedHop(it, updatedResolver) }
 
         if(resolvedPatterns.any { it is NullPattern } || resolvedPatterns.all { it is ExactValuePattern })
             return failedToFindAny(
@@ -326,6 +328,7 @@ data class AnyPattern(
     fun matchesValue(sampleData: Value?, resolver: Resolver, discriminatorValue: String, discMisMatchBreadCrumb: String? = null): Result {
         if (discriminator == null) return matches(sampleData, resolver)
 
+        val updatedResolver = resolver.addPatternAsSeen(this)
         val discriminatorCsvClause = if(discriminator.values.size == 1) {
             discriminator.values.first()
         } else "one of ${discriminator.values.joinToString(", ")}"
@@ -338,14 +341,14 @@ data class AnyPattern(
             )
         }
 
-        return discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().realise(
+        return discriminator.updatePatternsWithDiscriminator(pattern, updatedResolver).listFold().realise(
             hasValue = { updatedPatterns, _ ->
                 val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue) ?: return@realise Failure(
                     breadCrumb = discMisMatchBreadCrumb ?: discriminator.property,
                     message = "Could not find pattern with discriminator value ${discriminatorValue.quote()}",
                     failureReason = FailureReason.DiscriminatorMismatch
                 )
-                chosenPattern.matches(sampleData, resolver)
+                chosenPattern.matches(sampleData, updatedResolver)
             },
             orFailure = { failure ->  failure.failure },
             orException = { exception -> exception.toHasFailure().failure }

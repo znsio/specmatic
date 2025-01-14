@@ -10,10 +10,7 @@ import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.StringValue
 import io.specmatic.core.value.Value
-import org.cornutum.regexpgen.RandomGen
-import org.cornutum.regexpgen.RegExpGen
-import org.cornutum.regexpgen.js.Provider
-import org.cornutum.regexpgen.random.RandomBoundsGen
+import org.apache.commons.lang3.RandomStringUtils
 import java.nio.charset.StandardCharsets
 import java.util.*
 
@@ -63,15 +60,34 @@ data class StringPattern (
                 throw IllegalArgumentException("Invalid String Constraints - regex cannot generate infinite string when maxLength has been set")
             }
             try {
-                val generator: RegExpGen = Provider.forEcmaScript().matchingExact(regexWithoutCaretAndDollar)
-                val random: RandomGen = RandomBoundsGen()
-                generator.generate(random, maxLength, maxLength)
+                val maxString = regex?.let { it1 -> generateRandomString(maxLength,maxLength, it1) }
             }
             catch(e: Exception) {
                 throw IllegalArgumentException("Invalid String Constraints - regex cannot generate / match string greater than maxLength")
             }
         }
     }
+
+    private fun generateRandomString(minLength: Int, maxLength: Int, regex: String): String {
+        val pattern = Regex("\\{(\\d+),\\s*(\\d+)}")
+        val matchResults = pattern.findAll(regex)
+
+        val regexBounds = matchResults.map {
+            val (regexMin, regexMax) = it.destructured
+            regexMin.toInt() to regexMax.toInt()
+        }.toList()
+
+        regexBounds.forEach { (regexMin, regexMax) ->
+            if (minLength < regexMin || maxLength > regexMax) {
+                throw IllegalArgumentException(
+                    "Provided lengths ($minLength-$maxLength) are outside the bounds of the regex ($regexMin-$regexMax)."
+                )
+            }
+        }
+        val randomString = RandomStringUtils.random(maxLength, true, true)
+        return randomString
+    }
+
 
     override fun matches(sampleData: Value?, resolver: Resolver): Result {
         if (sampleData?.hasTemplate() == true)

@@ -1,6 +1,6 @@
 package application
 
-import io.specmatic.core.config.SpecmaticConfigFactory
+import io.specmatic.core.config.toSpecmaticConfig
 import io.specmatic.core.log.logger
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -23,7 +23,7 @@ class MigrateConfigCommand : Callable<Int> {
 	var version: Int = 1
 
 	override fun call(): Int {
-		val specmaticConfig = SpecmaticConfigFactory().create(inputFile)
+		val specmaticConfig = inputFile.toSpecmaticConfig()
 		val newConfigYaml = specmaticConfig.transformTo(version)
 
 		logger.log("Writing merged contract file to ${outputFile.path}")

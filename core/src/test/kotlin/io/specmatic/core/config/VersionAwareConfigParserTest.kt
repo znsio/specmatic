@@ -6,13 +6,13 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
 
-class SpecmaticConfigFactoryTest {
+class VersionAwareConfigParserTest {
     @CsvSource(
         "./src/test/resources/specmaticConfigFiles/specmatic_alias.yaml"
     )
     @ParameterizedTest
     fun `should create SpecmaticConfig given version 1 config file`(configFile: String) {
-        val specmaticConfig = SpecmaticConfigFactory().create(File(configFile))
+        val specmaticConfig = File(configFile).toSpecmaticConfig()
 
         assertThat(specmaticConfig.version).isIn(null, 1)
 
@@ -28,7 +28,7 @@ class SpecmaticConfigFactoryTest {
     )
     @ParameterizedTest
     fun `should create SpecmaticConfig given version 2 config file`(configFile: String) {
-        val specmaticConfig = SpecmaticConfigFactory().create(File(configFile))
+        val specmaticConfig = File(configFile).toSpecmaticConfig()
 
         assertThat(specmaticConfig.version).isEqualTo(2)
 

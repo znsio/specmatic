@@ -2,18 +2,16 @@ package io.specmatic.core.config.v2
 
 import io.specmatic.core.SourceProvider
 import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.loadSpecmaticConfig
+import io.specmatic.core.config.toSpecmaticConfig
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.api.Test
+import java.io.File
 
 internal class SpecmaticConfigV2Test {
-    @CsvSource(
-        "./src/test/resources/specmaticConfigFiles/specmatic_config_v2.yaml"
-    )
-    @ParameterizedTest
-    fun `should create SpecmaticConfig given SpecmaticConfigV2 With Git URL`(configFile: String) {
-        val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
+    @Test
+    fun `should create SpecmaticConfig given SpecmaticConfigV2 With Git URL`() {
+        val config: SpecmaticConfig =
+            File("./src/test/resources/specmaticConfigFiles/specmatic_config_v2.yaml").toSpecmaticConfig()
         val specmaticConfigV2 = SpecmaticConfigV2(
             version = config.version!!,
             contracts = config.sources.map { source ->
@@ -39,12 +37,10 @@ internal class SpecmaticConfigV2Test {
         assertThat(specmaticConfig.sources[0].stub).containsAll(specmaticConfigV2.contracts[0].consumes)
     }
 
-    @CsvSource(
-        "./src/test/resources/specmaticConfigFiles/specmatic_config_v2.yaml"
-    )
-    @ParameterizedTest
-    fun `should create SpecmaticConfig given SpecmaticConfigV2 With Filesystem`(configFile: String) {
-        val config: SpecmaticConfig = loadSpecmaticConfig(configFile)
+    @Test
+    fun `should create SpecmaticConfig given SpecmaticConfigV2 With Filesystem`() {
+        val config: SpecmaticConfig =
+            File("./src/test/resources/specmaticConfigFiles/specmatic_config_v2.yaml").toSpecmaticConfig()
         val specmaticConfigV2 = SpecmaticConfigV2(
             version = config.version!!,
             contracts = config.sources.map { source ->
@@ -63,9 +59,9 @@ internal class SpecmaticConfigV2Test {
 
         assertThat(specmaticConfig.version).isEqualTo(specmaticConfigV2.version)
         assertThat(specmaticConfig.sources.size).isEqualTo(specmaticConfigV2.contracts.size)
-        assertThat(specmaticConfig.sources[0].provider).isEqualTo(SourceProvider.filesystem)
-        assertThat(specmaticConfig.sources[0].directory).isEqualTo(specmaticConfigV2.contracts[0].filesystem?.directory)
-        assertThat(specmaticConfig.sources[0].test).containsAll(specmaticConfigV2.contracts[0].provides)
-        assertThat(specmaticConfig.sources[0].stub).containsAll(specmaticConfigV2.contracts[0].consumes)
+        assertThat(specmaticConfig.sources[1].provider).isEqualTo(SourceProvider.filesystem)
+        assertThat(specmaticConfig.sources[1].directory).isEqualTo(specmaticConfigV2.contracts[1].filesystem?.directory)
+        assertThat(specmaticConfig.sources[1].test).containsAll(specmaticConfigV2.contracts[1].provides)
+        assertThat(specmaticConfig.sources[1].stub).containsAll(specmaticConfigV2.contracts[1].consumes)
     }
 }

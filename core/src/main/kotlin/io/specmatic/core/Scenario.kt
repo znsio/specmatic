@@ -834,6 +834,20 @@ data class Scenario(
         } else emptySet()
         return defaultAttributeSelectionFields.plus(attributeSelectionFieldsFromRequest)
     }
+
+    fun fixRequestResponse(httpRequest: HttpRequest, httpResponse: HttpResponse, flagsBased: FlagsBased): Pair<HttpRequest, HttpResponse> {
+        val updatedFlagBased = if (isRequestAttributeSelected(httpRequest)) {
+            flagsBased.copy(unexpectedKeyCheck = ValidateUnexpectedKeys)
+        } else flagsBased
+
+        val updatedResolver = updatedFlagBased.update(resolver)
+        val updatedScenario = newBasedOnAttributeSelectionFields(httpRequest.queryParams)
+
+        val fixedHttpRequest = updatedScenario.httpRequestPattern.fixRequest(httpRequest, updatedResolver)
+        val fixedHttpResponse = updatedScenario.httpResponsePattern.fixResponse(httpResponse, updatedResolver)
+
+        return Pair(fixedHttpRequest, fixedHttpResponse)
+    }
 }
 
 fun newExpectedServerStateBasedOn(

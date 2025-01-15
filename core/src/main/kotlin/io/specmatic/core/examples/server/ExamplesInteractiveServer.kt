@@ -198,6 +198,28 @@ class ExamplesInteractiveServer(
                     }
                 }
 
+                post("/_specmatic/examples/fix") {
+                    val request = call.receive<FixExampleRequest>()
+                    try {
+                        val contractFile = getContractFile()
+                        val validationResultResponse = try {
+                            fixExample(contractFile, request)
+                        } catch (e: FileNotFoundException) {
+                            FixExampleResponse(request.exampleFile, e.message ?: "File not found")
+                        } catch (e: ContractException) {
+                            FixExampleResponse(request.exampleFile, exceptionCauseMessage(e))
+                        } catch (e: Exception) {
+                            FixExampleResponse(request.exampleFile, e.message ?: "An unexpected error occurred")
+                        }
+                        call.respond(HttpStatusCode.OK, validationResultResponse)
+                    } catch (e: Exception) {
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("errorMessage" to exceptionCauseMessage(e))
+                        )
+                    }
+                }
+
                 get("/_specmatic/examples/content") {
                     val fileName = call.request.queryParameters["fileName"]
                     if(fileName == null) {
@@ -483,6 +505,33 @@ class ExamplesInteractiveServer(
                 allExistingExamples = if(bulkMode) examples else emptyList(),
                 allowOnlyMandatoryKeysInJSONObject
             )
+        }
+
+        fun fixExample(contractFile: File, request: FixExampleRequest): FixExampleResponse {
+            val feature = parseContractFileToFeature(contractFile)
+
+            if (request.isSchemaBased) {
+                val example = SchemaExample.fromFile(request.exampleFile).value
+                val fixedExample = feature.fixSchemaFlagBased(example.discriminatorBasedOn, example.schemaBasedOn, example.value)
+                example.file.writeText(fixedExample.toStringLiteral())
+                return FixExampleResponse(exampleFile = example.file)
+            }
+
+            val scenario = feature.scenarios.firstOrNull {
+                it.method == request.method && it.status == request.responseStatusCode && it.path == request.path
+                        && (request.contentType == null || it.httpRequestPattern.headersPattern.contentType == request.contentType)
+            } ?: return FixExampleResponse(exampleFile = request.exampleFile, errorMessage = "Scenario not found")
+
+            val example = ScenarioStub.readFromFile(request.exampleFile)
+            val (fixedRequest, fixedResponse) = scenario.fixRequestResponse(
+                httpRequest = example.request,
+                httpResponse = example.response,
+                flagsBased = feature.flagsBased
+            )
+            val fixedExampleJson = example.copy(request = fixedRequest, response = fixedResponse).toJSON().toStringLiteral()
+            request.exampleFile.writeText(fixedExampleJson)
+
+            return FixExampleResponse(exampleFile = request.exampleFile)
         }
 
         fun generateForSchemaBased(contractFile: File, path: String, method: String): List<ExamplePathInfo> {

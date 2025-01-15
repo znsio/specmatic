@@ -421,6 +421,15 @@ data class Feature(
        }
     }
 
+    fun fixSchemaFlagBased(discriminatorPatternName: String?, patternName: String, value: Value): Value {
+        val updatedResolver = flagsBased.update(scenarios.last().resolver)
+
+        return when (val pattern = getSchemaPattern(discriminatorPatternName, patternName, updatedResolver)) {
+            is AnyPattern -> pattern.fixValue(value, updatedResolver, patternName)
+            else -> pattern.fixValue(value, updatedResolver)
+        } ?: generateSchemaFlagBased(discriminatorPatternName, patternName)
+    }
+
     private fun getSchemaPattern(discriminatorPatternName: String?, patternName: String, resolver: Resolver): Pattern {
         if (!discriminatorPatternName.isNullOrEmpty()) {
             return when (val discriminatorPattern = resolver.getPattern(withPatternDelimiters(discriminatorPatternName))) {

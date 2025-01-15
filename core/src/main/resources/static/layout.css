@@ -119,6 +119,14 @@ header {
             }
         }
 
+        &#bulk-fix {
+            --_content: "Fix Selected";
+
+            &[data-panel="details"] {
+                --_content: "Fix Example";
+            }
+        }
+
         &[data-selected="0"][data-panel="table"],
         &.bulk-disabled {
             --_background-color: var(--gray);

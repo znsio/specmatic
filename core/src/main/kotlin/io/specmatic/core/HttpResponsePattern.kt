@@ -212,6 +212,14 @@ data class HttpResponsePattern(
             body = body.eliminateOptionalKey(response.body, resolver)
         )
     }
+
+    fun fixResponse(response: HttpResponse, resolver: Resolver): HttpResponse {
+        return response.copy(
+            status = status,
+            headers = headersPattern.fixValue(response.headers, resolver),
+            body = body.fixValue(response.body, resolver) ?: body.generate(resolver)
+        )
+    }
 }
 
 private val valueMismatchMessages = object : MismatchMessages {

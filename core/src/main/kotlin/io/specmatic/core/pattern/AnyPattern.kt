@@ -33,6 +33,30 @@ data class AnyPattern(
 
     data class AnyPatternMatch(val pattern: Pattern, val result: Result)
 
+    fun fixValue(value: Value, resolver: Resolver, discriminatorValue: String): Value? {
+        if (discriminator == null) return null
+
+        return getDiscriminatorPattern(discriminatorValue, resolver).realise(
+            hasValue = { it, _ -> it.fixValue(value, resolver) },
+            orFailure = { null },
+            orException = { null }
+        )
+    }
+
+    override fun fixValue(value: Value, resolver: Resolver): Value? {
+        val updatedPatterns = discriminator
+            ?.updatePatternsWithDiscriminator(pattern, resolver)?.listFold()
+            ?.withDefault(pattern) { it } ?: pattern
+
+        val matchingPattern = updatedPatterns.minByOrNull { pattern ->
+            (pattern.matches(value, resolver) as? Failure)?.failureCount() ?: 0
+        }
+
+        return if (matchingPattern != null) {
+            matchingPattern.fixValue(value, resolver)
+        } else updatedPatterns.firstNotNullOfOrNull { it.fixValue(value, resolver) }
+    }
+
     override fun removeKeysNotPresentIn(keys: Set<String>, resolver: Resolver): Pattern {
         if(keys.isEmpty()) return this
 
@@ -323,32 +347,46 @@ data class AnyPattern(
         }
     }
 
-    fun matchesValue(sampleData: Value?, resolver: Resolver, discriminatorValue: String, discMisMatchBreadCrumb: String? = null): Result {
-        if (discriminator == null) return matches(sampleData, resolver)
+    private fun getDiscriminatorPattern(discriminatorValue: String, resolver: Resolver): ReturnValue<Pattern> {
+        if (discriminator == null) return HasException(
+            ContractException("Pattern is not discriminator based")
+        )
 
         val discriminatorCsvClause = if(discriminator.values.size == 1) {
             discriminator.values.first()
         } else "one of ${discriminator.values.joinToString(", ")}"
 
         if (discriminatorValue !in discriminator.values) {
-            return Failure(
-                breadCrumb = discMisMatchBreadCrumb ?: discriminator.property,
-                message = "Expected the value of discriminator to be $discriminatorCsvClause but it was ${discriminatorValue.quote()}",
-                failureReason = FailureReason.DiscriminatorMismatch
+            return HasFailure(
+                Failure(
+                    message = "Expected the value of discriminator to be $discriminatorCsvClause but it was ${discriminatorValue.quote()}",
+                    failureReason = FailureReason.DiscriminatorMismatch
+                )
             )
         }
 
         return discriminator.updatePatternsWithDiscriminator(pattern, resolver).listFold().realise(
             hasValue = { updatedPatterns, _ ->
-                val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue) ?: return@realise Failure(
-                    breadCrumb = discMisMatchBreadCrumb ?: discriminator.property,
-                    message = "Could not find pattern with discriminator value ${discriminatorValue.quote()}",
-                    failureReason = FailureReason.DiscriminatorMismatch
+                val chosenPattern = getDiscriminatorBasedPattern(updatedPatterns, discriminatorValue) ?: return@realise HasFailure(
+                    Failure(
+                        message = "Could not find pattern with discriminator value ${discriminatorValue.quote()}",
+                        failureReason = FailureReason.DiscriminatorMismatch
+                    )
                 )
-                chosenPattern.matches(sampleData, resolver)
+                HasValue(chosenPattern)
             },
-            orFailure = { failure ->  failure.failure },
-            orException = { exception -> exception.toHasFailure().failure }
+            orFailure = { failure -> HasFailure<Any>(failure.failure).cast() },
+            orException = { exception -> exception.toHasFailure().cast() }
+        )
+    }
+
+    fun matchesValue(sampleData: Value?, resolver: Resolver, discriminatorValue: String, discMisMatchBreadCrumb: String? = null): Result {
+        if (discriminator == null) return matches(sampleData, resolver)
+
+        return getDiscriminatorPattern(discriminatorValue, resolver).realise(
+            hasValue = { it, _ -> it.matches(sampleData, resolver) },
+            orFailure = { it.failure.breadCrumb(discMisMatchBreadCrumb ?: discriminator.property) },
+            orException = { it.toHasFailure().failure.breadCrumb(discMisMatchBreadCrumb ?: discriminator.property) }
         )
     }
 

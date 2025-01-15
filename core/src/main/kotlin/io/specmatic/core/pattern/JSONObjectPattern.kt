@@ -28,6 +28,33 @@ data class JSONObjectPattern(
     val maxProperties: Int? = null
 ) : Pattern, PossibleJsonObjectPatternContainer {
 
+    override fun fixValue(value: Value, resolver: Resolver): Value? {
+        val adjustedValue = (value as? JSONObjectValue) ?: JSONObjectValue()
+        val adjustedPattern = pattern.mapKeys {
+            if (shouldMakePropertyMandatory(it.value, resolver)) {
+                withoutOptionality(it.key)
+            } else it.key
+        }
+
+        val errors = resolver.findKeyErrorList(adjustedPattern, adjustedValue.jsonObject)
+        val missingKeys = errors.filterIsInstance<MissingKeyError>().map { it.name }
+        val unexpectedKeys = errors.filterIsInstance<UnexpectedKeyError>().map { it.name }
+
+        val updatedResolver = resolver.addPatternAsSeen(this)
+        val fixedValue = adjustedValue.jsonObject.mapNotNull { (key, value) ->
+            val pattern = adjustedPattern[key] ?: adjustedPattern["$key?"]
+            if (pattern == null && key in unexpectedKeys) return@mapNotNull null
+            key to (pattern?.fixValue(value, updatedResolver.updateLookupPath(this.typeAlias, key)) ?: value)
+        }
+        val missingKeysToValue = missingKeys.mapNotNull { key ->
+            adjustedPattern.getValue(key).fixValue(
+                NullValue, updatedResolver.updateLookupPath(this.typeAlias, key)
+            )?.let { key to it }
+        }
+
+        return fixedValue.plus(missingKeysToValue).takeIf { it.isNotEmpty() }?.let { JSONObjectValue(it.toMap()) }
+    }
+
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
         if (value !is JSONObjectValue) return value
 

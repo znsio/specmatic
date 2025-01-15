@@ -11,6 +11,11 @@ data class DeferredPattern(
     override val pattern: String,
     val key: String? = null
 ) : Pattern, PossibleJsonObjectPatternContainer {
+
+    override fun fixValue(value: Value, resolver: Resolver): Value? {
+        return resolvePattern(resolver).fixValue(value, resolver)
+    }
+
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
         return resolvePattern(resolver).eliminateOptionalKey(value, resolver)
     }

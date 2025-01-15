@@ -881,6 +881,16 @@ data class HttpRequestPattern(
             body = body.eliminateOptionalKey(request.body, resolver)
         )
     }
+
+    fun fixRequest(request: HttpRequest, resolver: Resolver): HttpRequest {
+        return request.copy(
+            method = method,
+            path = httpPathPattern?.fixValue(request.path, resolver),
+            queryParams = httpQueryParamPattern.fixValue(request.queryParams, resolver),
+            headers = headersPattern.fixValue(request.headers, resolver),
+            body = body.fixValue(request.body, resolver) ?: body.generate(resolver)
+        )
+    }
 }
 
 fun missingParam(missingValue: String): ContractException {

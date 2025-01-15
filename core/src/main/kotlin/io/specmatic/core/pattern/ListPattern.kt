@@ -4,6 +4,7 @@ import io.specmatic.core.*
 import io.specmatic.core.pattern.config.NegativePatternConfiguration
 import io.specmatic.core.value.JSONArrayValue
 import io.specmatic.core.value.ListValue
+import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.Value
 
 data class ListPattern(
@@ -13,6 +14,19 @@ data class ListPattern(
 ) : Pattern, SequenceType, HasDefaultExample, PossibleJsonObjectPatternContainer {
     override val memberList: MemberList
         get() = MemberList(emptyList(), pattern)
+
+    override fun fixValue(value: Value, resolver: Resolver): Value? {
+        if (resolver.hasSeenPattern(this.pattern)) return null
+
+        if (value !is JSONArrayValue || (value.list.isEmpty() && resolver.allPatternsAreMandatory)) {
+            return pattern.listOf(0.until(randomNumber(3)).mapIndexedNotNull { index, _ ->
+                attempt(breadCrumb = "[$index (random)]") { pattern.fixValue(NullValue, resolver) }
+            }, resolver).takeIf { it is JSONArrayValue && it.list.isNotEmpty() }
+        }
+
+        val updatedResolver = resolver.addPatternAsSeen(this)
+        return JSONArrayValue(value.list.mapNotNull { pattern.fixValue(it, updatedResolver) })
+    }
 
     override fun eliminateOptionalKey(value: Value, resolver: Resolver): Value {
         if (value !is JSONArrayValue) return value

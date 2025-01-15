@@ -3,12 +3,10 @@ package io.specmatic.core.pattern
 import io.specmatic.GENERATION
 import io.specmatic.conversions.OpenApiSpecification
 import io.specmatic.core.*
-import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import io.specmatic.core.value.NullValue
-import io.specmatic.core.value.NumberValue
 import io.specmatic.shouldNotMatch
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
@@ -282,5 +280,147 @@ Feature: Recursive test
         println(matchResult.reportString())
 
         assertThat(matchResult).isInstanceOf(Result.Success::class.java)
+    }
+
+    @Nested
+    inner class FixValueTests {
+        @Test
+        fun `should be able to fix simple invalid values in an json array`() {
+            val innerPattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "nested": {
+                    "nestedKey": "(date)",
+                    "nestedOptionalKey?": "(boolean)"
+                }
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+            val pattern = ListPattern(innerPattern)
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.nested.nestedOptionalKey" to BooleanValue(booleanValue = true)
+            )
+
+            val invalidValue = parsedValue("""[
+                {
+                    "topLevelKey": 999,
+                    "topLevelOptionalKey": 10,
+                    "nested": {
+                        "nestedKey": "2025-01-01",
+                        "nestedOptionalKey": "false"
+                    }
+                }
+            ]
+            """.trimIndent())
+            val fixedValue = pattern.fixValue(invalidValue, Resolver(dictionary = patternDictionary))
+            println(fixedValue?.toStringLiteral())
+
+            assertThat(fixedValue?.toStringLiteral()).isEqualTo("""
+            [
+                {
+                    "topLevelKey": "Fixed",
+                    "topLevelOptionalKey": 10,
+                    "nested": {
+                        "nestedKey": "2025-01-01",
+                        "nestedOptionalKey": true
+                    }
+                }
+            ]
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should generate if the value does not match the type expected json-array`() {
+            val innerPattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "nested": {
+                    "nestedKey": "(date)",
+                    "nestedOptionalKey?": "(boolean)"
+                }
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+            val pattern = ListPattern(innerPattern)
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.nested.nestedKey" to StringValue("2025-01-01"),
+            )
+
+            val invalidValue = JSONObjectValue()
+            val fixedValue = pattern.fixValue(invalidValue, Resolver(dictionary = patternDictionary))
+            println(fixedValue?.toStringLiteral())
+
+            assertThat((fixedValue as JSONArrayValue).list).allSatisfy {
+                assertThat(it.toStringLiteral()).isEqualTo("""
+                {
+                    "topLevelKey": "Fixed",
+                    "nested": {
+                        "nestedKey": "2025-01-01"
+                    }
+                }
+                """.trimIndent())
+            }
+        }
+
+        @Test
+        fun `should not generate when the pattern is cycling and value is missing`() {
+            val pattern = ListPattern(parsedPattern("""{
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "subList": "(TestList)"
+            }
+            """.trimIndent(), typeAlias = "(Test)"))
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.topLevelOptionalKey" to NumberValue(999)
+            )
+
+            val value = parsedValue("""
+            [
+                {
+                    "topLevelKey": 999,
+                    "topLevelOptionalKey": "Invalid"
+                }
+            ]
+            """.trimIndent())
+            val fixedValue = pattern.fixValue(value, Resolver(newPatterns = mapOf("(TestList)" to pattern), dictionary = patternDictionary))
+            println(fixedValue?.toStringLiteral())
+
+            assertThat(fixedValue?.toStringLiteral()).isEqualTo("""
+            [
+                {
+                    "topLevelKey": "Fixed",
+                    "topLevelOptionalKey": 999
+                }
+            ]
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should generate new values if the list is empty and allPatternsAreMandatory is set`() {
+            val innerPattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)"
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+            val pattern = ListPattern(innerPattern)
+            val patternDictionary = mapOf("Test.topLevelKey" to StringValue("Fixed"))
+
+            val emptyList = parsedValue("[]")
+            val fixedValue = pattern.fixValue(emptyList, Resolver(dictionary = patternDictionary).withAllPatternsAsMandatory())
+            println(fixedValue?.toStringLiteral())
+
+            assertThat((fixedValue as JSONArrayValue).list).isNotEmpty
+            assertThat(fixedValue.list).allSatisfy {
+                assertThat(it.toStringLiteral()).isEqualTo("""
+                {
+                    "topLevelKey": "Fixed"
+                }
+                """.trimIndent())
+            }
+        }
     }
 }

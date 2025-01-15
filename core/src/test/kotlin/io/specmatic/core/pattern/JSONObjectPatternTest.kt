@@ -1720,4 +1720,218 @@ components:
 
         assertThat(value).isEqualTo(JSONObjectValue())
     }
+
+    @Nested
+    inner class FixValueTests {
+        @Test
+        fun `should generate if the value does not match the type expected json-object`() {
+            val pattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "nested": {
+                    "nestedKey": "(date)",
+                    "nestedOptionalKey?": "(boolean)"
+                }
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.nested.nestedKey" to StringValue("2025-01-01")
+            )
+
+            val invalidValue = JSONArrayValue(emptyList())
+            val fixedValue = pattern.fixValue(invalidValue, Resolver(dictionary = patternDictionary))
+            println(fixedValue?.toStringLiteral())
+
+            assertThat(fixedValue?.toStringLiteral()).isEqualTo("""
+            {
+                "topLevelKey": "Fixed",
+                "nested": {
+                    "nestedKey": "2025-01-01"
+                }
+            }
+            """.trimIndent())
+        }
+
+        @Test
+        fun `should be able to fix simple invalid values in an json object`() {
+            val pattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "nested": {
+                    "nestedKey": "(date)",
+                    "nestedOptionalKey?": "(boolean)"
+                }
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.nested.nestedOptionalKey" to BooleanValue(booleanValue = true)
+            )
+
+            val invalidValue = parsedValue("""
+            {
+                "topLevelKey": 10,
+                "topLevelOptionalKey": 10,
+                "nested": {
+                    "nestedKey": "2025-01-01",
+                    "nestedOptionalKey": "false"
+                }
+            }
+            """.trimIndent())
+            val fixedValue = pattern.fixValue(invalidValue, Resolver(dictionary = patternDictionary))
+            println(fixedValue?.toStringLiteral())
+
+            assertThat(fixedValue).isEqualTo(parsedValue("""
+            {
+                "topLevelKey": "Fixed",
+                "topLevelOptionalKey": 10,
+                "nested": {
+                    "nestedKey": "2025-01-01",
+                    "nestedOptionalKey": true
+                }
+            }
+            """.trimIndent()))
+        }
+
+        @Test
+        fun `should be able to fix invalid values with missing mandatory keys`() {
+            val pattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "nested": {
+                    "nestedKey": "(date)",
+                    "nestedOptionalKey?": "(boolean)"
+                }
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.nested.nestedOptionalKey" to BooleanValue(booleanValue = true),
+                "Test.nested.nestedKey" to StringValue("2025-01-01")
+            )
+
+            val invalidValue = parsedValue("""
+            {
+                "topLevelOptionalKey": 10,
+                "nested": {
+                    "nestedOptionalKey": "false"
+                }
+            }
+            """.trimIndent())
+            val fixedValue = pattern.fixValue(invalidValue, Resolver(dictionary = patternDictionary))
+            println(fixedValue?.toStringLiteral())
+
+            assertThat(fixedValue).isEqualTo(parsedValue("""
+            {
+                "topLevelKey": "Fixed",
+                "topLevelOptionalKey": 10,
+                "nested": {
+                    "nestedKey": "2025-01-01",
+                    "nestedOptionalKey": true
+                }
+            }
+            """.trimIndent()))
+        }
+
+        @Test
+        fun `should not add missing optional keys`() {
+            val pattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "nested": {
+                    "nestedKey": "(date)",
+                    "nestedOptionalKey?": "(boolean)"
+                }
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+
+            val validValue = parsedValue("""
+            {
+                "topLevelKey": "Fixed",
+                "nested": {
+                    "nestedKey": "2025-01-01"
+                }
+            }
+            """.trimIndent())
+            val fixedValue = pattern.fixValue(validValue, Resolver())
+            println(fixedValue?.toStringLiteral())
+
+            assertThat(fixedValue).isEqualTo(parsedValue("""
+            {
+                "topLevelKey": "Fixed",
+                "nested": {
+                    "nestedKey": "2025-01-01"
+                }
+            }
+            """.trimIndent()))
+        }
+
+        @Test
+        fun `should not add mandatory keys again when the pattern is cycling`() {
+            val pattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "nested": "(Test)"
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.topLevelOptionalKey" to NumberValue(999),
+            )
+
+            val value = parsedValue("""
+            {
+                "topLevelOptionalKey": 999
+            }
+            """.trimIndent())
+            val fixedValue = pattern.fixValue(value, Resolver(newPatterns = mapOf("(Test)" to pattern), dictionary = patternDictionary))
+            println(fixedValue?.toStringLiteral())
+
+            assertThat(fixedValue).isEqualTo(parsedValue("""
+            {
+                "topLevelKey": "Fixed",
+                "topLevelOptionalKey": 999
+            }
+            """.trimIndent()))
+        }
+
+        @Test
+        fun `should not add mandatory keys again when the pattern is cycling even when allPatternsMandatory is set`() {
+            val pattern = parsedPattern("""
+            {
+                "topLevelKey": "(string)",
+                "topLevelOptionalKey?": "(number)",
+                "nested": "(Test)"
+            }
+            """.trimIndent(), typeAlias = "(Test)")
+            val patternDictionary = mapOf(
+                "Test.topLevelKey" to StringValue("Fixed"),
+                "Test.topLevelOptionalKey" to NumberValue(999),
+            )
+
+            val value = parsedValue("""
+            {
+                "topLevelOptionalKey": 999
+            }
+            """.trimIndent())
+            val fixedValue = pattern.fixValue(
+                value,
+                Resolver(newPatterns = mapOf("(Test)" to pattern), dictionary = patternDictionary).withAllPatternsAsMandatory()
+            )
+            println(fixedValue?.toStringLiteral())
+
+            assertThat(fixedValue).isEqualTo(parsedValue("""
+            {
+                "topLevelKey": "Fixed",
+                "topLevelOptionalKey": 999
+            }
+            """.trimIndent()))
+        }
+    }
 }

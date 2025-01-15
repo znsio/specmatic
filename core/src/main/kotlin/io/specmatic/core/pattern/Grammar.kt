@@ -361,3 +361,15 @@ fun parsedValue(content: String?): Value {
         }
     } ?: EmptyString
 }
+
+fun parsedScalarValue(content: String?): Value {
+    val trimmed = content?.trim() ?: return NullValue
+    return when {
+        trimmed.toIntOrNull() != null -> NumberValue(trimmed.toInt())
+        trimmed.toLongOrNull() != null -> NumberValue(trimmed.toLong())
+        trimmed.toFloatOrNull() != null -> NumberValue(trimmed.toFloat())
+        trimmed.toDoubleOrNull() != null -> NumberValue(trimmed.toDouble())
+        trimmed.lowercase() in setOf("true", "false") -> BooleanValue(trimmed.toBoolean())
+        else -> StringValue(trimmed)
+    }
+}

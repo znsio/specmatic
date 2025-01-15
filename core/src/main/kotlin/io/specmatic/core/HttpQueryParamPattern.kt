@@ -1,8 +1,11 @@
 package io.specmatic.core
 
 import io.specmatic.core.pattern.*
+import io.specmatic.core.utilities.Flags
+import io.specmatic.core.utilities.Flags.Companion.EXTENSIBLE_QUERY_PARAMS
 import io.specmatic.core.utilities.URIUtils
 import io.specmatic.core.value.JSONArrayValue
+import io.specmatic.core.value.NullValue
 import io.specmatic.core.value.StringValue
 import java.net.URI
 
@@ -188,6 +191,33 @@ data class HttpQueryParamPattern(val queryPatterns: Map<String, Pattern>, val ad
     }
     fun matches(row: Row, resolver: Resolver): Result {
         return matches(queryPatterns, row, resolver, "query param")
+    }
+
+    fun fixValue(queryParams: QueryParameters?, resolver: Resolver): QueryParameters {
+        if (queryParams == null) return QueryParameters(this.generate(resolver))
+
+        val updatedQueryParams = if(additionalProperties != null) {
+            queryParams.withoutMatching(queryPatterns.keys, additionalProperties, resolver)
+        } else { queryParams }
+
+        val updatedResolver = if (Flags.getBooleanValue(EXTENSIBLE_QUERY_PARAMS)) {
+            resolver.withUnexpectedKeyCheck(IgnoreUnexpectedKeys)
+        } else resolver
+
+        val keyErrors =  updatedResolver.findKeyErrorList(queryPatterns, updatedQueryParams.asMap().mapValues { StringValue(it.value) })
+        val missingKeys = keyErrors.filterIsInstance<MissingKeyError>().map { it.name }
+        val unexpectedKeys = keyErrors.filterIsInstance<UnexpectedKeyError>().map { it.name }
+
+        val fixedValue = updatedQueryParams.asValueMap().mapNotNull { (key, value) ->
+            val pattern = queryPatterns[key] ?: queryPatterns["$key?"]
+            if (pattern == null && key in unexpectedKeys) return@mapNotNull null
+            key to (pattern?.fixValue(value, updatedResolver) ?: value).toStringLiteral()
+        }
+        val missingKeysToValue = missingKeys.mapNotNull { key ->
+            queryPatterns.getValue(key).fixValue(NullValue, updatedResolver)?.let { key to it.toStringLiteral() }
+        }
+
+        return QueryParameters(fixedValue.plus(missingKeysToValue))
     }
 }
 

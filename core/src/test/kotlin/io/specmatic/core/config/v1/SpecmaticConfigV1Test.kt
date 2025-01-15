@@ -23,11 +23,6 @@ internal class SpecmaticConfigV1Test {
 
         assertThat(specmaticConfig.version).isEqualTo(specmaticConfigV1.version)
         assertThat(specmaticConfig.sources.size).isEqualTo(specmaticConfigV1.sources.size)
-        assertThat(specmaticConfig.sources[0].test).containsAll(specmaticConfigV1.sources[0].test)
-        assertThat(specmaticConfig.sources[0].stub).containsAll(specmaticConfigV1.sources[0].stub)
-        assertThat(specmaticConfig.sources[0].provider).isEqualTo(specmaticConfigV1.sources[0].provider)
-        assertThat(specmaticConfig.sources[0].repository).isEqualTo(specmaticConfigV1.sources[0].repository)
-        assertThat(specmaticConfig.sources[0].branch).isEqualTo(specmaticConfigV1.sources[0].branch)
-        assertThat(specmaticConfig.sources[0].directory).isEqualTo(specmaticConfigV1.sources[0].directory)
+        assertThat(specmaticConfig.sources).containsAll(specmaticConfigV1.sources)
     }
 }

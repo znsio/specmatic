@@ -53,6 +53,8 @@ class AllPatternsMandatoryTest {
                   type: string
                 inventory:
                   type: number
+                details:
+                  ${'$'}ref: '#/components/schemas/Details'
               required:
                 - name
             Product:
@@ -66,9 +68,20 @@ class AllPatternsMandatoryTest {
                   type: string
                 inventory:
                   type: number
+                details:
+                  ${'$'}ref: '#/components/schemas/Details'
               required:
                 - id
                 - name
+            Details:
+              type: object
+              properties:
+                dateOfManufacture:
+                  type: string
+                  format: date
+                dateOfExpiry:
+                  type: string
+                  format: date
             """.trimIndent()
 
     @BeforeEach
@@ -89,7 +102,11 @@ class AllPatternsMandatoryTest {
         val example = ScenarioStub(
             request = HttpRequest(path = "/products", method = "POST", body = JSONObjectValue(mapOf("name" to StringValue("iPhone")))),
             response = HttpResponse(status = 200, body = JSONArrayValue(
-                List(2) { JSONObjectValue(mapOf("id" to NumberValue(1), "name" to StringValue("iPhone"))) }
+                List(2) { JSONObjectValue(mapOf(
+                    "id" to NumberValue(1),
+                    "name" to StringValue("iPhone"),
+                    "details" to JSONObjectValue(emptyMap())
+                ))}
             ))
         )
         exampleFile.writeText(example.toJSON().toStringLiteral())
@@ -104,15 +121,26 @@ class AllPatternsMandatoryTest {
             Expected optional key named "type" was missing
             >> REQUEST.BODY.inventory
             Expected optional key named "inventory" was missing
+            >> REQUEST.BODY.details
+            Expected optional key named "details" was missing
             
             >> RESPONSE.BODY[0].type
             Expected optional key named "type" was missing
             >> RESPONSE.BODY[0].inventory
             Expected optional key named "inventory" was missing
+            >> RESPONSE.BODY[0].details.dateOfManufacture
+            Expected optional key named "dateOfManufacture" was missing
+            >> RESPONSE.BODY[0].details.dateOfExpiry
+            Expected optional key named "dateOfExpiry" was missing
+
             >> RESPONSE.BODY[1].type
             Expected optional key named "type" was missing
             >> RESPONSE.BODY[1].inventory
             Expected optional key named "inventory" was missing
+            >> RESPONSE.BODY[1].details.dateOfManufacture
+            Expected optional key named "dateOfManufacture" was missing
+            >> RESPONSE.BODY[1].details.dateOfExpiry
+            Expected optional key named "dateOfExpiry" was missing
             """.trimIndent())
     }
 
@@ -122,7 +150,13 @@ class AllPatternsMandatoryTest {
 
         val exampleFile = tempDir.resolve("example.json")
         val example = ScenarioStub(
-            request = HttpRequest(path = "/products", method = "POST", body = JSONObjectValue(mapOf("name" to StringValue("iPhone")))),
+            request = HttpRequest(path = "/products", method = "POST", body = JSONObjectValue(mapOf(
+                "name" to StringValue("iPhone"),
+                "details" to JSONObjectValue(mapOf(
+                    "dateOfManufacture" to StringValue("2020-01-01"),
+                    "dateOfExpiry" to StringValue("2020-01-01")
+                ))
+            ))),
             response = HttpResponse(status = 200, body = JSONArrayValue(
                 List(1) { JSONObjectValue(mapOf("id" to NumberValue(1))) }
             ))
@@ -175,16 +209,23 @@ class AllPatternsMandatoryTest {
             Expected string, actual was 123 (number)
             >> RESPONSE.BODY[1].name
             Expected string, actual was 123 (number)
+            
+            >> REQUEST.BODY.details
+            Expected optional key named "details" was missing
 
             >> RESPONSE.BODY[0].type
             Expected optional key named "type" was missing
             >> RESPONSE.BODY[0].inventory
             Expected optional key named "inventory" was missing
-                        
+            >> RESPONSE.BODY[0].details
+            Expected optional key named "details" was missing
+            
             >> RESPONSE.BODY[1].type
             Expected optional key named "type" was missing
             >> RESPONSE.BODY[1].inventory
             Expected optional key named "inventory" was missing
+            >> RESPONSE.BODY[1].details
+            Expected optional key named "details" was missing
             """.trimIndent())
     }
 

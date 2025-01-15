@@ -9,6 +9,19 @@ data class ContractConfig(
     val provides: List<String>? = null,
     val consumes: List<String>? = null
 ) {
+    constructor(source: Source) : this(
+        git = when (source.provider) {
+            SourceProvider.git -> GitConfig(url = source.repository, branch = source.branch)
+            else -> null
+        },
+        filesystem = when (source.provider) {
+            SourceProvider.filesystem -> FileSystemConfig(directory = source.directory)
+            else -> null
+        },
+        provides = source.test,
+        consumes = source.stub
+    )
+
     fun transform(): Source {
         return when {
             git != null -> Source(

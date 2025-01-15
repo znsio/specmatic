@@ -8,8 +8,6 @@ import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.toSpecmaticConfig
 import io.specmatic.core.config.v2.ContractConfig
-import io.specmatic.core.config.v2.FileSystemConfig
-import io.specmatic.core.config.v2.GitConfig
 import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.log.logger
 import io.specmatic.core.pattern.ContractException
@@ -172,20 +170,7 @@ data class SpecmaticConfig(
     private fun upgradeToV2(): SpecmaticConfigV2 {
         return SpecmaticConfigV2(
             version = SpecmaticConfigVersion.VERSION_2.value,
-            contracts = this.sources.map { source ->
-                ContractConfig(
-                    git = when (source.provider) {
-                        SourceProvider.git -> GitConfig(url = source.repository, branch = source.branch)
-                        else -> null
-                    },
-                    filesystem = when (source.provider) {
-                        SourceProvider.filesystem -> FileSystemConfig(directory = source.directory)
-                        else -> null
-                    },
-                    provides = source.test,
-                    consumes = source.stub
-                )
-            },
+            contracts = this.sources.map { ContractConfig(it) },
             auth = this.auth,
             pipeline = this.pipeline,
             environments = this.environments,

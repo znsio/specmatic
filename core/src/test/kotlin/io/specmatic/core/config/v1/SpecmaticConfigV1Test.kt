@@ -8,9 +8,8 @@ import org.junit.jupiter.params.provider.CsvSource
 
 internal class SpecmaticConfigV1Test {
     @CsvSource(
-        "./src/test/resources/specmaticConfigFiles/specmatic_alias.yaml",
-        "./src/test/resources/specmaticConfigFiles/specmatic_alias.yml",
-        "./src/test/resources/specmaticConfigFiles/specmatic_alias.json",
+        "./src/test/resources/specmaticConfigFiles/specmatic_without_version.yaml",
+        "./src/test/resources/specmaticConfigFiles/specmatic_without_version.json"
     )
     @ParameterizedTest
     fun `should create SpecmaticConfig given SpecmaticConfigV1`(configFile: String) {

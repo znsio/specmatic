@@ -4,14 +4,18 @@ import io.specmatic.core.SourceProvider
 import io.specmatic.core.SpecmaticConfig
 import io.specmatic.core.config.toSpecmaticConfig
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
 
 internal class SpecmaticConfigV2Test {
-    @Test
-    fun `should create SpecmaticConfig given SpecmaticConfigV2 With Git URL`() {
-        val config: SpecmaticConfig =
-            File("./src/test/resources/specmaticConfigFiles/specmatic_config_v2.yaml").toSpecmaticConfig()
+    @CsvSource(
+        "./src/test/resources/specmaticConfigFiles/specmatic_config_v2.yaml",
+        "./src/test/resources/specmaticConfigFiles/specmatic_config_v2.json"
+    )
+    @ParameterizedTest
+    fun `should create SpecmaticConfig given SpecmaticConfigV2 With Git URL`(configFile: String) {
+        val config: SpecmaticConfig = File(configFile).toSpecmaticConfig()
         val specmaticConfigV2 = SpecmaticConfigV2(
             version = config.version!!,
             contracts = config.sources.map { source ->
@@ -37,10 +41,13 @@ internal class SpecmaticConfigV2Test {
         assertThat(specmaticConfig.sources[0].stub).containsAll(specmaticConfigV2.contracts[0].consumes)
     }
 
-    @Test
-    fun `should create SpecmaticConfig given SpecmaticConfigV2 With Filesystem`() {
-        val config: SpecmaticConfig =
-            File("./src/test/resources/specmaticConfigFiles/specmatic_config_v2.yaml").toSpecmaticConfig()
+    @CsvSource(
+        "./src/test/resources/specmaticConfigFiles/specmatic_config_v2.yaml",
+        "./src/test/resources/specmaticConfigFiles/specmatic_config_v2.json"
+    )
+    @ParameterizedTest
+    fun `should create SpecmaticConfig given SpecmaticConfigV2 With Filesystem`(configFile: String) {
+        val config: SpecmaticConfig = File(configFile).toSpecmaticConfig()
         val specmaticConfigV2 = SpecmaticConfigV2(
             version = config.version!!,
             contracts = config.sources.map { source ->

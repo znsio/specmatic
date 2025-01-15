@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "contracts": [
+    {
+      "git": {
+        "url": "https://contracts",
+        "branch": "1.0.1"
+      },
+      "provides": [
+        "product_search_bff_v4.yaml"
+      ],
+      "consumes": [
+        "api_order_v3.yaml",
+        "kafka.yaml"
+      ]
+    },
+    {
+      "filesystem": {
+        "directory": "specmatic-order-contracts"
+      },
+      "provides": [
+        "product_search_bff_v4.yaml"
+      ],
+      "consumes": [
+        "api_order_v3.yaml",
+        "kafka.yaml"
+      ]
+    }
+  ]
+}

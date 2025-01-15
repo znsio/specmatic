@@ -1,4 +1,4 @@
-version: 0
+version: null
 contract_repositories:
   - type: git
     repository: https://contracts

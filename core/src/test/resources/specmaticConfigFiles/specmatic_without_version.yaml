@@ -5,3 +5,11 @@ contract_repositories:
       - com/petstore/1.yaml
     consumes:
       - com/petstore/payment.yaml
+
+  - type: filesystem
+    directory: contracts
+    provides:
+      - com/petstore/1.yaml
+    consumes:
+      - com/petstore/payment.yaml
+      - com/petstore/order.yaml

@@ -1081,7 +1081,7 @@ internal class JSONObjectPatternTest {
             println(result.reportString())
 
             assertThat(result).isInstanceOf(Result.Failure::class.java)
-            assertThat(result.reportString()).containsIgnoringWhitespaces("""
+            assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
             >> subOptionalObject.subOptionalKey
             Expected key named "subOptionalKey" was missing
             >> topLevelOptionalKey

@@ -116,7 +116,10 @@ class AllPatternsMandatoryTest {
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
         assertThat(result.isPartialFailure()).isTrue()
-        assertThat(result.reportString()).containsIgnoringWhitespaces("""
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("""
+            In scenario "POST /products. Response: OK"
+            API: POST /products -> 200
+
             >> REQUEST.BODY.type
             Expected optional key named "type" was missing
             >> REQUEST.BODY.inventory
@@ -169,9 +172,13 @@ class AllPatternsMandatoryTest {
 
         val report = result.reportString()
         println(report)
-        assertThat(report).containsIgnoringWhitespaces("""
+        assertThat(report).isEqualToNormalizingWhitespace("""
+            In scenario "POST /products. Response: OK"
+            API: POST /products -> 200
+
             >> RESPONSE.BODY[0].name
             Expected key named "name" was missing
+
             >> REQUEST.BODY.type
             Expected optional key named "type" was missing
             >> REQUEST.BODY.inventory
@@ -180,6 +187,8 @@ class AllPatternsMandatoryTest {
             Expected optional key named "type" was missing
             >> RESPONSE.BODY[0].inventory
             Expected optional key named "inventory" was missing
+            >> RESPONSE.BODY[0].details
+            Expected optional key named "details" was missing
             """.trimIndent())
     }
 
@@ -204,7 +213,10 @@ class AllPatternsMandatoryTest {
 
         val report = result.reportString()
         println(report)
-        assertThat(report).containsIgnoringWhitespaces("""
+        assertThat(report).isEqualToNormalizingWhitespace("""
+            In scenario "POST /products. Response: OK"
+            API: POST /products -> 200
+
             >> RESPONSE.BODY[0].name
             Expected string, actual was 123 (number)
             >> RESPONSE.BODY[1].name

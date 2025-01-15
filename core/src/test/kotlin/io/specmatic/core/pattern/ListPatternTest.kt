@@ -198,7 +198,7 @@ Feature: Recursive test
         println(result.reportString())
 
         assertThat(result).isInstanceOf(Result.Failure::class.java)
-        assertThat(result.reportString()).containsIgnoringWhitespaces("List cannot be empty")
+        assertThat(result.reportString()).isEqualToNormalizingWhitespace("List cannot be empty")
     }
 
     @Test

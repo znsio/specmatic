@@ -14,6 +14,9 @@ private const val HTTP_HEADERS = "headers"
 private const val HTTP_BODY = "body"
 const val BREADCRUMB_QUERY_PARAMS = "QUERY-PARAMS"
 private const val HTTP_QUERY_PARAMS = "query"
+private const val BREADCRUMB_TILDLE = ".(~~~"
+private const val BREADCRUMB_REGEX_TILDLE = "^\\(~~~"
+private const val BREADCRUMB_WHEN_OBJ = "(when "
 
 data class ExampleValidationDetails(val matchFailureDetailsList: List<MatchFailureDetails>) {
     fun jsonPathToErrorDescriptionMapping(): List<ExampleValidationResult> {
@@ -37,6 +40,7 @@ data class ExampleValidationDetails(val matchFailureDetailsList: List<MatchFailu
         return matchingFailureDetails.flatMap { matchingFailureDetail ->
             val combinedBreadcrumbs = matchingFailureDetail.breadCrumbs
                 .takeIf { it.isNotEmpty() }
+                ?.filterNot { it.startsWith("(") && it.endsWith(")") }
                 ?.joinToString(JSONPATH_DELIMITER) { breadcrumb -> processBreadcrumb(breadcrumb) }
                 ?.let { "/$it" }
                 ?: ""
@@ -52,6 +56,8 @@ data class ExampleValidationDetails(val matchFailureDetailsList: List<MatchFailu
             .replace(BREAD_CRUMB_HEADERS, HTTP_HEADERS)
             .replace(BREADCRUMB_QUERY_PARAMS, HTTP_QUERY_PARAMS)
             .replace(BREADCRUMB_DELIMITER, JSONPATH_DELIMITER)
+            .replace(BREADCRUMB_TILDLE, " $BREADCRUMB_WHEN_OBJ")
+            .replace(Regex(BREADCRUMB_REGEX_TILDLE), BREADCRUMB_WHEN_OBJ)
             .replace(Regex("\\[(\\d+)]")) { matchResult -> "/${matchResult.groupValues[1]}" }.trimStart('/')
     }
 

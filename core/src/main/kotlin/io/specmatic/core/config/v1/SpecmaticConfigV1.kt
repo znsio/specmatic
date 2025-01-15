@@ -2,12 +2,11 @@ package io.specmatic.core.config.v1
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import io.specmatic.core.*
+import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.utilities.Flags
 import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
-
-const val SPECMATIC_CONFIG_VERSION_1 = 1
 
 data class SpecmaticConfigV1 (
 	@field:JsonAlias("contract_repositories")
@@ -55,7 +54,7 @@ data class SpecmaticConfigV1 (
 			attributeSelectionPattern = this.attributeSelectionPattern,
 			allPatternsMandatory = this.allPatternsMandatory,
 			defaultPatternValues = this.defaultPatternValues,
-			version = SPECMATIC_CONFIG_VERSION_1
+			version = SpecmaticConfigVersion.VERSION_1.value
 		)
 	}
 }

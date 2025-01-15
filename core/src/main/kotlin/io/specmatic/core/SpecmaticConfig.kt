@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.specmatic.core.Configuration.Companion.configFilePath
+import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.config.toSpecmaticConfig
 import io.specmatic.core.config.v2.ContractConfig
 import io.specmatic.core.config.v2.FileSystemConfig
@@ -156,18 +157,21 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun upgradeTo(version: Int): String {
+    fun upgradeTo(version: SpecmaticConfigVersion): String {
         val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
         return when (version) {
-            2 -> objectMapper.writeValueAsString(upgradeToV2())
-            else -> ""
+            SpecmaticConfigVersion.VERSION_2 -> objectMapper.writeValueAsString(upgradeToV2())
+            else -> throw IllegalArgumentException(
+                "Unable to upgrade: SpecmaticConfigVersion ${version.value} " +
+                        "does not exist or is not supported for upgrade."
+            )
         }
     }
 
     private fun upgradeToV2(): SpecmaticConfigV2 {
         return SpecmaticConfigV2(
-            version = 2,
+            version = SpecmaticConfigVersion.VERSION_2.value,
             contracts = this.sources.map { source ->
                 ContractConfig(
                     git = when (source.provider) {

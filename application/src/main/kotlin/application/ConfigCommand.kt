@@ -58,7 +58,7 @@ class ConfigCommand : Callable<Int> {
                     return FAILURE_EXIT_CODE
                 }
 
-                if (configFile.readText().getVersion() == upgradeVersion) {
+                if (configFile.readText().getVersion() == upgradeVersion.value) {
                     logger.log("The provided $SPECMATIC_CONFIGURATION file is already up-to-date")
                     return SUCCESS_EXIT_CODE
                 }

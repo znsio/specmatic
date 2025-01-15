@@ -7,8 +7,6 @@ import io.specmatic.core.utilities.Flags.Companion.EXAMPLE_DIRECTORIES
 import io.specmatic.core.utilities.Flags.Companion.getBooleanValue
 import io.specmatic.core.utilities.Flags.Companion.getStringValue
 
-const val SPECMATIC_CONFIG_VERSION_2 = 2
-
 data class SpecmaticConfigV2(
     val version: Int,
     val contracts: List<ContractConfig> = emptyList(),

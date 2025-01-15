@@ -4,9 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.specmatic.core.SpecmaticConfig
-import io.specmatic.core.config.v1.SPECMATIC_CONFIG_VERSION_1
+import io.specmatic.core.config.SpecmaticConfigVersion.Companion.getSpecmaticConfigVersion
 import io.specmatic.core.config.v1.SpecmaticConfigV1
-import io.specmatic.core.config.v2.SPECMATIC_CONFIG_VERSION_2
 import io.specmatic.core.config.v2.SpecmaticConfigV2
 import io.specmatic.core.pattern.ContractException
 import java.io.File
@@ -18,12 +17,21 @@ private val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
 fun File.toSpecmaticConfig(): SpecmaticConfig {
     val configYaml = this.readText()
     return when (val configVersion = configYaml.getVersion()) {
-        SPECMATIC_CONFIG_VERSION_1 -> objectMapper.readValue(configYaml, SpecmaticConfigV1::class.java).transform()
-        SPECMATIC_CONFIG_VERSION_2 -> objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java).transform()
+        SpecmaticConfigVersion.VERSION_1.value -> objectMapper.readValue(configYaml, SpecmaticConfigV1::class.java)
+            .transform()
+
+        SpecmaticConfigVersion.VERSION_2.value -> objectMapper.readValue(configYaml, SpecmaticConfigV2::class.java)
+            .transform()
+
         else -> throw ContractException("Unsupported Specmatic config version: $configVersion")
     }
 }
 
 fun String.getVersion(): Int {
-    return objectMapper.readTree(this).get(SPECMATIC_CONFIG_VERSION)?.asInt() ?: SPECMATIC_CONFIG_VERSION_1
+    val version = objectMapper.readTree(this).get(SPECMATIC_CONFIG_VERSION)?.asInt()
+    return if (version == null) {
+        SpecmaticConfigVersion.VERSION_1.value
+    } else {
+        getSpecmaticConfigVersion(version)?.value ?: version
+    }
 }

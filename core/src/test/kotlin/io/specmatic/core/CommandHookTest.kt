@@ -1,7 +1,7 @@
 package io.specmatic.core
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.specmatic.core.config.v1.SPECMATIC_CONFIG_VERSION_1
+import io.specmatic.core.config.SpecmaticConfigVersion
 import io.specmatic.core.utilities.Flags
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
@@ -80,7 +80,7 @@ internal class CommandHookTest {
         val specmaticConfig = SpecmaticConfig(
             emptyList(),
             hooks = mapOf(HookName.stub_load_contract.name to "cat ${secondary.canonicalPath}"),
-            version = SPECMATIC_CONFIG_VERSION_1
+            version = SpecmaticConfigVersion.VERSION_1.value
         )
         configFile.writeText(ObjectMapper().writeValueAsString(specmaticConfig))
         Configuration.configFilePath = configFile.canonicalPath

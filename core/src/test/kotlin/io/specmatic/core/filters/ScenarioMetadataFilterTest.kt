@@ -201,6 +201,13 @@ class ScenarioMetadataFilterTests {
     }
 
     @Test
+    fun `double nested conditions`() {
+        val filter = ScenarioMetadataFilter.from("!(STATUS=202,401,403,405 || STATUS=50x || (PATH=/monitor && METHOD=GET) || (PATH=/monitor/(id:string) && METHOD=GET)) && (PATH=/orders && METHOD=GET)")
+        assertTrue(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/orders", statusCode = 200)))
+        assertFalse(filter.isSatisfiedBy(createScenarioMetadata(method = "GET", path = "/products", statusCode = 200)))
+    }
+
+    @Test
     fun `exclude scenarios with combined METHOD and PATH conditions, in addition also a status condition`() {
         val filter = ScenarioMetadataFilter.from("!(PATH=/users && METHOD=POST) && !(PATH=/products && METHOD=POST) && STATUS!=202,400,500")
 

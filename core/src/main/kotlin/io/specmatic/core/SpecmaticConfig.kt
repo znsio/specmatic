@@ -6,7 +6,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.specmatic.core.Configuration.Companion.configFilePath
 import io.specmatic.core.config.toSpecmaticConfig
-import io.specmatic.core.config.v1.SpecmaticConfigV1
 import io.specmatic.core.config.v2.ContractConfig
 import io.specmatic.core.config.v2.FileSystemConfig
 import io.specmatic.core.config.v2.GitConfig
@@ -157,40 +156,16 @@ data class SpecmaticConfig(
     }
 
     @JsonIgnore
-    fun transformTo(version: Int): String {
+    fun upgradeTo(version: Int): String {
         val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
         return when (version) {
-            2 -> objectMapper.writeValueAsString(transformToV2())
-            else -> objectMapper.writeValueAsString(transformToV1())
+            2 -> objectMapper.writeValueAsString(upgradeToV2())
+            else -> ""
         }
     }
 
-    private fun transformToV1(): SpecmaticConfigV1 {
-        return SpecmaticConfigV1(
-            version = 1,
-            sources = this.sources,
-            auth = this.auth,
-            pipeline = this.pipeline,
-            environments = this.environments,
-            hooks = this.hooks,
-            repository = this.repository,
-            report = this.report,
-            security = this.security,
-            test = this.test,
-            stub = this.stub,
-            virtualService = this.virtualService,
-            examples = this.examples,
-            workflow = this.workflow,
-            ignoreInlineExamples = this.ignoreInlineExamples,
-            additionalExampleParamsFilePath = this.additionalExampleParamsFilePath,
-            attributeSelectionPattern = this.attributeSelectionPattern,
-            allPatternsMandatory = this.allPatternsMandatory,
-            defaultPatternValues = this.defaultPatternValues
-        )
-    }
-
-    private fun transformToV2(): SpecmaticConfigV2 {
+    private fun upgradeToV2(): SpecmaticConfigV2 {
         return SpecmaticConfigV2(
             version = 2,
             contracts = this.sources.map { source ->

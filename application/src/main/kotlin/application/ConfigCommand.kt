@@ -22,7 +22,7 @@ private const val SPECMATIC_JSON = "specmatic.json"
     mixinStandardHelpOptions = true,
     description = ["Manage and configure Specmatic Config."],
     subcommands = [
-        ConfigCommand.Migrate::class
+        ConfigCommand.Upgrade::class
     ]
 )
 class ConfigCommand : Callable<Int> {
@@ -32,18 +32,18 @@ class ConfigCommand : Callable<Int> {
     }
 
     @Command(
-        name = "migrate",
+        name = "upgrade",
         mixinStandardHelpOptions = true,
         description = ["Upgrade Specmatic Config to the latest version."]
     )
-    class Migrate : Callable<Int> {
-        @Option(names = ["--input"], description = ["Path to config file that needs to migrated."])
+    class Upgrade : Callable<Int> {
+        @Option(names = ["--input"], description = ["Path to config file that needs to upgraded."])
         var inputFile: File? = null
 
-        @Option(names = ["--output"], description = ["Output file path for the migrated config."])
+        @Option(names = ["--output"], description = ["Output file path for the upgraded config."])
         var outputFile: File? = null
 
-        private val latestVersion = SPECMATIC_CONFIG_VERSION_2
+        private val upgradeVersion = SPECMATIC_CONFIG_VERSION_2
 
         override fun call(): Int {
             inputFile = inputFile ?: getConfigFile() ?: run {
@@ -51,18 +51,18 @@ class ConfigCommand : Callable<Int> {
                 return FAILURE_EXIT_CODE
             }
 
-            if (inputFile!!.readText().getVersion() == latestVersion) {
+            if (inputFile!!.readText().getVersion() == upgradeVersion) {
                 logger.log("Config is already up-to-date")
                 return SUCCESS_EXIT_CODE
             }
 
-            val migratedConfigYaml = getMigratedConfig(inputFile!!)
+            val upgradedConfigYaml = getUpgradedConfig(inputFile!!)
 
             if (outputFile != null) {
-                logger.log("Writing migrated config file to ${outputFile!!.path}")
-                outputFile!!.writeText(migratedConfigYaml)
+                logger.log("Writing upgraded config file to ${outputFile!!.path}")
+                outputFile!!.writeText(upgradedConfigYaml)
             } else {
-                logger.log(migratedConfigYaml)
+                logger.log(upgradedConfigYaml)
             }
 
             return SUCCESS_EXIT_CODE
@@ -81,9 +81,9 @@ class ConfigCommand : Callable<Int> {
             }
         }
 
-        private fun getMigratedConfig(configFile: File): String {
+        private fun getUpgradedConfig(configFile: File): String {
             return try {
-                configFile.toSpecmaticConfig().transformTo(latestVersion)
+                configFile.toSpecmaticConfig().upgradeTo(upgradeVersion)
             } catch (e: Exception) {
                 exitWithMessage(e.message.orEmpty())
             }
